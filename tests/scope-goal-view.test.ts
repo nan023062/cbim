@@ -5,8 +5,8 @@ import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGo
 import {ScopeGoalPanel,goalTaskReference} from '../src/frontend/tasks/ScopeGoalPanel';
 import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
 import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {summarizeScope} from '../src/backend/core/tasks/scope-view';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'main-session'},time='2026-11-07T00:00:00.000Z';

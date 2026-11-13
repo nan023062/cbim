@@ -1,6 +1,6 @@
 import type {DispatchScope,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
 import type {RunSummary} from '../src/bridge/contracts/execution';
-import {summarizeScope} from '../src/backend/core/tasks/scope-view';
+import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 
 export const progressIdentity={workspaceId:'a'.repeat(64),rootSessionId:'root'},progressTime='2026-11-09T06:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main',agentSessionId:'main-channel',name:'主 Agent'};

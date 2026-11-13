@@ -4,8 +4,8 @@
  * 设计原因：原路径、宿主创建时间及所有权随机值不能进入公开工具回包；生命周期必须先落盘再启动脚本。
  */
 import {z} from 'zod';
-import {controlledFileBindingSchema} from '../../../core/file-operations/controlled-file-operation';
-import {scopedExecutionAuthorizationSchema} from '../../../core/file-operations/isolated-execution-recovery';
+import {controlledFileBindingSchema} from '../../../../logic/file-operations/rules/controlled-file-operation';
+import {scopedExecutionAuthorizationSchema} from '../../../../logic/file-operations/rules/isolated-execution-recovery';
 const digest=z.string().regex(/^[a-f0-9]{64}$/);
 export const isolationProcessSchema=z.object({pid:z.number().int().positive(),created:z.string().regex(/^[0-9]{1,24}$/),session:z.number().int().nonnegative()}).strict();
 export type IsolationProcess=z.infer<typeof isolationProcessSchema>;

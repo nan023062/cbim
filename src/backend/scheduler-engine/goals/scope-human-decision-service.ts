@@ -6,19 +6,19 @@
  * 职责边界：这里只保存决定，不修改 goal、wait、图或运行许可；共享文件端口供另一专用接续服务重新核实，保存本身不启动模型。哈希只描述有界观察。
  */
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge/ports';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {goalInputRevision,sameGoalValue} from '../../core/tasks/scope-goal';
-import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import {verifyArtifactBaselines} from '../../core/evidence/artifact-evidence';
-import {completeOutputProof,completeOutputObservation,assertCompleteOutputBudget} from '../../core/evidence/complete-output-evidence';
-import type {OutputManifestRecord} from '../../core/evidence/output-manifest';
-import {humanDecisionPreviewInputSchema,humanDecisionRequestSchema,humanDecisionLookupSchema,humanDecisionHistoryInputSchema,humanDecisionActorSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,humanDecisionCoverageLimitation,humanDecisionLimit,type HumanDecisionPreviewInput,type HumanDecisionRequest,type HumanDecisionLookup,type HumanDecisionHistoryInput,type HumanDecisionPreview,type HumanDecisionReceipt,type HumanDecisionHistory,type HumanDecisionActor,type HumanDecisionCandidate,type HumanDecisionKind} from '../../core/tasks/human-decisions';
-import {humanDecisionBasis,humanDecisionProof} from '../../core/tasks/human-decision-proof';
-import {compareHumanReconsideration} from '../../core/tasks/human-reconsideration';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../../logic/knowledge/rules/ports';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {goalInputRevision,sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import {verifyArtifactBaselines} from '../../../logic/evidence/rules/artifact-evidence';
+import {completeOutputProof,completeOutputObservation,assertCompleteOutputBudget} from '../../../logic/evidence/rules/complete-output-evidence';
+import type {OutputManifestRecord} from '../../../logic/evidence/rules/output-manifest';
+import {humanDecisionPreviewInputSchema,humanDecisionRequestSchema,humanDecisionLookupSchema,humanDecisionHistoryInputSchema,humanDecisionActorSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,humanDecisionCoverageLimitation,humanDecisionLimit,type HumanDecisionPreviewInput,type HumanDecisionRequest,type HumanDecisionLookup,type HumanDecisionHistoryInput,type HumanDecisionPreview,type HumanDecisionReceipt,type HumanDecisionHistory,type HumanDecisionActor,type HumanDecisionCandidate,type HumanDecisionKind} from '../../../logic/tasks/rules/human-decisions';
+import {humanDecisionBasis,humanDecisionProof} from '../../../logic/tasks/rules/human-decision-proof';
+import {compareHumanReconsideration} from '../../../logic/tasks/rules/human-reconsideration';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import type {HumanDecisionPorts} from '../evidence/human-decision-evidence';
 import {humanEvidenceStateStamp} from '../evidence/human-evidence-state';

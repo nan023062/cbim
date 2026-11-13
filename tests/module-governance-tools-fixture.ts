@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import type {Application} from '../src/backend/main/assembly/application';
-import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/backend/core/governance/module-governance';
+import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/logic/governance/rules/module-governance';
 import {seedModuleGovernance} from './module-governance-fixture';
 import {request} from './data/knowledge';
 import {moduleGovernanceToolsFixture as data} from './module-governance-tools-provider';

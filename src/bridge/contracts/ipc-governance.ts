@@ -3,7 +3,7 @@
  * 设计原因：命令输出按对应回执种类核实；批准和实施分别提交，查询不会重放原事务。类型不替代身份和权限校验。
  */
 import {z} from 'zod';
-import {moduleGovernanceReceiptSchema,type ModuleGovernanceList,type ModuleGovernanceReceipt,type ModuleGovernanceUnaccepted,moduleGovernanceApplyInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceListInputSchema,moduleGovernanceLookupSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceRegisterInputSchema,moduleGovernanceUnacceptedInputSchema} from '../../backend/core/governance/module-governance';
+import {moduleGovernanceReceiptSchema,type ModuleGovernanceList,type ModuleGovernanceReceipt,type ModuleGovernanceUnaccepted,moduleGovernanceApplyInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceListInputSchema,moduleGovernanceLookupSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceRegisterInputSchema,moduleGovernanceUnacceptedInputSchema} from '../../logic/governance/rules/module-governance';
 
 export const governanceIpcRequests={
   'governance.list':moduleGovernanceListInputSchema,

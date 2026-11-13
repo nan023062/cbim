@@ -2,7 +2,7 @@ import {serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export const activeInputData={
   model:'active-goal-input-fixture',goal:'ACTIVE_INPUT_MAIN: 核实业务文件并按照最新用户要求汇报',

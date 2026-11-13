@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/backend/core/workspace/knowledge-source';
+import {knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/logic/workspace/rules/knowledge-source';
 import {fixture} from './helpers';
 import {summary} from './data/knowledge';
 import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe,knowledgeSourceMemberChange} from './knowledge-source-lifecycle-fixture';

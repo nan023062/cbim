@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {ReplaceQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-replacement';
 import {abandonedDependencyData as data} from './abandoned-checkpoint-dependency-provider';
 export {seedDependencyReplacement as seedAbandonedDependency,dependencyRuns as abandonedRuns} from './queued-dependency-replacement-fixture';
 export {additionRecords as abandonedRecords} from './queued-dependency-addition-fixture';

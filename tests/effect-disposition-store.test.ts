@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {effectDispositionCommand,effectDispositionReceipt} from '../src/backend/core/tasks/effect-observation-rules';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {effectDispositionCommand,effectDispositionReceipt} from '../src/logic/tasks/rules/effect-observation-rules';
+import {hash} from '../src/core/platform/node/serialization';
 import {effectIdentity,effectRootMutation,effectScope,effectRecord,effectTime} from './effect-core-fixture';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 
 async function fixture(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-effect-append-')),store=new FileDispatchStore(directory,effectIdentity.workspaceId),file=path.join(directory,'dispatch.jsonl');await store.transact({commandId:'open',fingerprint:'open'},async()=>effectRootMutation());await store.transact({commandId:'scope',fingerprint:'scope'},async()=>({scopes:[effectScope()],receipt:true}));await store.transact({commandId:'close',fingerprint:'close'},async()=>({scopes:[{...effectScope(),status:'closed',outcome:'failed',closedAt:effectTime}],receipt:true}));return {directory,store,file,async close(){await store.close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-effect-append-')))throw Error('unsafe temp path');await fs.rm(directory,{recursive:true,force:true})}}}
 async function save(store:FileDispatchStore,record=effectRecord()){return store.transact(effectDispositionCommand(record.request),async()=>({effectDispositions:[record],receipt:effectDispositionReceipt(record)}))}

@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {outputManifestResultSchema,outputManifestReportSchema} from '../src/backend/core/evidence/output-manifest';
+import {outputManifestResultSchema,outputManifestReportSchema} from '../src/logic/evidence/rules/output-manifest';
 import {outputManifestData as d,outputManifestProvider} from '../tests/output-manifest-provider';
 import {seedOutputManifest,manifestRecords,manifestLogFiles,assertManifestReport} from '../tests/output-manifest-pi-fixture';
 import {latestExecutable} from './build-artifact.mjs';

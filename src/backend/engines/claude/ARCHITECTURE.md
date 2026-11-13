@@ -97,7 +97,7 @@ class N_src_backend_engines_claude_engine_ts_external_AgentEngine["AgentEngine (
 N_src_backend_engines_claude_engine_ts_external_AgentEngine <|.. N_src_backend_engines_claude_engine_ts_ClaudeCodeEngine
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[tools.ts](tools.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../../logic/budget/rules/request-budget.ts](../../../logic/budget/rules/request-budget.ts)、[../../../logic/execution/rules/engine-tools.ts](../../../logic/execution/rules/engine-tools.ts)、[../../../logic/execution/rules/engine-instructions.ts](../../../logic/execution/rules/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../../logic/execution/rules/engine-runtime.ts](../../../logic/execution/rules/engine-runtime.ts)、[tools.ts](tools.ts)。
 
 ### sdk.ts
 
@@ -109,7 +109,7 @@ class N_src_backend_engines_claude_sdk_ts["sdk.ts"] {
 }
 ```
 
-直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)。
+直接依赖：[../../../logic/execution/rules/engine-runtime.ts](../../../logic/execution/rules/engine-runtime.ts)。
 
 ### tools.ts
 
@@ -123,7 +123,7 @@ class N_src_backend_engines_claude_tools_ts["tools.ts"] {
 }
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/execution/rules/engine-tools.ts](../../../logic/execution/rules/engine-tools.ts)。
 
 ### 本目录调用边界
 

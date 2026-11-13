@@ -1,4 +1,4 @@
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {artifactBaselineFixture as data} from './artifact-baseline-provider';
 import type {Application} from '../src/backend/main/assembly/application';
-import {artifactReportSchema,type ArtifactFileCheck} from '../src/backend/core/evidence/artifact-baseline';
+import {artifactReportSchema,type ArtifactFileCheck} from '../src/logic/evidence/rules/artifact-baseline';
 export {queuedTaskCancelRecords as artifactBaselineRecords} from './queued-task-cancel-fixture';
 export {reportFiles as artifactBaselineFiles} from './execution-report-fixture';
 

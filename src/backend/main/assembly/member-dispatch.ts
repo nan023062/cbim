@@ -20,36 +20,36 @@
 import path from 'node:path';
 import type {Workspace} from '../workspace/workspace';
 import {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
-import type {DispatchObserver} from '../../core/dispatch/dispatch-storage';
+import type {DispatchObserver} from '../../../logic/dispatch/rules/dispatch-storage';
 import type {LlmProfiles} from '../../../logic/models/service';
 import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
 import {MemberExecutionManager,type PreparedEngine} from '../../scheduler-engine/members/member-execution';
 import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
-import type {EngineRuntimeResolver} from '../../core/execution/engine-runtime';
+import type {EngineRuntimeResolver} from '../../../logic/execution/rules/engine-runtime';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../scheduler-engine/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from '../platform/files/artifact-files';
 import {CodeCheckRunner} from '../platform/files/code-check-runner';
 import {OutputManifestFiles} from '../platform/files/output-manifest-files';
 import {NativeSessionFiles} from '../platform/native-session-files';
-import {memberCheckpointLimit} from '../../core/tasks/member-checkpoint';
+import {memberCheckpointLimit} from '../../../logic/tasks/rules/member-checkpoint';
 import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../../scheduler-engine/members/member-checkpoint-verifier';
 import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from '../run-storage/run-storage';
 import {guard} from '../platform/tool-guard';
 import {ScopedExecutionFiles} from '../platform/files/scoped-execution-files';
-import {preparedExecutionScope,executionScopeCovers} from '../../core/workspace/execution-scope';
-import {artifactTransitionPaths} from '../../core/workspace/artifact-scope';
-import {safeId} from '../../core/foundation/identity';
-import {fail} from '../../core/foundation/errors';
+import {preparedExecutionScope,executionScopeCovers} from '../../../logic/workspace/rules/execution-scope';
+import {artifactTransitionPaths} from '../../../logic/workspace/rules/artifact-scope';
+import {safeId} from '../../../logic/execution/ports/identity';
+import {fail} from '../../../core/errors';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
-import type {ScopeBudgetPolicy} from '../../core/budget/scope-budget';
-import {preparedWorkflowContracts} from '../../core/tasks/execution-context';
-import {nativeToolNames} from '../../core/tools/native-tools';
+import type {ScopeBudgetPolicy} from '../../../logic/budget/rules/scope-budget';
+import {preparedWorkflowContracts} from '../../../logic/tasks/rules/execution-context';
+import {nativeToolNames} from '../../../logic/tools/rules/native-tools';
 import {WorkspaceMembers} from '../registry/workspace-members';
 import {ModuleOwnerships} from '../registry/module-ownerships';
 import type {ResolvedLlm} from '../../../logic/models';
-import type {MemberStartOptions} from '../../core/tasks/member-commands';
-import {workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
+import type {MemberStartOptions} from '../../../logic/tasks/rules/member-commands';
+import {workspaceMemberModelHash} from '../../../logic/team/rules/workspace-member-rules';
 import {ControlledFiles} from '../file-operations/controlled-files';
 import {IsolatedExecutions} from '../file-operations/isolated-executions';
 import {createArtifactTransitionPort} from '../file-operations/artifact-transitions';
@@ -86,7 +86,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
   };
   const normalizeArtifact=(raw:string)=>normalizeArtifactPath(workspace.entry.path,raw);
   /** 主/成员的权威运行日志只在后端读取；不能以公开摘要或模型传来的“成功”替代。 */
-  const inspectMember=async(run:import('../../core/tasks/dispatch-execution').DispatchRun)=>{
+  const inspectMember=async(run:import('../../../logic/tasks/rules/dispatch-execution').DispatchRun)=>{
     workspace.assert();
     const summary=await storage.read(path.join(runsDirectory,'tasks',safeId(run.binding.taskId),safeId(run.binding.runId)));
     if(summary.task.workspaceId!==workspace.entry.id||summary.task.root!==workspace.entry.path)fail('MEMBER_LOG_IDENTITY','成员运行记录属于其他工作区');

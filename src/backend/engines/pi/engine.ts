@@ -17,21 +17,21 @@
  * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
  */
 import {redactLiteral} from '../../../core/utility';
-import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
+import type {EngineRuntimePackage} from '../../../logic/execution/rules/engine-runtime';
 import fs from 'node:fs/promises';
-import {runtimeEngineTools,nativeToolsDisabled} from '../../core/execution/engine-tools';
-import {engineInstructions} from '../../core/execution/engine-instructions';
+import {runtimeEngineTools,nativeToolsDisabled} from '../../../logic/execution/rules/engine-tools';
+import {engineInstructions} from '../../../logic/execution/rules/engine-instructions';
 import path from 'node:path';
-import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
+import type {AgentEngine,EngineContext,EngineEvent} from '../../../logic/execution/rules/types';
 import {PiRpc,type PiCommand} from './rpc';
 import {openBridge,bridgeExtensionForSource,type KnowledgeBridge} from './bridge';
 import type {ResolvedLlm} from '../../../logic/models';
-import {modelStopError} from '../../core/execution/model-errors';
+import {modelStopError} from '../../../logic/execution/rules/model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
-import {nativeToolNames} from '../../core/tools/native-tools';
-import {fail} from '../../core/foundation/errors';
+import {nativeToolNames} from '../../../logic/tools/rules/native-tools';
+import {fail} from '../../../core/errors';
 import {pathToFileURL} from 'node:url';
-import type {RequestBudgetPort} from '../../core/models/request-budget';
+import type {RequestBudgetPort} from '../../../logic/budget/rules/request-budget';
 import {openRequestBudgetTransport} from '../transport/request-budget-transport';
 import {requestBudgetBootstrap} from './request-budget-bootstrap';
 import {RunInactivityTimer} from '../run-inactivity';
@@ -228,7 +228,7 @@ export class PiEngine implements AgentEngine {
   }
   private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?redactLiteral(value,key):value}
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
-  async steer(message:string,images:import('../../core/execution/types').InputImage[],signal:AbortSignal){
+  async steer(message:string,images:import('../../../logic/execution/rules/types').InputImage[],signal:AbortSignal){
     const assertReady=()=>{
       if(signal.aborted||this.stopped||this.closing)fail('QUEUE_INSERT_STOPPED','当前运行已停止插入，原消息仍保留在队列');
       if(!this.rpc||!this.settlement)fail('QUEUE_INSERT_STALE','原主运行已结束，原消息仍保留在队列');

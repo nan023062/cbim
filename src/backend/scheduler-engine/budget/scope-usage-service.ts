@@ -4,15 +4,15 @@
  * 设计原因：同一主会话可跨多个目标，不能按时间或最近日志猜归属；缺失记录与未知价格保留不完整，不参与执行许可。
  * 职责边界：公开查询只读有界来源并前后核实基线；collect 为预算事务复用相同 canonical 校验但不重入存储，不扫描其它主会话、不修复或启动模型。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
-import {emptyScopeRunUsage,measureScopeRunUsage,summarizeScopeUsage} from '../../core/execution/scope-usage';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import {scopeUsageInputSchema,scopeUsageReportSchema,type ScopeUsageInput,type ScopeUsageReport,type ScopeUsageRun} from '../../core/budget/scope-usage';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import {emptyScopeRunUsage,measureScopeRunUsage,summarizeScopeUsage} from '../../../logic/execution/rules/scope-usage';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {scopeUsageInputSchema,scopeUsageReportSchema,type ScopeUsageInput,type ScopeUsageReport,type ScopeUsageRun} from '../../../logic/budget/rules/scope-usage';
 import type {ScopeGoalPorts} from '../goals/scope-goal-service';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;

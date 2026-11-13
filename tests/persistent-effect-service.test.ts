@@ -1,15 +1,15 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
+import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
 import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
-import {persistentWriteEffects,persistentWriteObservationSchema,type PersistentWriteObservation,type PersistentWriteName} from '../src/backend/core/tasks/persistent-write-observation';
-import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../src/backend/core/tasks/persistent-write-input';
+import {persistentWriteEffects,persistentWriteObservationSchema,type PersistentWriteObservation,type PersistentWriteName} from '../src/logic/tasks/rules/persistent-write-observation';
+import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../src/logic/tasks/rules/persistent-write-input';
 import {reportFixture,reportIdentity} from './command-verification-fixture';
-import {effectObservationBasis} from '../src/backend/core/tasks/effect-observation-rules';
-import {effectObservationReportSchema} from '../src/backend/core/tasks/effect-observation';
+import {effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
+import {effectObservationReportSchema} from '../src/logic/tasks/rules/effect-observation';
 import {effectReport} from './effect-core-fixture';
-import {governanceToolEffects} from '../src/backend/core/governance/module-governance-tools';
-import {moduleOwnershipToolEffects} from '../src/backend/core/workspace/module-ownership-tool-policy';
+import {governanceToolEffects} from '../src/logic/governance/rules/module-governance-tools';
+import {moduleOwnershipToolEffects} from '../src/logic/workspace/rules/module-ownership-tool-policy';
 
 const observe={protectionId:randomUUID(),expectedProtectionRevision:1,expectedKnowledgeRevision:'a'.repeat(64),statement:'PRIVATE_ORIGINAL_STATEMENT'};
 const inputs={cbim_governance_observe:observe,cbim_governance_propose:{protectionId:observe.protectionId,observationId:randomUUID(),expectedProtectionRevision:1,expectedKnowledgeRevision:observe.expectedKnowledgeRevision,newOverviewText:'PRIVATE_ORIGINAL_BODY',reason:'原提案',alternatives:['保留'],invariants:['边界'],rollbackNotes:'另行核实'},cbim_module_owner_change_commit:{change:{moduleId:'.cbim/workspace/module',expectedBinding:null,nextOwner:{memberId:randomUUID(),expectedRevision:1},reason:'PRIVATE_ORIGINAL_REASON'},expectedOwnershipCursor:null,expectedBasis:'b'.repeat(64)}};

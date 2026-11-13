@@ -7,7 +7,7 @@ import {once} from 'node:events';
 import {execFileSync} from 'node:child_process';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {seedTeam} from '../tests/team-fixture';
 import {registerExplicitFixtureOwner} from '../tests/explicit-owner-fixture';
 import {request} from '../tests/data/knowledge';

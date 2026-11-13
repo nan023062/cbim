@@ -4,7 +4,7 @@
  * 不算进展；重复工具快照不续期。只持有本轮计时及快照摘要，不保存推理、正文或执行重放能力。
  */
 import {createHash} from 'node:crypto';
-import type {EngineEvent} from '../core/execution/types';
+import type {EngineEvent} from '../../logic/execution/rules/types';
 
 /** 每轮创建一次；过期或 dispose 后迟到事件不能重新启用计时器。 */
 export class RunInactivityTimer {

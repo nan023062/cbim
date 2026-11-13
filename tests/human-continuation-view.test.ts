@@ -9,7 +9,7 @@ import {humanDecisionCoverageLimitation,type HumanDecisionRecord} from '../src/b
 import type {DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
 import {transcript} from '../src/frontend/execution-view/transcript';
-import type {RunSummary,RunInputSource} from '../src/backend/core/execution/types';
+import type {RunSummary,RunInputSource} from '../src/logic/execution/rules/types';
 
 const id=(value:number)=>`11111111-1111-4111-8111-${String(value).padStart(12,'0')}`,time='2026-11-07T00:00:00.000Z',hash='a'.repeat(64);
 const target:HumanContinuationTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',waitId:'wait',expectedGoalRevision:3,expectedInputRevision:1,expectedDecisionRevision:1,decisionIds:[id(1)]};

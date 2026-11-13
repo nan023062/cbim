@@ -1,20 +1,20 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {ownerExecutionBindingSchema,ownerExecutionSelectionSchema,ownerExecutionSelectionFor,ownerExecutionSelectionMatches,ownerExecutionBindingMatches,sameOwnerExecutionForModules} from '../src/backend/core/team/member-execution-binding';
-import {assertCurrentOwnerExecutionBinding,resolveOwnerExecutionSelection} from '../src/backend/core/team/member-execution-rules';
-import {validateOwnerExecutionMutation} from '../src/backend/core/tasks/owner-execution-invariants';
-import {dispatchTaskInput} from '../src/backend/core/tasks/dispatch-commands';
-import {goalPlanInputSchema,dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
-import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
-import {humanContinuationSubject} from '../src/backend/core/tasks/human-continue';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
-import type {ToolDecision} from '../src/backend/core/tools/types';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
+import {ownerExecutionBindingSchema,ownerExecutionSelectionSchema,ownerExecutionSelectionFor,ownerExecutionSelectionMatches,ownerExecutionBindingMatches,sameOwnerExecutionForModules} from '../src/logic/team/rules/member-execution-binding';
+import {assertCurrentOwnerExecutionBinding,resolveOwnerExecutionSelection} from '../src/logic/team/rules/member-execution-rules';
+import {validateOwnerExecutionMutation} from '../src/logic/tasks/rules/owner-execution-invariants';
+import {dispatchTaskInput} from '../src/logic/tasks/rules/dispatch-commands';
+import {goalPlanInputSchema,dispatchScopeGoalSchema} from '../src/logic/tasks/rules/scope-goal';
+import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge} from '../src/logic/tasks/rules/execution-context';
+import {humanContinuationSubject} from '../src/logic/tasks/rules/human-continue';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {validateWorkflowEvidence} from '../src/logic/evidence/rules/workflow-evidence';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import type {ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
+import type {ToolDecision} from '../src/logic/tools/rules/types';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import {registry,registryApply,memberEvent,ownershipEvent,bindingFor,ws,identity,moduleId,agentId,model,task,rootMutation,taskMutation,plannedScope,prepared,claimMutation} from './owner-execution-core-fixture';
 
 const graphState=(state:DispatchState,bound=true):DispatchState=>{

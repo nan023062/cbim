@@ -3,16 +3,16 @@
  * 设计原因：身份、原命令 ID 和来源来自后端实例及工具调用闭包；持久观察与提案不经过桌面批准入口，也不进入共享知识工具缓存。
  * 职责边界：只读查询或追加私有待办，不批准、不实施、不换实例重放；失败只返回可查询的原命令身份，不泄露底层正文。
  */
-import type {TaskSpec} from '../../core/tasks/types';
-import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/execution/conversation-binding';
-import {safeId} from '../../core/foundation/identity';
-import {fail,Fault} from '../../core/foundation/errors';
-import {moduleGovernanceMainOriginSchema} from '../../core/governance/module-governance';
-import {moduleGovernanceMainCommandId} from '../../core/governance/module-governance-rules';
+import type {TaskSpec} from '../../../logic/tasks/rules/types';
+import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
+import {safeId} from '../../../logic/execution/ports/identity';
+import {fail,Fault} from '../../../core/errors';
+import {moduleGovernanceMainOriginSchema} from '../../../logic/governance/rules/module-governance';
+import {moduleGovernanceMainCommandId} from '../../../logic/governance/rules/module-governance-rules';
 import {
   governanceGetInputSchema,governanceObserveInputSchema,governanceProposeInputSchema,governanceReceiptInputSchema,
   projectGovernanceGet,projectGovernanceReceipt,type GovernanceToolsPort,
-} from '../../core/governance/module-governance-tools';
+} from '../../../logic/governance/rules/module-governance-tools';
 import type {Workspace} from '../workspace/workspace';
 
 /** 仅实际主运行的 createEngine 工厂调用；参数不来自模型或页面选中记录。 */

@@ -10,11 +10,11 @@ import type {AutoCollaboration} from '../../scheduler-engine/dispatch/auto-colla
 import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
 import {AutomationScheduler} from '../../scheduler-engine/automation/scheduler';
 import {FileAutomations} from './storage';
-import {automationIdentitySchema,type AutomationDefinition,type AutomationRunner,type AutomationCatalog} from '../../core/automation/contracts';
-import {Team,BusinessWorkspace} from '../../core/knowledge/read-models';
-import {builtinSkills,Builtins} from '../../core/knowledge/builtins';
-import {fail} from '../../core/foundation/errors';
-import type {OwnerExecutionSelection} from '../../core/team/member-execution-binding';
+import {automationIdentitySchema,type AutomationDefinition,type AutomationRunner,type AutomationCatalog} from '../../../logic/automation/rules/contracts';
+import {Team,BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
+import {builtinSkills,Builtins} from '../../../logic/knowledge/rules/builtins';
+import {fail} from '../../../core/errors';
+import type {OwnerExecutionSelection} from '../../../logic/team/rules/member-execution-binding';
 import {executionOptions} from '../../scheduler-engine/conversation/execution-manager';
 
 /** Main 内部持有，公开 IPC 只能取得经实例校验的服务；所有动作仍由串行调度器裁决。 */

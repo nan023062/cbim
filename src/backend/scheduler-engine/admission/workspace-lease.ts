@@ -3,8 +3,8 @@
  * 作用定位：同一已打开工作区内，主会话与独立成员共享的执行占用协调器。
  * 设计原因：主调度与执行成员是独立实例，各实例串行；不同实例只读可并行，写入或可能获批写入的运行独占工作区。同一主运行内部的证据核实可派生读占用，不能误与自身独占冲突；跨进程排他由工作区内核锁负责。
  */
-import {fail} from '../../core/foundation/errors';
-import type {ChatPermission} from '../../core/tools/policy/types';
+import {fail} from '../../../core/errors';
+import type {ChatPermission} from '../../../logic/tools/rules/policy/types';
 
 /** 由工作区装配方共享的进程内协调器；只控制已接入运行，不限制外部程序对文件的访问。 */
 export class WorkspaceExecutionLease {

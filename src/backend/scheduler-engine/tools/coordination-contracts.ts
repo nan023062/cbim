@@ -2,10 +2,10 @@
  * 作用定位：校验只读闭包预览的原运行归属和提交依据。
  * 设计原因：预览不能被错误回包换成其他周期、版本或原因；最终写入仍使用原领域契约。
  */
-import {coordinationPreviewSchema} from '../../core/tasks/coordination-preview';
-import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
-import type {CancelQueuedTasksInput} from '../../core/tasks/queued-task-cancel';
-import {checkedJsonToolResult} from '../../core/tools/results';
+import {coordinationPreviewSchema} from '../../../logic/tasks/rules/coordination-preview';
+import type {MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
+import type {CancelQueuedTasksInput} from '../../../logic/tasks/rules/queued-task-cancel';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
 
 export function checkedClosurePreview(name:string,value:unknown,binding:MainToolOutputBinding,input?:CancelQueuedTasksInput){
   return checkedJsonToolResult(name,value,coordinationPreviewSchema.refine(preview=>{

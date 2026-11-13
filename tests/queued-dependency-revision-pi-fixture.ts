@@ -1,11 +1,11 @@
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {ReviseQueuedDependenciesReceipt} from '../src/backend/core/tasks/queued-dependency-revision';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {ReviseQueuedDependenciesReceipt} from '../src/logic/tasks/rules/queued-dependency-revision';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {dependencyRevisionData as data} from './queued-dependency-revision-provider';

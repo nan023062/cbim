@@ -5,7 +5,7 @@ import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {PiEngine} from '../src/backend/engines/pi/engine';
-import type {EngineEvent} from '../src/backend/core/execution/types';
+import type {EngineEvent} from '../src/logic/execution/rules/types';
 
 it.each(['progress','silent'] as const)('真实 Pi 与本地流式端点：%s，活跃跨过窗口/静默退出且只发一次请求',async mode=>{
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-idle-')),cwd=path.join(root,'project'),directory=path.join(root,'run');

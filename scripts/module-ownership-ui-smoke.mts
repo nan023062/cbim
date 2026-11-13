@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
-import {moduleOwnershipDetailSchema,moduleOwnershipPageSchema,moduleOwnershipReceiptSchema,type ModuleOwnershipReceipt} from '../src/backend/core/workspace/module-ownership';
+import {moduleOwnershipDetailSchema,moduleOwnershipPageSchema,moduleOwnershipReceiptSchema,type ModuleOwnershipReceipt} from '../src/logic/workspace/rules/module-ownership';
 import {seedModuleOwnership,moduleOwnershipFixture as data,moduleOwnershipHttpProbe,moduleOwnershipJournal,moduleOwnershipRunFiles} from '../tests/module-ownership-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 

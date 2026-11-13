@@ -3,12 +3,12 @@
  * 设计原因：批准依赖必须有持久记录，工具成功只代表审阅保存，不代表后继已运行或用户验收。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {candidateReviewInputSchema,type CandidateReviewInput} from '../../core/tasks/candidate-review';
-import {taskNodeSchema} from '../../core/tasks/graph-rules';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import {fail} from '../../core/foundation/errors';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {candidateReviewInputSchema,type CandidateReviewInput} from '../../../logic/tasks/rules/candidate-review';
+import {taskNodeSchema} from '../../../logic/tasks/rules/graph-rules';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import {fail} from '../../../core/errors';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
 export class CandidateReviewTools {
   constructor(private binding:MainToolOutputBinding,private save:(input:CandidateReviewInput,callId:string,signal:AbortSignal)=>Promise<TaskNode>){}
   has(name:string){return name==='cbim_dispatch_review'}

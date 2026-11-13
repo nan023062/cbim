@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema} from '../src/backend/core/tools/contracts';
+import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema} from '../src/logic/tools/rules/contracts';
 
 it('缺省知识身份取当前实例，可选query不必填写；显式旧身份、缺业务字段和写权限仍拒绝',async()=>{
   const f=await fixture();try{

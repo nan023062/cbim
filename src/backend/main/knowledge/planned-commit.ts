@@ -6,11 +6,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import {checkedKnowledgePlan,plannedRequestSchema,type KnowledgePlanRef,type PlannedKnowledgeCommit} from '../../core/knowledge/planned-commit';
-import type {StoragePaths} from '../../core/foundation/paths';
-import type {ChangeRequest} from '../../core/knowledge/types';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {checkedKnowledgePlan,plannedRequestSchema,type KnowledgePlanRef,type PlannedKnowledgeCommit} from '../../../logic/knowledge/rules/planned-commit';
+import type {StoragePaths} from '../../../logic/workspace/ports/paths';
+import type {ChangeRequest} from '../../../logic/knowledge/rules/types';
 
 /** 返回旧请求不赋予新提交权；调用方必须先查原 journal，缺少 v2 计划时拒绝新的写入。 */
 export async function readKnowledgePlan(owner:{entry:{id:string};paths:StoragePaths},ref:KnowledgePlanRef):Promise<{request:ChangeRequest;plan?:PlannedKnowledgeCommit}>{

@@ -5,6 +5,17 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 test.each([
+  ['src/logic/tasks/rules/graph.ts','src/logic/models/service/index.ts',false],
+  ['src/logic/tasks/rules/graph.ts','src/backend/main/workspace/workspace.ts',false],
+  ['src/core/json.ts','src/logic/knowledge/rules/types.ts',false],
+  ['src/backend/main/assembly/application.ts','src/logic/tasks/rules/unregistered.ts',false],
+  ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
+] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
+  const spec=path.posix.relative(path.posix.dirname(from),to);
+  expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
+});
+
+test.each([
   ['src/backend/main/assembly/application.ts','src/logic/resources/service/index.ts',true],
   ['src/logic/resources/service/resource-store.ts','src/core/platform/node/locking.ts',true],
   ['src/logic/resources/service/resource-repository.ts','src/backend/main/platform/paths.ts',false],
@@ -271,39 +282,39 @@ test('all maintained code has no cycles including type dependencies and no unrev
 
 test('read models are accessible through their public entry, not private implementations',()=>{
   const files={
-    'src/backend/core/knowledge/read-models/index.ts':"export {Team} from './team';",
-    'src/backend/core/knowledge/read-models/team.ts':'export class Team {}',
+    'src/logic/knowledge/rules/read-models/index.ts':"export {Team} from './team';",
+    'src/logic/knowledge/rules/read-models/team.ts':'export class Team {}',
   };
-  expect(audit({...files,'src/backend/scheduler-engine/a.ts':"import {Team} from '../core/knowledge/read-models';"}).ok).toBe(true);
-  const result=audit({...files,'src/backend/scheduler-engine/a.ts':"import type {Team} from '../core/knowledge/read-models/team';"});
+  expect(audit({...files,'src/backend/scheduler-engine/a.ts':"import {Team} from '../../logic/knowledge/rules/read-models';"}).ok).toBe(true);
+  const result=audit({...files,'src/backend/scheduler-engine/a.ts':"import type {Team} from '../../logic/knowledge/rules/read-models/team';"});
   expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'knowledge-read-models',kind:'type'}));
   expect(result.cycles).toEqual([]);expect(result.ok).toBe(false);
 });
 test('alias reexports and literal dynamic imports cannot bypass a private entry',()=>{
   const files={
-    'tsconfig.json':JSON.stringify({compilerOptions:{baseUrl:'.',paths:{'@core/*':['src/backend/core/*']}}}),
-    'src/backend/core/knowledge/read-models/team.ts':'export class Team {}',
+    'tsconfig.json':JSON.stringify({compilerOptions:{baseUrl:'.',paths:{'@knowledge/*':['src/logic/knowledge/rules/*']}}}),
+    'src/logic/knowledge/rules/read-models/team.ts':'export class Team {}',
   };
-  for(const source of ["export type {Team} from '@core/knowledge/read-models/team';","export type T=import('@core/knowledge/read-models/team').Team;","import('../core/knowledge/read-models/team');"]){
+  for(const source of ["export type {Team} from '@knowledge/read-models/team';","export type T=import('@knowledge/read-models/team').Team;","import('../../logic/knowledge/rules/read-models/team');"]){
     const result=audit({...files,'src/backend/scheduler-engine/a.ts':source});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry'}));expect(result.ok).toBe(false);
   }
 });
 test('snapshot data and read models reject reverse dependencies on orchestration without needing a file cycle',()=>{
-  for(const file of ['src/backend/core/knowledge/types.ts','src/backend/core/knowledge/read-models/snapshot.ts']){
-    const result=audit({[file]:`import type {Query} from '${file.endsWith('/types.ts')?'./knowledge-queries':'../knowledge-queries'}';`,'src/backend/core/knowledge/knowledge-queries.ts':'export interface Query {}'});
+  for(const file of ['src/logic/knowledge/rules/types.ts','src/logic/knowledge/rules/read-models/snapshot.ts']){
+    const result=audit({[file]:`import type {Query} from '${file.endsWith('/types.ts')?'./knowledge-queries':'../knowledge-queries'}';`,'src/logic/knowledge/rules/knowledge-queries.ts':'export interface Query {}'});
     expect(result.cycles).toEqual([]);expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction'}));expect(result.ok).toBe(false);
   }
 });
 
 test('P1 narrow boundaries reject restored write access, shared stores and business tool registration',()=>{
   const cases=[
-    ['src/backend/core/knowledge/knowledge-queries.ts','./ports','src/backend/core/knowledge/ports.ts','knowledge-query-orchestration'],
-    ['src/backend/core/knowledge/knowledge-queries.ts','./knowledge-refresh','src/backend/core/knowledge/knowledge-refresh.ts','knowledge-query-orchestration'],
-    ['src/backend/core/budget/model-request-budget-storage.ts','../dispatch/dispatch-storage','src/backend/core/dispatch/dispatch-storage.ts','request-budget-port'],
-    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','../../core/dispatch/dispatch-storage','src/backend/core/dispatch/dispatch-storage.ts','request-budget-service'],
+    ['src/logic/knowledge/rules/knowledge-queries.ts','./ports','src/logic/knowledge/rules/ports.ts','knowledge-query-orchestration'],
+    ['src/logic/knowledge/rules/knowledge-queries.ts','./knowledge-refresh','src/logic/knowledge/rules/knowledge-refresh.ts','knowledge-query-orchestration'],
+    ['src/logic/budget/rules/model-request-budget-storage.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-port'],
+    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','../../../logic/dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
     ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','./scope-budget-service','src/backend/scheduler-engine/budget/scope-budget-service.ts','request-budget-service'],
-    ['src/backend/core/execution/engine-tools.ts','./capabilities/member-tool-capabilities','src/backend/core/execution/capabilities/member-tool-capabilities.ts','engine-tool-registry'],
+    ['src/logic/execution/rules/engine-tools.ts','./capabilities/member-tool-capabilities','src/logic/execution/rules/capabilities/member-tool-capabilities.ts','engine-tool-registry'],
   ];
   for(const [file,spec,target,boundary] of cases){
     const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
@@ -318,19 +329,19 @@ test('test data rejects Application imports and private helper reexports',()=>{
 });
 test('a shared pure helper cannot hide an indirect filesystem or SDK dependency',()=>{
   const indirect=audit({
-    'tests/data/knowledge.ts':"import {hash} from '../../src/backend/core/foundation/serialization';",
-    'src/backend/core/foundation/serialization.ts':"import {write} from './files'; export const hash=write;",
-    'src/backend/core/foundation/files.ts':'export const write=()=>{};',
+    'tests/data/knowledge.ts':"import {hash} from '../../src/core/platform/node/serialization';",
+    'src/core/platform/node/serialization.ts':"import {write} from './files'; export const hash=write;",
+    'src/core/platform/node/files.ts':'export const write=()=>{};',
   });
   expect(indirect.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'pure-foundation'}));expect(indirect.ok).toBe(false);
   for(const spec of ['node:fs/promises','@anthropic-ai/claude-agent-sdk']){
-    const result=audit({'src/backend/core/knowledge/read-models/snapshot.ts':`import type * as External from '${spec}';`});
+    const result=audit({'src/logic/knowledge/rules/read-models/snapshot.ts':`import type * as External from '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'knowledge-read-models'}));expect(result.ok).toBe(false);
   }
 });
 test('relative paths into node_modules cannot hide an external dependency',()=>{
   const result=audit({
-    'src/backend/core/knowledge/read-models/snapshot.ts':"import type {Sdk} from '../../../../../node_modules/private-sdk/index';",
+    'src/logic/knowledge/rules/read-models/snapshot.ts':"import type {Sdk} from '../../../../../node_modules/private-sdk/index';",
     'node_modules/private-sdk/index.ts':'export interface Sdk {}',
   });
   expect(result.unresolved).toEqual([]);
@@ -375,21 +386,21 @@ test('cross layer type imports fail even without a cycle',()=>{
   expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
 });
 test('snapshot contracts and domain views reject reverse or private dependencies without a file cycle',()=>{
-  const contracts='src/backend/core/knowledge/types.ts';
-  const snapshot='src/backend/core/knowledge/read-models/snapshot.ts';
-  const team='src/backend/core/knowledge/read-models/team.ts';
-  const workspace='src/backend/core/knowledge/read-models/workspace.ts';
-  const port='src/backend/core/knowledge/ports.ts';
-  const query='src/backend/core/knowledge/knowledge-queries.ts';
+  const contracts='src/logic/knowledge/rules/types.ts';
+  const snapshot='src/logic/knowledge/rules/read-models/snapshot.ts';
+  const team='src/logic/knowledge/rules/read-models/team.ts';
+  const workspace='src/logic/knowledge/rules/read-models/workspace.ts';
+  const port='src/logic/knowledge/rules/ports.ts';
+  const query='src/logic/knowledge/rules/knowledge-queries.ts';
   const denied=[
     [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
-    [team,port],[query,port],['src/backend/core/foundation/json.ts',contracts],
+    [team,port],[query,port],['src/core/json.ts',contracts],
     ['tests/knowledge-data.ts','tests/helpers.ts'],
     ['tests/knowledge-fixture.ts','src/backend/main/assembly/application.ts'],
-    ['src/backend/core/budget/model-request-budget-storage.ts','src/backend/core/dispatch/dispatch-storage.ts'],
-    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','src/backend/core/dispatch/dispatch-storage.ts'],
-    ['src/backend/core/execution/engine-tools.ts','src/backend/core/evidence/progress-tools.ts'],
-    ['src/backend/core/execution/index.ts','src/backend/engines/pi/engine.ts'],
+    ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
+    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
+    ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],
+    ['src/logic/execution/rules/index.ts','src/backend/engines/pi/engine.ts'],
     ['src/frontend/execution-view/WorkStatus.tsx','src/frontend/tasks/useExecutionRecovery.ts'],
     ['src/frontend/execution-view/ToolTimeline.tsx','src/frontend/conversation/Conversation.tsx'],
     ['src/frontend/tasks/MemberRunTranscript.tsx','src/frontend/conversation/ConversationTurn.tsx'],
@@ -406,7 +417,7 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     [snapshot]:"export type {T} from '../types';",
     [team]:"export type {T} from '../types';",
     [workspace]:"export type {T} from './snapshot';",
-    'src/backend/core/knowledge/read-models/index.ts':"export type {T} from './snapshot'; import './team'; import './workspace';",
+    'src/logic/knowledge/rules/read-models/index.ts':"export type {T} from './snapshot'; import './team'; import './workspace';",
     [query]:"import type {T} from './read-models';",
   }).ok).toBe(true);
 });
@@ -417,7 +428,7 @@ test('history persistence rejects workspace and runtime assembly even through ty
     const result=audit({[from]:`export type {T} from '${relative}';`,[to]:'export type T=string;'});
     expect(result.cycles).toEqual([]);expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
   }
-  expect(audit({[from]:"import type {T} from '../../core/team/session-history-storage';",'src/backend/core/team/session-history-storage.ts':'export type T=string;'}).ok).toBe(true);
+  expect(audit({[from]:"import type {T} from '../../../logic/team/rules/session-history-storage';",'src/logic/team/rules/session-history-storage.ts':'export type T=string;'}).ok).toBe(true);
 });
 
 test('updater stays independent of application runtime and business services',()=>{

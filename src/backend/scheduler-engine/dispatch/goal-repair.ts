@@ -2,10 +2,10 @@
  * 作用定位：调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。
  * 设计原因：只有明确可修复的业务拒绝才重新唤醒主调度；权限、未知副作用、身份和日志异常保持停放。
  */
-import {hash,json} from '../../core/foundation/serialization';
-import type {GoalRepairSource} from '../../core/execution/input-source';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {GraphSnapshot} from '../../core/tasks/graph-types';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {GoalRepairSource} from '../../../logic/execution/rules/input-source';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot} from '../../../logic/tasks/rules/graph-types';
 
 const repairable=new Set(['GOAL_REVIEW_REQUIRED','GOAL_PLAN_REQUIRED','GOAL_REPLAN_REQUIRED','GOAL_GRAPH_CHANGED','GOAL_EFFECT_CHANGED','GOAL_KNOWLEDGE_CHANGED','GOAL_EVIDENCE_STALE','GOAL_WORKFLOW_UNMET','GOAL_CRITERIA_UNMET','GOAL_WORK_FAILED']);
 /** 最多三次返工；同一验收问题且任务成果未变化最多尝试两次，目标版本递增本身不算进展。 */

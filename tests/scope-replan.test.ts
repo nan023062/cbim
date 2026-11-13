@@ -7,16 +7,16 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import {replanRequestSchema,replanReceiptSchema,type ReplanRequest} from '../src/backend/core/tasks/scope-replan';
+import {json} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import {replanRequestSchema,replanReceiptSchema,type ReplanRequest} from '../src/logic/tasks/rules/scope-replan';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {EngineContext,TaskSpec,RunSummary} from '../src/backend/core/execution/types';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {EngineContext,TaskSpec,RunSummary} from '../src/logic/execution/rules/types';
 import type {ScopeGoalPorts} from '../src/backend/scheduler-engine/goals/scope-goal-service';
 
 async function setup(human=false,legacy=false,multi=false,splitMain=false){

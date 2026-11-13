@@ -1,7 +1,7 @@
 import {spawn,type ChildProcess} from 'node:child_process';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -11,12 +11,12 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {RunSummary} from '../src/backend/core/execution/types';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
-import type {ChatApproval} from '../src/backend/core/tools/policy/types';
+import {json} from '../src/core/platform/node/serialization';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {RunSummary} from '../src/logic/execution/rules/types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
+import type {ChatApproval} from '../src/logic/tools/rules/policy/types';
 
 type ProviderRequest={
   model:string;

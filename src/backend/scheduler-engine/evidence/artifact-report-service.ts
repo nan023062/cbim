@@ -4,15 +4,15 @@
  * 设计原因：文件观察与执行回执分页使用不同基线；旧日志不补造，查询不创建模型、恢复任务或改写历史。
  * 职责边界：结果仅覆盖所选文件；未知命令、未覆盖写入和后续副作用保留为限制，哈希相同不签发验收或续跑许可。
  */
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import {artifactReportInputSchema,artifactReportSchema,artifactFileCheckSchema,type ArtifactReport,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import {verifyArtifactBaselines} from '../../core/evidence/artifact-evidence';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {artifactReportInputSchema,artifactReportSchema,artifactFileCheckSchema,type ArtifactReport,type ArtifactFileFact,type ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import {verifyArtifactBaselines} from '../../../logic/evidence/rules/artifact-evidence';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
 import {memberPublicTask} from '../runtime/member-events';
 
 /** 可信平台能力；文件查询不领模型名额，临时读占用仅阻止本应用的业务写入竞争。 */

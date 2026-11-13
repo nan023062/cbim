@@ -4,8 +4,8 @@
  * 设计原因：引擎展示统计可能为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
  * 中断诊断只取已知协议原因，不回显供应商任意错误正文；仍阻断终态和工具，不重试或补造可靠用量。
  */
-import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../core/budget/model-request-budget';
-import {fail} from '../../core/foundation/errors';
+import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../../logic/budget/rules/model-request-budget';
+import {fail} from '../../../core/errors';
 
 const integer=(v:unknown):number=>{if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0)throw Error('请求用量缺失或不是安全非负整数');return v};
 const optional=(v:unknown)=>v===undefined?0:integer(v);

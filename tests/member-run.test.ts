@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec,type RuntimeOptions,type MemberRunLaunch} from '../src/backend/core/execution';
+import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec,type RuntimeOptions,type MemberRunLaunch} from '../src/logic/execution/rules';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 

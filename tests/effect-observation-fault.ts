@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {PiEngine} from '../src/backend/engines/pi/engine';
-import type {EngineContext} from '../src/backend/core/execution/types';
+import type {EngineContext} from '../src/logic/execution/rules/types';
 import {effectFixture as data} from './effect-observation-provider';
 
 type Event={type:string;toolCallId?:string;toolName?:string;isError?:boolean;result?:unknown};

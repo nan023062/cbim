@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {seedExecutionReport} from './execution-report-fixture';
 import {inspectionScopes,corruptInspectionHistory} from './inspection-cycle-fixture';
 import {businessReplanFixture as data} from './business-replan-provider';

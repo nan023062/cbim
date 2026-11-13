@@ -6,17 +6,17 @@
  * 职责边界：不创建模型、不修改旧候选、不伪造自由输入；相同命令只返回原意图，跨等待不继承接受。
  */
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import {safeId} from '../../core/foundation/identity';
-import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge/ports';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../core/tasks/scope-goal';
-import {appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
-import {humanContinuationRequestSchema,humanContinuationLookupSchema,humanContinuationSubject,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt,type ScopeHumanContinuation} from '../../core/tasks/human-continue';
-import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
-import {waitingHumanDecisions} from '../../core/tasks/human-continuation-rules';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {safeId} from '../../../logic/execution/ports/identity';
+import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../../logic/knowledge/rules/ports';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {appendScopeMainRun} from '../../../logic/tasks/rules/scope-run-tracking';
+import {humanContinuationRequestSchema,humanContinuationLookupSchema,humanContinuationSubject,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt,type ScopeHumanContinuation} from '../../../logic/tasks/rules/human-continue';
+import {isHumanContinuation} from '../../../logic/tasks/rules/scope-continuation-record';
+import {waitingHumanDecisions} from '../../../logic/tasks/rules/human-continuation-rules';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
 import {validateHumanAcceptances,type HumanDecisionPorts} from '../evidence/human-decision-evidence';
 import {rejectBudget,type ScopeBudgetRejected,type ScopeBudgetService} from '../budget/scope-budget-service';

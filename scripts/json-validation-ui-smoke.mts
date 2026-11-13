@@ -13,8 +13,8 @@ import {seedCsvValidation} from '../tests/csv-validation-fixture';
 import {pngValidationData} from '../tests/png-validation-data';
 import {seedPngValidation} from '../tests/png-validation-fixture';
 import {seedWorkflowSelection,assertWorkflowSelection} from '../tests/workflow-selection-fixture';
-import {humanDecisionHistorySchema} from '../src/backend/core/tasks/human-decisions';
-import {humanContinuationReceiptSchema} from '../src/backend/core/tasks/human-continue';
+import {humanDecisionHistorySchema} from '../src/logic/tasks/rules/human-decisions';
+import {humanContinuationReceiptSchema} from '../src/logic/tasks/rules/human-continue';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Actual packaged UI/Pi/native files and validation service. Only model replies are local fixtures;

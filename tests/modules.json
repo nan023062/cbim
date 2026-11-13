@@ -195,9 +195,9 @@
         ]
       }
     },
-    "backend/core/budget": {
+    "logic/budget/rules": {
       "roots": [
-        "src/backend/core/budget/"
+        "src/logic/budget/rules/"
       ],
       "tests": {
         "unit": [],
@@ -207,9 +207,9 @@
         "integration": []
       }
     },
-    "backend/core/connectors": {
+    "logic/connectors/rules": {
       "roots": [
-        "src/backend/core/connectors/"
+        "src/logic/connectors/rules/"
       ],
       "tests": {
         "unit": [
@@ -219,9 +219,9 @@
         "integration": []
       }
     },
-    "backend/core/evidence": {
+    "logic/evidence/rules": {
       "roots": [
-        "src/backend/core/evidence/"
+        "src/logic/evidence/rules/"
       ],
       "tests": {
         "unit": [
@@ -241,9 +241,9 @@
         "integration": []
       }
     },
-    "backend/core/execution": {
+    "logic/execution/rules": {
       "roots": [
-        "src/backend/core/execution/"
+        "src/logic/execution/rules/"
       ],
       "tests": {
         "unit": [
@@ -268,9 +268,9 @@
         ]
       }
     },
-    "backend/core/execution/capabilities": {
+    "logic/execution/rules/capabilities": {
       "roots": [
-        "src/backend/core/execution/capabilities/"
+        "src/logic/execution/rules/capabilities/"
       ],
       "tests": {
         "unit": [],
@@ -284,9 +284,9 @@
         "integration": []
       }
     },
-    "backend/core/execution/runtime": {
+    "logic/execution/rules/runtime": {
       "roots": [
-        "src/backend/core/execution/runtime/"
+        "src/logic/execution/rules/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -301,9 +301,9 @@
         "integration": []
       }
     },
-    "backend/core/file-operations": {
+    "logic/file-operations/rules": {
       "roots": [
-        "src/backend/core/file-operations/"
+        "src/logic/file-operations/rules/"
       ],
       "tests": {
         "unit": [],
@@ -315,9 +315,9 @@
         "integration": []
       }
     },
-    "backend/core/governance": {
+    "logic/governance/rules": {
       "roots": [
-        "src/backend/core/governance/"
+        "src/logic/governance/rules/"
       ],
       "tests": {
         "unit": [
@@ -331,9 +331,9 @@
         "integration": []
       }
     },
-    "backend/core/knowledge": {
+    "logic/knowledge/rules": {
       "roots": [
-        "src/backend/core/knowledge/"
+        "src/logic/knowledge/rules/"
       ],
       "tests": {
         "unit": [
@@ -346,9 +346,9 @@
         "integration": []
       }
     },
-    "backend/core/knowledge/read-models": {
+    "logic/knowledge/rules/read-models": {
       "roots": [
-        "src/backend/core/knowledge/read-models/"
+        "src/logic/knowledge/rules/read-models/"
       ],
       "tests": {
         "unit": [
@@ -358,19 +358,9 @@
         "integration": []
       }
     },
-    "backend/core/models": {
+    "logic/tasks/rules": {
       "roots": [
-        "src/backend/core/models/"
-      ],
-      "tests": {
-        "unit": [],
-        "contract": [],
-        "integration": []
-      }
-    },
-    "backend/core/tasks": {
-      "roots": [
-        "src/backend/core/tasks/"
+        "src/logic/tasks/rules/"
       ],
       "tests": {
         "unit": [
@@ -399,9 +389,9 @@
         "integration": []
       }
     },
-    "backend/core/team": {
+    "logic/team/rules": {
       "roots": [
-        "src/backend/core/team/"
+        "src/logic/team/rules/"
       ],
       "tests": {
         "unit": [],
@@ -413,9 +403,9 @@
         "integration": []
       }
     },
-    "backend/core/tools": {
+    "logic/tools/rules": {
       "roots": [
-        "src/backend/core/tools/"
+        "src/logic/tools/rules/"
       ],
       "tests": {
         "unit": [
@@ -430,9 +420,9 @@
         "integration": []
       }
     },
-    "backend/core/workspace": {
+    "logic/workspace/rules": {
       "roots": [
-        "src/backend/core/workspace/"
+        "src/logic/workspace/rules/"
       ],
       "tests": {
         "unit": [

@@ -7,9 +7,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {z} from 'zod';
-import {hash} from '../../../core/foundation/serialization';
-import {safeId} from '../../../core/foundation/identity';
-import {fail} from '../../../core/foundation/errors';
+import {hash} from '../../../../core/platform/node/serialization';
+import {safeId} from '../../../../logic/execution/ports/identity';
+import {fail} from '../../../../core/errors';
 import {isolationRecordSchema,isolationProcessSchema,type IsolationRecord} from './isolation-record';
 const changeSchema=z.discriminatedUnion('kind',[
   z.object({kind:z.literal('prepared'),record:isolationRecordSchema}).strict(),

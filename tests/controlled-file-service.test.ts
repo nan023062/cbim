@@ -5,8 +5,8 @@ import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backe
 import type {Workspace} from '../src/backend/main/workspace/workspace';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {controlledFileOperation,controlledFileOperationId} from '../src/backend/core/file-operations/controlled-file-rules';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {controlledFileOperation,controlledFileOperationId} from '../src/logic/file-operations/rules/controlled-file-rules';
+import {hash} from '../src/core/platform/node/serialization';
 import {storeFixture,fact} from './controlled-file-core-fixture';
 import {instanceId} from './owner-execution-core-fixture';
 import {deferred} from './artifact-runtime-fixture';

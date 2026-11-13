@@ -7,7 +7,7 @@ import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {fixture} from './helpers';
 import {seedKnowledgeSource,knowledgeSourceFixture as data,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe} from './knowledge-source-lifecycle-fixture';
-import {knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/backend/core/workspace/knowledge-source';
+import {knowledgeSourceChangeSchema,type KnowledgeSourceChange} from '../src/logic/workspace/rules/knowledge-source';
 
 it('an actually terminated child after committed knowledge reopens by settling only the original source transaction',async()=>{
   const f=await fixture(),probe=await knowledgeSourceHttpProbe();let app=f.app,child:ChildProcess|undefined;

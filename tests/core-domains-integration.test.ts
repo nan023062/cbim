@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {Team,BusinessWorkspace} from '../src/backend/core/knowledge/read-models';
+import {Team,BusinessWorkspace} from '../src/logic/knowledge/rules/read-models';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
 

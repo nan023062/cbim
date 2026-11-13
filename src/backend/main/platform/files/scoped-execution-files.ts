@@ -7,13 +7,13 @@
  */
 import path from 'node:path';
 import {createRequire} from 'node:module';
-import {executionScopeSchema,executionScopeCovers,type ExecutionScope} from '../../../core/workspace/execution-scope';
-import {scopedNodeInputSchema,type ScopedNodeInput} from '../../../core/file-operations/scoped-execution';
-import type {ScopedExecutionPort} from '../../../core/execution/capabilities/run-scoped-execution';
+import {executionScopeSchema,executionScopeCovers,type ExecutionScope} from '../../../../logic/workspace/rules/execution-scope';
+import {scopedNodeInputSchema,type ScopedNodeInput} from '../../../../logic/file-operations/rules/scoped-execution';
+import type {ScopedExecutionPort} from '../../../../logic/execution/rules/capabilities/run-scoped-execution';
 import {Win32ControlledFile} from './controlled-file-win32';
 import {runIsolatedNode} from '../isolation/isolated-node';
-import {fail} from '../../../core/foundation/errors';
-import type {ScopedExecutionAuthorization} from '../../../core/file-operations/isolated-execution-recovery';
+import {fail} from '../../../../core/errors';
+import type {ScopedExecutionAuthorization} from '../../../../logic/file-operations/rules/isolated-execution-recovery';
 import type {IsolationLifecycle} from '../isolation/isolation-record';
 const requireRuntime=createRequire(typeof __filename==='string'?__filename:import.meta.url);
 /** 每个成员 run 创建独立对象；scope 不向模型写入，调用前后均复核原工作区仍有效。 */

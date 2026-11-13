@@ -16,43 +16,43 @@
  * GitHub 外部提交计入副作用时序，但不充当主知识提交或业务验收证据。
  */
 import {resolveExecutionModules} from '../context/automatic-context';
-import {sameAutomaticExecutionForModules,type AutomaticExecutionBinding} from '../../core/team/automatic-execution';
+import {sameAutomaticExecutionForModules,type AutomaticExecutionBinding} from '../../../logic/team/rules/automatic-execution';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
-import {candidateReviewInputSchema,type CandidateReviewInput} from '../../core/tasks/candidate-review';
-import {questionToolName} from '../../core/tools/questions';
-import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
+import {candidateReviewInputSchema,type CandidateReviewInput} from '../../../logic/tasks/rules/candidate-review';
+import {questionToolName} from '../../../logic/tools/rules/questions';
+import {scopeHasUnresolvedActiveInput} from '../../../logic/tasks/rules/scope-active-input';
 import {validateScopeActiveInputLog} from './scope-active-input-evidence';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {goalCommand} from './main-command-request';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary,StoredEvent} from '../../core/execution/types';
-import type {ToolReceipt} from '../../core/tools/types';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
-import {dispatchScopeWaitSchema,type DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
-import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,goalInputRevision,goalNeedsReplan,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../core/tasks/scope-goal';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary,StoredEvent} from '../../../logic/execution/rules/types';
+import type {ToolReceipt} from '../../../logic/tools/rules/types';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {DispatchTaskInput} from '../../../logic/tasks/rules/dispatch-commands';
+import {dispatchScopeWaitSchema,type DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GraphIdentity,GraphSnapshot,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {goalPlanInputSchema,goalReviewInputSchema,sameGoalValue,scopeGoalDecisionLimit,goalInputRevision,goalNeedsReplan,type DispatchScopeGoal,type GoalPlanInput,type GoalReviewInput,type ScopeGoalReview} from '../../../logic/tasks/rules/scope-goal';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 import {executionToolFacts} from '../evidence/execution-report-facts';
 import {memberHelpCandidate} from '../members/member-help-state';
 import {memberPublicTask} from '../runtime/member-events';
 import {consumedHumanDecision,assertHumanSubject,validateHumanAcceptances,type HumanDecisionPorts} from '../evidence/human-decision-evidence';
-import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
-import {currentHumanContinuation} from '../../core/tasks/human-continuation-rules';
+import type {HumanDecisionRecord} from '../../../logic/tasks/rules/human-decisions';
+import {currentHumanContinuation} from '../../../logic/tasks/rules/human-continuation-rules';
 import {validateMemberWorkflow,memberWorkflowFiles,memberWorkflowEvidence} from '../members/member-workflow';
-import type {OutputManifestRecord,OutputManifestSnapshot,OutputManifestCheck} from '../../core/evidence/output-manifest';
-import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import {sameWorkflowSelectionsForModules,validateWorkflowSelections} from '../../core/tasks/workflow-selection';
-import {sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../../core/team/member-execution-binding';
+import type {OutputManifestRecord,OutputManifestSnapshot,OutputManifestCheck} from '../../../logic/evidence/rules/output-manifest';
+import type {ArtifactFileFact,ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import {sameWorkflowSelectionsForModules,validateWorkflowSelections} from '../../../logic/tasks/rules/workflow-selection';
+import {sameOwnerExecutionForModules,type OwnerExecutionBinding} from '../../../logic/team/rules/member-execution-binding';
 import type {OwnerExecutionService} from '../dispatch/owner-execution-service';
-import {abandonedCheckpointSource} from '../../core/tasks/checkpoint-handoff-rules';
+import {abandonedCheckpointSource} from '../../../logic/tasks/rules/checkpoint-handoff-rules';
 import {verifyMemberCheckpointHistory} from '../members/member-checkpoint-verifier';
 import type {MemberPauseService} from '../members/member-pause-service';
-import {coordinationPreview} from '../../core/tasks/coordination-preview';
-import type {CancelQueuedTasksInput} from '../../core/tasks/queued-task-cancel';
+import {coordinationPreview} from '../../../logic/tasks/rules/coordination-preview';
+import type {CancelQueuedTasksInput} from '../../../logic/tasks/rules/queued-task-cancel';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
@@ -133,7 +133,7 @@ export class ScopeGoalService {
     const alive=()=>{this.owner.assert();assertCurrent?.()};alive();
     const business=draft.assignments.filter(assignment=>assignment.agentId!=='cbim:main');
     if(business.length&&!this.owners)fail('OWNER_EXECUTION_UNAVAILABLE','未装配岗位执行计划端口');
-    const save=async(context:{snapshot:Awaited<ReturnType<Owner['snapshot']>>;profiles:readonly import('../../core/team/workspace-member').WorkspaceMemberModelSnapshot[]})=>this.store.transact(command,async state=>{
+    const save=async(context:{snapshot:Awaited<ReturnType<Owner['snapshot']>>;profiles:readonly import('../../../logic/team/rules/workspace-member').WorkspaceMemberModelSnapshot[]})=>this.store.transact(command,async state=>{
       alive();
       const scope=this.scope(state,identity,scopeId),goal=this.editable(scope,draft.expectedRevision),graph=this.graph(state,scope),snapshot=context.snapshot;
       check(snapshot.workspaceId===scope.workspaceId,'GOAL_IDENTITY','知识快照不属于目标工作区');

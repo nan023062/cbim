@@ -2,7 +2,7 @@
  * 作用定位：从同一目标的持久任务终态判断是否停止自动接续，供实时协调和重启核实共用。
  * 设计原因：失败后另派新任务不能重置额度；不另存内存计数，也不把文字输出、换编号或其它成功任务当作消除失败的依据。
  */
-import type {GraphSnapshot} from '../../core/tasks/graph-types';
+import type {GraphSnapshot} from '../../../logic/tasks/rules/graph-types';
 
 /** 每个目标累计最多三次异常成员终态；用户取消、可靠检查点和业务求助不属于执行异常。 */
 const memberFailureLimit=3;

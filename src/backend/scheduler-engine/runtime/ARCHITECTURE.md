@@ -89,7 +89,7 @@ class N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeMana
 N_src_backend_scheduler_engine_runtime_global_runtime_ts ..> N_src_backend_scheduler_engine_runtime_global_runtime_ts_GlobalRuntimeManager : 声明
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/member-run.ts](../../core/execution/member-run.ts)、[../../core/execution/conversation-binding.ts](../../core/execution/conversation-binding.ts)、[../../core/execution/usage.ts](../../core/execution/usage.ts)、[../../core/runtime/runtime-scope.ts](../../core/runtime/runtime-scope.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/runtime/types.ts](../../core/runtime/types.ts)。
+直接依赖：[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/execution/rules/member-run.ts](../../../logic/execution/rules/member-run.ts)、[../../../logic/execution/rules/conversation-binding.ts](../../../logic/execution/rules/conversation-binding.ts)、[../../../logic/execution/rules/usage.ts](../../../logic/execution/rules/usage.ts)、[../../../logic/runtime/rules/runtime-scope.ts](../../../logic/runtime/rules/runtime-scope.ts)、[../../../logic/dispatch/rules/dispatch-storage.ts](../../../logic/dispatch/rules/dispatch-storage.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/team/rules/agent-types.ts](../../../logic/team/rules/agent-types.ts)、[../../../logic/runtime/rules/types.ts](../../../logic/runtime/rules/types.ts)。
 
 ### member-events.ts
 
@@ -133,7 +133,7 @@ class N_src_backend_scheduler_engine_runtime_member_events_ts_MemberEventStreams
 N_src_backend_scheduler_engine_runtime_member_events_ts ..> N_src_backend_scheduler_engine_runtime_member_events_ts_MemberEventStreams : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tasks/member-events.ts](../../core/tasks/member-events.ts)、[public-run-events.ts](public-run-events.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/tasks/rules/dispatch-execution.ts](../../../logic/tasks/rules/dispatch-execution.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/evidence/rules/progress.ts](../../../logic/evidence/rules/progress.ts)、[../../../logic/tasks/rules/member-events.ts](../../../logic/tasks/rules/member-events.ts)、[public-run-events.ts](public-run-events.ts)。
 
 ### public-run-events.ts
 
@@ -159,7 +159,7 @@ class N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdent
 N_src_backend_scheduler_engine_runtime_public_run_events_ts ..> N_src_backend_scheduler_engine_runtime_public_run_events_ts_PublicRunIdentity : 声明
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/evidence/progress.ts](../../core/evidence/progress.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/evidence/validation.ts](../../core/evidence/validation.ts)、[../../core/execution/run-failure.ts](../../core/execution/run-failure.ts)。
+直接依赖：[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/evidence/rules/progress.ts](../../../logic/evidence/rules/progress.ts)、[../../../logic/tools/rules/types.ts](../../../logic/tools/rules/types.ts)、[../../../logic/tools/rules/scope-schema.ts](../../../logic/tools/rules/scope-schema.ts)、[../../../logic/evidence/rules/validation.ts](../../../logic/evidence/rules/validation.ts)、[../../../logic/execution/rules/run-failure.ts](../../../logic/execution/rules/run-failure.ts)。
 
 ### 本目录调用边界
 

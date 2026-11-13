@@ -1,5 +1,5 @@
 import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';

@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {jsonToolResult,validateToolResult} from '../src/backend/core/tools/results';
+import {jsonToolResult,validateToolResult} from '../src/logic/tools/rules/results';
 import {openBridge} from '../src/backend/engines/pi/bridge';
 
 it('显式空值可表达，未定义、循环或无法序列化的返回值不能伪装为成功文本',()=>{

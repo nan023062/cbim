@@ -6,8 +6,8 @@ import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-s
 import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
 import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {DispatchObserver} from '../src/backend/core/dispatch/dispatch-storage';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
+import type {DispatchObserver} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 
 const directories:string[]=[];
 async function directory(){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-runtime-feed-'));directories.push(dir);return dir}

@@ -5,7 +5,7 @@ import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {ClaudeCodeEngine,claudeEnvironment} from '../src/backend/engines/claude/engine';
-import type {EngineContext,EngineEvent} from '../src/backend/core/execution/types';
+import type {EngineContext,EngineEvent} from '../src/logic/execution/rules/types';
 import type {ResolvedLlm} from '../src/logic/models';
 
 const roots:string[]=[];

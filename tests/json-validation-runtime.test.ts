@@ -1,13 +1,13 @@
-import {RunValidation} from '../src/backend/core/execution/capabilities/run-validation';
+import {RunValidation} from '../src/logic/execution/rules/capabilities/run-validation';
 import {runtimeToolGroup} from './runtime-tool-group';
 import {afterEach,expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {EngineContext,ToolDecision} from '../src/backend/core/execution';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import {validationTool} from '../src/backend/core/evidence/validation-tools';
-import type {ValidationInput,ValidationResult} from '../src/backend/core/evidence/validation';
-import {verifyValidationRecords} from '../src/backend/core/evidence/validation-evidence';
+import type {EngineContext,ToolDecision} from '../src/logic/execution/rules';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import {validationTool} from '../src/logic/evidence/rules/validation-tools';
+import type {ValidationInput,ValidationResult} from '../src/logic/evidence/rules/validation';
+import {verifyValidationRecords} from '../src/logic/evidence/rules/validation-evidence';
 import {artifactRuntimeFixture,artifactBinding,seedProgress,invoke,captureInput,deferred} from './artifact-runtime-fixture';
 
 const bindings:WorkflowContractBinding[]=[{moduleId:'.cbim/workspace/module',workflowId:'workflow',workflowVersion:'version-one',contract:{version:1,delivery:{requiredValidations:[{id:'json-result',validator:'json-schema-v1',artifactPath:'File.txt',schema:{type:'object',properties:{count:{type:'integer',minimum:1}},required:['count'],additionalProperties:false}}]}}}];

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
-import type {HumanDecisionPreview,HumanDecisionRequest} from '../src/backend/core/tasks/human-decisions';
+import type {HumanDecisionPreview,HumanDecisionRequest} from '../src/logic/tasks/rules/human-decisions';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';

@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {moduleGovernanceListSchema} from '../src/backend/core/governance/module-governance';
+import {moduleGovernanceListSchema} from '../src/logic/governance/rules/module-governance';
 import {moduleGovernanceToolsProvider,moduleGovernanceToolsFixture as data} from '../tests/module-governance-tools-provider';
 import {seedModuleGovernanceTools,moduleGovernanceToolsRecords,moduleGovernanceToolsLogBytes,moduleGovernanceToolsJournalBytes} from '../tests/module-governance-tools-fixture';
 import {latestExecutable} from './build-artifact.mjs';

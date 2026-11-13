@@ -2,8 +2,8 @@ import {expect,it,vi} from 'vitest';
 import type {Bridge} from '../src/bridge/contracts/workspace';
 import {randomUUID} from 'node:crypto';
 import {AutomationScheduler} from '../src/backend/scheduler-engine/automation/scheduler';
-import {nextAutomationAt} from '../src/backend/core/automation/schedule';
-import {automationDefinitionSchema,type AutomationDefinition,type AutomationRunner,type AutomationState} from '../src/backend/core/automation/contracts';
+import {nextAutomationAt} from '../src/logic/automation/rules/schedule';
+import {automationDefinitionSchema,type AutomationDefinition,type AutomationRunner,type AutomationState} from '../src/logic/automation/rules/contracts';
 
 const definition:AutomationDefinition={name:'定时核实',enabled:true,executor:{kind:'main'},moduleIds:[],workflowSelections:[],skillIds:[],prompt:'只读核实项目状态',permission:'read',schedule:{kind:'interval',minutes:5}};
 function fixture(){

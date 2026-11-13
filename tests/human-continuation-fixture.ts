@@ -1,7 +1,7 @@
 import type {Application} from '../src/backend/main/assembly/application';
-import type {HumanDecisionKind} from '../src/backend/core/tasks/human-decisions';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/backend/core/tasks/human-decisions';
-import type {HumanContinuationRequest} from '../src/backend/core/tasks/human-continue';
+import type {HumanDecisionKind} from '../src/logic/tasks/rules/human-decisions';
+import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
+import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 import {randomUUID} from 'node:crypto';
 import {humanDecisionLogBytes,humanDecisionRecords} from './human-decisions-fixture';
 import {humanContinuationFixture as data} from './human-continuation-provider';

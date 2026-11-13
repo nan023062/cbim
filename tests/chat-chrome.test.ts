@@ -4,7 +4,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {MessageCard} from '../src/frontend/conversation/MessageCard';
 import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
 import {UsageStatus,type ConversationActivity} from '../src/frontend/conversation/UsageStatus';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 test('user bubble and assistant bare surface keep copy and real timestamp accessible',()=>{
   const render=(speaker:'user'|'assistant')=>renderToStaticMarkup(createElement(MessageCard,{speaker,text:'hello',time:'2026-11-06T00:00:00Z',children:'hello'}));
   expect(render('user')).toContain('user-bubble');expect(render('assistant')).toContain('bare-bubble');

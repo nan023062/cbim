@@ -4,16 +4,16 @@
  * 设计原因：公开统计与启动授权分离；可信主启动占位覆盖登记后尚未落日志的窗口，退出后缺失记录仍是未知，不据此自动恢复。
  * 职责边界：只限制下一次运行；逐请求预检仅消费预算视图，不要求完整调度状态。不中断已接收运行、不消费安全等待或改写目标验收。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import {summarizeScopeUsage} from '../../core/execution/scope-usage';
-import {evaluateScopeBudget,scopeBudgetPolicySchema,type ScopeBudgetPolicy,type ScopeBudgetObservation} from '../../core/budget/scope-budget';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {DispatchState} from '../../core/dispatch/dispatch-storage';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {summarizeScopeUsage} from '../../../logic/execution/rules/scope-usage';
+import {evaluateScopeBudget,scopeBudgetPolicySchema,type ScopeBudgetPolicy,type ScopeBudgetObservation} from '../../../logic/budget/rules/scope-budget';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
 import type {ScopeUsageService} from './scope-usage-service';
-import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetDecision} from '../../core/budget/model-request-budget-rules';
-import type {RequestBudgetModel} from '../../core/budget/model-request-budget';
-import type {RequestBudgetState,RequestBudgetScope} from '../../core/budget/model-request-budget-storage';
+import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetDecision} from '../../../logic/budget/rules/model-request-budget-rules';
+import type {RequestBudgetModel} from '../../../logic/budget/rules/model-request-budget';
+import type {RequestBudgetState,RequestBudgetScope} from '../../../logic/budget/rules/model-request-budget-storage';
 
 export type BudgetCandidate={runId:string;kind:'main'|'member';taskId:string;model?:Pick<RequestBudgetModel,'contextWindow'|'maxTokens'|'pricing'>};
 /** 私有事务回执只标记拒绝，绝不是已受理运行；事务完成后再抛错，避免丢失 blocked 记录。 */

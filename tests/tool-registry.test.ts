@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 import {z} from 'zod';
-import {ToolRegistry} from '../src/backend/core/tools/registry';
+import {ToolRegistry} from '../src/logic/tools/rules/registry';
 
 it('工具发现和参数解析不会执行或自行签发权限，拒绝重复与非 cbim 名称',async()=>{
   const registry=new ToolRegistry<boolean>();let executions=0;

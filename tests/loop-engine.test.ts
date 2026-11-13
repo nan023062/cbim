@@ -6,7 +6,7 @@ import {z} from 'zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/backend/core/execution';
+import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/logic/execution/rules';
 
 async function setup(factory:()=>AgentEngine,describeTool?:ConstructorParameters<typeof LoopRuntime>[0]['describeTool'],normalizeToolInput?:ConstructorParameters<typeof LoopRuntime>[0]['normalizeToolInput']){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-loop-unit-'));let locked=false;

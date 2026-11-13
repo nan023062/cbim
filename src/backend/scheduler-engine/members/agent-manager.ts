@@ -5,10 +5,10 @@
  * 职责边界：目前只管理身份与注册，不分配 Pi 进程、执行槽或宣布 working。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import type {AgentConfigurationSnapshot,AgentSessionBinding} from '../../core/team/agent-types';
-import type {DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {AgentRef} from '../../core/tasks/graph-types';
+import {fail} from '../../../core/errors';
+import type {AgentConfigurationSnapshot,AgentSessionBinding} from '../../../logic/team/rules/agent-types';
+import type {DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {AgentRef} from '../../../logic/tasks/rules/graph-types';
 
 /** 先尊重既有图根身份；新主会话创建独立主实例。同实例按根会话和用途复用通道，缺省用途兼容旧 task 记录。 */
 export function prepareMember(state:DispatchState,configuration:AgentConfigurationSnapshot,rootSessionId:string,purpose:NonNullable<AgentSessionBinding['purpose']>='task',execution?:{scopeId:string;taskId:string}){

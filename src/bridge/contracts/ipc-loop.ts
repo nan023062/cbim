@@ -4,15 +4,15 @@
  */
 import {z} from 'zod';
 import {ipcId,workspaceIdArgs,taskIdArgs,runIdArgs,questionAnswers} from './ipc-shapes';
-import {type ConversationThreadView,type RunSummary} from '../../backend/core/execution/types';
-import {type ChatApproval} from '../../backend/core/tools/policy/types';
-import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../backend/core/tasks/human-continue';
-import {type QueueDelta,type QueuedMessage} from '../../backend/core/tasks/queue';
-import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../backend/core/tasks/scope-continuation';
-import {type RecoveryReceipt,recoveryLookupSchema,recoveryRequestSchema} from '../../backend/core/tasks/scope-recovery';
-import {type ReplanReceipt,replanLookupSchema,replanRequestSchema} from '../../backend/core/tasks/scope-replan';
-import {type TaskSpec} from '../../backend/core/tasks/types';
-import {type PendingQuestion} from '../../backend/core/tools/questions';
+import {type ConversationThreadView,type RunSummary} from '../../logic/execution/rules/types';
+import {type ChatApproval} from '../../logic/tools/rules/policy/types';
+import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../logic/tasks/rules/human-continue';
+import {type QueueDelta,type QueuedMessage} from '../../logic/tasks/rules/queue';
+import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../logic/tasks/rules/scope-continuation';
+import {type RecoveryReceipt,recoveryLookupSchema,recoveryRequestSchema} from '../../logic/tasks/rules/scope-recovery';
+import {type ReplanReceipt,replanLookupSchema,replanRequestSchema} from '../../logic/tasks/rules/scope-replan';
+import {type TaskSpec} from '../../logic/tasks/rules/types';
+import {type PendingQuestion} from '../../logic/tools/rules/questions';
 
 export const loopIpcRequests={
   'loop.prepare':workspaceIdArgs.extend({task:z.object({goal:z.string(),moduleId:ipcId,agentId:ipcId,workflowId:ipcId,responsiblePerson:z.string().optional(),acceptance:z.array(z.string())}).strict()}).strict(),

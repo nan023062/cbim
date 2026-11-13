@@ -42,7 +42,7 @@ class N_src_backend_main_resources_repository_connection_store_ts_RepositoryConn
 N_src_backend_main_resources_repository_connection_store_ts ..> N_src_backend_main_resources_repository_connection_store_ts_RepositoryConnectionStore : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/connectors/rules/repository-connection.ts](../../../logic/connectors/rules/repository-connection.ts)。
 
 ### repository-connections.ts
 
@@ -141,7 +141,7 @@ class N_src_backend_main_resources_repository_connections_ts_RepositoryConnectio
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/connectors/definition.ts](../../core/connectors/definition.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/connectors/rules/definition.ts](../../../logic/connectors/rules/definition.ts)、[../../../logic/connectors/rules/repository-connection.ts](../../../logic/connectors/rules/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../../logic/connectors/rules/repository-tools.ts](../../../logic/connectors/rules/repository-tools.ts)。
 
 ### workspace-packages.ts
 
@@ -182,7 +182,7 @@ class N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages["Work
 N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/portable-package.ts](../../core/knowledge/portable-package.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/portable-package.ts](../../../logic/knowledge/rules/portable-package.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/knowledge/rules/planned-commit.ts](../../../logic/knowledge/rules/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)。
 
 ### 本目录调用边界
 

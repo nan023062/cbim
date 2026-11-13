@@ -6,8 +6,8 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
 import {RemoteRepository} from '../src/logic/resources/service';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {continuationSourceSnapshotSchema} from '../src/backend/core/tasks/continuation-source-snapshot';
+import {hash} from '../src/core/platform/node/serialization';
+import {continuationSourceSnapshotSchema} from '../src/logic/tasks/rules/continuation-source-snapshot';
 
 const signal=()=>new AbortController().signal;
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};

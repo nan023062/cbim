@@ -9,9 +9,9 @@ export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings,LlmApi,AlternateConne
 export {llmApiSchema,connectionSchema,definition} from '../../logic/models';
 export {providerPresets,identifyProvider} from '../../logic/models';
 export {connectionForEngine,providerSupportsEngine} from '../../logic/models';
-export {mainAgentSettingsSchema} from '../../backend/core/team/agent-runtime';
-export type {MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
+export {mainAgentSettingsSchema} from '../../logic/team/rules/agent-runtime';
+export type {MainAgentSettingsView} from '../../logic/team/rules/agent-runtime';
 export type {DiscoveredModel} from '../../logic/models';
-export {modelStopError} from '../../backend/core/execution/model-errors';
+export {modelStopError} from '../../logic/execution/rules/model-errors';
 export {engineSupportsApi,engineLabel,engineApi,loopEngineSchema,agentModelSelectionSchema} from '../../logic/models';
 export type {LoopEngine,AgentModelSelection} from '../../logic/models';

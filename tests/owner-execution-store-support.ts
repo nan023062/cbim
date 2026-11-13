@@ -1,8 +1,8 @@
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import type {GraphIdentity} from '../src/backend/core/tasks/graph-types';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {WorkspaceMemberModelSnapshot} from '../src/backend/core/team/workspace-member';
-import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';
+import type {GraphIdentity} from '../src/logic/tasks/rules/graph-types';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {WorkspaceMemberModelSnapshot} from '../src/logic/team/rules/workspace-member';
+import {ownerExecutionSelectionFor} from '../src/logic/team/rules/member-execution-binding';
 import {memberEvent,ownershipEvent,bindingFor,model as defaultModel,agentId,moduleId,knowledge} from './owner-execution-core-fixture';
 
 /** 旧 Store 行为测试经真实 source+岗位+责任审计建立当前协议前置，不注入或跳过生产校验。 */

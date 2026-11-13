@@ -9,12 +9,12 @@
  * 终态原因：与任务卡共用 publicRunFailure 重建已识别诊断，未知错误正文不透传，历史日志不改写。
  */
 import path from 'node:path';
-import type {StoredEvent,TaskSpec} from '../../core/execution/types';
-import type {TaskProgress} from '../../core/evidence/progress';
-import type {ToolReceipt} from '../../core/tools/types';
-import {repositoryToolScopeSchema,githubFeedbackScopeSchema} from '../../core/tools/scope-schema';
-import {validationResultSchema} from '../../core/evidence/validation';
-import {publicRunFailure} from '../../core/execution/run-failure';
+import type {StoredEvent,TaskSpec} from '../../../logic/execution/rules/types';
+import type {TaskProgress} from '../../../logic/evidence/rules/progress';
+import type {ToolReceipt} from '../../../logic/tools/rules/types';
+import {repositoryToolScopeSchema,githubFeedbackScopeSchema} from '../../../logic/tools/rules/scope-schema';
+import {validationResultSchema} from '../../../logic/evidence/rules/validation';
+import {publicRunFailure} from '../../../logic/execution/rules/run-failure';
 
 /** 已核实的运行身份；成员、主对话和旧日志都不能通过投影改变其归属。 */
 export interface PublicRunIdentity {workspaceId:string;taskId:string;runId:string}

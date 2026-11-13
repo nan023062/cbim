@@ -10,8 +10,8 @@ import {seedTeam} from './team-fixture';
 import {scopeContinuationProvider,continuationFixture} from './scope-continuation-provider';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/backend/core/tasks/scope-continuation';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 
 it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only explicit goal input and preserves original scope with real Pi (%s)',async(mode)=>{
   const f=await fixture(),provider=await scopeContinuationProvider({holdContinuation:true,waitAgain:mode==='wait-again'});let app=f.app;

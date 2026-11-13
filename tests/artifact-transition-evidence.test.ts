@@ -2,8 +2,8 @@ import {it,expect,beforeAll,afterAll} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {transitionFixture,runTransitions,transitionContracts} from './artifact-transition-fixture';
-import type {StoredEvent} from '../src/backend/core/execution/types';
-import {artifactScopeSchema} from '../src/backend/core/workspace/artifact-scope';
+import type {StoredEvent} from '../src/logic/execution/rules/types';
+import {artifactScopeSchema} from '../src/logic/workspace/rules/artifact-scope';
 import {ArtifactTransitionProofs} from '../src/frontend/tasks/ArtifactTransitionProofs';
 
 let f:Awaited<ReturnType<typeof transitionFixture>>,events:StoredEvent[];

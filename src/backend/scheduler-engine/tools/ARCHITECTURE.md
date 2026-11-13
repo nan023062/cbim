@@ -48,7 +48,7 @@ class N_src_backend_scheduler_engine_tools_candidate_review_tools_ts_CandidateRe
 N_src_backend_scheduler_engine_tools_candidate_review_tools_ts ..> N_src_backend_scheduler_engine_tools_candidate_review_tools_ts_CandidateReviewTools : 声明
 ```
 
-直接依赖：[../../core/tasks/candidate-review.ts](../../core/tasks/candidate-review.ts)、[../../core/tasks/graph-rules.ts](../../core/tasks/graph-rules.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)。
+直接依赖：[../../../logic/tasks/rules/candidate-review.ts](../../../logic/tasks/rules/candidate-review.ts)、[../../../logic/tasks/rules/graph-rules.ts](../../../logic/tasks/rules/graph-rules.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)。
 
 ### command-report-contract.ts
 
@@ -61,7 +61,7 @@ class N_src_backend_scheduler_engine_tools_command_report_contract_ts["command-r
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tasks/rules/command-verification.ts](../../../logic/tasks/rules/command-verification.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/contracts.ts](../../../logic/tools/rules/contracts.ts)。
 
 ### coordination-contracts.ts
 
@@ -73,7 +73,7 @@ class N_src_backend_scheduler_engine_tools_coordination_contracts_ts["coordinati
 }
 ```
 
-直接依赖：[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+直接依赖：[../../../logic/tasks/rules/coordination-preview.ts](../../../logic/tasks/rules/coordination-preview.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)、[../../../logic/tasks/rules/queued-task-cancel.ts](../../../logic/tasks/rules/queued-task-cancel.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)。
 
 ### coordination-tools.ts
 
@@ -108,7 +108,7 @@ class N_src_backend_scheduler_engine_tools_coordination_tools_ts_CoordinationToo
 N_src_backend_scheduler_engine_tools_coordination_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_tools_ts_CoordinationTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tasks/rules/coordination-preview.ts](../../../logic/tasks/rules/coordination-preview.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/execution/rules/engine-tools.ts](../../../logic/execution/rules/engine-tools.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)。
 
 ### dispatch-tools.ts
 
@@ -161,7 +161,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
+直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../../logic/tasks/rules/coordination-preview.ts](../../../logic/tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tasks/rules/dispatch-commands.ts](../../../logic/tasks/rules/dispatch-commands.ts)、[../../../logic/tasks/rules/workflow-selection.ts](../../../logic/tasks/rules/workflow-selection.ts)、[../../../logic/tasks/rules/queued-task-cancel.ts](../../../logic/tasks/rules/queued-task-cancel.ts)、[../../../logic/tasks/rules/queued-dependency-replacement.ts](../../../logic/tasks/rules/queued-dependency-replacement.ts)、[../../../logic/tasks/rules/queued-dependency-addition.ts](../../../logic/tasks/rules/queued-dependency-addition.ts)、[../../../logic/tasks/rules/queued-dependency-revision.ts](../../../logic/tasks/rules/queued-dependency-revision.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../../logic/tasks/rules/command-verification.ts](../../../logic/tasks/rules/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../../logic/tasks/rules/queued-member-resume.ts](../../../logic/tasks/rules/queued-member-resume.ts)、[../../../logic/tasks/rules/checkpoint-handoff.ts](../../../logic/tasks/rules/checkpoint-handoff.ts)。
 
 ### feedback-status-tool.ts
 
@@ -184,7 +184,7 @@ class N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatu
 N_src_backend_scheduler_engine_tools_feedback_status_tool_ts ..> N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatusTool : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
 
 ### feedback-tools.ts
 
@@ -205,7 +205,7 @@ class N_src_backend_scheduler_engine_tools_feedback_tools_ts_FeedbackTools["Feed
 N_src_backend_scheduler_engine_tools_feedback_tools_ts ..> N_src_backend_scheduler_engine_tools_feedback_tools_ts_FeedbackTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/scope-schema.ts](../../../logic/tools/rules/scope-schema.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
 
 ### goal-tools.ts
 
@@ -248,7 +248,7 @@ class N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools["GoalTools"] 
 N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts_GoalTools : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../../logic/tasks/rules/coordination-preview.ts](../../../logic/tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tasks/rules/scope-goal.ts](../../../logic/tasks/rules/scope-goal.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)。
 
 ### governance-tools.ts
 
@@ -279,7 +279,7 @@ class N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools["
 N_src_backend_scheduler_engine_tools_governance_tools_ts ..> N_src_backend_scheduler_engine_tools_governance_tools_ts_GovernanceTools : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/governance/module-governance-rules.ts](../../core/governance/module-governance-rules.ts)、[../../core/governance/module-governance-tools.ts](../../core/governance/module-governance-tools.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/governance/rules/module-governance-rules.ts](../../../logic/governance/rules/module-governance-rules.ts)、[../../../logic/governance/rules/module-governance-tools.ts](../../../logic/governance/rules/module-governance-tools.ts)。
 
 ### knowledge-contracts.ts
 
@@ -291,7 +291,7 @@ class N_src_backend_scheduler_engine_tools_knowledge_contracts_ts["knowledge-con
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/tool-output-base.ts](../../core/knowledge/tool-output-base.ts)、[../../core/knowledge/tool-output-queries.ts](../../core/knowledge/tool-output-queries.ts)、[../../core/knowledge/tool-output-builtins.ts](../../core/knowledge/tool-output-builtins.ts)、[../../core/knowledge/tool-output-transactions.ts](../../core/knowledge/tool-output-transactions.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/builtins.ts](../../../logic/knowledge/rules/builtins.ts)、[../../../logic/knowledge/rules/tool-output-base.ts](../../../logic/knowledge/rules/tool-output-base.ts)、[../../../logic/knowledge/rules/tool-output-queries.ts](../../../logic/knowledge/rules/tool-output-queries.ts)、[../../../logic/knowledge/rules/tool-output-builtins.ts](../../../logic/knowledge/rules/tool-output-builtins.ts)、[../../../logic/knowledge/rules/tool-output-transactions.ts](../../../logic/knowledge/rules/tool-output-transactions.ts)、[../../../logic/tools/rules/contracts.ts](../../../logic/tools/rules/contracts.ts)。
 
 ### knowledge-tools.ts
 
@@ -322,7 +322,7 @@ class N_src_backend_scheduler_engine_tools_knowledge_tools_ts_KnowledgeTools["Kn
 N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_scheduler_engine_tools_knowledge_tools_ts_KnowledgeTools : 声明
 ```
 
-直接依赖：[../../core/tools/registry.ts](../../core/tools/registry.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/knowledge-refresh.ts](../../core/knowledge/knowledge-refresh.ts)、[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)、[../../core/knowledge/knowledge-write-input.ts](../../core/knowledge/knowledge-write-input.ts)。
+直接依赖：[../../../logic/tools/rules/registry.ts](../../../logic/tools/rules/registry.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/builtins.ts](../../../logic/knowledge/rules/builtins.ts)、[../../../logic/knowledge/rules/knowledge-queries.ts](../../../logic/knowledge/rules/knowledge-queries.ts)、[../../../logic/knowledge/rules/knowledge-refresh.ts](../../../logic/knowledge/rules/knowledge-refresh.ts)、[../../../logic/knowledge/rules/object-crud.ts](../../../logic/knowledge/rules/object-crud.ts)、[../../../logic/tools/rules/types.ts](../../../logic/tools/rules/types.ts)、[knowledge-contracts.ts](knowledge-contracts.ts)、[../../../logic/knowledge/rules/knowledge-write-input.ts](../../../logic/knowledge/rules/knowledge-write-input.ts)。
 
 ### main-tool-contracts.ts
 
@@ -336,7 +336,7 @@ class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-con
 }
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../logic/tasks/rules/main-tool-output.ts](../../../logic/tasks/rules/main-tool-output.ts)、[../../../logic/tools/rules/contracts.ts](../../../logic/tools/rules/contracts.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)。
 
 ### module-ownership-tools.ts
 
@@ -357,7 +357,7 @@ class N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwner
 N_src_backend_scheduler_engine_tools_module_ownership_tools_ts ..> N_src_backend_scheduler_engine_tools_module_ownership_tools_ts_ModuleOwnershipTools : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/workspace/module-ownership-rules.ts](../../core/workspace/module-ownership-rules.ts)、[../../core/workspace/module-ownership.ts](../../core/workspace/module-ownership.ts)、[../../core/workspace/module-ownership-tool-policy.ts](../../core/workspace/module-ownership-tool-policy.ts)、[../../core/workspace/module-ownership-tools.ts](../../core/workspace/module-ownership-tools.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/workspace/rules/module-ownership-rules.ts](../../../logic/workspace/rules/module-ownership-rules.ts)、[../../../logic/workspace/rules/module-ownership.ts](../../../logic/workspace/rules/module-ownership.ts)、[../../../logic/workspace/rules/module-ownership-tool-policy.ts](../../../logic/workspace/rules/module-ownership-tool-policy.ts)、[../../../logic/workspace/rules/module-ownership-tools.ts](../../../logic/workspace/rules/module-ownership-tools.ts)。
 
 ### question-tools.ts
 
@@ -377,7 +377,7 @@ class N_src_backend_scheduler_engine_tools_question_tools_ts_QuestionTools["Ques
 N_src_backend_scheduler_engine_tools_question_tools_ts ..> N_src_backend_scheduler_engine_tools_question_tools_ts_QuestionTools : 声明
 ```
 
-直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/contracts.ts](../../core/tools/contracts.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../../logic/tools/rules/questions.ts](../../../logic/tools/rules/questions.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/contracts.ts](../../../logic/tools/rules/contracts.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### repository-tools.ts
 
@@ -400,7 +400,7 @@ class N_src_backend_scheduler_engine_tools_repository_tools_ts_RepositoryTools["
 N_src_backend_scheduler_engine_tools_repository_tools_ts ..> N_src_backend_scheduler_engine_tools_repository_tools_ts_RepositoryTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/connectors/rules/repository-tools.ts](../../../logic/connectors/rules/repository-tools.ts)。
 
 ### web-tools.ts
 
@@ -420,7 +420,7 @@ class N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools["WebTools"] {
 N_src_backend_scheduler_engine_tools_web_tools_ts ..> N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools : 声明
 ```
 
-直接依赖：[../../../logic/web/index.ts](../../../logic/web/index.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)。
+直接依赖：[../../../logic/web/index.ts](../../../logic/web/index.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)。
 
 ### workspace-member-tools.ts
 
@@ -440,7 +440,7 @@ class N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMe
 N_src_backend_scheduler_engine_tools_workspace_member_tools_ts ..> N_src_backend_scheduler_engine_tools_workspace_member_tools_ts_WorkspaceMemberTools : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)、[../../core/team/workspace-member-tools.ts](../../core/team/workspace-member-tools.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../logic/tools/rules/policy/tool-policy.ts](../../../logic/tools/rules/policy/tool-policy.ts)、[../../../logic/team/rules/workspace-member-rules.ts](../../../logic/team/rules/workspace-member-rules.ts)、[../../../logic/team/rules/workspace-member-tools.ts](../../../logic/team/rules/workspace-member-tools.ts)。
 
 ### 本目录调用边界
 
@@ -514,7 +514,7 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 ### 知识查询与刷新分别装配
 
-`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
+`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../../logic/knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
 
 ### 项目根模块查询 v2
 

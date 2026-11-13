@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {FeedbackStatusTool} from '../src/backend/scheduler-engine/tools/feedback-status-tool';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
 import type {FeedbackConnectionCheck} from '../src/logic/feedback';
 
 const signal=()=>new AbortController().signal;

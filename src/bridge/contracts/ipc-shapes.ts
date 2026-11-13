@@ -8,4 +8,4 @@ export const noIpcArgs=z.record(z.never()).nullish();
 export const workspaceIdArgs=z.object({id:ipcId}).strict();
 export const taskIdArgs=workspaceIdArgs.extend({taskId:ipcId}).strict();
 export const runIdArgs=taskIdArgs.extend({runId:ipcId}).strict();
-export {questionAnswersInputSchema as questionAnswers} from '../../backend/core/tools/questions';
+export {questionAnswersInputSchema as questionAnswers} from '../../logic/tools/rules/questions';

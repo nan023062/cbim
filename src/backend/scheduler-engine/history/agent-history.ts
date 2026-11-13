@@ -4,16 +4,16 @@
  * 设计原因：实例释放不删除履历，索引与正文分离；只接收已落盘日志/派发意图，列表不回读日志，详情按需恢复后消费增量。
  * 生命周期：装配方先 initialize，再接入观察；关闭前排空执行并撤销订阅，close 等待索引写完。索引错误可见但不改变已发生的执行。
  */
-import {fail} from '../../core/foundation/errors';
-import type {RunSummary,StoredEvent,TaskSpec} from '../../core/execution/types';
-import {checkedConversationAgentBinding} from '../../core/execution/conversation-binding';
-import {checkedMemberRunBinding} from '../../core/execution/member-run';
-import type {DispatchState,DispatchMutation} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import type {MemberRunView} from '../../core/tasks/member-events';
-import {agentHistoryRolesInput,agentHistorySessionsInput,agentHistoryRunsInput,agentHistoryEventsInput,type AgentHistoryRole,type AgentHistorySession,type AgentHistoryRun,type AgentHistoryRoles,type AgentHistoryPage,type AgentHistoryEventsRead} from '../../core/team/session-history';
-import {checkedAgentHistoryRecord,type AgentHistoryRecord,type AgentHistoryStore} from '../../core/team/session-history-storage';
+import {fail} from '../../../core/errors';
+import type {RunSummary,StoredEvent,TaskSpec} from '../../../logic/execution/rules/types';
+import {checkedConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
+import {checkedMemberRunBinding} from '../../../logic/execution/rules/member-run';
+import type {DispatchState,DispatchMutation} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {MemberRunView} from '../../../logic/tasks/rules/member-events';
+import {agentHistoryRolesInput,agentHistorySessionsInput,agentHistoryRunsInput,agentHistoryEventsInput,type AgentHistoryRole,type AgentHistorySession,type AgentHistoryRun,type AgentHistoryRoles,type AgentHistoryPage,type AgentHistoryEventsRead} from '../../../logic/team/rules/session-history';
+import {checkedAgentHistoryRecord,type AgentHistoryRecord,type AgentHistoryStore} from '../../../logic/team/rules/session-history-storage';
 import {projectRunEvent} from '../runtime/public-run-events';
 
 type Source=AgentHistoryRecord['journal'];

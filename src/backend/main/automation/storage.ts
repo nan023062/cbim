@@ -5,8 +5,8 @@
  */
 import fs from 'node:fs/promises';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {automationStateSchema,type AutomationState,type AutomationStorage} from '../../core/automation/contracts';
+import {fail} from '../../../core/errors';
+import {automationStateSchema,type AutomationState,type AutomationStorage} from '../../../logic/automation/rules/contracts';
 
 export class FileAutomations implements AutomationStorage {
  constructor(private readonly file:string,private readonly workspaceId:string){}

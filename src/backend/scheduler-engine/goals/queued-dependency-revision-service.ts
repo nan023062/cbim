@@ -8,17 +8,17 @@
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {contextualMainCommand} from './main-command-request';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity,GraphChange,TaskNode} from '../../core/tasks/graph-types';
-import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput,type DependencyRevision,type ReviseQueuedDependenciesReceipt} from '../../core/tasks/queued-dependency-revision';
-import {queuedDependencyRevisionSelection} from '../../core/tasks/queued-dependency-revision-rules';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity,GraphChange,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput,type DependencyRevision,type ReviseQueuedDependenciesReceipt} from '../../../logic/tasks/rules/queued-dependency-revision';
+import {queuedDependencyRevisionSelection} from '../../../logic/tasks/rules/queued-dependency-revision-rules';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,type DispatchKnowledgeWorkspace} from '../context/execution-context';
 import {memberBatch,memberView} from '../members/member-state';
 import type {ScopeGoalService} from './scope-goal-service';
 import type {OwnerExecutionService} from '../dispatch/owner-execution-service';
-import {ownerExecutionSelectionFor} from '../../core/team/member-execution-binding';
+import {ownerExecutionSelectionFor} from '../../../logic/team/rules/member-execution-binding';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const contextSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,runId:id,commandId:id}).strict();

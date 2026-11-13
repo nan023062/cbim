@@ -5,9 +5,9 @@ import {requestBudgetFixture,budgetAttempt,budgetUsage,budgetTestModel} from './
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
 import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
-import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../src/backend/core/budget/model-request-budget-rules';
-import type {ModelRequestBudgetChange} from '../src/backend/core/budget/model-request-budget';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../src/logic/budget/rules/model-request-budget-rules';
+import type {ModelRequestBudgetChange} from '../src/logic/budget/rules/model-request-budget';
+import {hash} from '../src/core/platform/node/serialization';
 
 it('预算端口只暴露隔离的预算视图，阶段提交保留唯一事务及原命令重放',async()=>{
   const f=await requestBudgetFixture();try{

@@ -5,20 +5,20 @@
  */
 import fs from 'node:fs/promises';
 import {FileObjectStorage} from '../knowledge/object-storage';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {Paths} from '../platform/paths';
 import {atomic,exists,readJson} from '../../../core/platform/node/files';
-import {json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
+import {json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
 import {KernelLock} from '../platform/locking';
-import {Rules} from '../../core/knowledge/knowledge';
+import {Rules} from '../../../logic/knowledge/rules/knowledge';
 import {KnowledgeStore} from '../knowledge/knowledge-store';
 import {ModuleGovernanceService} from '../governance/module-governance';
 import {FileDispatchStore} from '../dispatch-storage/dispatch-store';
 import {KnowledgeSources} from '../registry/knowledge-sources';
-import type {KnowledgePlanRef} from '../../core/knowledge/planned-commit';
+import type {KnowledgePlanRef} from '../../../logic/knowledge/rules/planned-commit';
 import type {KnowledgeGovernanceTransaction} from '../knowledge/governance-port';
 import type {WorkspaceEntry,WorkspaceView,Snapshot,ChangeRequest,TaskView} from '../../../bridge/contracts/workspace';
 export class Workspace implements KnowledgeWorkspace {

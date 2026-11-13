@@ -6,16 +6,16 @@
  * 内部复用：影响观察可获取已核主来源供选定调用适配，但完整 canonical 仅留后端，不经公开报告返回。
  */
 import {isDeepStrictEqual} from 'node:util';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
-import {checkedConversationAgentBinding} from '../../core/execution/conversation-binding';
-import type {DispatchState,DispatchStore,DispatchCommandEvidence} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {goalInputRevision} from '../../core/tasks/scope-goal';
-import {commandVerificationInputSchema,commandVerificationReportSchema,commandRecordSchema,isVerifiableMainToolName,commandReportToolName,type CommandVerificationInput,type CommandVerificationReport,type CommandRecord} from '../../core/tasks/command-verification';
-import {projectCommandReceipt} from '../../core/tasks/command-verification-output';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import {checkedConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
+import type {DispatchState,DispatchStore,DispatchCommandEvidence} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {goalInputRevision} from '../../../logic/tasks/rules/scope-goal';
+import {commandVerificationInputSchema,commandVerificationReportSchema,commandRecordSchema,isVerifiableMainToolName,commandReportToolName,type CommandVerificationInput,type CommandVerificationReport,type CommandRecord} from '../../../logic/tasks/rules/command-verification';
+import {projectCommandReceipt} from '../../../logic/tasks/rules/command-verification-output';
 import {executionToolFacts} from './execution-report-facts';
 import {restoreMainCommand} from '../goals/main-command-request';
 

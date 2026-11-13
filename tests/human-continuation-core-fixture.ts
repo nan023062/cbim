@@ -1,11 +1,11 @@
 import {randomUUID} from 'node:crypto';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import {humanDecisionBasis} from '../src/backend/core/tasks/human-decision-proof';
-import {humanDecisionCoverageLimitation,type HumanDecisionRecord,type HumanDecisionKind,type HumanDecisionProof} from '../src/backend/core/tasks/human-decisions';
-import {humanContinuationSubject,type ScopeHumanContinuation} from '../src/backend/core/tasks/human-continue';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
+import {humanDecisionBasis} from '../src/logic/tasks/rules/human-decision-proof';
+import {humanDecisionCoverageLimitation,type HumanDecisionRecord,type HumanDecisionKind,type HumanDecisionProof} from '../src/logic/tasks/rules/human-decisions';
+import {humanContinuationSubject,type ScopeHumanContinuation} from '../src/logic/tasks/rules/human-continue';
 
 export const at='2026-11-07T10:00:00.000Z',digest='a'.repeat(64),identity={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope'},options={provider:'test',model:'test',profileId:'11111111-1111-4111-8111-111111111111',permission:'ask' as const};
 export function humanFixture(decision:HumanDecisionKind='accept'){

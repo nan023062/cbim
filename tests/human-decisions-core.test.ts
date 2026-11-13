@@ -1,16 +1,16 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {humanDecisionRequestSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,scopeHumanDecisionsSchema,humanDecisionHistorySchema,humanDecisionReceiptSchema,humanDecisionCoverageLimitation,type HumanDecisionPreview,type HumanDecisionRecord} from '../src/backend/core/tasks/human-decisions';
-import {humanDecisionBasis,humanDecisionProof} from '../src/backend/core/tasks/human-decision-proof';
-import {compareHumanReconsideration} from '../src/backend/core/tasks/human-reconsideration';
-import {validateHumanDecisions,validateHumanDecisionCommand} from '../src/backend/core/tasks/human-decision-invariants';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
-import {emptyScopeSnapshot,summarizeScope,applyScopeBatch,validateScopeSnapshot,readScopeDetail} from '../src/backend/core/tasks/scope-view';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
+import {humanDecisionRequestSchema,humanDecisionPreviewSchema,humanDecisionRecordSchema,scopeHumanDecisionsSchema,humanDecisionHistorySchema,humanDecisionReceiptSchema,humanDecisionCoverageLimitation,type HumanDecisionPreview,type HumanDecisionRecord} from '../src/logic/tasks/rules/human-decisions';
+import {humanDecisionBasis,humanDecisionProof} from '../src/logic/tasks/rules/human-decision-proof';
+import {compareHumanReconsideration} from '../src/logic/tasks/rules/human-reconsideration';
+import {validateHumanDecisions,validateHumanDecisionCommand} from '../src/logic/tasks/rules/human-decision-invariants';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {dispatchScopeGoalSchema} from '../src/logic/tasks/rules/scope-goal';
+import {emptyScopeSnapshot,summarizeScope,applyScopeBatch,validateScopeSnapshot,readScopeDetail} from '../src/logic/tasks/rules/scope-view';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 
 const at='2026-11-07T10:00:00.000Z',digest='a'.repeat(64),otherDigest='b'.repeat(64);
 const identity={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope'},graphIdentity={workspaceId:'workspace',rootSessionId:'root'},graphCursor={streamId:'stream',seq:8};

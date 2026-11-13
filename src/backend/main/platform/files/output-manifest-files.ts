@@ -8,10 +8,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Stats} from 'node:fs';
-import {fail} from '../../../core/foundation/errors';
-import {artifactScopeBindingsSchema,artifactScopeLimits,artifactScopePathSchema,type ArtifactScopeBinding} from '../../../core/workspace/artifact-scope';
-import {outputManifestSnapshotSchema,type OutputManifestSnapshot,type OutputManifestEntry,type OutputManifestCheck} from '../../../core/evidence/output-manifest';
-import {outputManifestHash} from '../../../core/evidence/output-manifest-evidence';
+import {fail} from '../../../../core/errors';
+import {artifactScopeBindingsSchema,artifactScopeLimits,artifactScopePathSchema,type ArtifactScopeBinding} from '../../../../logic/workspace/rules/artifact-scope';
+import {outputManifestSnapshotSchema,type OutputManifestSnapshot,type OutputManifestEntry,type OutputManifestCheck} from '../../../../logic/evidence/rules/output-manifest';
+import {outputManifestHash} from '../../../../logic/evidence/rules/output-manifest-evidence';
 import {ArtifactFiles,normalizeArtifactPath} from './artifact-files';
 
 const normal=(value:string)=>process.platform==='win32'?value.toLowerCase():value;

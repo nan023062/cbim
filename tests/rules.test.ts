@@ -3,9 +3,9 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {moduleFiles,summary} from './data/knowledge';
-import {json,hash} from '../src/backend/core/foundation/serialization';
-import {parseJson} from '../src/backend/core/knowledge/knowledge';
-import {moduleSections,moduleBodyTemplate} from '../src/backend/core/workspace/module-outline';
+import {json,hash} from '../src/core/platform/node/serialization';
+import {parseJson} from '../src/logic/knowledge/rules/knowledge';
+import {moduleSections,moduleBodyTemplate} from '../src/logic/workspace/rules/module-outline';
 
 it('错误章节直接返回精确标题与可复制模板，空模块和有源模块的模板均可通过结构校验',async()=>{
   const f=await knowledgeFixture();try{

@@ -5,16 +5,16 @@
  * 设计原因：查询只注入快照读取，刷新单独装配事务端口；先声明实际能力和契约版本再消费运行授权。领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。
  */
 import {z} from 'zod';
-import {ToolRegistry,type ToolDefinition} from '../../core/tools/registry';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import {fail} from '../../core/foundation/errors';
-import {Builtins,builtinSkills} from '../../core/knowledge/builtins';
-import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
-import {KnowledgeRefresh} from '../../core/knowledge/knowledge-refresh';
-import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
-import type {ToolEffect} from '../../core/tools/types';
+import {ToolRegistry,type ToolDefinition} from '../../../logic/tools/rules/registry';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import {fail} from '../../../core/errors';
+import {Builtins,builtinSkills} from '../../../logic/knowledge/rules/builtins';
+import {KnowledgeQueries} from '../../../logic/knowledge/rules/knowledge-queries';
+import {KnowledgeRefresh} from '../../../logic/knowledge/rules/knowledge-refresh';
+import {ObjectCrud,objectOperation} from '../../../logic/knowledge/rules/object-crud';
+import type {ToolEffect} from '../../../logic/tools/rules/types';
 import {knowledgeToolContract} from './knowledge-contracts';
-import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema,knowledgeRefreshInputSchema} from '../../core/knowledge/knowledge-write-input';
+import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema,knowledgeRefreshInputSchema} from '../../../logic/knowledge/rules/knowledge-write-input';
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
   readonly queries:KnowledgeQueries;

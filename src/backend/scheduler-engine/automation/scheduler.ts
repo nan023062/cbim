@@ -3,9 +3,9 @@
  * 设计原因：先保存 starting 意图，再通过窄执行端口启动；异步启动不占串行锁，bind 能保存原任务且暂停可取消。每项最多一个未结执行；重启跳过错过的时刻，不重放启动。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import {automationDefinitionSchema,type AutomationDefinition,type AutomationJob,type AutomationRun,type AutomationState,type AutomationStorage,type AutomationRunner} from '../../core/automation/contracts';
-import {nextAutomationAt} from '../../core/automation/schedule';
+import {fail} from '../../../core/errors';
+import {automationDefinitionSchema,type AutomationDefinition,type AutomationJob,type AutomationRun,type AutomationState,type AutomationStorage,type AutomationRunner} from '../../../logic/automation/rules/contracts';
+import {nextAutomationAt} from '../../../logic/automation/rules/schedule';
 const active=(run:AutomationRun)=>['starting','running','waiting','unknown'].includes(run.status);
 const message=(error:unknown)=>(error instanceof Error?error.message:String(error)).slice(0,4000);
 export class AutomationScheduler {

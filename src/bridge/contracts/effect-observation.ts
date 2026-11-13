@@ -6,8 +6,8 @@ export {
   effectObservationInputSchema,effectObservationReportSchema,effectSubjectSchema,sameEffectSubject,
   effectDispositionInputSchema,effectDispositionReceiptSchema,effectDispositionLookupSchema,
   effectDispositionListInputSchema,effectDispositionListSchema,effectRelationsInputSchema,effectRelationsSchema,
-} from '../../backend/core/tasks/effect-observation';
+} from '../../logic/tasks/rules/effect-observation';
 export type {
   EffectSubject,EffectObservationInput,EffectObservationReport,EffectDispositionInput,EffectDispositionReceipt,
   EffectDispositionRecord,EffectDispositionLookup,EffectDispositionList,EffectRelationsInput,EffectRelations,
-} from '../../backend/core/tasks/effect-observation';
+} from '../../logic/tasks/rules/effect-observation';

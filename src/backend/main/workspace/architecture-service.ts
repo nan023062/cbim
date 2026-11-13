@@ -4,8 +4,8 @@
  * 职责边界：这里只维护工作区唯一的静态团队/业务知识，不创建成员实例或改写任何主会话任务图；已派发任务继续持有自己的知识基线并由执行层复核版本。
  */
 import {z} from 'zod';
-import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import {ObjectCrud,objectOperation} from '../../../logic/knowledge/rules/object-crud';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import type {ArchitecturePreview,ArchitectureCommit} from '../../../bridge/contracts/architecture';
 
 const identifier=z.string().min(1).max(512).regex(/^\S+$/);

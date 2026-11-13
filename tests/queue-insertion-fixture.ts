@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/assembly/application';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {attachmentPng} from './waiting-attachments-fixture';
 import {insertionData as data} from './queue-insertion-provider';
 

@@ -1,5 +1,5 @@
-import {hash,json} from '../../src/backend/core/foundation/serialization';
-import type {KnowledgeFile,Snapshot,ModuleNode} from '../../src/backend/core/knowledge/types';
+import {hash,json} from '../../src/core/platform/node/serialization';
+import type {KnowledgeFile,Snapshot,ModuleNode} from '../../src/logic/knowledge/rules/types';
 import {moduleFiles,summary} from './knowledge';
 
 /** 固定“已校验快照”输入，只用于读取模型；不代替 Rules 校验、知识事务或真实集成夹具。 */

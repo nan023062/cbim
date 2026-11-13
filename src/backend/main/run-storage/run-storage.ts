@@ -5,9 +5,9 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {RunStorage} from '../../core/execution/storage';
-import type {TaskSpec} from '../../core/tasks/types';
-import {safeId} from '../../core/foundation/identity';
+import type {RunStorage} from '../../../logic/execution/rules/storage';
+import type {TaskSpec} from '../../../logic/tasks/rules/types';
+import {safeId} from '../../../logic/execution/ports/identity';
 import {RunJournal} from './run-journal';
 
 /** 应用装配的文件存储；实例不缓存历史，查询总是核验已落盘日志。 */

@@ -4,16 +4,16 @@
  * 设计原因：发送前先占用输入额度，确认后才提升目标版本；原生发送与磁盘事务不冒称原子，失败保留原尝试且不重放。
  * 职责边界：input.message 是实际发送的队列快照，可能含附件展开资料；不重建用户原文、不改变原始 goal.input 或模型权限。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {GraphIdentity} from '../../core/tasks/graph-types';
-import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../core/tasks/scope-goal';
-import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
-import {scopeActiveInputLimits,scopeActiveInputPayloadSchema,scopeActiveInputSendReceiptSchema,scopeHasUnresolvedActiveInput,type ScopeActiveInput,type ScopeActiveInputPayload,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
-import {scopedActiveInputHash} from '../../core/tasks/scope-active-input-rules';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GraphIdentity} from '../../../logic/tasks/rules/graph-types';
+import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {isHumanContinuation} from '../../../logic/tasks/rules/scope-continuation-record';
+import {scopeActiveInputLimits,scopeActiveInputPayloadSchema,scopeActiveInputSendReceiptSchema,scopeHasUnresolvedActiveInput,type ScopeActiveInput,type ScopeActiveInputPayload,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../../../logic/tasks/rules/scope-active-input';
+import {scopedActiveInputHash} from '../../../logic/tasks/rules/scope-active-input-rules';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 function check(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}

@@ -9,7 +9,7 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {businessReplanProvider,businessReplanFixture as data} from '../tests/business-replan-provider';
 import {seedExecutionReport} from '../tests/execution-report-fixture';
 import {inspectionScopes,corruptInspectionHistory} from '../tests/inspection-cycle-fixture';
-import type {ReplanRequest} from '../src/backend/core/tasks/scope-replan';
+import type {ReplanRequest} from '../src/logic/tasks/rules/scope-replan';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Packaged UI and all Pi/tool work are real. The localhost model and named faults are isolated

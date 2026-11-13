@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {MemberEventStreams} from '../src/backend/scheduler-engine/runtime/member-events';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import path from 'node:path';
 
 function fixture(){

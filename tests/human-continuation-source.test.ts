@@ -2,10 +2,10 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {checkedRunInputSource,type HumanDecisionsSource} from '../src/backend/core/execution/input-source';
+import {checkedRunInputSource,type HumanDecisionsSource} from '../src/logic/execution/rules/input-source';
 import {bridgeExtensionForSource} from '../src/backend/engines/pi/bridge';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/execution/types';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const source=():HumanDecisionsSource=>({kind:'human_decisions',continuationId:'continuation',scopeId:'scope',waitId:'wait',inputRevision:2,decisionRevision:3,decisionIds:['decision-a','decision-b']});

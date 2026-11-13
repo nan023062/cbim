@@ -32,7 +32,7 @@ class N_src_backend_main_workspace_architecture_service_ts_ArchitectureService["
 N_src_backend_main_workspace_architecture_service_ts ..> N_src_backend_main_workspace_architecture_service_ts_ArchitectureService : 声明
 ```
 
-直接依赖：[../../core/knowledge/object-crud.ts](../../core/knowledge/object-crud.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../../bridge/contracts/architecture.ts](../../../bridge/contracts/architecture.ts)。
+直接依赖：[../../../logic/knowledge/rules/object-crud.ts](../../../logic/knowledge/rules/object-crud.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../bridge/contracts/architecture.ts](../../../bridge/contracts/architecture.ts)。
 
 ### catalog.ts
 
@@ -55,7 +55,7 @@ class N_src_backend_main_workspace_catalog_ts_Catalog["Catalog"] {
 N_src_backend_main_workspace_catalog_ts ..> N_src_backend_main_workspace_catalog_ts_Catalog : 声明
 ```
 
-直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
 
 ### workspace.ts
 
@@ -149,7 +149,7 @@ class N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace["Kno
 N_src_backend_main_workspace_workspace_ts_external_KnowledgeWorkspace <|.. N_src_backend_main_workspace_workspace_ts_Workspace
 ```
 
-直接依赖：[../knowledge/object-storage.ts](../knowledge/object-storage.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../knowledge/knowledge-store.ts](../knowledge/knowledge-store.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../dispatch-storage/dispatch-store.ts](../dispatch-storage/dispatch-store.ts)、[../registry/knowledge-sources.ts](../registry/knowledge-sources.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../knowledge/governance-port.ts](../knowledge/governance-port.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
+直接依赖：[../knowledge/object-storage.ts](../knowledge/object-storage.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../platform/paths.ts](../platform/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../../logic/knowledge/rules/knowledge.ts](../../../logic/knowledge/rules/knowledge.ts)、[../knowledge/knowledge-store.ts](../knowledge/knowledge-store.ts)、[../governance/module-governance.ts](../governance/module-governance.ts)、[../dispatch-storage/dispatch-store.ts](../dispatch-storage/dispatch-store.ts)、[../registry/knowledge-sources.ts](../registry/knowledge-sources.ts)、[../../../logic/knowledge/rules/planned-commit.ts](../../../logic/knowledge/rules/planned-commit.ts)、[../knowledge/governance-port.ts](../knowledge/governance-port.ts)、[../../../bridge/contracts/workspace.ts](../../../bridge/contracts/workspace.ts)。
 
 
 ## 子目录导航

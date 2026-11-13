@@ -1,15 +1,15 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import {dispatchScopeGoalSchema,type DispatchScopeGoal} from '../src/backend/core/tasks/scope-goal';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {scopeActiveInputSchema,scopeActiveInputSendReceiptSchema,scopeActiveInputStatus,validateScopeInputHistory,type ScopeActiveInput,type AcceptedScopeActiveInput} from '../src/backend/core/tasks/scope-active-input';
-import {scopedActiveInputHash,validateScopeActiveInputs} from '../src/backend/core/tasks/scope-active-input-rules';
-import {mainToolScopeSchema,projectMainScope} from '../src/backend/core/tasks/main-tool-scope';
-import {summarizeScope,emptyScopeSnapshot,validateScopeSnapshot} from '../src/backend/core/tasks/scope-view';
-import {currentHumanContinuation} from '../src/backend/core/tasks/human-continuation-rules';
+import {hash,json} from '../src/core/platform/node/serialization';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import {dispatchScopeGoalSchema,type DispatchScopeGoal} from '../src/logic/tasks/rules/scope-goal';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {scopeActiveInputSchema,scopeActiveInputSendReceiptSchema,scopeActiveInputStatus,validateScopeInputHistory,type ScopeActiveInput,type AcceptedScopeActiveInput} from '../src/logic/tasks/rules/scope-active-input';
+import {scopedActiveInputHash,validateScopeActiveInputs} from '../src/logic/tasks/rules/scope-active-input-rules';
+import {mainToolScopeSchema,projectMainScope} from '../src/logic/tasks/rules/main-tool-scope';
+import {summarizeScope,emptyScopeSnapshot,validateScopeSnapshot} from '../src/logic/tasks/rules/scope-view';
+import {currentHumanContinuation} from '../src/logic/tasks/rules/human-continuation-rules';
 import {humanFixture,continued} from './human-continuation-core-fixture';
 
 const at='2026-11-07T08:00:00.000Z',later='2026-11-07T08:00:01.000Z';

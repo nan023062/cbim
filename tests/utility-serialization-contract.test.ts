@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {hash,json} from '../src/backend/core/foundation/serialization';
+import {hash,json} from '../src/core/platform/node/serialization';
 import {formatJson} from '../src/core/utility';
 import {sha256} from '../src/core/platform/node/digest';
 

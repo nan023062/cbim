@@ -3,9 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {memberResumeRequests,currentMemberResumeRequest} from '../src/backend/core/tasks/member-checkpoint-chain';
+import {memberResumeRequests,currentMemberResumeRequest} from '../src/logic/tasks/rules/member-checkpoint-chain';
 import {memberCheckpointView} from '../src/frontend/tasks/member-checkpoint-state';
-import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-invariants';
+import {validateDispatchExecution} from '../src/logic/tasks/rules/dispatch-invariants';
 
 type Fixture=Awaited<ReturnType<typeof checkpointServiceFixture>>;
 async function latest(f:Fixture){const state=await f.store.read(),graph=state.graphs.find(g=>g.identity.rootSessionId===f.identity.rootSessionId)!;return {state,graph,task:graph.tasks.find(t=>t.taskId===f.taskId)!}}

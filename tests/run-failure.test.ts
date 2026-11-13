@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
-import {publicRunFailure} from '../src/backend/core/execution/run-failure';
+import {publicRunFailure} from '../src/logic/execution/rules/run-failure';
 import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
-import type {StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
+import type {StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 
 it.each([
   ['Pi 连续 30 分钟无执行进展，已中断；请核实未确认的操作与产物。','30 分钟无执行进展'],

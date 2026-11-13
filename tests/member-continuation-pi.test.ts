@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/backend/core/execution';
+import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/logic/execution/rules';
 import {PiEngine} from '../src/backend/engines/pi/engine';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 

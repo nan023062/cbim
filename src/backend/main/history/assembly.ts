@@ -6,7 +6,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {safeId} from '../../core/foundation/identity';
+import {safeId} from '../../../logic/execution/ports/identity';
 import {AgentHistoryService} from '../../scheduler-engine/history/agent-history';
 import {FileAgentHistoryStore} from './file-store';
 import {FileRunStorage} from '../run-storage/run-storage';

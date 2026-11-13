@@ -7,7 +7,7 @@ import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {memberPauseProvider,memberPauseData as data} from '../tests/member-pause-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from '../tests/member-checkpoint-fixture';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Isolated real EXE/Pi; localhost model output is deterministic. All modes reopen an actual persisted wait.

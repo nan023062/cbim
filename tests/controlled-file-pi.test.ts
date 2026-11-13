@@ -3,16 +3,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import {controlledFileChangeSchema,type ControlledFileChange} from '../src/backend/core/file-operations/controlled-file-event';
-import {controlledFileReportSchema,fileCompensationPreviewSchema,fileCompensationReceiptSchema,type ControlledFileReportInput,type FileCompensationInput} from '../src/backend/core/file-operations/controlled-file-operation';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import {controlledFileChangeSchema,type ControlledFileChange} from '../src/logic/file-operations/rules/controlled-file-event';
+import {controlledFileReportSchema,fileCompensationPreviewSchema,fileCompensationReceiptSchema,type ControlledFileReportInput,type FileCompensationInput} from '../src/logic/file-operations/rules/controlled-file-operation';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {controlledFileProvider,controlledFileFixture as data,controlledFact,type ControlledFileMode} from './controlled-file-provider';
 import {createControlledHost,holdControlledReadonlyMapping} from './controlled-file-electron-fixture';
 import {additionRecords} from './queued-dependency-addition-fixture';
 import {effectPersistedRunBytes,archiveEffectRuns,effectRunEvidence} from './effect-observation-fixture';
-import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/backend/core/tasks/effect-observation';
+import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 
 async function changes(user:string,id:string){const raw=await fs.readFile(path.join(user,id,'dispatch','dispatch.jsonl'),'utf8');return raw.trim().split('\n').flatMap(line=>((JSON.parse(line)as {body:{mutation:DispatchMutation}}).body.mutation.controlledFileChanges??[]).map(change=>controlledFileChangeSchema.parse(change)))}
 async function until(check:()=>Promise<boolean>,provider:Awaited<ReturnType<typeof controlledFileProvider>>,label:string){const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,30))}throw Error('Controlled file Pi timeout: '+label)}

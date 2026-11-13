@@ -1,6 +1,6 @@
 # 模型目录与选型
 
-`index.ts` 是不加载 Node、Electron 或服务的纯公共入口。目录解析、配置 Schema、引擎标识、供应商预设和接口选择归本模块；配置持久化、联网与凭据解析归 [service](service/CONTRACT.md)。请求预算仍归旧 backend/core/models/request-budget.ts，主 Agent 设置仍归旧 main/models，未随目录整体迁入。
+`index.ts` 是不加载 Node、Electron 或服务的纯公共入口。目录解析、配置 Schema、引擎标识、供应商预设和接口选择归本模块；配置持久化、联网与凭据解析归 [service](service/CONTRACT.md)。请求预算归 logic/budget/rules/request-budget.ts，主 Agent 设置仍归旧 main/models，未随目录整体迁入。
 
 ## 不变量
 

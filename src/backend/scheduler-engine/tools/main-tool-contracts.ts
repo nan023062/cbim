@@ -3,10 +3,10 @@
  * 设计原因：提交方和输出核验共用原 run/call 映射；只在一次序列化的 wire 上核对业务结构与归属，不重新执行动作，也不把回包失败解释为回滚。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {hash,json} from '../../core/foundation/serialization';
-import {mainToolOutputSchema,mainToolOutputSchemas,type MainToolName,type MainToolOutputBinding} from '../../core/tasks/main-tool-output';
-import type {ToolCancellation,ToolRecovery} from '../../core/tools/contracts';
-import {checkedJsonToolResult} from '../../core/tools/results';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {mainToolOutputSchema,mainToolOutputSchemas,type MainToolName,type MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
+import type {ToolCancellation,ToolRecovery} from '../../../logic/tools/rules/contracts';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
 
 /** 保留已落盘命令的映射格式；只读工具没有命令，模型不能提供或替换此键。 */
 export function mainToolCommandId(name:MainToolName,binding:MainToolOutputBinding,toolCallId:string):string|undefined{

@@ -4,19 +4,19 @@
  * 设计原因：主轮仍占执行资源时不能立刻启动成员；预约和真正领取分开，并各自在 Knowledge→模型→Store 顺序核原岗位。旧回执不重新解析来源，未确认补充阻止新预约，停止或重启不会自动重放。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {memberResumeCommand} from '../goals/main-command-request';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity} from '../../core/tasks/graph-types';
-import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
-import {memberResumeSelection} from '../../core/tasks/queued-member-resume-rules';
-import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity} from '../../../logic/tasks/rules/graph-types';
+import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../../logic/tasks/rules/queued-member-resume';
+import {memberResumeSelection} from '../../../logic/tasks/rules/queued-member-resume-rules';
+import {scopeHasUnresolvedActiveInput} from '../../../logic/tasks/rules/scope-active-input';
 import {memberBatch} from './member-state';
 import {verifyMemberCheckpointProof,type MemberCheckpointVerificationPorts} from './member-checkpoint-verifier';
 import type {OwnerExecutionService} from '../dispatch/owner-execution-service';
-import {memberResumeRequests} from '../../core/tasks/member-checkpoint-chain';
+import {memberResumeRequests} from '../../../logic/tasks/rules/member-checkpoint-chain';
 
 export class MemberResumeService {
   constructor(private readonly owner:KnowledgeWorkspace,private readonly store:DispatchStore,private readonly ports:MemberCheckpointVerificationPorts,private readonly owners?:OwnerExecutionService){}

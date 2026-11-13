@@ -5,12 +5,12 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {EngineEvent, RunSummary, StoredEvent, TaskSpec} from '../../core/execution/types';
-import type {ToolReceipt} from '../../core/tools/types';
-import {checkedMemberRunBinding} from '../../core/execution/member-run';
-import {checkedRunInputSource} from '../../core/execution/input-source';
-import {checkedConversationAgentBinding} from '../../core/execution/conversation-binding';
-import {Fault,fail} from '../../core/foundation/errors';
+import type {EngineEvent, RunSummary, StoredEvent, TaskSpec} from '../../../logic/execution/rules/types';
+import type {ToolReceipt} from '../../../logic/tools/rules/types';
+import {checkedMemberRunBinding} from '../../../logic/execution/rules/member-run';
+import {checkedRunInputSource} from '../../../logic/execution/rules/input-source';
+import {checkedConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
+import {Fault,fail} from '../../../core/errors';
 
 
 /** 只追加的运行事实来源；事件可靠落盘后才返回，观察者由上层运行时通知。 */

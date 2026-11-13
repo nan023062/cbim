@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createHash} from 'node:crypto';
-import {dispatchKnowledgeFingerprint,type PreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
-import {workspacePackageFingerprint,type WorkspacePackage} from '../src/backend/core/knowledge/portable-package';
-import {sameGoalValue} from '../src/backend/core/tasks/scope-goal';
-import {workspaceMemberCanonical} from '../src/backend/core/team/workspace-member-rules';
-import {knowledgeSourceCanonical} from '../src/backend/core/workspace/knowledge-source-rules';
+import {dispatchKnowledgeFingerprint,type PreparedDispatchKnowledge} from '../src/logic/tasks/rules/execution-context';
+import {workspacePackageFingerprint,type WorkspacePackage} from '../src/logic/knowledge/rules/portable-package';
+import {sameGoalValue} from '../src/logic/tasks/rules/scope-goal';
+import {workspaceMemberCanonical} from '../src/logic/team/rules/workspace-member-rules';
+import {knowledgeSourceCanonical} from '../src/logic/workspace/rules/knowledge-source-rules';
 
 it('岗位与知识来源保留原字符序、数字键与 undefined 字节',()=>{
   const value={z:undefined,a:[undefined,{é:2,Z:1}],10:'ten',2:'two'};

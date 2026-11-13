@@ -4,13 +4,13 @@
  * 作用定位：核实持久等待的成员原记录，并在用户明确继续时重新检查岗位、知识、native 与文件。
  * 设计原因：重启只读登记等待，不触碰原生会话；继续先取业务读占用，再按知识→模型→Store 的顺序核实，失败不消费等待。预检结果不缓存为执行许可，预约及领取仍各自重核。
  */
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import type {DispatchKnowledgeWorkspace} from '../context/execution-context';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
-import type {MemberPause} from '../../core/tasks/member-pause';
-import {memberPauseSelection,assertMemberPausePermission} from '../../core/tasks/member-pause-rules';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GoalContinuationRequest} from '../../../logic/tasks/rules/scope-continuation';
+import type {MemberPause} from '../../../logic/tasks/rules/member-pause';
+import {memberPauseSelection,assertMemberPausePermission} from '../../../logic/tasks/rules/member-pause-rules';
 import {verifyMemberCheckpointHistory,verifyMemberCheckpointProof,type MemberCheckpointVerificationPorts} from './member-checkpoint-verifier';
 import type {OwnerExecutionService,OwnerExecutionContext} from '../dispatch/owner-execution-service';
 

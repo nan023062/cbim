@@ -1,3 +1,11 @@
+## 2026-11-13：连续迁移第二批／领域规则与端口
+
+- 来源为用户已授权的四层迁移，基线 d1c57e71。旧 backend/core 的 219 个文件迁移：领域规则归 logic/<业务>/rules，身份及工作区路径归业务 ports；严格 JSON 错误适配、hash/json 兼容函数归 Core，旧 Fault 转发删除，消费者使用同一构造器。408 个受影响源码经 TypeScript AST 规范化比对，除模块路径与注释外无实现差异。
+- 保护既有事务、权限、幂等、未知结果及恢复语义；不聚合领域总 barrel，保留实际跨领域消费者使用的 197 个细粒度入口。原私有读模型、存储端口和运行环境限制继续有效，新增未登记入口、规则反向服务依赖回归。领域聚合仍有协作关系，不以文件无环宣称完成全部解耦。
+- 同步消费者、测试登记、检查器所有权、源码注释、118 份目录类图及相关契约、四层说明和三宿主工作流。pnpm typecheck、pnpm check:architecture（1471 文件/7201 依赖，0 环/违规）、pnpm check:test-modules（482 测试文件）通过。原模拟路径导致的 9 个边界失败已修复，未删除断言。
+- pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot：132 项通过；新增边界用例单独 -t 'domain migration'：5 项通过、130 项未选中；tests/test-modules.test.ts 前次 10 项通过。业务验证选择迁移领域自身单元及其直接协作契约：pnpm exec vitest run tests/connector-registry.test.ts tests/task-progress.test.ts tests/engine-session.test.ts tests/runtime-usage.test.ts tests/governance-feedback-wire.test.ts tests/module-governance-core.test.ts tests/module-governance-feedback-core.test.ts tests/knowledge-queries.test.ts tests/core-domains.test.ts tests/effect-observation-core.test.ts tests/human-continuation-core.test.ts tests/human-decisions-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-dependency-revision-core.test.ts tests/scope-active-input-core.test.ts tests/tool-registry.test.ts tests/workflow-contract.test.ts tests/scope-usage-metering.test.ts tests/knowledge-query-ports.test.ts tests/rules.test.ts tests/dispatch-graph.test.ts tests/engine-tools.test.ts tests/engine-capabilities.test.ts tests/controlled-file-core.test.ts tests/owner-execution-core.test.ts tests/workspace-member-core.test.ts tests/execution-scope.test.ts tests/repository-tool-core.test.ts --reporter=default，28 文件/220 项通过。合计 31 文件/367 项不同用例通过。
+- Q1 状态与实现保持；Q2 规则和服务边界保留；Q3 模块单元及直接契约验证；Q4 logic 各业务 rules/ports 的类图为 review 入口；Q5 无。未运行全仓回归、打包、桌面和升级验证，留后续集成。后续继续有状态服务、调度、Bridge/View；本片独立本地提交，不代表全部迁移完成。
+
 ## 2026-11-13：连续迁移第一批／资源仓库
 
 - 用户授权依次完成剩余四层迁移；基线 650c186e，初始干净，开放 Issue 仅无关 #65。C3/L3。先迁边界已闭合的 LocalRepository、RemoteRepository、ResourceRepositories 到 logic/resources/service；Bridge 的纯资源定义归 logic/resources，包/知识事务仍待其依赖闭合后迁移。ResourceRepositoryPaths 仅注入三个目录属性，替代对 Main Paths 的类型依赖；既有 Paths 结构兼容。

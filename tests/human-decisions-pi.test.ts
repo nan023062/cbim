@@ -5,8 +5,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema,humanDecisionHistorySchema,type HumanDecisionKind,type HumanDecisionRequest} from '../src/backend/core/tasks/human-decisions';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import {humanDecisionPreviewSchema,humanDecisionReceiptSchema,humanDecisionHistorySchema,type HumanDecisionKind,type HumanDecisionRequest} from '../src/logic/tasks/rules/human-decisions';
 import {humanDecisionProvider,humanDecisionFixture as data} from './human-decisions-provider';
 import {seedHumanDecision,humanDecisionRecords,humanDecisionLogBytes} from './human-decisions-fixture';
 

@@ -4,8 +4,8 @@
  * 生命周期：回答与取消只有先发生者消费等待；回包损坏不会重建问题，停止/关闭清理等待，重启不自动重放。
  */
 import {randomUUID} from 'node:crypto';
-import {questionInput as input,questionAnswersInputSchema,type PendingQuestion,type QuestionResult} from '../../core/tools/questions';
-export type {QuestionInput,PendingQuestion} from '../../core/tools/questions';
+import {questionInput as input,questionAnswersInputSchema,type PendingQuestion,type QuestionResult} from '../../../logic/tools/rules/questions';
+export type {QuestionInput,PendingQuestion} from '../../../logic/tools/rules/questions';
 export class QuestionQueue {
   private pending=new Map<string,{view:PendingQuestion;finish:(answers:QuestionResult)=>void}>();
   /** 返回独立视图；调用方或界面不得通过修改列表改写原题和选项。 */

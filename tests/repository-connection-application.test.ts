@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {RepositoryConnectionPreview,RepositoryConnectionCommit,RepositoryConnectionReceipt,RepositoryConnectionCheck,RepositoryConnectionList} from '../src/backend/core/connectors/repository-connection';
+import type {RepositoryConnectionPreview,RepositoryConnectionCommit,RepositoryConnectionReceipt,RepositoryConnectionCheck,RepositoryConnectionList} from '../src/logic/connectors/rules/repository-connection';
 import {seedRepositoryConnection,repositoryConnectionFixture as data,repositoryConnectionRunFiles} from './repository-connection-fixture';
 
 async function definition(app:Application,workspaceId:string,repositoryId:string){

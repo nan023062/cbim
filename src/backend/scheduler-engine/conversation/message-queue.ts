@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {queuedMessageSchema as item,type QueuedMessage,type QueueDelta} from '../../core/tasks/queue';
-export type {QueuedMessage,QueueCursor,QueueDelta} from '../../core/tasks/queue';
+import {queuedMessageSchema as item,type QueuedMessage,type QueueDelta} from '../../../logic/tasks/rules/queue';
+export type {QueuedMessage,QueueCursor,QueueDelta} from '../../../logic/tasks/rules/queue';
 /** 只暴露待发送负载，不向全局监控传递用户消息、附件或模型配置。 */
 export interface QueueCounts {
  pending:number;

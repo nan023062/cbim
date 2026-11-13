@@ -6,19 +6,19 @@
  * 职责边界：旧纯文本兼容，不读取附件或启动模型，不签署人工项；事务已提交后的失败保留原意图，不还原等待或重放。
  */
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {safeId} from '../../core/foundation/identity';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {appendScopeMainRun} from '../../core/tasks/scope-run-tracking';
-import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../core/tasks/scope-goal';
-import {assertContinuationAttachmentManifest,type TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
-import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../core/tasks/scope-continuation';
+import {fail} from '../../../core/errors';
+import {safeId} from '../../../logic/execution/ports/identity';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {appendScopeMainRun} from '../../../logic/tasks/rules/scope-run-tracking';
+import {goalInputRevision,scopeGoalDecisionLimit,sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {assertContinuationAttachmentManifest,type TrustedContinuationInput} from '../../../logic/tasks/rules/scope-continuation-attachments';
+import {goalContinuationRequestSchema,scopeContinuationLookupSchema,scopeContinuationTotalTextLimit,type GoalContinuationRequest,type GoalContinuationReceipt,type ScopeContinuation,type ScopeContinuationLookup} from '../../../logic/tasks/rules/scope-continuation';
 import {rejectBudget,type ScopeBudgetService,type ScopeBudgetRejected} from '../budget/scope-budget-service';
-import {isHumanContinuation} from '../../core/tasks/scope-continuation-record';
-import {scopeActiveInputLimits} from '../../core/tasks/scope-active-input';
+import {isHumanContinuation} from '../../../logic/tasks/rules/scope-continuation-record';
+import {scopeActiveInputLimits} from '../../../logic/tasks/rules/scope-active-input';
 import type {MemberPauseService} from '../members/member-pause-service';
 import type {OwnerExecutionContext} from '../dispatch/owner-execution-service';
 

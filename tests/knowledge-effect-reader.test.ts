@@ -5,14 +5,14 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request,moduleFiles} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {knowledgeTransactionObservationSchema} from '../src/backend/core/knowledge/knowledge-write-observation';
-import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/backend/core/knowledge/knowledge-write-input';
+import {knowledgeTransactionObservationSchema} from '../src/logic/knowledge/rules/knowledge-write-observation';
+import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/logic/knowledge/rules/knowledge-write-input';
 import {observeKnowledgeTransaction} from '../src/backend/main/evidence/knowledge-effect-reader';
-import {hash,json} from '../src/backend/core/foundation/serialization';
+import {hash,json} from '../src/core/platform/node/serialization';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from '../src/backend/main/knowledge/governance-port';
-import {ObjectCrud} from '../src/backend/core/knowledge/object-crud';
+import {ObjectCrud} from '../src/logic/knowledge/rules/object-crud';
 
 it('实际工具字段解析与原事务 fingerprint 相同，失败查询不执行或补造请求',async()=>{
  const f=await fixture();try{

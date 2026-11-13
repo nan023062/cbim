@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {moduleGovernanceReceiptSchema} from '../src/backend/core/governance/module-governance';
+import {moduleGovernanceReceiptSchema} from '../src/logic/governance/rules/module-governance';
 import {governanceFeedbackProvider,governanceFeedbackFixture as data} from './module-governance-feedback-provider';
 import {seedGovernanceFeedback,governanceFeedbackRecords,governanceFeedbackLogBytes,governanceFeedbackJournalBytes,governanceFeedbackHistory} from './module-governance-feedback-fixture';
 

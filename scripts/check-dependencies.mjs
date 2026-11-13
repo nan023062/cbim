@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {builtinModules} from 'node:module';
 import ts from 'typescript';
 import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
+import {isDomainFile,domainPublicEntries} from './logic-domain-entries.mjs';
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
 // .agents 是宿主提供的 Skill 符号链接入口，实际文件归 .claude 扫描，避免重复遍历。
@@ -43,11 +44,12 @@ const layerOf = file => {
 // 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
 // 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。
 const foundation='src/backend/core/foundation/';
-const knowledgeTypes='src/backend/core/knowledge/types.ts';
-const knowledgeSnapshot='src/backend/core/knowledge/read-models/snapshot.ts';
-const teamView='src/backend/core/knowledge/read-models/team.ts';
-const businessView='src/backend/core/knowledge/read-models/workspace.ts';
-const projectRoot='src/backend/core/workspace/project-root.ts';
+const foundationEntries=['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts','src/logic/workspace/ports/paths.ts','src/logic/execution/ports/identity.ts'];
+const knowledgeTypes='src/logic/knowledge/rules/types.ts';
+const knowledgeSnapshot='src/logic/knowledge/rules/read-models/snapshot.ts';
+const teamView='src/logic/knowledge/rules/read-models/team.ts';
+const businessView='src/logic/knowledge/rules/read-models/workspace.ts';
+const projectRoot='src/logic/workspace/rules/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
 const modelPublic='src/logic/models/index.ts';
@@ -89,20 +91,23 @@ const moduleBoundaries=[
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
   {sources:[projectRoot],allow:[]},
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
-  {sources:['src/backend/core/knowledge/knowledge-queries.ts'],allow:['src/backend/core/knowledge/read-models/index.ts',knowledgeTypes,foundation]},
+  {sources:['src/logic/knowledge/rules/knowledge-queries.ts'],allow:['src/logic/knowledge/rules/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
-  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/core/platform/node/files/index.ts','src/backend/core/team/session-history-storage.ts']},
-  {sources:['src/backend/core/budget/model-request-budget-storage.ts'],allow:['src/backend/core/budget/scope-budget.ts','src/backend/core/budget/model-request-budget.ts']},
-  {sources:['src/backend/core/execution/engine-tools.ts'],allow:[]},
-  {sources:['src/backend/core/execution/index.ts'],allow:['src/backend/core/execution/types.ts','src/backend/core/execution/storage.ts','src/backend/core/execution/runtime/runtime.ts','src/backend/core/execution/member-run.ts','src/backend/core/execution/input-source.ts','src/backend/core/execution/conversation-binding.ts']},
-  {sources:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],allow:[foundation,'src/backend/core/budget/model-request-budget-storage.ts','src/backend/core/budget/model-request-budget.ts','src/backend/core/budget/model-request-budget-rules.ts',modelPublic,'src/backend/core/models/request-budget.ts','src/backend/core/team/workspace-member-rules.ts','src/backend/scheduler-engine/budget/scope-budget-service.ts']},
+  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/core/platform/node/files/index.ts','src/logic/team/rules/session-history-storage.ts']},
+  {sources:['src/logic/budget/rules/model-request-budget-storage.ts'],allow:['src/logic/budget/rules/scope-budget.ts','src/logic/budget/rules/model-request-budget.ts']},
+  {sources:['src/logic/execution/rules/engine-tools.ts'],allow:[]},
+  {sources:['src/logic/execution/rules/index.ts'],allow:['src/logic/execution/rules/types.ts','src/logic/execution/rules/storage.ts','src/logic/execution/rules/runtime/runtime.ts','src/logic/execution/rules/member-run.ts','src/logic/execution/rules/input-source.ts','src/logic/execution/rules/conversation-binding.ts']},
+  {sources:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/backend/scheduler-engine/budget/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
-  {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
+  {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
   {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
+  if(entry==='src/backend/core/'&&isDomainFile(file))return domainPublicEntries.has(file);
+  if(entry==='src/backend/core/'&&['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(file))return true;
+  if(entry===foundation&&foundationEntries.includes(file))return true;
   if(file===entry)return true;
   if(!entry.endsWith('/')||!file.startsWith(entry))return false;
   // Core 的宽入口不包含独立逻辑基础层；根层领域约定也不包含技术子库。
@@ -254,7 +259,11 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to);
+      const domainMigration=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(/^src\/backend\/(core|main|engines|scheduler-engine)\//.test(e.from)||e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/logic/'));
+      const foundationMigration=/^src\/backend\/(engines|scheduler-engine)\//.test(e.from)&&['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(e.to);
+      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to)||domainMigration||foundationMigration;
+      // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
+      if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&![modelPublic,feedbackPublic].includes(e.to))return true;
       if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
       // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
       if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;

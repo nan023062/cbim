@@ -4,8 +4,8 @@
  * 设计原因：名额与工作区租约必须一起取得；等待不占任何资源，只有原协调器能在通知后重新核实并启动。票据不持久化、不从历史恢复模型。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import {admissionIdentitySchema,admissionRequestSchema,admissionPolicySchema,admissionConfigureSchema,admissionCursorSchema,type AdmissionIdentity,type AdmissionRequest,type AdmissionWaitReason,type AdmissionDenialReason,type AdmissionTicket,type AdmissionOccupant,type AdmissionPolicy,type AdmissionCursor,type AdmissionSnapshot,type AdmissionRead} from '../../core/runtime/admission';
+import {fail} from '../../../core/errors';
+import {admissionIdentitySchema,admissionRequestSchema,admissionPolicySchema,admissionConfigureSchema,admissionCursorSchema,type AdmissionIdentity,type AdmissionRequest,type AdmissionWaitReason,type AdmissionDenialReason,type AdmissionTicket,type AdmissionOccupant,type AdmissionPolicy,type AdmissionCursor,type AdmissionSnapshot,type AdmissionRead} from '../../../logic/runtime/rules/admission';
 
 /** 本地端口必须同步；canAcquire/isCurrent 只查询，acquire 原子取得本地租约，通知不能直接绕过 attempt 执行。 */
 export interface LocalAdmissionPort {

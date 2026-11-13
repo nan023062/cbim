@@ -1,6 +1,6 @@
 import {test,expect} from 'vitest';
 import {sessionRuns,SessionTaskView} from '../src/frontend/tasks/SessionTaskView';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 const run=(taskId:string,workspaceId='w'):RunSummary=>({task:{taskId,workspaceId,root:'root',goal:taskId,moduleIds:[],acceptance:[]},runId:taskId,status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]});

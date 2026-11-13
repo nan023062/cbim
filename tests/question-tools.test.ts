@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {QuestionTools,questionTool} from '../src/backend/scheduler-engine/tools/question-tools';
 import {QuestionQueue} from '../src/backend/scheduler-engine/conversation/questions';
-import {questionToolName,questionInput,questionResultSchema,questionResultForInput} from '../src/backend/core/tools/questions';
-import {toolMetadataSchema} from '../src/backend/core/tools/contracts';
+import {questionToolName,questionInput,questionResultSchema,questionResultForInput} from '../src/logic/tools/rules/questions';
+import {toolMetadataSchema} from '../src/logic/tools/rules/contracts';
 
 const input={questions:[{question:'下一步？',options:[{label:'方案A'},{label:'方案B'}]},{question:'补充目标？',options:[{label:'小型'},{label:'完整'}]}]};
 const answer={answers:[{question:'下一步？',answer:'方案B',supplement:'保留旧接口'},{question:'补充目标？',answer:'其它明确目标'}]};

@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {seedOwnerExecution,ownerExecutionData as data,ownerExecutionRecords} from './owner-execution-fixture';
 import {ownerCheckpointProvider,ownerCheckpointData,type OwnerCheckpointMode} from './owner-execution-checkpoint-provider';

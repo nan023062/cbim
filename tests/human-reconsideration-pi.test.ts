@@ -5,7 +5,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/backend/core/tasks/human-decisions';
+import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
 import {completeOutputProvider,completeOutputData as d} from './complete-output-provider';
 import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from './complete-output-pi-fixture';
 

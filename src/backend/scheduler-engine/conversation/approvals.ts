@@ -3,9 +3,9 @@
  * 设计原因：从执行管理器拆离等待状态，结束和停止统一清理；原生与知识写入共用当前运行审批，不持久化授权，也不扩展到其他任务。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import type {ChatApproval} from '../../core/tools/policy/types';
-import type {ToolCall,ToolDecision} from '../../core/tools/types';
+import {fail} from '../../../core/errors';
+import type {ChatApproval} from '../../../logic/tools/rules/policy/types';
+import type {ToolCall,ToolDecision} from '../../../logic/tools/rules/types';
 export class ApprovalQueue {
  private approvedRuns=new Set<string>();
  /** 仅在当前运行中挂起调用；已获得本次放行时立即返回。 */

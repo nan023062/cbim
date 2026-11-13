@@ -4,14 +4,14 @@
  * 设计原因：scope 必须从 beforeRun 后原批次取得；模块责任与岗位执行发现核同一组游标，actor 和原命令由闭包生成，模型不能自报身份、权限或重放来源。
  * 停止边界：原命令查询与提交全程纳入周期在途集合；保存之后不再抛明确未受理错误，回包失败保留原 commandId。
  */
-import {fail} from '../../core/foundation/errors';
-import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/execution/conversation-binding';
-import type {TaskSpec} from '../../core/tasks/types';
-import {moduleOwnershipMainActorSchema} from '../../core/workspace/module-ownership';
-import {moduleOwnershipMainCommandId} from '../../core/workspace/module-ownership-rules';
-import {moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,type ModuleOwnershipToolsPort} from '../../core/workspace/module-ownership-tools';
+import {fail} from '../../../core/errors';
+import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
+import type {TaskSpec} from '../../../logic/tasks/rules/types';
+import {moduleOwnershipMainActorSchema} from '../../../logic/workspace/rules/module-ownership';
+import {moduleOwnershipMainCommandId} from '../../../logic/workspace/rules/module-ownership-rules';
+import {moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,type ModuleOwnershipToolsPort} from '../../../logic/workspace/rules/module-ownership-tools';
 import type {MainToolContext} from '../../scheduler-engine/dispatch/auto-collaboration';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import type {ModuleOwnerships} from './module-ownerships';
 import type {WorkspaceMembers} from './workspace-members';
 import type {OwnerExecutionService} from '../../scheduler-engine/dispatch/owner-execution-service';

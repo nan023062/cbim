@@ -8,12 +8,12 @@
  * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
 import {InFlightOperations} from '../../../core/utility';
-import {toolFailureResult,toolReturnedResult} from '../../core/tools/outcome';
-import type {EngineContext} from '../../core/execution/types';
-import {nativeToolsDisabled} from '../../core/execution/engine-tools';
-import type {EngineToolsPort,EngineToolSchema} from '../../core/execution/engine-tools';
-import {nativeToolNames} from '../../core/tools/native-tools';
-import {validateToolResult,type ToolResult} from '../../core/tools/results';
+import {toolFailureResult,toolReturnedResult} from '../../../logic/tools/rules/outcome';
+import type {EngineContext} from '../../../logic/execution/rules/types';
+import {nativeToolsDisabled} from '../../../logic/execution/rules/engine-tools';
+import type {EngineToolsPort,EngineToolSchema} from '../../../logic/execution/rules/engine-tools';
+import {nativeToolNames} from '../../../logic/tools/rules/native-tools';
+import {validateToolResult,type ToolResult} from '../../../logic/tools/rules/results';
 
 export interface CodexToolSpec {type:'function';name:string;description:string;inputSchema:Record<string,unknown>}
 /** 一个 run 只持有自己的调用身份及取消信号；重复 callId 不执行第二次。 */

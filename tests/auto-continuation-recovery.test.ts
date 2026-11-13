@@ -10,8 +10,8 @@ import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/back
 import type {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {TaskSpec} from '../src/backend/core/execution/types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {TaskSpec} from '../src/logic/execution/rules/types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),identity={workspaceId:entry.id,rootSessionId:'root'},directory=path.join(f.user,'recovery-dispatch');

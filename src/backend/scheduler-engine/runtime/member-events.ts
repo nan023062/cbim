@@ -5,12 +5,12 @@
  * 设计原因：节点详情高频轮询不能反复扫描日志；首次恢复失败可重试，成功后与实时事件合并去重。仅可信新运行尚未启动的空日志窗口可等待实时首条事件，已开始或损坏日志不能冒充空记录；公开投影排除原生绑定、冻结知识及工具正文。
  * 职责边界：不签发图状态、不启动或恢复执行；工具只公开身份、状态、工作区内业务路径与可信回执。公开对话和计划文本仅限长，不保证识别其中的敏感内容。
  */
-import {fail} from '../../core/foundation/errors';
-import type {RunSummary,StoredEvent,TaskSpec} from '../../core/execution/types';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import type {TaskProgress} from '../../core/evidence/progress';
-import type {MemberEventCursor,MemberEventsRead,MemberRunView} from '../../core/tasks/member-events';
+import {fail} from '../../../core/errors';
+import type {RunSummary,StoredEvent,TaskSpec} from '../../../logic/execution/rules/types';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {TaskProgress} from '../../../logic/evidence/rules/progress';
+import type {MemberEventCursor,MemberEventsRead,MemberRunView} from '../../../logic/tasks/rules/member-events';
 import {projectRunEvent} from './public-run-events';
 
 /** 业务目标和岗位执行绑定来自原节点；同时用于 Runtime 头与公开核验，不传播能力正文或原生会话绑定。 */

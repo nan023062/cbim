@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from '../src/backend/engines/pi/runtime-config';
 import {modelSchema} from '../src/logic/models';
 import type {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 /** A queued resume receipt identifies the previous run; wait for its actual successor before asserting Pi events. */
 async function completedTurn(manager:WorkspaceExecutionManager,receipt:{taskId:string;runId:string;queued?:boolean}){

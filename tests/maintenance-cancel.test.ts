@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {fixture} from './helpers';
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 
 // Keep this regression independent of fixture changes for external host integration.
 function internalKnowledge(workspace:KnowledgeWorkspace){return {async call(name:string,input:Record<string,unknown>){

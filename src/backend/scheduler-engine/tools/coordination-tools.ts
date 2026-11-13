@@ -2,12 +2,12 @@
  * 作用定位：主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。
  * 设计原因：只组合已装配的只读能力，嵌入参数时同步其本地引用根；领域校验和各自快照边界仍由原服务持有。
  */
-import {fail} from '../../core/foundation/errors';
-import {coordinationVersions} from '../../core/tasks/coordination-preview';
-import {mainToolOutputSchemas} from '../../core/tasks/main-tool-output';
-import {jsonToolResult,validateToolResult,type ToolResult} from '../../core/tools/results';
-import type {EngineToolSchema} from '../../core/execution/engine-tools';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
+import {fail} from '../../../core/errors';
+import {coordinationVersions} from '../../../logic/tasks/rules/coordination-preview';
+import {mainToolOutputSchemas} from '../../../logic/tasks/rules/main-tool-output';
+import {jsonToolResult,validateToolResult,type ToolResult} from '../../../logic/tools/rules/results';
+import type {EngineToolSchema} from '../../../logic/execution/rules/engine-tools';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
 
 interface ReadPort {
   list():EngineToolSchema[];

@@ -7,7 +7,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
-import {moduleGovernanceProposalBasis} from '../src/backend/core/governance/module-governance-rules';
+import {moduleGovernanceProposalBasis} from '../src/logic/governance/rules/module-governance-rules';
 
 const feedback={kind:'evidence_request',focus:'invariant',expectedResponse:'说明职责不变量及其具体依据。'};
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

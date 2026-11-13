@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {humanDecisionHistorySchema} from '../src/backend/core/tasks/human-decisions';
+import {humanDecisionHistorySchema} from '../src/logic/tasks/rules/human-decisions';
 import {completeOutputProvider,completeOutputData as d} from '../tests/complete-output-provider';
 import {seedCompleteOutput,completeOutputRecords,completeOutputSourceBytes} from '../tests/complete-output-pi-fixture';
 import {latestExecutable} from './build-artifact.mjs';

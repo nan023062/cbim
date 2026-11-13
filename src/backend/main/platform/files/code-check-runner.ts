@@ -6,11 +6,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn,execFile} from 'node:child_process';
-import {hash} from '../../../core/foundation/serialization';
-import {fail} from '../../../core/foundation/errors';
-import {codeCheckLimits,codeTestSummarySchema} from '../../../core/workspace/code-check';
-import {codeCheckExecutionSchema,type CodeCheckPort,type FrozenCodeCheck,type CodeCommandResult} from '../../../core/evidence/code-check';
-import {outputManifestHash} from '../../../core/evidence/output-manifest-evidence';
+import {hash} from '../../../../core/platform/node/serialization';
+import {fail} from '../../../../core/errors';
+import {codeCheckLimits,codeTestSummarySchema} from '../../../../logic/workspace/rules/code-check';
+import {codeCheckExecutionSchema,type CodeCheckPort,type FrozenCodeCheck,type CodeCommandResult} from '../../../../logic/evidence/rules/code-check';
+import {outputManifestHash} from '../../../../logic/evidence/rules/output-manifest-evidence';
 import {OutputManifestFiles} from './output-manifest-files';
 
 /** 每次调用均核实工作区实例；不继承模型传入的 cwd、环境变量或 shell 文本。 */

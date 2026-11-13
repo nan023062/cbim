@@ -3,7 +3,7 @@
  * 作用定位：定义已受理协作批次交给运行入口的进程内等待通知，不进入模型或公开 IPC 参数。
  * 设计原因：容量不足只通知原协调器重新核实；票据随批次停止撤销。单轮附件图片另经可信内存上下文传递，不能混入持久配置后随成员结果再次发送。
  */
-import type {InputImage} from '../../core/execution/types';
+import type {InputImage} from '../../../logic/execution/rules/types';
 
 /** 仅 AutoCollaboration 创建；scope 与回调固定归属一个仍活动的批次。 */
 export interface ExecutionAdmissionWait {

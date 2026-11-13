@@ -5,13 +5,13 @@
  * 职责边界：只返回后端可信端口，不发网络、不接受模型传入身份；重开和查询只读历史，不释放未决消耗。
  */
 import {randomUUID} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
-import type {RequestBudgetStore,RequestBudgetState,RequestBudgetAdmission} from '../../core/budget/model-request-budget-storage';
-import {requestBudgetBindingSchema,requestBudgetModelSchema,requestBudgetQuerySchema,requestBudgetUsageSchema,type RequestBudgetBinding,type RequestBudgetIntent,type ModelRequestBudgetChange} from '../../core/budget/model-request-budget';
-import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetCost,requestBudgetDecision,requestBudgetCommand,requestBudgetReceipt} from '../../core/budget/model-request-budget-rules';
+import {fail} from '../../../core/errors';
+import type {RequestBudgetStore,RequestBudgetState,RequestBudgetAdmission} from '../../../logic/budget/rules/model-request-budget-storage';
+import {requestBudgetBindingSchema,requestBudgetModelSchema,requestBudgetQuerySchema,requestBudgetUsageSchema,type RequestBudgetBinding,type RequestBudgetIntent,type ModelRequestBudgetChange} from '../../../logic/budget/rules/model-request-budget';
+import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetCost,requestBudgetDecision,requestBudgetCommand,requestBudgetReceipt} from '../../../logic/budget/rules/model-request-budget-rules';
 import type {ResolvedLlm} from '../../../logic/models';
-import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../../core/models/request-budget';
-import {workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
+import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../../../logic/budget/rules/request-budget';
+import {workspaceMemberModelHash} from '../../../logic/team/rules/workspace-member-rules';
 
 type Owner={entry:{id:string};instanceId:string;assert():void};
 /** 每个活动工作区仅一份；实例代际来自工作区所有权，不从磁盘请求或页面输入恢复。 */

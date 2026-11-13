@@ -1,13 +1,13 @@
 import {expect,it,vi} from 'vitest';
-import {automaticReturnSchema,validateAutomaticReturns,type AutomaticReturn} from '../src/backend/core/tasks/automatic-return';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import {automaticReturnSchema,validateAutomaticReturns,type AutomaticReturn} from '../src/logic/tasks/rules/automatic-return';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {AutomaticReturnService} from '../src/backend/scheduler-engine/dispatch/automatic-return-service';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {workspaceMemberModelHash} from '../src/backend/core/team/workspace-member-rules';
-import type {WorkspaceMemberModelSnapshot} from '../src/backend/core/team/workspace-member';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member-rules';
+import type {WorkspaceMemberModelSnapshot} from '../src/logic/team/rules/workspace-member';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {ScopeGoalService,ScopeGoalPorts} from '../src/backend/scheduler-engine/goals/scope-goal-service';
 import type {OwnerExecutionModelPorts} from '../src/backend/scheduler-engine/dispatch/owner-execution-service';
 

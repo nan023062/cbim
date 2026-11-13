@@ -7,9 +7,9 @@ import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {agentModelSelectionSchema} from '../../../logic/models';
-import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../core/team/agent-runtime';
+import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../../logic/team/rules/agent-runtime';
 import type {LlmProfiles} from '../../../logic/models/service';
 
 const stored=z.object({version:z.literal(1),revision:z.number().int().nonnegative().safe(),selection:agentModelSelectionSchema.nullable()}).strict();

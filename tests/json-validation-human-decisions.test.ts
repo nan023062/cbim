@@ -2,9 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
-import type {HumanContinuationRequest} from '../src/backend/core/tasks/human-continue';
-import type {HumanDecisionKind,HumanDecisionPreview} from '../src/backend/core/tasks/human-decisions';
-import type {GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
+import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
+import type {HumanDecisionKind,HumanDecisionPreview} from '../src/logic/tasks/rules/human-decisions';
+import type {GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {humanServiceFixture} from './human-decision-service-fixture';
 

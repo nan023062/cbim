@@ -1,11 +1,11 @@
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {DispatchMutation,DispatchMessage} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {AgentInstance} from '../src/backend/core/team/agent-types';
+import type {DispatchMutation,DispatchMessage} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {AgentInstance} from '../src/logic/team/rules/agent-types';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {queuedTaskCancelFixture as data} from './queued-task-cancel-provider';

@@ -8,18 +8,18 @@
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {contextualMainCommand} from './main-command-request';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity,GraphEdge,TaskNode} from '../../core/tasks/graph-types';
-import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type DependencyReplacement,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
-import {queuedDependencyReplacementSelection} from '../../core/tasks/queued-dependency-replacement-rules';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity,GraphEdge,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type DependencyReplacement,type ReplaceQueuedDependencyReceipt} from '../../../logic/tasks/rules/queued-dependency-replacement';
+import {queuedDependencyReplacementSelection} from '../../../logic/tasks/rules/queued-dependency-replacement-rules';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,type DispatchKnowledgeWorkspace} from '../context/execution-context';
 import {memberBatch,memberView} from '../members/member-state';
 import type {ScopeGoalService} from './scope-goal-service';
 import type {OwnerExecutionService} from '../dispatch/owner-execution-service';
-import {ownerExecutionSelectionFor} from '../../core/team/member-execution-binding';
+import {ownerExecutionSelectionFor} from '../../../logic/team/rules/member-execution-binding';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const contextSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,runId:id,commandId:id}).strict();

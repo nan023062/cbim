@@ -4,14 +4,14 @@
  * 职责边界：只读并冻结输入，不创建实例、不派发消息、不读取历史真人花名册或维护声明，执行资格由岗位责任与运行授权核实。
  * 读取边界：角色、模块与正文读取只经 knowledge/read-models 公开入口，成员派发的身份和授权仍在本层核实。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import {content,Team,BusinessWorkspace} from '../../core/knowledge/read-models';
-import type {Snapshot} from '../../core/knowledge/types';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import {content,Team,BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
 
-import type {AgentConfigurationSnapshot} from '../../core/team/agent-types';
-import type {ModuleBinding} from '../../core/tasks/graph-types';
-import {validateWorkflowSelections,type WorkflowSelection} from '../../core/tasks/workflow-selection';
+import type {AgentConfigurationSnapshot} from '../../../logic/team/rules/agent-types';
+import type {ModuleBinding} from '../../../logic/tasks/rules/graph-types';
+import {validateWorkflowSelections,type WorkflowSelection} from '../../../logic/tasks/rules/workflow-selection';
 
 import {mainAgentId,mainAgentInstructions} from '../conversation/main-agent';
 

@@ -1,9 +1,9 @@
 import {randomUUID} from 'node:crypto';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {EffectObservationReport,EffectDispositionRecord} from '../src/backend/core/tasks/effect-observation';
-import {effectObservationBasis} from '../src/backend/core/tasks/effect-observation-rules';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
+import type {DispatchMutation,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {EffectObservationReport,EffectDispositionRecord} from '../src/logic/tasks/rules/effect-observation';
+import {effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 
 export const effectIdentity={workspaceId:'workspace',rootSessionId:'root'},effectTime='2026-11-08T10:00:00.000Z';
 export function effectRootMutation():DispatchMutation {

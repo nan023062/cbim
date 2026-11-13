@@ -8,7 +8,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
 import {randomBytes,createHash} from 'node:crypto';
-import {Fault,fail} from '../../../core/foundation/errors';
+import {Fault,fail} from '../../../../core/errors';
 import {controlledChildReplySchema,controlledPlatformBytes,type ControlledChildRequest,type ControlledChildReply,type ControlledFileTransport,type ExclusiveControlledFile,type ExclusiveControlledTransition,type ControlledNamespaceChange} from './controlled-file-protocol';
 
 const requireNative=createRequire(typeof __filename==='string'?__filename:import.meta.url);

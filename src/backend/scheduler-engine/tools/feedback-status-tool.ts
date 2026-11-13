@@ -3,9 +3,9 @@
  * 设计原因：未连接时提交／核实仍不注册；独立诊断入口避免把任何工具缺失都归因为未登录。它不授予写权、不刷新已捕获范围、不读取提交结果。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail} from '../../core/foundation/errors';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
+import {fail} from '../../../core/errors';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
 import {feedbackAvailabilitySchema,feedbackConnectionCheckSchema,feedbackReceiptInputSchema,type FeedbackAvailability,type FeedbackConnectionCheck} from '../../../logic/feedback';
 
 const messages:Record<FeedbackAvailability['code'],string>={

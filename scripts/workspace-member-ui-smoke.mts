@@ -7,7 +7,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
-import {workspaceMemberDetailSchema,workspaceMemberListSchema,workspaceMemberReceiptSchema,type WorkspaceMemberReceipt} from '../src/backend/core/team/workspace-member';
+import {workspaceMemberDetailSchema,workspaceMemberListSchema,workspaceMemberReceiptSchema,type WorkspaceMemberReceipt} from '../src/logic/team/rules/workspace-member';
 import {seedWorkspaceMembers,workspaceMemberFixture as data,workspaceMemberHttpProbe,workspaceMemberRunFiles} from '../tests/workspace-member-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 

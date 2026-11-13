@@ -4,8 +4,8 @@
  */
 import {z} from 'zod';
 import {ipcId,noIpcArgs,workspaceIdArgs,taskIdArgs} from './ipc-shapes';
-import {type ObjectCommit,type ObjectPreview,objectOperation} from '../../backend/core/knowledge/object-contract';
-import {type KnowledgeCommit,type Preview,type Snapshot,type TaskView} from '../../backend/core/knowledge/types';
+import {type ObjectCommit,type ObjectPreview,objectOperation} from '../../logic/knowledge/rules/object-contract';
+import {type KnowledgeCommit,type Preview,type Snapshot,type TaskView} from '../../logic/knowledge/rules/types';
 import {type Catalog,type WorkspaceEntry,type WorkspaceView} from './workspace-view';
 
 export const workspaceIpcRequests={

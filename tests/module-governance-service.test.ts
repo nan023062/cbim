@@ -9,8 +9,8 @@ import {request,moduleFiles} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
 import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
 import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
-import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../src/backend/core/governance/module-governance';
-import {json} from '../src/backend/core/foundation/serialization';
+import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../src/logic/governance/rules/module-governance';
+import {json} from '../src/core/platform/node/serialization';
 
 async function setup(){const f=await fixture();try{
   const seeded=await seedModuleGovernance(f.app,f.a),ws=f.app.workspace(seeded.entry.id),identity=seeded.identity;

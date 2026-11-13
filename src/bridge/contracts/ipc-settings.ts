@@ -9,9 +9,9 @@ import {ipcId,noIpcArgs} from './ipc-shapes';
 import {type DiscoveredModel} from './models';
 import {type LlmSettings,connectionSchema,definition} from './models';
 import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from './github-feedback';
-import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
-import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';
-import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/budget/scope-budget';
+import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../logic/runtime/rules/admission';
+import {type RuntimeRead,type RuntimeSnapshot} from '../../logic/runtime/rules/types';
+import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../logic/budget/rules/scope-budget';
 import {modelActionSchemas,type ModelActionResults} from './model-actions';
 
 export const settingsIpcRequests={

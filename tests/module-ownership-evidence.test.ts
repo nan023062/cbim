@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import {isProgressEvidence} from '../src/backend/core/tasks/member-tool-output';
-import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import {isProgressEvidence} from '../src/logic/tasks/rules/member-tool-output';
+import {evaluateWorkflowDelivery} from '../src/logic/evidence/rules/workflow-evidence';
 import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
-import {moduleOwnershipToolEffects} from '../src/backend/core/workspace/module-ownership-tool-policy';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {moduleOwnershipToolEffects} from '../src/logic/workspace/rules/module-ownership-tool-policy';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 import {humanServiceFixture} from './human-decision-service-fixture';
 
 it.each(Object.entries(moduleOwnershipToolEffects))('%s remains a tool fact but cannot become progress, legacy candidate or Workflow evidence',async(name,effect)=>{

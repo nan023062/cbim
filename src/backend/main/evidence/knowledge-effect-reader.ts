@@ -4,12 +4,12 @@
  * 设计原因：完整 journal 校验复用唯一知识串行队列，原对象计划只从固定私有缓存加载；不把工具失败当作事务回滚，也不借当前实例补造历史请求。
  * 职责边界：不提交知识、不刷新索引、不修剪目录、不恢复事务或创建另一个 Store；前后正文仅参与私有摘要，不进入公开报告。
  */
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {StoragePaths} from '../../core/foundation/paths';
-import type {ChangeRequest} from '../../core/knowledge/types';
-import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservation} from '../../core/knowledge/knowledge-write-observation';
-import {originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../core/knowledge/knowledge-write-input';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {StoragePaths} from '../../../logic/workspace/ports/paths';
+import type {ChangeRequest} from '../../../logic/knowledge/rules/types';
+import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservation} from '../../../logic/knowledge/rules/knowledge-write-observation';
+import {originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../../logic/knowledge/rules/knowledge-write-input';
 import type {KnowledgeGovernanceTransaction} from '../knowledge/governance-port';
 import {readKnowledgePlan} from '../knowledge/planned-commit';
 

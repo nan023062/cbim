@@ -6,7 +6,7 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 ### 知识查询与刷新分别装配
 
-`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../core/knowledge/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
+`KnowledgeTools` 将只读注册表/详情交给 Core 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../../logic/knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
 
 ### 项目根模块查询 v2
 

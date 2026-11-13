@@ -8,7 +8,7 @@ import {registerFixtureOwner} from './owner-execution-fixture';
 import {modelRequestBudgetProvider} from './model-request-budget-provider';
 import {codexFixture} from './codex-fixture';
 import {budgetScopes} from './scope-budget-fixture';
-import {requestBudgetReportSchema} from '../src/backend/core/budget/model-request-budget';
+import {requestBudgetReportSchema} from '../src/logic/budget/rules/model-request-budget';
 import {NativeSessionFiles} from '../src/backend/main/platform/native-session-files';
 import type {LoopEngine} from '../src/logic/models';
 

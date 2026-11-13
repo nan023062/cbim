@@ -3,15 +3,15 @@
  * 作用定位：把岗位服务装配到真实主运行；工作区、actor 和命令身份由闭包持有。
  * 设计原因：登记/采纳复用唯一 Store，不建立第二份成员表；模型选型继承静态 Agent，停止排空与回执核实沿原周期。
  */
-import {fail} from '../../core/foundation/errors';
-import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/execution/conversation-binding';
+import {fail} from '../../../core/errors';
+import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../../logic/execution/rules/conversation-binding';
 import {agentModelSelectionSchema} from '../../../logic/models';
-import {data} from '../../core/knowledge/read-models';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {TaskSpec} from '../../core/tasks/types';
-import {workspaceMemberMainCommandId} from '../../core/team/workspace-member-rules';
-import {workspaceMemberMainActorSchema,type WorkspaceMemberChangeInput} from '../../core/team/workspace-member';
-import {memberToolInspectSchema,memberToolPreviewSchema,memberToolCommitSchema,memberToolReceiptSchema,type MemberToolChange,type WorkspaceMemberToolsPort} from '../../core/team/workspace-member-tools';
+import {data} from '../../../logic/knowledge/rules/read-models';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {TaskSpec} from '../../../logic/tasks/rules/types';
+import {workspaceMemberMainCommandId} from '../../../logic/team/rules/workspace-member-rules';
+import {workspaceMemberMainActorSchema,type WorkspaceMemberChangeInput} from '../../../logic/team/rules/workspace-member';
+import {memberToolInspectSchema,memberToolPreviewSchema,memberToolCommitSchema,memberToolReceiptSchema,type MemberToolChange,type WorkspaceMemberToolsPort} from '../../../logic/team/rules/workspace-member-tools';
 import type {MainToolContext} from '../../scheduler-engine/dispatch/auto-collaboration';
 import type {WorkspaceMembers} from './workspace-members';
 

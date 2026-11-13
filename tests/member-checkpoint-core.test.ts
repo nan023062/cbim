@@ -1,14 +1,14 @@
 import {it,expect,vi} from 'vitest';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
-import {artifactSources} from '../src/backend/core/evidence/artifact-evidence';
-import type {ArtifactBaselineStaged} from '../src/backend/core/evidence/artifact-baseline';
-import {memberCheckpointInputSchema,memberCheckpointProofSchema,isMemberCheckpointPending,type MemberCheckpointStaged} from '../src/backend/core/tasks/member-checkpoint';
-import {MemberCheckpointTools} from '../src/backend/core/tasks/member-checkpoint-tools';
-import {validateCheckpointEligibility,verifyMemberCheckpoint} from '../src/backend/core/tasks/member-checkpoint-evidence';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import type {ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
+import {artifactSources} from '../src/logic/evidence/rules/artifact-evidence';
+import type {ArtifactBaselineStaged} from '../src/logic/evidence/rules/artifact-baseline';
+import {memberCheckpointInputSchema,memberCheckpointProofSchema,isMemberCheckpointPending,type MemberCheckpointStaged} from '../src/logic/tasks/rules/member-checkpoint';
+import {MemberCheckpointTools} from '../src/logic/tasks/rules/member-checkpoint-tools';
+import {validateCheckpointEligibility,verifyMemberCheckpoint} from '../src/logic/tasks/rules/member-checkpoint-evidence';
 
 const binding={workspaceId:'workspace',teamId:'team',agentId:'executor',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',taskId:'task',runId:'first-run',leaseEpoch:1,planRevision:1},stamp='2026-11-07T00:00:00.000Z',normalize=(path:string)=>path.replace(/^\/workspace\//,'');
 const input={expectedTaskProgressVersion:1,baselineId:'baseline',reason:'暂存局部修改，交回主调度安排'};

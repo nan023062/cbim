@@ -5,10 +5,10 @@
  * 范围边界：仓库操作及链接器须与完整授权/回执范围一致，外部只读不能降为工作区文件事实。
  * 兼容边界：原执行报告保持 128 字符调用 ID；原命令核实可显式采用真实工具已有的 512 字符域，不截断或改变旧报告协议。
  */
-import {executionReportSchema,type ExecutionReport} from '../../core/tasks/execution-report';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import {hash,json} from '../../core/foundation/serialization';
+import {executionReportSchema,type ExecutionReport} from '../../../logic/tasks/rules/execution-report';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {z} from 'zod';
 
 type Item=ExecutionReport['tools']['items'][number];

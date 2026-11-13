@@ -8,14 +8,14 @@
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {contextualMainCommand} from '../goals/main-command-request';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity,TaskNode} from '../../core/tasks/graph-types';
-import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt,type CheckpointAbandonment} from '../../core/tasks/checkpoint-handoff';
-import {checkpointAbandonmentSelection} from '../../core/tasks/checkpoint-handoff-rules';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt,type CheckpointAbandonment} from '../../../logic/tasks/rules/checkpoint-handoff';
+import {checkpointAbandonmentSelection} from '../../../logic/tasks/rules/checkpoint-handoff-rules';
 import {verifyMemberCheckpointHistory,type MemberCheckpointHistoryPorts} from './member-checkpoint-verifier';
 
 // 与已有图及处置叶子的逻辑身份域一致；这里不是文件路径入口，不能额外缩窄历史身份。

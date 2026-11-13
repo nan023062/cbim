@@ -35,7 +35,9 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
           const feedbackService=to==='logic/feedback/service'&&(from.startsWith('backend/main/')||from.startsWith('bridge/server/'));
           const resourceCompatibility=to==='logic/resources'&&from==='bridge/contracts/resources.ts';
           const resourceService=to==='logic/resources/service'&&(from.startsWith('backend/main/')||from.startsWith('bridge/server/'));
-          if(!asset&&allowed[layer]&&!modelCompatibility&&!modelService&&!webCompatibility&&!webService&&!webDesktop&&!feedbackCompatibility&&!feedbackService&&!resourceCompatibility&&!resourceService)expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
+          const domainEntry=/^logic\/[^/]+\/(rules|ports)(\/|$)/.test(to)&&(/^backend\/(core|main|engines|scheduler-engine)\//.test(from)||from.startsWith('bridge/contracts/'));
+          const foundationEntry=/^backend\/(engines|scheduler-engine)\//.test(from)&&['core/errors','core/json','core/platform/node/serialization'].includes(to);
+          if(!asset&&allowed[layer]&&!modelCompatibility&&!modelService&&!webCompatibility&&!webService&&!webDesktop&&!feedbackCompatibility&&!feedbackService&&!resourceCompatibility&&!resourceService&&!domainEntry&&!foundationEntry)expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
         }
       }
       ts.forEachChild(node,visit);

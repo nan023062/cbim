@@ -8,8 +8,8 @@ import {businessReplanProvider,businessReplanFixture as data} from './business-r
 import {prepareBusinessReplan} from './business-replan-fixture';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {ReplanRequest,ReplanReceipt,ReplanPreview} from '../src/backend/core/tasks/scope-replan';
-import type {ConversationThreadView} from '../src/backend/core/execution/types';
+import type {ReplanRequest,ReplanReceipt,ReplanPreview} from '../src/logic/tasks/rules/scope-replan';
+import type {ConversationThreadView} from '../src/logic/execution/rules/types';
 
 it.each(['execute','ask','stop'] as const)('creates explicit independent business work after real read-only evidence (%s)',async mode=>{
   const f=await fixture(),provider=await businessReplanProvider({holdBusiness:true,holdOld:true});let app=f.app;

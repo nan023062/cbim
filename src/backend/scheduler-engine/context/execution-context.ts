@@ -8,20 +8,20 @@
  */
 import {orderJsonValue} from '../../../core/utility';
 import {resolveExecutionModules} from './automatic-context';
-import {hash} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {data,BusinessWorkspace} from '../../core/knowledge/read-models';
-import {Builtins} from '../../core/knowledge/builtins';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {Snapshot} from '../../core/knowledge/types';
-import type {WorkspaceMember} from '../../core/team/workspace-member';
+import {hash} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {data,BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
+import {Builtins} from '../../../logic/knowledge/rules/builtins';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
+import type {WorkspaceMember} from '../../../logic/team/rules/workspace-member';
 
-import type {TaskNode} from '../../core/tasks/graph-types';
-import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,type PreparedDispatchKnowledge} from '../../core/tasks/execution-context';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,type PreparedDispatchKnowledge} from '../../../logic/tasks/rules/execution-context';
 import {resolveDispatchAgent,resolveDispatchModules} from './dispatch-context';
 import {mainAgentId} from '../conversation/main-agent';
-import {parseWorkflowContract} from '../../core/workspace/workflow-contract';
-import {validateTaskWorkflowSelections} from '../../core/tasks/workflow-selection';
+import {parseWorkflowContract} from '../../../logic/workspace/rules/workflow-contract';
+import {validateTaskWorkflowSelections} from '../../../logic/tasks/rules/workflow-selection';
 
 const standardIds=['business-execution','common-rules'];
 /** 只读执行知识准备所需能力；依赖修订复用它，不需要工作区写入或任务控制接口。 */

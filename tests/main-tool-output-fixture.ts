@@ -1,9 +1,9 @@
-import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
-import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
-import type {OwnerExecutionBinding,OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {MainToolOutputBinding} from '../src/logic/tasks/rules/main-tool-output';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
+import type {GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
+import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import type {OwnerExecutionBinding,OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export const mainToolBinding:MainToolOutputBinding={workspaceId:'workspace',rootSessionId:'root',scopeId:'bound-scope',runId:'e5f28867-d117-451e-826e-b5bb4f7962c0'};
 export const mainToolTime='2026-11-07T00:00:00.000Z';

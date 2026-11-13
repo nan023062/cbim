@@ -36,7 +36,7 @@ class N_src_backend_main_run_storage_run_journal_ts_RunJournal["RunJournal"] {
 N_src_backend_main_run_storage_run_journal_ts ..> N_src_backend_main_run_storage_run_journal_ts_RunJournal : 声明
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)、[../../core/execution/member-run.ts](../../core/execution/member-run.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../../core/execution/conversation-binding.ts](../../core/execution/conversation-binding.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/tools/rules/types.ts](../../../logic/tools/rules/types.ts)、[../../../logic/execution/rules/member-run.ts](../../../logic/execution/rules/member-run.ts)、[../../../logic/execution/rules/input-source.ts](../../../logic/execution/rules/input-source.ts)、[../../../logic/execution/rules/conversation-binding.ts](../../../logic/execution/rules/conversation-binding.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### run-storage.ts
 
@@ -58,7 +58,7 @@ class N_src_backend_main_run_storage_run_storage_ts_external_RunStorage["RunStor
 N_src_backend_main_run_storage_run_storage_ts_external_RunStorage <|.. N_src_backend_main_run_storage_run_storage_ts_FileRunStorage
 ```
 
-直接依赖：[../../core/execution/storage.ts](../../core/execution/storage.ts)、[../../core/tasks/types.ts](../../core/tasks/types.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[run-journal.ts](run-journal.ts)。
+直接依赖：[../../../logic/execution/rules/storage.ts](../../../logic/execution/rules/storage.ts)、[../../../logic/tasks/rules/types.ts](../../../logic/tasks/rules/types.ts)、[../../../logic/execution/ports/identity.ts](../../../logic/execution/ports/identity.ts)、[run-journal.ts](run-journal.ts)。
 
 ### 本目录调用边界
 

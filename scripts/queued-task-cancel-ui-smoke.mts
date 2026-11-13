@@ -7,7 +7,7 @@ import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {queuedTaskCancelProvider,queuedTaskCancelFixture as data} from '../tests/queued-task-cancel-provider';
 import {seedQueuedTaskCancel,queuedTaskCancelRecords} from '../tests/queued-task-cancel-fixture';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged desktop/Pi and native evidence. Only model responses are deterministic and local;

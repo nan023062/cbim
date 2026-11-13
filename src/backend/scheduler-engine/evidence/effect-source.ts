@@ -5,12 +5,12 @@
  * 职责边界：不读当前模型/知识，不修复日志，不操作 native；返回的摘要仍需公开白名单投影。
  */
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {EffectObservationInput,EffectObservationReport} from '../../core/tasks/effect-observation';
-import {goalInputRevision} from '../../core/tasks/scope-goal';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {EffectObservationInput,EffectObservationReport} from '../../../logic/tasks/rules/effect-observation';
+import {goalInputRevision} from '../../../logic/tasks/rules/scope-goal';
 import {memberPublicTask} from '../runtime/member-events';
 import {executionToolFacts} from './execution-report-facts';
 import type {CommandVerificationService} from './command-verification-service';

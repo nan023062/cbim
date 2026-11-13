@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {goalInspection,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import type {ServerResponse} from 'node:http';
 
 /** Native Pi compaction has no business tools; keep its requests separately, never advance member scripts. */

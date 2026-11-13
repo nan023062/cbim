@@ -6,17 +6,17 @@
  * 反馈边界：模型只能引用真实意见准备修订，不能填写本机评价，也不能把回应引用等同已解决或已理解。
  */
 import {z} from 'zod';
-import {withToolReconciliation} from '../../core/tools/outcome';
+import {withToolReconciliation} from '../../../logic/tools/rules/outcome';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail,Fault} from '../../core/foundation/errors';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
-import {moduleGovernanceMainCommandId} from '../../core/governance/module-governance-rules';
+import {fail,Fault} from '../../../core/errors';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
+import {moduleGovernanceMainCommandId} from '../../../logic/governance/rules/module-governance-rules';
 import {
   governanceGetInputSchema,governanceObserveInputSchema,governanceProposeInputSchema,governanceReceiptInputSchema,
   governanceGetOutputSchema,governanceWriteOutputSchema,governanceReceiptOutputSchema,governanceToolEffects,isGovernanceToolName,governanceToolOutputLimit,
   type GovernanceToolsPort,type GovernanceToolName,
-} from '../../core/governance/module-governance-tools';
+} from '../../../logic/governance/rules/module-governance-tools';
 
 /** 主实例与运行的后端身份；不属于模型输入或可序列化运行设置。 */
 export interface GovernanceRunBinding {workspaceId:string;rootSessionId:string;agentInstanceId:string;agentSessionId:string;runId:string}

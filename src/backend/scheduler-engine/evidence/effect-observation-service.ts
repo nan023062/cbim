@@ -6,22 +6,22 @@
  */
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import {effectObservationInputSchema,effectObservationReportSchema,effectFileObservationSchema,effectDispositionInputSchema,effectDispositionLookupSchema,effectDispositionReceiptSchema,effectDispositionRecordSchema,effectDispositionListSchema,effectRelationsInputSchema,effectRelationsSchema,effectObservationLimits,sameEffectSubject,type EffectObservationInput,type EffectObservationReport,type EffectFileObservation,type EffectCallObservation,type EffectDispositionInput,type EffectDispositionLookup,type EffectDispositionReceipt,type EffectRelationsInput} from '../../core/tasks/effect-observation';
-import {effectObservationBasis,effectDispositionCommand,effectDispositionRevision,effectDispositionReceipt,summarizeEffectDisposition} from '../../core/tasks/effect-observation-rules';
-import {isVerifiableMainToolName} from '../../core/tasks/command-verification';
-import {verifyArtifactBaselines} from '../../core/evidence/artifact-evidence';
-import {artifactRelativePathSchema} from '../../core/evidence/artifact-baseline';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import {effectObservationInputSchema,effectObservationReportSchema,effectFileObservationSchema,effectDispositionInputSchema,effectDispositionLookupSchema,effectDispositionReceiptSchema,effectDispositionRecordSchema,effectDispositionListSchema,effectRelationsInputSchema,effectRelationsSchema,effectObservationLimits,sameEffectSubject,type EffectObservationInput,type EffectObservationReport,type EffectFileObservation,type EffectCallObservation,type EffectDispositionInput,type EffectDispositionLookup,type EffectDispositionReceipt,type EffectRelationsInput} from '../../../logic/tasks/rules/effect-observation';
+import {effectObservationBasis,effectDispositionCommand,effectDispositionRevision,effectDispositionReceipt,summarizeEffectDisposition} from '../../../logic/tasks/rules/effect-observation-rules';
+import {isVerifiableMainToolName} from '../../../logic/tasks/rules/command-verification';
+import {verifyArtifactBaselines} from '../../../logic/evidence/rules/artifact-evidence';
+import {artifactRelativePathSchema} from '../../../logic/evidence/rules/artifact-baseline';
 import {CommandVerificationService} from './command-verification-service';
 import {readEffectSource,effectStateStamp,type EffectSourcePorts,type EffectSourceRead} from './effect-source';
-import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservation} from '../../core/knowledge/knowledge-write-observation';
-import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../core/knowledge/knowledge-write-input';
-import {persistentWriteObservationSchema,persistentWriteEffects,type PersistentWriteObservation,type PersistentWriteName} from '../../core/tasks/persistent-write-observation';
-import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../../core/tasks/persistent-write-input';
-import {controlledFileWriteInputSchema,controlledFileWriteToolName,type ControlledFileReportInput,type ControlledFileReport} from '../../core/file-operations/controlled-file-operation';
+import {knowledgeTransactionObservationSchema,type KnowledgeTransactionObservation} from '../../../logic/knowledge/rules/knowledge-write-observation';
+import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../../../logic/knowledge/rules/knowledge-write-input';
+import {persistentWriteObservationSchema,persistentWriteEffects,type PersistentWriteObservation,type PersistentWriteName} from '../../../logic/tasks/rules/persistent-write-observation';
+import {originalPersistentWrite,persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../../../logic/tasks/rules/persistent-write-input';
+import {controlledFileWriteInputSchema,controlledFileWriteToolName,type ControlledFileReportInput,type ControlledFileReport} from '../../../logic/file-operations/rules/controlled-file-operation';
 import {observeControlledEffect,type ControlledEffectReference} from './effect-controlled-file';
 
 /** Main 固定工作区根的可信只读端口；路径仍须二次规范化，释放只读占用不代表原调用已核实成功。 */

@@ -1,10 +1,10 @@
 import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {dependencyReplacementSchema,type ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {dependencyReplacementSchema,type ReplaceQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-replacement';
 
 export const dependencyReplacementFixture={
   goal:'DEPENDENCY_REPLACE_MAIN: A求助后以A2真实候选替换B前置，保留原B和C身份顺序完成',

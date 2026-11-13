@@ -6,20 +6,20 @@
  * 设计原因：当前登记与真实能力/模型必须同时匹配；知识锁在外，模型短锁其次，Store 事务最后，不能在事务中反向读取排队服务。
  * 职责边界：只查询或核实，不采纳配置、不修改责任、不运行模型；历史结算不调用当前岗位门禁。主模型匹配不写责任登记，不缓存跨知识版本的结果。配置读取沿岗位采纳引擎，同一模型多引擎按完整配置哈希区分。
  */
-import {implicitProjectModuleId,type AutomaticExecutionBinding,type CollaborationPolicy} from '../../core/team/automatic-execution';
+import {implicitProjectModuleId,type AutomaticExecutionBinding,type CollaborationPolicy} from '../../../logic/team/rules/automatic-execution';
 import {isDeepStrictEqual} from 'node:util';
-import {fail,Fault} from '../../core/foundation/errors';
-import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge/ports';
-import type {Snapshot} from '../../core/knowledge/types';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import {workspaceMemberEngine,type WorkspaceMemberModelRef,type WorkspaceMemberModelSnapshot} from '../../core/team/workspace-member';
-import {workspaceMemberCapabilityHash,workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
-import {ownerExecutionSelectionFor,type OwnerExecutionBinding,type OwnerExecutionSelection} from '../../core/team/member-execution-binding';
-import {resolveOwnerExecutionSelection,assertCurrentOwnerExecutionBinding} from '../../core/team/member-execution-rules';
-import {ownerExecutionDiscoverySchema,taskOwnerInspectInputSchema,moduleOwnerMatchesSchema,type ModuleOwnerMatches,type OwnerExecutionDiscovery,type TaskOwnerInspectOutput} from '../../core/team/owner-execution-discovery';
-import {implicitModuleOwner} from '../../core/team/implicit-module-owner';
-import {currentKnowledgeSource,knowledgeSourceRef} from '../../core/workspace/knowledge-source-rules';
+import {fail,Fault} from '../../../core/errors';
+import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../../logic/knowledge/rules/ports';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {workspaceMemberEngine,type WorkspaceMemberModelRef,type WorkspaceMemberModelSnapshot} from '../../../logic/team/rules/workspace-member';
+import {workspaceMemberCapabilityHash,workspaceMemberModelHash} from '../../../logic/team/rules/workspace-member-rules';
+import {ownerExecutionSelectionFor,type OwnerExecutionBinding,type OwnerExecutionSelection} from '../../../logic/team/rules/member-execution-binding';
+import {resolveOwnerExecutionSelection,assertCurrentOwnerExecutionBinding} from '../../../logic/team/rules/member-execution-rules';
+import {ownerExecutionDiscoverySchema,taskOwnerInspectInputSchema,moduleOwnerMatchesSchema,type ModuleOwnerMatches,type OwnerExecutionDiscovery,type TaskOwnerInspectOutput} from '../../../logic/team/rules/owner-execution-discovery';
+import {implicitModuleOwner} from '../../../logic/team/rules/implicit-module-owner';
+import {currentKnowledgeSource,knowledgeSourceRef} from '../../../logic/workspace/rules/knowledge-source-rules';
 import {resolveDispatchAgent,resolveDispatchModules} from '../context/dispatch-context';
 
 export type OwnerExecutionWorkspace=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'|'rules'>&Partial<SourceSnapshotReader>;

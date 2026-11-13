@@ -9,9 +9,9 @@ import {inspectionCycleProvider,inspectionFixture as data} from './inspection-cy
 import {corruptInspectionHistory,inspectionScopes} from './inspection-cycle-fixture';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {RecoveryRequest,RecoveryReceipt} from '../src/backend/core/tasks/scope-recovery';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {ConversationThreadView} from '../src/backend/core/execution/types';
+import type {RecoveryRequest,RecoveryReceipt} from '../src/logic/tasks/rules/scope-recovery';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {ConversationThreadView} from '../src/logic/execution/rules/types';
 
 it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi inspection without replaying damaged old history (%s)',async mode=>{
   const f=await fixture(),provider=await inspectionCycleProvider({holdFresh:true,holdOld:true,again:mode==='again'});let app=f.app;

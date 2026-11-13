@@ -5,12 +5,12 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {ObjectPlan,ObjectStorage} from '../../core/knowledge/object-storage';
-import type {KnowledgeFile} from '../../core/knowledge/types';
-import type {StoragePaths} from '../../core/foundation/paths';
+import type {ObjectPlan,ObjectStorage} from '../../../logic/knowledge/rules/object-storage';
+import type {KnowledgeFile} from '../../../logic/knowledge/rules/types';
+import type {StoragePaths} from '../../../logic/workspace/ports/paths';
 import {atomic} from '../../../core/platform/node/files';
-import {json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
+import {json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
 
 /** owner 只提供工程身份和路径端口，不依赖 Workspace 生命周期实现。 */
 export class FileObjectStorage implements ObjectStorage {

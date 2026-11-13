@@ -4,11 +4,11 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import {createScopeRunTracking,appendScopeMainRun,scopeRunTrackingSchema} from '../src/backend/core/tasks/scope-run-tracking';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import {createScopeRunTracking,appendScopeMainRun,scopeRunTrackingSchema} from '../src/logic/tasks/rules/scope-run-tracking';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
 
 const time='2026-11-07T10:00:00.000Z';
 const scope=(scopeId='scope',rootSessionId='root'):DispatchScope=>({scopeId,workspaceId:'workspace',rootSessionId,status:'active',createdAt:time,goal:{revision:1,input:{message:'原目标',attachmentIds:[]}},runTracking:createScopeRunTracking('first-'+scopeId)});

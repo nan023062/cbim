@@ -1,14 +1,14 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {humanContinuationRequestSchema,humanContinuationSubject,scopeHumanContinuationSchema,humanContinuationReceiptSchema} from '../src/backend/core/tasks/human-continue';
-import {goalContinuationRequestSchema} from '../src/backend/core/tasks/scope-continuation';
-import {scopeContinuationRecordSchema,isHumanContinuation} from '../src/backend/core/tasks/scope-continuation-record';
-import {currentHumanContinuation,waitingHumanDecisions,referencedHumanDecision,humanContinuationSubjectMatches} from '../src/backend/core/tasks/human-continuation-rules';
-import {validateHumanContinuations,validateHumanContinuationCommand} from '../src/backend/core/tasks/human-continuation-invariants';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import {humanDecisionBasis} from '../src/backend/core/tasks/human-decision-proof';
+import {humanContinuationRequestSchema,humanContinuationSubject,scopeHumanContinuationSchema,humanContinuationReceiptSchema} from '../src/logic/tasks/rules/human-continue';
+import {goalContinuationRequestSchema} from '../src/logic/tasks/rules/scope-continuation';
+import {scopeContinuationRecordSchema,isHumanContinuation} from '../src/logic/tasks/rules/scope-continuation-record';
+import {currentHumanContinuation,waitingHumanDecisions,referencedHumanDecision,humanContinuationSubjectMatches} from '../src/logic/tasks/rules/human-continuation-rules';
+import {validateHumanContinuations,validateHumanContinuationCommand} from '../src/logic/tasks/rules/human-continuation-invariants';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {dispatchScopeGoalSchema} from '../src/logic/tasks/rules/scope-goal';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import {humanDecisionBasis} from '../src/logic/tasks/rules/human-decision-proof';
 import {at,identity,options,humanFixture,continued,planned,reviewed} from './human-continuation-core-fixture';
 
 const transition=(before:DispatchState,after:DispatchState)=>validateDispatchScopes(before,after,{scopes:after.scopes,receipt:true});

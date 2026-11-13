@@ -5,11 +5,11 @@ import path from 'node:path';
 import {AgentHistoryService} from '../src/backend/scheduler-engine/history/agent-history';
 import {FileAgentHistoryStore} from '../src/backend/main/history/file-store';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
-import type {AgentHistoryStore,AgentHistoryRecord} from '../src/backend/core/team/session-history-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
+import type {StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
+import type {AgentHistoryStore,AgentHistoryRecord} from '../src/logic/team/rules/session-history-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 
 const temporary:string[]=[];
 afterEach(async()=>{for(const directory of temporary.splice(0))await fs.rm(directory,{recursive:true,force:true})});
@@ -77,7 +77,7 @@ describe('静态 Agent 持久化历史索引',()=>{
     const first=await writeLog(f.root,a,[next(a,2,'run.settled',{status:'completed'})]);
     f.history.restoreRun(first.summary,'loop');f.history.observeRun(b,'loop');await f.history.close();
     const loaded=await f.store.load();expect(loaded.records).toHaveLength(2);
-    const {hash}=await import('../src/backend/core/foundation/serialization');
+    const {hash}=await import('../src/core/platform/node/serialization');
     const file=path.join(f.directory,hash('cbim:main'),'sessions',hash('session-one'),hash(JSON.stringify([a.taskId,a.runId]))+'.json');await fs.writeFile(file,'{broken');
     const reopened=new AgentHistoryService(workspaceId,f.root,{store:f.store,read:f.read});await reopened.initialize();
     expect((await reopened.roles({workspaceId})).roles[0].runCount).toBe(1);expect((await reopened.roles({workspaceId})).diagnostics).not.toHaveLength(0);

@@ -5,14 +5,14 @@
  * 职责边界：不调用提交、预览、恢复或初始化；不查询新模型，不把保存当作批准、实施、迁移或交接。正文只参与私有指纹。
  */
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {persistentWriteObservationSchema,type PersistentWriteObservation} from '../../core/tasks/persistent-write-observation';
-import {persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../../core/tasks/persistent-write-input';
-import {moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceReceiptSchema} from '../../core/governance/module-governance';
-import {moduleOwnershipChangeSchema,moduleOwnershipCommitInputSchema,moduleOwnershipReceiptSchema} from '../../core/workspace/module-ownership';
-import {moduleOwnershipCommand,moduleOwnershipReceipt} from '../../core/workspace/module-ownership-rules';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {persistentWriteObservationSchema,type PersistentWriteObservation} from '../../../logic/tasks/rules/persistent-write-observation';
+import {persistentWriteIdentity,persistentWriteSourceHash,type PersistentWriteReference} from '../../../logic/tasks/rules/persistent-write-input';
+import {moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceReceiptSchema} from '../../../logic/governance/rules/module-governance';
+import {moduleOwnershipChangeSchema,moduleOwnershipCommitInputSchema,moduleOwnershipReceiptSchema} from '../../../logic/workspace/rules/module-ownership';
+import {moduleOwnershipCommand,moduleOwnershipReceipt} from '../../../logic/workspace/rules/module-ownership-rules';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
 import {governanceCommandFingerprint,type ModuleGovernanceStore} from '../governance/storage/module-governance-store';
 
 interface PersistentEffectOwner {

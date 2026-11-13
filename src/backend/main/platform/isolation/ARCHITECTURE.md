@@ -209,7 +209,7 @@ class N_src_backend_main_platform_isolation_isolation_record_ts_IsolationLifecyc
 N_src_backend_main_platform_isolation_isolation_record_ts ..> N_src_backend_main_platform_isolation_isolation_record_ts_IsolationLifecycle : 声明
 ```
 
-直接依赖：[../../../core/file-operations/controlled-file-operation.ts](../../../core/file-operations/controlled-file-operation.ts)、[../../../core/file-operations/isolated-execution-recovery.ts](../../../core/file-operations/isolated-execution-recovery.ts)。
+直接依赖：[../../../../logic/file-operations/rules/controlled-file-operation.ts](../../../../logic/file-operations/rules/controlled-file-operation.ts)、[../../../../logic/file-operations/rules/isolated-execution-recovery.ts](../../../../logic/file-operations/rules/isolated-execution-recovery.ts)。
 
 ### isolation-records.ts
 
@@ -261,7 +261,7 @@ class N_src_backend_main_platform_isolation_isolation_records_ts_MemoryEntry["Me
 N_src_backend_main_platform_isolation_isolation_records_ts ..> N_src_backend_main_platform_isolation_isolation_records_ts_MemoryEntry : 声明
 ```
 
-直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/identity.ts](../../../core/foundation/identity.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[isolation-record.ts](isolation-record.ts)。
+直接依赖：[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../logic/execution/ports/identity.ts](../../../../logic/execution/ports/identity.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[isolation-record.ts](isolation-record.ts)。
 
 ### isolation-recovery-win32.ts
 

@@ -4,8 +4,8 @@ import {randomUUID} from 'node:crypto';
 import {it,expect,vi} from 'vitest';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {continuationAttachmentLimits} from '../src/backend/core/tasks/scope-continuation-attachments';
+import {hash} from '../src/core/platform/node/serialization';
+import {continuationAttachmentLimits} from '../src/logic/tasks/rules/scope-continuation-attachments';
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64');
 async function setup(){const f=await fixture();const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),inputs=new ChatInputs(workspace),directory=path.join(workspace.paths.project(entry.id),'chat-inputs');return {...f,entry,workspace,inputs,directory,signal:new AbortController().signal}}

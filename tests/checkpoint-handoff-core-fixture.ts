@@ -1,17 +1,17 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {hash} from '../src/core/platform/node/serialization';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import type {DispatchState,DispatchMutation,CheckpointMessage,AssignmentMessage} from '../src/backend/core/dispatch/dispatch-storage';
-import type {GraphEventBatch,TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {MemberCheckpointRecord} from '../src/backend/core/tasks/member-checkpoint';
-import type {MemberResumeRequest} from '../src/backend/core/tasks/queued-member-resume';
-import type {AbandonCheckpointInput,CheckpointAbandonment,AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-invariants';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {validateOwnerExecutionMutation} from '../src/backend/core/tasks/owner-execution-invariants';
+import type {DispatchState,DispatchMutation,CheckpointMessage,AssignmentMessage} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {GraphEventBatch,TaskNode} from '../src/logic/tasks/rules/graph-types';
+import type {MemberCheckpointRecord} from '../src/logic/tasks/rules/member-checkpoint';
+import type {MemberResumeRequest} from '../src/logic/tasks/rules/queued-member-resume';
+import type {AbandonCheckpointInput,CheckpointAbandonment,AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {validateDispatchExecution} from '../src/logic/tasks/rules/dispatch-invariants';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {validateOwnerExecutionMutation} from '../src/logic/tasks/rules/owner-execution-invariants';
 import {memberEvent,ownershipEvent,bindingFor,ws,identity,scopeId,at,command,rootMutation,taskMutation,initialScope,plannedScope,claimMutation} from './owner-execution-core-fixture';
 
 export const mainRunId='main-run',later='2026-11-08T08:00:02.000Z';

@@ -16,7 +16,7 @@
  */
 import {parseApplicationRequest} from './request';
 import type {ApplicationServices} from './services';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {isIpcAction,type IpcHandlers,type ApplicationIpcAction,type IpcAction,type IpcResponse} from '../../../bridge/contracts/ipc-call';
 import {desktopIpcRequests} from '../../../bridge/contracts/ipc-desktop';
 import {agentHistoryIpcHandlers} from './agent-history';

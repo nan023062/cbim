@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export type WorkflowConditionMode='complete'|'missing-capability'|'stop'|'parallel-effects';
 export const workflowConditionFixture={model:'workflow-condition-fixture',goal:'WORKFLOW_CONDITION_MAIN: 按保存的模块执行约定交付真实成果',memberGoal:'WORKFLOW_CONDITION_MEMBER: 计划前不可写入，实际读取后才能交付',file:'workflow-condition-result.txt',fact:'WORKFLOW_CONDITION_REAL_FILE_7e41c',parallelInitial:'WORKFLOW_PARALLEL_OLD_BYTES',parallelStarted:'workflow-parallel-started',parallelRelease:'workflow-parallel-release',acceptance:['按模块Workflow先计划再写入，并引用本轮实际read回执交付'],draft:'保留原会话普通草稿，Workflow校验不能发送它。',otherDraft:'另一个会话的独立草稿也应保留。',final:'模块Workflow的真实工具条件已核实，成员成果已完成主调度审阅。'};

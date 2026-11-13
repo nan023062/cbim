@@ -5,10 +5,10 @@
  * 职责边界：输入已经通过原 canonical/授权校验；公开仅 ledger，checkedAt 不进入处置依据，错误只给不可核实诊断。
  */
 import {isDeepStrictEqual as equal} from 'node:util';
-import {hash} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {controlledFileReportSchema,type ControlledFileReport,type ControlledFileReportInput,type ControlledFileWriteInput,type ControlledFileBinding} from '../../core/file-operations/controlled-file-operation';
-import {controlledFileOperationId} from '../../core/file-operations/controlled-file-rules';
+import {hash} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {controlledFileReportSchema,type ControlledFileReport,type ControlledFileReportInput,type ControlledFileWriteInput,type ControlledFileBinding} from '../../../logic/file-operations/rules/controlled-file-operation';
+import {controlledFileOperationId} from '../../../logic/file-operations/rules/controlled-file-rules';
 
 /** 只能从已核实成员来源构造，不能从页面传入正文、scope 或运行绑定。 */
 export interface ControlledEffectReference {identity:ControlledFileReportInput;scopeId:string;binding:ControlledFileBinding;input:ControlledFileWriteInput}

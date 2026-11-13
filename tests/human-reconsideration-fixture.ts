@@ -3,8 +3,8 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {humanServiceFixture} from './human-decision-service-fixture';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {HumanDecisionKind,HumanDecisionPreviewInput} from '../src/backend/core/tasks/human-decisions';
-import type {HumanContinuationRequest} from '../src/backend/core/tasks/human-continue';
+import type {HumanDecisionKind,HumanDecisionPreviewInput} from '../src/logic/tasks/rules/human-decisions';
+import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 
 type Fixture=Awaited<ReturnType<typeof humanServiceFixture>>;
 export async function saveHumanOpinion(f:Fixture,input:HumanDecisionPreviewInput=f.input,decision:HumanDecisionKind='accept'){

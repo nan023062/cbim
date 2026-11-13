@@ -5,7 +5,7 @@ import {workspaceMemberHttpProbe,workspaceMemberRuntimeEvidence} from './workspa
 import {moduleOwnershipDetail} from './module-ownership-fixture';
 import {randomUUID} from 'node:crypto';
 import {commitWorkspaceMember} from './workspace-member-fixture';
-import {ownerExecutionDiscoverySchema} from '../src/backend/core/team/owner-execution-discovery';
+import {ownerExecutionDiscoverySchema} from '../src/logic/team/rules/owner-execution-discovery';
 
 it('explicitly configures two positions of the same Agent with distinct models/adaptation and module sources without executing a model',async()=>{
   const f=await fixture(),probe=await workspaceMemberHttpProbe();

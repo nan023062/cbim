@@ -6,7 +6,7 @@ import type {ApplicationServices} from './services';
 import type {IpcHandlers} from '../../../bridge/contracts/ipc-call';
 import {loopChoicesSchema,type LoopIpcResponses} from '../../../bridge/contracts/ipc-loop';
 import {ChatInputs} from '../materials/chat-inputs';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function loopIpcHandlers(app:ApplicationServices):IpcHandlers<keyof LoopIpcResponses>{

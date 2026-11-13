@@ -5,9 +5,9 @@
 ```mermaid
 flowchart TB
   Main[main · 应用与平台装配] --> Scheduler[scheduler-engine · 业务编排]
-  Main --> Core[core · 领域规则与执行契约]
+  Main --> Core[src/logic · 领域规则与执行契约]
   Main --> Updater[updater · 独立更新]
-  Main --> Foundations[core/foundation 子库 · 独立技术机制]
+  Main --> Foundations[src/core · 独立技术机制]
   Core --> Foundations
   Main --> Shared[src/core shared utilities]
   Core --> Shared
@@ -26,18 +26,18 @@ Updater 对共享 Core 的依赖限于 utility 通用公开入口，用于已获
 
 Engines 同样只消费 utility 通用入口：Pi/Codex 组合 LF 拆帧，Codex 组合在途集合。协议、授权、超时、取消与真实进程退出仍由适配器拥有；不能借此依赖其他基础方案或应用服务。
 
-共享 src/core 已建立：utility 与 Node 摘要已迁入，files/web 暂留 backend/core/foundation。旧 backend/core 的领域规则与执行机制属于待迁移 Logic，不等于共享 Core。
+共享 src/core 的 utility、文件、网页、错误与 JSON 适配已经独立。旧 backend/core 已迁至 src/logic 各业务规则与端口；本目录暂留宿主服务、调度、具体引擎和更新启动。
 
 ## 按职责定位
 
 | 修改对象 | 规则／契约 | 编排 | 本机实现 |
 | --- | --- | --- | --- |
-| 模型执行 | [core/execution](core/execution/ARCHITECTURE.md)、[core/models](core/models/ARCHITECTURE.md) | [assembly](scheduler-engine/assembly/ARCHITECTURE.md)、[conversation](scheduler-engine/conversation/ARCHITECTURE.md)、[members](scheduler-engine/members/ARCHITECTURE.md) | [engines](engines/ARCHITECTURE.md)、[run-storage](main/run-storage/ARCHITECTURE.md) |
-| 任务与目标 | [tasks](core/tasks/ARCHITECTURE.md)、[dispatch](core/dispatch/ARCHITECTURE.md) | [dispatch](scheduler-engine/dispatch/ARCHITECTURE.md)、[goals](scheduler-engine/goals/ARCHITECTURE.md) | [dispatch-storage](main/dispatch-storage/ARCHITECTURE.md) |
-| 证据与预算 | [evidence](core/evidence/ARCHITECTURE.md)、[budget](core/budget/ARCHITECTURE.md) | [evidence](scheduler-engine/evidence/ARCHITECTURE.md)、[budget](scheduler-engine/budget/ARCHITECTURE.md) | [evidence](main/evidence/ARCHITECTURE.md)、[预算存储适配](main/dispatch-storage/request-budget-store.ts) |
-| 知识与岗位 | [knowledge](core/knowledge/ARCHITECTURE.md)、[team](core/team/ARCHITECTURE.md)、[workspace](core/workspace/ARCHITECTURE.md) | [context](scheduler-engine/context/ARCHITECTURE.md) | [knowledge](main/knowledge/ARCHITECTURE.md)、[registry](main/registry/ARCHITECTURE.md) |
-| 文件与隔离执行 | [file-operations](core/file-operations/ARCHITECTURE.md) | 由成员能力与应用服务调用 | [file-operations](main/file-operations/ARCHITECTURE.md)、[platform/files](main/platform/files/ARCHITECTURE.md)、[platform/isolation](main/platform/isolation/ARCHITECTURE.md) |
-| 履历与资料 | [team 履历契约](core/team/ARCHITECTURE.md) | [history](scheduler-engine/history/ARCHITECTURE.md) | [history](main/history/ARCHITECTURE.md)、[materials](main/materials/ARCHITECTURE.md) |
+| 模型执行 | [执行规则](../logic/execution/rules/ARCHITECTURE.md)、[预算规则](../logic/budget/rules/ARCHITECTURE.md) | [assembly](scheduler-engine/assembly/ARCHITECTURE.md)、[conversation](scheduler-engine/conversation/ARCHITECTURE.md)、[members](scheduler-engine/members/ARCHITECTURE.md) | [engines](engines/ARCHITECTURE.md)、[run-storage](main/run-storage/ARCHITECTURE.md) |
+| 任务与目标 | [tasks](../logic/tasks/rules/ARCHITECTURE.md)、[dispatch](../logic/dispatch/rules/ARCHITECTURE.md) | [dispatch](scheduler-engine/dispatch/ARCHITECTURE.md)、[goals](scheduler-engine/goals/ARCHITECTURE.md) | [dispatch-storage](main/dispatch-storage/ARCHITECTURE.md) |
+| 证据与预算 | [evidence](../logic/evidence/rules/ARCHITECTURE.md)、[budget](../logic/budget/rules/ARCHITECTURE.md) | [evidence](scheduler-engine/evidence/ARCHITECTURE.md)、[budget](scheduler-engine/budget/ARCHITECTURE.md) | [evidence](main/evidence/ARCHITECTURE.md)、[预算存储适配](main/dispatch-storage/request-budget-store.ts) |
+| 知识与岗位 | [knowledge](../logic/knowledge/rules/ARCHITECTURE.md)、[team](../logic/team/rules/ARCHITECTURE.md)、[workspace](../logic/workspace/rules/ARCHITECTURE.md) | [context](scheduler-engine/context/ARCHITECTURE.md) | [knowledge](main/knowledge/ARCHITECTURE.md)、[registry](main/registry/ARCHITECTURE.md) |
+| 文件与隔离执行 | [file-operations](../logic/file-operations/rules/ARCHITECTURE.md) | 由成员能力与应用服务调用 | [file-operations](main/file-operations/ARCHITECTURE.md)、[platform/files](main/platform/files/ARCHITECTURE.md)、[platform/isolation](main/platform/isolation/ARCHITECTURE.md) |
+| 履历与资料 | [team 履历契约](../logic/team/rules/ARCHITECTURE.md) | [history](scheduler-engine/history/ARCHITECTURE.md) | [history](main/history/ARCHITECTURE.md)、[materials](main/materials/ARCHITECTURE.md) |
 
 状态归属没有因目录迁移变化：派发事务仍由 FileDispatchStore 原子提交，运行日志仍由 RunStorage 管理，知识写入仍经原文件事务和端口。运行数据位置、IPC 名称与打包输出名保留兼容。
 
@@ -45,6 +45,6 @@ Engines 同样只消费 utility 通用入口：Pi/Codex 组合 LF 拆帧，Codex
 
 先读修改对象的契约和规则，再沿编排读到实际存储或平台副作用。新增引擎主要进入 `engines/<engine>` 与 `scheduler-engine/assembly/loop-engine.ts`；公共引擎契约确需改变时，仍须明确消费者与兼容影响，不能声称增加引擎绝不修改核心。
 
-Core 已禁止依赖具体引擎。LoopRuntime、loop-engine、ScopeGoalService 的依赖密度和共享 DispatchStore 的宽接口仍在；当前聚合目录不等于已完成这些职责拆分。没有足够变更历史证明稳定性的模块仍作为稳定候选，不能以文件位置证明稳定。
+Logic 规则已禁止依赖具体引擎。LoopRuntime、loop-engine、ScopeGoalService 的依赖密度和共享 DispatchStore 的宽接口仍在；当前聚合目录不等于已完成这些职责拆分。没有足够变更历史证明稳定性的模块仍作为稳定候选，不能以文件位置证明稳定。
 
 源码与依赖图由现有检查器提取；未来 review 先看 Git diff 和受影响模块，再按需要扩大阅读。目录定位与设计理由在契约/生成器中维护，不在每次 review 重新生成全仓源码快照。

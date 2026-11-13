@@ -7,9 +7,9 @@ import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch
 import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
 import type {ApplicationServices} from '../src/backend/main/ipc/services';
 import {applyScopeBatch,validateScopeSnapshot,type ScopeSnapshot,type ScopeCursor,type DispatchSessionRead} from '../src/bridge/contracts/dispatch';
-import {readScopeDelta,summarizeScope,emptyScopeSnapshot,scopeViewHistoryLimit} from '../src/backend/core/tasks/scope-view';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import {dispatchScopeGoalSchema,type GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
+import {readScopeDelta,summarizeScope,emptyScopeSnapshot,scopeViewHistoryLimit} from '../src/logic/tasks/rules/scope-view';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import {dispatchScopeGoalSchema,type GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
 
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id);

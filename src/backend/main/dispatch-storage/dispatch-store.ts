@@ -7,22 +7,22 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import {applyGraphBatch, readGraphDelta} from '../../core/tasks/graph-reducer';
-import {validateDispatchExecution} from '../../core/tasks/dispatch-invariants';
-import {validateDispatchScopes} from '../../core/tasks/dispatch-scope-invariants';
-import {projectWorkspaceMemberMutation} from '../../core/tasks/workspace-member-invariants';
-import {projectModuleOwnershipMutation} from '../../core/tasks/module-ownership-invariants';
-import {projectEffectDispositionMutation} from '../../core/tasks/effect-observation-invariants';
-import {projectControlledFileMutation} from '../../core/file-operations/controlled-file-invariants';
-import {projectModelRequestBudgetMutation} from '../../core/budget/model-request-budget-invariants';
-import type {DispatchCommand, DispatchCommandEvidence, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../core/tasks/graph-types';
-import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../core/tasks/scope-view';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {projectKnowledgeSourceMutation} from '../../core/tasks/knowledge-source-invariants';
-import {validateOwnerExecutionMutation,type DispatchExecutionProtocol} from '../../core/tasks/owner-execution-invariants';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import {applyGraphBatch, readGraphDelta} from '../../../logic/tasks/rules/graph-reducer';
+import {validateDispatchExecution} from '../../../logic/tasks/rules/dispatch-invariants';
+import {validateDispatchScopes} from '../../../logic/tasks/rules/dispatch-scope-invariants';
+import {projectWorkspaceMemberMutation} from '../../../logic/tasks/rules/workspace-member-invariants';
+import {projectModuleOwnershipMutation} from '../../../logic/tasks/rules/module-ownership-invariants';
+import {projectEffectDispositionMutation} from '../../../logic/tasks/rules/effect-observation-invariants';
+import {projectControlledFileMutation} from '../../../logic/file-operations/rules/controlled-file-invariants';
+import {projectModelRequestBudgetMutation} from '../../../logic/budget/rules/model-request-budget-invariants';
+import type {DispatchCommand, DispatchCommandEvidence, DispatchMutation, DispatchObserver, DispatchState, DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {AgentRef, GraphCursor, GraphDelta, GraphEventBatch, GraphIdentity, GraphSnapshot} from '../../../logic/tasks/rules/graph-types';
+import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDelta,readScopeDetail,summarizeScope,scopeViewHistoryLimit,type DispatchSessionReadInput,type DispatchSessionRead,type ScopeSnapshot,type ScopeEventBatch} from '../../../logic/tasks/rules/scope-view';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {projectKnowledgeSourceMutation} from '../../../logic/tasks/rules/knowledge-source-invariants';
+import {validateOwnerExecutionMutation,type DispatchExecutionProtocol} from '../../../logic/tasks/rules/owner-execution-invariants';
 
 /** transactionSeq 是工作区日志序号，与单张图的 batch.seq 分开。 */
 interface TransactionBody {

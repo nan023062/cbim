@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {artifactCaptureResultSchema,artifactReportSchema} from '../src/backend/core/evidence/artifact-baseline';
+import {artifactCaptureResultSchema,artifactReportSchema} from '../src/logic/evidence/rules/artifact-baseline';
 import {artifactBaselineProvider,artifactBaselineFixture as data} from '../tests/artifact-baseline-provider';
 import {seedArtifactBaseline,artifactBaselineRecords,artifactBaselineFiles,assertArtifactVerification} from '../tests/artifact-baseline-fixture';
 import {latestExecutable} from './build-artifact.mjs';

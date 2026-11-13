@@ -7,15 +7,15 @@
  * 工具目录及调用端口契约来自上层 engine-tools；此文件只维护 Pi 的 HTTP/扩展适配与一次性许可。
  */
 import http from 'node:http';
-import {toolOutcome,toolReturnedResult,toolFailureResult} from '../../core/tools/outcome';
+import {toolOutcome,toolReturnedResult,toolFailureResult} from '../../../logic/tools/rules/outcome';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
-import type {ToolCall,ToolDecision} from '../../core/execution/types';
-import {validateToolResult,type ToolResult} from '../../core/tools/results';
-import {Fault,fail} from '../../core/foundation/errors';
-import {checkedRunInputSource,type RunInputSource} from '../../core/execution/input-source';
+import type {ToolCall,ToolDecision} from '../../../logic/execution/rules/types';
+import {validateToolResult,type ToolResult} from '../../../logic/tools/rules/results';
+import {Fault,fail} from '../../../core/errors';
+import {checkedRunInputSource,type RunInputSource} from '../../../logic/execution/rules/input-source';
 
-import type {EngineToolsPort as KnowledgeBridge} from '../../core/execution/engine-tools';
-export type {EngineToolSchema as KnowledgeToolSchema,EngineToolsPort as KnowledgeBridge} from '../../core/execution/engine-tools';
+import type {EngineToolsPort as KnowledgeBridge} from '../../../logic/execution/rules/engine-tools';
+export type {EngineToolSchema as KnowledgeToolSchema,EngineToolsPort as KnowledgeBridge} from '../../../logic/execution/rules/engine-tools';
 /** 临时桥只接受本次实例令牌；工具授权绑定调用 ID、名称和原始参数。 */
 export async function openBridge(knowledge:KnowledgeBridge,beforeTool:(call:ToolCall)=>Promise<ToolDecision>,onContext?:(usage:{tokens:number|null;contextWindow:number})=>Promise<void>,onRequestLimit?:(limit:number)=>Promise<void>,onTools?:(catalog:{expected:string[];active:string[];missing:string[]})=>Promise<void>){
   const tools=await knowledge.list();

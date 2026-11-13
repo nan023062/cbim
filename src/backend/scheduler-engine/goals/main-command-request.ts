@@ -5,20 +5,20 @@
  * 职责边界：纯转换不读 Store、不授权、不执行；派发隐藏父版本只能由调用方提供可信原事务前态。
  */
 import {z} from 'zod';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {GraphIdentity} from '../../core/tasks/graph-types';
-import type {DispatchCommand} from '../../core/dispatch/dispatch-storage';
-import {dispatchTaskFields,dispatchTaskInput} from '../../core/tasks/dispatch-commands';
-import {goalPlanInputSchema,goalReviewInputSchema} from '../../core/tasks/scope-goal';
-import {cancelQueuedTasksInputSchema} from '../../core/tasks/queued-task-cancel';
-import {replaceQueuedDependencyInputSchema} from '../../core/tasks/queued-dependency-replacement';
-import {addQueuedDependencyInputSchema} from '../../core/tasks/queued-dependency-addition';
-import {reviseQueuedDependenciesInputSchema} from '../../core/tasks/queued-dependency-revision';
-import {resumeMemberInputSchema} from '../../core/tasks/queued-member-resume';
-import {abandonCheckpointInputSchema} from '../../core/tasks/checkpoint-handoff';
-import type {VerifiableMainToolName} from '../../core/tasks/command-verification';
-import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {GraphIdentity} from '../../../logic/tasks/rules/graph-types';
+import type {DispatchCommand} from '../../../logic/dispatch/rules/dispatch-storage';
+import {dispatchTaskFields,dispatchTaskInput} from '../../../logic/tasks/rules/dispatch-commands';
+import {goalPlanInputSchema,goalReviewInputSchema} from '../../../logic/tasks/rules/scope-goal';
+import {cancelQueuedTasksInputSchema} from '../../../logic/tasks/rules/queued-task-cancel';
+import {replaceQueuedDependencyInputSchema} from '../../../logic/tasks/rules/queued-dependency-replacement';
+import {addQueuedDependencyInputSchema} from '../../../logic/tasks/rules/queued-dependency-addition';
+import {reviseQueuedDependenciesInputSchema} from '../../../logic/tasks/rules/queued-dependency-revision';
+import {resumeMemberInputSchema} from '../../../logic/tasks/rules/queued-member-resume';
+import {abandonCheckpointInputSchema} from '../../../logic/tasks/rules/checkpoint-handoff';
+import type {VerifiableMainToolName} from '../../../logic/tasks/rules/command-verification';
+import type {MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
 import {mainToolCommandId} from '../tools/main-tool-contracts';
 
 /** 保持既有字段插入顺序；不要改为 canonical 排序，否则已保存指纹将不再匹配。 */

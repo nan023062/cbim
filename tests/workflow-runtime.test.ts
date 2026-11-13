@@ -2,12 +2,12 @@ import {runtimeToolGroup} from './runtime-tool-group';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {expect,it,vi} from 'vitest';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {EngineContext,ToolCall} from '../src/backend/core/execution/types';
-import {nativeToolDescriptor} from '../src/backend/core/tools/native-tools';
-import {progressTool} from '../src/backend/core/evidence/progress-tools';
-import {validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
-import {jsonToolResult} from '../src/backend/core/tools/results';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import type {EngineContext,ToolCall} from '../src/logic/execution/rules/types';
+import {nativeToolDescriptor} from '../src/logic/tools/rules/native-tools';
+import {progressTool} from '../src/logic/evidence/rules/progress-tools';
+import {validateWorkflowEvidence} from '../src/logic/evidence/rules/workflow-evidence';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
 import {artifactRuntimeFixture,artifactBinding,deferred,invoke} from './artifact-runtime-fixture';
 
 const bindings:WorkflowContractBinding[]=[{moduleId:'.cbim/workspace/module',workflowId:'workflow',workflowVersion:'workflow-v1',contract:{version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'read-proof',toolName:'read'}]}}}];

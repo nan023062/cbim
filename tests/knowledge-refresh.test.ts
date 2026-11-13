@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {moduleFiles} from './data/knowledge';
-import {originalKnowledgeWrite} from '../src/backend/core/knowledge/knowledge-write-input';
+import {originalKnowledgeWrite} from '../src/logic/knowledge/rules/knowledge-write-input';
 import {observeKnowledgeTransaction} from '../src/backend/main/evidence/knowledge-effect-reader';
 import {artifactRuntimeFixture} from './artifact-runtime-fixture';
 

@@ -5,16 +5,16 @@
  * 职责边界：查询不创建运行、补采旧清单、写文件或签署验收；短读占用只约束本应用，外部进程仍可能随后改变文件。
  */
 import {isDeepStrictEqual as equal} from 'node:util';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import {outputManifestQuerySchema,outputManifestReportSchema,outputManifestCheckSchema,type OutputManifestReport,type OutputManifestSnapshot,type OutputManifestCheck} from '../../core/evidence/output-manifest';
-import {verifyOutputManifests,outputManifestHash} from '../../core/evidence/output-manifest-evidence';
-import {preparedWorkflowContracts} from '../../core/tasks/execution-context';
-import {preparedArtifactScopes,artifactScopeLimits} from '../../core/workspace/artifact-scope';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {outputManifestQuerySchema,outputManifestReportSchema,outputManifestCheckSchema,type OutputManifestReport,type OutputManifestSnapshot,type OutputManifestCheck} from '../../../logic/evidence/rules/output-manifest';
+import {verifyOutputManifests,outputManifestHash} from '../../../logic/evidence/rules/output-manifest-evidence';
+import {preparedWorkflowContracts} from '../../../logic/tasks/rules/execution-context';
+import {preparedArtifactScopes,artifactScopeLimits} from '../../../logic/workspace/rules/artifact-scope';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
 import {memberPublicTask} from '../runtime/member-events';
 
 /** 平台必须重新枚举全部原范围；check 的结论与摘要在服务再次核对，不接受只验旧文件列表。 */

@@ -4,8 +4,8 @@
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {webFetchInput,webFetchOutput,webSearchInput,webSearchOutput,type WebToolsPort} from '../../../logic/web';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
 const fetchName='cbim_web_fetch',searchName='cbim_web_search';
 export class WebTools {
   constructor(private readonly port:WebToolsPort,private readonly workspaceId:string){}

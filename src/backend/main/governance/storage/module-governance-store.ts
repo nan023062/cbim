@@ -10,12 +10,12 @@ import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {atomic} from '../../../../core/platform/node/files';
-import {hash,json} from '../../../core/foundation/serialization';
-import {fail} from '../../../core/foundation/errors';
-import {moduleGovernanceRegisterInputSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema,moduleGovernanceReceiptSchema,moduleGovernanceApplyIntentSchema,type ModuleGovernanceReceipt,type ModuleGovernanceApplyIntent,type ModuleGovernanceProtection,type ModuleGovernanceProposal,type ModuleGovernanceObservation,type ModuleGovernanceDecision} from '../../../core/governance/module-governance';
-import {validateModuleGovernanceProposal,validateModuleGovernanceDecisionAppend,validateModuleGovernanceRecordOrigin,validateModuleGovernanceMainObservation} from '../../../core/governance/module-governance-rules';
-import {moduleGovernanceOriginSchema} from '../../../core/governance/module-governance';
-import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../../core/governance/module-governance-feedback';
+import {hash,json} from '../../../../core/platform/node/serialization';
+import {fail} from '../../../../core/errors';
+import {moduleGovernanceRegisterInputSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema,moduleGovernanceReceiptSchema,moduleGovernanceApplyIntentSchema,type ModuleGovernanceReceipt,type ModuleGovernanceApplyIntent,type ModuleGovernanceProtection,type ModuleGovernanceProposal,type ModuleGovernanceObservation,type ModuleGovernanceDecision} from '../../../../logic/governance/rules/module-governance';
+import {validateModuleGovernanceProposal,validateModuleGovernanceDecisionAppend,validateModuleGovernanceRecordOrigin,validateModuleGovernanceMainObservation} from '../../../../logic/governance/rules/module-governance-rules';
+import {moduleGovernanceOriginSchema} from '../../../../logic/governance/rules/module-governance';
+import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../../../logic/governance/rules/module-governance-feedback';
 
 const inputSchema=z.union([moduleGovernanceRegisterInputSchema,moduleGovernanceObserveInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema]);
 const commandSchema=z.object({input:inputSchema,fingerprint:z.string().regex(/^[a-f0-9]{64}$/),receipt:moduleGovernanceReceiptSchema,intent:moduleGovernanceApplyIntentSchema.optional(),origin:moduleGovernanceOriginSchema.optional()}).strict();

@@ -8,12 +8,12 @@
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import type {Snapshot} from '../../core/knowledge/types';
-import {BusinessWorkspace} from '../../core/knowledge/read-models';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import {summarizeWorkspaceMember} from '../../core/team/workspace-member';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
+import {BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import {summarizeWorkspaceMember} from '../../../logic/team/rules/workspace-member';
 import {
   moduleOwnershipActorSchema,moduleOwnershipByMemberInputSchema,moduleOwnershipCommitInputSchema,moduleOwnershipDetailSchema,
   moduleOwnershipGetInputSchema,moduleOwnershipListInputSchema,moduleOwnershipLookupSchema,moduleOwnershipPageSchema,
@@ -21,11 +21,11 @@ import {
   type ModuleOwnership,type ModuleOwnershipActor,type ModuleOwnershipChange,type ModuleOwnershipIdentity,
   type ModuleOwnershipPreview,type ModuleOwnershipPreviewInput,type ModuleOwnershipReadBasis,type ModuleOwnershipReceipt,
   type ModuleOwnershipView,type ObservedModule,
-} from '../../core/workspace/module-ownership';
-import {assertModuleOwnershipExpectedBinding,moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../../core/workspace/module-ownership-rules';
-import {checkModuleOwnershipActor,moduleOwnershipImpact} from '../../core/tasks/module-ownership-invariants';
+} from '../../../logic/workspace/rules/module-ownership';
+import {assertModuleOwnershipExpectedBinding,moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOwnershipReceipt} from '../../../logic/workspace/rules/module-ownership-rules';
+import {checkModuleOwnershipActor,moduleOwnershipImpact} from '../../../logic/tasks/rules/module-ownership-invariants';
 import type {KnowledgeSourceWorkspace} from './knowledge-sources';
-import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rules';
+import {knowledgeSourcePending} from '../../../logic/workspace/rules/knowledge-source-rules';
 
 function input<S extends z.ZodTypeAny>(schema:S,raw:unknown):z.output<S>{const result=schema.safeParse(raw);if(!result.success)fail('OWNERSHIP_INPUT','责任请求不完整或包含不支持的字段');return result.data}
 type Knowledge={snapshot?:Snapshot;visible:Map<string,{name:string;summary:string}>;issue?:'invalid'|'unavailable'};

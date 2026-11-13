@@ -7,7 +7,7 @@ import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {memberCheckpointChainProvider,memberChainData as data} from '../tests/member-checkpoint-chain-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from '../tests/member-checkpoint-fixture';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {latestExecutable} from './build-artifact.mjs';
 
 // Real packaged desktop and Pi, isolated files and two actual restarts; only localhost model replies are scripted.

@@ -3,9 +3,9 @@
  * 作用定位：把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。
  * 设计原因：等待不占任何租约；工作区装配代际与可信批次回调隔离迟到唤醒，准入错误区分未受理与可继续等待。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import type {AdmissionRequest} from '../../core/runtime/admission';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import type {AdmissionRequest} from '../../../logic/runtime/rules/admission';
 import type {GlobalRunAdmission} from '../../scheduler-engine/admission/run-admission';
 import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
 import type {ExecutionAdmissionWait} from '../../scheduler-engine/admission/admission-wait';

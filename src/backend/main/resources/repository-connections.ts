@@ -9,24 +9,24 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
 import {atomic} from '../../../core/platform/node/files';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {KnowledgeWorkspace,KnowledgeCommit} from '../../core/knowledge/ports';
-import type {ChangeRequest} from '../../core/knowledge/types';
-import {connectorRegistrySchema,isResourceRepositoryConnector,resourceRepositoryConnectorDefinitionSchema,type ConnectorDefinition} from '../../core/connectors/definition';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {KnowledgeWorkspace,KnowledgeCommit} from '../../../logic/knowledge/rules/ports';
+import type {ChangeRequest} from '../../../logic/knowledge/rules/types';
+import {connectorRegistrySchema,isResourceRepositoryConnector,resourceRepositoryConnectorDefinitionSchema,type ConnectorDefinition} from '../../../logic/connectors/rules/definition';
 import {
   repositoryConnectionListInputSchema,repositoryConnectionListSchema,repositoryConnectionPreviewInputSchema,repositoryConnectionPreviewSchema,
   repositoryConnectionCommitInputSchema,repositoryConnectionCommitLookupSchema,repositoryConnectionCommitSchema,repositoryConnectionGrantInputSchema,repositoryConnectionRevokeInputSchema,
   repositoryConnectionLookupSchema,repositoryConnectionCheckInputSchema,repositoryConnectionCheckSchema,
   repositoryConnectionUnacceptedInputSchema,repositoryConnectionUnacceptedSchema,
   type RepositoryConnectionIdentity,type RepositoryConnectionPreview,type RepositoryConnectionCommit,type RepositoryConnectionGrant,type RepositoryConnectionReceipt,
-} from '../../core/connectors/repository-connection';
+} from '../../../logic/connectors/rules/repository-connection';
 import {RepositoryConnectionStore} from './repository-connection-store';
 import type {ResourceRepositories,SharedRepositoryReadConnection} from '../../../logic/resources/service';
 import {
   repositoryListInputSchema,repositoryGetInputSchema,repositoryToolLimits,
   type RepositoryToolsPort,type RepositoryToolTarget,
-} from '../../core/connectors/repository-tools';
+} from '../../../logic/connectors/rules/repository-tools';
 
 const registryPath='.cbim/connectors/registry.json';
 const requestSchema=z.object({workspaceId:z.string(),instanceId:z.string().uuid(),revision:z.string(),requestId:z.string().uuid(),changes:z.array(z.object({path:z.string(),text:z.string().nullable()}).strict())}).strict();

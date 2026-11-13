@@ -5,8 +5,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {humanContinuationReceiptSchema} from '../src/backend/core/tasks/human-continue';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
+import {humanContinuationReceiptSchema} from '../src/logic/tasks/rules/human-continue';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {humanContinuationProvider,humanContinuationFixture as data,type HumanContinuationMode} from './human-continuation-provider';
 import {seedHumanContinuation,humanContinuationRecords,decideHumanContinuation,humanContinuationRequest,humanContinuationSourceBytes} from './human-continuation-fixture';
 

@@ -4,19 +4,19 @@
  * 设计原因：工具成功不等于结构验证通过；canonical 核验包括本轮冻结岗位身份，原要求及当前文件共同约束出口。历史返工核实保留原证明，不能因文件已修改而抹掉过去的真实结果。
  * 职责边界：从完整canonical重建原集合身份，当前出口调用受限全集合或旧文件端口；不重入派发存储、不签署人工业务验收或承诺跨文件原子快照。
  */
-import {fail} from '../../core/foundation/errors';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {preparedWorkflowContracts,validatePreparedDispatchKnowledge} from '../../core/tasks/execution-context';
-import {validateWorkflowEvidence,selectWorkflowValidations} from '../../core/evidence/workflow-evidence';
-import {verifyValidationRecords} from '../../core/evidence/validation-evidence';
-import {completeOutputRequired,selectCompleteOutput,completeOutputProof,assertCompleteOutputCurrent} from '../../core/evidence/complete-output-evidence';
-import {verifyOutputManifests} from '../../core/evidence/output-manifest-evidence';
-import {preparedArtifactScopes,artifactScopeLimits} from '../../core/workspace/artifact-scope';
-import type {OutputManifestRecord,OutputManifestSnapshot,OutputManifestCheck} from '../../core/evidence/output-manifest';
-import {artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import type {RunSummary} from '../../core/execution/types';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
+import {fail} from '../../../core/errors';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {preparedWorkflowContracts,validatePreparedDispatchKnowledge} from '../../../logic/tasks/rules/execution-context';
+import {validateWorkflowEvidence,selectWorkflowValidations} from '../../../logic/evidence/rules/workflow-evidence';
+import {verifyValidationRecords} from '../../../logic/evidence/rules/validation-evidence';
+import {completeOutputRequired,selectCompleteOutput,completeOutputProof,assertCompleteOutputCurrent} from '../../../logic/evidence/rules/complete-output-evidence';
+import {verifyOutputManifests} from '../../../logic/evidence/rules/output-manifest-evidence';
+import {preparedArtifactScopes,artifactScopeLimits} from '../../../logic/workspace/rules/artifact-scope';
+import type {OutputManifestRecord,OutputManifestSnapshot,OutputManifestCheck} from '../../../logic/evidence/rules/output-manifest';
+import {artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
 import {memberPublicTask} from '../runtime/member-events';
 
 /** 仅可信平台注入，不能调用会重新读取本事务 store 的报告服务。 */

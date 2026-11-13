@@ -42,7 +42,7 @@ class N_src_backend_scheduler_engine_admission_admission_wait_ts_ExecutionLaunch
 N_src_backend_scheduler_engine_admission_admission_wait_ts ..> N_src_backend_scheduler_engine_admission_admission_wait_ts_ExecutionLaunchContext : 声明
 ```
 
-直接依赖：[../../core/execution/types.ts](../../core/execution/types.ts)。
+直接依赖：[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)。
 
 ### run-admission.ts
 
@@ -133,7 +133,7 @@ class N_src_backend_scheduler_engine_admission_run_admission_ts_GlobalRunAdmissi
 N_src_backend_scheduler_engine_admission_run_admission_ts ..> N_src_backend_scheduler_engine_admission_run_admission_ts_GlobalRunAdmission : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)。
 
 ### workspace-lease.ts
 
@@ -154,7 +154,7 @@ class N_src_backend_scheduler_engine_admission_workspace_lease_ts_WorkspaceExecu
 N_src_backend_scheduler_engine_admission_workspace_lease_ts ..> N_src_backend_scheduler_engine_admission_workspace_lease_ts_WorkspaceExecutionLease : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/policy/types.ts](../../core/tools/policy/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/policy/types.ts](../../../logic/tools/rules/policy/types.ts)。
 
 
 ## 子目录导航

@@ -8,7 +8,7 @@ import {seedTeam} from './team-fixture';
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
 import {prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
 import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import {LoopRuntime} from '../src/backend/core/execution';
+import {LoopRuntime} from '../src/logic/execution/rules';
 
 it('空工作区普通对话默认主 Agent，知识变化后仍可继续，保留每轮消息',async()=>{
   const f=await fixture();let manager:WorkspaceExecutionManager|undefined;

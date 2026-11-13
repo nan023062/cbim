@@ -1,5 +1,5 @@
 import {it,expect} from 'vitest';
-import {ConnectorRegistry} from '../src/backend/core/connectors/registry';
+import {ConnectorRegistry} from '../src/logic/connectors/rules/registry';
 
 it('链接器封装查询和唯一身份规则，不启动外部工具',()=>{
   const connector={id:'.cbim/connectors/docs',name:'文档桥',summary:'团队文档',plugin:{ghost_id:'docs',namespace:null}};

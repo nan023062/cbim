@@ -1,8 +1,8 @@
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import {memberHelpResultSchema} from '../src/backend/core/tasks/member-help';
+import {memberHelpResultSchema} from '../src/logic/tasks/rules/member-help';
 
 export const memberHelpFixture={
   mainGoal:'MEMBER_HELP_MAIN: 根据已有记录核实模块事实；遇到输入缺口先求助，再由主调度决定补做或等待',

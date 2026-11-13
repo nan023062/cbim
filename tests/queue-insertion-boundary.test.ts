@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import {PiEngine} from '../src/backend/engines/pi/engine';
-import type {AgentEngine,EngineEvent,InputImage} from '../src/backend/core/execution/types';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
+import type {AgentEngine,EngineEvent,InputImage} from '../src/logic/execution/rules/types';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 

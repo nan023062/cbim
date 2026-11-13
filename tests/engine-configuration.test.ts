@@ -8,10 +8,10 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {LlmProfiles} from '../src/logic/models/service';
 import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
 import {engineSupportsApi,loopEngineSchema} from '../src/logic/models';
-import {workspaceMemberModelHash} from '../src/backend/core/team/workspace-member-rules';
-import {workspaceMemberModelSnapshotSchema} from '../src/backend/core/team/workspace-member';
-import {objectOperation} from '../src/backend/core/knowledge/object-crud';
-import {queuedMessageSchema} from '../src/backend/core/tasks/queue';
+import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member-rules';
+import {workspaceMemberModelSnapshotSchema} from '../src/logic/team/rules/workspace-member';
+import {objectOperation} from '../src/logic/knowledge/rules/object-crud';
+import {queuedMessageSchema} from '../src/logic/tasks/rules/queue';
 import {EngineModelPicker} from '../src/frontend/components/EngineModelPicker';
 
 const base:LlmDefinition={name:'Shared provider',api:'anthropic-messages',auth:'none',baseUrl:'http://127.0.0.1:1',defaultModel:'test',models:[{id:'test',name:'Test model',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]};

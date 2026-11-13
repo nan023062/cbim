@@ -1,14 +1,14 @@
 import {describe,it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../src/backend/core/foundation/serialization';
+import {hash,json} from '../src/core/platform/node/serialization';
 import {
   moduleGovernanceRegisterInputSchema,moduleGovernanceProposeInputSchema,moduleGovernanceDecideInputSchema,moduleGovernanceApplyInputSchema,moduleGovernanceApplicationSchema,moduleGovernanceUnacceptedSchema,
   type ModuleGovernanceProtection,type ModuleGovernanceObservation,type ModuleGovernanceProposal,type ModuleGovernanceDecision,type ModuleGovernanceApplyIntent,
-} from '../src/backend/core/governance/module-governance';
+} from '../src/logic/governance/rules/module-governance';
 import {
   moduleGovernanceBinding,moduleGovernanceProposalBasis,validateModuleGovernanceProposal,validateModuleGovernanceDecisionAppend,validateModuleGovernanceWrite,advanceModuleGovernanceProtection,
   type ModuleGovernanceFile,type ModuleGovernanceWriteInput,
-} from '../src/backend/core/governance/module-governance-rules';
+} from '../src/logic/governance/rules/module-governance-rules';
 
 const now='2026-11-07T08:00:00.000Z',workspaceId='workspace',instanceId=randomUUID(),moduleId='.cbim/workspace/engine',actor={kind:'local_desktop',interaction:'explicit_submit'} as const;
 const fact=(path:string,text:string):ModuleGovernanceFile=>({path,text,hash:hash(text)});

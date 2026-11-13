@@ -4,12 +4,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
-import {LoopRuntime} from '../src/backend/core/execution';
+import {LoopRuntime} from '../src/logic/execution/rules';
 import {PiEngine} from '../src/backend/engines/pi/engine';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {guard} from '../src/backend/main/platform/tool-guard';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
-import {nativeToolDescriptor} from '../src/backend/core/tools/native-tools';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
+import {nativeToolDescriptor} from '../src/logic/tools/rules/native-tools';
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
 import {loopInstructions,prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
 

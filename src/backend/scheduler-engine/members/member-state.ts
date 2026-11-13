@@ -6,13 +6,13 @@
  * 设计原因：纯状态计算与进程生命周期分开；已请求求助的运行不能同时产出交付候选，模型正文不签发完成或验收事实。
  */
 import {randomUUID} from 'node:crypto';
-import {candidateAccepted} from '../../core/tasks/candidate-review';
-import {fail} from '../../core/foundation/errors';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {GraphSnapshot,GraphEventBatch,GraphChange,TaskNode,AgentGraphView} from '../../core/tasks/graph-types';
-import type {AgentInstance} from '../../core/team/agent-types';
-import {isProgressEvidence} from '../../core/tasks/member-tool-output';
+import {candidateAccepted} from '../../../logic/tasks/rules/candidate-review';
+import {fail} from '../../../core/errors';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphSnapshot,GraphEventBatch,GraphChange,TaskNode,AgentGraphView} from '../../../logic/tasks/rules/graph-types';
+import type {AgentInstance} from '../../../logic/team/rules/agent-types';
+import {isProgressEvidence} from '../../../logic/tasks/rules/member-tool-output';
 import {hasMemberHelp} from './member-help-state';
 export {memberHelpCandidate,hasMemberHelp} from './member-help-state';
 

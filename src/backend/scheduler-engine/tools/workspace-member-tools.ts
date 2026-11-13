@@ -4,14 +4,14 @@
  * 设计原因：工具分类与调用使用同一严格协议；主写入只执行一次，回包异常保留稳定命令供核实，不能冒充桌面选型。
  */
 import {z} from 'zod';
-import {withToolReconciliation} from '../../core/tools/outcome';
+import {withToolReconciliation} from '../../../logic/tools/rules/outcome';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {isDeepStrictEqual} from 'node:util';
-import {fail,Fault} from '../../core/foundation/errors';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
-import {workspaceMemberMainCommandId} from '../../core/team/workspace-member-rules';
-import {memberToolEffects,memberToolInputs,memberToolOutputs,memberToolCommitSchema,memberToolPreviewSchema,memberToolReceiptSchema,type MemberToolName,type MemberToolBinding,type WorkspaceMemberToolsPort} from '../../core/team/workspace-member-tools';
+import {fail,Fault} from '../../../core/errors';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
+import {workspaceMemberMainCommandId} from '../../../logic/team/rules/workspace-member-rules';
+import {memberToolEffects,memberToolInputs,memberToolOutputs,memberToolCommitSchema,memberToolPreviewSchema,memberToolReceiptSchema,type MemberToolName,type MemberToolBinding,type WorkspaceMemberToolsPort} from '../../../logic/team/rules/workspace-member-tools';
 
 const descriptions:Record<MemberToolName,string>={
  cbim_member_inspect:'查询岗位列表；传 memberId 返回版本、当前/已采纳能力和配置哈希及修复入口。能力失配仍返回差异；不读取凭据、不派工。',

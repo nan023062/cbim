@@ -10,21 +10,21 @@
 import {redactLiteral} from '../../../core/utility';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
+import type {AgentEngine,EngineContext,EngineEvent} from '../../../logic/execution/rules/types';
 import type {ResolvedLlm} from '../../../logic/models';
-import type {RequestBudgetPort} from '../../core/models/request-budget';
-import {runtimeEngineTools,type EngineToolsPort} from '../../core/execution/engine-tools';
-import {engineInstructions} from '../../core/execution/engine-instructions';
+import type {RequestBudgetPort} from '../../../logic/budget/rules/request-budget';
+import {runtimeEngineTools,type EngineToolsPort} from '../../../logic/execution/rules/engine-tools';
+import {engineInstructions} from '../../../logic/execution/rules/engine-instructions';
 import {managedNativeTools} from '../native-tools';
 import {codexBinary} from './binary';
-import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
+import type {EngineRuntimePackage} from '../../../logic/execution/rules/engine-runtime';
 import {CodexRpc} from './rpc';
 import {codexTools} from './tools';
 import {openCodexModelProxy} from './model-proxy';
 import {readCodexSession,codexPath} from './session';
 import {RunInactivityTimer} from '../run-inactivity';
 
-export interface CodexOptions {/** 本次执行固定的独立 Codex 包与 Pi 工具包，由可信宿主注入。 */ runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
+export interface CodexOptions {/** 本次执行固定的独立 Codex 包与 Pi 工具包，由可信宿主注入。 */ runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;llm?:ResolvedLlm;images?:import('../../../logic/execution/rules/types').InputImage[];turnTimeoutMs?:number;requestBudget?():Promise<RequestBudgetPort|undefined>}
 /** 删除宿主 Codex/OpenAI 身份及启动注入；只把本轮代理令牌交给原生进程。 */
 export function codexEnvironment(home:string,token:string):NodeJS.ProcessEnv{
   const env={...process.env};for(const key of Object.keys(env))if(/^(CODEX|OPENAI_|ANTHROPIC_|CLAUDE|CBIM_|NODE_OPTIONS$|NODE_PATH$|ELECTRON_RUN_AS_NODE$)/i.test(key))delete env[key];

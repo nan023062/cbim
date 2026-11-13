@@ -5,8 +5,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
-import {admissionReadSchema} from '../src/backend/core/runtime/admission';
+import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
+import {admissionReadSchema} from '../src/logic/runtime/rules/admission';
 import {globalRuntimeProviders,seedGlobalRuntime,globalRuntimeFixture as data,waitFixture,globalAdmissionFixture as admissionData,admissionScopes,globalRuntimeLogBytes} from '../tests/global-runtime-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 

@@ -4,8 +4,8 @@
  * 设计原因：保护规则、人工决定和知识写入必须共用同一串行边界，但账本不能反向调用工作区形成锁循环。
  * 职责边界：普通 ChangeRequest 没有批准字段；这里的 intentId 只能由独立桌面治理服务交给事务端口。
  */
-import type {ChangeRequest,Preview,Snapshot} from '../../core/knowledge/types';
-import type {KnowledgeCommit} from '../../core/knowledge/ports';
+import type {ChangeRequest,Preview,Snapshot} from '../../../logic/knowledge/rules/types';
+import type {KnowledgeCommit} from '../../../logic/knowledge/rules/ports';
 
 /** 原知识 journal 保存的精确治理来源，不携带正文或可复用的外部授权。 */
 export interface KnowledgeGovernanceBinding {intentId:string;protectionId:string;proposalId:string;decisionId:string}

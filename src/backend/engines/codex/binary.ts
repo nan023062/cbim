@@ -7,7 +7,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createRequire} from 'node:module';
-import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
+import type {EngineRuntimePackage} from '../../../logic/execution/rules/engine-runtime';
 
 /** 只解析固定生产依赖；返回值不受模型、IPC 或工作区配置控制。 */
 export async function codexBinary(runtime?:EngineRuntimePackage){

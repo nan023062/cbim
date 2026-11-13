@@ -4,17 +4,17 @@ import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission
 import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
 import type {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import type {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {TaskSpec,RunSummary} from '../src/backend/core/execution/types';
-import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {TaskSpec,RunSummary} from '../src/logic/execution/rules/types';
+import type {GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
 import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
 import {mainToolOwnerSelection,mainToolReplacement} from './main-tool-output-fixture';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
-import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
-import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
-import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
+import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-addition';
+import type {MainToolOutputBinding} from '../src/logic/tasks/rules/main-tool-output';
+import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
 async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex'){

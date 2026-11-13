@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import {constants} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import type {LoopEngine} from '../../../logic/models';
 
 /** 原生历史含模型消息和图片，采用独立 64 MiB 上限；超限明确拒绝续执行，不能截断作证。 */

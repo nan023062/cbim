@@ -4,12 +4,12 @@
  * 设计原因：模型调用成功不等于可交接；必须正常结束、没有未决工具且求助后没有新工作，才允许主调度另派新任务。
  * 外部写也算求助后的新工作；当前成员未装配反馈工具，历史核验仍按真实效果防守。
  */
-import {fail} from '../../core/foundation/errors';
-import {json} from '../../core/foundation/serialization';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import {memberHelpInputSchema,memberHelpRecordSchema,memberHelpResultSchema,memberHelpStagedSchema,type MemberHelpRecord} from '../../core/tasks/member-help';
+import {fail} from '../../../core/errors';
+import {json} from '../../../core/platform/node/serialization';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {memberHelpInputSchema,memberHelpRecordSchema,memberHelpResultSchema,memberHelpStagedSchema,type MemberHelpRecord} from '../../../logic/tasks/rules/member-help';
 import {executionToolFacts} from '../evidence/execution-report-facts';
 
 /** 已登记求助或返回成功求助正文的运行不能同时签发交付候选；失败的无效调用仍可被模型修正。 */

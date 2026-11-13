@@ -1,11 +1,11 @@
 import {expect,test} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {effectObservationInputSchema,effectObservationReportSchema,effectDispositionRecordSchema,effectDispositionListSchema,sameEffectSubject} from '../src/backend/core/tasks/effect-observation';
-import {effectObservationBasis,effectDispositionCommand,effectDispositionReceipt,effectDispositionRevision,summarizeEffectDisposition} from '../src/backend/core/tasks/effect-observation-rules';
-import {projectEffectDispositionMutation,validateEffectDispositionLink} from '../src/backend/core/tasks/effect-observation-invariants';
-import {recoveryRequestSchema,scopeRecoverySchema,recoveryRequestSource,recoverySourceKey,type ScopeRecovery} from '../src/backend/core/tasks/scope-recovery';
-import {inspectionProofSchema} from '../src/backend/core/tasks/scope-replan';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import {effectObservationInputSchema,effectObservationReportSchema,effectDispositionRecordSchema,effectDispositionListSchema,sameEffectSubject} from '../src/logic/tasks/rules/effect-observation';
+import {effectObservationBasis,effectDispositionCommand,effectDispositionReceipt,effectDispositionRevision,summarizeEffectDisposition} from '../src/logic/tasks/rules/effect-observation-rules';
+import {projectEffectDispositionMutation,validateEffectDispositionLink} from '../src/logic/tasks/rules/effect-observation-invariants';
+import {recoveryRequestSchema,scopeRecoverySchema,recoveryRequestSource,recoverySourceKey,type ScopeRecovery} from '../src/logic/tasks/rules/scope-recovery';
+import {inspectionProofSchema} from '../src/logic/tasks/rules/scope-replan';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {effectIdentity,effectTime,effectState,effectReport,effectRecord} from './effect-core-fixture';
 
 function inspect(record=effectRecord()):DispatchScope {const report=record.observation,scopeId=randomUUID();return {...effectIdentity,scopeId,status:'active',createdAt:effectTime,recovery:{recoveryId:scopeId,acceptedAt:effectTime,source:{...report.identity.subject,scopeId:'source',reportBasis:report.basis,scopeOutcome:'failed',reportExecution:'unknown',logState:'verified',unknownToolCount:1,sourceGoalRevision:1,sourceInputRevision:1},operation:'inspect_effects',observation:{text:'明确核实'},input:{message:'读取现状'},options:{permission:'read',profileId:randomUUID(),provider:'fixture',model:'fixture'},context:{initialRunId:'inspect-run',nativeSessionId:randomUUID(),excludedRunIds:['main-run']},dispositionId:record.dispositionId}} as DispatchScope}

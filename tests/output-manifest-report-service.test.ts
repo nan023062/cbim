@@ -2,7 +2,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {manifestReportFixture} from './output-manifest-report-fixture';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 it('列举无文件读取，明确复核完整目录发现新增、移动和缺失，原日志及状态不变',async()=>{
   const f=await manifestReportFixture();try{

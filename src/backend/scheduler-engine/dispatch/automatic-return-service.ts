@@ -2,17 +2,17 @@
  * 作用定位：持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。
  * 设计原因：恢复只转交可靠成果，不运行旧成员；最新启动意图、完整日志、模型配置与当前文件均须匹配，同目标异常额度从持久任务图核实，未知保持封存。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import {automaticReturnSchema,type AutomaticReturn} from '../../core/tasks/automatic-return';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity} from '../../core/tasks/graph-types';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {RunSummary} from '../../core/execution/types';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {automaticReturnSchema,type AutomaticReturn} from '../../../logic/tasks/rules/automatic-return';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity} from '../../../logic/tasks/rules/graph-types';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import type {ScopeGoalService,ScopeGoalPorts} from '../goals/scope-goal-service';
-import {workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
+import {workspaceMemberModelHash} from '../../../logic/team/rules/workspace-member-rules';
 import type {OwnerExecutionModelPorts} from './owner-execution-service';
 import {memberFailureStopReason} from './member-failure-limit';
 

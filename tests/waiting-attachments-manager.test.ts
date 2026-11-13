@@ -10,10 +10,10 @@ import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,TaskSpec} from '../src/backend/core/execution/types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
-import {hash,json} from '../src/backend/core/foundation/serialization';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,TaskSpec} from '../src/logic/execution/rules/types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
+import {hash,json} from '../src/core/platform/node/serialization';
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64');
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

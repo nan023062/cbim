@@ -2,8 +2,8 @@
  * 作用定位：岗位登记与模块责任的公开 IPC 请求与响应。
  * 设计原因：只注入本机提交来源；岗位配置和模块绑定由各自服务维护，不借登记启动模型。类型不替代身份和权限校验。
  */
-import {type WorkspaceMemberDetail,type WorkspaceMemberList,type WorkspaceMemberPreview,type WorkspaceMemberReceipt,workspaceMemberCommitInputSchema,workspaceMemberGetInputSchema,workspaceMemberListInputSchema,workspaceMemberLookupSchema,workspaceMemberPreviewInputSchema} from '../../backend/core/team/workspace-member';
-import {type ModuleOwnershipDetail,type ModuleOwnershipPage,type ModuleOwnershipPreview,type ModuleOwnershipReceipt,moduleOwnershipByMemberInputSchema,moduleOwnershipCommitInputSchema,moduleOwnershipGetInputSchema,moduleOwnershipListInputSchema,moduleOwnershipLookupSchema,moduleOwnershipPreviewInputSchema} from '../../backend/core/workspace/module-ownership';
+import {type WorkspaceMemberDetail,type WorkspaceMemberList,type WorkspaceMemberPreview,type WorkspaceMemberReceipt,workspaceMemberCommitInputSchema,workspaceMemberGetInputSchema,workspaceMemberListInputSchema,workspaceMemberLookupSchema,workspaceMemberPreviewInputSchema} from '../../logic/team/rules/workspace-member';
+import {type ModuleOwnershipDetail,type ModuleOwnershipPage,type ModuleOwnershipPreview,type ModuleOwnershipReceipt,moduleOwnershipByMemberInputSchema,moduleOwnershipCommitInputSchema,moduleOwnershipGetInputSchema,moduleOwnershipListInputSchema,moduleOwnershipLookupSchema,moduleOwnershipPreviewInputSchema} from '../../logic/workspace/rules/module-ownership';
 
 export const peopleIpcRequests={
   'workspace.members.list':workspaceMemberListInputSchema,

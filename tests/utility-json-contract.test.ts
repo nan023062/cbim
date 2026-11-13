@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
-import {parseJson} from '../src/backend/core/foundation/json';
-import {Fault} from '../src/backend/core/foundation/errors';
+import {parseJson} from '../src/core/json';
+import {Fault} from '../src/core/errors';
 import {parseStrictJson} from '../src/core/utility';
 
 it('Core 保留 JSON Fault 的 code、name 和原提示，不泄漏 utility 错误类型',()=>{

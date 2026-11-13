@@ -1,9 +1,9 @@
 import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {reviseQueuedDependenciesReceiptSchema,type ReviseQueuedDependenciesInput,type ReviseQueuedDependenciesReceipt} from '../src/backend/core/tasks/queued-dependency-revision';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {reviseQueuedDependenciesReceiptSchema,type ReviseQueuedDependenciesInput,type ReviseQueuedDependenciesReceipt} from '../src/logic/tasks/rules/queued-dependency-revision';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const dependencyRevisionData={model:'dependency-revision-fixture',goal:'DEPENDENCY_REVISE_MAIN: 原子退役B到C并新增A和D到C，保留四个原任务，真实核实四份材料',

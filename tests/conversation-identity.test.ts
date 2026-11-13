@@ -11,8 +11,8 @@ async function registerExecutor(app:Application,workspaceId:string,moduleId:stri
   const settings=await app.models.save({profile:{name:'Conversation identity fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Conversation identity fixture')!;
   return registerExplicitFixtureOwner(app,workspaceId,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'});
 }
-import {json} from '../src/backend/core/foundation/serialization';
-import type {TaskSpec} from '../src/backend/core/tasks/types';
+import {json} from '../src/core/platform/node/serialization';
+import type {TaskSpec} from '../src/logic/tasks/rules/types';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 

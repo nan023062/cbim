@@ -2,9 +2,9 @@ import {vi} from 'vitest';
 import {manifestFixture,manifestInput,manifestContracts} from './output-manifest-fixture';
 import {seedProgress,invoke,artifactBinding} from './artifact-runtime-fixture';
 import {OutputManifestReportService} from '../src/backend/scheduler-engine/evidence/output-manifest-report-service';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {OutputManifestSnapshot,OutputManifestStaged} from '../src/backend/core/evidence/output-manifest';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {OutputManifestSnapshot,OutputManifestStaged} from '../src/logic/evidence/rules/output-manifest';
 
 export async function manifestReportFixture(){
   const f=await manifestFixture(async c=>{await seedProgress(c);await invoke(c,'cbim_task_manifest_capture','capture',manifestInput)}),summary=await (await f.start()).done;

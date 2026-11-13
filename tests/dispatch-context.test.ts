@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
+import {json} from '../src/core/platform/node/serialization';
 import {resolveConversationAgent,resolveDispatchAgent,resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
 // 故意保留旧维护关系输入，验证历史数据不参与当前派发；不再依赖已退出的生产类型。
 

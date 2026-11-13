@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 import {waitingMixedSourcesProvider,mixedSourceGoal as goal} from '../tests/waiting-mixed-sources-provider';
 import {seedWaitingAttachments,attachmentWait} from '../tests/waiting-attachments-fixture';
 import {mixedRecords,mixedRunBytes,mixedRunByteEvidence} from '../tests/waiting-mixed-sources-fixture';

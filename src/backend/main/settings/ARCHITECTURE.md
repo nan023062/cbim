@@ -42,7 +42,7 @@ class N_src_backend_main_settings_admission_settings_ts_AdmissionSettings["Admis
 N_src_backend_main_settings_admission_settings_ts ..> N_src_backend_main_settings_admission_settings_ts_AdmissionSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/admission/run-admission.ts](../../scheduler-engine/admission/run-admission.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)、[../../scheduler-engine/admission/run-admission.ts](../../scheduler-engine/admission/run-admission.ts)。
 
 ### budget-settings.ts
 
@@ -70,7 +70,7 @@ class N_src_backend_main_settings_budget_settings_ts_BudgetSettings["BudgetSetti
 N_src_backend_main_settings_budget_settings_ts ..> N_src_backend_main_settings_budget_settings_ts_BudgetSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/budget/scope-budget.ts](../../core/budget/scope-budget.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/budget/rules/scope-budget.ts](../../../logic/budget/rules/scope-budget.ts)。
 
 
 ## 子目录导航

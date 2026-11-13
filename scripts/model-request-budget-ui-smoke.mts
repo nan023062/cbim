@@ -8,7 +8,7 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {modelRequestBudgetProvider} from '../tests/model-request-budget-provider';
 import {scopeBudgetProvider,scopeBudgetFixture} from '../tests/scope-budget-provider';
 import {seedScopeBudget,budgetScopes} from '../tests/scope-budget-fixture';
-import {requestBudgetReportSchema} from '../src/backend/core/budget/model-request-budget';
+import {requestBudgetReportSchema} from '../src/logic/budget/rules/model-request-budget';
 import {latestExecutable} from './build-artifact.mjs';
 
 const mode=process.argv.includes('--block')?'block':process.argv.includes('--unknown')?'unknown':'complete',name='request-budget-'+mode,exe=await latestExecutable();

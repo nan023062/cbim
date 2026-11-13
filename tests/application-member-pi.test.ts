@@ -5,13 +5,13 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
+import {json} from '../src/core/platform/node/serialization';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {MemberExecutionView,MemberStartReceipt} from '../src/backend/core/tasks/member-commands';
-import type {OpenGraphReceipt,DispatchReceipt} from '../src/backend/core/tasks/dispatch-commands';
-import type {ChatApproval} from '../src/backend/core/tools/policy/types';
-import type {MemberEventsRead,MemberEventCursor} from '../src/backend/core/tasks/member-events';
-import type {StoredEvent} from '../src/backend/core/execution/types';
+import type {MemberExecutionView,MemberStartReceipt} from '../src/logic/tasks/rules/member-commands';
+import type {OpenGraphReceipt,DispatchReceipt} from '../src/logic/tasks/rules/dispatch-commands';
+import type {ChatApproval} from '../src/logic/tools/rules/policy/types';
+import type {MemberEventsRead,MemberEventCursor} from '../src/logic/tasks/rules/member-events';
+import type {StoredEvent} from '../src/logic/execution/rules/types';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 /** Actual Application, dispatch transactions, policy, persistence and pinned Pi; only the model provider is a deterministic localhost fixture. */

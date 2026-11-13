@@ -4,7 +4,7 @@ import type {Application} from '../src/backend/main/assembly/application';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {jsonValidationFixture as data} from './json-validation-provider';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 export {workflowConditionRecords as jsonValidationRecords} from './workflow-condition-fixture';
 export {globalRuntimeLogBytes as jsonValidationLogBytes} from './global-runtime-fixture';

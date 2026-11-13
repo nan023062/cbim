@@ -5,8 +5,8 @@
  * 职责边界：不做文件I/O、图像显示、色彩转换或视觉判断；像素只留本次内存，平台调用方继续核停止与文件身份。
  */
 import {inflateSync} from 'node:zlib';
-import {fail} from '../../../core/foundation/errors';
-import {pngImageSchema,pngValidationLimits,type PngImageSchema,type PngValidationOutcome} from '../../../core/workspace/png-validation-schema';
+import {fail} from '../../../../core/errors';
+import {pngImageSchema,pngValidationLimits,type PngImageSchema,type PngValidationOutcome} from '../../../../logic/workspace/rules/png-validation-schema';
 
 const signature=Buffer.from([137,80,78,71,13,10,26,10]);
 const crcTable=Uint32Array.from({length:256},(_,value)=>{let c=value;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0});

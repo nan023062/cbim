@@ -7,7 +7,7 @@ import {request} from './data/knowledge';
 import {knowledgeContractResult} from './knowledge-contract-provider';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {memberToolChangeSchema} from '../src/backend/core/team/workspace-member-tools';
+import {memberToolChangeSchema} from '../src/logic/team/rules/workspace-member-tools';
 
 it.each(['execute','read'] as const)('真实 Pi 主工具 %s 注册、采纳、更新、停用沿唯一岗位审计，恢复不重放',async permission=>{
  const f=await fixture(),errors:string[]=[],requests:any[]=[];let seeded:Awaited<ReturnType<typeof seedWorkspaceMembers>>,app=f.app,memberId='',commandId='';

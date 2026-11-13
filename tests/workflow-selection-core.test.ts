@@ -1,14 +1,14 @@
 import {describe,expect,it} from 'vitest';
-import {workflowSelectionSchema,workflowSelectionsSchema,validateWorkflowSelections,sameWorkflowSelectionsForModules,validateTaskWorkflowSelections} from '../src/backend/core/tasks/workflow-selection';
-import {dispatchTaskInput} from '../src/backend/core/tasks/dispatch-commands';
-import {goalPlanInputSchema,dispatchScopeGoalSchema} from '../src/backend/core/tasks/scope-goal';
-import {humanContinuationSubject,humanContinuationSubjectSchema} from '../src/backend/core/tasks/human-continue';
-import {taskNodeSchema,validateGraph} from '../src/backend/core/tasks/graph-rules';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {mainToolOutputSchema,projectMainScope} from '../src/backend/core/tasks/main-tool-output';
-import {checkedJsonToolResult} from '../src/backend/core/tools/results';
+import {workflowSelectionSchema,workflowSelectionsSchema,validateWorkflowSelections,sameWorkflowSelectionsForModules,validateTaskWorkflowSelections} from '../src/logic/tasks/rules/workflow-selection';
+import {dispatchTaskInput} from '../src/logic/tasks/rules/dispatch-commands';
+import {goalPlanInputSchema,dispatchScopeGoalSchema} from '../src/logic/tasks/rules/scope-goal';
+import {humanContinuationSubject,humanContinuationSubjectSchema} from '../src/logic/tasks/rules/human-continue';
+import {taskNodeSchema,validateGraph} from '../src/logic/tasks/rules/graph-rules';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {mainToolOutputSchema,projectMainScope} from '../src/logic/tasks/rules/main-tool-output';
+import {checkedJsonToolResult} from '../src/logic/tools/rules/results';
 import {mainToolBinding,mainToolScope,mainToolTask} from './main-tool-output-fixture';
-import type {AgentRef,TaskNode,GraphChange,GraphEventBatch} from '../src/backend/core/tasks/graph-types';
+import type {AgentRef,TaskNode,GraphChange,GraphEventBatch} from '../src/logic/tasks/rules/graph-types';
 
 const moduleId='.cbim/workspace/game',otherModule='.cbim/workspace/art',workflowId=moduleId+'/workflows/validate_json',selection={moduleId,workflowId};
 const identity={workspaceId:'workspace',rootSessionId:'root'},at='2026-11-07T08:00:00.000Z';

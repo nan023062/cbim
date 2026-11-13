@@ -3,11 +3,11 @@
  * 设计原因：空项目可以执行，却不应偷偷写入 .cbim 模块或伪造正式模块；保底身份始终单独留痕。
  * 职责边界：只读固定知识，不能扩大权限、忽略无效知识或为已有模块创建全项目捷径。
  */
-import {fail} from '../../core/foundation/errors';
-import {implicitProjectModuleId,type AutomaticExecutionBinding} from '../../core/team/automatic-execution';
-import type {Snapshot} from '../../core/knowledge/types';
-import type {ModuleBinding} from '../../core/tasks/graph-types';
-import type {WorkflowSelection} from '../../core/tasks/workflow-selection';
+import {fail} from '../../../core/errors';
+import {implicitProjectModuleId,type AutomaticExecutionBinding} from '../../../logic/team/rules/automatic-execution';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
+import type {ModuleBinding} from '../../../logic/tasks/rules/graph-types';
+import type {WorkflowSelection} from '../../../logic/tasks/rules/workflow-selection';
 import {resolveDispatchModules} from './dispatch-context';
 
 /** 只有真实模块清单为空且有已核实兜底身份时，才解析预留的全项目模块。 */

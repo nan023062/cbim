@@ -63,7 +63,7 @@ class N_src_backend_scheduler_engine_automation_scheduler_ts_AutomationScheduler
 N_src_backend_scheduler_engine_automation_scheduler_ts ..> N_src_backend_scheduler_engine_automation_scheduler_ts_AutomationScheduler : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/automation/contracts.ts](../../core/automation/contracts.ts)、[../../core/automation/schedule.ts](../../core/automation/schedule.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/automation/rules/contracts.ts](../../../logic/automation/rules/contracts.ts)、[../../../logic/automation/rules/schedule.ts](../../../logic/automation/rules/schedule.ts)。
 
 
 ## 子目录导航

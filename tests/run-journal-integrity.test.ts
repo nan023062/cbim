@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {TaskSpec} from '../src/backend/core/execution/types';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
+import type {TaskSpec} from '../src/logic/execution/rules/types';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const directories:string[]=[];

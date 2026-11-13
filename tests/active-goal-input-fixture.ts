@@ -6,7 +6,7 @@ import {seedTeam} from './team-fixture';
 import {usageScopes} from './scope-usage-fixture';
 import {activeInputData as data} from './active-goal-input-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export async function seedActiveInput(app:Application,project:string,user:string,provider:{url:string;bind:(agentId:string,moduleId:string,selection:OwnerExecutionSelection)=>void}){
   await app.models.save({profile:{name:'Active goal input fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Active goal input fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});

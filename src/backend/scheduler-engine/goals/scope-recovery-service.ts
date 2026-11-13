@@ -4,22 +4,22 @@
  * 设计原因：旧运行未知时不能续接或重放；成员/主来源在事务外核实，再以短事务核原身份和会话槽。原请求先查回执，新周期冻结明确处置且不放宽只读权限。
  */
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {GraphIdentity} from '../../core/tasks/graph-types';
-import {graphIdentityInput} from '../../core/tasks/dispatch-commands';
-import {recoveryRequestSchema,recoveryLookupSchema,recoveryContextSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt,type ScopeRecovery,type RecoveryContext} from '../../core/tasks/scope-recovery';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {scopeFreshContext} from '../../core/tasks/fresh-context';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GraphIdentity} from '../../../logic/tasks/rules/graph-types';
+import {graphIdentityInput} from '../../../logic/tasks/rules/dispatch-commands';
+import {recoveryRequestSchema,recoveryLookupSchema,recoveryContextSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt,type ScopeRecovery,type RecoveryContext} from '../../../logic/tasks/rules/scope-recovery';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {scopeFreshContext} from '../../../logic/tasks/rules/fresh-context';
 import {ExecutionReportService} from '../evidence/execution-report-service';
 import type {ScopeGoalPorts} from './scope-goal-service';
-import {createScopeRunTracking} from '../../core/tasks/scope-run-tracking';
+import {createScopeRunTracking} from '../../../logic/tasks/rules/scope-run-tracking';
 import type {EffectObservationService} from '../evidence/effect-observation-service';
 import {effectStateStamp} from '../evidence/effect-source';
-import {sameEffectSubject} from '../../core/tasks/effect-observation';
+import {sameEffectSubject} from '../../../logic/tasks/rules/effect-observation';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'assert'>;
 /** 真实启动标识和被隔离旧运行由运行时在租约内取得，不能接受模型或公开请求传入。 */

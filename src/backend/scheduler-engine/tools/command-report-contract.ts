@@ -3,10 +3,10 @@
  * 设计原因：报告复用服务但不成为第九种写命令；当前 root 由闭包固定，旧 run/call 可明确查询，不能借结果更换身份。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail} from '../../core/foundation/errors';
-import {commandVerificationReportSchema,commandVerificationReportForInput,commandVerificationLimits,commandReportToolName,type CommandVerificationInput} from '../../core/tasks/command-verification';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {ToolCancellation,ToolRecovery} from '../../core/tools/contracts';
+import {fail} from '../../../core/errors';
+import {commandVerificationReportSchema,commandVerificationReportForInput,commandVerificationLimits,commandReportToolName,type CommandVerificationInput} from '../../../logic/tasks/rules/command-verification';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {ToolCancellation,ToolRecovery} from '../../../logic/tools/rules/contracts';
 
 export function commandReportContract(){
   const cancellation:ToolCancellation={mode:'preflight_only',description:'读取前后复核本次取消；不改变原命令、日志或恢复状态。'};

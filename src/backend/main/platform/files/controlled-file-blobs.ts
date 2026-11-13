@@ -6,9 +6,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
-import {fail} from '../../../core/foundation/errors';
-import {controlledFileLimits} from '../../../core/file-operations/controlled-file-operation';
-import {controlledFileBlobRefSchema,type ControlledFileBlobRef} from '../../../core/file-operations/controlled-file-event';
+import {fail} from '../../../../core/errors';
+import {controlledFileLimits} from '../../../../logic/file-operations/rules/controlled-file-operation';
+import {controlledFileBlobRefSchema,type ControlledFileBlobRef} from '../../../../logic/file-operations/rules/controlled-file-event';
 const fact=(bytes:Uint8Array)=>({byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
 export class ControlledFileBlobs {
   private tail:Promise<unknown>=Promise.resolve();

@@ -4,13 +4,13 @@
  * 设计原因：稳定 memberId 与运行实例分离；登记只保存实际原则、有效 Skill 和无凭据模型快照，不派工、不修改知识或默认执行角色。
  * 事务边界：能力采纳固定知识串行快照后进入同一 Store，未追踪来源捕获与岗位事件同事务；模型配置仍前后复验，不宣称拥有跨存储原子锁。原命令先查回执，重开不能重做已提交动作。
  */
-import {data} from '../../core/knowledge/read-models';
+import {data} from '../../../logic/knowledge/rules/read-models';
 import {agentModelSelectionSchema} from '../../../logic/models';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
+import {fail} from '../../../core/errors';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
 import {
   workspaceMemberActorSchema,type WorkspaceMemberActor,workspaceMemberCapabilitySchema,workspaceMemberCommitInputSchema,workspaceMemberDetailSchema,
   workspaceMemberGetInputSchema,workspaceMemberListInputSchema,workspaceMemberListSchema,
@@ -20,16 +20,16 @@ import {
   type WorkspaceMemberCurrentDiff,type WorkspaceMemberIdentity,
   type WorkspaceMemberModelRef,type WorkspaceMemberModelSnapshot,type WorkspaceMemberPreview,
   workspaceMemberEngine,type WorkspaceMemberPreviewInput,type WorkspaceMemberReceipt,type WorkspaceMemberRuntimePolicy,
-} from '../../core/team/workspace-member';
+} from '../../../logic/team/rules/workspace-member';
 import {
   workspaceMemberMainCommandId,workspaceMemberCapabilityHash,workspaceMemberChangedFields,workspaceMemberCommand,
   workspaceMemberHash,workspaceMemberModelHash,workspaceMemberPreviewBasis,
   workspaceMemberProposed,workspaceMemberReceipt,
-} from '../../core/team/workspace-member-rules';
+} from '../../../logic/team/rules/workspace-member-rules';
 import {resolveDispatchAgent} from '../../scheduler-engine/context/dispatch-context';
-import type {Snapshot} from '../../core/knowledge/types';
-import {knowledgeSourcePending} from '../../core/workspace/knowledge-source-rules';
-import type {SourceSelection,KnowledgeSourceReadState} from '../../core/workspace/knowledge-source';
+import type {Snapshot} from '../../../logic/knowledge/rules/types';
+import {knowledgeSourcePending} from '../../../logic/workspace/rules/knowledge-source-rules';
+import type {SourceSelection,KnowledgeSourceReadState} from '../../../logic/workspace/rules/knowledge-source';
 import type {KnowledgeSourceWorkspace} from './knowledge-sources';
 
 /** 只接收岗位独立选择的引擎、明确供应商和模型公开参数；不得在实现中解密、网络探测或读取默认选择。 */

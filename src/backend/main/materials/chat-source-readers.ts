@@ -5,9 +5,9 @@
  */
 import fs from 'node:fs/promises';
 import {readBoundedBytes,ByteLimitError} from '../../../core/utility';
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import {continuationSourceLimits,continuationSourceUrlSchema,type ContinuationSourceProof} from '../../core/tasks/continuation-source-snapshot';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import {continuationSourceLimits,continuationSourceUrlSchema,type ContinuationSourceProof} from '../../../logic/tasks/rules/continuation-source-snapshot';
 
 /** 按完整 Unicode 字符截取 UTF-8 前缀；不会将被截断的多字节字符变为替换符。 */
 export function sourceExcerpt(text:string){

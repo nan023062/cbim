@@ -5,12 +5,12 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {RemoteRepository} from '../src/logic/resources/service';
 import {RepositoryTools} from '../src/backend/scheduler-engine/tools/repository-tools';
-import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../src/backend/core/connectors/repository-tools';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
+import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../src/logic/connectors/rules/repository-tools';
+import {hash} from '../src/core/platform/node/serialization';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {executionToolFacts} from '../src/backend/scheduler-engine/evidence/execution-report-facts';
 import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
-import type {RunSummary,StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
+import type {RunSummary,StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};
 async function connected(){

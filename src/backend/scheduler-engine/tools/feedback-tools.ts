@@ -4,10 +4,10 @@
  * 收集边界：简述之外均可省略，不要求补齐模板；缺省显示由纯正文协议统一处理，授权与未知核实不放宽。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail} from '../../core/foundation/errors';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import {githubFeedbackScopeSchema} from '../../core/tools/scope-schema';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
+import {fail} from '../../../core/errors';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import {githubFeedbackScopeSchema} from '../../../logic/tools/rules/scope-schema';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
 import {feedbackInputSchema,feedbackReceiptInputSchema,feedbackResultSchema,type FeedbackToolsPort} from '../../../logic/feedback';
 
 /** 只由桌面主会话装配；没有账号设置、变更仓库或重新发送未知提交的模型入口。 */

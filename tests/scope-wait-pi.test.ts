@@ -9,8 +9,8 @@ import {scopeWaitProvider,waitFixture} from './scope-wait-provider';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 
 /** Real native Pi and Application; observing acquire/release never substitutes for the real lease checks. */
 it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('keeps safe persistent waiting distinct from shutdown and failed completion (%s)',async(mode)=>{

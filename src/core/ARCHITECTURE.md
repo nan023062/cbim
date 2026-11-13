@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [errors.ts](errors.ts) | 不依赖业务或平台的带错误码异常与抛出入口。 |
+| [json.ts](json.ts) | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
 
 ## 架构类图
 
@@ -31,14 +32,23 @@ class N_src_core_web["web/"] {
 class N_src_core_errors_ts["errors.ts"] {
   <<module>>
 }
+class N_src_core_json_ts["json.ts"] {
+  <<module>>
+}
+N_src_core_json_ts ..> N_src_core_utility : 导入依赖
+N_src_core_json_ts ..> N_src_core_errors_ts : 导入依赖
 N_src_core_platform ..> N_src_core_web : 导入依赖
 N_src_core_platform ..> N_src_core_errors_ts : 导入依赖
+N_src_core_platform ..> N_src_core_utility : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `json.ts` → `utility`：导入。
+- `json.ts` → `errors.ts`：导入。
 - `platform` → `web`：导入。
 - `platform` → `errors.ts`：导入。
+- `platform` → `utility`：导入。
 
 ### errors.ts 公开入口
 
@@ -47,6 +57,17 @@ classDiagram
 class N_src_core_errors_ts["errors.ts"] {
   <<module>>
   +fail()
+}
+```
+
+
+### json.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_core_json_ts["json.ts"] {
+  <<module>>
+  +parseJson()
 }
 ```
 
@@ -74,7 +95,7 @@ Core 是四层架构的基础公共层，不含业务规则、通信操作、页
 
 前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
 
-旧 backend/core 是待迁移的业务层，不属于本目录；backend/core/foundation 的 safeId、StoragePaths 和 JSON/摘要适配保留；errors.ts 为共享 Fault 的在用兼容出口。Node files 已迁入 platform/node/files，Web 已迁入 Logic，网页基础能力按平台迁入 Core。当前 Logic 已完成模型与 Web，其他业务及 Bridge/View 尚未整体迁移；目标结构与分片方式见 [四层设计](../../design/four-layer-architecture.md)。
+旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图继续分批迁移。
 
 没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
 

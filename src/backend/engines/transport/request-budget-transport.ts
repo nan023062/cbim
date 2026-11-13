@@ -7,11 +7,11 @@
 import http from 'node:http';
 import {randomBytes,timingSafeEqual,createHash} from 'node:crypto';
 import type {ResolvedLlm} from '../../../logic/models';
-import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../../core/models/request-budget';
+import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../../../logic/budget/rules/request-budget';
 import {RequestBudgetUsageStream} from './request-budget-usage';
-import {requestBudgetReservation,requestBudgetCost} from '../../core/budget/model-request-budget-rules';
-import {Fault} from '../../core/foundation/errors';
-import {workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
+import {requestBudgetReservation,requestBudgetCost} from '../../../logic/budget/rules/model-request-budget-rules';
+import {Fault} from '../../../core/errors';
+import {workspaceMemberModelHash} from '../../../logic/team/rules/workspace-member-rules';
 
 /** 所有引擎共用的实际 API 路径；不接受子进程指定目标或 HTTP 重定向。 */
 export function requestBudgetEndpoint(llm:ResolvedLlm):string{

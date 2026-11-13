@@ -1,8 +1,8 @@
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 
 export const continuationFixture={
   mainGoal:'SCOPE_CONTINUE_MAIN: 核实项目文件后，按补充的输出格式汇报',

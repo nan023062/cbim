@@ -5,9 +5,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {hash} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {StoragePaths} from '../../core/foundation/paths';
+import {hash} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {StoragePaths} from '../../../logic/workspace/ports/paths';
 export class Paths implements StoragePaths {
   constructor(readonly userRoot=path.join(os.homedir(),'.cbim'),readonly installRoot=path.resolve('.'),readonly protectedRoots:readonly string[]=[]){}
   async identity(input:string){

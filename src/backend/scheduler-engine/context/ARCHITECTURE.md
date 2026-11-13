@@ -27,7 +27,7 @@ class N_src_backend_scheduler_engine_context_automatic_context_ts["automatic-con
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/automatic-execution.ts](../../core/team/automatic-execution.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[dispatch-context.ts](dispatch-context.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/team/rules/automatic-execution.ts](../../../logic/team/rules/automatic-execution.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/tasks/rules/workflow-selection.ts](../../../logic/tasks/rules/workflow-selection.ts)、[dispatch-context.ts](dispatch-context.ts)。
 
 ### dispatch-context.ts
 
@@ -41,7 +41,7 @@ class N_src_backend_scheduler_engine_context_dispatch_context_ts["dispatch-conte
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/agent-types.ts](../../core/team/agent-types.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../logic/knowledge/rules/read-models/index.ts](../../../logic/knowledge/rules/read-models/index.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/team/rules/agent-types.ts](../../../logic/team/rules/agent-types.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/tasks/rules/workflow-selection.ts](../../../logic/tasks/rules/workflow-selection.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)。
 
 ### execution-context.ts
 
@@ -67,7 +67,7 @@ class N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowle
 N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_scheduler_engine_context_execution_context_ts_DispatchKnowledgeWorkspace : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[automatic-context.ts](automatic-context.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/team/workspace-member.ts](../../core/team/workspace-member.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/execution-context.ts](../../core/tasks/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[automatic-context.ts](automatic-context.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/read-models/index.ts](../../../logic/knowledge/rules/read-models/index.ts)、[../../../logic/knowledge/rules/builtins.ts](../../../logic/knowledge/rules/builtins.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/team/rules/workspace-member.ts](../../../logic/team/rules/workspace-member.ts)、[../../../logic/tasks/rules/graph-types.ts](../../../logic/tasks/rules/graph-types.ts)、[../../../logic/tasks/rules/execution-context.ts](../../../logic/tasks/rules/execution-context.ts)、[dispatch-context.ts](dispatch-context.ts)、[../conversation/main-agent.ts](../conversation/main-agent.ts)、[../../../logic/workspace/rules/workflow-contract.ts](../../../logic/workspace/rules/workflow-contract.ts)、[../../../logic/tasks/rules/workflow-selection.ts](../../../logic/tasks/rules/workflow-selection.ts)。
 
 ### team-workflow.ts
 
@@ -92,7 +92,7 @@ class N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput["Tea
 N_src_backend_scheduler_engine_context_team_workflow_ts ..> N_src_backend_scheduler_engine_context_team_workflow_ts_TeamTaskInput : 声明
 ```
 
-直接依赖：[../../core/knowledge/knowledge-queries.ts](../../core/knowledge/knowledge-queries.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/execution/index.ts](../../core/execution/index.ts)、[../../core/workspace/workflow-contract.ts](../../core/workspace/workflow-contract.ts)。
+直接依赖：[../../../logic/knowledge/rules/knowledge-queries.ts](../../../logic/knowledge/rules/knowledge-queries.ts)、[../../../logic/knowledge/rules/builtins.ts](../../../logic/knowledge/rules/builtins.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../logic/execution/rules/index.ts](../../../logic/execution/rules/index.ts)、[../../../logic/workspace/rules/workflow-contract.ts](../../../logic/workspace/rules/workflow-contract.ts)。
 
 ### 本目录调用边界
 
@@ -129,7 +129,7 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 
 `knowledge-queries.ts` 组合 Core 的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。内部知识工具和 `prepareTeamTask` 使用同一个编排入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。
 
-索引刷新由 Core 的 `refreshKnowledgeIndexes` 单独处理，工具注册层装配读/写两条路径；旧查询类的 refresh 方法已退出。职责、状态归属和允许依赖见 [知识契约](../../core/knowledge/CONTRACT.md#快照契约领域视图与查询编排)。新增查询通常修改所属领域视图与本层组合，不要求修改刷新事务或运行引擎。
+索引刷新由 Core 的 `refreshKnowledgeIndexes` 单独处理，工具注册层装配读/写两条路径；旧查询类的 refresh 方法已退出。职责、状态归属和允许依赖见 [知识契约](../../../logic/knowledge/rules/CONTRACT.md#快照契约领域视图与查询编排)。新增查询通常修改所属领域视图与本层组合，不要求修改刷新事务或运行引擎。
 
 ### 多成员、多模块任务上下文契约
 
@@ -137,7 +137,7 @@ N_src_backend_scheduler_engine_context_execution_context_ts ..> N_src_backend_sc
 
 `DispatchKnowledgeWorkspace` 明确只读的 `entry/assert/snapshot/read/rules` 能力。未启动依赖替换复用 `prepareDispatchExecutionContext` 逐个核对待办闭包的原角色、模块、Workflow 与当前规范，并用 `recheckDispatchExecutionContext` 最后核对替代候选的冻结知识。版本变化整体拒绝，不刷新旧任务或扩大权限；仍不声称锁定外部业务产物。
 
-已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色、继承 Skill、多个真实模块及各自 Workflow。`cbim:main` 与已退役的 `cbim:executor` 不能作为独立成员准备或恢复；主会话直接工作不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../core/tasks/CONTRACT.md)。
+已实现 `resolveDispatchAgent` 与 `resolveDispatchModules`：同快照解析自定义执行角色、继承 Skill、多个真实模块及各自 Workflow。`cbim:main` 与已退役的 `cbim:executor` 不能作为独立成员准备或恢复；主会话直接工作不通过该业务任务入口。缺失关系抛出明确错误码；默认采用各模块 Workflow 清单首项，空清单明确标为 general，不继承父模块。`prepareDispatchExecutionContext` 在执行前冻结完整角色、模块与流程正文；`recheckDispatchExecutionContext` 在启动或恢复时核对知识和内置规范版本。旧 `prepareTeamTask` 继续处理原单模块执行。新任务模型见 [core/tasks](../../../logic/tasks/rules/CONTRACT.md)。
 
 `resolveConversationAgent` 只用于主会话图根与普通对话实例登记：要求快照有工作区身份和版本，返回固定内置主角色、Team 和主指引，不加载业务 Skill。因此结构校验失败时用户仍能与主助手诊断知识问题；正式 `createMember`、`dispatchTask`、执行冻结仍使用严格解析入口，不能借普通对话身份绕过知识、岗位责任或完整 Skill 校验。
 

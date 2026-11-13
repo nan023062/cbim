@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest';
 import {deflateSync} from 'node:zlib';
 import {decodePngRaster,validatePngArtifact} from '../src/backend/main/platform/files/png-validator';
-import {pngImageSchema,pngValidationLimits} from '../src/backend/core/workspace/png-validation-schema';
-import {workflowContractSchema} from '../src/backend/core/workspace/workflow-contract';
+import {pngImageSchema,pngValidationLimits} from '../src/logic/workspace/rules/png-validation-schema';
+import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-contract';
 import {pngBytes,pngChunk,pngSignature} from './png-validation-data';
 
 const schema={width:2,height:2,colorType:'rgb' as const},pixels=[10,20,30,50,60,70,15,18,34,66,55,72];

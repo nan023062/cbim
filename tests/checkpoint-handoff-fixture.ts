@@ -5,7 +5,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import type {Application} from '../src/backend/main/assembly/application';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';

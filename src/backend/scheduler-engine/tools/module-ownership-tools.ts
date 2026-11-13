@@ -5,20 +5,20 @@
  * 职责边界：责任是控制面登记，写入仍需知识治理权限；不是业务产物、派发或人工批准。
  */
 import {z} from 'zod';
-import {withToolReconciliation} from '../../core/tools/outcome';
+import {withToolReconciliation} from '../../../logic/tools/rules/outcome';
 import {isDeepStrictEqual} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail,Fault} from '../../core/foundation/errors';
-import {checkedJsonToolResult} from '../../core/tools/results';
-import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
-import {moduleOwnershipMainCommandId} from '../../core/workspace/module-ownership-rules';
-import {isModuleOwnershipSourceAdoption} from '../../core/workspace/module-ownership';
-import {moduleOwnershipToolEffects,isModuleOwnershipToolName,type ModuleOwnershipToolName} from '../../core/workspace/module-ownership-tool-policy';
+import {fail,Fault} from '../../../core/errors';
+import {checkedJsonToolResult} from '../../../logic/tools/rules/results';
+import type {RunToolDescriptor} from '../../../logic/tools/rules/policy/tool-policy';
+import {moduleOwnershipMainCommandId} from '../../../logic/workspace/rules/module-ownership-rules';
+import {isModuleOwnershipSourceAdoption} from '../../../logic/workspace/rules/module-ownership';
+import {moduleOwnershipToolEffects,isModuleOwnershipToolName,type ModuleOwnershipToolName} from '../../../logic/workspace/rules/module-ownership-tool-policy';
 import {
   moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,
   moduleOwnerInspectOutputSchema,moduleOwnerPreviewOutputSchema,moduleOwnerRecordedOutputSchema,moduleOwnerReceiptOutputSchema,
   moduleOwnerToolOutputLimit,type ModuleOwnerRunBinding,type ModuleOwnershipToolsPort,
-} from '../../core/workspace/module-ownership-tools';
+} from '../../../logic/workspace/rules/module-ownership-tools';
 
 const inputs={cbim_module_owner_inspect:moduleOwnerInspectInputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewInputSchema,cbim_module_owner_change_commit:moduleOwnerCommitInputSchema,cbim_module_owner_receipt:moduleOwnerReceiptInputSchema};
 const outputs={cbim_module_owner_inspect:moduleOwnerInspectOutputSchema,cbim_module_owner_change_preview:moduleOwnerPreviewOutputSchema,cbim_module_owner_change_commit:moduleOwnerRecordedOutputSchema,cbim_module_owner_receipt:moduleOwnerReceiptOutputSchema};

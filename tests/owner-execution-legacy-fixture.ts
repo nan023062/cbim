@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {seedKnowledgeSource,knowledgeSourceFixture,knowledgeSourceDiskEvidence,knowledgeSourceHttpProbe} from './knowledge-source-lifecycle-fixture';
 import {memberCheckpointProvider,memberCheckpointFixture} from './owner-legacy-checkpoint-provider';
 import {scopeUsageProvider,scopeUsageFixture} from './owner-legacy-usage-provider';

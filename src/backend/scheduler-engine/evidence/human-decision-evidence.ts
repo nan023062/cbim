@@ -5,23 +5,23 @@
  * 设计原因：人的历史意见不等于当前产物未变；独立端口避免目标服务与人工服务相互引用，全部接受项的选定基线及冻结产物验证文件共享一次有界读取。
  * 职责边界：只读可信 canonical 与业务字节，不消费等待、不复制签署身份，也不恢复未知操作。
  */
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
-import type {HumanDecisionRecord} from '../../core/tasks/human-decisions';
-import {type ScopeHumanContinuation,humanContinuationSubject} from '../../core/tasks/human-continue';
-import {currentHumanContinuation,referencedHumanDecision} from '../../core/tasks/human-continuation-rules';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import {verifyArtifactBaselines} from '../../core/evidence/artifact-evidence';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {GraphSnapshot,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {HumanDecisionRecord} from '../../../logic/tasks/rules/human-decisions';
+import {type ScopeHumanContinuation,humanContinuationSubject} from '../../../logic/tasks/rules/human-continue';
+import {currentHumanContinuation,referencedHumanDecision} from '../../../logic/tasks/rules/human-continuation-rules';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {artifactLimits,artifactFileCheckSchema,type ArtifactFileFact,type ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import {verifyArtifactBaselines} from '../../../logic/evidence/rules/artifact-evidence';
 import {memberWorkflowEvidence} from '../members/member-workflow';
-import type {OutputManifestSnapshot,OutputManifestCheck,OutputManifestRecord} from '../../core/evidence/output-manifest';
-import {completeOutputProof,assertCompleteOutputCurrent,assertCompleteOutputBudget} from '../../core/evidence/complete-output-evidence';
+import type {OutputManifestSnapshot,OutputManifestCheck,OutputManifestRecord} from '../../../logic/evidence/rules/output-manifest';
+import {completeOutputProof,assertCompleteOutputCurrent,assertCompleteOutputBudget} from '../../../logic/evidence/rules/complete-output-evidence';
 
 /** 固定工作区文件端口；只读占用不领取模型名额，关闭/退役检查覆盖异步读取。 */
 export interface HumanDecisionPorts {

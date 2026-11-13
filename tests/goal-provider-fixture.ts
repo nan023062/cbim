@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 /** Local provider helpers produce real goal-tool calls; they never mutate scheduler state or invent result identities. */
 export interface GoalFixturePlan {objective:string;agentId:string;moduleIds:string[];acceptance:string[];ownerSelection?:OwnerExecutionSelection}

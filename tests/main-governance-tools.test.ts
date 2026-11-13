@@ -7,10 +7,10 @@ import {request} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
 import {mainGovernanceTools} from '../src/backend/main/governance/main-governance-tools';
 import {GovernanceTools} from '../src/backend/scheduler-engine/tools/governance-tools';
-import {governanceGetOutputSchema,governanceWriteOutputSchema,governanceReceiptOutputSchema,type GovernanceToolsPort} from '../src/backend/core/governance/module-governance-tools';
-import type {TaskSpec} from '../src/backend/core/tasks/types';
-import {moduleGovernanceMainCommandId} from '../src/backend/core/governance/module-governance-rules';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
+import {governanceGetOutputSchema,governanceWriteOutputSchema,governanceReceiptOutputSchema,type GovernanceToolsPort} from '../src/logic/governance/rules/module-governance-tools';
+import type {TaskSpec} from '../src/logic/tasks/rules/types';
+import {moduleGovernanceMainCommandId} from '../src/logic/governance/rules/module-governance-rules';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 
 const signal=()=>new AbortController().signal;
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

@@ -1,6 +1,6 @@
-import {json,hash} from '../../src/backend/core/foundation/serialization';
+import {json,hash} from '../../src/core/platform/node/serialization';
 import {randomUUID} from 'node:crypto';
-import type {Snapshot,Change,KnowledgeFile} from '../../src/backend/core/knowledge/types';
+import type {Snapshot,Change,KnowledgeFile} from '../../src/logic/knowledge/rules/types';
 
 /** 仅构造数据，不加载 Application、工作区、工具装配或文件存储；保留原字段顺序与内容指纹。 */
 export const request=(snapshot:Snapshot,changes:Change[])=>({workspaceId:snapshot.workspaceId,instanceId:snapshot.instanceId,revision:snapshot.revision,requestId:randomUUID(),changes});

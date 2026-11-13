@@ -8,9 +8,9 @@ import {Paths} from '../src/backend/main/platform/paths';
 import {modelRequestBudgetProvider,type RequestBudgetMode} from './model-request-budget-provider';
 import {budgetScopes,seedScopeBudget} from './scope-budget-fixture';
 import {scopeBudgetProvider,scopeBudgetFixture} from './scope-budget-provider';
-import {requestBudgetReportSchema} from '../src/backend/core/budget/model-request-budget';
+import {requestBudgetReportSchema} from '../src/logic/budget/rules/model-request-budget';
 import type {ResolvedLlm} from '../src/logic/models';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 it.each(['openai-completions','openai-responses','anthropic-messages'] as ResolvedLlm['profile']['api'][])('实际Application/Pi的 %s 经过启动门禁并可靠结算缓存与推理用量，重开查询不发送',async api=>{
   const f=await fixture(),provider=await modelRequestBudgetProvider(api);let app=f.app;

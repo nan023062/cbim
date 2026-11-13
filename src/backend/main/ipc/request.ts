@@ -7,7 +7,7 @@
  */
 import {ZodError} from 'zod';
 import {parseIpcRequest,type ApplicationIpcAction} from '../../../bridge/contracts/ipc-call';
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 const shutdownMessages:Partial<Record<ApplicationIpcAction,string>>={
   'chat.paths':'CBIM 正在退出，未导入路径',
   'chat.image':'CBIM 正在退出，未导入图片',

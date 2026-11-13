@@ -4,13 +4,13 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
-import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
+import {json} from '../src/core/platform/node/serialization';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
+import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
 import * as loops from '../src/backend/scheduler-engine/assembly/loop-engine';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {TaskSpec} from '../src/backend/core/execution/types';
+import type {TaskSpec} from '../src/logic/execution/rules/types';
 import {registerServiceOwner} from './owner-service-fixture';
 
 it('真实应用汇总两个工作区的成员及任务，幂等重试和重启不重复，关闭后不残留活动',async()=>{

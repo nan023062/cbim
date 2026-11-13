@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 import {dependencyReplacementFixture} from './queued-dependency-replacement-provider';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
-import {dependencyReplacementSchema} from '../src/backend/core/tasks/queued-dependency-replacement';
-import {abandonCheckpointReceiptSchema,type AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import {dependencyReplacementSchema} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import {abandonCheckpointReceiptSchema,type AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
 
 export const abandonedDependencyData={...dependencyReplacementFixture,
   goal:'ABANDONED_DEPENDENCY_MAIN: 明确放弃A检查点，以A2真实候选接替原B和C前置',

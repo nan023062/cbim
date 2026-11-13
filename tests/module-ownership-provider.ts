@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {moduleOwnerInspectOutputSchema,moduleOwnerPreviewOutputSchema,moduleOwnerRecordedOutputSchema} from '../src/backend/core/workspace/module-ownership-tools';
+import {moduleOwnerInspectOutputSchema,moduleOwnerPreviewOutputSchema,moduleOwnerRecordedOutputSchema} from '../src/logic/workspace/rules/module-ownership-tools';
 import type {GoalFixtureRequest} from './goal-provider-fixture';
 import {moduleOwnershipFixture as data} from './module-ownership-fixture';
 import {workspaceMemberFixture} from './workspace-member-fixture';

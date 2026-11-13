@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {SessionGraphProjection} from '../src/frontend/tasks/graph-state';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import type {GraphEventBatch} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'main-session'};

@@ -5,8 +5,8 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {RecoveryRequest} from '../src/backend/core/tasks/scope-recovery';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {RecoveryRequest} from '../src/logic/tasks/rules/scope-recovery';
 
 function barrier(){let resolve!:()=>void;const promise=new Promise<void>(accept=>{resolve=accept});return {promise,resolve}}
 async function fixture(stage:'preflight'|'factory'){

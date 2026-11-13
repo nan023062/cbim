@@ -3,7 +3,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {ReplaceQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-replacement';
+import type {ReplaceQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-replacement';
 import {abandonedDependencyProvider,abandonedDependencyData as data} from './abandoned-checkpoint-dependency-provider';
 import {seedAbandonedDependency,assertAbandonedDependency,abandonedRecords,abandonedWait,abandonedRunBytes,abandonedRunByteEvidence} from './abandoned-checkpoint-dependency-fixture';
 

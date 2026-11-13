@@ -2,8 +2,8 @@ import {expect,test,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedOwnerExecution} from './owner-execution-fixture';
-import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
-import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';
+import type {GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
+import {ownerExecutionSelectionFor} from '../src/logic/team/rules/member-execution-binding';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 
 const latch=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};

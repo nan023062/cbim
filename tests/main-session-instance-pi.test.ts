@@ -1,5 +1,5 @@
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -8,11 +8,11 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
+import {json} from '../src/core/platform/node/serialization';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {RunSummary} from '../src/backend/core/execution/types';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
+import type {RunSummary} from '../src/logic/execution/rules/types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
 
 type ProviderRequest={model:string;messages:{role:string;content:unknown}[];tools?:{function:{name:string}}[]};
 type ProviderResponse={text?:string;tool?:{id:string;name:string;args:unknown}};

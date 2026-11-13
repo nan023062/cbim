@@ -3,9 +3,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import type {GraphEventBatch,GraphIdentity} from '../src/backend/core/tasks/graph-types';
+import {hash} from '../src/core/platform/node/serialization';
+import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {GraphEventBatch,GraphIdentity} from '../src/logic/tasks/rules/graph-types';
 
 const identity={workspaceId:'_workspace',rootSessionId:'-root'},time='2026-11-08T10:00:00.000Z';
 function rootMutation(id:GraphIdentity=identity):DispatchMutation{

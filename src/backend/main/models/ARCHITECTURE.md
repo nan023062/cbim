@@ -38,7 +38,7 @@ class N_src_backend_main_models_main_agent_settings_ts_MainAgentSettings["MainAg
 N_src_backend_main_models_main_agent_settings_ts ..> N_src_backend_main_models_main_agent_settings_ts_MainAgentSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/team/agent-runtime.ts](../../core/team/agent-runtime.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../../logic/team/rules/agent-runtime.ts](../../../logic/team/rules/agent-runtime.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)。
 
 
 ## 子目录导航

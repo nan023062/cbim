@@ -6,8 +6,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {z} from 'zod';
-import type {AgentEngine} from '../core/execution/types';
-import type {EngineRuntimePackage} from '../core/execution/engine-runtime';
+import type {AgentEngine} from '../../logic/execution/rules/types';
+import type {EngineRuntimePackage} from '../../logic/execution/rules/engine-runtime';
 
 const binding=z.object({schema:z.literal(1),kind:z.string(),sessionId:z.string(),identity:z.string().regex(/^[a-f0-9]{64}$/),version:z.string(),toolsIdentity:z.string().optional()}).strict();
 // 只用于旧整包版本迁移。以后提高适配器版本时不能跟着改此表，否则会默许跨版本恢复。

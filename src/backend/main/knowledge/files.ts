@@ -5,11 +5,11 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {StoragePaths as Paths} from '../../core/foundation/paths';
-import type {KnowledgeFile} from '../../core/knowledge/types';
-import {isKnowledge,excluded} from '../../core/knowledge/knowledge';
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
+import type {StoragePaths as Paths} from '../../../logic/workspace/ports/paths';
+import type {KnowledgeFile} from '../../../logic/knowledge/rules/types';
+import {isKnowledge,excluded} from '../../../logic/knowledge/rules/knowledge';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
 import {exists} from '../../../core/platform/node/files';
 export async function readKnowledge(paths:Paths,root:string){
   const result:KnowledgeFile[]=[];

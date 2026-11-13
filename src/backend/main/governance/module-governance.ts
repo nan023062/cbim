@@ -5,13 +5,13 @@
  * 反馈边界：回应来源冻结入提案，批准、逐项评价及新实施复核当前意见；后来的替代不改原评价或已提交 journal。
  */
 import {z} from 'zod';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {ChangeRequest,Preview,Snapshot} from '../../core/knowledge/types';
-import * as protocol from '../../core/governance/module-governance';
-import {projectGovernanceBody,governanceOversizedOutputSchema,governanceToolBodyLimit} from '../../core/governance/module-governance-tools';
-import {moduleGovernanceBinding,moduleGovernanceProposalBasis,validateModuleGovernanceWrite,advanceModuleGovernanceProtection,validateModuleGovernanceMainObservation,moduleGovernanceMainCommandId} from '../../core/governance/module-governance-rules';
-import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../core/governance/module-governance-feedback';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {ChangeRequest,Preview,Snapshot} from '../../../logic/knowledge/rules/types';
+import * as protocol from '../../../logic/governance/rules/module-governance';
+import {projectGovernanceBody,governanceOversizedOutputSchema,governanceToolBodyLimit} from '../../../logic/governance/rules/module-governance-tools';
+import {moduleGovernanceBinding,moduleGovernanceProposalBasis,validateModuleGovernanceWrite,advanceModuleGovernanceProtection,validateModuleGovernanceMainObservation,moduleGovernanceMainCommandId} from '../../../logic/governance/rules/module-governance-rules';
+import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments} from '../../../logic/governance/rules/module-governance-feedback';
 import {ModuleGovernanceStore,governanceCommandFingerprint,type GovernanceCommand} from './storage/module-governance-store';
 import type {KnowledgeGovernanceAuthority,KnowledgeGovernanceBinding,KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from '../knowledge/governance-port';
 

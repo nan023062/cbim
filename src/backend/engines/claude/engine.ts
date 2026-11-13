@@ -12,21 +12,21 @@ import fs from 'node:fs/promises';
 import {RunInactivityTimer} from '../run-inactivity';
 import path from 'node:path';
 import type {Query,SDKUserMessage,SDKMessage} from '@anthropic-ai/claude-agent-sdk';
-import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
+import type {AgentEngine,EngineContext,EngineEvent} from '../../../logic/execution/rules/types';
 import type {ResolvedLlm} from '../../../logic/models';
-import type {RequestBudgetPort} from '../../core/models/request-budget';
-import {runtimeEngineTools,type EngineToolsPort} from '../../core/execution/engine-tools';
-import {engineInstructions} from '../../core/execution/engine-instructions';
+import type {RequestBudgetPort} from '../../../logic/budget/rules/request-budget';
+import {runtimeEngineTools,type EngineToolsPort} from '../../../logic/execution/rules/engine-tools';
+import {engineInstructions} from '../../../logic/execution/rules/engine-instructions';
 import {openRequestBudgetTransport} from '../transport/request-budget-transport';
 import {loadClaudeSdk} from './sdk';
-import type {EngineRuntimePackage} from '../../core/execution/engine-runtime';
+import type {EngineRuntimePackage} from '../../../logic/execution/rules/engine-runtime';
 import {claudeTools} from './tools';
 
 export interface ClaudeOptions {
   /** 冷壳已验证的固定 SDK 包；不含用户账号目录。 */
   runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;
   agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;
-  llm?:ResolvedLlm;images?:import('../../core/execution/types').InputImage[];turnTimeoutMs?:number;
+  llm?:ResolvedLlm;images?:import('../../../logic/execution/rules/types').InputImage[];turnTimeoutMs?:number;
   requestBudget?():Promise<RequestBudgetPort|undefined>;
   /** 可信测试注入；生产始终使用 CBIM 自带 SDK，不接受公开运行参数指定可执行文件。 */
   loadSdk?:typeof loadClaudeSdk;

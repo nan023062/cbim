@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {goalRepairFeedback} from '../src/backend/scheduler-engine/dispatch/goal-repair';
-import {checkedRunInputSource} from '../src/backend/core/execution/input-source';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import {checkedRunInputSource} from '../src/logic/execution/rules/input-source';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {transcript} from '../src/frontend/execution-view/transcript';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 const scope={scopeId:'scope',workspaceId:'workspace',rootSessionId:'root',status:'active',createdAt:'2026-11-12T00:00:00.000Z',goal:{revision:1,input:{message:'开发',attachmentIds:[]}}} satisfies DispatchScope;
 const graph={tasks:[]} as unknown as GraphSnapshot;

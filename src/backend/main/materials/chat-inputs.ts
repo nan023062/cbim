@@ -11,13 +11,13 @@ import {randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {hash} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,continuationAttachmentLimits,continuationSourceItemFromSnapshot,type ContinuationAttachmentManifest,type ContinuationAttachmentItem} from '../../core/tasks/scope-continuation-attachments';
-import type {InputImage} from '../../core/execution/types';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
+import {hash} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,continuationAttachmentLimits,continuationSourceItemFromSnapshot,type ContinuationAttachmentManifest,type ContinuationAttachmentItem} from '../../../logic/tasks/rules/scope-continuation-attachments';
+import type {InputImage} from '../../../logic/execution/rules/types';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import type {ChatAttachment,ChatAttachmentPreview} from '../../../bridge/contracts/chat';
-import {continuationSourceSnapshotSchema} from '../../core/tasks/continuation-source-snapshot';
+import {continuationSourceSnapshotSchema} from '../../../logic/tasks/rules/continuation-source-snapshot';
 import {readDirectorySource,readUrlSource} from './chat-source-readers';
 /** 按文件签名识别视觉模型常用格式，不信任扩展名；其他二进制保留引用行为。 */
 function imageMime(buffer:Buffer){

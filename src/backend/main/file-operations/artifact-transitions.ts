@@ -6,8 +6,8 @@
  * 删除和移动沿用同一程序缓存保护边界，不允许把独立更新目录当业务产物目标。
  */
 import {isDeepStrictEqual as equal} from 'node:util';
-import {fail} from '../../core/foundation/errors';
-import type {ArtifactTransitionRunPort} from '../../core/execution/capabilities/run-artifact-transition';
+import {fail} from '../../../core/errors';
+import type {ArtifactTransitionRunPort} from '../../../logic/execution/rules/capabilities/run-artifact-transition';
 import type {ControlledFileTransport,ControlledNamespaceChange} from '../platform/files/controlled-file-protocol';
 import type {Workspace} from '../workspace/workspace';
 

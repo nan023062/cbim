@@ -1,11 +1,11 @@
 import {expect,it,vi} from 'vitest';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
-import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactReportSchema,artifactReportInputSchema,artifactLimits,type ArtifactBaselineStaged} from '../src/backend/core/evidence/artifact-baseline';
-import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/evidence/artifact-tools';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
+import {hash} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
+import {artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
+import {artifactCaptureInputSchema,artifactBaselineStagedSchema,artifactReportSchema,artifactReportInputSchema,artifactLimits,type ArtifactBaselineStaged} from '../src/logic/evidence/rules/artifact-baseline';
+import {ArtifactTools,artifactCaptureToolName} from '../src/logic/evidence/rules/artifact-tools';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
 
 const binding={workspaceId:'workspace',teamId:'team',agentId:'agent',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',taskId:'task',runId:'run',leaseEpoch:1,planRevision:1},stamp='2026-11-07T00:00:00.000Z';
 const normalize=(path:string)=>path.replace(/^\/workspace\//,'');

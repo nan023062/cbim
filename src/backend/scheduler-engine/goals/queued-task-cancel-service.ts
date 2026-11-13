@@ -5,14 +5,14 @@
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {contextualMainCommand} from './main-command-request';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {GraphIdentity,GraphChange,TaskNode} from '../../core/tasks/graph-types';
-import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
-import {queuedCancellationSelection} from '../../core/tasks/queued-task-cancel-rules';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {GraphIdentity,GraphChange,TaskNode} from '../../../logic/tasks/rules/graph-types';
+import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../../logic/tasks/rules/queued-task-cancel';
+import {queuedCancellationSelection} from '../../../logic/tasks/rules/queued-task-cancel-rules';
 
 const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 const contextSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,runId:id,commandId:id}).strict();

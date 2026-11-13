@@ -3,8 +3,8 @@
  * 作用定位：将工作区唯一 DispatchStore 适配为请求预算专用的两项读写能力。
  * 设计原因：投影和预留都发生在原串行事务内部，不先读余额再独立扣减；明确投影字段与提交字段，避免结构类型或额外属性把其他领域状态传给预算服务。
  */
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {RequestBudgetStore,RequestBudgetState} from '../../core/budget/model-request-budget-storage';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {RequestBudgetStore,RequestBudgetState} from '../../../logic/budget/rules/model-request-budget-storage';
 
 function budgetState(state:DispatchState):RequestBudgetState {
   return structuredClone({

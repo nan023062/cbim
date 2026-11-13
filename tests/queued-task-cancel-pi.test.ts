@@ -7,8 +7,8 @@ import {queuedTaskCancelProvider,queuedTaskCancelFixture as data} from './queued
 import {seedQueuedTaskCancel,queuedTaskCancelRecords} from './queued-task-cancel-fixture';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 it.each(['complete','stop','cancel-not-success'] as const)('explicitly cancels unstarted dependencies then preserves the goal and immutable history (%s)',async mode=>{
   const f=await fixture(),provider=await queuedTaskCancelProvider({holdContinuation:true,invalidComplete:mode==='cancel-not-success'});let app=f.app;

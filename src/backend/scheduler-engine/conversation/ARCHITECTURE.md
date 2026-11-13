@@ -36,7 +36,7 @@ class N_src_backend_scheduler_engine_conversation_approvals_ts_ApprovalQueue["Ap
 N_src_backend_scheduler_engine_conversation_approvals_ts ..> N_src_backend_scheduler_engine_conversation_approvals_ts_ApprovalQueue : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/policy/types.ts](../../core/tools/policy/types.ts)、[../../core/tools/types.ts](../../core/tools/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/tools/rules/policy/types.ts](../../../logic/tools/rules/policy/types.ts)、[../../../logic/tools/rules/types.ts](../../../logic/tools/rules/types.ts)。
 
 ### execution-manager.ts
 
@@ -208,7 +208,7 @@ class N_src_backend_scheduler_engine_conversation_execution_manager_ts_Workspace
 N_src_backend_scheduler_engine_conversation_execution_manager_ts ..> N_src_backend_scheduler_engine_conversation_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/identity.ts](../../core/foundation/identity.ts)、[../../core/execution/storage.ts](../../core/execution/storage.ts)、[../../core/execution/index.ts](../../core/execution/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/tasks/scope-continuation.ts](../../core/tasks/scope-continuation.ts)、[../../core/tasks/dispatch-scope.ts](../../core/tasks/dispatch-scope.ts)、[../../core/tasks/scope-active-input.ts](../../core/tasks/scope-active-input.ts)、[../../core/tasks/scope-active-input-rules.ts](../../core/tasks/scope-active-input-rules.ts)、[../../core/tasks/scope-goal.ts](../../core/tasks/scope-goal.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/tasks/scope-continuation-attachments.ts](../../core/tasks/scope-continuation-attachments.ts)、[../../core/tasks/scope-recovery.ts](../../core/tasks/scope-recovery.ts)、[../../core/tasks/fresh-context.ts](../../core/tasks/fresh-context.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../core/tasks/scope-replan.ts](../../core/tasks/scope-replan.ts)、[../../core/tasks/human-continue.ts](../../core/tasks/human-continue.ts)。
+直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/execution/ports/identity.ts](../../../logic/execution/ports/identity.ts)、[../../../logic/execution/rules/storage.ts](../../../logic/execution/rules/storage.ts)、[../../../logic/execution/rules/index.ts](../../../logic/execution/rules/index.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/execution/rules/input-source.ts](../../../logic/execution/rules/input-source.ts)、[../assembly/loop-engine.ts](../assembly/loop-engine.ts)、[../context/team-workflow.ts](../context/team-workflow.ts)、[../../../logic/knowledge/rules/read-models/index.ts](../../../logic/knowledge/rules/read-models/index.ts)、[../../../logic/tasks/rules/scope-continuation.ts](../../../logic/tasks/rules/scope-continuation.ts)、[../../../logic/tasks/rules/dispatch-scope.ts](../../../logic/tasks/rules/dispatch-scope.ts)、[../../../logic/tasks/rules/scope-active-input.ts](../../../logic/tasks/rules/scope-active-input.ts)、[../../../logic/tasks/rules/scope-active-input-rules.ts](../../../logic/tasks/rules/scope-active-input-rules.ts)、[../../../logic/tasks/rules/scope-goal.ts](../../../logic/tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../logic/tasks/rules/scope-continuation-attachments.ts](../../../logic/tasks/rules/scope-continuation-attachments.ts)、[../../../logic/tasks/rules/scope-recovery.ts](../../../logic/tasks/rules/scope-recovery.ts)、[../../../logic/tasks/rules/fresh-context.ts](../../../logic/tasks/rules/fresh-context.ts)、[../admission/admission-wait.ts](../admission/admission-wait.ts)、[../../../logic/tasks/rules/scope-replan.ts](../../../logic/tasks/rules/scope-replan.ts)、[../../../logic/tasks/rules/human-continue.ts](../../../logic/tasks/rules/human-continue.ts)。
 
 ### main-agent.ts
 
@@ -282,7 +282,7 @@ class N_src_backend_scheduler_engine_conversation_message_queue_ts_MessageQueue[
 N_src_backend_scheduler_engine_conversation_message_queue_ts ..> N_src_backend_scheduler_engine_conversation_message_queue_ts_MessageQueue : 声明
 ```
 
-直接依赖：[../../core/tasks/queue.ts](../../core/tasks/queue.ts)。
+直接依赖：[../../../logic/tasks/rules/queue.ts](../../../logic/tasks/rules/queue.ts)。
 
 ### questions.ts
 
@@ -301,7 +301,7 @@ class N_src_backend_scheduler_engine_conversation_questions_ts_QuestionQueue["Qu
 N_src_backend_scheduler_engine_conversation_questions_ts ..> N_src_backend_scheduler_engine_conversation_questions_ts_QuestionQueue : 声明
 ```
 
-直接依赖：[../../core/tools/questions.ts](../../core/tools/questions.ts)。
+直接依赖：[../../../logic/tools/rules/questions.ts](../../../logic/tools/rules/questions.ts)。
 
 ### 本目录调用边界
 

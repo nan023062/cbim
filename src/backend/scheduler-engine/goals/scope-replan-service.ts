@@ -4,22 +4,22 @@
  * 设计原因：旧任务和未知回执保持封存；事务外核实主/成员来源及完整只读证据，知识短锁内仅做 Store CAS。重复命令先读原回执，明确处置只关联新目标，不修正旧失败。
  */
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../core/knowledge/ports';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {freshContextSchema,scopeFreshContext} from '../../core/tasks/fresh-context';
-import {replanPreviewInputSchema,replanRequestSchema,replanLookupSchema,type ReplanPreviewInput,type ReplanPreview,type ReplanRequest,type ReplanLookup,type ReplanReceipt,type ScopeReplan,type InspectionProof} from '../../core/tasks/scope-replan';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace,SourceSnapshotReader} from '../../../logic/knowledge/rules/ports';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {freshContextSchema,scopeFreshContext} from '../../../logic/tasks/rules/fresh-context';
+import {replanPreviewInputSchema,replanRequestSchema,replanLookupSchema,type ReplanPreviewInput,type ReplanPreview,type ReplanRequest,type ReplanLookup,type ReplanReceipt,type ScopeReplan,type InspectionProof} from '../../../logic/tasks/rules/scope-replan';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
 import {ScopeGoalService,type ScopeGoalPorts} from './scope-goal-service';
-import {createScopeRunTracking} from '../../core/tasks/scope-run-tracking';
+import {createScopeRunTracking} from '../../../logic/tasks/rules/scope-run-tracking';
 import {ExecutionReportService} from '../evidence/execution-report-service';
 import {resolveDispatchModules} from '../context/dispatch-context';
 import type {EffectObservationService} from '../evidence/effect-observation-service';
 import {effectStateStamp} from '../evidence/effect-source';
-import {sameEffectSubject} from '../../core/tasks/effect-observation';
-import {goalInputRevision} from '../../core/tasks/scope-goal';
+import {sameEffectSubject} from '../../../logic/tasks/rules/effect-observation';
+import {goalInputRevision} from '../../../logic/tasks/rules/scope-goal';
 
 type Owner=Pick<KnowledgeWorkspace,'entry'|'instanceId'|'assert'|'snapshot'|'read'>&Partial<SourceSnapshotReader>;
 export type ReplanLaunch={runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal};

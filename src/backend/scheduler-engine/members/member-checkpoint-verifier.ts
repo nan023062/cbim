@@ -5,16 +5,16 @@
  * 设计原因：续执行仍须当前知识及全部文件匹配；放弃只核原冻结证明，不能因来源或模型变化阻止结束旧待办，也不能据历史真实性获得新执行许可。
  */
 import {isDeepStrictEqual} from 'node:util';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {TaskNode} from '../../core/tasks/graph-types';
-import type {ArtifactFileFact,ArtifactFileCheck} from '../../core/evidence/artifact-baseline';
-import {artifactLimits} from '../../core/evidence/artifact-baseline';
-import {memberCheckpointProofSchema,memberCheckpointLimit,type MemberCheckpointProof} from '../../core/tasks/member-checkpoint';
-import {verifyMemberCheckpoint,validateCheckpointEligibility} from '../../core/tasks/member-checkpoint-evidence';
+import {fail} from '../../../core/errors';
+import {hash,json} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../../../logic/tasks/rules/graph-types';
+import type {ArtifactFileFact,ArtifactFileCheck} from '../../../logic/evidence/rules/artifact-baseline';
+import {artifactLimits} from '../../../logic/evidence/rules/artifact-baseline';
+import {memberCheckpointProofSchema,memberCheckpointLimit,type MemberCheckpointProof} from '../../../logic/tasks/rules/member-checkpoint';
+import {verifyMemberCheckpoint,validateCheckpointEligibility} from '../../../logic/tasks/rules/member-checkpoint-evidence';
 import {recheckDispatchExecutionContext,type DispatchKnowledgeWorkspace} from '../context/execution-context';
 import {memberPublicTask} from '../runtime/member-events';
 

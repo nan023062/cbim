@@ -1,6 +1,6 @@
 import {expect,test,vi} from 'vitest';
 import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {mainToolBinding} from './main-tool-output-fixture';
 
 const input={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'B',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'使用补做任务的真实结果'};

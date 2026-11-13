@@ -3,7 +3,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv';
-import {objectOperation} from '../src/backend/core/knowledge/object-crud';
+import {objectOperation} from '../src/logic/knowledge/rules/object-crud';
 import {fixture} from './helpers';
 import {summary,moduleFiles} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';

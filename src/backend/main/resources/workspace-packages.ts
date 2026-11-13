@@ -9,12 +9,12 @@ import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage} from '../../core/knowledge/portable-package';
-import type {KnowledgeWorkspace,KnowledgeCommit} from '../../core/knowledge/ports';
-import type {ChangeRequest} from '../../core/knowledge/types';
-import {knowledgePlanHash,type PackagePlanV2} from '../../core/knowledge/planned-commit';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage} from '../../../logic/knowledge/rules/portable-package';
+import type {KnowledgeWorkspace,KnowledgeCommit} from '../../../logic/knowledge/rules/ports';
+import type {ChangeRequest} from '../../../logic/knowledge/rules/types';
+import {knowledgePlanHash,type PackagePlanV2} from '../../../logic/knowledge/rules/planned-commit';
 import type {PublishWorkspaceResult,ImportWorkspacePreview} from '../../../bridge/contracts/resources';
 import type {ResourceRepositories} from '../../../logic/resources/service';
 

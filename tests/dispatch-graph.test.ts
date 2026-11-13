@@ -1,10 +1,10 @@
 import {expect,test} from 'vitest';
-import {applyGraphBatch,readGraphDelta} from '../src/backend/core/tasks/graph-reducer';
-import {validateGraph} from '../src/backend/core/tasks/graph-rules';
-import {validateTaskNode} from '../src/backend/core/tasks/graph-rules';
+import {applyGraphBatch,readGraphDelta} from '../src/logic/tasks/rules/graph-reducer';
+import {validateGraph} from '../src/logic/tasks/rules/graph-rules';
+import {validateTaskNode} from '../src/logic/tasks/rules/graph-rules';
 import {memberReviewStage} from '../src/frontend/tasks/member-review-state';
 import {dependenciesReady} from '../src/backend/scheduler-engine/members/member-state';
-import type {AgentRef,GraphChange,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
+import type {AgentRef,GraphChange,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
 
 const identity={workspaceId:'workspace-1',rootSessionId:'conversation-1'};
 const agent:AgentRef={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'};

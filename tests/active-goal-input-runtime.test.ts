@@ -2,11 +2,11 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,EngineContext,EngineEvent} from '../src/backend/core/execution/types';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,EngineContext,EngineEvent} from '../src/logic/execution/rules/types';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {scopedActiveInputHash} from '../src/backend/core/tasks/scope-active-input-rules';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {scopedActiveInputHash} from '../src/logic/tasks/rules/scope-active-input-rules';
 
 async function fixture(afterSave?:(event:EngineEvent)=>void){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-active-input-runtime-')),storage=new FileRunStorage(),create=storage.createJournal.bind(storage);

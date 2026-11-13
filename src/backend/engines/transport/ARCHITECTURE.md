@@ -26,7 +26,7 @@ class N_src_backend_engines_transport_request_budget_transport_ts["request-budge
 }
 ```
 
-直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../core/budget/model-request-budget-rules.ts](../../core/budget/model-request-budget-rules.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../../logic/budget/rules/request-budget.ts](../../../logic/budget/rules/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../logic/budget/rules/model-request-budget-rules.ts](../../../logic/budget/rules/model-request-budget-rules.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/team/rules/workspace-member-rules.ts](../../../logic/team/rules/workspace-member-rules.ts)。
 
 ### request-budget-usage.ts
 
@@ -54,7 +54,7 @@ class N_src_backend_engines_transport_request_budget_usage_ts_RequestBudgetUsage
 N_src_backend_engines_transport_request_budget_usage_ts ..> N_src_backend_engines_transport_request_budget_usage_ts_RequestBudgetUsageStream : 声明
 ```
 
-直接依赖：[../../core/budget/model-request-budget.ts](../../core/budget/model-request-budget.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../../logic/budget/rules/model-request-budget.ts](../../../logic/budget/rules/model-request-budget.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### 本目录调用边界
 

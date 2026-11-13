@@ -17,29 +17,29 @@ import {randomUUID} from 'node:crypto';
 import {mainAgentId} from './main-agent';
 import {z} from 'zod';
 import {loopEngineSchema} from '../../../logic/models';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import {fail,Fault} from '../../core/foundation/errors';
-import {safeId} from '../../core/foundation/identity';
-import type {RunStorage} from '../../core/execution/storage';
-import type {StoredEvent,TaskSpec} from '../../core/execution';
-import type {RunInputSource,RunSummary,ConversationThreadView} from '../../core/execution/types';
-import {checkedRunInputSource} from '../../core/execution/input-source';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import {fail,Fault} from '../../../core/errors';
+import {safeId} from '../../../logic/execution/ports/identity';
+import type {RunStorage} from '../../../logic/execution/rules/storage';
+import type {StoredEvent,TaskSpec} from '../../../logic/execution/rules';
+import type {RunInputSource,RunSummary,ConversationThreadView} from '../../../logic/execution/rules/types';
+import {checkedRunInputSource} from '../../../logic/execution/rules/input-source';
 import type {createWorkspaceLoop,WorkspaceLoopOptions} from '../assembly/loop-engine';
 import {prepareTeamTask,type TeamTaskInput} from '../context/team-workflow';
-import {Team,BusinessWorkspace} from '../../core/knowledge/read-models';
+import {Team,BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
 
-import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../core/tasks/scope-continuation';
-import type {DispatchScopeWait} from '../../core/tasks/dispatch-scope';
-import type {ScopeActiveInput,ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
-import {scopedActiveInputHash} from '../../core/tasks/scope-active-input-rules';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {hash,json} from '../../core/foundation/serialization';
-import {assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
-import {recoveryRequestSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../core/tasks/scope-recovery';
-import type {FreshContext} from '../../core/tasks/fresh-context';
+import {goalContinuationRequestSchema,type GoalContinuationRequest,type GoalContinuationReceipt} from '../../../logic/tasks/rules/scope-continuation';
+import type {DispatchScopeWait} from '../../../logic/tasks/rules/dispatch-scope';
+import type {ScopeActiveInput,ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../../logic/tasks/rules/scope-active-input';
+import {scopedActiveInputHash} from '../../../logic/tasks/rules/scope-active-input-rules';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type TrustedContinuationInput} from '../../../logic/tasks/rules/scope-continuation-attachments';
+import {recoveryRequestSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../../logic/tasks/rules/scope-recovery';
+import type {FreshContext} from '../../../logic/tasks/rules/fresh-context';
 import type {ExecutionAdmissionWait,ExecutionLaunchContext} from '../admission/admission-wait';
-import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../core/tasks/scope-replan';
-import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../core/tasks/human-continue';
+import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../../logic/tasks/rules/scope-replan';
+import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../../logic/tasks/rules/human-continue';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
 export const executionOptions=z.object({engine:loopEngineSchema.optional(),provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
@@ -201,9 +201,9 @@ export class WorkspaceExecutionManager {
   answerApproval(taskId:string,id:string,allow:boolean,allowAll=false){this.approvalQueue.answer(taskId,id,allow,allowAll)}
   private cancelApprovals(taskId?:string){this.approvalQueue.cancel(taskId);this.questions.cancel(taskId)}
   /** 运行工厂由装配方注入，调度层不创建 main 的进程锁或具体工作区实例。 */
-  constructor(readonly workspace:KnowledgeWorkspace,private storage:RunStorage,private factory:(options:WorkspaceLoopOptions,task:TaskSpec,context:ExecutionLaunchContext)=>ReturnType<typeof createWorkspaceLoop>,private inputImages:(ids?:string[])=>Promise<import('../../core/execution/types').InputImage[]>=async()=>[],
+  constructor(readonly workspace:KnowledgeWorkspace,private storage:RunStorage,private factory:(options:WorkspaceLoopOptions,task:TaskSpec,context:ExecutionLaunchContext)=>ReturnType<typeof createWorkspaceLoop>,private inputImages:(ids?:string[])=>Promise<import('../../../logic/execution/rules/types').InputImage[]>=async()=>[],
     /** Main 只在首次未受理的附件补充调用；旧装配缺省仍支持文本，不冒造文件或视觉输入。 */
-    private prepareContinuationInput?:(input:GoalContinuationRequest['input'],signal:AbortSignal)=>Promise<{message:string;images:import('../../core/execution/types').InputImage[];manifest:ContinuationAttachmentManifest}>){}
+    private prepareContinuationInput?:(input:GoalContinuationRequest['input'],signal:AbortSignal)=>Promise<{message:string;images:import('../../../logic/execution/rules/types').InputImage[];manifest:ContinuationAttachmentManifest}>){}
   /** 观察者只收到已落盘事件；监听错误不能改变执行结果。 */
   subscribe(listener:(event:StoredEvent)=>void){this.listeners.add(listener);return ()=>{this.listeners.delete(listener)}}
   private serial<T>(work:()=>Promise<T>):Promise<T>{

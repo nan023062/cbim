@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
@@ -12,7 +12,7 @@ import {additionRecords} from './queued-dependency-addition-fixture';
 import {globalRuntimeLogBytes} from './global-runtime-fixture';
 import {effectFixture as data,type effectObservationProvider} from './effect-observation-provider';
 import {loseOriginalEffectResult} from './effect-observation-fault';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 export {additionRecords as effectRecords,globalRuntimeLogBytes as effectLogBytes};
 export async function effectWait(check:()=>Promise<boolean>,provider:Awaited<ReturnType<typeof effectObservationProvider>>,label:string){const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,30))}throw Error('Effect fixture timeout: '+label)}

@@ -3,12 +3,12 @@
  * 作用定位：把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。
  * 设计原因：Scope 与运行日志是两个真实存储，不能靠单边记录推断原生已经接收；未知不会被旧 review 或普通聊天完成例外洗白。
  */
-import {fail} from '../../core/foundation/errors';
-import type {RunSummary} from '../../core/execution/types';
-import type {DispatchScope} from '../../core/tasks/dispatch-scope';
-import {sameGoalValue} from '../../core/tasks/scope-goal';
-import {scopeActiveInputTokenSchema} from '../../core/tasks/scope-active-input';
-import {scopedActiveInputHash} from '../../core/tasks/scope-active-input-rules';
+import {fail} from '../../../core/errors';
+import type {RunSummary} from '../../../logic/execution/rules/types';
+import type {DispatchScope} from '../../../logic/tasks/rules/dispatch-scope';
+import {sameGoalValue} from '../../../logic/tasks/rules/scope-goal';
+import {scopeActiveInputTokenSchema} from '../../../logic/tasks/rules/scope-active-input';
+import {scopedActiveInputHash} from '../../../logic/tasks/rules/scope-active-input-rules';
 
 /** 只校验新协议标记，旧无 token 的历史不迁移；被选中的新日志必须完整、连续且属于原主运行。 */
 export function validateScopeActiveInputLog(scope:DispatchScope,summary:RunSummary):void{

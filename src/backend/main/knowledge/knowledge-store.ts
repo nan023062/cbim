@@ -9,15 +9,15 @@ import {readKnowledge} from './files';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {atomic,exists,readJson} from '../../../core/platform/node/files';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {StoragePaths} from '../../core/foundation/paths';
-import {Rules,revision,INDEXES,isKnowledge,parseJson} from '../../core/knowledge/knowledge';
-import type {Snapshot,ChangeRequest,Preview,Change} from '../../core/knowledge/types';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import type {StoragePaths} from '../../../logic/workspace/ports/paths';
+import {Rules,revision,INDEXES,isKnowledge,parseJson} from '../../../logic/knowledge/rules/knowledge';
+import type {Snapshot,ChangeRequest,Preview,Change} from '../../../logic/knowledge/rules/types';
 import type {KnowledgeGovernanceAuthority,KnowledgeGovernanceBinding,KnowledgeGovernanceTransaction,KnowledgeJournalStatus} from './governance-port';
 import {readKnowledgePlan} from './planned-commit';
-import type {KnowledgePlanRef,PlannedKnowledgeCommit} from '../../core/knowledge/planned-commit';
-import {plannedRequestSchema} from '../../core/knowledge/planned-commit';
+import type {KnowledgePlanRef,PlannedKnowledgeCommit} from '../../../logic/knowledge/rules/planned-commit';
+import {plannedRequestSchema} from '../../../logic/knowledge/rules/planned-commit';
 import {checkedSourceJournal,type KnowledgeSourceAuthority,type KnowledgeSourceJournal} from './source-journal';
 
 /** 存储通过此端口报告实例状态；不持有 Electron 或工作区执行管理器。 */

@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {Rules,revision} from '../src/backend/core/knowledge/knowledge';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {KnowledgeFile,Snapshot} from '../src/backend/core/knowledge/types';
+import {Rules,revision} from '../src/logic/knowledge/rules/knowledge';
+import {hash,json} from '../src/core/platform/node/serialization';
+import type {KnowledgeFile,Snapshot} from '../src/logic/knowledge/rules/types';
 import {moduleFiles,summary} from './knowledge-data';
 
 export const teamIds={

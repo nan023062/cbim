@@ -5,10 +5,10 @@
 export {
   moduleOwnershipChangeInputSchema,moduleOwnershipPreviewInputSchema,moduleOwnershipPreviewSchema,
   moduleOwnershipCommitInputSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption,
-} from '../../backend/core/workspace/module-ownership';
+} from '../../logic/workspace/rules/module-ownership';
 export type {
   ModuleOwnership,ModuleOwnershipIdentity,ModuleOwnershipReadBasis,ModuleOwnershipView,
   ModuleOwnershipChangeInput,ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,
   ModuleOwnershipReceipt,ModuleOwnershipPage,ModuleOwnershipDetail,ModuleOwnershipListInput,ModuleOwnershipGetInput,
   ModuleOwnershipByMemberInput,ModuleOwnershipLookup,
-} from '../../backend/core/workspace/module-ownership';
+} from '../../logic/workspace/rules/module-ownership';

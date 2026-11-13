@@ -6,12 +6,12 @@
  */
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {KnowledgeQueries} from '../../core/knowledge/knowledge-queries';
-import {Builtins} from '../../core/knowledge/builtins';
-import {fail} from '../../core/foundation/errors';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {TaskSpec} from '../../core/execution';
-import {parseWorkflowContract} from '../../core/workspace/workflow-contract';
+import {KnowledgeQueries} from '../../../logic/knowledge/rules/knowledge-queries';
+import {Builtins} from '../../../logic/knowledge/rules/builtins';
+import {fail} from '../../../core/errors';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {TaskSpec} from '../../../logic/execution/rules';
+import {parseWorkflowContract} from '../../../logic/workspace/rules/workflow-contract';
 
 export const teamTaskInput=z.object({goal:z.string().trim().min(1),moduleId:z.string().min(1),agentId:z.string().min(1),workflowId:z.string().min(1),responsiblePerson:z.string().optional(),acceptance:z.array(z.string().trim().min(1)).min(1)});
 export type TeamTaskInput=z.infer<typeof teamTaskInput>;

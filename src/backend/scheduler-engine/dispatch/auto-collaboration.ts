@@ -19,37 +19,37 @@
  * 新核实/修复：启动信号透传受理服务，事务外 IO 后停止不得保存新意图；已受理意图仍按原命令查询，不清原 unknown。
  * 自动接续保留本周期的引擎选型，不从当前设置重新选择主引擎；成员仍使用各自冻结配置。
  */
-import type {GoalPlanInput} from '../../core/tasks/scope-goal';
-import {hash,json} from '../../core/foundation/serialization';
+import type {GoalPlanInput} from '../../../logic/tasks/rules/scope-goal';
+import {hash,json} from '../../../core/platform/node/serialization';
 import {randomUUID} from 'node:crypto';
-import {currentMemberResumeRequest} from '../../core/tasks/member-checkpoint-chain';
-import {isMemberCheckpointPending} from '../../core/tasks/member-checkpoint';
-import {fail} from '../../core/foundation/errors';
-import type {TaskSpec,RunSummary,RunInputSource} from '../../core/execution/types';
-import type {DispatchScope,DispatchScopeOutcome} from '../../core/tasks/dispatch-scope';
-import type {GoalContinuationRequest} from '../../core/tasks/scope-continuation';
-import type {TrustedContinuationInput} from '../../core/tasks/scope-continuation-attachments';
-import type {ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../core/tasks/scope-active-input';
-import type {HumanContinuationRequest} from '../../core/tasks/human-continue';
-import type {RecoveryRequest} from '../../core/tasks/scope-recovery';
-import type {ReplanRequest} from '../../core/tasks/scope-replan';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {DispatchTaskInput} from '../../core/tasks/dispatch-commands';
-import type {GraphSnapshot,TaskNode} from '../../core/tasks/graph-types';
+import {currentMemberResumeRequest} from '../../../logic/tasks/rules/member-checkpoint-chain';
+import {isMemberCheckpointPending} from '../../../logic/tasks/rules/member-checkpoint';
+import {fail} from '../../../core/errors';
+import type {TaskSpec,RunSummary,RunInputSource} from '../../../logic/execution/rules/types';
+import type {DispatchScope,DispatchScopeOutcome} from '../../../logic/tasks/rules/dispatch-scope';
+import type {GoalContinuationRequest} from '../../../logic/tasks/rules/scope-continuation';
+import type {TrustedContinuationInput} from '../../../logic/tasks/rules/scope-continuation-attachments';
+import type {ScopeActiveInputPayload,ScopeActiveInputToken,ScopeActiveInputSendReceipt} from '../../../logic/tasks/rules/scope-active-input';
+import type {HumanContinuationRequest} from '../../../logic/tasks/rules/human-continue';
+import type {RecoveryRequest} from '../../../logic/tasks/rules/scope-recovery';
+import type {ReplanRequest} from '../../../logic/tasks/rules/scope-replan';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {DispatchTaskInput} from '../../../logic/tasks/rules/dispatch-commands';
+import type {GraphSnapshot,TaskNode} from '../../../logic/tasks/rules/graph-types';
 import {DispatchTools} from '../tools/dispatch-tools';
 import {GoalTools} from '../tools/goal-tools';
 import {CandidateReviewTools} from '../tools/candidate-review-tools';
 import {dependenciesReady} from '../members/member-state';
 import {mainToolCommandId} from '../tools/main-tool-contracts';
-import {projectMainScope} from '../../core/tasks/main-tool-output';
+import {projectMainScope} from '../../../logic/tasks/rules/main-tool-output';
 import type {WorkspaceDispatchService} from './dispatch-service';
 import type {MemberExecutionManager} from '../members/member-execution';
 import type {WorkspaceExecutionManager} from '../conversation/execution-manager';
 import type {WorkspaceLoopOptions} from '../assembly/loop-engine';
 import type {WorkspaceExecutionLease} from '../admission/workspace-lease';
 import type {ExecutionAdmissionWait} from '../admission/admission-wait';
-import {abandonCheckpointReceiptSchema} from '../../core/tasks/checkpoint-handoff';
-import type {GoalRepairSource} from '../../core/execution/input-source';
+import {abandonCheckpointReceiptSchema} from '../../../logic/tasks/rules/checkpoint-handoff';
+import type {GoalRepairSource} from '../../../logic/execution/rules/input-source';
 import {goalRepairFeedback} from './goal-repair';
 import {memberFailureStopReason} from './member-failure-limit';
 

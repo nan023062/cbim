@@ -4,16 +4,16 @@
  * 作用定位：以持久派发状态和指定成员运行日志生成异常核实报告。
  * 设计原因：观察流程独立于执行恢复；只有可信撤销记录及无领取事实共同成立才报告未启动。原岗位绑定按该轮冻结值核验，不用当前责任或模型覆盖历史；前后屏障防止拼接证据。
  */
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import {executionReportInputSchema,executionReportSchema,type ExecutionReport} from '../../core/tasks/execution-report';
-import type {DispatchStore,DispatchState} from '../../core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../../core/tasks/dispatch-execution';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {RunSummary} from '../../core/execution/types';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {executionReportInputSchema,executionReportSchema,type ExecutionReport} from '../../../logic/tasks/rules/execution-report';
+import type {DispatchStore,DispatchState} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../../../logic/tasks/rules/dispatch-execution';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {RunSummary} from '../../../logic/execution/rules/types';
 import {executionToolFacts} from './execution-report-facts';
-import {queuedTaskCancellationSchema} from '../../core/tasks/queued-task-cancel';
+import {queuedTaskCancellationSchema} from '../../../logic/tasks/rules/queued-task-cancel';
 
 const active=(run?:DispatchRun)=>run?.status==='starting'||run?.status==='running';
 const emptyTools=():ExecutionReport['tools']=>({available:false,total:0,counts:{succeeded:0,failed:0,denied:0,unknown:0,not_authorized:0},items:[],paginationReset:false});

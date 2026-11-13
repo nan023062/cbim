@@ -29,7 +29,7 @@ class N_src_backend_main_knowledge_files_ts["files.ts"] {
 }
 ```
 
-直接依赖：[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)。
+直接依赖：[../../../logic/workspace/ports/paths.ts](../../../logic/workspace/ports/paths.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/knowledge/rules/knowledge.ts](../../../logic/knowledge/rules/knowledge.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)。
 
 ### governance-port.ts
 
@@ -73,7 +73,7 @@ class N_src_backend_main_knowledge_governance_port_ts_KnowledgeGovernanceTransac
 N_src_backend_main_knowledge_governance_port_ts ..> N_src_backend_main_knowledge_governance_port_ts_KnowledgeGovernanceTransaction : 声明
 ```
 
-直接依赖：[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)。
+直接依赖：[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/knowledge/rules/ports.ts](../../../logic/knowledge/rules/ports.ts)。
 
 ### knowledge-store.ts
 
@@ -166,7 +166,7 @@ class N_src_backend_main_knowledge_knowledge_store_ts_KnowledgeStore["KnowledgeS
 N_src_backend_main_knowledge_knowledge_store_ts ..> N_src_backend_main_knowledge_knowledge_store_ts_KnowledgeStore : 声明
 ```
 
-直接依赖：[files.ts](files.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/knowledge.ts](../../core/knowledge/knowledge.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[governance-port.ts](governance-port.ts)、[planned-commit.ts](planned-commit.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[source-journal.ts](source-journal.ts)。
+直接依赖：[files.ts](files.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/workspace/ports/paths.ts](../../../logic/workspace/ports/paths.ts)、[../../../logic/knowledge/rules/knowledge.ts](../../../logic/knowledge/rules/knowledge.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[governance-port.ts](governance-port.ts)、[planned-commit.ts](planned-commit.ts)、[../../../logic/knowledge/rules/planned-commit.ts](../../../logic/knowledge/rules/planned-commit.ts)、[source-journal.ts](source-journal.ts)。
 
 ### object-storage.ts
 
@@ -191,7 +191,7 @@ class N_src_backend_main_knowledge_object_storage_ts_external_ObjectStorage["Obj
 N_src_backend_main_knowledge_object_storage_ts_external_ObjectStorage <|.. N_src_backend_main_knowledge_object_storage_ts_FileObjectStorage
 ```
 
-直接依赖：[../../core/knowledge/object-storage.ts](../../core/knowledge/object-storage.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../../logic/knowledge/rules/object-storage.ts](../../../logic/knowledge/rules/object-storage.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)、[../../../logic/workspace/ports/paths.ts](../../../logic/workspace/ports/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### planned-commit.ts
 
@@ -203,7 +203,7 @@ class N_src_backend_main_knowledge_planned_commit_ts["planned-commit.ts"] {
 }
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../core/foundation/paths.ts](../../core/foundation/paths.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../logic/knowledge/rules/planned-commit.ts](../../../logic/knowledge/rules/planned-commit.ts)、[../../../logic/workspace/ports/paths.ts](../../../logic/workspace/ports/paths.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)。
 
 ### source-journal.ts
 
@@ -239,7 +239,7 @@ class N_src_backend_main_knowledge_source_journal_ts_KnowledgeSourceAuthority["K
 N_src_backend_main_knowledge_source_journal_ts ..> N_src_backend_main_knowledge_source_journal_ts_KnowledgeSourceAuthority : 声明
 ```
 
-直接依赖：[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../core/workspace/knowledge-source.ts](../../core/workspace/knowledge-source.ts)、[../../core/workspace/knowledge-source-rules.ts](../../core/workspace/knowledge-source-rules.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)。
+直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/knowledge/rules/planned-commit.ts](../../../logic/knowledge/rules/planned-commit.ts)、[../../../logic/workspace/rules/knowledge-source.ts](../../../logic/workspace/rules/knowledge-source.ts)、[../../../logic/workspace/rules/knowledge-source-rules.ts](../../../logic/workspace/rules/knowledge-source-rules.ts)、[../../../logic/knowledge/rules/types.ts](../../../logic/knowledge/rules/types.ts)。
 
 ### 本目录调用边界
 

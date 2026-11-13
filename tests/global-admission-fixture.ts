@@ -1,10 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {globalAdmissionFixture as data,type AdmissionProject} from './global-admission-provider';

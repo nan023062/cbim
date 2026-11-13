@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../core/budget/scope-budget';
+import {fail} from '../../../core/errors';
+import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../../logic/budget/rules/scope-budget';
 
 const stored=z.object({version:z.literal(1),policy:scopeBudgetPolicySchema}).strict();
 /** 测试可注入读写故障；路径由主进程装配，桌面请求不能指定文件或替换存储。 */

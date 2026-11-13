@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {queuedDependencyReplacementSelection} from '../src/backend/core/tasks/queued-dependency-replacement-rules';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {RunSummary} from '../src/backend/core/execution/types';
-import type {ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import {currentMemberResumeRequest} from '../src/backend/core/tasks/member-checkpoint-chain';
+import {queuedDependencyReplacementSelection} from '../src/logic/tasks/rules/queued-dependency-replacement-rules';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {RunSummary} from '../src/logic/execution/rules/types';
+import type {ReplaceQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import {currentMemberResumeRequest} from '../src/logic/tasks/rules/member-checkpoint-chain';
 
 async function setup(reserved=false,chain=false){
   const f=await checkpointServiceFixture({checkpointCount:chain?2:1});

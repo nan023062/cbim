@@ -7,13 +7,13 @@
  * 职责边界：complete 只申请主轮次结算后的复核；人工项只能引用用户已保存且经专用入口消费的接受，模型不能签署或继续等待。工具层不执行成员或重造证据。
  */
 import {z} from 'zod';
-import {withToolReconciliation} from '../../core/tools/outcome';
+import {withToolReconciliation} from '../../../logic/tools/rules/outcome';
 import {checkedClosurePreview} from './coordination-contracts';
-import {coordinationPreviewSchema} from '../../core/tasks/coordination-preview';
+import {coordinationPreviewSchema} from '../../../logic/tasks/rules/coordination-preview';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail} from '../../core/foundation/errors';
-import {goalPlanInputSchema,goalReviewInputSchema} from '../../core/tasks/scope-goal';
-import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {fail} from '../../../core/errors';
+import {goalPlanInputSchema,goalReviewInputSchema} from '../../../logic/tasks/rules/scope-goal';
+import type {MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 
 const inspectInput=z.object({}).strict();

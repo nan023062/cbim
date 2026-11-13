@@ -29,7 +29,7 @@ class N_src_backend_engines_pi_bridge_ts["bridge.ts"] {
 }
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/execution/input-source.ts](../../core/execution/input-source.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)。
+直接依赖：[../../../logic/tools/rules/outcome.ts](../../../logic/tools/rules/outcome.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[../../../logic/tools/rules/results.ts](../../../logic/tools/rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/execution/rules/input-source.ts](../../../logic/execution/rules/input-source.ts)、[../../../logic/execution/rules/engine-tools.ts](../../../logic/execution/rules/engine-tools.ts)。
 
 ### engine.ts
 
@@ -106,7 +106,7 @@ class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外�
 N_src_backend_engines_pi_engine_ts_external_AgentEngine <|.. N_src_backend_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../logic/execution/rules/engine-runtime.ts](../../../logic/execution/rules/engine-runtime.ts)、[../../../logic/execution/rules/engine-tools.ts](../../../logic/execution/rules/engine-tools.ts)、[../../../logic/execution/rules/engine-instructions.ts](../../../logic/execution/rules/engine-instructions.ts)、[../../../logic/execution/rules/types.ts](../../../logic/execution/rules/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../../logic/execution/rules/model-errors.ts](../../../logic/execution/rules/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../../logic/tools/rules/native-tools.ts](../../../logic/tools/rules/native-tools.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/budget/rules/request-budget.ts](../../../logic/budget/rules/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### request-budget-bootstrap.ts
 

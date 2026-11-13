@@ -6,9 +6,9 @@ import fs from 'node:fs/promises';
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
 import {atomic} from '../../../core/platform/node/files';
-import {json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {repositoryConnectionGrantSchema,repositoryConnectionReceiptSchema,type RepositoryConnectionGrant,type RepositoryConnectionReceipt} from '../../core/connectors/repository-connection';
+import {json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {repositoryConnectionGrantSchema,repositoryConnectionReceiptSchema,type RepositoryConnectionGrant,type RepositoryConnectionReceipt} from '../../../logic/connectors/rules/repository-connection';
 
 const commandSchema=z.object({workspaceId:z.string().min(1),commandId:z.string().uuid(),inputHash:z.string().regex(/^[a-f0-9]{64}$/),receipt:repositoryConnectionReceiptSchema}).strict();
 const stateSchema=z.object({version:z.literal(1),grants:z.array(repositoryConnectionGrantSchema).max(1024),commands:z.array(commandSchema).max(4096)}).strict();

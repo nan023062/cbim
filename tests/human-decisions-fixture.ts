@@ -5,7 +5,7 @@ import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {humanDecisionFixture as data} from './human-decisions-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 export {queuedTaskCancelRecords as humanDecisionRecords} from './queued-task-cancel-fixture';
 
 /** Isolated empty project: the artifact is created by real Pi's native write, not seeded as a fake result. */

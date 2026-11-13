@@ -37,7 +37,7 @@ class N_src_backend_main_automation_service_ts_WorkspaceAutomations["WorkspaceAu
 N_src_backend_main_automation_service_ts ..> N_src_backend_main_automation_service_ts_WorkspaceAutomations : 声明
 ```
 
-直接依赖：[../workspace/workspace.ts](../workspace/workspace.ts)、[../../scheduler-engine/conversation/execution-manager.ts](../../scheduler-engine/conversation/execution-manager.ts)、[../../scheduler-engine/dispatch/auto-collaboration.ts](../../scheduler-engine/dispatch/auto-collaboration.ts)、[../../scheduler-engine/dispatch/dispatch-service.ts](../../scheduler-engine/dispatch/dispatch-service.ts)、[../../scheduler-engine/automation/scheduler.ts](../../scheduler-engine/automation/scheduler.ts)、[storage.ts](storage.ts)、[../../core/automation/contracts.ts](../../core/automation/contracts.ts)、[../../core/knowledge/read-models/index.ts](../../core/knowledge/read-models/index.ts)、[../../core/knowledge/builtins.ts](../../core/knowledge/builtins.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/member-execution-binding.ts](../../core/team/member-execution-binding.ts)。
+直接依赖：[../workspace/workspace.ts](../workspace/workspace.ts)、[../../scheduler-engine/conversation/execution-manager.ts](../../scheduler-engine/conversation/execution-manager.ts)、[../../scheduler-engine/dispatch/auto-collaboration.ts](../../scheduler-engine/dispatch/auto-collaboration.ts)、[../../scheduler-engine/dispatch/dispatch-service.ts](../../scheduler-engine/dispatch/dispatch-service.ts)、[../../scheduler-engine/automation/scheduler.ts](../../scheduler-engine/automation/scheduler.ts)、[storage.ts](storage.ts)、[../../../logic/automation/rules/contracts.ts](../../../logic/automation/rules/contracts.ts)、[../../../logic/knowledge/rules/read-models/index.ts](../../../logic/knowledge/rules/read-models/index.ts)、[../../../logic/knowledge/rules/builtins.ts](../../../logic/knowledge/rules/builtins.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/team/rules/member-execution-binding.ts](../../../logic/team/rules/member-execution-binding.ts)。
 
 ### storage.ts
 
@@ -59,7 +59,7 @@ class N_src_backend_main_automation_storage_ts_external_AutomationStorage["Autom
 N_src_backend_main_automation_storage_ts_external_AutomationStorage <|.. N_src_backend_main_automation_storage_ts_FileAutomations
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/automation/contracts.ts](../../core/automation/contracts.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../logic/automation/rules/contracts.ts](../../../logic/automation/rules/contracts.ts)。
 
 ### 本目录调用边界
 

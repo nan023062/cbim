@@ -3,9 +3,9 @@ import http from 'node:http';
 import assert from 'node:assert/strict';
 import {memberCheckpointProvider,memberCheckpointFixture} from './member-checkpoint-provider';
 import {goalInspection,goalPlanArguments,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 export const memberPauseData={...memberCheckpointFixture,waitReason:'原检查点和后继已保留，等待用户补充后再继续',supplement:'继续原A、B、C，保持原目标和权限，重新核实文件与原会话。',live:'原等待已由用户明确消费，尚未预约成员续执行。'};
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 function value(request:Request,id:string){

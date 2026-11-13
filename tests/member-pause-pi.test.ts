@@ -7,7 +7,7 @@ import {memberPauseProvider,memberPauseData as data} from './member-pause-provid
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from './member-checkpoint-fixture';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as const)('durable member pause and explicit continuation through real Pi (%s)',async mode=>{
   const f=await fixture(),provider=await memberPauseProvider(mode==='submitted-stop');let app=f.app;

@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
-import {selectEngineSession} from '../src/backend/core/execution/engine-session';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {selectEngineSession} from '../src/logic/execution/rules/engine-session';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 function summary(id:string,engine:string,resumeFrom?:string):RunSummary{return {runId:id,task:{taskId:'task',workspaceId:'workspace',root:'project',goal:'goal',moduleIds:[],acceptance:[]},status:'completed',acceptance:'not_evaluated',unresolvedTools:[],sessionFile:engine+'/'+id,events:[{type:'run.started',data:{engine,resumeFrom,message:id},version:1,seq:1,taskId:'task',runId:id,workspaceId:'workspace',time:'2026-11-10T00:00:00Z'}]}}
 test('same engine restores its own file without replaying public context',async()=>{const old=summary('one','pi');expect(await selectEngineSession('pi',old,async()=>{throw Error('unexpected')})).toEqual({sessionFile:'pi/one'})});

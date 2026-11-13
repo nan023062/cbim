@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {RepeatedToolFailures} from '../src/backend/core/execution/repeated-tool-failures';
-import {toolFailureResult,toolReturnedResult,runToolResult,withToolReconciliation} from '../src/backend/core/tools/outcome';
-import {Fault} from '../src/backend/core/foundation/errors';
+import {RepeatedToolFailures} from '../src/logic/execution/rules/repeated-tool-failures';
+import {toolFailureResult,toolReturnedResult,runToolResult,withToolReconciliation} from '../src/logic/tools/rules/outcome';
+import {Fault} from '../src/core/errors';
 
 it('连续失败按提出顺序计算，参数键序一致，重复结束不计数，成功或不同参数重置',()=>{
  const tracker=new RepeatedToolFailures();

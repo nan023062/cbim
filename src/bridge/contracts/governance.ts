@@ -12,4 +12,4 @@ export {
   type ModuleGovernanceApplication,type ModuleGovernanceReceipt,
   type ModuleGovernanceOrigin,
   type ModuleGovernanceFeedback,type ModuleGovernanceResponseRef,type ModuleGovernanceResponseAssessment,type ModuleGovernanceResponseState,
-} from '../../backend/core/governance/module-governance';
+} from '../../logic/governance/rules/module-governance';

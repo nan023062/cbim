@@ -6,10 +6,10 @@
  */
 import {InFlightOperations} from '../../../core/utility';
 import {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import {repositoryListInputSchema} from '../../core/connectors/repository-tools';
+import {fail} from '../../../core/errors';
+import {hash} from '../../../core/platform/node/serialization';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import {repositoryListInputSchema} from '../../../logic/connectors/rules/repository-tools';
 import type {RepositoryConnections} from '../resources/repository-connections';
 import {ChatInputs} from './chat-inputs';
 import {sourceExcerpt} from './chat-source-readers';

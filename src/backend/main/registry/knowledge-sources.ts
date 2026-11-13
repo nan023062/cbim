@@ -6,15 +6,15 @@
  */
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import {parseJson} from '../../core/foundation/json';
-import {fail} from '../../core/foundation/errors';
-import type {DispatchState,DispatchStore} from '../../core/dispatch/dispatch-storage';
-import type {ChangeRequest,Snapshot} from '../../core/knowledge/types';
-import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
-import type {PlannedKnowledgeCommit} from '../../core/knowledge/planned-commit';
-import {knowledgeSourceKey,type KnowledgeSourceKey,type KnowledgeSourceObservation,type KnowledgeSourceMutationPlan,type KnowledgeSourceReadState,type CapabilitySourceRef,type KnowledgeSourceCapture,type SourceSelection} from '../../core/workspace/knowledge-source';
-import {currentKnowledgeSource,knowledgeSourceRef,knowledgeSourceSelection,knowledgeSourcePending,nextKnowledgeSourceCursor,knowledgeSourceCommand,knowledgeSourceReceipt,createKnowledgeSourceCapture,knowledgeSourceStatus,applyKnowledgeSourceChange} from '../../core/workspace/knowledge-source-rules';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {parseJson} from '../../../core/json';
+import {fail} from '../../../core/errors';
+import type {DispatchState,DispatchStore} from '../../../logic/dispatch/rules/dispatch-storage';
+import type {ChangeRequest,Snapshot} from '../../../logic/knowledge/rules/types';
+import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
+import type {PlannedKnowledgeCommit} from '../../../logic/knowledge/rules/planned-commit';
+import {knowledgeSourceKey,type KnowledgeSourceKey,type KnowledgeSourceObservation,type KnowledgeSourceMutationPlan,type KnowledgeSourceReadState,type CapabilitySourceRef,type KnowledgeSourceCapture,type SourceSelection} from '../../../logic/workspace/rules/knowledge-source';
+import {currentKnowledgeSource,knowledgeSourceRef,knowledgeSourceSelection,knowledgeSourcePending,nextKnowledgeSourceCursor,knowledgeSourceCommand,knowledgeSourceReceipt,createKnowledgeSourceCapture,knowledgeSourceStatus,applyKnowledgeSourceChange} from '../../../logic/workspace/rules/knowledge-source-rules';
 import {sourceJournalHash,sourceTransitionId,type KnowledgeSourceJournal,type KnowledgeSourceAuthority} from '../knowledge/source-journal';
 
 /** 仅 Main 服务使用的知识锁端口；领域 KnowledgeWorkspace 不暴露 Store 或来源签发能力。 */

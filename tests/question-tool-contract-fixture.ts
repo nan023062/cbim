@@ -2,13 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {questionContractData as data} from './question-tool-contract-provider';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 export async function questionWait(check:()=>Promise<boolean>,label:string,timeout=40000){const until=Date.now()+timeout;while(Date.now()<until){if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('提问工具验收等待超时：'+label)}

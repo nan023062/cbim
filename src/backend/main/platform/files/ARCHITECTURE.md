@@ -55,7 +55,7 @@ class N_src_backend_main_platform_files_artifact_files_ts_ArtifactFiles["Artifac
 N_src_backend_main_platform_files_artifact_files_ts ..> N_src_backend_main_platform_files_artifact_files_ts_ArtifactFiles : 声明
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/evidence/artifact-baseline.ts](../../../core/evidence/artifact-baseline.ts)、[../../../core/workspace/json-validation-schema.ts](../../../core/workspace/json-validation-schema.ts)、[../../../core/workspace/csv-validation-schema.ts](../../../core/workspace/csv-validation-schema.ts)、[../../../core/workspace/png-validation-schema.ts](../../../core/workspace/png-validation-schema.ts)、[png-validator.ts](png-validator.ts)、[../../../core/tasks/effect-observation.ts](../../../core/tasks/effect-observation.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/evidence/rules/artifact-baseline.ts](../../../../logic/evidence/rules/artifact-baseline.ts)、[../../../../logic/workspace/rules/json-validation-schema.ts](../../../../logic/workspace/rules/json-validation-schema.ts)、[../../../../logic/workspace/rules/csv-validation-schema.ts](../../../../logic/workspace/rules/csv-validation-schema.ts)、[../../../../logic/workspace/rules/png-validation-schema.ts](../../../../logic/workspace/rules/png-validation-schema.ts)、[png-validator.ts](png-validator.ts)、[../../../../logic/tasks/rules/effect-observation.ts](../../../../logic/tasks/rules/effect-observation.ts)。
 
 ### code-check-runner.ts
 
@@ -79,7 +79,7 @@ class N_src_backend_main_platform_files_code_check_runner_ts_external_CodeCheckP
 N_src_backend_main_platform_files_code_check_runner_ts_external_CodeCheckPort <|.. N_src_backend_main_platform_files_code_check_runner_ts_CodeCheckRunner
 ```
 
-直接依赖：[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/workspace/code-check.ts](../../../core/workspace/code-check.ts)、[../../../core/evidence/code-check.ts](../../../core/evidence/code-check.ts)、[../../../core/evidence/output-manifest-evidence.ts](../../../core/evidence/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)。
+直接依赖：[../../../../core/platform/node/serialization.ts](../../../../core/platform/node/serialization.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/workspace/rules/code-check.ts](../../../../logic/workspace/rules/code-check.ts)、[../../../../logic/evidence/rules/code-check.ts](../../../../logic/evidence/rules/code-check.ts)、[../../../../logic/evidence/rules/output-manifest-evidence.ts](../../../../logic/evidence/rules/output-manifest-evidence.ts)、[output-manifest-files.ts](output-manifest-files.ts)。
 
 ### controlled-file-blobs.ts
 
@@ -99,7 +99,7 @@ class N_src_backend_main_platform_files_controlled_file_blobs_ts_ControlledFileB
 N_src_backend_main_platform_files_controlled_file_blobs_ts ..> N_src_backend_main_platform_files_controlled_file_blobs_ts_ControlledFileBlobs : 声明
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/file-operations/controlled-file-operation.ts](../../../core/file-operations/controlled-file-operation.ts)、[../../../core/file-operations/controlled-file-event.ts](../../../core/file-operations/controlled-file-event.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/file-operations/rules/controlled-file-operation.ts](../../../../logic/file-operations/rules/controlled-file-operation.ts)、[../../../../logic/file-operations/rules/controlled-file-event.ts](../../../../logic/file-operations/rules/controlled-file-event.ts)。
 
 ### controlled-file-child.ts
 
@@ -269,7 +269,7 @@ class N_src_backend_main_platform_files_controlled_file_transport_ts_external_Ex
 N_src_backend_main_platform_files_controlled_file_transport_ts_external_ExclusiveControlledTransition <|.. N_src_backend_main_platform_files_controlled_file_transport_ts_UtilityFileSession
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[controlled-file-protocol.ts](controlled-file-protocol.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[controlled-file-protocol.ts](controlled-file-protocol.ts)。
 
 ### controlled-file-win32.ts
 
@@ -346,7 +346,7 @@ class N_src_backend_main_platform_files_output_manifest_files_ts_OutputManifestF
 N_src_backend_main_platform_files_output_manifest_files_ts ..> N_src_backend_main_platform_files_output_manifest_files_ts_OutputManifestFiles : 声明
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/workspace/artifact-scope.ts](../../../core/workspace/artifact-scope.ts)、[../../../core/evidence/output-manifest.ts](../../../core/evidence/output-manifest.ts)、[../../../core/evidence/output-manifest-evidence.ts](../../../core/evidence/output-manifest-evidence.ts)、[artifact-files.ts](artifact-files.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/workspace/rules/artifact-scope.ts](../../../../logic/workspace/rules/artifact-scope.ts)、[../../../../logic/evidence/rules/output-manifest.ts](../../../../logic/evidence/rules/output-manifest.ts)、[../../../../logic/evidence/rules/output-manifest-evidence.ts](../../../../logic/evidence/rules/output-manifest-evidence.ts)、[artifact-files.ts](artifact-files.ts)。
 
 ### png-validator.ts
 
@@ -376,7 +376,7 @@ class N_src_backend_main_platform_files_png_validator_ts_PngRasterResult["PngRas
 N_src_backend_main_platform_files_png_validator_ts ..> N_src_backend_main_platform_files_png_validator_ts_PngRasterResult : 声明
 ```
 
-直接依赖：[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/workspace/png-validation-schema.ts](../../../core/workspace/png-validation-schema.ts)。
+直接依赖：[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/workspace/rules/png-validation-schema.ts](../../../../logic/workspace/rules/png-validation-schema.ts)。
 
 ### scoped-execution-files.ts
 
@@ -407,7 +407,7 @@ class N_src_backend_main_platform_files_scoped_execution_files_ts_external_Scope
 N_src_backend_main_platform_files_scoped_execution_files_ts_external_ScopedExecutionPort <|.. N_src_backend_main_platform_files_scoped_execution_files_ts_ScopedExecutionFiles
 ```
 
-直接依赖：[../../../core/workspace/execution-scope.ts](../../../core/workspace/execution-scope.ts)、[../../../core/file-operations/scoped-execution.ts](../../../core/file-operations/scoped-execution.ts)、[../../../core/execution/capabilities/run-scoped-execution.ts](../../../core/execution/capabilities/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[../isolation/isolated-node.ts](../isolation/isolated-node.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/file-operations/isolated-execution-recovery.ts](../../../core/file-operations/isolated-execution-recovery.ts)、[../isolation/isolation-record.ts](../isolation/isolation-record.ts)。
+直接依赖：[../../../../logic/workspace/rules/execution-scope.ts](../../../../logic/workspace/rules/execution-scope.ts)、[../../../../logic/file-operations/rules/scoped-execution.ts](../../../../logic/file-operations/rules/scoped-execution.ts)、[../../../../logic/execution/rules/capabilities/run-scoped-execution.ts](../../../../logic/execution/rules/capabilities/run-scoped-execution.ts)、[controlled-file-win32.ts](controlled-file-win32.ts)、[../isolation/isolated-node.ts](../isolation/isolated-node.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../../logic/file-operations/rules/isolated-execution-recovery.ts](../../../../logic/file-operations/rules/isolated-execution-recovery.ts)、[../isolation/isolation-record.ts](../isolation/isolation-record.ts)。
 
 ### 本目录调用边界
 

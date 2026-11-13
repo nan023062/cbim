@@ -10,24 +10,24 @@
  */
 import {z} from 'zod';
 import type {CandidateReviewTools} from './candidate-review-tools';
-import {withToolReconciliation} from '../../core/tools/outcome';
+import {withToolReconciliation} from '../../../logic/tools/rules/outcome';
 import {checkedClosurePreview} from './coordination-contracts';
-import {coordinationPreviewSchema} from '../../core/tasks/coordination-preview';
+import {coordinationPreviewSchema} from '../../../logic/tasks/rules/coordination-preview';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {fail} from '../../core/foundation/errors';
-import {dispatchTaskFields,type DispatchTaskInput,type DispatchReceipt} from '../../core/tasks/dispatch-commands';
-import {validateWorkflowSelections} from '../../core/tasks/workflow-selection';
-import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../core/tasks/queued-task-cancel';
-import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-replacement';
-import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../../core/tasks/queued-dependency-addition';
-import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput,type ReviseQueuedDependenciesReceipt} from '../../core/tasks/queued-dependency-revision';
-import type {MainToolOutputBinding} from '../../core/tasks/main-tool-output';
+import {fail} from '../../../core/errors';
+import {dispatchTaskFields,type DispatchTaskInput,type DispatchReceipt} from '../../../logic/tasks/rules/dispatch-commands';
+import {validateWorkflowSelections} from '../../../logic/tasks/rules/workflow-selection';
+import {cancelQueuedTasksInputSchema,type CancelQueuedTasksInput,type CancelQueuedTasksReceipt} from '../../../logic/tasks/rules/queued-task-cancel';
+import {replaceQueuedDependencyInputSchema,type ReplaceQueuedDependencyInput,type ReplaceQueuedDependencyReceipt} from '../../../logic/tasks/rules/queued-dependency-replacement';
+import {addQueuedDependencyInputSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../../../logic/tasks/rules/queued-dependency-addition';
+import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput,type ReviseQueuedDependenciesReceipt} from '../../../logic/tasks/rules/queued-dependency-revision';
+import type {MainToolOutputBinding} from '../../../logic/tasks/rules/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import {commandReportContract,checkedCommandReportResult} from './command-report-contract';
-import {commandReportToolInputSchema,type CommandReportToolInput,type CommandVerificationReport} from '../../core/tasks/command-verification';
+import {commandReportToolInputSchema,type CommandReportToolInput,type CommandVerificationReport} from '../../../logic/tasks/rules/command-verification';
 import type {GoalTools} from './goal-tools';
-import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../core/tasks/queued-member-resume';
-import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../../core/tasks/checkpoint-handoff';
+import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../../logic/tasks/rules/queued-member-resume';
+import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../../../logic/tasks/rules/checkpoint-handoff';
 
 const {assigneeAgentId,...taskFields}=dispatchTaskFields.shape;
 // 角色只核对岗位能力，不再作为默认路由；实际岗位预期来自模块负责人发现。

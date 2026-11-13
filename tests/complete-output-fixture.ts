@@ -1,8 +1,8 @@
 import {runtimeToolGroup} from './runtime-tool-group';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {EngineContext} from '../src/backend/core/execution/types';
-import {validationTool} from '../src/backend/core/evidence/validation-tools';
+import type {EngineContext} from '../src/logic/execution/rules/types';
+import {validationTool} from '../src/logic/evidence/rules/validation-tools';
 import {manifestFixture,manifestContracts} from './output-manifest-fixture';
 import {artifactBinding,seedProgress,invoke} from './artifact-runtime-fixture';
 

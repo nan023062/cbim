@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema,type ModuleGovernanceReceipt} from '../src/backend/core/governance/module-governance';
+import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema,type ModuleGovernanceReceipt} from '../src/logic/governance/rules/module-governance';
 import {seedModuleGovernance,moduleGovernanceFixture as data,moduleGovernanceRunFiles} from './module-governance-fixture';
 
 it.each(['approve','reject','defer'] as const)('actual Application separates protected module proposal, local decision and exact implementation (%s)',async decision=>{

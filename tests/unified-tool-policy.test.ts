@@ -1,17 +1,17 @@
 import {test,expect} from 'vitest';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
+import {json} from '../src/core/platform/node/serialization';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import path from 'node:path';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
-import {memberToolEffects} from '../src/backend/core/team/workspace-member-tools';
-import {originalKnowledgeWrite} from '../src/backend/core/knowledge/knowledge-write-input';
+import {memberToolEffects} from '../src/logic/team/rules/workspace-member-tools';
+import {originalKnowledgeWrite} from '../src/logic/knowledge/rules/knowledge-write-input';
 
 test('主岗位工具精确核知识范围，预览可读而提交保留 read/ask/execute 门禁',async()=>{
  for(const [name,effect] of Object.entries(memberToolEffects)){

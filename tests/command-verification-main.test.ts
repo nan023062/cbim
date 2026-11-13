@@ -7,11 +7,11 @@ import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {GoalPlanInput} from '../src/backend/core/tasks/scope-goal';
-import type {TaskSpec} from '../src/backend/core/tasks/types';
-import type {VerifiableMainToolName,CommandVerificationReport} from '../src/backend/core/tasks/command-verification';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import type {GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
+import type {TaskSpec} from '../src/logic/tasks/rules/types';
+import type {VerifiableMainToolName,CommandVerificationReport} from '../src/logic/tasks/rules/command-verification';
 import {reportFixture,reportInputs,reportIdentity,reportBinding,evidenceFor} from './command-verification-fixture';
 import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
 

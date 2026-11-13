@@ -1,10 +1,10 @@
 import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {dependencyAdditionSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {dependencyAdditionSchema,type AddQueuedDependencyInput,type AddQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-addition';
 
 export const dependencyAdditionData={
   model:'dependency-addition-fixture',goal:'DEPENDENCY_ADD_MAIN: 先建B和C再建A，给B追加A前置，保留原任务并顺序核实三份材料',

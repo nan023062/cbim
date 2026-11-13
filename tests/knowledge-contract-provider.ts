@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
-import type {Snapshot,ChangeRequest} from '../src/backend/core/knowledge/types';
+import type {Snapshot,ChangeRequest} from '../src/logic/knowledge/rules/types';
 import type {GoalFixtureRequest} from './goal-provider-fixture';
 
 export type KnowledgeContractMode='complete'|'stop'|'malformed-after-commit';

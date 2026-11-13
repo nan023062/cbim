@@ -5,12 +5,12 @@
  */
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
-import {hash,json} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import {plannedRequestSchema,objectPlanV2Schema,packagePlanV2Schema,checkedKnowledgePlan,type PlannedKnowledgeCommit} from '../../core/knowledge/planned-commit';
-import {knowledgeSourceTransitionSchema,type KnowledgeSourceTransition} from '../../core/workspace/knowledge-source';
-import {knowledgeSourceCanonical} from '../../core/workspace/knowledge-source-rules';
-import type {ChangeRequest,Snapshot} from '../../core/knowledge/types';
+import {hash,json} from '../../../core/platform/node/serialization';
+import {fail} from '../../../core/errors';
+import {plannedRequestSchema,objectPlanV2Schema,packagePlanV2Schema,checkedKnowledgePlan,type PlannedKnowledgeCommit} from '../../../logic/knowledge/rules/planned-commit';
+import {knowledgeSourceTransitionSchema,type KnowledgeSourceTransition} from '../../../logic/workspace/rules/knowledge-source';
+import {knowledgeSourceCanonical} from '../../../logic/workspace/rules/knowledge-source-rules';
+import type {ChangeRequest,Snapshot} from '../../../logic/knowledge/rules/types';
 const digest=z.string().regex(/^[a-f0-9]{64}$/);
 export const knowledgeSourceJournalSchema=z.object({version:z.literal(1),request:plannedRequestSchema,plan:z.union([objectPlanV2Schema,packagePlanV2Schema]).optional(),beforeHash:digest,afterHash:digest,transition:knowledgeSourceTransitionSchema}).strict();
 export type KnowledgeSourceJournal=z.infer<typeof knowledgeSourceJournalSchema>;

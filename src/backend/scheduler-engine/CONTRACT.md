@@ -132,7 +132,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 成员派发与执行调度契约
 
-已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 LoopRuntime 与岗位选择的 PiEngine/ClaudeCodeEngine/CodexEngine 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；执行者可恢复求助/等待和重启自动续跑仍未开放。节点规则见 [core/tasks](../core/tasks/CONTRACT.md)，成员身份见 [core/team](../core/team/CONTRACT.md)。
+已实现可信桌面入口和主会话模型工具的成员执行闭环：`prepareMember` 注册稳定成员/独立逻辑通道，`WorkspaceDispatchService` 核实成员、多模块关系并原子派发，`MemberExecutionManager` 领取信封后使用同一 LoopRuntime 与岗位选择的 PiEngine/ClaudeCodeEngine/CodexEngine 执行、提交候选和返回结果信封。`AutoCollaboration` 在主轮结束并释放占用后推进本轮派发，再把可靠结果回注原主会话。支持 Snapshot/Delta、命令幂等与持久化记录恢复；执行者可恢复求助/等待和重启自动续跑仍未开放。节点规则见 [core/tasks](../../logic/tasks/rules/CONTRACT.md)，成员身份见 [core/team](../../logic/team/rules/CONTRACT.md)。
 
 ### 当前成员执行边界
 

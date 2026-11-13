@@ -21,7 +21,7 @@ import {ElectronBrowserReader} from '../../core/platform/electron/web-reader';
 import {ChatInputs} from './materials/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';
-import {json} from '../core/foundation/serialization';
+import {json} from '../../core/platform/node/serialization';
 import {knowledgeTools} from '../scheduler-engine/tools/knowledge-tools';
 import {DesktopUpdates} from '../updater/desktop-updates';
 import {latestDesktopRelease} from '../updater/desktop-releases';

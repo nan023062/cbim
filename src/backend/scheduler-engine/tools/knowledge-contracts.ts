@@ -3,13 +3,13 @@
  * 设计原因：元数据按现有事务行为逐项声明；v2 刷新保留原请求身份，不能用工具名猜授权或把协议失败视为未提交及通用可重试。
  */
 import type {z} from 'zod';
-import {fail} from '../../core/foundation/errors';
-import {builtinSkills} from '../../core/knowledge/builtins';
-import {workspaceIdentityOutputSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema} from '../../core/knowledge/tool-output-base';
-import {moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema} from '../../core/knowledge/tool-output-queries';
-import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../../core/knowledge/tool-output-builtins';
-import {knowledgeRefreshOutputSchema,knowledgePreviewOutputSchema,knowledgeCommitOutputSchema,objectPreviewOutputSchema,objectCommitOutputSchema,maintenanceTaskOutputSchema,maintenanceTaskStatusOutputSchema} from '../../core/knowledge/tool-output-transactions';
-import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema,type ToolCancellation,type ToolRecovery} from '../../core/tools/contracts';
+import {fail} from '../../../core/errors';
+import {builtinSkills} from '../../../logic/knowledge/rules/builtins';
+import {workspaceIdentityOutputSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema} from '../../../logic/knowledge/rules/tool-output-base';
+import {moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema} from '../../../logic/knowledge/rules/tool-output-queries';
+import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../../../logic/knowledge/rules/tool-output-builtins';
+import {knowledgeRefreshOutputSchema,knowledgePreviewOutputSchema,knowledgeCommitOutputSchema,objectPreviewOutputSchema,objectCommitOutputSchema,maintenanceTaskOutputSchema,maintenanceTaskStatusOutputSchema} from '../../../logic/knowledge/rules/tool-output-transactions';
+import {knowledgeToolCatalogOutputSchema,knowledgeToolDescribeOutputSchema,type ToolCancellation,type ToolRecovery} from '../../../logic/tools/rules/contracts';
 
 const cancellation:ToolCancellation={mode:'preflight_only',description:'调用开始前检查取消；领域读取或事务开始后不承诺中断，取消不表示已有操作回滚。'};
 const read:ToolRecovery={mode:'read_again',description:'可显式重新读取；知识、实例或维护状态可能已变化，不能把新读取伪装成旧版本回执。'};

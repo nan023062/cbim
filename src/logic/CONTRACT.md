@@ -1,9 +1,9 @@
-# Logic 当前迁移范围
+# Logic 业务层
 
-Logic 拥有业务规则、服务和状态，单向组合共享 Core；不得依赖 Bridge、View 或旧 backend 的实现。当前模型目录、供应商连接、引擎选型及配置服务已迁入 [models](models/CONTRACT.md)，[Web 服务](web/CONTRACT.md) 也已迁入，其他业务仍在旧目录。
+Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridge、View 或旧 backend。模型、Web、反馈与资源仓库服务已经迁入；其余领域规则由旧 backend/core 迁入对应业务的 rules 目录，执行身份和工作区路径归 ports。其余宿主服务、调度与引擎仍在迁移中。
 
-模型纯规则入口与有副作用的服务入口分别维护，不能通过纯入口导出存储。旧宿主仅在登记的入口装配服务；旧执行模块只能使用纯模型契约。依赖检查同时核实公开入口、运行环境与类型引用，未对旧后端开放整个 Logic。
+公开入口按真实消费者登记在 scripts/logic-domain-entries.mjs。规则保留细粒度入口，不通过一个领域总 barrel 同时加载纯契约、运行规则和平台实现；类型依赖同样受无环检查约束。读模型、预算存储端口、引擎工具注册等较窄边界仍限制私有文件访问。
 
-反馈业务已迁入 feedback/index.ts 与 feedback/service/index.ts：纯输入/正文/范围和宿主授权/账本分开。反馈范围唯一实现归 Logic，旧工具日志组合其契约；Core 只提供文件、摘要、原生锁及加密端口。
+规则不导入应用服务，已有跨领域规则协作仍保留明确契约。迁移没有改变状态所有权：任务版本和原子提交、知识写入授权、运行未知结果与恢复判断仍由原模块负责。当前文件无环不代表领域聚合已经全部解耦。
 
-资源仓库实现已迁到 src/logic/resources/service，纯定义归 src/logic/resources；旧 Main/resources 暂留与知识事务相关的连接授权和发布导入。宿主目录通过 ResourceRepositoryPaths 注入，Logic 不依赖 Main Paths 或 Bridge。
+模型/Web/反馈/资源的纯入口与 service 入口分开。Bridge 只暴露需要传输的类型；宿主通过公开服务入口装配，浏览器不能加载 Node/Electron。目录导航见 [类图](ARCHITECTURE.md)。

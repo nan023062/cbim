@@ -46,7 +46,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
-采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 仍是待迁移业务，不能整体当作新 Core。files/web 已迁入按平台隔离的 Core，Web 业务已迁入 Logic。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
+采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 领域规则已迁入 Logic，业务端口不能当作共享 Core。files/web 已迁入按平台隔离的 Core，Web 业务已迁入 Logic。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
 
 前后端可复用 src/core/utility 的相同契约，视图/业务专属策略仍分别维护，不相互引用业务实现，也不经 Bridge 转发工具。先核对共享 Core 契约与消费者语义；前端 equalJson 已组合共享排序，保留 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。共享 Core 不依赖三层业务或旧 backend/frontend，Node/Electron 不进入便携入口。
 

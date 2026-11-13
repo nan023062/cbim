@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {admissionPolicySchema,type AdmissionPolicy} from '../../core/runtime/admission';
+import {fail} from '../../../core/errors';
+import {admissionPolicySchema,type AdmissionPolicy} from '../../../logic/runtime/rules/admission';
 import type {GlobalRunAdmission} from '../../scheduler-engine/admission/run-admission';
 
 const storedPolicy=z.object({version:z.literal(1),policy:admissionPolicySchema}).strict();

@@ -5,8 +5,8 @@ import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import {QuestionQueue} from '../src/backend/scheduler-engine/conversation/questions';
-import type {PendingQuestion} from '../src/backend/core/tools/questions';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {PendingQuestion} from '../src/logic/tools/rules/questions';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {questionContractData as data,questionContractProvider,type QuestionContractMode} from './question-tool-contract-provider';
 import {questionWait,questionRun,seedQuestionContract} from './question-tool-contract-fixture';
 

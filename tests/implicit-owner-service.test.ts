@@ -3,7 +3,7 @@ import {fixture} from './helpers';
 import {moduleFiles,summary,request} from './data/knowledge';
 import {seedOwnerExecution} from './owner-execution-fixture';
 import {commitModuleOwnership,moduleOwnershipChange} from './module-ownership-fixture';
-import {ownerExecutionSelectionFor} from '../src/backend/core/team/member-execution-binding';
+import {ownerExecutionSelectionFor} from '../src/logic/team/rules/member-execution-binding';
 
 async function setup(){
  const f=await fixture(),seed=await seedOwnerExecution(f.app,f.a,{main:'http://localhost:1/main',a:'http://localhost:1/a',b:'http://localhost:1/b'}),workspace=f.app.workspace(seed.entry.id),service=f.app.memberDispatch(seed.entry.id),child=seed.modules[0]+'/inherited_leaf',unassigned='.cbim/workspace/unassigned';

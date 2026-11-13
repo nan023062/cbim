@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {humanDecisionHistorySchema,humanDecisionReceiptSchema,type HumanDecisionKind} from '../src/backend/core/tasks/human-decisions';
+import {humanDecisionHistorySchema,humanDecisionReceiptSchema,type HumanDecisionKind} from '../src/logic/tasks/rules/human-decisions';
 import {humanDecisionProvider,humanDecisionFixture as data} from '../tests/human-decisions-provider';
 import {seedHumanDecision,humanDecisionRecords,humanDecisionLogBytes} from '../tests/human-decisions-fixture';
 import {latestExecutable} from './build-artifact.mjs';

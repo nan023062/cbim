@@ -71,6 +71,8 @@ jobs:
         run: pnpm typecheck
       - name: Check architecture and dependencies
         run: pnpm check:architecture
+      - name: Check module test ownership and isolation
+        run: pnpm check:test-modules
       - name: Verify brand assets
         run: pnpm check:brand
       - name: Build public website

@@ -31,7 +31,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 当前允许方向以 `scripts/check-dependencies.mjs` 的 layers 和源码为准：
 
 - foundations → 自身、标准库和必要第三方库；作为独立基础类库，不依赖 Core 或任何其他项目模块。业务消费者只通过能力公开入口使用，平台适配独立入口加载。
-- backend/core → backend/core。
+- backend/core → backend/core、foundations 的能力公开入口；不反向认识应用装配或具体引擎。
 - backend/engines → 自身、backend/core；具体 SDK 与 HTTP 传输不得被 Core 反向引用。
 - backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
@@ -73,6 +73,8 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 交接应让维护者能定位三类答案：业务规则由谁负责及其理由；新增同类需求怎样扩展、哪些契约与核心实现应保持稳定；修改后如何验证、哪里仍缺证据。可以用具体场景帮助核对理解，不强制答题或逐步骤审批，不把沉默当作认可。只对影响后续工作的真实业务歧义或取舍分歧集中提问，区分材料交付与人的明确确认。
 
 ## 5. 验证后再报告
+
+测试也按职责维护：所有单元套件归属一个模块，数据/纯断言/临时目录与 Application 集成夹具分离；不导入其他测试套件，不依赖执行顺序。测试归属在 `tests/modules.json`，不是实时待办。涉及测试增删、导入或夹具变化时运行 `pnpm check:test-modules`；模块单元与跨模块契约/集成分别记录，禁止仅改变分类绕过解耦。该检查可证明登记和静态依赖边界，断言责任及共享状态仍需代码 review。
 
 按 [AGENTS.md 的验证范围](../../../AGENTS.md#日常验证范围) 选择与实际变化相关的检查，不设置每次源码修改必跑的固定套餐：
 

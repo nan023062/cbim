@@ -1,0 +1,1260 @@
+{
+  "version": 1,
+  "modules": {
+    "application": {
+      "roots": [
+        "src/backend/main/assembly/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "tests/abandoned-checkpoint-dependency-pi.test.ts",
+          "tests/abandoned-checkpoint-dependency-service.test.ts",
+          "tests/active-goal-input-pi.test.ts",
+          "tests/active-goal-input-service.test.ts",
+          "tests/agent-history-ipc.test.ts",
+          "tests/agent-history.test.ts",
+          "tests/application-collaboration-pi.test.ts",
+          "tests/application-member-pi.test.ts",
+          "tests/application-runtime.test.ts",
+          "tests/architecture-service.test.ts",
+          "tests/artifact-baseline-pi.test.ts",
+          "tests/artifact-transition-pi.test.ts",
+          "tests/auto-continuation-recovery.test.ts",
+          "tests/automatic-execution-pi.test.ts",
+          "tests/automatic-execution.test.ts",
+          "tests/automation-application.test.ts",
+          "tests/builtins.test.ts",
+          "tests/business-replan-pi.test.ts",
+          "tests/chat-clipboard.test.ts",
+          "tests/chat-inputs.test.ts",
+          "tests/chat-material-imports.test.ts",
+          "tests/checkpoint-handoff-pi.test.ts",
+          "tests/checkpoint-handoff-service.test.ts",
+          "tests/claude-application.test.ts",
+          "tests/claude-tools.test.ts",
+          "tests/codex-application.test.ts",
+          "tests/codex-interruption.test.ts",
+          "tests/codex-lifecycle.test.ts",
+          "tests/command-verification-main.test.ts",
+          "tests/complete-output-human.test.ts",
+          "tests/complete-output-pi.test.ts",
+          "tests/connector-definitions.test.ts",
+          "tests/continuation-chat-inputs.test.ts",
+          "tests/controlled-file-pi.test.ts",
+          "tests/conversation-identity.test.ts",
+          "tests/conversation-retry.test.ts",
+          "tests/coordination-pi.test.ts",
+          "tests/coordination-tools.test.ts",
+          "tests/core-domains-integration.test.ts",
+          "tests/default-executor.test.ts",
+          "tests/desktop-update-lifecycle.test.ts",
+          "tests/direct-main-execution-pi.test.ts",
+          "tests/dispatch-context.test.ts",
+          "tests/dispatch-scope-wait.test.ts",
+          "tests/dispatch-scope.test.ts",
+          "tests/dispatch-session-read.test.ts",
+          "tests/effect-observation-pi.test.ts",
+          "tests/execution-report-pi.test.ts",
+          "tests/execution-report.test.ts",
+          "tests/failure.test.ts",
+          "tests/github-feedback-lifecycle-pi.test.ts",
+          "tests/github-feedback-pi.test.ts",
+          "tests/global-admission-pi.test.ts",
+          "tests/global-runtime-scopes.test.ts",
+          "tests/global-runtime-view-pi.test.ts",
+          "tests/goal-repair-pi.test.ts",
+          "tests/goal-review-pi.test.ts",
+          "tests/human-continuation-pi.test.ts",
+          "tests/human-continuation-service.test.ts",
+          "tests/human-decision-service.test.ts",
+          "tests/human-decisions-pi.test.ts",
+          "tests/human-reconsideration-pi.test.ts",
+          "tests/human-reconsideration-service.test.ts",
+          "tests/implicit-owner-service.test.ts",
+          "tests/inline-module-ownership.test.ts",
+          "tests/inspection-cycle-pi.test.ts",
+          "tests/json-validation-human-decisions.test.ts",
+          "tests/json-validation-pi.test.ts",
+          "tests/knowledge-contract-pi.test.ts",
+          "tests/knowledge-effect-pi.test.ts",
+          "tests/knowledge-effect-reader.test.ts",
+          "tests/knowledge-refresh.test.ts",
+          "tests/knowledge-source-lifecycle-application.test.ts",
+          "tests/knowledge-source-lifecycle-fault.test.ts",
+          "tests/knowledge-source-lifecycle-process.test.ts",
+          "tests/knowledge-source-plan-service.test.ts",
+          "tests/knowledge-tool-contracts.test.ts",
+          "tests/knowledge-tool-output.test.ts",
+          "tests/main-agent-settings.test.ts",
+          "tests/main-governance-tools.test.ts",
+          "tests/main-session-instance-pi.test.ts",
+          "tests/main-tool-contract-pi.test.ts",
+          "tests/main-tool-output-service.test.ts",
+          "tests/maintenance-cancel.test.ts",
+          "tests/member-checkpoint-chain-pi.test.ts",
+          "tests/member-checkpoint-chain-service.test.ts",
+          "tests/member-checkpoint-domain.test.ts",
+          "tests/member-checkpoint-pi.test.ts",
+          "tests/member-checkpoint-service.test.ts",
+          "tests/member-dispatch.test.ts",
+          "tests/member-execution-context.test.ts",
+          "tests/member-execution.test.ts",
+          "tests/member-help-pi.test.ts",
+          "tests/member-help.test.ts",
+          "tests/member-pause-pi.test.ts",
+          "tests/member-pause-service.test.ts",
+          "tests/member-tool-contract-pi.test.ts",
+          "tests/model-actions.test.ts",
+          "tests/model-request-budget-pi.test.ts",
+          "tests/model-request-budget-transport.test.ts",
+          "tests/model-request-budget.test.ts",
+          "tests/module-governance-application.test.ts",
+          "tests/module-governance-feedback-pi.test.ts",
+          "tests/module-governance-feedback-service.test.ts",
+          "tests/module-governance-review.test.ts",
+          "tests/module-governance-service.test.ts",
+          "tests/module-governance-tools-pi.test.ts",
+          "tests/module-ownership-application.test.ts",
+          "tests/module-ownership-evidence.test.ts",
+          "tests/module-ownership-pi.test.ts",
+          "tests/module-ownership-service.test.ts",
+          "tests/module-ownership-tools.test.ts",
+          "tests/native-tool-guard.test.ts",
+          "tests/object-crud.test.ts",
+          "tests/original-command-pi.test.ts",
+          "tests/output-manifest-pi.test.ts",
+          "tests/owner-execution-application.test.ts",
+          "tests/owner-execution-checkpoint-pi.test.ts",
+          "tests/owner-execution-legacy.test.ts",
+          "tests/owner-execution-pi.test.ts",
+          "tests/owner-execution-service.test.ts",
+          "tests/path-contract.test.ts",
+          "tests/persistent-effect-pi.test.ts",
+          "tests/pi-length.test.ts",
+          "tests/pi-loop.test.ts",
+          "tests/pi-runtime-config.test.ts",
+          "tests/project-root-module.test.ts",
+          "tests/question-evidence.test.ts",
+          "tests/question-tool-contract-pi.test.ts",
+          "tests/queue-insert.test.ts",
+          "tests/queue-insertion-pi.test.ts",
+          "tests/queued-dependency-addition-pi.test.ts",
+          "tests/queued-dependency-addition-service.test.ts",
+          "tests/queued-dependency-replacement-pi.test.ts",
+          "tests/queued-dependency-replacement-service.test.ts",
+          "tests/queued-dependency-revision-pi.test.ts",
+          "tests/queued-dependency-revision-service.test.ts",
+          "tests/queued-task-cancel-pi.test.ts",
+          "tests/queued-task-cancel.test.ts",
+          "tests/repository-connection-application.test.ts",
+          "tests/repository-connection-http.test.ts",
+          "tests/repository-connection-service.test.ts",
+          "tests/repository-tools-pi.test.ts",
+          "tests/repository-tools.test.ts",
+          "tests/resource-repository.test.ts",
+          "tests/retired-entry.test.ts",
+          "tests/rules-json-arrays.test.ts",
+          "tests/run-approval.test.ts",
+          "tests/scope-budget-pi.test.ts",
+          "tests/scope-budget-service.test.ts",
+          "tests/scope-budget.test.ts",
+          "tests/scope-continuation-attachments.test.ts",
+          "tests/scope-continuation-pi.test.ts",
+          "tests/scope-continuation.test.ts",
+          "tests/scope-goal.test.ts",
+          "tests/scope-recovery.test.ts",
+          "tests/scope-replan.test.ts",
+          "tests/scope-run-tracking.test.ts",
+          "tests/scope-usage-pi.test.ts",
+          "tests/scope-wait-pi.test.ts",
+          "tests/scoped-execution-pi.test.ts",
+          "tests/task-progress-pi.test.ts",
+          "tests/team-workflow.test.ts",
+          "tests/unified-tool-policy.test.ts",
+          "tests/vision.test.ts",
+          "tests/waiting-attachments-manager.test.ts",
+          "tests/waiting-attachments-pi.test.ts",
+          "tests/waiting-mixed-sources-pi.test.ts",
+          "tests/web-settings-ipc.test.ts",
+          "tests/web-tools-pi.test.ts",
+          "tests/workflow-condition-pi.test.ts",
+          "tests/workflow-contract-knowledge.test.ts",
+          "tests/workflow-selection-evidence.test.ts",
+          "tests/workflow-selection-pi.test.ts",
+          "tests/workflow-selection-service.test.ts",
+          "tests/workspace-history-startup.test.ts",
+          "tests/workspace-lifecycle.test.ts",
+          "tests/workspace-member-application.test.ts",
+          "tests/workspace-member-service.test.ts",
+          "tests/workspace-member-tools-pi.test.ts",
+          "tests/workspace-navigation.test.ts",
+          "tests/workspace-packages.test.ts",
+          "tests/workspace.test.ts"
+        ]
+      }
+    },
+    "backend/core/budget": {
+      "roots": [
+        "src/backend/core/budget/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/scope-usage-metering.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/connectors": {
+      "roots": [
+        "src/backend/core/connectors/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/connector-registry.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/core/evidence": {
+      "roots": [
+        "src/backend/core/evidence/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/task-progress.test.ts"
+        ],
+        "contract": [
+          "tests/artifact-evidence.test.ts",
+          "tests/artifact-transition-runtime.test.ts",
+          "tests/code-check.test.ts",
+          "tests/json-artifact-validation-core.test.ts",
+          "tests/output-manifest-evidence.test.ts",
+          "tests/output-manifest-report-service.test.ts",
+          "tests/output-manifest-runtime.test.ts",
+          "tests/task-progress-bounds.test.ts",
+          "tests/workflow-evidence.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/execution": {
+      "roots": [
+        "src/backend/core/execution/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/engine-session.test.ts",
+          "tests/runtime-usage.test.ts"
+        ],
+        "contract": [
+          "tests/conversation-binding.test.ts",
+          "tests/engine-capabilities.test.ts",
+          "tests/engine-tools.test.ts",
+          "tests/human-continuation-source.test.ts",
+          "tests/member-continuation-pi.test.ts",
+          "tests/member-continuation.test.ts",
+          "tests/member-run-pi.test.ts",
+          "tests/member-run.test.ts",
+          "tests/run-failure.test.ts",
+          "tests/tool-failure-control.test.ts",
+          "tests/tool-result-pi.test.ts"
+        ],
+        "integration": [
+          "tests/isolation-recovery-win32.test.ts"
+        ]
+      }
+    },
+    "backend/core/execution/capabilities": {
+      "roots": [
+        "src/backend/core/execution/capabilities/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/artifact-runtime.test.ts",
+          "tests/complete-output-runtime.test.ts",
+          "tests/csv-validation-runtime.test.ts",
+          "tests/json-validation-runtime.test.ts",
+          "tests/png-validation-runtime.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/execution/runtime": {
+      "roots": [
+        "src/backend/core/execution/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/active-goal-input-runtime.test.ts",
+          "tests/controlled-file-runtime.test.ts",
+          "tests/runtime-continuation.test.ts",
+          "tests/runtime-failed-retry.test.ts",
+          "tests/runtime-fresh-main.test.ts",
+          "tests/scoped-execution-runtime.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/file-operations": {
+      "roots": [
+        "src/backend/core/file-operations/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/controlled-effect-service.test.ts",
+          "tests/controlled-file-core.test.ts",
+          "tests/controlled-file-store.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/governance": {
+      "roots": [
+        "src/backend/core/governance/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/governance-feedback-wire.test.ts",
+          "tests/module-governance-core.test.ts",
+          "tests/module-governance-feedback-core.test.ts"
+        ],
+        "contract": [
+          "tests/governance-tool-core.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/knowledge": {
+      "roots": [
+        "src/backend/core/knowledge/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/knowledge-queries.test.ts"
+        ],
+        "contract": [
+          "tests/knowledge-query-ports.test.ts",
+          "tests/rules.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/knowledge/read-models": {
+      "roots": [
+        "src/backend/core/knowledge/read-models/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/core-domains.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/core/models": {
+      "roots": [
+        "src/backend/core/models/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/model-catalog.test.ts"
+        ],
+        "contract": [
+          "tests/engine-configuration.test.ts",
+          "tests/provider-connections.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/tasks": {
+      "roots": [
+        "src/backend/core/tasks/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/effect-observation-core.test.ts",
+          "tests/human-continuation-core.test.ts",
+          "tests/human-decisions-core.test.ts",
+          "tests/queued-dependency-replacement-core.test.ts",
+          "tests/queued-dependency-revision-core.test.ts",
+          "tests/scope-active-input-core.test.ts"
+        ],
+        "contract": [
+          "tests/automatic-return.test.ts",
+          "tests/checkpoint-handoff-core.test.ts",
+          "tests/command-verification-core.test.ts",
+          "tests/continuation-source-core.test.ts",
+          "tests/dispatch-graph.test.ts",
+          "tests/main-tool-output-core.test.ts",
+          "tests/member-checkpoint-core.test.ts",
+          "tests/member-checkpoint-runtime.test.ts",
+          "tests/member-help-runtime.test.ts",
+          "tests/member-tool-output-core.test.ts",
+          "tests/member-tool-output-wrappers.test.ts",
+          "tests/queued-dependency-addition-core.test.ts",
+          "tests/workflow-selection-core.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/team": {
+      "roots": [
+        "src/backend/core/team/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/owner-execution-core.test.ts",
+          "tests/owner-execution-view.test.ts",
+          "tests/workspace-member-core.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/tools": {
+      "roots": [
+        "src/backend/core/tools/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/tool-registry.test.ts"
+        ],
+        "contract": [
+          "tests/repository-tool-core.test.ts",
+          "tests/tool-output-wire.test.ts",
+          "tests/tool-results.test.ts",
+          "tests/workflow-runtime.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/core/workspace": {
+      "roots": [
+        "src/backend/core/workspace/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/workflow-contract.test.ts"
+        ],
+        "contract": [
+          "tests/artifact-transition-evidence.test.ts",
+          "tests/csv-artifact-validation-core.test.ts",
+          "tests/execution-scope.test.ts",
+          "tests/knowledge-source-core.test.ts",
+          "tests/module-ownership-core.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/engines": {
+      "roots": [
+        "src/backend/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/native-tool-paths.test.ts"
+        ],
+        "contract": [
+          "tests/engine-runtime-binding.test.ts",
+          "tests/engine-runtime-loader.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/engines/claude": {
+      "roots": [
+        "src/backend/engines/claude/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/claude-engine.test.ts"
+        ],
+        "contract": [
+          "tests/engine-capability-policy.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/engines/codex": {
+      "roots": [
+        "src/backend/engines/codex/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/codex-engine.test.ts",
+          "tests/codex-tools.test.ts",
+          "tests/codex-write-recovery.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/engines/pi": {
+      "roots": [
+        "src/backend/engines/pi/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/engine-inactivity-pi.test.ts",
+          "tests/model-request-budget-bootstrap.test.ts",
+          "tests/pi-cancellation.test.ts",
+          "tests/pi-rpc.test.ts",
+          "tests/pi-tool-catalog.test.ts"
+        ],
+        "contract": [
+          "tests/engine-inactivity.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/engines/transport": {
+      "roots": [
+        "src/backend/engines/transport/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/model-request-budget-usage.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/main/dispatch-storage": {
+      "roots": [
+        "src/backend/main/dispatch-storage/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/command-evidence-store.test.ts"
+        ],
+        "contract": [
+          "tests/dispatch-execution-store.test.ts",
+          "tests/dispatch-store.test.ts",
+          "tests/effect-disposition-store.test.ts",
+          "tests/owner-execution-store.test.ts",
+          "tests/request-budget-ports.test.ts",
+          "tests/runtime-feeds.test.ts",
+          "tests/scope-detail-recovery.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/feedback": {
+      "roots": [
+        "src/backend/main/feedback/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/github-feedback.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/file-operations": {
+      "roots": [
+        "src/backend/main/file-operations/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/controlled-file-service.test.ts",
+          "tests/isolated-executions.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/history": {
+      "roots": [
+        "src/backend/main/history/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/agent-history-assembly.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/ipc": {
+      "roots": [
+        "src/backend/main/ipc/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/ipc-requests.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/main/models": {
+      "roots": [
+        "src/backend/main/models/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/llm.test.ts",
+          "tests/owner-model-configuration.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/main/platform": {
+      "roots": [
+        "src/backend/main/platform/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/native-session-files.test.ts",
+          "tests/terminal.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/main/platform/files": {
+      "roots": [
+        "src/backend/main/platform/files/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/artifact-files.test.ts",
+          "tests/controlled-namespace-platform.test.ts",
+          "tests/png-artifact-files.test.ts",
+          "tests/scoped-execution-platform.test.ts"
+        ],
+        "contract": [
+          "tests/csv-artifact-files.test.ts",
+          "tests/json-artifact-files.test.ts",
+          "tests/output-manifest-files.test.ts",
+          "tests/png-artifact-validation-core.test.ts"
+        ],
+        "integration": [
+          "tests/controlled-file-platform.test.ts"
+        ]
+      }
+    },
+    "backend/main/platform/isolation": {
+      "roots": [
+        "src/backend/main/platform/isolation/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/isolated-node.test.ts"
+        ],
+        "contract": [
+          "tests/isolation-records.test.ts"
+        ],
+        "integration": [
+          "tests/isolation-recovery-crash.test.ts"
+        ]
+      }
+    },
+    "backend/main/run-storage": {
+      "roots": [
+        "src/backend/main/run-storage/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/loop-engine.test.ts",
+          "tests/run-journal-integrity.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/settings": {
+      "roots": [
+        "src/backend/main/settings/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/budget-settings.test.ts",
+          "tests/web-settings.test.ts"
+        ],
+        "contract": [
+          "tests/admission-settings.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/main/web": {
+      "roots": [
+        "src/backend/main/web/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/web-service.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/admission": {
+      "roots": [
+        "src/backend/scheduler-engine/admission/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/run-admission.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/automation": {
+      "roots": [
+        "src/backend/scheduler-engine/automation/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/automation-scheduler.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/budget": {
+      "roots": [
+        "src/backend/scheduler-engine/budget/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/scope-usage-service.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/conversation": {
+      "roots": [
+        "src/backend/scheduler-engine/conversation/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/main-history-context.test.ts",
+          "tests/message-queue.test.ts",
+          "tests/questions.test.ts"
+        ],
+        "contract": [
+          "tests/agent-role-instructions.test.ts",
+          "tests/execution-collaboration.test.ts",
+          "tests/queue-insertion-boundary.test.ts",
+          "tests/recovery-start-race.test.ts",
+          "tests/replan-start-race.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/dispatch": {
+      "roots": [
+        "src/backend/scheduler-engine/dispatch/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/auto-collaboration.test.ts",
+          "tests/goal-repair.test.ts",
+          "tests/member-failure-limit.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/evidence": {
+      "roots": [
+        "src/backend/scheduler-engine/evidence/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/artifact-report-service.test.ts",
+          "tests/effect-observation-service.test.ts",
+          "tests/knowledge-effect-service.test.ts",
+          "tests/persistent-effect-service.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/goals": {
+      "roots": [
+        "src/backend/scheduler-engine/goals/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/command-verification-service.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/history": {
+      "roots": [
+        "src/backend/scheduler-engine/history/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/agent-history-store.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/runtime": {
+      "roots": [
+        "src/backend/scheduler-engine/runtime/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/global-runtime.test.ts",
+          "tests/public-run-events.test.ts"
+        ],
+        "contract": [
+          "tests/member-events.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/scheduler-engine/tools": {
+      "roots": [
+        "src/backend/scheduler-engine/tools/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/candidate-review-tools.test.ts",
+          "tests/coordination-schema.test.ts",
+          "tests/web-tools.test.ts"
+        ],
+        "contract": [
+          "tests/claude-schema.test.ts",
+          "tests/dispatch-tools.test.ts",
+          "tests/github-feedback-status.test.ts",
+          "tests/github-feedback-tools.test.ts",
+          "tests/goal-tools.test.ts",
+          "tests/question-tools.test.ts",
+          "tests/queued-dependency-replacement-tools.test.ts",
+          "tests/queued-task-cancel-tools.test.ts",
+          "tests/workspace-member-tools.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "backend/updater": {
+      "roots": [
+        "src/backend/updater/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/desktop-updates.test.ts",
+          "tests/nsis-differential-download.test.ts",
+          "tests/nsis-updater.test.ts",
+          "tests/release-http.test.ts",
+          "tests/update-restart-profile.test.ts"
+        ],
+        "contract": [
+          "tests/runtime-download.test.ts",
+          "tests/runtime-journal.test.ts",
+          "tests/runtime-manifest.test.ts",
+          "tests/runtime-store.test.ts",
+          "tests/runtime-updates.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "bridge/contracts": {
+      "roots": [
+        "src/bridge/contracts/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/ipc-desktop.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "bridge/preload": {
+      "roots": [
+        "src/bridge/preload/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/ipc-preload.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "foundations/concurrency": {
+      "roots": [
+        "src/foundations/concurrency/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/concurrency.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "foundations/files": {
+      "roots": [
+        "src/foundations/files/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/files.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "foundations/web": {
+      "roots": [
+        "src/foundations/web/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/web-browser-proxy.test.ts",
+          "tests/web-foundations.test.ts"
+        ],
+        "contract": [
+          "tests/web-browser-fallback.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/components": {
+      "roots": [
+        "src/frontend/components/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/repository-tools-view.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/conversation": {
+      "roots": [
+        "src/frontend/conversation/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/brain-status.test.ts",
+          "tests/conversation-activity.test.ts",
+          "tests/thread-recovery-notice.test.ts",
+          "tests/usage.test.ts"
+        ],
+        "contract": [
+          "tests/chat-chrome.test.ts",
+          "tests/conversation-waiting.test.ts",
+          "tests/queue-insertion-view.test.ts",
+          "tests/queue-sync.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/execution-view": {
+      "roots": [
+        "src/frontend/execution-view/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/conversation.test.ts",
+          "tests/knowledge-tool-view.test.ts",
+          "tests/markdown.test.ts",
+          "tests/run-view.test.ts"
+        ],
+        "contract": [
+          "tests/inline-conversation.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/governance": {
+      "roots": [
+        "src/frontend/governance/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/governance-feedback-view.test.ts",
+          "tests/governance-origin-view.test.ts",
+          "tests/governance-pending.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/knowledge": {
+      "roots": [
+        "src/frontend/knowledge/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/knowledge-file-tree.test.ts",
+          "tests/static-owners.test.ts"
+        ],
+        "contract": [
+          "tests/knowledge-source-view.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/resources": {
+      "roots": [
+        "src/frontend/resources/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/repository-connection-state.test.ts",
+          "tests/resource-application.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/runtime": {
+      "roots": [
+        "src/frontend/runtime/"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/runtime-feed.test.ts",
+          "tests/runtime-view.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/settings": {
+      "roots": [
+        "src/frontend/settings/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/budget-settings-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/shell": {
+      "roots": [
+        "src/frontend/shell/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/conversation-tabs.test.ts",
+          "tests/runtime-navigation.test.ts",
+          "tests/tabs.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/tasks": {
+      "roots": [
+        "src/frontend/tasks/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/artifact-report-view.test.ts",
+          "tests/candidate-review.test.ts",
+          "tests/command-verification-view.test.ts",
+          "tests/continuation-source-view.test.ts",
+          "tests/controlled-file-view.test.ts",
+          "tests/effect-observation-view.test.ts",
+          "tests/execution-recovery-repeat.test.ts",
+          "tests/execution-report-view.test.ts",
+          "tests/member-cancellation-view.test.ts",
+          "tests/member-checkpoint-view.test.ts",
+          "tests/member-dependency-addition-view.test.ts",
+          "tests/member-dependency-revision-view.test.ts",
+          "tests/member-dependency-view.test.ts",
+          "tests/member-help-view.test.ts",
+          "tests/output-manifest-view.test.ts",
+          "tests/scope-budget-view.test.ts",
+          "tests/scope-continuation-view.test.ts",
+          "tests/scope-replan-view.test.ts",
+          "tests/scope-usage-view.test.ts",
+          "tests/session-task-view.test.ts",
+          "tests/task-graph-layout.test.ts"
+        ],
+        "contract": [
+          "tests/active-goal-input-view.test.ts",
+          "tests/admission-view.test.ts",
+          "tests/conversation-progress.test.ts",
+          "tests/execution-recovery-view.test.ts",
+          "tests/human-continuation-view.test.ts",
+          "tests/human-decision-view.test.ts",
+          "tests/member-event-state.test.ts",
+          "tests/member-validation-state.test.ts",
+          "tests/model-request-budget-view.test.ts",
+          "tests/scope-goal-view.test.ts",
+          "tests/session-graph-state.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "frontend/team": {
+      "roots": [
+        "src/frontend/team/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/agent-history-view.test.ts",
+          "tests/team-model.test.ts",
+          "tests/workspace-member-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/updates": {
+      "roots": [
+        "src/frontend/updates/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/update-button-state.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "frontend/workspace": {
+      "roots": [
+        "src/frontend/workspace/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/module-ownership-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/check-dependencies": {
+      "roots": [
+        "scripts/check-dependencies.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/dependencies.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/config": {
+      "roots": [
+        "scripts/desktop-signing/config.cjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/desktop-signing.test.mjs"
+        ],
+        "integration": []
+      }
+    },
+    "tooling/desktop-acceptance-inputs": {
+      "roots": [
+        "scripts/desktop-acceptance-inputs.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/desktop-acceptance-inputs.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/desktop-update-network-evidence": {
+      "roots": [
+        "scripts/desktop-update-network-evidence.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/desktop-update-network-evidence.test.mjs"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/package-pi-runtime": {
+      "roots": [
+        "scripts/package-pi-runtime.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/claude-packaging.test.ts",
+          "tests/codex-packaging.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "tooling/repair-pi-tool-result": {
+      "roots": [
+        "scripts/repair-pi-tool-result.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/session-repair.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/runtime-packaging": {
+      "roots": [
+        "scripts/runtime-packaging.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/runtime-packaging.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "tooling/source-contracts": {
+      "roots": [],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/core-layer-contracts.test.ts",
+          "tests/ipc-browser.test.ts",
+          "tests/layer-boundaries.test.ts",
+          "tests/source-architecture.test.ts"
+        ],
+        "integration": [
+          "tests/isolated-node-crash.test.ts"
+        ]
+      }
+    },
+    "tooling/test-modules": {
+      "roots": [
+        "scripts/test-modules.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/test-modules.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    }
+  }
+}

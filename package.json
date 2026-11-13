@@ -21,6 +21,8 @@
     "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:architecture": "node scripts/source-architecture.mjs --check && pnpm check:dependencies",
     "test": "vitest run",
+    "test:module": "node scripts/test-modules.mjs",
+    "check:test-modules": "node scripts/test-modules.mjs --check",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:desktop": "node scripts/make-desktop.mjs",

@@ -46,6 +46,10 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
+所有单元测试按责任模块组织，实施前核实 `tests/modules.json` 中被测模块、unit/contract/integration 分类及夹具依赖。一个单元套件只验证一个模块；不得直接或间接加载完整 Application、导入其他测试套件、依赖测试顺序或遗留状态。纯数据/断言/临时目录与应用装配分别维护。无关责任拆成不同套件；真实跨模块契约及集成覆盖保留，不能靠改分类掩盖耦合。
+
+优先用 `pnpm test:module --module <模块>` 选择单元，实际受影响协作另加 `--kind contract` / `--kind integration`，或使用精确文件/用例选择器。测试增删、归属、导入或夹具变化时同步目录并执行 `pnpm check:test-modules`。CI 检查所有已提交测试；新测试不得遗漏登记。静态依赖通过仍需 review 断言是否围绕同一行为责任，不能声称机器已证明全部语义解耦。
+
 跨层职责、共享状态、重复机制或扩展传播问题配合 [architecture-evolution](../architecture-evolution/SKILL.md)，把判断落到本步实际代码：
 
 - 新增分支、可选参数或公共状态字段前，查找已有同类能力及消费者。记录共同不变量和独立变化部分，区分重复领域规则、可复用技术机制与偶然相似；证据不足时保留局部实现，不预建万能 Base/Manager 或插件框架。

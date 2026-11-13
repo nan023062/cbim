@@ -27,7 +27,7 @@ test('主根详情展示已记录的实例与对话通道，旧日志不按主�
  const props={workspaceId:'w',taskId:'current',runs:[item],queued:[],now:0,busy:false,selectedTaskId:'session:current',onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}};
  const legacy=renderToStaticMarkup(createElement(SessionTaskView,props));expect(legacy).toContain('历史记录未保存主 Agent 实例绑定');
  item.conversationBinding={workspaceId:'w',rootSessionId:'current',teamId:'team',agentId:'cbim:main',agentInstanceId:'main-current',agentSessionId:'chat-current'};
- const html=renderToStaticMarkup(createElement(SessionTaskView,props));expect(html).toContain('main-current');expect(html).toContain('chat-current');expect(html).toContain('主 Agent 负责调度与知识治理');expect(html).toContain('业务任务由独立执行 Agent 实例完成');expect(html).not.toContain('历史记录未保存');expect(html).not.toContain('自执行');
+ const html=renderToStaticMarkup(createElement(SessionTaskView,props));expect(html).toContain('main-current');expect(html).toContain('chat-current');expect(html).toContain('主 Agent 与成员均可执行任务');expect(html).toContain('主 Agent 还负责协调和知识治理');expect(html).not.toContain('历史记录未保存');expect(html).not.toContain('自执行');
  const foreign={...item,conversationBinding:{...item.conversationBinding,rootSessionId:'other'}};
  const rejected=renderToStaticMarkup(createElement(SessionTaskView,{...props,runs:[foreign]}));expect(rejected).toContain('实例身份不一致');expect(rejected).not.toContain('chat-current');
 });

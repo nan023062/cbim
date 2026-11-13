@@ -46,3 +46,4 @@ App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会�
 ### 异步结果失效边界
 
 RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
+主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。

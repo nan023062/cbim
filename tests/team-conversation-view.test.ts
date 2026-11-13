@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ConversationEntries} from '../src/view/conversation/ConversationEntries';
 import {MemberConversation} from '../src/view/conversation/MemberConversation';
-import {teamConversations} from '../src/view/conversation/team-conversations';
+import {teamConversations} from '../src/view/execution-view/team-conversations';
 import {officeSession,officeGraph,officeTask,officeTime} from './team-conversation-fixture';
 
 it('主会话保持可见，子角色独立折叠且只有查看入口',()=>{

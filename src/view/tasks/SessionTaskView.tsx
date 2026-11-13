@@ -1,11 +1,12 @@
 /**
- * 作用定位：以节点流程图展示当前主会话的派发任务，并在选择根或任务后显示对应执行详情。
+ * 作用定位：以办公室人物/模块工位展示当前主会话，保留可切换的节点依赖图，并在选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；默认折叠已完成、已撤销任务，显式展开恢复原图，直接定位历史节点时自动展开。根详情共享目标、审阅与显式补充，历史浏览不改变调度。
  * 职责边界：运行轮次不是派发节点；根审阅中的原任务/新成果只导航本周期真实节点，不新增连线或执行。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态。
  * 文件补偿：当前工作区实例沿真实会话传给成员详情；图身份不签发新的文件操作许可。
  * 异常核实：根与成员详情共享真实会话的显式观察/新核实入口，不用根节点伪造业务任务来源。
  * 停止入口：使用会话独立的停止在途状态，消息插入或附件准备忙碌时仍可停止。
  */
+import {OfficeScene} from './OfficeScene';
 import {useEffect,useId,useMemo,useState} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
 import type {GraphSnapshot} from '../../bridge/contracts/dispatch';
@@ -49,6 +50,8 @@ export interface SessionTaskViewProps {
   now:number;busy:boolean;
   /** 只禁用重复停止，不借普通操作 busy 阻断正在插入消息时的停止。 */
   stopping?:boolean;
+  /** 人物对话导航只改变页面与原话题选择；sessionId 缺省表示主会话。 */
+  onAgentChat?:(sessionId?:string,scopeId?:string)=>void;
   onQueueChange:(id:string,action:string)=>void;onQueueContinue:()=>void;onChat:()=>void;onStop:()=>void;
   graph?:GraphSnapshot;graphLoading?:boolean;graphError?:string;onRefreshGraph?:()=>void;
   /** 与主对话共享目标摘要/选中详情；完成依据控制默认折叠，周期选择只突出节点，不改变执行。 */
@@ -88,7 +91,7 @@ function RootTaskDetail({history,pending,now,busy,stopping,onQueueChange,onQueue
       {instance?<p>主 Agent 实例 <code>{instance}</code></p>:<p>历史记录未保存主 Agent 实例绑定。</p>}
       {conflicting?<p role="alert">主会话运行与任务图的实例身份不一致，请重新同步。</p>:binding?<p>对话通道 <code>{binding.agentSessionId}</code></p>:<p>历史记录未保存对话通道绑定，不按角色名称推断。</p>}
       {graph&&<p>调度通道 <code>{graph.root.agent.agentSessionId}</code></p>}
-      <p>主 Agent 负责调度与知识治理；业务任务由独立执行 Agent 实例完成。</p>
+      <p>主 Agent 与成员均可执行任务；主 Agent 还负责协调和知识治理。</p>
     </details>
     {progress&&<article className="session-run" aria-label="执行计划"><h3>{progress.goal}</h3><p>计划版本 {progress.version} · {progress.state==='awaiting_review'?'交付待审阅':'执行与验证中'} · 尚未业务验收</p><p>{progress.reason}</p><ol>{progress.steps.map(step=><li key={step.id}><strong>{step.title}</strong> · {step.owner} · {{pending:'待处理',working:'进行中',reported_done:'已报告完成，待核验'}[step.state]}{step.evidence.length>0&&<details><summary>{step.evidence.length} 条工具回执</summary>{step.evidence.map(id=><p key={id}><code>{id}</code></p>)}</details>}</li>)}</ol><h4>验收要求</h4><ul>{progress.acceptance.map((item,index)=><li key={index}>{item}</li>)}</ul>{progress.delivery&&<><h4>交付候选</h4><p>{progress.delivery.summary}</p><ul>{progress.delivery.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></>}<details><summary>计划修订记录</summary>{history.flatMap(run=>run.events.filter(event=>event.type==='task.updated').map(event=><p key={run.runId+':'+event.seq}>{event.time} · {String((event.data.progress as {reason?:string})?.reason??'计划更新')}</p>))}</details></article>}
     <MessageQueue items={pending} busy={busy} continueDisabled={stopping||waiting||scopeState?.loading} onChange={onQueueChange} onContinue={onQueueContinue}/>
@@ -98,10 +101,11 @@ function RootTaskDetail({history,pending,now,busy,stopping,onQueueChange,onQueue
   </div>;
 }
 
-/** 主区域始终保留图；选择节点才挂载实时详情，关闭详情不停止后台任务。 */
+/** 主区域默认办公室，可切换原依赖图；选择节点才挂载实时详情，关闭详情不停止后台任务。 */
 export function SessionTaskView(props:SessionTaskViewProps){
   const {workspaceId,taskId,runs,queued,now,busy,onQueueChange,onQueueContinue,onChat,onStop,graph,graphLoading,graphError,onRefreshGraph,selectedTaskId,onSelectTask,scopeState}=props;
   const [localSelection,setLocalSelection]=useState<string>();
+  const [presentation,setPresentation]=useState<'office'|'graph'>('office');
   const [historyDisclosure,setHistoryDisclosure]=useState<{session:string;expanded:boolean}>();
   const graphRegionId=useId(),sessionKey=JSON.stringify([workspaceId,taskId]);
   useEffect(()=>{setLocalSelection(undefined);setHistoryDisclosure(undefined)},[workspaceId,taskId]);
@@ -120,15 +124,16 @@ export function SessionTaskView(props:SessionTaskViewProps){
     setHistoryDisclosure({session:sessionKey,expanded:!historyExpanded});
     if(historyExpanded&&selectedHistory)select(undefined);
   };
-  return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>任务流程</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · 已读 {history.length} 轮记录{props.historyIssueCount?` · ${props.historyIssueCount} 轮待核实`:''}</p></div><div className="task-view-actions">{onRefreshGraph&&<button onClick={onRefreshGraph} disabled={graphLoading} aria-label="刷新任务图">刷新</button>}<button onClick={onChat}>返回对话</button></div></header>
+  return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>团队办公室</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · 已读 {history.length} 轮记录{props.historyIssueCount?` · ${props.historyIssueCount} 轮待核实`:''}</p></div><div className="task-view-actions">{onRefreshGraph&&<button onClick={onRefreshGraph} disabled={graphLoading} aria-label="刷新任务图">刷新</button>}<button onClick={onChat}>返回对话</button></div></header>
     {error&&<p role="alert" className="task-graph-error">任务图同步中断：{error}{matching?'。保留上次已确认的图。':''}</p>}
     {graphLoading&&<p role="status" className="task-graph-loading">正在同步任务图…</p>}
-    {scopeState&&scopeState.scopes.length>0&&<div className="task-scope-filter"><label>突出显示周期<select aria-label="任务图目标周期" data-testid="task-scope-select" value={scopeState.historyScopeId??''} onChange={event=>scopeState.selectScope(event.target.value||undefined)}><option value="">当前 / 最新目标</option>{[...scopeState.scopes].reverse().map(scope=><option value={scope.scopeId} key={scope.scopeId}>{scope.objective??scope.inputPreview??'旧周期'} · {new Date(scope.createdAt).toLocaleString()}</option>)}</select></label><span data-testid="task-scope-status">{scopeState.selectedGoalView.label}</span><small>已完成、已撤销任务默认折叠；待审阅和待处理任务继续显示。</small></div>}
-    {taskId&&scopeState?.selectedScopeId&&<ScopeUsagePanel key={JSON.stringify([workspaceId,taskId,scopeState.selectedScopeId])} identity={{workspaceId,rootSessionId:taskId,scopeId:scopeState.selectedScopeId}}/>}
-    {archived.tasks.length>0&&<div className="task-history-disclosure"><button aria-expanded={!!historyExpanded} aria-controls={graphRegionId} data-testid="task-history-toggle" onClick={toggleHistory}>历史任务（{archived.tasks.length}） · {historyExpanded?'收起':'展开'}</button><span>{historyExpanded?'已展开历史节点及原有关系。':`${matching!.tasks.length-archived.tasks.length} 个当前任务${archived.relatedEdgeCount?` · ${archived.relatedEdgeCount} 条关联涉及历史任务，展开可查看`:''}`}</span></div>}
+    <div className="office-mode-switch" aria-label="任务展示方式"><button aria-pressed={presentation==='office'} onClick={()=>setPresentation('office')}>办公室</button><button aria-pressed={presentation==='graph'} onClick={()=>setPresentation('graph')}>任务依赖图</button></div>
+    {scopeState&&scopeState.scopes.length>0&&<div className="task-scope-filter"><label>{presentation==='office'?'查看话题信息':'突出显示周期'}<select aria-label="任务图目标周期" data-testid="task-scope-select" value={scopeState.historyScopeId??''} onChange={event=>scopeState.selectScope(event.target.value||undefined)}><option value="">当前 / 最新目标</option>{[...scopeState.scopes].reverse().map(scope=><option value={scope.scopeId} key={scope.scopeId}>{scope.objective??scope.inputPreview??'旧周期'} · {new Date(scope.createdAt).toLocaleString()}</option>)}</select></label><span data-testid="task-scope-status">{scopeState.selectedGoalView.label}</span><small>已完成、已撤销任务默认折叠；待审阅和待处理任务继续显示。</small></div>}
+    {taskId&&scopeState?.selectedScopeId&&<details className="office-usage"><summary>话题用量</summary><ScopeUsagePanel key={JSON.stringify([workspaceId,taskId,scopeState.selectedScopeId])} identity={{workspaceId,rootSessionId:taskId,scopeId:scopeState.selectedScopeId}}/></details>}
+    {presentation==='graph'&&archived.tasks.length>0&&<div className="task-history-disclosure"><button aria-expanded={!!historyExpanded} aria-controls={graphRegionId} data-testid="task-history-toggle" onClick={toggleHistory}>历史任务（{archived.tasks.length}） · {historyExpanded?'收起':'展开'}</button><span>{historyExpanded?'已展开历史节点及原有关系。':`${matching!.tasks.length-archived.tasks.length} 个当前任务${archived.relatedEdgeCount?` · ${archived.relatedEdgeCount} 条关联涉及历史任务，展开可查看`:''}`}</span></div>}
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div id={graphRegionId} className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
-      <DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId} hiddenTaskIds={historyExpanded?undefined:archived.taskIds}/>
-      {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭详情，返回流程图">返回流程图</button></header>
+      {presentation==='office'&&matching?<OfficeScene key={sessionKey} selectedTaskId={selected} graph={matching} sessions={scopeState?.teamSessions} scopes={scopeState?.scopes??[]} mainRunning={history.some(run=>run.status==='running')} queued={pending.length} active={props.active} onChat={props.onAgentChat??(()=>onChat())} onTask={select}/>:<DispatchGraph key={workspaceId+':'+taskId} graph={matching} root={root} selectedTaskId={selected} onSelectTask={select} highlightedScopeId={scopeState?.selectedScopeId} hiddenTaskIds={historyExpanded?undefined:archived.taskIds}/>}
+      {hasDetail&&<aside className="session-graph-detail" aria-label={rootSelected?'主 Agent 详情':'成员任务详情'} data-testid="session-graph-detail"><header><strong>{rootSelected?'主会话调度':'成员任务'}</strong><button onClick={()=>select(undefined)} aria-label="关闭任务详情">关闭详情</button></header>
         {rootSelected?<RootTaskDetail onSelectTask={select} history={history} pending={pending} now={now} busy={busy} stopping={props.stopping} onQueueChange={onQueueChange} onQueueContinue={onQueueContinue} onStop={onStop} graph={matching} scopeState={scopeState} continuation={props.continuation} replan={props.replan} humanDecisions={props.humanDecisions} humanContinuation={props.humanContinuation} recovery={props.recovery} historyIssueCount={props.historyIssueCount}/>:selectedTask&&taskId&&<MemberTaskDetail active={props.active} key={workspaceId+':'+taskId+':'+selectedTask.taskId} workspaceId={workspaceId} workspaceInstanceId={props.workspaceInstanceId} rootSessionId={taskId} task={selectedTask} graphCursor={matching?.cursor} scope={scopeState?.scopes.find(scope=>scope.scopeId===selectedTask.scopeId)} recovery={props.recovery}/>}
       </aside>}
     </div>}

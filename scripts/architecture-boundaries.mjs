@@ -197,8 +197,8 @@ export const logicalBoundaries = [
   },
   {
     id:'execution-view', prefix:'src/view/execution-view/',
-    public:['src/view/execution-view/WorkStatus.tsx','src/view/execution-view/ToolTimeline.tsx','src/view/execution-view/MarkdownMessage.tsx','src/view/execution-view/transcript.ts','src/view/execution-view/tool-labels.ts','src/view/execution-view/repairStreamingMarkdown.ts','src/view/execution-view/MessageQueue.tsx','src/view/execution-view/QuestionCard.tsx','src/view/execution-view/ComposerAttachments.tsx','src/view/execution-view/knowledge-tool-view.ts'],
-    dependencies:[], imports:['src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/view/components/Icon.tsx','src/view/components/RepositoryScopeDetails.tsx'],
+    public:['src/view/execution-view/team-conversations.ts','src/view/execution-view/WorkStatus.tsx','src/view/execution-view/ToolTimeline.tsx','src/view/execution-view/MarkdownMessage.tsx','src/view/execution-view/transcript.ts','src/view/execution-view/tool-labels.ts','src/view/execution-view/repairStreamingMarkdown.ts','src/view/execution-view/MessageQueue.tsx','src/view/execution-view/QuestionCard.tsx','src/view/execution-view/ComposerAttachments.tsx','src/view/execution-view/knowledge-tool-view.ts'],
+    dependencies:[], imports:['src/bridge/contracts/dispatch.ts','src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/view/components/Icon.tsx','src/view/components/RepositoryScopeDetails.tsx'],
     external:['react','react-markdown','remark-gfm','rehype-highlight'],
   },
   {

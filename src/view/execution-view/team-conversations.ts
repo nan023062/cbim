@@ -1,5 +1,5 @@
 /**
- * 作用定位：把办公室长期子 Session 投影为侧栏角色、当前状态与任务引用。
+ * 作用定位：将办公室长期子 Session 投影为共享的角色、状态与任务引用，供侧栏、成员对话和办公室使用。
  * 设计原因：同一角色的执行实例可以变化，导航始终使用唯一逻辑 Session；只接受原办公室登记，不从名字猜身份。
  */
 import type {GraphSnapshot,TeamSession,TaskNode} from '../../bridge/contracts/dispatch';

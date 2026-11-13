@@ -19,6 +19,7 @@
 | [QuestionCard.tsx](QuestionCard.tsx) | 展示 Agent 的结构化问题，以选项卡及最后一项其它输入收集答案。 |
 | [questions.css](questions.css) | 结构化问题卡片的主题、选中态和输入排版。 |
 | [repairStreamingMarkdown.ts](repairStreamingMarkdown.ts) | 显示正在流入的 Markdown 时临时补齐未闭合语法。 |
+| [team-conversations.ts](team-conversations.ts) | 将办公室长期子 Session 投影为共享的角色、状态与任务引用，供侧栏、成员对话和办公室使用。 |
 | [tool-failure-view.ts](tool-failure-view.ts) | 从已确认执行前拒绝的工具回包提取可读原因，兼容旧校验 JSON。 |
 | [tool-labels.ts](tool-labels.ts) | 工具轨道和实时活动预览共用的公开动作名称。 |
 | [ToolTimeline.tsx](ToolTimeline.tsx) | 把工具申请、授权、运行、输出及完成记录合并成可展开的执行时间线。 |
@@ -122,6 +123,35 @@ class N_src_view_execution_view_repairStreamingMarkdown_ts["repairStreamingMarkd
 }
 ```
 
+
+### team-conversations.ts
+
+```mermaid
+classDiagram
+class N_src_view_execution_view_team_conversations_ts["team-conversations.ts"] {
+  <<module>>
+  +teamConversations()
+  +memberConversationTasks()
+  +teamConversationKey()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_execution_view_team_conversations_ts["team-conversations.ts"] {
+  <<module>>
+}
+class N_src_view_execution_view_team_conversations_ts_TeamConversation["TeamConversation"] {
+  <<interface>>
+  +session
+  +name
+  +running
+  +taskIds
+}
+N_src_view_execution_view_team_conversations_ts ..> N_src_view_execution_view_team_conversations_ts_TeamConversation : 声明
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### tool-failure-view.ts
 
@@ -311,3 +341,6 @@ ToolTimeline 在失败或未确认调用旁展示运行记录中的 nextStep；e
 ## 明确拒绝与旧参数错误
 
 ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/started/updated 时，只读渲染拒绝原因，并不调用核实控制插槽。tool-failure-view 兼容旧 message 内嵌的校验数组及当前 TOOL_INPUT_INVALID，展示缺失字段、格式说明与默认参数语义，不展示原始校验 JSON；原日志未修改。已放行或仅正文自称 rejected 的失败保持原核实入口，不能通过伪造正文隐藏可能发生的副作用。
+### 团队逻辑对话投影
+
+`team-conversations.ts` 供侧栏、成员文字页和办公室共用，不依赖任一业务页面。只接受同工作区/主根的正式 TeamSession；角色的不同执行实例统一到同一人物/导航项，公开任务引用保留原身份，正文仍按原 task/run 读取。`teamConversationKey` 以工作区实例隔离本机动态缓存。该模块只投影，不创建会话或修改执行。

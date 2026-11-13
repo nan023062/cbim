@@ -29,8 +29,8 @@ it('只折叠可靠完成周期的交付及撤销，失败/检查点/待审阅�
   const input=graph([task('complete','result_ready'),task('cancel','cancelled'),...(['failed','interrupted','blocked','checkpointed','waiting','queued','running'] as const).map(status=>task(status,status)),{...task('pending','result_ready'),scopeId:'active'},{...task('in-flight','cancelled'),activeRunId:'live'}]);
   const before=JSON.stringify(input),view=taskHistoryView(input,[done]);
   expect([...view.taskIds]).toEqual(['complete','cancel']);expect(JSON.stringify(input)).toBe(before);
-  const html=render(input);expect(html).toContain('历史任务（2）');expect(html).toContain('aria-expanded="false"');
-  expect(html).not.toContain('data-task-id="complete"');expect(html).not.toContain('data-task-id="cancel"');
+  const html=render(input);expect(html).toContain('历史任务 · 2');expect(html).toContain('<details class="office-history">');
+  const current=html.split('<details class="office-history"')[0];expect(current).not.toContain('data-task-id="complete"');expect(current).not.toContain('data-task-id="cancel"');
   for(const id of ['failed','interrupted','blocked','checkpointed','waiting','queued','running','pending','in-flight'])expect(html).toContain(`data-task-id="${id}"`);
 });
 
@@ -55,7 +55,7 @@ it('折叠不补造穿越历史的依赖，展开原图恢复真实连线；原�
   const input=graph([task('old','result_ready'),{...task('current','waiting'),scopeId:'active'}]);
   input.edges.push({edgeId:'depends-on-old',identity,fromNodeId:'task:old',toNodeId:'task:current',kind:'dependency',condition:{kind:'result_ready',planRevision:1},enabled:true,revision:1});
   const before=JSON.stringify(input),archived=taskHistoryView(input,[done]),root=sessionRoot([],identity.rootSessionId,0,input);
-  expect(archived.relatedEdgeCount).toBe(1);expect(render(input)).toContain('1 条关联涉及历史任务');
+  expect(archived.relatedEdgeCount).toBe(1);expect(render(input)).toContain('任务依赖图');
   const props={graph:input,root,onSelectTask:()=>{}};
   const collapsed=renderToStaticMarkup(createElement(DispatchGraph,{...props,hiddenTaskIds:archived.taskIds}));
   expect(collapsed).toContain('data-task-id="current"');expect(collapsed).not.toContain('data-task-id="old"');expect(collapsed).not.toContain('data-kind="dependency"');
@@ -73,7 +73,7 @@ it('折叠不能遮蔽完整图的循环或缺少端点',()=>{
 
 it('全部折叠时保留主根和历史入口，直接定位历史任务自动展开原节点与详情',()=>{
   const input=graph([task('old','cancelled')]);
-  const collapsed=render(input);expect(collapsed).toContain('dispatch-root-node');expect(collapsed).toContain('当前没有待处理任务');expect(collapsed).not.toContain('尚未派发成员任务');
-  const selected=render(input,[done],'old');expect(selected).toContain('aria-expanded="true"');expect(selected).toContain('data-task-id="old"');expect(selected).toContain('成员任务详情');
+  const collapsed=render(input);expect(collapsed).toContain('data-office-actor="main:root"');expect(collapsed).toContain('当前没有待处理任务');expect(collapsed).not.toContain('尚未派发成员任务');
+  const selected=render(input,[done],'old');expect(selected).toContain('<details class="office-history" open="">');expect(selected).toContain('data-task-id="old"');expect(selected).toContain('成员任务详情');
   const foreign={...input,identity:{...identity,workspaceId:'foreign'}};expect(render(foreign)).not.toContain('task-history-toggle');
 });

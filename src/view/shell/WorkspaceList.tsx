@@ -8,7 +8,7 @@ import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {Layouts,ViewTab} from './tabs';
 import {Icon} from '../components/Icon';
 import {ConversationEntries} from '../conversation/ConversationEntries';
-import {teamConversationKey,type TeamConversation} from '../conversation/team-conversations';
+import {teamConversationKey,type TeamConversation} from '../execution-view/team-conversations';
 import {stateLabels} from '../components/state-labels';
 import './workspace-list.css';
 export function WorkspaceList({teamChats={},selectedChildren={},onChild,workspaces,layouts,selected,onSelect,onChat,onNew,onRename,onRemove,onRenameChat,onRemoveChat,onSettings,running={},busy}:{teamChats?:Record<string,TeamConversation[]>;selectedChildren?:Record<string,string|undefined>;onChild?:(workspaceId:string,tab:ViewTab,childId:string)=>void;workspaces:WorkspaceView[];layouts:Layouts;selected:string;onSelect:(id:string)=>void;onChat:(id:string,tab:ViewTab)=>void;onNew:(id:string)=>void;onRename:(id:string,name:string)=>Promise<void>;onRemove:(id:string)=>Promise<void>;onRenameChat:(workspaceId:string,tabId:string,title:string)=>void;onRemoveChat:(workspaceId:string,tabId:string)=>void;onSettings?:(id:string)=>void;running?:Record<string,string[]>;busy:boolean}){

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {teamConversations,memberConversationTasks,teamConversationKey} from '../src/view/conversation/team-conversations';
+import {teamConversations,memberConversationTasks,teamConversationKey} from '../src/view/execution-view/team-conversations';
 import {officeSession,officeGraph,officeTask} from './team-conversation-fixture';
 
 it('一个逻辑子 Session 合并多个任务执行实例，并跨话题保留唯一导航',()=>{

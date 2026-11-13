@@ -8,7 +8,7 @@ import {useMemberRun} from '../tasks/useMemberRun';
 import {MemberRunTranscript} from '../tasks/MemberRunTranscript';
 import {memberTaskLabel} from '../tasks/MemberActivity';
 import {ToolTimeline} from '../execution-view/ToolTimeline';
-import {memberConversationTasks,type TeamConversation} from './team-conversations';
+import {memberConversationTasks,type TeamConversation} from '../execution-view/team-conversations';
 import './conversation-topics.css';
 
 /** 选择仅决定读取哪个原运行；切换时 useMemberRun 丢弃上一身份的迟到响应。 */

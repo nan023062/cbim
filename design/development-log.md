@@ -1,3 +1,14 @@
+## 2026-11-14：办公室改版第 12 步——人物工位、往返动态与双向导航
+
+- 基线 `28621d7b`。任务视图默认办公室，可切换原依赖图；每个正式逻辑 Agent 一个人物，显示当前模块/目标、真实状态与同角色待办。历史沿原完成/撤销规则折叠。新增派发驱动主 Agent 往返，候选、求助、检查点驱动成员汇报往返；首次进入、重复/旧图和隐藏期间不回放。关闭动态停止行走及工作摆动，系统减少动画同样保留文字状态和所有入口。模块工位键与主工位/休息区分开，允许业务模块同名。
+- 人物头顶入口返回对应主/子对话与原话题；修复侧栏重复点击相同 Agent 仍滞留任务视图的问题。主子会话和办公室共用 execution-view/team-conversations 投影；只迁移共享只读能力，不允许 Tasks 反向依赖 Conversation。用量折叠，办公室优先展示人物。各相关文件注释、四份 CONTRACT 及五个目录类图同步。
+- Q1 保护真实执行与历史归属，动画不能触发执行；Q2 共享身份投影归 execution-view，办公室状态/动作归 tasks，文字导航归 Conversation/Shell；Q3 本片只影响展示、图消费者、导航与依赖入口，选择对应单元/契约；Q4 teamConversations → officeScene / OfficeEventTracker → OfficeScene → Conversation → App；Q5 无新增通用治理规则。
+- `pnpm exec vitest run tests/office-scene.test.ts tests/task-history-view.test.ts tests/session-task-view.test.ts tests/scope-goal-view.test.ts tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/runtime-navigation.test.ts tests/chat-chrome.test.ts`：48/48；之后补充工位同名边界并关闭全部人物动态，精确重跑 `tests/office-scene.test.ts`：5/5。首轮旧依赖图断言因默认展示变化失败，改核办公室中全部当前节点，独立依赖图的连线断言保留。
+- `pnpm typecheck`、`pnpm check:architecture`（751 代码/样式、1508 文件、0 类图差异/循环/违规）、`pnpm check:test-modules`（494 文件：unit 146 / contract 155 / integration 193）通过。首次依赖检查指出 Tasks 引用 Conversation 及夹具绝对导入，迁移共用投影、修正路径后通过；精确登记共享入口和 Dispatch 类型契约，没有放宽目录限制。`tests/dependencies.test.ts -t 'snapshot contracts and domain views reject reverse or private dependencies without a file cycle|View and Logic can only meet through public Bridge contracts'`：2 通过，149 未选择。最后 `node scripts/source-architecture.mjs --check`：0 差异。
+- 实机渲染验收使用 `node scripts/office-team-ui-preview.mjs` + Cindy 管理的 Chrome，只连接 127.0.0.1，真实 React App 与公开 IPC 形状的内存夹具，不启动模型、不触碰用户工作区。核对两办公室独立人物身份、默认历史折叠、主/成员头顶跳转、侧栏重复点击返回、成员普通输入的 loop.enqueue.taskId=root、只浏览零执行请求。新增派发/汇报各一个人物，测得途中位移 (-269.25,342)/(269.25,-342)，终点均回 (0,0)，轮询不重放；后台定时采样超时后改用页面内动画关键帧测量，不把采样超时当业务失败。关闭动态后行走及工作摆动节点为 0，对话按钮仍有 3 个。
+- Chrome 最小窗口内宽 500，因此使用同源嵌入页获得真实 320px viewport：文档宽/scrollWidth 均 320，办公室 281/281，工位 257/257，无横向溢出；页面 errors/unexpected IPC 均为空。深色截图已目视检查。浅色/深色真实计算样式分别白底深字/深底浅字；截图接口中途返回 CHROME_OPERATION_FAILED，未将浅色和窄屏截图目视验收报告为通过。减少动画系统偏好分支做代码核对，未改变用户系统设置。
+- 本设计的会话身份、话题/排队、上下文、整话题补充、历史关联和办公室场景已完成本轮代码实现；逐片验证不等于全量回归或发布。真实主/成员模型链的本地确定性 Pi 集成见第 6/7/8/11 步；本片未跑在线模型、完整桌面程序、打包/安装升级、全仓回归或 CI，未推送、合并或发布。
+
 ## 2026-11-14：办公室改版第 11 步——主 Agent 的按话题归档读取
 
 - 基线 `908a5d8d`。新增只读 `cbim_office_history`，主 Session → 话题 → 原内容引用，按需读取原目标/输入/补充、主轮、派发、成员公开对话及回传。正文沿 canonical 保存，不复制存储或按时间猜归属；长公开消息可完整分块，续页须核原版本。主工具绑定原办公室，成员 Loop 不提供归档入口；公开白名单继续隐藏内部提示词、原生信息及工具私有正文。

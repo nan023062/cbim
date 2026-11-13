@@ -1,3 +1,7 @@
+### 仓库响应体消费
+
+RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限制原字节，显式取消挂起 reader 并释放锁/监听；保留 #70 已修复的 Node 22 信号转发缺口。取消或超时不交付半截 JSON。8 秒期限、CANCELLED/TIMEOUT/SIZE/CONNECTION/PROTOCOL 分类、令牌、仓库身份和不重试语义仍由 request 决定；基础流不接触 URL 或凭据。
+
 ### 公开网页与搜索
 
 网页正文转换已迁移至独立 [foundations/web](../../../foundations/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../web/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。

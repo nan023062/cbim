@@ -38,6 +38,13 @@ test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
   const privateDigest=audit({'src/foundations/utility/digest.ts':'export const value=1;','src/backend/main/example.ts':"import {value} from '../../foundations/utility/digest';"});
   expect(privateDigest.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'utility-node-foundations'}));
 });
+test('Updater 只组合 utility 通用入口，不能借基础层依赖其他方案或 Node 入口',()=>{
+  expect(audit({'src/backend/updater/a.ts':"import {value} from '../../foundations/utility';",'src/foundations/utility/index.ts':'export const value=1;'}).ok).toBe(true);
+  for(const target of ['utility/node','files','web']){
+    const file=target==='utility/node'?`src/foundations/${target}.ts`:`src/foundations/${target}/index.ts`;
+    expect(audit({'src/backend/updater/a.ts':`import {value} from '../../foundations/${target}';`,[file]:'export const value=1;'}).violations).not.toEqual([]);
+  }
+});
 
 test('fixed bootstrap generated loading remains a real source edge and cannot hide cycles or missing code',()=>{
   const load="import {createRequire} from 'node:module'; const loadApplication=createRequire(import.meta.url); loadApplication(entry);";

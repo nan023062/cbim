@@ -1,3 +1,15 @@
+## 2026-11-13：utility 候选 1–4 收敛与消费者迁移
+
+- 来源与 S1：用户直接授权继续提炼候选 1–4，并同步类图和 AI 工作流；基线 `8eb1c7da`。已核对当前 Issues，无本切片对应工单，不新增或回填外部 Issue。候选 2（SHA-256）与 4（JSON 文本格式化）沿用上一提交，补齐候选 1（有界字节流）与 3（严格 JSON）。原任务历史视图的并行改动保留，不纳入本提交。
+- S2–S4：utility 只拥有通用算法及本次 reader，不依赖其他项目模块。字节流机制负责上限、取消、锁与监听释放；URL、凭据、期限、业务错误、JSON 协议和重试决策留在消费者。严格 JSON 保留 jsonc-parser 原行为，Core 适配原 `JSON` Fault。通用入口不加载 Node；摘要仍走独立 Node 入口。保护稳定算法，把业务变化限制在原适配层。
+- S5：新增 `readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`。迁移资源仓库、GitHub HTTP、网页材料、Release 列表和更新小清单五处响应体读取，保持各自字节上限及错误映射。核对已有 #70 修复提交 `36c36bf649614b0f4aeac140c9ba90a9767203a2`，保留显式取消挂起 reader 的语义，不依赖 fetch 转发信号；底层 cancel 不返回时也不无限等待。未合并远端分支、改动 CI 或扩大到安装包流式落盘、模型字符限额及 Node 原始 HTTP。
+- 模块测试：新增字节流与严格 JSON 的独立单元；Core 错误兼容与五消费者业务映射独立作为契约测试，登记在 `tests/modules.json`。`pnpm test:module --module foundations/utility --kind all` 首轮 8 文件/28 项通过；随后新增的五个超限映射和清单成功/空正文用例包含在下述 Node 22 验证，重叠用例不重复计数。
+- Node 22 验证：核对本机 `test-results/ci-speed/node22/node.exe` 为 v22.19.0，SHA-256 `995a3fb3cefad590cd3f4b321532a4b9582fb9c6575320ed2e3e894caac3e362` 与已有官方校验文件一致。执行 `& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/repository-connection-http.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，2 文件/15 项通过；覆盖真实 HTTP 8 秒超时、取消以及 fetch 不转发信号且底层 cancel 挂起的五消费者契约。测试证明读取停止等待和 reader 释放，不把它解释为所有底层连接物理退出。
+- 受影响回归选取：解析适配影响规则、数组、领域及产物验证；响应体迁移影响更新、资料与资源仓库；依赖规则调整需验证检测器。执行 `pnpm exec vitest run tests/rules.test.ts tests/rules-json-arrays.test.ts tests/core-domains.test.ts tests/json-artifact-validation-core.test.ts tests/release-http.test.ts tests/runtime-download.test.ts tests/chat-material-imports.test.ts tests/resource-repository.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`，10 文件/75 项通过。该批先前执行回执未能恢复，在确认无活动进程后重新取得完整结果。
+- Review 补充：发现 Buffer.slice 共享存储会违背字节快照契约。先以 `pnpm exec vitest run tests/unit/foundations/utility/bounded-bytes.test.ts -t 'Buffer' --reporter=dot` 复现失败，再改为显式 Uint8Array 副本，同步注释、契约及类图。执行 `& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/unit/foundations/utility/bounded-bytes.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，2 文件/18 项通过，包含全部流单元和五消费者契约；不重复累加早先已运行用例。
+- S6：`pnpm typecheck` 通过；`pnpm check:architecture` 通过（91 目录、710 源码/样式文件，1418 扫描文件、7062 条含类型依赖，0 循环/边界违规）；`pnpm check:test-modules` 通过（455 文件：118 unit、150 contract、187 integration）。检查包含工作区已有并行源码；未改变其内容。三宿主的三个相关 Skill 共 9 份入口逐字一致，`git diff --check` 通过。
+- 文档与 S7：同步变更源文件头/公共入口说明、utility 与消费者 CONTRACT、9 份受影响目录类图及生成器/边界规则。AI 工作流补充流消费与连接归属、非阻塞取消、JSON 错误适配及真实消费者回归要求。Review 入口为 `src/foundations/utility/CONTRACT.md`、两项独立实现、Core JSON 适配和五消费者契约测试；未来业务修改留在调用方，新增算法从 utility 契约与模块单元进入。本步只做受影响开发验证，未运行全仓测试、桌面冒烟、构建或发布验收；未推送、合并或发布。
+
 ## 2026-11-13：utility 算法与数据结构基础库，迁入实例串行队列
 
 - 来源与 S1：用户要求创建 `foundations/utility`，并明确将实例级串行执行方案迁入；基线 `2a2dca39`。已核实开放 Issues 当前仅 #65，无对应本片工单，沿直接授权实施，不新增或回填外部 Issue。原任务历史界面并行改动完整保留；未整合远端另一轮 HTTP/CI 改动，本片不修改该请求路径。

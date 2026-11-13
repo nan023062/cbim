@@ -1,9 +1,10 @@
 /**
  * 目录归属：backend/main/materials；显式资料导入与附件快照。
  * 作用定位：桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。
- * 设计原因：网络字节上限、目录枚举及 UTF-8 截取在 Main 集中处理；取消后不继续读取，既不执行网页脚本，也不把首层清单称为完整目录。
+ * 设计原因：字节/目录/摘录规则在 Main 决定，utility 负责有界流与 reader 取消；既不执行网页脚本，也不把首层清单称为完整目录。
  */
 import fs from 'node:fs/promises';
+import {readBoundedBytes,ByteLimitError} from '../../../foundations/utility';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {continuationSourceLimits,continuationSourceUrlSchema,type ContinuationSourceProof} from '../../core/tasks/continuation-source-snapshot';
@@ -40,12 +41,14 @@ export async function readUrlSource(kind:'link'|'web',value:string,signal:AbortS
     const mediaType=(response.headers.get('content-type')??'').split(';')[0].trim().toLowerCase();
     if(!/^(text\/[a-z0-9.+-]+|application\/json)$/.test(mediaType)||mediaType.length>256)fail('ATTACHMENT_WEB_TYPE','此地址不是可读取的文本网页，请添加为链接');
     const declared=response.headers.get('content-length');if(declared&&Number(declared)>continuationSourceLimits.webResponseBytes)fail('ATTACHMENT_WEB_LIMIT','网页响应超过 1 MiB，请改为添加链接');
-    const chunks:Uint8Array[]=[];let total=0;const reader=response.body?.getReader();
-    if(reader)try{while(true){combined.throwIfAborted();const part=await reader.read();combined.throwIfAborted();if(part.done)break;total+=part.value.byteLength;if(total>continuationSourceLimits.webResponseBytes)fail('ATTACHMENT_WEB_LIMIT','网页响应超过 1 MiB，请改为添加链接');chunks.push(part.value)}}finally{await reader.cancel().catch(()=>{});reader.releaseLock()}
-    const raw=Buffer.concat(chunks,total);let decoded:string;try{decoded=new TextDecoder('utf-8',{fatal:true}).decode(raw)}catch{fail('ATTACHMENT_WEB_ENCODING','网页不是有效 UTF-8 文本，请改为添加链接')}
+    let raw:Uint8Array;
+    try{raw=await readBoundedBytes(response.body,{maxBytes:continuationSourceLimits.webResponseBytes,signal:combined})}
+    catch(error){if(error instanceof ByteLimitError)fail('ATTACHMENT_WEB_LIMIT','网页响应超过 1 MiB，请改为添加链接');throw error}
+    const total=raw.byteLength;let decoded:string;try{decoded=new TextDecoder('utf-8',{fatal:true}).decode(raw)}catch{fail('ATTACHMENT_WEB_ENCODING','网页不是有效 UTF-8 文本，请改为添加链接')}
     const html=mediaType==='text/html';if(html)decoded=decoded.replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
     const excerpt=sourceExcerpt(decoded);combined.throwIfAborted();
     return {name:url.hostname,source:url.href,text:excerpt.text,note:'网页文本摘录，不执行脚本；最多 64 KiB UTF-8'+(excerpt.truncated?'，已截取':''),proof:{kind:'web',url:url.href,capturedAt:new Date().toISOString(),mediaType,rawBytes:total,rawHash:hash(raw),extraction:html?'html_text':'text',savedTextBytes:excerpt.savedTextBytes,truncated:excerpt.truncated} satisfies ContinuationSourceProof};
   }catch(error){signal.throwIfAborted();if(timeout.aborted)fail('ATTACHMENT_WEB_TIMEOUT','网页读取超时，未保存资料');if(error&&typeof error==='object'&&'code' in error)throw error;fail('ATTACHMENT_WEB_FETCH','网页读取失败或发生跳转，请改用最终地址或添加链接')}
-  finally{if(response?.body&&!response.body.locked)await response.body.cancel().catch(()=>{})}
+  // 错误发生于接管 reader 之前时仍请求关闭正文；底层取消不得把业务取消重新拖成无限等待。
+  finally{if(response?.body&&!response.body.locked)void response.body.cancel().catch(()=>{})}
 }

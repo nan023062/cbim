@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-通用算法与数据结构：JSON 文本格式化、实例级串行队列及独立 Node 入口的 SHA-256；不拥有文件/网络 I/O、业务身份、事务或权限。
+通用算法与数据结构：严格 JSON、文本格式化、有界字节流、实例串行队列及 Node 独立入口的 SHA-256；不发起文件/网络访问，不拥有业务身份、事务或权限。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,13 +10,41 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [bounded-bytes.ts](bounded-bytes.ts) | 有界收集 Web ReadableStream 的字节，不发起 HTTP 或解释内容。 |
 | [digest.ts](digest.ts) | Node 环境的 SHA-256 摘要算法，无文件、网络或业务状态。 |
 | [index.ts](index.ts) | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
 | [json-text.ts](json-text.ts) | 将给定数据格式化为两空格缩进、末尾换行的 JSON 文本。 |
 | [node.ts](node.ts) | utility 需要 Node 标准库的独立公开入口。 |
 | [serial-queue.ts](serial-queue.ts) | utility 的实例级串行执行结构，按提交顺序执行，同一队列最多执行一个任务。 |
+| [strict-json.ts](strict-json.ts) | 严格 JSON 语法及重复键检查，无领域错误码、Schema 或 I/O。 |
 
 ## 架构类图
+
+### bounded-bytes.ts
+
+```mermaid
+classDiagram
+class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+  <<module>>
+  +readBoundedBytes()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+  <<module>>
+}
+class N_src_foundations_utility_bounded_bytes_ts_ByteLimitError["ByteLimitError"] {
+  +maxBytes
+}
+N_src_foundations_utility_bounded_bytes_ts ..> N_src_foundations_utility_bounded_bytes_ts_ByteLimitError : 声明
+class N_src_foundations_utility_bounded_bytes_ts_external_RangeError["RangeError (外部契约)"] {
+  <<external>>
+}
+N_src_foundations_utility_bounded_bytes_ts_external_RangeError <|-- N_src_foundations_utility_bounded_bytes_ts_ByteLimitError
+```
+
 
 ### digest.ts
 
@@ -37,7 +65,7 @@ class N_src_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json-text.ts](json-text.ts)、[serial-queue.ts](serial-queue.ts)。
+直接依赖：[json-text.ts](json-text.ts)、[serial-queue.ts](serial-queue.ts)、[bounded-bytes.ts](bounded-bytes.ts)、[strict-json.ts](strict-json.ts)。
 
 ### json-text.ts
 
@@ -76,6 +104,33 @@ N_src_foundations_utility_serial_queue_ts ..> N_src_foundations_utility_serial_q
 ```
 
 
+### strict-json.ts
+
+```mermaid
+classDiagram
+class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
+  <<module>>
+  +parseStrictJson()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
+  <<module>>
+}
+class N_src_foundations_utility_strict_json_ts_StrictJsonError["StrictJsonError"] {
+  +reason
+  +key
+}
+N_src_foundations_utility_strict_json_ts ..> N_src_foundations_utility_strict_json_ts_StrictJsonError : 声明
+class N_src_foundations_utility_strict_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
+  <<external>>
+}
+N_src_foundations_utility_strict_json_ts_external_SyntaxError <|-- N_src_foundations_utility_strict_json_ts_StrictJsonError
+```
+
+
 ### 本目录调用边界
 
 ```mermaid
@@ -89,14 +144,26 @@ class N_src_foundations_utility_json_text_ts["json-text.ts"] {
 class N_src_foundations_utility_serial_queue_ts["serial-queue.ts"] {
   <<module>>
 }
+class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+  <<module>>
+}
+class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
+  <<module>>
+}
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_text_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_serial_queue_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_bounded_bytes_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_strict_json_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_foundations_utility_node_ts["node.ts"] {
   <<module>>
 }
 class N_src_foundations_utility_digest_ts["digest.ts"] {
   <<module>>
 }
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_text_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_serial_queue_ts : 导入依赖
 N_src_foundations_utility_node_ts ..> N_src_foundations_utility_digest_ts : 导入依赖
 ```
 
@@ -115,15 +182,16 @@ N_src_foundations_utility_node_ts ..> N_src_foundations_utility_digest_ts : 导�
 
 # 通用算法与数据结构
 
-本模块提供领域无关的数据处理算法及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。每项能力独立实现、具名导出，不建立万能 Utility 类、全局实例或服务定位器。文件、网络、平台进程、权限和事务不属于本模块。
+本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。每项能力独立实现、具名导出，不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 
 ## 入口与真实消费者
 
-- `index.ts`：公开 `SerialQueue`、`formatJson`；仅使用语言原语，没有 Node 加载。
+- `index.ts`：公开 `SerialQueue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
 - `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
-- `serial-queue.ts`、`json-text.ts`、`digest.ts` 是私有实现，消费者只导入上述公开入口。
+- `serial-queue.ts`、`json-text.ts`、`digest.ts`、`bounded-bytes.ts`、`strict-json.ts` 是私有实现，消费者只导入上述公开入口。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
+- Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
 
 ## SerialQueue
 
@@ -139,6 +207,20 @@ N_src_foundations_utility_node_ts ..> N_src_foundations_utility_digest_ts : 导�
 
 ## 扩展与验证
 
+### 有界字节流
+
+`readBoundedBytes(body, {maxBytes, signal})` 仅完整成功时返回 Uint8Array。maxBytes 为非负安全整数，按字节累计，不相信 Content-Length；超限抛 ByteLimitError，流错误与 signal.reason 原样传出，null 正文为空。非法上限/预先取消在取得 reader 前拒绝，流仍由调用者持有；已接管后，失败请求一次 cancel，正常或失败均移除监听并释放 reader 锁。
+
+取消显式唤醒挂起 read，且不等待不合作的底层 cancel Promise，避免取消自己再次挂起；清理失败不覆盖原错误。这证明本次读取不再等待，不证明网络/进程物理退出，相关屏障仍归原宿主。分块按可见视图显式复制（含 Buffer），生产者后续复用存储不改变已读取字节；最终合并的内存与字节上限同阶，不返回截断前缀。大安装包流式落盘、模型字符上限、Node 原始 HTTP 传输及其他协议不强行套用该内存收集器。
+
+### 严格 JSON
+
+`parseStrictJson` 保留原 jsonc-parser 行为，拒绝注释、尾逗号、无效语法和同对象重复键；转义后同名也重复，不同对象可以有同名键。StrictJsonError 分别给出 invalid-syntax、duplicate-key 与重复 key，不包含业务 code。
+
+解析不进行危险键裁剪、Schema 校验、字段排序或大小/深度限制；资源预算、原字节身份与错误对外映射由消费者决定。远端 HTTP 的普通 JSON 解码未擅自改成严格解析，避免改变已有协议。
+
+### 扩展入口
+
 新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。功能按职责拆文件，公共入口只做导出；通用入口不得导入 Node 入口。
 
-模块单元在 `tests/unit/foundations/utility/`，按队列、格式化、摘要分别验证；Core 的名称/字节兼容另做契约测试。模块测试不加载 Application，消费者验证保留版本冲突、失败恢复和原有指纹规则。
+模块单元在 `tests/unit/foundations/utility/`，按队列、格式化、摘要、严格 JSON、字节流分别验证；Core 名称/字节/错误兼容与流消费业务映射另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP 取消/超时、资料快照、知识校验、版本冲突和原指纹规则。

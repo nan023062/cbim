@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域共用错误、严格 JSON、标识及路径端口；hash/json 兼容名称重导出 utility 唯一算法。独立文件 I/O 已归 foundations/files；StoragePaths 的 protectedRoots 声明额外程序缓存，路径核验仍归平台。
+领域错误、标识及路径端口；hash/json 兼容名称重导出 utility 唯一算法，parseJson 将严格解析事实转回原 JSON Fault。独立文件 I/O 归 foundations/files；StoragePaths 声明路径保护范围，核验归平台。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -12,7 +12,7 @@
 | --- | --- |
 | [errors.ts](errors.ts) | 跨领域统一错误码与失败出口。 |
 | [identity.ts](identity.ts) | 运行记录路径中任务和执行标识的格式检查。 |
-| [json.ts](json.ts) | 严格 JSON 解析，拒绝重复字段与无效语法。 |
+| [json.ts](json.ts) | 将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。 |
 | [paths.ts](paths.ts) | 工作区身份与受控路径解析端口。 |
 | [serialization.ts](serialization.ts) | Core 既有 hash/json 名称的兼容适配，算法实现归独立 utility 基础库。 |
 
@@ -65,7 +65,7 @@ class N_src_backend_core_foundation_json_ts["json.ts"] {
 }
 ```
 
-直接依赖：[errors.ts](errors.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[errors.ts](errors.ts)。
 
 ### paths.ts
 

@@ -44,7 +44,7 @@ class N_src_backend_main_feedback_github_api_ts_GitHubRequest["GitHubRequest"] {
 N_src_backend_main_feedback_github_api_ts ..> N_src_backend_main_feedback_github_api_ts_GitHubRequest : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
 
 ### github-feedback-auth.ts
 
@@ -204,3 +204,13 @@ N_src_backend_main_feedback_github_feedback_ts ..> N_src_backend_main_feedback_g
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# GitHub HTTP 适配边界
+
+github-api 继续拥有固定地址白名单、方法、令牌、20 秒期限、2 MiB 原字节上限、JSON 解码和错误脱敏。响应体通过 utility.readBoundedBytes 收集，基础库不决定目标地址、授权或重试，不记录请求内容。
+
+reader 取消不依赖 fetch 转发信号；中断、超限或坏 JSON 均沿原 GITHUB_NETWORK 对外出口报告未取得可靠回包，不泄漏底层 reason 或自动重发写请求。工具证据、设备授权、连接持久化与业务反馈仍由本目录原服务拥有，基础库读取完成不等同于反馈业务成功。

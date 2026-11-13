@@ -17,7 +17,7 @@ const layers = {
   'backend/core':['backend/core','foundations'],'backend/engines':['backend/engines','backend/core'],
   'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],
   'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations'],
-  'backend/updater':['backend/updater','bridge/contracts'],
+  'backend/updater':['backend/updater','bridge/contracts','foundations'],
   'bridge/contracts':['bridge/contracts','backend/core'],
   'bridge/preload':['bridge/preload','bridge/contracts'],
   frontend:['frontend','bridge/contracts'],
@@ -33,9 +33,11 @@ const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts'];
+const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts','src/foundations/utility/strict-json.ts','src/foundations/utility/bounded-bytes.ts'];
 const moduleBoundaries=[
   {sources:utilityPortable,allow:utilityPortable},
+  // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
+  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/foundations/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/foundations/utility/index.ts','src/foundations/utility/node.ts']},

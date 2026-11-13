@@ -145,6 +145,7 @@ class N_src_backend_updater_release_http_ts_ReleaseRequest["ReleaseRequest"] {
 N_src_backend_updater_release_http_ts ..> N_src_backend_updater_release_http_ts_ReleaseRequest : 声明
 ```
 
+直接依赖：[../../foundations/utility/index.ts](../../foundations/utility/index.ts)。
 
 ### restart-profile.ts
 
@@ -182,7 +183,7 @@ class N_src_backend_updater_runtime_download_ts["runtime-download.ts"] {
 }
 ```
 
-直接依赖：[runtime-manifest.ts](runtime-manifest.ts)。
+直接依赖：[../../foundations/utility/index.ts](../../foundations/utility/index.ts)、[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### runtime-host.ts
 
@@ -504,6 +505,12 @@ N_src_backend_updater_runtime_updates_ts ..> N_src_backend_updater_runtime_journ
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 桌面更新子系统
+
+## 有界响应体与基础库
+
+Release 列表（2 MiB / 20 秒）和小清单（16 MiB / 30 秒）组合 utility 通用入口的 readBoundedBytes，保留既有上限与错误文案。utility 只拥有 reader 的取消/释放；更新模块仍决定公开地址、GET/跳转、无凭据传输、解析、签名及安装状态。正文未完整或停止时不交付部分 JSON，也不自动重发。
+
+仅允许更新子系统依赖 utility 通用公开入口，不能由此进入 Node 专用入口、其他基础方案或 Main。大安装包继续流式写盘并累计摘要，不使用内存收集器。本次读取完成不代表签名、解压、安装或物理资源退出已完成。
 
 C 为冷基础三段版本，R 为同 C 内递增资源号；E 是签名清单中固定的三个外部引擎。RuntimeUpdates 优先选择当前 C 的新 R，没有兼容 R 时才提示更高 C。公开 UI 只有一个状态机，下载阶段包含解压和校验，只有 ready 允许点击安装图标。
 

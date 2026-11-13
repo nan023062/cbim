@@ -1,5 +1,7 @@
 # materials 持久化契约
 
+网页资料的 reader 生命周期统一由 utility.readBoundedBytes 负责：累计字节上限为原 1 MiB，取消显式结束挂起读取，失败不返回前缀。URL/媒体类型/声明长度、15 秒期限、严格 UTF-8、摘录和来源 hash 仍由 chat-source-readers 决定；来源事实只基于完整原字节。清理仅请求取消，不等待不合作的底层 cancel Promise；不因此声称底层网络物理退出。取消/超限/错误类型或坏 UTF-8 仍不保存资料快照。
+
 ### 剪贴板图片与路径快照
 
 ChatInputs.clipboardImage 只接受 PNG/JPEG/GIF/WebP、规范 base64、签名匹配且不超过5 MiB的原字节。source 保存唯一 clipboard URI 和原名称，note 保存采集时间；不伪造磁盘路径，文本不夹带base64。视觉输入、排队、等待补充共用已保存图片，仍受模型视觉能力和总20 MiB限制。

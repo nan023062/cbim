@@ -6,8 +6,8 @@ export const logicalBoundaries = [
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
-    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts'],public:['src/foundations/utility/index.ts'],
-    dependencies:[],external:[],
+    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts','src/foundations/utility/strict-json.ts','src/foundations/utility/bounded-bytes.ts'],public:['src/foundations/utility/index.ts'],
+    dependencies:[],external:['jsonc-parser'],
   },
   {
     id:'utility-node-foundations',files:['src/foundations/utility/node.ts','src/foundations/utility/digest.ts'],public:['src/foundations/utility/node.ts'],
@@ -23,7 +23,7 @@ export const logicalBoundaries = [
     id:'pure-foundation',
     files:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],
     public:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],
-    dependencies:['utility-foundations','utility-node-foundations'], external:['jsonc-parser'],
+    dependencies:['utility-foundations','utility-node-foundations'], external:[],
   },
   {
     id:'knowledge-data', files:['src/backend/core/knowledge/types.ts'],

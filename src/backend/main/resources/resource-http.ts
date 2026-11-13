@@ -1,10 +1,11 @@
 /**
  * 作用定位：RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。
- * 设计原因：让本地共享和远端访问复用资源契约；专用只读令牌在服务端禁止写入，调用取消和 8 秒超时覆盖正文读取，不自动重试或回退本地文件。
+ * 设计原因：资源身份、令牌和业务错误留在本层；utility 显式取消正文 reader，保留 Node 22 挂起修复，不依赖 fetch 继续转发信号。
  */
 import http from 'node:http';
 import {timingSafeEqual} from 'node:crypto';
 import type {AddressInfo} from 'node:net';
+import {readBoundedBytes,ByteLimitError} from '../../../foundations/utility';
 import {fail} from '../../core/foundation/errors';
 import {json} from '../../core/foundation/serialization';
 import {MAX_BYTES,snapshotSchema,type RepositoryStore} from './resource-store';
@@ -18,9 +19,11 @@ export class RemoteRepository implements RepositoryStore{
     const timeout=AbortSignal.timeout(8000),combined=signal?AbortSignal.any([signal,timeout]):timeout;
     const interrupted=()=>{if(signal?.aborted)fail('CANCELLED','仓库读取已取消；本次调用不会自动重试');if(timeout.aborted)fail('TIMEOUT','仓库请求超过 8 秒；本次调用不会自动重试')};
     interrupted();let response:Response;try{response=await fetch(this.url+'/v1/resources',{method,headers:{Authorization:'Bearer '+this.token,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal:combined})}catch{interrupted();fail('CONNECTION',method==='GET'?'无法连接远端仓库，请检查地址、网络和服务状态':'远端写入结果未确认，请刷新仓库核对后再操作')}
-    let bytes=0;const chunks:Uint8Array[]=[];const reader=response.body?.getReader();try{if(reader)for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.length;if(bytes>MAX_BYTES+65536){await reader.cancel();fail('SIZE','远端响应过大')}chunks.push(value)}}catch(e:any){if(e.code==='SIZE')throw e;interrupted();fail('CONNECTION','远端响应中断，请刷新核对结果')}
+    let bytes:Uint8Array;
+    try{bytes=await readBoundedBytes(response.body,{maxBytes:MAX_BYTES+65536,signal:combined})}
+    catch(error){if(error instanceof ByteLimitError)fail('SIZE','远端响应过大');interrupted();fail('CONNECTION','远端响应中断，请刷新核对结果')}
     interrupted();
-    let payload:any;try{payload=JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{fail('PROTOCOL','远端未返回 CBIM 仓库协议数据')}
+    let payload:any;try{payload=JSON.parse(Buffer.from(bytes).toString('utf8'))}catch{fail('PROTOCOL','远端未返回 CBIM 仓库协议数据')}
     if(!response.ok){const code=response.status===401?'UNAUTHORIZED':response.status===403?'FORBIDDEN':response.status===409?'CONFLICT':'REMOTE_ERROR';fail(code,code==='UNAUTHORIZED'?'远端仓库令牌无效':code==='FORBIDDEN'?'当前仓库凭据不允许该操作':code==='CONFLICT'?'远端仓库已变化，请刷新后重新编辑':'远端仓库请求失败，请检查服务状态')}
     const parsed=snapshotSchema.safeParse(payload);if(!parsed.success)fail('PROTOCOL','远端数据不兼容 CBIM Resource Repository v1');if(this.expectedId&&parsed.data.repositoryId!==this.expectedId)fail('IDENTITY','远端仓库身份已变化，请重新连接');return parsed.data;
   }

@@ -1250,11 +1250,15 @@
       ],
       "tests": {
         "unit": [
+          "tests/unit/foundations/utility/bounded-bytes.test.ts",
           "tests/unit/foundations/utility/digest.test.ts",
           "tests/unit/foundations/utility/json-text.test.ts",
-          "tests/unit/foundations/utility/serial-queue.test.ts"
+          "tests/unit/foundations/utility/serial-queue.test.ts",
+          "tests/unit/foundations/utility/strict-json.test.ts"
         ],
         "contract": [
+          "tests/utility-body-consumers.test.ts",
+          "tests/utility-json-contract.test.ts",
           "tests/utility-serialization-contract.test.ts"
         ],
         "integration": []

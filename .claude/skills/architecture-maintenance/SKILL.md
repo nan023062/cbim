@@ -36,7 +36,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
 - backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts、foundations 的能力公开入口。
-- backend/updater → 自身、bridge/contracts；更新程序不得反向依赖 Main、调度或业务运行时。
+- backend/updater → 自身、bridge/contracts、foundations/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。
 - frontend → 自身、bridge/contracts。
 - bridge/preload → 自身、bridge/contracts。
@@ -75,6 +75,8 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 ## 5. 验证后再报告
 
 utility 的类图必须分别表达各算法模块、实例数据结构与通用/Node 公开入口。当前 SerialQueue 归 `src/foundations/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core 的 hash/json 兼容出口仍保留，注明算法只在 utility 实现。
+
+严格解析与字节流消费分别表达为独立模块，标明 Core 的错误适配和 Main/Updater 的业务策略。reader 释放与网络/进程退出不能画成同一个完成保证；取消、不完整输入和大小限制的回归随实际消费者同步。
 
 测试也按职责维护：所有单元套件归属一个模块，数据/纯断言/临时目录与 Application 集成夹具分离；不导入其他测试套件，不依赖执行顺序。测试归属在 `tests/modules.json`，不是实时待办。涉及测试增删、导入或夹具变化时运行 `pnpm check:test-modules`；模块单元与跨模块契约/集成分别记录，禁止仅改变分类绕过解耦。该检查可证明登记和静态依赖边界，断言责任及共享状态仍需代码 review。
 

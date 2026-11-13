@@ -1,11 +1,10 @@
 /**
- * 作用定位：严格 JSON 解析，拒绝重复字段与无效语法。
- * 设计原因：快照读取与规则校验共用解析器，避免领域查询经解析函数依赖整个校验器。
+ * 作用定位：将 utility 的严格 JSON 解析事实适配为 Core 原有 JSON 错误协议。
+ * 设计原因：语法算法独立复用，快照与规则消费者继续得到同一 Fault.code、name 和提示。
  */
-import {parseTree,Node as JsonNode,ParseError,getNodeValue} from 'jsonc-parser';
+import {parseStrictJson,StrictJsonError} from '../../../foundations/utility';
 import {fail} from './errors';
+/** 不改变字段及资源限制；只将已知解析失败转换为原 JSON 领域错误，其他异常原样传播。 */
 export function parseJson(text:string){
-  const errors:ParseError[]=[];const tree=parseTree(text,errors,{disallowComments:true,allowTrailingComma:false});
-  if(errors.length||!tree)fail('JSON','JSON 格式无效');
-  const visit=(node:JsonNode)=>{if(node.type==='object'){const seen=new Set();for(const property of node.children||[]){const key=property.children![0].value;if(seen.has(key))fail('JSON',`重复 JSON 字段：${key}`);seen.add(key)}}for(const child of node.children||[])visit(child)};visit(tree);return getNodeValue(tree);
+  try{return parseStrictJson(text)}catch(error){if(error instanceof StrictJsonError)fail('JSON',error.message);throw error}
 }

@@ -4,8 +4,9 @@
  * 回执边界：首次受理后仅周期状态可更新；矛盾运行或附件清单保留旧回执并显示查询错误。
  * 成员等待：已核实的检查点/岗位/权限预受理拒绝保留可编辑草稿；曾通信未知的原请求仍冻结。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {equalJson as equal} from '../foundations/utility';
+import {SubscriptionSet,equalJson as equal} from '../foundations/utility';
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../../bridge/contracts/dispatch';
 import type {ChatAttachment,ChatMaterialImport} from '../../bridge/contracts/chat';
@@ -59,7 +60,7 @@ export function checkedContinuationReceipt(raw:unknown,request:GoalContinuationR
 export class ScopeContinuationController {
   private value:ContinuationState={records:[],error:''};
   private unavailable=false;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private pending=new Set<string>();
   /** 同一主会话的两个表单共用；选择器返回前不提交或回收控制器。 */
   private importing=false;
@@ -92,10 +93,10 @@ export class ScopeContinuationController {
   /** 仅无视图观察且无请求在途时可被renderer缓存回收，重开再从本机记录恢复。 */
   get canRelease(){return this.listeners.size===0&&this.pending.size===0&&!this.importing}
   get isImporting(){return this.importing}
-  subscribe(listener:()=>void){this.listeners.add(listener);return ()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   record(scopeId:string,waitId:string){return this.value.records.find(item=>item.scopeId===scopeId&&item.waitId===waitId)}
   isPending(record:ContinuationDraft|undefined){return !!record?.attempt&&this.pending.has(record.attempt.request.commandId)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private store(){
     if(this.unavailable)throw Error(this.value.error);
     this.ports.storage.setItem(this.storageKey,JSON.stringify({version:1,workspaceId:this.workspaceId,rootSessionId:this.rootSessionId,records:this.value.records}));

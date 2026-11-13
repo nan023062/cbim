@@ -1,7 +1,9 @@
 /**
  * 作用定位：将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。
  * 设计原因：缺省旧记录不能从静态 Agent 猜岗位；局部校验只证明记录自身对应，不把历史快照当作当前领取许可。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
 import {ownerExecutionBindingMatches,taskOwnerInspectOutputSchema,type OwnerExecutionBinding,type TaskOwnerInspectInput,type TaskOwnerInspectOutput} from '../../bridge/contracts/owner-execution';
 
@@ -41,12 +43,12 @@ export class OwnerInspectionController {
   private task:TaskNode;
   private serial=0;
   private inFlight?:Promise<void>;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private value:OwnerInspectionState;
   constructor(task:TaskNode,private readonly read:(input:TaskOwnerInspectInput)=>Promise<unknown>){this.task=structuredClone(task);this.value={key:ownerInspectionKey(task),loading:false}}
   get snapshot():OwnerInspectionState{return this.value}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
-  private publish(value:OwnerInspectionState){this.value=value;for(const listener of this.listeners)listener()}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
+  private publish(value:OwnerInspectionState){this.value=value;this.listeners.notify()}
   /** 仅同步观察对象，不自动读取；新节点/版本不会沿用旧报告或进行中的操作状态。 */
   observe(task:TaskNode){const key=ownerInspectionKey(task);if(key===this.value.key)return;this.serial++;this.inFlight=undefined;this.task=structuredClone(task);this.publish({key,loading:false})}
   /** 同一版本双击合并；无轮询，网络失败保留同版本旧报告并明确显示过期读取错误。 */

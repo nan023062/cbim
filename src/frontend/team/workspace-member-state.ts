@@ -2,8 +2,9 @@
  * 作用定位：项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。
  * 设计原因：完整岗位页与模块卡片共用同一命令池，登记不因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {equalJson as same} from '../foundations/utility';
+import {SubscriptionSet,equalJson as same} from '../foundations/utility';
 import {workspaceMemberCommitInputSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberIdentity,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,WorkspaceMemberLookup} from '../../bridge/contracts/workspace-members';
 
@@ -60,7 +61,7 @@ export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INP
 export class WorkspaceMemberCommands {
   readonly storageKey:string;
   private value:WorkspaceMemberCommandState={records:[],error:''};
-  private listeners=new Set<()=>void>();private pending=new Set<string>();private unavailable=false;private corrupt=false;
+  private listeners=new SubscriptionSet();private pending=new Set<string>();private unavailable=false;private corrupt=false;
   constructor(readonly workspaceId:string,private ports:WorkspaceMemberCommandPorts){
     this.storageKey='cbim.workspace-members.commands.v1.'+workspaceId;
     try{const raw=ports.storage.getItem(this.storageKey);if(!raw)return;if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('超过本机记录容量');const parsed=JSON.parse(raw);if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
@@ -70,9 +71,9 @@ export class WorkspaceMemberCommands {
   get snapshot(){return this.value}
   get blocked(){return this.unavailable||this.pending.size>0||this.value.records.some(item=>item.phase==='unknown'||item.phase==='submitting')}
   get canRelease(){return !this.listeners.size&&!this.pending.size}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   isPending(id:string){return this.pending.has(id)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private save(record:WorkspaceMemberAttempt){
     const records=[...this.value.records],index=records.findIndex(item=>item.request.commandId===record.request.commandId);if(index<0)records.push(record);else records[index]=record;this.value={records,error:''};
     try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}

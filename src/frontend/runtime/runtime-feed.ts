@@ -2,7 +2,9 @@
  * 作用定位：维护窗口内只读监管游标、最近确认快照和增量发布，供运行管理页面订阅。
  * 设计原因：单次在途查询避免每秒堆积回读；noop 和未变化行保留引用，离页后的迟到结果不能污染新订阅。
  * 生命周期：最后一个订阅退出即停止轮询，已确认快照可保留；重开只读，不触发任务恢复。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {runtimeReadSchema,type RuntimeCursor,type RuntimeSnapshot} from '../../bridge/contracts/runtime';
 import {runtimeTaskKey,runtimeRunKey} from './runtime-view-state';
 export interface RuntimeFeedState {data?:RuntimeSnapshot;error:string}
@@ -15,11 +17,11 @@ export function reconcileRuntime(previous:RuntimeSnapshot|undefined,next:Runtime
 }
 /** 一份页面事实流；transport 校验失败保留旧数据并明确过期，不解释成零负载。 */
 export class RuntimeFeed {
-  private value:RuntimeFeedState={error:''};private listeners=new Set<()=>void>();private timer?:ReturnType<typeof setTimeout>;private generation=0;private pending?:Promise<void>;
+  private value:RuntimeFeedState={error:''};private listeners=new SubscriptionSet();private timer?:ReturnType<typeof setTimeout>;private generation=0;private pending?:Promise<void>;
   constructor(private readonly read:(cursor?:RuntimeCursor)=>Promise<unknown>,private readonly intervalMs=1000){}
   get snapshot(){return this.value}
-  private emit(){for(const listener of this.listeners)listener()}
-  subscribe(listener:()=>void){this.listeners.add(listener);if(this.listeners.size===1){this.generation++;void this.refresh()}return()=>{this.listeners.delete(listener);if(!this.listeners.size){this.generation++;clearTimeout(this.timer)}}}
+  private emit(){this.listeners.notify()}
+  subscribe(listener:()=>void){const unsubscribe=this.listeners.subscribe(listener);if(this.listeners.size===1){this.generation++;void this.refresh()}return()=>{unsubscribe();if(!this.listeners.size){this.generation++;clearTimeout(this.timer)}}}
   /** 在途读取复用，完成后再计时；手动刷新也不会发起并行请求。 */
   refresh():Promise<void>{
     if(this.pending)return this.pending;

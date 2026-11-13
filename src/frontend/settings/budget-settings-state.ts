@@ -1,7 +1,9 @@
 /**
  * 作用定位：管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。
  * 设计原因：空白额度不是零预算，未知保存结果不能盲目覆盖；失败保留用户草稿，重新读取才取得最新版本，无自动重试或轮询。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../bridge/contracts/scope-budget';
 
 export interface BudgetSettingsDraft {enabled:boolean;tokens:string;estimatedCostUsd:string;enforcement?:'request'}
@@ -22,11 +24,11 @@ const fields=(policy:ScopeBudgetPolicy):BudgetSettingsDraft=>({enabled:policy.en
 export class BudgetSettingsController {
   private state:BudgetSettingsState={enabled:false,tokens:'',estimatedCostUsd:'',busy:false,error:'',notice:''};
   private generation=0;
-  private readonly listeners=new Set<()=>void>();
+  private readonly listeners=new SubscriptionSet();
   constructor(private readonly call:Call){}
   snapshot=()=>this.state;
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(value:Partial<BudgetSettingsState>){this.state={...this.state,...value};for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(value:Partial<BudgetSettingsState>){this.state={...this.state,...value};this.listeners.notify()}
   edit(value:Partial<BudgetSettingsDraft>){if(!this.state.busy)this.publish({...value,error:'',notice:''})}
   cancel(){this.generation++;this.state={...this.state,busy:false}}
   async load(){

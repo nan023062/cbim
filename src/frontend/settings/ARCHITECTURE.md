@@ -88,7 +88,7 @@ class N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsController[
 N_src_frontend_settings_budget_settings_state_ts ..> N_src_frontend_settings_budget_settings_state_ts_BudgetSettingsController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
 
 ### budget-settings.css
 
@@ -294,3 +294,8 @@ note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说
 供应商表单保存主连接、一份凭据、模型目录与可选兼容接口，不为每个引擎复制供应商。ProviderConnections 提供官方预设、精确地址识别开关、自定义兼容地址和适用型号编辑；预览只显示默认模型的推导地址，不联网。主协议/地址或兼容接口草稿变更清空当前输入凭据及已发现目录，已保存目录保持不变；旧 engine 字段编辑保存时移除。
 
 ProviderConnectionTest 在供应商卡片中明确选择已保存型号和测试引擎，展示实际协议与目标地址；仅点击测试才发送一次短文本请求，成功显示实际接口及“仅文本请求”，失败保留目录与选择。编辑、取消和切换测试菜单不探测网络。Agent 选型不因测试改变，更新供应商不热替换已启动运行。
+
+
+### 预算设置订阅边界
+
+BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后同步通知监听器；订阅和退订不读写设置。cancel、草稿保留、版本与保存失败策略仍归控制器，集合不拥有状态或 IPC。

@@ -1,7 +1,9 @@
 /**
  * 作用定位：完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。
  * 设计原因：范围与集合身份不可拆分，跨节点、轮次及选择的迟到响应必须隔离；旧观察和本次错误分别保留。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {outputManifestReportSchema,type OutputManifestReport,type OutputManifestQuery} from '../../bridge/contracts/output-manifest';
 
 export type ManifestSelection=Omit<OutputManifestQuery,'manifestId'>;
@@ -35,11 +37,11 @@ export function checkedManifestReport(raw:unknown,request:OutputManifestQuery):O
 export class ManifestReportController {
   private value:ManifestReportState={selectedId:'',loading:false,error:''};
   private generation=0;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   constructor(readonly identity:ManifestSelection,private read:(input:OutputManifestQuery)=>Promise<unknown>,private version:()=>string=()=> ''){}
   get snapshot(){return this.value}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(value:ManifestReportState){this.value=value;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(value:ManifestReportState){this.value=value;this.listeners.notify()}
   cancel(){this.generation++;this.value={...this.value,loading:false}}
   /** 选择本身不扫描；清掉上一个选项的观察，未选择时不默认最新。 */
   select(id:string){

@@ -1,7 +1,9 @@
 /**
  * 作用定位：管理任务周期用量的一次显式读取，并验证返回身份、计量来源与汇总一致性。
  * 设计原因：大日志不按秒重复读取；控制器绑定唯一周期，切换后忽略迟到结果。读取失败保留上次快照并标记问题，不把缺失数据解释为零消费。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {scopeUsageInputSchema,scopeUsageReportSchema,type ScopeUsageInput,type ScopeUsageReport,type ScopeUsageRun} from '../../bridge/contracts/scope-usage';
 
 export interface ScopeUsageState {report?:ScopeUsageReport;loading:boolean;error:string}
@@ -37,12 +39,12 @@ export function checkedScopeUsage(raw:unknown,identity:ScopeUsageInput):ScopeUsa
 export class ScopeUsageController {
   private value:ScopeUsageState={loading:false,error:''};
   private generation=0;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   readonly identity:ScopeUsageInput;
   constructor(identity:ScopeUsageInput,private request:(identity:ScopeUsageInput)=>Promise<unknown>){this.identity=scopeUsageInputSchema.parse(identity)}
   get snapshot(){return this.value}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(value:ScopeUsageState){this.value=value;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(value:ScopeUsageState){this.value=value;this.listeners.notify()}
   cancel(){this.generation++;this.value={...this.value,loading:false}}
   async read(){
     if(this.value.loading)return;const generation=this.generation;this.publish({...this.value,loading:true,error:''});

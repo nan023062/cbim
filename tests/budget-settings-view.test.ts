@@ -3,6 +3,14 @@ import {BudgetSettingsController,budgetSettingsInput} from '../src/frontend/sett
 
 const deferred=<T,>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve}};
 describe('scope budget settings draft',()=>{
+  it('发布状态后同步通知，退订后只更新状态而不通知旧页面',()=>{
+    let reads=0;const controller=new BudgetSettingsController(async()=>{reads++;return undefined});
+    const values:string[]=[];
+    const off=controller.subscribe(()=>values.push(controller.snapshot().tokens));
+    controller.edit({tokens:'100'});expect(values).toEqual(['100']);
+    off();controller.edit({tokens:'200'});
+    expect(values).toEqual(['100']);expect(controller.snapshot().tokens).toBe('200');expect(reads).toBe(0);
+  });
   it('treats blanks as unconfigured and requires an explicit positive limit when enabled',()=>{
     expect(budgetSettingsInput({enabled:false,tokens:'bad',estimatedCostUsd:'-1'},1)).toEqual({revision:1,enabled:false,limits:{}});
     expect(budgetSettingsInput({enabled:true,tokens:'1200',estimatedCostUsd:''},2)).toEqual({revision:2,enabled:true,limits:{tokens:1200}});

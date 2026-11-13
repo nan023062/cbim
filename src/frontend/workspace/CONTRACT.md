@@ -60,3 +60,8 @@ inline-module-ownership 在新登记时同时传递 Agent runtime 的 engine、p
 
 
 责任列表的普通入口只传工作区及分页字段；指定岗位反查时才附 memberId。回包核验沿原请求进行，不将可选字段混入另一个严格协议。
+
+
+### 模块责任命令订阅
+
+ModuleOwnershipCommands 组合前端 SubscriptionSet 管理本实例监听器，保存或请求状态改变后同步通知。canRelease 仍同时检查监听器与未决请求；持久命令、未知结果、查询/重送及池回收策略留在原控制器。

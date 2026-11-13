@@ -25,7 +25,7 @@ class N_src_frontend_foundations_utility["utility/"] {
 
 ## 子目录导航
 
-- [utility/](utility/ARCHITECTURE.md)：前端通用工具按类别内聚：json.ts 提供保留现有 localeCompare、undefined 与数组规则的 JSON 比较，index.ts 是公开入口。请求、预览与回执的业务判断留在消费者；与后端 utility 分别实现、测试和演进。
+- [utility/](utility/ARCHITECTURE.md)：前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；业务状态、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -39,4 +39,4 @@ class N_src_frontend_foundations_utility["utility/"] {
 
 前端与后端是独立的域，各自在域内沉淀公共能力。此目录只承载前端低频、可独立验证的机制，不依赖页面、业务控制器、bridge 或后端 foundations；不持有业务状态或通信权限。
 
-当前只有 [utility](utility/CONTRACT.md)，通过其 `index.ts` 提供 JSON 比较。后续同类算法按类别内聚，不能把页面状态机、回执规则或持久化策略机械下沉。后端不反向消费此前端库，通信契约也不作为工具库的转发入口。
+当前只有 [utility](utility/CONTRACT.md)，通过其 `index.ts` 提供 JSON 比较与实例订阅集合。订阅集合只持有监听器，状态发布、轮询和销毁仍归各控制器。后续同类算法按类别内聚，不能把页面状态机、回执规则或持久化策略机械下沉。后端不反向消费此前端库，通信契约也不作为工具库的转发入口。

@@ -143,7 +143,7 @@ class N_src_frontend_tasks_admission_state_ts_AdmissionFeed["AdmissionFeed"] {
 N_src_frontend_tasks_admission_state_ts ..> N_src_frontend_tasks_admission_state_ts_AdmissionFeed : 声明
 ```
 
-直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)。
 
 ### admission.css
 
@@ -215,7 +215,7 @@ class N_src_frontend_tasks_artifact_report_state_ts_ArtifactReportController["Ar
 N_src_frontend_tasks_artifact_report_state_ts ..> N_src_frontend_tasks_artifact_report_state_ts_ArtifactReportController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### artifact-report.css
 
@@ -283,7 +283,7 @@ class N_src_frontend_tasks_command_verification_state_ts_CommandVerificationCont
 N_src_frontend_tasks_command_verification_state_ts ..> N_src_frontend_tasks_command_verification_state_ts_CommandVerificationController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/command-verification.ts](../../bridge/contracts/command-verification.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### command-verification.css
 
@@ -685,7 +685,7 @@ class N_src_frontend_tasks_controlled_file_state_ts_ControlledFileController["Co
 N_src_frontend_tasks_controlled_file_state_ts ..> N_src_frontend_tasks_controlled_file_state_ts_ControlledFileController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/controlled-files.ts](../../bridge/contracts/controlled-files.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/controlled-files.ts](../../bridge/contracts/controlled-files.ts)。
 
 ### controlled-file.css
 
@@ -897,7 +897,7 @@ class N_src_frontend_tasks_effect_observation_state_ts_EffectObservationControll
 N_src_frontend_tasks_effect_observation_state_ts ..> N_src_frontend_tasks_effect_observation_state_ts_EffectObservationController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)。
 
 ### effect-observation.css
 
@@ -983,7 +983,7 @@ class N_src_frontend_tasks_execution_report_state_ts_ExecutionReportController["
 N_src_frontend_tasks_execution_report_state_ts ..> N_src_frontend_tasks_execution_report_state_ts_ExecutionReportController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### execution-report.css
 
@@ -1851,7 +1851,7 @@ class N_src_frontend_tasks_output_manifest_state_ts_ManifestReportController["Ma
 N_src_frontend_tasks_output_manifest_state_ts ..> N_src_frontend_tasks_output_manifest_state_ts_ManifestReportController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/output-manifest.ts](../../bridge/contracts/output-manifest.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/output-manifest.ts](../../bridge/contracts/output-manifest.ts)。
 
 ### owner-execution-state.ts
 
@@ -1907,7 +1907,7 @@ class N_src_frontend_tasks_owner_execution_state_ts_OwnerInspectionController["O
 N_src_frontend_tasks_owner_execution_state_ts ..> N_src_frontend_tasks_owner_execution_state_ts_OwnerInspectionController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/owner-execution.ts](../../bridge/contracts/owner-execution.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/owner-execution.ts](../../bridge/contracts/owner-execution.ts)。
 
 ### owner-execution.css
 
@@ -2072,7 +2072,7 @@ class N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRec
 N_src_frontend_tasks_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts_ExecutionRecoveryPool : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### replan-state.ts
 
@@ -2205,7 +2205,7 @@ class N_src_frontend_tasks_replan_state_ts_ScopeReplanController["ScopeReplanCon
 N_src_frontend_tasks_replan_state_ts ..> N_src_frontend_tasks_replan_state_ts_ScopeReplanController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
 ### request-budget-state.ts
 
@@ -2244,7 +2244,7 @@ class N_src_frontend_tasks_request_budget_state_ts_RequestBudgetController["Requ
 N_src_frontend_tasks_request_budget_state_ts ..> N_src_frontend_tasks_request_budget_state_ts_RequestBudgetController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)。
 
 ### RequestBudgetPanel.tsx
 
@@ -2386,7 +2386,7 @@ class N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageController["ScopeUsage
 N_src_frontend_tasks_scope_usage_state_ts ..> N_src_frontend_tasks_scope_usage_state_ts_ScopeUsageController : 声明
 ```
 
-直接依赖：[../../bridge/contracts/scope-usage.ts](../../bridge/contracts/scope-usage.ts)。
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/scope-usage.ts](../../bridge/contracts/scope-usage.ts)。
 
 ### scope-usage.css
 
@@ -4426,3 +4426,10 @@ member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待�
 ## 等待时聊天补充转交
 
 `useScopeContinuation.submitInput` 复用当前选中等待的严格身份、版本和模型校验。`ScopeContinuationController.submitInput` 先保存聊天正文与有序附件，再使用既有冻结命令提交；不同的已有目标草稿不会被覆盖。保存成功后补充记录持有正文，拒绝和未知结果也可在输入区表单找回；保存失败不清聊天草稿。表单、任务根与聊天共用同一控制器和锁，已受理或未知命令不能再次构造新提交。补充继续仍不代表人工验收，后端等待与队列准入不变。
+
+
+### 控制器订阅边界
+
+准入、报告、接续、人工决定、恢复、重规划及用量等 15 个控制器各自组合前端 SubscriptionSet；原 subscribe 方法/绑定函数形式保留，先更新状态再同步通知。集合按身份去重并遍历当前监听集合，异常原样传播，不增加快照遍历、引用计数、自动轮询或吞错。
+
+AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各 canRelease 仍组合监听器数量及原在途/预览条件。OwnerInspectionController 与 RequestBudgetController 的 dispose 仍先失效原读取再清监听器。其他控制器只退订、不封闭持久命令，也不取消后端操作；业务恢复与发布策略未下沉。

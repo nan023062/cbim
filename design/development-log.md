@@ -1,3 +1,13 @@
+## 2026-11-13：前端实例订阅集合提取
+
+- 来源与基线：用户指定继续前端公共库订阅集合，基线 `b24348bb`（JSON 提取已本地提交、未推送）。开放工单仅 #65，与本步无关，未推进其状态；复用已核实的分层及治理约束，核对前端全部监听集合、订阅/通知/清理入口和直接消费者测试。范围 C3、认知 L2，只提取监听机制，不引入状态管理或跨域工具依赖。
+- 实现：前端 utility 的 `events.ts` 提供 SubscriptionSet，经 index.ts 公开 subscribe、notify、size、clear。19 个控制器迁移：runtime 1、settings 1、tasks 15、team 1、workspace 1。集合每实例独立、按函数身份去重，注册不立即通知；notify 同步遍历当前 Set，通知中增删及重入语义保留，异常原样传播并中断本轮。无引用计数、快照、吞错、全局总线、自动调度或异步等待；旧退订删除重新注册的同身份监听器行为保留并有测试。
+- 稳定与变化：各控制器仍先改状态再通知；RuntimeFeed/AdmissionFeed 保留首订阅读取、末退订停止计时、generation 与 pending；canRelease 仍包含原在途/预览条件，dispose 仍拥有请求失效及资源逻辑。集合只清监听器，不宣称取消请求或物理资源已退出。TypeScript AST 去注释对比：逆向替换本步监听机制后，19 个消费者与基线源码结构一致，没有附带业务逻辑改写。
+- 注释与资料：新类别实现、公开入口与 19 个消费者文件头同步；维护 utility/foundations 契约、runtime/settings/tasks/team/workspace 五目录订阅边界，以及以上受影响目录和 frontend 的 8 份类图。三套开发/架构 Skill 的 9 个入口同步，明确集合机制与业务生命周期分离，全部本地引用有效。
+- 测试选择与结果：新集合单元 9 项验证隔离、去重、退订身份、通知中增删、清空、异常、嵌套及不等待 Promise；预算设置补“先更新再通知，退订不阻止状态更新”回归；23 个直接消费者套件验证原页面、回执、恢复和轮询生命周期。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/events.test.ts tests/artifact-report-view.test.ts tests/admission-view.test.ts tests/budget-settings-view.test.ts tests/controlled-file-view.test.ts tests/continuation-source-view.test.ts tests/command-verification-view.test.ts tests/inline-module-ownership.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/execution-report-view.test.ts tests/execution-recovery-view.test.ts tests/execution-recovery-repeat.test.ts tests/effect-observation-view.test.ts tests/knowledge-source-view.test.ts tests/model-request-budget-view.test.ts tests/module-ownership-view.test.ts tests/output-manifest-view.test.ts tests/owner-execution-view.test.ts tests/runtime-feed.test.ts tests/scope-usage-view.test.ts tests/scope-replan-view.test.ts tests/scope-continuation-view.test.ts tests/workspace-member-view.test.ts --reporter=dot`：24 文件/242 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`（93 目录/712 源码样式，1435 扫描文件/7124 含类型依赖，0 环/违规）、`pnpm check:test-modules`（464 文件：125 unit、152 contract、187 integration）及 diff 空白检查通过。新单元独立登记在 frontend/foundations/utility，无应用或业务夹具。未改变分层检测器，不重复其测试；未运行全仓、桌面、打包或发布验收。
+- 维护交接：机制入口为前端 events.ts；新增同类通知在本域组合该集合，首末订阅副作用和状态规则仍修改对应控制器。Q1 保留原 Set 通知契约；Q2 生命周期变化局限原控制器；Q3 集合单元、直接消费者和 AST 对比；Q4 events.ts/控制器契约；Q5 无新增候选规则。验证完成不代替人工 review。本步独立本地提交，未推送。
+
 ## 2026-11-13：前端域独立提取 JSON 比较
 
 - 来源与基线：用户明确要求从前端公共库的 JSON 比较开始，基线 `90da0806`；开放 Issues 仅 #65，与此切片无关，未推进该工单。沿用已核实的全局分层，再精读前端比较、五个控制器及消费者测试。前端和后端属于不同域，本步不开放跨域公共工具依赖；治理范围 C3、认知 L2，涉及前端公共入口与依赖边界，不改变业务契约。

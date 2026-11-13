@@ -1,7 +1,9 @@
 /**
  * 作用定位：成员文件基线列表和显式复核的只读界面状态，校验报告身份及单次观察结果。
  * 设计原因：列表不默认选择或读取文件；切换基线、节点、轮次时作废迟到响应，不把旧复核拼入新报告，也不触发模型或任务恢复。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {artifactReportSchema,type ArtifactReport,type ArtifactReportInput} from '../../bridge/contracts/dispatch';
 
 export type ArtifactSelection=Omit<ArtifactReportInput,'baselineId'>;
@@ -43,11 +45,11 @@ export function checkedArtifactReport(raw:unknown,request:ArtifactReportInput):A
 export class ArtifactReportController {
   private value:ArtifactReportState={selectedId:'',loading:false,error:''};
   private generation=0;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   constructor(readonly identity:ArtifactSelection,private read:(input:ArtifactReportInput)=>Promise<unknown>,private version:()=>string=()=> ''){}
   get snapshot(){return this.value}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(next:ArtifactReportState){this.value=next;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(next:ArtifactReportState){this.value=next;this.listeners.notify()}
   /** 卸载只忽略读取结果；后端只读调用不产生可重放操作。 */
   cancel(){this.generation++;this.value={...this.value,loading:false}}
   /** 用户选择不读取文件；更换选项清除旧观察，防止旧基线结果留在新选项下面。 */

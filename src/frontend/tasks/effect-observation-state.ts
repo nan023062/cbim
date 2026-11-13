@@ -2,7 +2,9 @@
  * 作用定位：为同一主会话的主/成员调用保存显式影响观察、处置草稿、稳定命令及后续关联。
  * 设计原因：观察不定时回读，处置先在本机保存再发送；丢回包只查询原命令，不换 ID 重试。跨视图共享一个控制器，迟到读取不能替换其他来源的依据。
  * 持久边界：普通聊天草稿独立；旧处置与原异常均保留。报告只在内存，重新进入后必须显式观察，不能拿旧 hash 自动开修复任务。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {
   effectObservationInputSchema,effectObservationReportSchema,effectDispositionInputSchema,effectDispositionReceiptSchema,
   effectDispositionListSchema,effectRelationsSchema,sameEffectSubject,
@@ -50,7 +52,7 @@ export function checkedEffectReceipt(raw:unknown,request:EffectDispositionInput,
 /** 读写状态按原 subject 分开；构造/订阅/重开均不查询、不发模型任务。 */
 export class EffectObservationController {
   private value:EffectState={drafts:[],attempts:[],reads:{},error:''};
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private pending=new Set<string>();
   private generations=new Map<string,number>();
   /** 同来源历史选择按点击次序生效；较早的回包仍保存事实但不能把当前选择切回去。 */
@@ -89,8 +91,8 @@ export class EffectObservationController {
   get snapshot(){return this.value}
   get available(){return !this.unavailable}
   get canRelease(){return this.listeners.size===0&&this.pending.size===0&&!Object.values(this.value.reads).some(v=>v.loading)}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(next:EffectState){this.value=next;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(next:EffectState){this.value=next;this.listeners.notify()}
   draft(identity:EffectObservationInput){return this.value.drafts.find(x=>sameIdentity(x.identity,identity))}
   attempt(identity:EffectObservationInput){const id=this.draft(identity)?.commandId;return this.value.attempts.find(x=>x.request.commandId===id)}
   read(identity:EffectObservationInput){return this.value.reads[effectSelectionKey(identity)]}

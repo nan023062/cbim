@@ -1,25 +1,27 @@
 /**
  * 作用定位：维护当前窗口共享的全局准入快照，供设置与会话提示订阅。
  * 设计原因：只轮询内存游标，无变化保持对象引用；所有订阅共用单次在途读取，隐藏页面停止计时，迟到结果不能覆盖新订阅代际。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {admissionReadSchema,type AdmissionCursor,type AdmissionSnapshot} from '../../bridge/contracts/admission';
 
 export interface AdmissionFeedState {data?:AdmissionSnapshot;error:string}
 /** 本投影不启动任务、不持有票据，也不把取数失败解释为零占用。 */
 export class AdmissionFeed {
   private value:AdmissionFeedState={error:''};
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private timer?:ReturnType<typeof setTimeout>;
   private generation=0;
   private pending?:Promise<void>;
   constructor(private read:(cursor?:AdmissionCursor)=>Promise<unknown>,private intervalMs=1000){}
   get snapshot(){return this.value}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   /** 首订阅触发读取；末订阅离开后停止，已确认数据保留但不可启动历史等待。 */
   subscribe(listener:()=>void){
-    this.listeners.add(listener);
+    const unsubscribe=this.listeners.subscribe(listener);
     if(this.listeners.size===1){this.generation++;void this.refresh()}
-    return ()=>{this.listeners.delete(listener);if(!this.listeners.size){this.generation++;clearTimeout(this.timer)}};
+    return ()=>{unsubscribe();if(!this.listeners.size){this.generation++;clearTimeout(this.timer)}};
   }
   /** 串行读取，不按固定间隔堆积请求；保存配额后也可调用，未订阅时不创建常驻轮询。 */
   refresh():Promise<void>{

@@ -3,8 +3,9 @@
  * 设计原因：继续会产生新运行，必须先保存固定决定与配置再发送；通信未知不能借新意见或新模型换命令重播。
  * 职责边界：不生成批准、不改原始输入、不自动发起工作；重开只查询未确认的原命令。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {equalJson as equal} from '../foundations/utility';
+import {SubscriptionSet,equalJson as equal} from '../foundations/utility';
 import {humanContinuationRequestSchema,humanContinuationReceiptSchema} from '../../bridge/contracts/human-continue';
 import type {HumanContinuationRequest,HumanContinuationReceipt,HumanContinuationLookup} from '../../bridge/contracts/human-continue';
 
@@ -31,7 +32,7 @@ export function checkedHumanContinuationReceipt(raw:unknown,request:HumanContinu
 export class HumanContinuationController {
   private value:HumanContinuationState={records:[],error:''};
   private unavailable=false;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private pending=new Set<string>();
   readonly storageKey:string;
   constructor(readonly workspaceId:string,readonly rootSessionId:string,private ports:HumanContinuationPorts){
@@ -50,10 +51,10 @@ export class HumanContinuationController {
   get snapshot(){return this.value}
   get available(){return !this.unavailable}
   get canRelease(){return !this.listeners.size&&!this.pending.size}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   record(scopeId:string,waitId:string){return this.value.records.find(value=>value.scopeId===scopeId&&value.waitId===waitId)}
   isPending(record?:HumanContinuationDraft){return !!record&&this.pending.has(record.attempt.request.commandId)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private update(record:HumanContinuationDraft):boolean{
     const records=[...this.value.records],index=records.findIndex(value=>value.scopeId===record.scopeId&&value.waitId===record.waitId);if(index<0)records.push(record);else records[index]=record;this.value={records,error:''};
     try{const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,rootSessionId:this.rootSessionId,records});if(records.length>128||new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本地记录超过容量上限');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}

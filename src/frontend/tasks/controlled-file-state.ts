@@ -2,7 +2,9 @@
  * 作用定位：维护同主会话的受控文件报告、补偿预览和本机原命令索引，供成员详情共享。
  * 设计原因：显式补偿先持久固定请求再发送；未知只能查原命令，查询失败保留已知的受理前拒绝或终态，不能反向解除未知锁。重开不自动写文件。
  * 边界：只存公共身份及字节摘要，不保存 before 正文；读取没有轮询，晚到响应按原调用隔离，普通聊天草稿不在本控制器内。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {
   controlledFileLimits,controlledFileUtf8Bytes,controlledFileReportInputSchema,controlledFileReportSchema,controlledFileOperationSummarySchema,
   fileCompensationPreviewInputSchema,fileCompensationPreviewSchema,fileCompensationInputSchema,fileCompensationReceiptSchema,
@@ -72,7 +74,7 @@ export function checkedFileCompensationReceipt(raw:unknown,request:FileCompensat
 /** 每主会话共享；构造、订阅和身份/图版本变化均不调用任何后端端口。 */
 export class ControlledFileController {
   private value:ControlledFileState={drafts:[],attempts:[],reads:{},error:''};
-  private listeners=new Set<()=>void>();private pending=new Set<string>();private anchors=new Map<string,string>();private unavailable=false;
+  private listeners=new SubscriptionSet();private pending=new Set<string>();private anchors=new Map<string,string>();private unavailable=false;
   readonly storageKey:string;
   constructor(readonly workspaceId:string,readonly rootSessionId:string,private ports:ControlledFilePorts){
     this.storageKey='cbim.file-compensation.v1.'+JSON.stringify([workspaceId,rootSessionId]);
@@ -104,8 +106,8 @@ export class ControlledFileController {
   private owns(v:{workspaceId:string;rootSessionId:string}){return v.workspaceId===this.workspaceId&&v.rootSessionId===this.rootSessionId}
   get snapshot(){return this.value}get available(){return !this.unavailable}
   get canRelease(){return !this.listeners.size&&!this.pending.size&&!Object.values(this.value.reads).some(v=>v.loading)}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(next:ControlledFileState){this.value=next;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(next:ControlledFileState){this.value=next;this.listeners.notify()}
   read(identity:ControlledFileReportInput){return this.value.reads[controlledFileSelectionKey(identity)]}
   draft(identity:ControlledFileReportInput){return this.value.drafts.find(v=>sameIdentity(v.identity,identity))}
   attempt(identity:ControlledFileReportInput){return this.value.attempts.find(v=>v.request.commandId===this.draft(identity)?.commandId)}

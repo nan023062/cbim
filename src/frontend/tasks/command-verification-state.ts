@@ -2,7 +2,9 @@
  * 作用定位：保存一次原主工具调用的显式核实状态，校验报告身份并隔离迟到的异步响应。
  * 设计原因：工具失败与事务已保存可能同时成立；查询不得自动重试执行、清除未确认项或随轮询反复回读。读取失败保留旧报告并提示其时效。
  * 来源边界：旧或不完整轨道缺少 task 时只保留原展示，不创建核实入口，也不把角色名当成完整主会话身份。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {commandVerificationInputSchema,commandVerificationReportSchema} from '../../bridge/contracts/command-verification';
 import type {CommandVerificationInput,CommandVerificationReport} from '../../bridge/contracts/command-verification';
 import type {RunSummary} from '../../bridge/contracts/execution';
@@ -37,12 +39,12 @@ export function commandVerificationStale(report:CommandVerificationReport|undefi
 export class CommandVerificationController {
   private value:CommandVerificationState={loading:false,error:''};
   private generation=0;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   readonly selection:CommandVerificationSelection;
   constructor(selection:CommandVerificationSelection,private read:(request:CommandVerificationInput)=>Promise<unknown>){this.selection={...selection}}
   get snapshot(){return this.value}
-  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
-  private publish(value:CommandVerificationState){this.value=value;for(const listener of this.listeners)listener()}
+  subscribe=(listener:()=>void)=>{return this.listeners.subscribe(listener)};
+  private publish(value:CommandVerificationState){this.value=value;this.listeners.notify()}
   /** 卸载只取消观察，忽略迟到回包；不停止原任务、不修改服务端日志。 */
   cancel(){this.generation++;this.value={...this.value,loading:false}}
   /** 同一实例在途时合并重复点击；失败保留旧报告，绝不转调原工具或自动重读。 */

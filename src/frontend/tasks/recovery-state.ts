@@ -1,7 +1,9 @@
 /**
  * 作用定位：保存用户从异常报告新建只读核实周期的草稿、冻结命令和受理回执。
  * 设计原因：新周期不是恢复旧运行；严格区分真实主/成员来源并保留旧无 kind 协议。先持久化再发送，处置引用随命令冻结；未知结果只查原命令，报告版本不参与来源键。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {recoveryRequestSchema,recoveryReceiptSchema,recoverySourceSelectionSchema,recoverySourceKey,recoveryRequestSource} from '../../bridge/contracts/dispatch';
 import type {RecoveryRequest,RecoveryLookup,RecoveryReceipt,RecoverySourceSelection} from '../../bridge/contracts/dispatch';
 
@@ -50,7 +52,7 @@ export function checkedRecoveryReceipt(raw:unknown,request:RecoveryRequest,previ
 export class ExecutionRecoveryController {
   private value:RecoveryState={records:[],error:''};
   private unavailable=false;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private pending=new Set<string>();
   readonly storageKey:string;
   /** v1 始终保留原字节；回滚旧客户端不会覆盖 v2 的在途命令或归档。 */
@@ -86,7 +88,7 @@ export class ExecutionRecoveryController {
   get snapshot(){return this.value}
   get available(){return !this.unavailable}
   get canRelease(){return this.listeners.size===0&&this.pending.size===0}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   /** 归档成功先使该来源各视图的旧报告失效，再通知重绘；挂载期间错过的变更也会补查。 */
   subscribeSource(source:RecoverySource,listener:()=>void,onPrepared:()=>void,observedHistoryCount=this.record(source)?.history?.length??0){
     let count=observedHistoryCount;
@@ -95,7 +97,7 @@ export class ExecutionRecoveryController {
   }
   record(source:RecoverySource){const key=recoverySourceKey(source);return this.value.records.find(item=>recoverySourceKey(item.source)===key)}
   isPending(record?:RecoveryDraft){return !!record?.attempt&&this.pending.has(record.attempt.request.commandId)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private update(record:RecoveryDraft):boolean{
     const key=recoverySourceKey(record.source),index=this.value.records.findIndex(item=>recoverySourceKey(item.source)===key),records=[...this.value.records];if(index<0)records.push(record);else records[index]=record;
     try{

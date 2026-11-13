@@ -101,8 +101,10 @@ N_src_frontend_workspace ..> N_src_frontend_team : 导入依赖
 - `knowledge` → `execution-view`：导入。
 - `main.tsx` → `shell`：导入。
 - `resources` → `knowledge`：导入。
+- `runtime` → `foundations`：导入。
 - `runtime` → `tasks`：导入。
 - `settings` → `tasks`：导入。
+- `settings` → `foundations`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `updates`：导入。

@@ -3,7 +3,9 @@
  * 设计原因：只读核实不能原地提权；提交前保存新目标和 ask/execute 权限。首次容量拒绝不锁死草稿，曾通信未知仍只能查询或重试原命令，不能借准入等待重放业务。
  * 职责边界：本模块不复活旧任务、不批准人工验收；来源与知识是否仍有效由后端在受理时再次核验。
  * 新影响来源：dispositionId 纳入目标键、预览和稳定命令；回执必须匹配原选择，不为历史请求补造关联。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
+import {SubscriptionSet} from '../foundations/utility';
 import {replanPreviewSchema,replanRequestSchema,replanReceiptSchema} from '../../bridge/contracts/dispatch';
 import type {ReplanPreviewInput,ReplanPreview,ReplanRequest,ReplanLookup,ReplanReceipt} from '../../bridge/contracts/dispatch';
 
@@ -59,7 +61,7 @@ export class ScopeReplanController {
   private target?:ReplanTarget;
   private previewGeneration=0;
   private pending=new Set<string>();
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   readonly storageKey:string;
   constructor(readonly workspaceId:string,readonly rootSessionId:string,private ports:ReplanPorts){
     this.storageKey='cbim.scope-replan.v1.'+JSON.stringify([workspaceId,rootSessionId]);
@@ -93,8 +95,8 @@ export class ScopeReplanController {
   get snapshot(){return this.value}
   get available(){return !this.unavailable}
   get canRelease(){return this.listeners.size===0&&this.pending.size===0&&!this.value.preview?.loading}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
-  private emit(){for(const listener of this.listeners)listener()}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
+  private emit(){this.listeners.notify()}
   record(inspectionScopeId:string){return this.value.records.find(item=>item.inspectionScopeId===inspectionScopeId)}
   isPending(record?:ReplanDraft){return !!record?.attempt&&this.pending.has(record.attempt.request.commandId)}
   /** 历史选择、图或模型版本改变只作废预览，绝不改写冻结提交和它的迟到回执。 */

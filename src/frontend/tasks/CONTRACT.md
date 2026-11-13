@@ -445,3 +445,10 @@ member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待�
 ## 等待时聊天补充转交
 
 `useScopeContinuation.submitInput` 复用当前选中等待的严格身份、版本和模型校验。`ScopeContinuationController.submitInput` 先保存聊天正文与有序附件，再使用既有冻结命令提交；不同的已有目标草稿不会被覆盖。保存成功后补充记录持有正文，拒绝和未知结果也可在输入区表单找回；保存失败不清聊天草稿。表单、任务根与聊天共用同一控制器和锁，已受理或未知命令不能再次构造新提交。补充继续仍不代表人工验收，后端等待与队列准入不变。
+
+
+### 控制器订阅边界
+
+准入、报告、接续、人工决定、恢复、重规划及用量等 15 个控制器各自组合前端 SubscriptionSet；原 subscribe 方法/绑定函数形式保留，先更新状态再同步通知。集合按身份去重并遍历当前监听集合，异常原样传播，不增加快照遍历、引用计数、自动轮询或吞错。
+
+AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各 canRelease 仍组合监听器数量及原在途/预览条件。OwnerInspectionController 与 RequestBudgetController 的 dispose 仍先失效原读取再清监听器。其他控制器只退订、不封闭持久命令，也不取消后端操作；业务恢复与发布策略未下沉。

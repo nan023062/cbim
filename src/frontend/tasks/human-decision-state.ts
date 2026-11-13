@@ -3,8 +3,9 @@
  * 作用定位：维护当前主会话人工决定的草稿、手动预览、冻结命令及回执，供两处目标卡共享。
  * 设计原因：保存意见与执行分离；先持久化再发送，通信未知只能核实原命令。返工后须显式清除旧候选再核实，预览迟到或切换选择不能使过期依据变为可提交。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {equalJson as equal} from '../foundations/utility';
+import {SubscriptionSet,equalJson as equal} from '../foundations/utility';
 import {humanDecisionPreviewInputSchema,humanDecisionPreviewSchema,humanDecisionRequestSchema,humanDecisionReceiptSchema} from '../../bridge/contracts/human-decisions';
 import type {HumanDecisionKind,HumanDecisionBaselineSelection,HumanDecisionManifestSelection,HumanDecisionPreviewInput,HumanDecisionPreview,HumanDecisionRequest,HumanDecisionLookup,HumanDecisionReceipt} from '../../bridge/contracts/human-decisions';
 
@@ -47,7 +48,7 @@ export function checkedHumanDecisionReceipt(raw:unknown,request:HumanDecisionReq
 export class HumanDecisionController {
   private value:HumanDecisionState={records:[],error:''};
   private unavailable=false;
-  private listeners=new Set<()=>void>();
+  private listeners=new SubscriptionSet();
   private pending=new Set<string>();
   private previews=new Map<string,HumanDecisionPreviewState>();
   readonly storageKey:string;
@@ -79,12 +80,12 @@ export class HumanDecisionController {
   get snapshot(){return this.value}
   get available(){return !this.unavailable}
   get canRelease(){return !this.listeners.size&&!this.pending.size&&![...this.previews.values()].some(value=>value.loading)}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   record(scopeId:string,criterionId:string){return this.value.records.find(value=>value.scopeId===scopeId&&value.criterionId===criterionId)}
   previewState(target:HumanDecisionTarget){return this.previews.get(identityKey(target.scopeId,target.criterionId))}
   isPending(record?:HumanDecisionDraft){return !!record?.attempt&&this.pending.has(record.attempt.request.commandId)}
   locked(record?:HumanDecisionDraft){return this.isPending(record)||!!record?.attempt&&['submitting','unknown'].includes(record.attempt.phase)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private belongs(target:HumanDecisionTarget){return target.workspaceId===this.workspaceId&&target.rootSessionId===this.rootSessionId}
   private update(record:HumanDecisionDraft):boolean{
     const records=[...this.value.records],index=records.findIndex(value=>value.scopeId===record.scopeId&&value.criterionId===record.criterionId);if(index<0)records.push(record);else records[index]=record;

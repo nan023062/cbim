@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-前端通用工具按类别内聚：json.ts 提供保留现有 localeCompare、undefined 与数组规则的 JSON 比较，index.ts 是公开入口。请求、预览与回执的业务判断留在消费者；与后端 utility 分别实现、测试和演进。
+前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；业务状态、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,10 +10,29 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，当前提供 JSON 值比较。 |
+| [events.ts](events.ts) | 前端事件订阅工具，提供实例级、无参数的同步通知集合。 |
+| [index.ts](index.ts) | 前端域通用工具函数与数据结构的公开入口，当前提供 JSON 比较和实例订阅集合。 |
 | [json.ts](json.ts) | 前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。 |
 
 ## 架构类图
+
+### events.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_foundations_utility_events_ts["events.ts"] {
+  <<module>>
+}
+class N_src_frontend_foundations_utility_events_ts_SubscriptionSet["SubscriptionSet"] {
+  +size
+  +subscribe()
+  +notify()
+  +clear()
+  -listeners
+}
+N_src_frontend_foundations_utility_events_ts ..> N_src_frontend_foundations_utility_events_ts_SubscriptionSet : 声明
+```
+
 
 ### index.ts
 
@@ -23,7 +42,7 @@ class N_src_frontend_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json.ts](json.ts)。
+直接依赖：[json.ts](json.ts)、[events.ts](events.ts)。
 
 ### json.ts
 
@@ -46,7 +65,11 @@ class N_src_frontend_foundations_utility_index_ts["index.ts"] {
 class N_src_frontend_foundations_utility_json_ts["json.ts"] {
   <<module>>
 }
+class N_src_frontend_foundations_utility_events_ts["events.ts"] {
+  <<module>>
+}
 N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_json_ts : 导入依赖
+N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utility_events_ts : 导入依赖
 ```
 
 
@@ -64,7 +87,7 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 
 # 前端通用工具库
 
-本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts` 是私有实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
+本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts` 与 `events.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
 
 ## JSON 比较
 
@@ -80,8 +103,16 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 - `localeCompare` 依赖环境，可能让不同 Unicode 键比较为同序；保留稳定排序的原插入顺序，不借重构改变规则。因此不提供跨环境 canonical 保证。
 - 原样 `JSON.stringify` 比较仍由原消费者保留；负责人视图的字典序及递归序列化/空值规则也未迁移，不能直接替换成此入口。
 
+## 实例订阅集合
+
+`events.ts` 的 SubscriptionSet 只持有本实例无参数监听器，提供 subscribe、notify、size 和 clear。按函数身份去重，注册不立即通知；notify 同步按 Set 插入顺序遍历当前集合，不复制快照、不合并、不排队、不等待异步回调。监听器异常原样抛出并中断本轮，不自动删除失败监听器。
+
+保留原控制器的 Set 语义：通知期间删除未执行项会跳过，新加入项可在同一轮被执行；重复注册不做引用计数，任一退订都会移除该函数，旧退订也能移除后来重新注册的同一函数。清空不通知、不封闭集合；嵌套通知仍同步执行。消费者须避免回调反复重加自身导致无限遍历，也应自行处理异步回调的拒绝。
+
+19 个真实消费者包括岗位、模块责任、预算设置、运行监管、准入以及 tasks 中报告、接续、决定、恢复、重规划和用量控制器。状态先更新再通知的顺序保持；size 用于原 canRelease 判断，clear 仅清监听器。RuntimeFeed 和 AdmissionFeed 的首订阅读取、末退订停止计时、代次失效与单次在途读取仍由原控制器负责，不由集合创建或释放请求、定时器或业务资源。
+
 ## 依赖与验证
 
 前端业务单向导入公开入口；基础库不能反向引用页面、bridge 或后端。后端独立沉淀自己的公共库，二者不建立共享工具依赖。增加同类 JSON 算法优先放入 `json.ts`，实际语义不同时保留明确契约，不预设配置开关。
 
-单元测试归属 `frontend/foundations/utility`，只验证比较行为。五组消费者原有测试验证回执、提交及恢复组合；基础库不加载应用或消费者夹具。源码注释、类图和三宿主 AI 工作流随实现同步。
+单元测试归属 `frontend/foundations/utility`，JSON 比较与订阅集合分套件验证各自行为。消费者测试验证回执、提交、恢复、先更新后通知、轮询退订与迟到结果隔离；基础库不加载应用或消费者夹具。源码注释、类图和三宿主 AI 工作流随实现同步。

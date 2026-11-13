@@ -2,8 +2,9 @@
  * 作用定位：模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。
  * 设计原因：模块卡片与完整责任页共用命令池，更换负责人和同负责人采纳来源分别核对；未知不代表未保存，重开只查原命令，不补造来源。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
+ * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {equalJson as same} from '../foundations/utility';
+import {SubscriptionSet,equalJson as same} from '../foundations/utility';
 import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import {sourceReadStateMatches} from '../../bridge/contracts/knowledge-source';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,ModuleOwnershipReceipt,ModuleOwnershipListInput,ModuleOwnershipByMemberInput,ModuleOwnershipPage,ModuleOwnershipGetInput,ModuleOwnershipDetail,ModuleOwnershipLookup,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
@@ -58,7 +59,7 @@ export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:
 export class ModuleOwnershipCommands {
   readonly storageKey:string;
   private value:ModuleOwnershipCommandState={records:[],error:''};
-  private listeners=new Set<()=>void>();private pending=new Set<string>();private unavailable=false;private corrupt=false;
+  private listeners=new SubscriptionSet();private pending=new Set<string>();private unavailable=false;private corrupt=false;
   constructor(readonly workspaceId:string,private ports:ModuleOwnershipCommandPorts){
     this.storageKey='cbim.module-ownership.commands.v1.'+workspaceId;
     try{const raw=ports.storage.getItem(this.storageKey);if(!raw)return;if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('超过本机记录容量');const parsed=JSON.parse(raw);if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
@@ -68,9 +69,9 @@ export class ModuleOwnershipCommands {
   get snapshot(){return this.value}
   get blocked(){return this.unavailable||this.pending.size>0||this.value.records.some(item=>item.phase==='unknown'||item.phase==='submitting')}
   get canRelease(){return !this.listeners.size&&!this.pending.size}
-  subscribe(listener:()=>void){this.listeners.add(listener);return()=>{this.listeners.delete(listener)}}
+  subscribe(listener:()=>void){return this.listeners.subscribe(listener)}
   isPending(id:string){return this.pending.has(id)}
-  private emit(){for(const listener of this.listeners)listener()}
+  private emit(){this.listeners.notify()}
   private save(record:ModuleOwnershipAttempt){
     const records=[...this.value.records],index=records.findIndex(item=>item.request.commandId===record.request.commandId);if(index<0)records.push(record);else records[index]=record;this.value={records,error:''};
     try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}

@@ -17,7 +17,7 @@ test.each(['incomplete','hold'] as const)('工具完成后 %s：关闭前补登�
     await vi.waitFor(()=>expect(f.requests).toHaveLength(2),{timeout:f.engineOptions.turnTimeoutMs});
     if(afterTool==='hold')await f.engine.stop();
     const result=await running;
-    expect(result).toEqual(afterTool==='hold'?{status:'cancelled'}:{status:'failed',error:'请求未完整完成'});
+    expect(result).toEqual(afterTool==='hold'?{status:'cancelled'}:{status:'failed',error:expect.stringContaining('max_output_tokens')});
     await f.engine.close();
     const bound=f.events.filter(event=>event.type==='session.bound'&&event.data.sessionFile);
     expect(bound).toHaveLength(1);expect(f.invocations).toHaveLength(1);
@@ -49,7 +49,7 @@ test.each(['incomplete','hold'] as const)('真实应用 %s：登记早于日志�
     expect(failed.sessionFile).toBeTruthy();expect(failed.unresolvedTools).toEqual([]);
     expect(failed.events.filter(event=>event.type==='tool.finished')).toHaveLength(1);
     expect(failed.events.find(event=>event.type==='tool.finished')?.data.isError).toBe(false);
-    expect(failed.events.at(-1)).toMatchObject(afterTool==='hold'?{type:'run.settled',data:{status:'cancelled'}}:{type:'run.interrupted',data:{error:'请求未完整完成'}});
+    expect(failed.events.at(-1)).toMatchObject(afterTool==='hold'?{type:'run.settled',data:{status:'cancelled'}}:{type:'run.interrupted',data:{error:expect.stringContaining('max_output_tokens')}});
     const binding=failed.events.findIndex(event=>event.type==='session.bound'&&event.data.sessionFile);
     expect(binding).toBeGreaterThan(0);expect(binding).toBeLessThan(failed.events.length-1);
     const retry=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Continue now',options});

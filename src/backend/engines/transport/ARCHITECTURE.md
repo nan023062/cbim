@@ -54,7 +54,7 @@ class N_src_backend_engines_transport_request_budget_usage_ts_RequestBudgetUsage
 N_src_backend_engines_transport_request_budget_usage_ts ..> N_src_backend_engines_transport_request_budget_usage_ts_RequestBudgetUsageStream : 声明
 ```
 
-直接依赖：[../../core/budget/model-request-budget.ts](../../core/budget/model-request-budget.ts)。
+直接依赖：[../../core/budget/model-request-budget.ts](../../core/budget/model-request-budget.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)。
 
 ### 本目录调用边界
 
@@ -77,3 +77,13 @@ N_src_backend_engines_transport_request_budget_transport_ts ..> N_src_backend_en
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 模型流中断诊断
+
+`RequestBudgetUsageStream` 只暂存可靠终态，不将 response.incomplete 或 response.failed 当作完成。已知 max_output_tokens、content_filter 和通用未完成/失败分别返回固定的 Fault；错误正文由本地定义，不透传供应商任意信息。预算传输保留这些可信诊断，同时保持原未知预留、阻断后续请求及工具的规则。
+
+输出上限提示建议核实已有工具回执后继续、按需要分段生成或调整模型输出上限，不自动提高上限、拼接工具参数、重试或重放写入。未知原因明确未知；旧日志中已丢失的供应商原因无法追溯补造。工具恢复与会话绑定仍由各引擎负责，此解析器不执行文件事务，也不保证正在进行的磁盘写入具备原子性。

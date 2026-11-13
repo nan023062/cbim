@@ -6,6 +6,21 @@ import type {RequestBudgetPort} from '../src/backend/core/models/request-budget'
 
 async function upstream(reply:(res:http.ServerResponse,body:any,req:http.IncomingMessage)=>void|Promise<void>){let calls=0;const errors:unknown[]=[];const server=http.createServer(async(req,res)=>{try{let text='';for await(const part of req)text+=part;calls++;await reply(res,JSON.parse(text),req)}catch(e){errors.push(e);res.destroy()}});await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));return {url:'http://127.0.0.1:'+(server.address() as import('node:net').AddressInfo).port,get calls(){return calls},errors,close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}}}
 const good=(res:http.ServerResponse)=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({choices:[{index:0,delta:{content:'ok'},finish_reason:'stop'}],usage:{prompt_tokens:100,completion_tokens:20,total_tokens:120}})+'\n\ndata: [DONE]\n\n')};
+
+it('预算代理保留输出上限原因，未完整响应仍保留未知并禁止自动重试',async()=>{
+  const provider=await upstream(res=>{res.writeHead(200,{'content-type':'text/event-stream'});res.end('data: '+JSON.stringify({type:'response.incomplete',response:{incomplete_details:{reason:'max_output_tokens'},message:'private-provider-text'}})+'\n\n')});
+  const llm=structuredClone(budgetTestModel);llm.profile.api='openai-responses';llm.profile.baseUrl=provider.url+'/v1';
+  const f=await requestBudgetFixture({tokens:300000},llm);let gate:Awaited<ReturnType<typeof openRequestBudgetTransport>>|undefined;
+  try{
+    gate=await openRequestBudgetTransport(llm,f.port);await ready(gate);
+    await send(gate,{model:'budget-model',stream:true,max_output_tokens:4096}).then(r=>r.text()).catch(()=>{});
+    await expect(gate.assertSettled()).rejects.toThrow('max_output_tokens');
+    expect(gate.error()).not.toContain('private-provider-text');
+    expect(await f.service.report(f.query)).toMatchObject({unknown:1,reported:0});
+    expect((await send(gate,{model:'budget-model',stream:true,max_output_tokens:4096})).status).toBe(409);
+    expect(provider.calls).toBe(1);
+  }finally{await gate?.close();await f.cleanup();await provider.close()}
+});
 async function ready(gate:Awaited<ReturnType<typeof openRequestBudgetTransport>>){expect((await fetch(gate.url+'/ready',{method:'POST',headers:{authorization:'Bearer '+gate.token}})).status).toBe(200);gate.assertReady()}
 function send(gate:Awaited<ReturnType<typeof openRequestBudgetTransport>>,body:unknown={model:'budget-model',stream:true,max_tokens:4096},signal?:AbortSignal){return fetch(gate.url+'/request',{method:'POST',headers:{authorization:'Bearer '+gate.token,'content-type':'application/json','x-api-key':'child-key-must-not-forward'},body:JSON.stringify(body),signal})}
 

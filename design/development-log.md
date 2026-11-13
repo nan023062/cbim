@@ -1,3 +1,13 @@
+## 2026-11-13：Issue #65 剩余路径修复与长写入中断验证
+
+- 来源：用户要求继续修 [#65](https://github.com/nan023062/cbim/issues/65)，基线 `e5989abd`，开发前工作区干净，已读取工单正文及两条现有进度。复核原 Codex 运行事件及对应原生目录，原事件仅保存“请求未完整完成”，没有供应商具体原因，不能追溯断言为输出上限。
+- Windows 确定性缺陷：授权侧用工作区根解析 `/tmp/...`，Pi 独立工具 SDK 却用进程当前盘符解析。`engines/native-tools.ts` 在受管文件工具边界将单根分隔符路径按工作区补成完整路径；保留原输入、UNC、显式盘符及其它平台语义，不猜 Bash/MSYS 挂载表。纯 Windows 解析测试覆盖 D 盘与六种文件工具，实际 SDK 覆盖写/读/编辑。该变化仅用于 Codex 受管工具，不修改其它引擎自带文件工具。
+- 中断诊断：`transport/request-budget-usage.ts` 区分 Responses 的输出上限、内容过滤、原因未知、供应商失败；只输出本地固定文本，以 Fault 穿过预算代理已有可信错误通道。已发出但不完整的请求仍保留未知用量、阻断后续请求，不放宽结算屏障，不重试或补全参数。
+- 长写入验证：真实 Codex EXE 对本地确定性 HTTP 服务，26 万字符（UTF-8 34 万字节）写入完整成功；content 类型错误保留原文件，返回工具失败并可完成下一模型轮；长参数生成中途收到 incomplete 时不执行工具、不覆盖原文件，关闭前登记真实会话，随后显式续接原线程成功且不重放。已有“工具执行后中断”及真实应用恢复测试继续通过。这里只验证模型生成中断和错误参数，不声称文件系统写入过程中断电具有原子保障。
+- 验证依据：路径工具直接变化、流解析/预算传输为诊断消费者，Codex 中断与写入测试覆盖执行屏障及会话恢复。首轮 `pnpm exec vitest run tests/native-tool-paths.test.ts tests/model-request-budget-usage.test.ts tests/codex-write-recovery.test.ts tests/codex-interruption.test.ts --reporter=dot`：26 通过、1 失败（新增测试误用 SDK 旧 edit 参数）；按真实 edits[] 协议修正夹具后，`pnpm exec vitest run tests/native-tool-paths.test.ts tests/model-request-budget-transport.test.ts --reporter=dot`：17 通过。新增预算通道回归、将可信诊断改为 Fault 后，`pnpm exec vitest run tests/model-request-budget-usage.test.ts tests/model-request-budget-transport.test.ts tests/codex-write-recovery.test.ts tests/codex-interruption.test.ts --reporter=dot`：29 通过。最终共 37 个不同相关用例通过，不累计重跑。
+- 同步维护：两处源码文件头/接口说明，engines 与 transport 的 CONTRACT/ARCHITECTURE；生成器更新两份类图。`pnpm check:architecture`：1360 文件、6908 条依赖、0 循环及违规；`pnpm typecheck` 通过。未运行全量回归、打包、发布、真实供应商调用或人工 review，未改用户安装及历史数据。
+- 剩余边界：Windows 已证实缺陷已修；长写入没有复现额外执行层缺陷，诊断和恢复得到验证。旧日志已丢失的具体供应商原因不能补造，Issue 保持开放等待使用新版时的原始复现证据，不把本地 HTTP 测试等同真实 DeepSeek 验收。
+
 ## 2026-11-13：Issue #65 多轮失败的日志核实与确定性修复
 
 - 来源：[Issue #65](https://github.com/nan023062/cbim/issues/65)，开放清单只有此项，基线 `bf63b3a9`。用户确认 Codex 和 Claude Code 均出现问题，并授权只读本地 CBIM 对话日志；读取 webfps 对应运行事件及 dispatch 记录，未修改已安装应用、工作区或会话数据，原始日志与私有诊断未提交仓库。

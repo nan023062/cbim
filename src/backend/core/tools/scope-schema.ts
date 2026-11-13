@@ -5,11 +5,12 @@
  */
 import {z} from 'zod';
 import {connectorIdSchema} from '../connectors/definition';
+import {githubFeedbackScopeSchema} from '../../../logic/feedback';
 
 const workspaceId=z.string();
 export const repositoryToolScopeSchema=z.object({kind:z.literal('repository'),workspaceId,connectorId:connectorIdSchema,repositoryId:z.string().uuid(),connectionId:z.string().uuid(),operation:z.enum(['list','get'])}).strict();
-/** 反馈目标来自本机明确连接，不接受模型提供账号、仓库或任意地址。 */
-export const githubFeedbackScopeSchema=z.object({kind:z.literal('github-feedback'),workspaceId,connectionId:z.string().uuid(),repositoryId:z.number().int().positive(),owner:z.string().min(1).max(100),repo:z.string().min(1).max(100)}).strict();
+// 兼容原工具日志出口，反馈范围唯一实现由 Logic 拥有。
+export {githubFeedbackScopeSchema} from '../../../logic/feedback';
 export const toolScopeSchema=z.union([
   z.object({kind:z.enum(['workspace','knowledge','unknown']),workspaceId}).strict(),repositoryToolScopeSchema,githubFeedbackScopeSchema,
 ]);

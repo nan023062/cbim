@@ -124,3 +124,5 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 模型首批已迁入 src/logic/models：index.ts 为纯目录/连接/选型入口，service/index.ts 为配置持久化和受控凭据解析入口。前者不得加载后者，旧引擎/调度只能访问纯入口；旧 Main 通过服务入口装配。仅 bridge/contracts/models.ts 保留具名纯规则兼容出口，后续 Bridge DTO/预览迁移后退出，不能扩大为 Bridge/前端直达 Logic。Node files 位于 src/core/platform/node/files，Fault 位于 src/core/errors.ts，旧 errors.ts 是仍有消费者的同一异常兼容出口。主 Agent 设置和请求预算暂留旧目录，Logic 不得反向导入旧业务。模型单元、配置服务单元、UI/历史快照契约与 SDK 容量契约分别登记。
 
 Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web、core/platform/node/web、core/platform/electron/web-reader.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/contracts/secrets.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
+
+反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧 Main 锁出口共享同一构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。

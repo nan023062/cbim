@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [locking.ts](locking.ts) | KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
+| [locking.ts](locking.ts) | 旧 Main 锁入口的兼容出口，供工作区、资源和执行装配继续使用。 |
 | [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi/Claude Code/Codex 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
 | [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 与 GitHub 反馈凭据。 |
@@ -173,3 +173,5 @@ IsolationLifecycle在创建profile前保存私有来源，在恢复挂起线程�
 ### Claude 原生会话指纹
 
 NativeSessionFiles 由工厂固定 Pi、Claude Code 或 Codex 格式及受管根。通用的链接、完整字节、尾行、容量和读取竞争检查不变；Claude 另核实文件名等于 nativeSessionId.jsonl，所有带 sessionId 的记录同属该身份。Codex 另核 session_meta.payload.id、rollout 文件名与唯一 metadata；原生长路径由适配器归一后保存。只返回长度/摘要，不公开私有路径或正文。
+
+KernelLock 实现已迁到共享 Core 的 platform/node/locking.ts；本目录 locking.ts 保留仍有消费者的同构造器兼容出口，不持有第二套进程内锁状态。

@@ -2,9 +2,9 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {GitHubFeedback} from '../src/backend/main/feedback/github-feedback';
-import {githubRequest,type GitHubRequest} from '../src/backend/main/feedback/github-api';
-import {feedbackIssue,type FeedbackInput,type GitHubFeedbackConfig} from '../src/backend/core/connectors/github-feedback';
+import {GitHubFeedback} from '../src/logic/feedback/service';
+import type {GitHubRequest} from '../src/logic/feedback/service';
+import {feedbackIssue,type FeedbackInput,type GitHubFeedbackConfig} from '../src/logic/feedback';
 
 const roots:string[]=[],services:GitHubFeedback[]=[];
 const config:GitHubFeedbackConfig={clientId:'testclient_123',owner:'test-owner',repo:'cbim',visibility:'public',autoSubmit:true};
@@ -42,61 +42,11 @@ async function fixture(options:{secure?:boolean}={}){
   return {directory,service,create,login,request,calls,issues,posts:()=>calls.filter(call=>call.method==='POST'&&call.url.endsWith('/issues')),advance:(ms:number)=>{time+=ms},setToken:(value:string)=>{tokenState=value},setStatus:(value:number)=>{postStatus=value},lose:()=>{lost=true},corrupt:()=>{corrupt=true},account:(value:number)=>{accountId=value},repository:(value:number)=>{repoId=value},inspect:(fn:()=>Promise<void>)=>{inspectPost=fn}};
 }
 
-describe('GitHub device authorization',()=>{
-  it('distinguishes local authorization pending from a saved connection without polling as a side effect',async()=>{
-    const f=await fixture(),started=await f.service.auth.begin(config);
-    f.advance(5000);expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_AUTH_PENDING'});
-    expect(f.calls).toHaveLength(1);expect(await f.service.prepare(binding,()=>{})).toBeUndefined();
-    await f.service.auth.poll({flowId:started.flow!.id});expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_CONNECTED'});
-    await f.service.auth.disconnect();await f.service.auth.begin(config);f.advance(900000);
-    expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});
-    await f.service.auth.begin(config);await f.service.auth.cancel();expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});
-  });
-  it('diagnoses local connection and generation without decrypting credentials or requesting GitHub',async()=>{
-    const f=await fixture();expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_NOT_CONNECTED'});expect(f.calls).toHaveLength(0);
-    await f.login();const scope=(await f.service.prepare(binding,()=>{}))!.scope,calls=f.calls.length,decrypt=vi.spyOn(cipher,'decrypt');
-    expect(await f.service.auth.checkConnection(scope)).toEqual({code:'GITHUB_CONNECTED',repository:{owner:'test-owner',repo:'cbim'}});
-    expect(f.calls).toHaveLength(calls);expect(decrypt).not.toHaveBeenCalled();
-    await f.service.auth.disconnect();expect(await f.service.auth.checkConnection(scope)).toEqual({code:'GITHUB_NOT_CONNECTED'});
-    await f.login();expect(await f.service.auth.checkConnection(scope)).toMatchObject({code:'GITHUB_CONNECTION_CHANGED'});
-    const available=vi.spyOn(cipher,'available').mockReturnValue(false);expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_SECRET_STORAGE'});available.mockRestore();
-    const file=path.join(f.directory,'connection.json'),data=JSON.parse(await fs.readFile(file,'utf8'));data.connection.expiresAt=1;await fs.writeFile(file,JSON.stringify(data));
-    expect(await f.service.auth.checkConnection()).toMatchObject({code:'GITHUB_EXPIRED'});
-    await fs.writeFile(file,'broken private settings');expect(await f.service.auth.checkConnection()).toEqual({code:'GITHUB_SETTINGS'});
-  });
-  it('requires safe storage before any network request',async()=>{const f=await fixture({secure:false});await expect(f.service.auth.begin(config)).rejects.toMatchObject({code:'GITHUB_SECRET_STORAGE'});expect(f.calls).toHaveLength(0)});
-  it('keeps token/device code private and saves only encrypted credential',async()=>{
-    const f=await fixture(),started=await f.service.auth.begin(config);expect(JSON.stringify(started)).not.toContain('PRIVATE_DEVICE_CODE');expect(started.flow?.userCode).toBe('ABCD-EFGH');
-    f.advance(5000);const status=await f.service.auth.poll({flowId:started.flow!.id});expect(status.connected).toEqual({login:'tester',owner:'test-owner',repo:'cbim'});expect(JSON.stringify(status)).not.toContain(token);
-    const disk=await fs.readFile(path.join(f.directory,'connection.json'),'utf8');expect(disk).not.toContain(token);expect(disk).not.toContain('PRIVATE_DEVICE_CODE');expect(disk).toContain(cipher.encrypt(token));
-  });
-  it('enforces interval, slow_down and expiry without background polling',async()=>{
-    const f=await fixture(),start=await f.service.auth.begin(config),args={flowId:start.flow!.id};await f.service.auth.poll(args);expect(f.calls).toHaveLength(1);
-    f.setToken('slow_down');f.advance(5000);const slow=await f.service.auth.poll(args);expect(slow.flow!.nextPollAt).toBe(115000);await f.service.auth.poll(args);expect(f.calls).toHaveLength(2);
-    f.setToken('authorization_pending');f.advance(10000);await f.service.auth.poll(args);expect(f.calls).toHaveLength(3);
-    f.advance(900000);await expect(f.service.auth.poll(args)).rejects.toMatchObject({code:'GITHUB_EXPIRED'});expect((await f.service.auth.status()).flow).toBeUndefined();
-  });
-  it('cancels a flow and rejects late polls and invalid authorization',async()=>{
-    const f=await fixture(),start=await f.service.auth.begin(config);await f.service.auth.cancel();f.advance(5000);await expect(f.service.auth.poll({flowId:start.flow!.id})).rejects.toMatchObject({code:'GITHUB_FLOW'});
-    const next=await f.service.auth.begin(config);f.setToken('access_denied');f.advance(5000);await expect(f.service.auth.poll({flowId:next.flow!.id})).rejects.toMatchObject({code:'GITHUB_AUTH'});expect((await f.service.auth.status()).connected).toBeUndefined();
-  });
-  it('rejects caller tokens, arbitrary addresses and ungranted automatic submission',async()=>{
-    const f=await fixture();for(const input of [{...config,token:'secret'},{...config,owner:'evil/x'},{...config,autoSubmit:false}])await expect(f.service.auth.begin(input)).rejects.toMatchObject({code:'GITHUB_CONFIG'});expect(f.calls).toHaveLength(0);
-  });
-  it('disconnects without returning credentials and invalidates captured ports',async()=>{
-    const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;await f.service.auth.disconnect();await expect(port.submit(bug,signal())).rejects.toMatchObject({code:'GITHUB_CONNECTION_CHANGED'});expect(f.posts()).toHaveLength(0);expect(await f.service.prepare(binding,()=>{})).toBeUndefined();
-  });
-  it('does not let a second service change the target of an existing device flow',async()=>{
-    const f=await fixture(),first=await f.service.auth.begin(config),other=f.create();await other.auth.begin({...config,repo:'different'});f.advance(5000);
-    await expect(f.service.auth.poll({flowId:first.flow!.id})).rejects.toMatchObject({code:'GITHUB_FLOW'});expect(f.calls.filter(call=>call.url.endsWith('/login/oauth/access_token'))).toHaveLength(0);expect((await f.service.auth.status()).connected).toBeUndefined();
-  });
-  it('a stale poll cannot cancel the new flow, and queued cancellation prevents authorization from starting',async()=>{
-    const f=await fixture(),first=await f.service.auth.begin(config),second=await f.service.auth.begin(config);await expect(f.service.auth.poll({flowId:first.flow!.id})).rejects.toMatchObject({code:'GITHUB_FLOW'});expect((await f.service.auth.status()).flow!.id).toBe(second.flow!.id);
-    const count=f.calls.length,start=f.service.auth.begin(config),cancel=f.service.auth.cancel();await expect(start).rejects.toMatchObject({code:'GITHUB_CANCELLED'});await cancel;expect(f.calls).toHaveLength(count);
-  });
-});
-
 describe('direct issue submission',()=>{
+  it('does not prepare a submission port while authorization is pending',async()=>{
+    const f=await fixture();await f.service.auth.begin(config);f.advance(5000);
+    expect(await f.service.prepare(binding,()=>{})).toBeUndefined();expect(f.calls).toHaveLength(1);
+  });
   it.each(['bug','wish'] as const)('submits minimal %s once and deduplicates omitted, blank and placeholder fields after restart',async kind=>{
     const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;
     const input:FeedbackInput={kind,summary:kind==='bug'?'安装后的桌面图标与启动后窗口图标不一致':'希望支持批量导出'},result=await port.submit(input,signal());
@@ -169,14 +119,7 @@ describe('direct issue submission',()=>{
     const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;f.lose();await expect(port.submit(bug,signal())).rejects.toThrow();await f.service.auth.disconnect();f.account(99);await f.login();const next=(await f.service.prepare(binding,()=>{}))!;
     await expect(next.submit(wish,signal())).rejects.toMatchObject({code:'GITHUB_PENDING_OTHER'});await expect(next.receipt(signal())).rejects.toMatchObject({code:'GITHUB_RECEIPT_TARGET'});expect(f.posts()).toHaveLength(1);
   });
-});
-
-describe('GitHub transport boundary',()=>{
-  it('uses fixed hosts, refuses redirects and bounds responses without exposing tokens',async()=>{
-    const fetchMock=vi.fn().mockResolvedValue(new Response('{"ok":true}',{status:200}));vi.stubGlobal('fetch',fetchMock);
-    await expect(githubRequest('https://other.test/repos/x',{method:'GET',token,signal:signal()})).rejects.toMatchObject({code:'GITHUB_ADDRESS'});expect(fetchMock).not.toHaveBeenCalled();
-    await githubRequest('https://api.github.com/user',{method:'GET',token,signal:signal()});expect(fetchMock.mock.calls[0][1]).toMatchObject({redirect:'error',headers:{Authorization:`Bearer ${token}`,'X-GitHub-Api-Version':'2026-03-10'}});
-    fetchMock.mockRejectedValue(Error(token));await expect(githubRequest('https://api.github.com/user',{method:'GET',token,signal:signal()})).rejects.toMatchObject({code:'GITHUB_NETWORK',message:expect.not.stringContaining(token)});
-    fetchMock.mockResolvedValue(new Response('x'.repeat(2*1024*1024+1)));await expect(githubRequest('https://api.github.com/user',{method:'GET',token,signal:signal()})).rejects.toMatchObject({code:'GITHUB_NETWORK'});
+it('disconnects without returning credentials and invalidates captured ports',async()=>{
+    const f=await fixture();await f.login();const port=(await f.service.prepare(binding,()=>{}))!;await f.service.auth.disconnect();await expect(port.submit(bug,signal())).rejects.toMatchObject({code:'GITHUB_CONNECTION_CHANGED'});expect(f.posts()).toHaveLength(0);expect(await f.service.prepare(binding,()=>{})).toBeUndefined();
   });
 });

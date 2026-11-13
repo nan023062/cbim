@@ -65,6 +65,12 @@ const allowsWebMigration=(from,to)=>
   to===webPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/web.ts')||
   to===webService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'))||
   from==='src/backend/main/main.ts'&&to==='src/core/platform/electron/web-reader.ts';
+// 反馈范围与纯协议由 Logic 拥有，平台服务只向宿主装配开放。
+const feedbackPublic='src/logic/feedback/index.ts';
+const feedbackService='src/logic/feedback/service/index.ts';
+const allowsFeedbackMigration=(from,to)=>
+  to===feedbackPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/github-feedback.ts')||
+  to===feedbackService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
 const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
@@ -92,7 +98,7 @@ const moduleBoundaries=[
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic,webPublic]},
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(file===entry)return true;
@@ -109,7 +115,7 @@ export const externalLoads = [
   {file:'scripts/runtime-build.ts',expression:"require(path.join(plugin,'ViteConfig.js'))",reason:'只从锁定的 @electron-forge/plugin-vite 包路径读取生产配置生成器；与冷包共用构建参数，无运行时用户输入'},
   {file:'src/backend/engines/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
   {file:'src/backend/engines/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
-  {file:'src/backend/main/platform/locking.ts', expression:"requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
+  {file:'src/core/platform/node/locking.ts', expression:"requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
   {file:'src/backend/main/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/backend/main/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/backend/main/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
@@ -214,6 +220,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
+      if(relative(file)==='src/bridge/contracts/github-feedback.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/feedback(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
+        const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
+        if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['githubFeedbackConfigSchema','GitHubFeedbackConfig','GitHubFeedbackStatus'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'feedback-bridge-export',boundary:'feedback-bridge-compatibility'});
+      }
       if(relative(file)==='src/bridge/contracts/web.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/web(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
         const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
         if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['webConfigureInput','WebSettingsView'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'web-bridge-export',boundary:'web-bridge-compatibility'});
@@ -238,7 +248,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to);
+      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to);
       if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
       // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
       if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;

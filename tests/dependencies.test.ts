@@ -4,6 +4,37 @@ import path from 'node:path';
 import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
+test.each([
+  ['src/backend/main/assembly/application.ts','src/logic/feedback/service/index.ts',true],
+  ['src/backend/core/tools/scope-schema.ts','src/logic/feedback/index.ts',true],
+  ['src/backend/scheduler-engine/tools/feedback-tools.ts','src/logic/feedback/index.ts',true],
+  ['src/backend/scheduler-engine/tools/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
+  ['src/backend/engines/pi/engine.ts','src/logic/feedback/index.ts',false],
+  ['src/backend/main/assembly/application.ts','src/logic/feedback/service/github-feedback.ts',false],
+  ['src/logic/feedback/contracts.ts','src/backend/core/tools/scope-schema.ts',false],
+  ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
+  ['src/logic/feedback/service/github-feedback.ts','src/core/platform/node/locking.ts',true],
+  ['src/logic/feedback/service/github-feedback.ts','src/core/contracts/secrets.ts',true],
+  ['src/logic/feedback/service/github-feedback.ts','src/backend/main/platform/locking.ts',false],
+  ['src/logic/feedback/service/github-feedback.ts','src/logic/models/index.ts',false],
+  ['src/bridge/contracts/other.ts','src/logic/feedback/index.ts',false],
+  ['src/frontend/settings/feedback.ts','src/logic/feedback/index.ts',false],
+  ['src/bridge/client/feedback.ts','src/logic/feedback/service/index.ts',false],
+  ['src/core/platform/node/locking.ts','src/logic/feedback/index.ts',false],
+] as const)('反馈迁移边界 %s → %s = %s',(from,to,allowed)=>{
+  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
+  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+test('反馈桥仅公开连接设置，纯入口拒绝平台依赖',()=>{
+  const entry='src/logic/feedback/index.ts',bridge='src/bridge/contracts/github-feedback.ts';
+  expect(audit({[entry]:'export type GitHubFeedbackStatus={};',[bridge]:"export type {GitHubFeedbackStatus} from '../../logic/feedback';"}).ok).toBe(true);
+  for(const source of ["export * from '../../logic/feedback';","export type {FeedbackToolsPort} from '../../logic/feedback';"]){
+    expect(audit({[entry]:'export type FeedbackToolsPort={};',[bridge]:source}).logicalViolations).toContainEqual(expect.objectContaining({rule:'feedback-bridge-export'}));
+  }
+  for(const file of [entry,'src/logic/feedback/contracts.ts'])for(const spec of ['node:fs','koffi','electron'])expect(audit({[file]:`import '${spec}';`}).ok).toBe(false);
+});
+
 const temporary:string[]=[];
 test.each([
   ['src/logic/web/service/web-service.ts','src/core/platform/node/web/index.ts',true],

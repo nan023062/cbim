@@ -16,7 +16,7 @@ import {governanceToolEffects,isGovernanceToolName} from '../../governance/modul
 import {isModuleOwnershipToolName,moduleOwnershipToolEffects,moduleOwnershipToolPrefix} from '../../workspace/module-ownership-tool-policy';
 import {memberToolEffects,type MemberToolName} from '../../team/workspace-member-tools';
 import {isDeepStrictEqual} from 'node:util';
-import type {FeedbackScope} from '../../connectors/github-feedback';
+import type {FeedbackScope} from '../../../../logic/feedback';
 
 /** 已由调度层识别和解析的调用；不接受模型自行声明 effects 或权限。 */
 export interface RunToolDescriptor {effects:readonly ToolEffect[];native:boolean;

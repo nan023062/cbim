@@ -32,11 +32,13 @@ class N_src_core_errors_ts["errors.ts"] {
   <<module>>
 }
 N_src_core_platform ..> N_src_core_web : 导入依赖
+N_src_core_platform ..> N_src_core_errors_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `platform` → `web`：导入。
+- `platform` → `errors.ts`：导入。
 
 ### errors.ts 公开入口
 
@@ -51,8 +53,8 @@ class N_src_core_errors_ts["errors.ts"] {
 
 ## 子目录导航
 
-- [contracts/](contracts/ARCHITECTURE.md)：通用技术端口；当前 SecretCipher 由模型和 Web 共同使用，具体平台实现由宿主注入。
-- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、文件和网页，Electron 提供匿名网页适配。便携 Core 不依赖平台。
+- [contracts/](contracts/ARCHITECTURE.md)：通用技术端口；当前 SecretCipher 由模型、Web 与反馈共同使用，具体平台实现由宿主注入。
+- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配。便携 Core 不依赖平台。
 - [utility/](utility/ARCHITECTURE.md)：前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
 - [web/](web/ARCHITECTURE.md)：纯网页输入/浏览器契约与 HTML 正文算法；公开 index.ts，不加载 Node、Electron 或业务。
 
@@ -78,3 +80,5 @@ Core 是四层架构的基础公共层，不含业务规则、通信操作、页
 
 
 Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。
+
+Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行为；业务决定持有范围。SecretCipher 同时用于模型、Web 和反馈服务，Core 不依赖这些消费者。

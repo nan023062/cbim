@@ -49,7 +49,7 @@ class N_src_backend_core_tools_policy_tool_policy_ts_RunPolicyContext["RunPolicy
 N_src_backend_core_tools_policy_tool_policy_ts ..> N_src_backend_core_tools_policy_tool_policy_ts_RunPolicyContext : 声明
 ```
 
-直接依赖：[types.ts](types.ts)、[../types.ts](../types.ts)、[../scope-schema.ts](../scope-schema.ts)、[../../governance/module-governance-tools.ts](../../governance/module-governance-tools.ts)、[../../workspace/module-ownership-tool-policy.ts](../../workspace/module-ownership-tool-policy.ts)、[../../team/workspace-member-tools.ts](../../team/workspace-member-tools.ts)、[../../connectors/github-feedback.ts](../../connectors/github-feedback.ts)。
+直接依赖：[types.ts](types.ts)、[../types.ts](../types.ts)、[../scope-schema.ts](../scope-schema.ts)、[../../governance/module-governance-tools.ts](../../governance/module-governance-tools.ts)、[../../workspace/module-ownership-tool-policy.ts](../../workspace/module-ownership-tool-policy.ts)、[../../team/workspace-member-tools.ts](../../team/workspace-member-tools.ts)、[../../../../logic/feedback/index.ts](../../../../logic/feedback/index.ts)。
 
 ### types.ts
 

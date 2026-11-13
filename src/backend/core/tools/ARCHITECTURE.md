@@ -262,3 +262,5 @@ nativeToolNames 按引擎提供真实规范名：Pi 保持既有清单，Codex �
 ## 输入校验与缺省参数
 
 input-validation.ts 只解释实际 Schema issues，不根据工具字段清单推断缺参；optional/default 由原 Schema 决定，null、空字符串、显式值不转换为缺省。工具注册表使用共享无原值字段说明。toolInputError 仅用于执行前校验，ZodError 转为 TOOL_INPUT_INVALID，outcome 明确 rejected；执行后未知异常不使用此转换。字段说明经 Bridge 供旧 UI 投影共用，不赋予执行或重试许可。
+
+反馈范围 Schema 的唯一实现已迁入 Logic feedback；scope-schema.ts 组合并兼容重导出它，旧日志字段与校验保持，工具权限仍由可信调用方签发。

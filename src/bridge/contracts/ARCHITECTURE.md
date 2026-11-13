@@ -22,7 +22,7 @@
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
-| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议。 |
+| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议与输入 Schema。 |
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
@@ -351,7 +351,7 @@ class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)。
+直接依赖：[../../logic/feedback/index.ts](../../logic/feedback/index.ts)。
 
 ### governance.ts
 
@@ -845,7 +845,7 @@ class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelA
 N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-直接依赖：[web.ts](web.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[models.ts](models.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/budget/scope-budget.ts](../../backend/core/budget/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
+直接依赖：[web.ts](web.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[models.ts](models.ts)、[github-feedback.ts](github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/budget/scope-budget.ts](../../backend/core/budget/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
 
 ### ipc-shapes.ts
 
@@ -1396,6 +1396,9 @@ classDiagram
 class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
   <<module>>
 }
@@ -1408,17 +1411,20 @@ class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_models_ts["models.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_github_feedback_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
-N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_models_ts["models.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
   <<module>>
 }
@@ -1431,6 +1437,7 @@ class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖

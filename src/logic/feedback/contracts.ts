@@ -4,7 +4,8 @@
  * 内容边界：仅简述必填，补充字段允许缺省或空白；确定性正文标记“用户未提供”，不编造事实，已填写完整的旧正文保持不变。
  */
 import {z} from 'zod';
-import {githubFeedbackScopeSchema} from '../tools/scope-schema';
+/** 可信装配绑定的反馈目标；字段与原日志协议保持一致，不携带凭据或签发权限。 */
+export const githubFeedbackScopeSchema=z.object({kind:z.literal('github-feedback'),workspaceId:z.string(),connectionId:z.string().uuid(),repositoryId:z.number().int().positive(),owner:z.string().min(1).max(100),repo:z.string().min(1).max(100)}).strict();
 
 const field=z.string().min(1).max(6000).refine(value=>value.trim().length>0&&!value.includes('<!-- cbim-feedback:'),'内容为空或包含保留标记');
 const optionalField=z.string().max(6000).refine(value=>!value.includes('<!-- cbim-feedback:'),'内容包含保留标记').optional().describe('可选，仅填写用户愿意提供的内容；省略或空白显示用户未提供，不为缺项追问');

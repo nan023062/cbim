@@ -543,18 +543,6 @@
         "integration": []
       }
     },
-    "backend/main/feedback": {
-      "roots": [
-        "src/backend/main/feedback/"
-      ],
-      "tests": {
-        "unit": [],
-        "contract": [
-          "tests/github-feedback.test.ts"
-        ],
-        "integration": []
-      }
-    },
     "backend/main/file-operations": {
       "roots": [
         "src/backend/main/file-operations/"
@@ -1384,6 +1372,59 @@
           "tests/web-http-transport.test.ts",
           "tests/web-browser-proxy.test.ts"
         ]
+      }
+    },
+    "logic/feedback": {
+      "roots": [
+        "src/logic/feedback/index.ts",
+        "src/logic/feedback/contracts.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/feedback-contracts.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/feedback/service": {
+      "roots": [
+        "src/logic/feedback/service/index.ts",
+        "src/logic/feedback/service/github-feedback.ts",
+        "src/logic/feedback/service/github-feedback-auth.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/github-feedback-auth.test.ts"
+        ],
+        "contract": [
+          "tests/github-feedback.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "core/platform/node/locking": {
+      "roots": [
+        "src/core/platform/node/locking.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "tests/kernel-lock.test.ts"
+        ]
+      }
+    },
+    "logic/feedback/http": {
+      "roots": [
+        "src/logic/feedback/service/github-api.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/github-api.test.ts"
+        ],
+        "contract": [],
+        "integration": []
       }
     }
   }

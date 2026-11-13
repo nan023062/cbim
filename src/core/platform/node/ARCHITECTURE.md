@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Node 专属摘要、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。
+Node 专属摘要、原生互斥锁、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,6 +11,7 @@ Node 专属摘要、单文件 I/O 与网页读取，分别通过独立公开入�
 | 文件 | 当前职责 |
 | --- | --- |
 | [digest.ts](digest.ts) | 共享 Core 的 Node 专属摘要入口，提供 SHA-256 摘要。 |
+| [locking.ts](locking.ts) | Core 的 Node 原生锁入口；KernelLock：使用 Windows mutex 或 POSIX flock，防止跨进程并发持有。 |
 
 ## 架构类图
 
@@ -23,6 +24,9 @@ class N_src_core_platform_node_web["web/"] {
   <<directory>>
 }
 class N_src_core_platform_node_digest_ts["digest.ts"] {
+  <<module>>
+}
+class N_src_core_platform_node_locking_ts["locking.ts"] {
   <<module>>
 }
 ```
@@ -64,3 +68,7 @@ class N_src_core_platform_node_digest_ts["digest.ts"] {
 原 backend/core/foundation/serialization.ts 的 hash 名称仍单向重导出此实现，历史知识版本和指纹字节保持。Node 摘要不经 core/utility 导出，View/前端/桥接客户端不得导入。现阶段引擎、调度器、更新器也不因新增 Core 而扩大原依赖许可。
 
 独立单元仍在 tests/unit/foundations/utility/digest.test.ts，模块归属为 core/platform/node。字段选择、序列化顺序、授权或验签决定不属于摘要算法。
+
+## 原生互斥锁
+
+locking.ts 提供 KernelLock，使用 Windows mutex 或 POSIX flock。保留 Global\\CBIM 命名、scope/id 键、错误与进程内 held 集合；创建目录、重试、事务顺序与释放时机由消费者决定。旧 Main/platform/locking.ts 仍有工作区、资源和执行消费者，重导出同一构造器，不能保留第二份实现。koffi 只按固定安装包或 node_modules 路径加载；便携 Core 和前端不得导入。

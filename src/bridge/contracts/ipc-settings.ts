@@ -8,7 +8,7 @@ import {webConfigureInput,type WebSettingsView} from './web';
 import {ipcId,noIpcArgs} from './ipc-shapes';
 import {type DiscoveredModel} from './models';
 import {type LlmSettings,connectionSchema,definition} from './models';
-import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from '../../backend/core/connectors/github-feedback';
+import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from './github-feedback';
 import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
 import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';
 import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/budget/scope-budget';

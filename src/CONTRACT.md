@@ -7,3 +7,5 @@ Core 不依赖其余层，前后端通过公开入口共享同一技术契约。
 目标四层和后续切片见 [四层架构设计](../design/four-layer-architecture.md)，实际 Core 边界见 [Core 契约](core/CONTRACT.md)。新目标目录的依赖规则已启用；旧目录保留细粒度限制；桥接 models.ts 精确重导出 Logic 模型纯入口，模型 service 宿主入口独立。Bridge 现有纯领域契约重导出是迁移期结构，不宣称目标已全部实现。
 
 Web 工具协议与服务现位于 logic/web；Core 网页能力分为纯契约、Node 和 Electron 入口。仅 bridge/contracts/web.ts 保留既有设置协议的具名兼容导出，桌面注入浏览器；调度器不取得服务或平台访问权。
+
+反馈纯协议及宿主服务已迁入 logic/feedback，旧 Main 仅装配与关闭服务。Core 提供原生锁，旧锁出口保留兼容；Bridge 仅转接公开连接设置。

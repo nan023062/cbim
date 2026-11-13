@@ -1,3 +1,16 @@
+## 2026-11-13：Logic 第三步／反馈服务
+
+- 来源：用户明确授权迁移反馈服务并运行反馈模块测试；基线 ac62d9d3，初始工作区干净。开放 Issues 查询仅 #65，与本次目录迁移无关，未写入无关工单。C3/L3；阅读反馈输入、授权、账本、HTTP、工具策略、Main/IPC 装配和原生锁实际依赖，本片不包含资源或模块治理反馈业务迁移。
+- 反馈纯契约迁到 src/logic/feedback/index.ts，GitHubFeedback/GitHubFeedbackAuth 及传输迁到 service；宿主只通过 service/index.ts 装配。githubFeedbackScopeSchema 的唯一实现归反馈领域，旧工具范围组合并兼容重导出它，避免 Logic 依赖旧工具。Bridge 仅具名转接配置 Schema 和公开连接状态，不能导出提交端口、凭据或服务；旧调度/Core 仅获准纯入口。HTTP 文件独立登记逻辑边界与测试责任。
+- KernelLock 实现迁到 src/core/platform/node/locking.ts；旧 Main/platform/locking.ts 仍有工作区、资源、执行消费者，保留同一构造器的兼容重导出，共享原进程内 held 集合。Windows/POSIX 实现、锁名、scope、错误及关闭语义未重写。反馈直接组合 Core 的 SecretCipher、Fault、摘要、文件和锁，不依赖模型业务或旧 Main。原配置、指纹、先保存 sending 再 POST、结果未知禁止重发及原目标核实保持，不修改用户数据。
+- 测试拆分：纯字段/正文/范围、授权状态和 HTTP 各自单元登记；授权单元直接构造 Auth，使用请求、加密、锁替身与临时文件。提交契约保留真实 Auth/文件/原生锁，原 pending 下不得装配提交端口的断言仍在契约中。新增原生锁集成验证旧新入口同构造器、互斥与释放；工作区跨进程锁及真实 Pi 调用链另选原集成用例，没有以替身删除真实边界覆盖。
+- 首轮依赖检查拦下遗漏的旧范围导入造成的循环，以及 HTTP 测试直达未公开文件；模块选择器据此拒绝执行，没有回退全仓。补齐范围归属、独立 HTTP 边界后依赖通过。该循环亦曾使工具回执类型推断失败；修复后仅剩新增测试联合类型未收窄，补充 kind 检查后类型通过，并补跑该测试 3 项通过。产品实现未因测试作行为改写。
+- 模块测试：`pnpm test:module --module logic/feedback`（1 文件/3 项）、`pnpm test:module --module logic/feedback/service`（1 文件/9 项）、`pnpm test:module --module logic/feedback/http`（1 文件/1 项）通过。选择依据是纯业务协议、独立授权状态与有界传输责任。
+- 直接相关边界：`pnpm exec vitest run tests/github-feedback.test.ts tests/github-feedback-tools.test.ts tests/github-feedback-status.test.ts tests/kernel-lock.test.ts tests/ipc-requests.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`，8 文件/187 项通过。`pnpm exec vitest run tests/utility-body-consumers.test.ts -t github --reporter=dot`，2 项通过、9 项未选择；`pnpm exec vitest run tests/workspace.test.ts -t '目录别名与跨进程工程互斥' --reporter=dot`，1 项通过、9 项未选择。`pnpm exec vitest run tests/github-feedback-pi.test.ts tests/github-feedback-lifecycle-pi.test.ts --reporter=dot`，2 文件/5 项通过，使用真实本地 Pi 路径及测试 HTTP，不访问在线 GitHub。合计 15 个文件、208 个不同用例通过，18 项选择器排除不计通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 最终通过：103 目录/727 源码样式，1467 扫描文件/7190 依赖/0 环与违规；481 测试文件（137 unit、154 contract、190 integration）。15 个原源码实现去除导入/重导出/注释及单独核对的范围声明后语法一致；范围字段与约束逐项保持，锁与异常使用同一实现。
+- Vite 自带 esbuild 对反馈纯入口和桥配置入口做 browser/esm/write:false 打包，12/13 个输入，无服务/平台输入；宿主服务做 node/esm、external koffi、write:false 构建，28 个输入。没有生成发布制品。同步源码注释、受影响类图/契约、四层设计、AGENTS 和三宿主工作流，旧 feedback 目录及无消费者协议文件删除，保留仍使用中的 scope/locking 兼容出口。
+- Q1 保持授权代际、加密、锁、发送屏障和回执归属；Q2 反馈字段与格式归纯契约、登录与账本归业务服务、原生互斥归 Core；Q3 按纯行为、直接消费者、真实平台和 Pi 链路验证；Q4 logic/feedback/CONTRACT.md → service/CONTRACT.md → auth/提交/HTTP，对应修改各自责任测试；Q5 无新增自动治理。回退单位为本片目录、规则、消费者与测试的完整提交；保留人工 review。未运行全量回归、在线 OAuth/真实 Issue 提交、完整桌面制品或发布验收；本轮仅本地提交，不 push、合并或发布。
+
 ## 2026-11-13：Logic 第二批第一片／Web 服务
 
 - 来源：用户明确授权迁移 Web 服务并运行 Web 模块测试；基线 03abb281，初始工作区干净。开放 Issues 仅 #65，与本片无关，未修改无关工单。C3/L3；范围为网页协议、服务、配置及其技术基础和消费者，不包含反馈及资源业务迁移。

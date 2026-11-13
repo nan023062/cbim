@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Logic 已迁入模型与 Web 的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
+Logic 已迁入模型、Web 与反馈的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,9 @@ Logic 已迁入模型与 Web 的规则和服务；其他后端业务仍在旧目
 
 ```mermaid
 classDiagram
+class N_src_logic_feedback["feedback/"] {
+  <<directory>>
+}
 class N_src_logic_models["models/"] {
   <<directory>>
 }
@@ -28,6 +31,7 @@ class N_src_logic_web["web/"] {
 
 ## 子目录导航
 
+- [feedback/](feedback/ARCHITECTURE.md)：反馈输入、确定性正文、可信范围与公开连接契约；纯入口不加载持久化、网络或原生锁。
 - [models/](models/ARCHITECTURE.md)：模型目录、公开配置 Schema、供应商预设与引擎接口选择；index.ts 是纯公共入口，不加载 Node 或服务。配置服务位于 service，旧预算端口和主 Agent 设置不属于本片。
 - [web/](web/ARCHITECTURE.md)：网页工具与设置纯契约；service 提供网络业务适配和配置持久化，工具权限与宿主装配在外层。
 
@@ -44,3 +48,5 @@ class N_src_logic_web["web/"] {
 Logic 拥有业务规则、服务和状态，单向组合共享 Core；不得依赖 Bridge、View 或旧 backend 的实现。当前模型目录、供应商连接、引擎选型及配置服务已迁入 [models](models/CONTRACT.md)，[Web 服务](web/CONTRACT.md) 也已迁入，其他业务仍在旧目录。
 
 模型纯规则入口与有副作用的服务入口分别维护，不能通过纯入口导出存储。旧宿主仅在登记的入口装配服务；旧执行模块只能使用纯模型契约。依赖检查同时核实公开入口、运行环境与类型引用，未对旧后端开放整个 Logic。
+
+反馈业务已迁入 feedback/index.ts 与 feedback/service/index.ts：纯输入/正文/范围和宿主授权/账本分开。反馈范围唯一实现归 Logic，旧工具日志组合其契约；Core 只提供文件、摘要、原生锁及加密端口。

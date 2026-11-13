@@ -1,6 +1,11 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'feedback-http',files:['src/logic/feedback/service/github-api.ts'],public:['src/logic/feedback/service/github-api.ts'],dependencies:['core-errors','utility-foundations'],external:[]},
+  {id:'feedback-service',prefix:'src/logic/feedback/service/',public:['src/logic/feedback/service/index.ts'],dependencies:['feedback-contract','feedback-http','core-errors','secret-contract','file-foundations','utility-node-foundations','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto']},
+  {id:'feedback-contract',prefix:'src/logic/feedback/',public:['src/logic/feedback/index.ts'],dependencies:[],external:['zod']},
+  {id:'feedback-bridge-compatibility',files:['src/bridge/contracts/github-feedback.ts'],public:['src/bridge/contracts/github-feedback.ts'],dependencies:['feedback-contract'],external:[]},
+  {id:'kernel-lock',files:['src/core/platform/node/locking.ts'],public:['src/core/platform/node/locking.ts'],dependencies:['core-errors'],external:['node:module','node:path','node:fs','koffi']},
   {id:'secret-contract',files:['src/core/contracts/secrets.ts'],public:['src/core/contracts/secrets.ts'],dependencies:[],external:[]},
   {id:'web-service',prefix:'src/logic/web/service/',public:['src/logic/web/service/index.ts'],dependencies:['web-contract','web-node','web-portable','core-errors','secret-contract','file-foundations','utility-foundations'],external:['zod','node:fs/promises','node:timers/promises']},
   {id:'web-contract',prefix:'src/logic/web/',public:['src/logic/web/index.ts'],dependencies:[],external:['zod']},
@@ -130,7 +135,7 @@ export const logicalBoundaries = [
       "src/backend/core/team/agent-runtime.ts",
       "src/bridge/contracts/models.ts",
       "src/backend/core/execution/types.ts",
-      "src/backend/core/connectors/github-feedback.ts",
+      "src/bridge/contracts/github-feedback.ts",
       "src/backend/core/connectors/repository-connection.ts",
       "src/backend/core/connectors/repository-tools.ts",
       "src/bridge/contracts/web.ts",

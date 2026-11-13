@@ -33,7 +33,7 @@ import {LlmProfiles,type SecretCipher} from '../../../logic/models/service';
 import {MainAgentSettings} from '../models/main-agent-settings';
 import {AdmissionSettings} from '../settings/admission-settings';
 import {BudgetSettings} from '../settings/budget-settings';
-import {GitHubFeedback} from '../feedback/github-feedback';
+import {GitHubFeedback} from '../../../logic/feedback/service';
 import {createExecutionManager} from './execution';
 import type {EngineRuntimeResolver} from '../../core/execution/engine-runtime';
 import {createMemberServices} from './member-dispatch';

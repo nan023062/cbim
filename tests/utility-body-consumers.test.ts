@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {RemoteRepository} from '../src/backend/main/resources/resource-http';
-import {githubRequest} from '../src/backend/main/feedback/github-api';
+import {githubRequest} from '../src/logic/feedback/service/github-api';
 import {readUrlSource} from '../src/backend/main/materials/chat-source-readers';
 import {releaseRequest} from '../src/backend/updater/release-http';
 import {downloadRuntimeManifest} from '../src/backend/updater/runtime-download';

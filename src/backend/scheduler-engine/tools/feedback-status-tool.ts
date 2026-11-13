@@ -6,7 +6,7 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
 import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
-import {feedbackAvailabilitySchema,feedbackConnectionCheckSchema,feedbackReceiptInputSchema,type FeedbackAvailability,type FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
+import {feedbackAvailabilitySchema,feedbackConnectionCheckSchema,feedbackReceiptInputSchema,type FeedbackAvailability,type FeedbackConnectionCheck} from '../../../logic/feedback';
 
 const messages:Record<FeedbackAvailability['code'],string>={
   FEEDBACK_READY:'本轮已装配反馈提交与核实工具；实际提交仍需通过会话权限、连接和 GitHub 核验。',

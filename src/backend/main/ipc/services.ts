@@ -16,7 +16,7 @@ import type {MainAgentSettings} from '../models/main-agent-settings';
 import type {LlmProfiles} from '../../../logic/models/service';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
-import type {GitHubFeedback} from '../feedback/github-feedback';
+import type {GitHubFeedback} from '../../../logic/feedback/service';
 import type {ModuleGovernanceService} from '../governance/module-governance';
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';

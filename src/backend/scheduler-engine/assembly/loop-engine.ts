@@ -67,7 +67,7 @@ import type {WorkflowContractBinding} from '../../core/tasks/execution-context';
 import type {RepositoryToolsPort} from '../../core/connectors/repository-tools';
 import {FeedbackTools} from '../tools/feedback-tools';
 import {FeedbackStatusTool} from '../tools/feedback-status-tool';
-import type {FeedbackToolsPort,FeedbackScope,FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
+import type {FeedbackToolsPort,FeedbackScope,FeedbackConnectionCheck} from '../../../logic/feedback';
 import type {RunPolicyContext} from '../../core/tools/policy/tool-policy';
 import {RepositoryTools} from '../tools/repository-tools';
 import type {GovernanceToolsPort} from '../../core/governance/module-governance-tools';

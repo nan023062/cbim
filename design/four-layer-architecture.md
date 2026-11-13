@@ -87,3 +87,7 @@ Bridge 是通信边界，不是业务服务定位器。Logic 定义自己的服�
 ## Web 迁移切片
 
 WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为 Core 纯契约/正文算法、Node 抓取和 Electron 适配。SecretCipher 提升为 Core 技术端口，系统加密实现仍由宿主注入。只有旧桌面 main.ts 可引用 Electron 读取入口；旧调度器只使用 Logic 纯工具契约。bridge/contracts/web.ts 仅保留 webConfigureInput/WebSettingsView 的具名兼容导出，未来 DTO 迁移后退出。保留现有 robots、缓存、错误、取消和凭据语义；反馈与资源服务不在本片范围。
+
+## 反馈迁移切片
+
+反馈协议、范围、GitHub 授权与提交服务归 logic/feedback；纯 index.ts 与宿主 service/index.ts 分开。原 scope-schema 组合并重导出本域范围，避免 Logic 反向依赖工具体系。KernelLock 实现进入 core/platform/node/locking.ts，旧出口共享同一构造器以兼容工作区/资源消费者。bridge/contracts/github-feedback.ts 仅转接配置 Schema 与公开状态；旧 Main 通过服务公开入口装配，工具只能读纯契约。凭据、发送屏障、原目标核实与持久化字节保持；资源业务不在本片范围。

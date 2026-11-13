@@ -1,5 +1,5 @@
 /**
- * 目录归属：backend/main/feedback；GitHub 反馈与连接。
+ * 目录归属：logic/feedback/service；GitHub 反馈与连接。
  * 作用定位：桌面 GitHub Device Flow、账号／仓库绑定和本机加密凭据管理。
  * 设计原因：公开 Client ID 可以随应用配置，授权令牌只留在主进程；连接代际和串行队列使换号、断开与在途提交具有确定顺序。
  * 生命周期：轮询由可见设置页驱动，后端强制 interval/slow_down/过期；退出取消授权请求，不在后台无限轮询。运行诊断单独检查公开连接事实与原绑定，不解密、不联网。
@@ -9,11 +9,11 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {fail,Fault} from '../../core/foundation/errors';
-import {hash} from '../../core/foundation/serialization';
-import {KernelLock} from '../platform/locking';
-import type {SecretCipher} from '../../../logic/models';
-import {githubFeedbackConfigSchema,type GitHubFeedbackStatus,type FeedbackScope,type FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
+import {fail,Fault} from '../../../core/errors';
+import {sha256 as hash} from '../../../core/platform/node/digest';
+import {KernelLock} from '../../../core/platform/node/locking';
+import type {SecretCipher} from '../../../core/contracts/secrets';
+import {githubFeedbackConfigSchema,type GitHubFeedbackStatus,type FeedbackScope,type FeedbackConnectionCheck} from '..';
 import {githubRequest,type GitHubRequest} from './github-api';
 
 const connectionSchema=z.object({id:z.string().uuid(),accountId:z.number().int().positive(),login:z.string().regex(/^[A-Za-z0-9-]{1,100}$/),repositoryId:z.number().int().positive(),encryptedToken:z.string().min(1).max(32000),expiresAt:z.number().positive().optional()}).strict();
@@ -46,6 +46,7 @@ export class GitHubFeedbackAuth {
     const flow=this.flow&&this.now()<this.flow.expiresAt?this.flow:undefined;
     return {secureStorage:this.cipher?.available()===true,config:{clientId:config.clientId,owner:config.owner,repo:config.repo,visibility:config.visibility},...(data.connection?{connected:{login:data.connection.login,owner:config.owner,repo:config.repo}}:{}),...(flow?{flow:{id:flow.id,userCode:flow.userCode,verificationUri:'https://github.com/login/device' as const,expiresAt:flow.expiresAt,nextPollAt:flow.nextPollAt}}:{})};
   }
+  /** 在配置队列内读取公开摘要；不解密或发送网络请求，也不自动推进授权轮询。 */
   status(){return this.serial(async()=>this.view(await this.read()))}
   /** 诊断不能凭“工具缺失”推断未登录；本机仍等待授权回包、读取失败与账号断开分开。旧绑定变化只提示开启新一轮。 */
   checkConnection(scope?:FeedbackScope):Promise<FeedbackConnectionCheck>{return this.serial(async():Promise<FeedbackConnectionCheck>=>{
@@ -125,6 +126,8 @@ export class GitHubFeedbackAuth {
   private cancelFlow(){this.generation++;this.flow?.controller.abort();this.flow=undefined}
   /** 撤销本机使用许可，不声称删除 GitHub 网站上的 OAuth 授权。 */
   disconnect(){this.cancelFlow();return this.serial(async()=>{const data=await this.read();delete data.connection;delete data.flowId;await atomic(this.filename,JSON.stringify(data));return this.view(data)})}
+  /** 立即作废当前设备授权代际，随后返回公开状态；已保存连接不被删除。 */
   cancel(){this.cancelFlow();return this.status()}
+  /** 停止接单并中断本实例网络请求，等待已入队操作退出，不删除持久连接或原提交事实。 */
   async close(){this.closed=true;this.cancelFlow();this.lifetime.abort();await this.queue}
 }

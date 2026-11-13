@@ -1,5 +1,5 @@
 /**
- * 目录归属：backend/main/feedback；GitHub 反馈与连接。
+ * 目录归属：logic/feedback/service；GitHub 反馈与连接。
  * 作用定位：将本机会话的结构化反馈直接写入已连接 GitHub 仓库，保存私有原提交凭证。
  * 设计原因：先 fsync 意图再 POST；连接、账号、仓库和正文指纹在同工作区跨会话防重。保留原主会话归属，丢失回包只查原标记，硬中断后可在新会话核实。
  * 职责边界：只创建 Issue，不读开发进度、不回传链接、不上传整个工程；内容不入本地账本，账本只保留指纹与必要归属。
@@ -10,11 +10,11 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {hash} from '../../core/foundation/serialization';
-import {fail} from '../../core/foundation/errors';
-import type {SecretCipher} from '../../../logic/models';
-import {feedbackInputSchema,feedbackIssue,type FeedbackToolsPort,type FeedbackScope,type FeedbackInput,type FeedbackResult} from '../../core/connectors/github-feedback';
-import {KernelLock} from '../platform/locking';
+import {sha256 as hash} from '../../../core/platform/node/digest';
+import {fail} from '../../../core/errors';
+import type {SecretCipher} from '../../../core/contracts/secrets';
+import {feedbackInputSchema,feedbackIssue,type FeedbackToolsPort,type FeedbackScope,type FeedbackInput,type FeedbackResult} from '..';
+import {KernelLock} from '../../../core/platform/node/locking';
 import {GitHubFeedbackAuth,type GitHubFeedbackIdentity} from './github-feedback-auth';
 import {githubRequest,type GitHubRequest} from './github-api';
 
@@ -28,6 +28,7 @@ const unknown=()=>fail('GITHUB_SUBMISSION_UNKNOWN','GitHub 提交结果待核实
 
 /** 应用级唯一服务；跨进程内核锁保护同一本机账本，进程退出后 sending 仍保持未知。 */
 export class GitHubFeedback {
+  /** 与提交服务同生命周期的授权管理器，宿主只通过公开状态和操作连接设置界面。 */
   readonly auth:GitHubFeedbackAuth;
   private queue:Promise<unknown>=Promise.resolve();
   constructor(private directory:string,cipher?:SecretCipher,private request:GitHubRequest=githubRequest,now:()=>number=Date.now){this.auth=new GitHubFeedbackAuth(path.join(directory,'connection.json'),cipher,request,now)}
@@ -106,5 +107,6 @@ export class GitHubFeedback {
     }
     return unknown();
   }))}
+  /** 先取消授权与连接请求，再等待提交队列退出；保留 sending，不能把关闭视为未提交。 */
   async close(){await this.auth.close();await this.queue}
 }

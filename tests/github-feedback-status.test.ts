@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import {FeedbackStatusTool} from '../src/backend/scheduler-engine/tools/feedback-status-tool';
 import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
-import type {FeedbackConnectionCheck} from '../src/backend/core/connectors/github-feedback';
+import type {FeedbackConnectionCheck} from '../src/logic/feedback';
 
 const signal=()=>new AbortController().signal;
 const read=async(tool:FeedbackStatusTool)=>JSON.parse((await tool.call('cbim_feedback_status',{},signal())).content[0].text);

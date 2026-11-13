@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-链接器定义、查询与唯一身份检查；另定义 GitHub 反馈字段、公开登录状态与可信端口，纯协议不发网络请求或授予权限。
+链接器定义、查询与唯一身份检查；反馈协议已迁入 Logic，现存连接协议不发网络请求或授予权限。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,7 +11,6 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [definition.ts](definition.ts) | 链接器静态定义的纯协议，供知识校验、桌面连接管理与注册查询共用。 |
-| [github-feedback.ts](github-feedback.ts) | CBIM 反馈 Skill、可信 GitHub 端口和桌面登录共用的纯协议。 |
 | [registry.ts](registry.ts) | 链接器领域封装，管理插件或资源仓库的静态身份、查询与重复校验。 |
 | [repository-connection.ts](repository-connection.ts) | 桌面资源仓库链接器的输入、静态登记、独立只读授权与 HTTP 核验回执协议。 |
 | [repository-tools.ts](repository-tools.ts) | 主 Loop 资源仓库只读工具的严格分页、正文分块协议和可信捕获端口。 |
@@ -50,77 +49,6 @@ class N_src_backend_core_connectors_definition_ts_ConnectorDefinition["Connector
 N_src_backend_core_connectors_definition_ts ..> N_src_backend_core_connectors_definition_ts_ConnectorDefinition : 声明
 ```
 
-
-### github-feedback.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
-  <<module>>
-  +feedbackIssue()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
-  <<module>>
-}
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackInput["FeedbackInput"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackInput : 声明
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackScope["FeedbackScope"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackScope : 声明
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackResult["FeedbackResult"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackResult : 声明
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackToolsPort["FeedbackToolsPort"] {
-  <<interface>>
-  +scope
-  +submit()
-  +receipt()
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackToolsPort : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_backend_core_connectors_github_feedback_ts["github-feedback.ts"] {
-  <<module>>
-}
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackConnectionCheck["FeedbackConnectionCheck"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackConnectionCheck : 声明
-class N_src_backend_core_connectors_github_feedback_ts_FeedbackAvailability["FeedbackAvailability"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_FeedbackAvailability : 声明
-class N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackConfig["GitHubFeedbackConfig"] {
-  <<type>>
-
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackConfig : 声明
-class N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackStatus["GitHubFeedbackStatus"] {
-  <<interface>>
-  +secureStorage
-  +config
-  +connected
-  +flow
-}
-N_src_backend_core_connectors_github_feedback_ts ..> N_src_backend_core_connectors_github_feedback_ts_GitHubFeedbackStatus : 声明
-```
-
-直接依赖：[../tools/scope-schema.ts](../tools/scope-schema.ts)。
 
 ### registry.ts
 
@@ -353,13 +281,9 @@ N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connect
 
 网页工具协议已迁到 [Logic Web](../../../logic/web/CONTRACT.md)，由 `src/logic/web/index.ts` 公开；本目录不再保留 `web-tools.ts`。原输入限制、Unicode 正文上限、搜索结果与 untrusted 语义保持不变。浏览器 robots 策略及 Brave 配置的缺省、加密与持久化归 `src/logic/web/service`，模型工具不能修改这些设置。
 
-### GitHub 反馈纯协议
+### 已迁出的 GitHub 反馈协议
 
-`github-feedback.ts` 定义 BUG／需求的严格字段、最小 submitted 回执、已绑定目标端口及公开设置类型。`feedbackIssue` 只排版本次用户字段，保留标记不接受模型指定；不从本层发 HTTP、读凭据或授予权限。实际外部写由主进程实现，GitHub 工具不混入静态链接器注册或知识目录。
-
-反馈输入仅 `kind/summary` 必填，简述不能为空；其他字段可缺省或空白，仍限制类型、长度、保留标记和未知字段。缺失主栏目统一排成“用户未提供”，补充上下文只在非空时输出；已完整填写的旧标题/正文不变。规范化发生在指纹之前，主栏目省略、空白或显式占位可复用同一回执，不自动采集环境或编造事实。
-
-`FeedbackConnectionCheck` 仅表达本机保存的连接、尚待授权回包、过期、代际变化或设置／安全存储故障；不含凭据、设备码或提交记录。`FeedbackAvailability` 由调度层合成本轮实际装配与本机连接事实，两项操作工具必须同时存在或同时缺失。READY 不证明网络可达、权限允许或 Issue 已创建；诊断也不能把原未知提交改判为未发送。
+反馈字段、正文、可信范围与连接状态已迁到 [Logic feedback](../../../logic/feedback/CONTRACT.md)，本目录不再保留 github-feedback.ts；现存链接器和资源协议仍由本目录维护。
 
 ### 静态定义与提供方身份
 

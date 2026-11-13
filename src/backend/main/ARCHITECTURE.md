@@ -31,11 +31,11 @@ class N_src_backend_main_dispatch_storage["dispatch-storage/"] {
 class N_src_backend_main_evidence["evidence/"] {
   <<directory>>
 }
-class N_src_backend_main_feedback["feedback/"] {
+class N_src_backend_main_file_operations["file-operations/"] {
   <<directory>>
 }
 N_src_backend_main_assembly ..> N_src_backend_main_automation : 导入依赖
-N_src_backend_main_assembly ..> N_src_backend_main_feedback : 导入依赖
+N_src_backend_main_assembly ..> N_src_backend_main_file_operations : 导入依赖
 N_src_backend_main_assembly ..> N_src_backend_main_dispatch_storage : 导入依赖
 N_src_backend_main_assembly ..> N_src_backend_main_evidence : 导入依赖
 N_src_backend_main_commands ..> N_src_backend_main_assembly : 导入依赖
@@ -43,9 +43,6 @@ N_src_backend_main_commands ..> N_src_backend_main_assembly : 导入依赖
 
 ```mermaid
 classDiagram
-class N_src_backend_main_file_operations["file-operations/"] {
-  <<directory>>
-}
 class N_src_backend_main_governance["governance/"] {
   <<directory>>
 }
@@ -61,17 +58,17 @@ class N_src_backend_main_knowledge["knowledge/"] {
 class N_src_backend_main_materials["materials/"] {
   <<directory>>
 }
+class N_src_backend_main_models["models/"] {
+  <<directory>>
+}
 N_src_backend_main_governance ..> N_src_backend_main_knowledge : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_materials : 导入依赖
+N_src_backend_main_ipc ..> N_src_backend_main_models : 导入依赖
 N_src_backend_main_ipc ..> N_src_backend_main_governance : 导入依赖
-N_src_backend_main_ipc ..> N_src_backend_main_file_operations : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_models["models/"] {
-  <<directory>>
-}
 class N_src_backend_main_platform["platform/"] {
   <<directory>>
 }
@@ -87,14 +84,16 @@ class N_src_backend_main_run_storage["run-storage/"] {
 class N_src_backend_main_settings["settings/"] {
   <<directory>>
 }
+class N_src_backend_main_workspace["workspace/"] {
+  <<directory>>
+}
 N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
+N_src_backend_main_workspace ..> N_src_backend_main_platform : 导入依赖
+N_src_backend_main_workspace ..> N_src_backend_main_registry : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_backend_main_workspace["workspace/"] {
-  <<directory>>
-}
 class N_src_backend_main_main_ts["main.ts"] {
   <<module>>
 }
@@ -108,7 +107,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `assembly` → `ipc`：导入。
 - `assembly` → `models`：导入。
 - `assembly` → `settings`：导入。
-- `assembly` → `feedback`：导入。
 - `assembly` → `dispatch-storage`：导入。
 - `assembly` → `materials`：导入。
 - `assembly` → `history`：导入。
@@ -123,7 +121,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `commands` → `assembly`：导入。
 - `evidence` → `knowledge`：导入。
 - `evidence` → `governance`：导入。
-- `feedback` → `platform`：导入。
 - `file-operations` → `platform`：导入。
 - `file-operations` → `workspace`：导入。
 - `governance` → `workspace`：导入。
@@ -135,7 +132,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `ipc` → `workspace`：导入。
 - `ipc` → `platform`：导入。
 - `ipc` → `models`：导入。
-- `ipc` → `feedback`：导入。
 - `ipc` → `governance`：导入。
 - `ipc` → `settings`：导入。
 - `ipc` → `registry`：导入。
@@ -170,7 +166,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - [commands/](commands/ARCHITECTURE.md)：CLI 入口，复用应用和调度，不拥有第二套领域规则。
 - [dispatch-storage/](dispatch-storage/ARCHITECTURE.md)：当前派发图、命令、领取及任务状态的文件存储实现。保留共享事务与 DispatchStore，未按目录拆开一致性边界；这仍是依赖密集的共享实现。
 - [evidence/](evidence/ARCHITECTURE.md)：真实工程效果读取适配：在明确范围和版本下采集观察供证据服务使用。
-- [feedback/](feedback/ARCHITECTURE.md)：GitHub 反馈的登录、请求和持久化服务，公开字段与端口在 Core/connectors。
 - [file-operations/](file-operations/ARCHITECTURE.md)：受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。 所有受控文件与删除/移动操作继续拒绝安装、用户及独立 R/E 缓存根。
 - [governance/](governance/ARCHITECTURE.md)：工作区模块知识治理服务、可信桌面操作与独立主运行端口。登记保护、决定及实施只属桌面；模型仅可读取、观察、提案和核查回执；反馈来源在批准与实施前串行复核，未知不重放。
 - [history/](history/ARCHITECTURE.md)：履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。
@@ -231,7 +226,7 @@ note for main_brand "名称与图标只属于桌面呈现，不参与运行身�
 
 ## 反馈连接诊断与提交端口
 
-`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.checkConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存仍归 resources，工具命名／提示归调度层，更新程序不参与。
+`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.checkConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存归 Logic feedback/service，Main 负责装配和关闭，工具命名／提示归调度层，更新程序不参与。
 
 ```mermaid
 classDiagram

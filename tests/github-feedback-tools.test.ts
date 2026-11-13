@@ -6,7 +6,7 @@ import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools
 import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
 import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
 import {transcript} from '../src/frontend/execution-view/transcript';
-import type {FeedbackToolsPort,FeedbackScope} from '../src/backend/core/connectors/github-feedback';
+import type {FeedbackToolsPort,FeedbackScope} from '../src/logic/feedback';
 import type {RunSummary,EngineEvent,StoredEvent} from '../src/backend/core/execution/types';
 
 const scope:FeedbackScope={kind:'github-feedback',workspaceId:'workspace',connectionId:randomUUID(),repositoryId:42,owner:'owner',repo:'repo'};

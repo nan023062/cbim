@@ -33,13 +33,13 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 新四层以 [四层设计](../../../design/four-layer-architecture.md) 为目标：Core 不依赖业务，Logic 依赖适用 Core，Bridge 服务端依赖 Logic 公开入口，View 只使用 Bridge 客户端/契约与便携 Core。当前 src/core 已建立，旧 backend/frontend 和 Bridge 的旧领域契约重导出仍按现有规则受限；不得把目标画成全部已迁移。
 
 - 共享 Core → 自身获准入口与第三方库；utility 不依赖平台，platform/node、platform/electron 与前端/Bridge 客户端隔离。文件与网页基础能力已迁入共享 Core，便携协议、Node I/O 和 Electron 实现使用独立入口。
-- 旧 backend/core → 自身、Core 文件/Web/utility 等获准入口，以及 Logic models/web 的精确纯入口；不反向认识应用装配或具体引擎。
+- 旧 backend/core → 自身、Core 文件/Web/utility 等获准入口，以及 Logic models/web/feedback 的精确纯入口；不反向认识应用装配或具体引擎。
 - backend/engines → 自身、backend/core、core/utility 通用公开入口与 Logic models 精确纯入口；不借此访问其他基础方案、Node 入口或私有实现，具体 SDK 与 HTTP 传输不得被 Core 反向引用。
-- backend/scheduler-engine → 自身、backend/core、core/utility 通用公开入口与 Logic models/web 精确纯入口；assembly 中的引擎装配可以依赖 backend/engines。
+- backend/scheduler-engine → 自身、backend/core、core/utility 通用公开入口与 Logic models/web/feedback 精确纯入口；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
-- backend/main → 自身、backend/scheduler-engine、旧 backend/core、backend/updater、bridge/contracts、Core 获准入口及 Logic models/web 的纯入口和 service/index.ts；Electron Web 读取器仅允许 main.ts 装配入口直接导入。
+- backend/main → 自身、backend/scheduler-engine、旧 backend/core、backend/updater、bridge/contracts、Core 获准入口及 Logic models/web/feedback 的纯入口和 service/index.ts；Electron Web 读取器仅允许 main.ts 装配入口直接导入。
 - backend/updater → 自身、bridge/contracts、core/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
-- bridge/contracts → 自身、backend/core 的公开契约和纯函数；models.ts/web.ts 仅具名重导出已登记的 Logic 纯契约，不开放凭据、服务或任意重导出。
+- bridge/contracts → 自身、backend/core 的公开契约和纯函数；models.ts/web.ts/github-feedback.ts 仅具名重导出已登记的 Logic 纯契约，不开放凭据、服务或任意重导出。
 - frontend → 自身、bridge/contracts、共享 core/utility 公开入口；具体模块的窄依赖规则仍生效。
 - 前端适配库 frontend/foundations → 自身与共享 Core 的便携公开入口；不引用 React、页面或通信契约。equalJson 已组合共享排序，其余能力按真实语义逐项评估；不能为共享引入 Node 或后端业务。Bridge 不转发工具。
 - bridge/preload → 自身、bridge/contracts。
@@ -131,3 +131,5 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 模型首批已迁入 src/logic/models：index.ts 为纯目录/连接/选型入口，service/index.ts 为配置持久化和受控凭据解析入口。前者不得加载后者，旧引擎/调度只能访问纯入口；旧 Main 通过服务入口装配。仅 bridge/contracts/models.ts 保留具名纯规则兼容出口，后续 Bridge DTO/预览迁移后退出，不能扩大为 Bridge/前端直达 Logic。Node files 位于 src/core/platform/node/files，Fault 位于 src/core/errors.ts，旧 errors.ts 是仍有消费者的同一异常兼容出口。主 Agent 设置和请求预算暂留旧目录，Logic 不得反向导入旧业务。模型单元、配置服务单元、UI/历史快照契约与 SDK 容量契约分别登记。
 
 Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web、core/platform/node/web、core/platform/electron/web-reader.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/contracts/secrets.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
+
+反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧 Main 锁出口共享同一构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。

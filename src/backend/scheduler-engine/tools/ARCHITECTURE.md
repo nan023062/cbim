@@ -184,7 +184,7 @@ class N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatu
 N_src_backend_scheduler_engine_tools_feedback_status_tool_ts ..> N_src_backend_scheduler_engine_tools_feedback_status_tool_ts_FeedbackStatusTool : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
 
 ### feedback-tools.ts
 
@@ -205,7 +205,7 @@ class N_src_backend_scheduler_engine_tools_feedback_tools_ts_FeedbackTools["Feed
 N_src_backend_scheduler_engine_tools_feedback_tools_ts ..> N_src_backend_scheduler_engine_tools_feedback_tools_ts_FeedbackTools : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/scope-schema.ts](../../core/tools/scope-schema.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)、[../../../logic/feedback/index.ts](../../../logic/feedback/index.ts)。
 
 ### goal-tools.ts
 

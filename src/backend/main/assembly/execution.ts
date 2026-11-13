@@ -31,7 +31,7 @@ import {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspac
 import type {AutoCollaboration} from '../../scheduler-engine/dispatch/auto-collaboration';
 import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
-import type {GitHubFeedback} from '../feedback/github-feedback';
+import type {GitHubFeedback} from '../../../logic/feedback/service';
 import type {RepositoryConnections} from '../resources/repository-connections';
 import {mainGovernanceTools} from '../governance/main-governance-tools';
 import {mainWorkspaceMemberTools} from '../registry/main-workspace-member-tools';

@@ -56,7 +56,7 @@ N_src_logic ..> N_src_core : 导入依赖
 - [bridge/](bridge/ARCHITECTURE.md)：前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。
 - [core/](core/ARCHITECTURE.md)：四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
 - [frontend/](frontend/ARCHITECTURE.md)：React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
-- [logic/](logic/ARCHITECTURE.md)：Logic 已迁入模型与 Web 的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
+- [logic/](logic/ARCHITECTURE.md)：Logic 已迁入模型、Web 与反馈的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
@@ -73,3 +73,5 @@ Core 不依赖其余层，前后端通过公开入口共享同一技术契约。
 目标四层和后续切片见 [四层架构设计](../design/four-layer-architecture.md)，实际 Core 边界见 [Core 契约](core/CONTRACT.md)。新目标目录的依赖规则已启用；旧目录保留细粒度限制；桥接 models.ts 精确重导出 Logic 模型纯入口，模型 service 宿主入口独立。Bridge 现有纯领域契约重导出是迁移期结构，不宣称目标已全部实现。
 
 Web 工具协议与服务现位于 logic/web；Core 网页能力分为纯契约、Node 和 Electron 入口。仅 bridge/contracts/web.ts 保留既有设置协议的具名兼容导出，桌面注入浏览器；调度器不取得服务或平台访问权。
+
+反馈纯协议及宿主服务已迁入 logic/feedback，旧 Main 仅装配与关闭服务。Core 提供原生锁，旧锁出口保留兼容；Bridge 仅转接公开连接设置。

@@ -1,10 +1,10 @@
 /**
- * 目录归属：backend/main/feedback；GitHub 反馈与连接。
+ * 目录归属：logic/feedback/service；GitHub 反馈与连接。
  * 作用定位：主进程直连 GitHub 的有界 JSON 传输，供设备授权和反馈提交共用。
  * 设计原因：地址由代码固定，不跟随重定向；限制时长和回包大小，错误不回显凭据、远端正文或请求上下文。
  * 机制边界：utility 只消费有界响应字节并释放 reader，GitHub 授权与错误脱敏仍由本模块负责。
  */
-import {fail} from '../../core/foundation/errors';
+import {fail} from '../../../core/errors';
 import {readBoundedBytes} from '../../../core/utility';
 
 export interface GitHubReply {status:number;data:unknown}

@@ -8,7 +8,7 @@ import {fail} from '../../core/foundation/errors';
 import {checkedJsonToolResult} from '../../core/tools/results';
 import {githubFeedbackScopeSchema} from '../../core/tools/scope-schema';
 import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
-import {feedbackInputSchema,feedbackReceiptInputSchema,feedbackResultSchema,type FeedbackToolsPort} from '../../core/connectors/github-feedback';
+import {feedbackInputSchema,feedbackReceiptInputSchema,feedbackResultSchema,type FeedbackToolsPort} from '../../../logic/feedback';
 
 /** 只由桌面主会话装配；没有账号设置、变更仓库或重新发送未知提交的模型入口。 */
 export class FeedbackTools {

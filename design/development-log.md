@@ -1,3 +1,11 @@
+## 2026-11-13：候选清单收尾六／后端图校验与本轮交付
+
+- 用户批量授权内最后一片，基线 7b009ac9，C3/L2。后端 graphs.ts 提供 isDirectedAcyclic，Core graph-rules 分别组合它检查派发/依赖图与等待图。节点/端点/父子身份、启用边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 原错误仍留在 Core；公共层不认识业务或前端。无环判断不是授权，重复节点/缺端点由领域先校验，公共入口也拒绝无效结构。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/graphs.test.ts tests/dispatch-graph.test.ts tests/checkpoint-handoff-core.test.ts tests/member-checkpoint-domain.test.ts tests/queued-dependency-addition-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/workflow-selection-core.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot：9 文件/97 项通过。独立算法覆盖空图、平行边、循环、非法端点、长链；领域测试覆盖图重放、防互等与依赖修订；新增私有类别进入检测清单并验证禁止直达。
+- pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过：93 目录/716 源码样式，1446 扫描文件/7150 含类型依赖，0 环/违规；471 测试文件（131 unit、153 contract、187 integration）。三宿主 9 份工作流同内容且 57 处本地引用有效；diff 空白检查通过。同步后端 utility/Core tasks 及前后端基础库汇总的五份类图、契约与注释，当前入口清单反映所有已交付类别。
+- Q1 原领域防环与错误顺序；Q2 边选择及业务资格变化局限 Core；Q3 独立算法、图消费者与边界回归；Q4 utility/graphs.ts→Core graph-rules.ts；Q5 无新规则，历史频率未知。未运行全仓、完整桌面、打包或发布验收，验证不替代人工 review。
+- 本轮原清单剩余六项均已交付：前端分层 d13f402d、本地记录 ffe8c058、后端 JSON 7711dead、脱敏 0fbd20af、RPC 7b009ac9、后端图校验本条。分别验证与提交，完整 review 范围 git diff 4a1b2858..HEAD；之前 JSON 比较/订阅/异步代次三项保持。领域状态机、手工序列化特殊协议、HTTP/进程关闭/日志事务等原明确保留范围没有机械统一。无外部 Issue 写入、push、合并或发布。
+
 ## 2026-11-13：候选清单收尾五／后端 RPC 请求关联
 
 - 用户批量授权内，基线 0fbd20af，C3/L2。沿 Pi/Codex 的 register、回包、超时、fail、close 精读实际协议；共同 ID/回调/定时器下沉 async.ts 的 PendingRequests，实例独立，重复 ID 拒绝覆盖，take 清计时器并移除，rejectAll 支持固定错误或逐项错误工厂。

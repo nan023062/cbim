@@ -7,7 +7,7 @@ import {auditDependencies} from '../scripts/check-dependencies.mjs';
 const temporary:string[]=[];
 test('调度器仅可组合 portable utility 公开入口',()=>{
   const from='src/backend/scheduler-engine/context/a.ts';
-  for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','files/index.ts','web/index.ts']){
+  for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to='src/foundations/'+target,relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }
@@ -285,7 +285,7 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
 
 test('engines may use portable utility but not other foundation capabilities',()=>{
   const from='src/backend/engines/pi/rpc.ts';
-  for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','files/index.ts','web/index.ts']){
+  for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to='src/foundations/'+target,relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }

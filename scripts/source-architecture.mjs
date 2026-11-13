@@ -6,9 +6,9 @@ import ts from 'typescript';
 
 const scope={
   "src/frontend/foundations": "前端域的独立基础类库；前端业务单向组合其公开能力，不依赖页面、bridge 或后端基础库，不持有业务状态与通信权限。",
-  "src/frontend/foundations/utility": "前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，async.ts 提供实例异步代次标记，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；代次只判断迟到资格，业务状态、失效时机、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。",
+  "src/frontend/foundations/utility": "前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，async.ts 提供实例异步代次标记，graphs.ts 提供前端分层，storage.ts 提供注入式 JSON 记录读写，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；代次只判断迟到资格，业务状态、失效时机、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。",
   "src/foundations/files": "Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。",
-  "src/foundations/utility": "通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。",
+  "src/foundations/utility": "通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集；graphs.ts 提供后端无环判断。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。",
   "src/foundations": "后端域的独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。前端公共能力在 frontend/foundations 独立沉淀，两域工具库不互相引用。能力按独立契约和生命周期组织。",
   "src/foundations/web": "独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。",
   "src/backend/bootstrap": "固定冷壳入口：先验证同 C 的签名资源集合，再放行候选访问原 profile；独立选择日志、单实例、失败恢复及按需引擎下载由冷壳持有。计算式 main.js 装载保留可审计的源码依赖边。",

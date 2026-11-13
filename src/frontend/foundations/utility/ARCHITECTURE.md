@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，async.ts 提供实例异步代次标记，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；代次只判断迟到资格，业务状态、失效时机、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
+前端通用工具按类别内聚：json.ts 提供保留现有排序与空值规则的 JSON 比较，events.ts 提供实例级同步订阅集合，async.ts 提供实例异步代次标记，graphs.ts 提供前端分层，storage.ts 提供注入式 JSON 记录读写，index.ts 是公开入口。订阅按函数身份去重、通知遍历当前集合且异常原样传播；代次只判断迟到资格，业务状态、失效时机、轮询与销毁留在控制器。与后端 utility 分别实现、测试和演进。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -176,7 +176,7 @@ N_src_frontend_foundations_utility_index_ts ..> N_src_frontend_foundations_utili
 
 # 前端通用工具库
 
-本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts` 与 `async.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
+本库仅服务前端域，按数据或问题类别组织工具函数和数据结构，不采用一函数一文件。公开入口为 `index.ts`，`json.ts`、`events.ts`、`async.ts`、`graphs.ts` 与 `storage.ts` 是私有类别实现。当前仅依赖 JavaScript 标准能力，不依赖 React、页面、通信契约、Node 或后端 `src/foundations`，没有全局可变状态。
 
 ## JSON 比较
 

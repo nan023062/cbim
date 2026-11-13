@@ -33,7 +33,7 @@ const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts'];
+const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts','src/foundations/utility/graphs.ts'];
 const moduleBoundaries=[
   // 前端基础库仅在前端域内沉淀，不反向依赖页面、通信契约或后端基础库。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/']},

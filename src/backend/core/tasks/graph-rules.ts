@@ -2,10 +2,12 @@
  * 候选审阅绑定同任务的原运行、结果与计划；可选审阅门禁兼容旧持久图。
  * 全项目隐式模块只允许与匹配的 no_modules 兜底绑定并存；真实模块仍须核实岗位责任与流程。
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
+ * 算法边界：utility 仅判断无环；节点/端点、启用边和等待集合先由本领域核验，原 GRAPH 错误映射保持。
  * 设计原因：存储重放与新提交共用局部结构规则；多段检查点和预约按原运行顺序核对，依赖增删保留原版本与退役边，不以创建顺序代替防环。
  * 职责边界：结构通过不等于任务已获授权，调度层仍需核实来源。
  * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
  */
+import {isDirectedAcyclic} from '../../../foundations/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {candidateReviewSchema} from './candidate-review';
@@ -92,11 +94,7 @@ export function validateGraphCursor(value:unknown){shape(cursor,value)}
 function unique(values:string[],label:string){if(new Set(values).size!==values.length)fail('GRAPH_INPUT_INVALID',`${label}出现重复身份`)}
 function sameMember(left:AgentRef,right:AgentRef){return left.agentId===right.agentId&&left.agentInstanceId===right.agentInstanceId&&left.agentSessionId===right.agentSessionId}
 function acyclic(nodes:string[],edges:[string,string][],code:string){
-  const incoming=new Map(nodes.map(n=>[n,0])),outgoing=new Map<string,string[]>();
-  for(const [from,to] of edges){incoming.set(to,(incoming.get(to)??0)+1);outgoing.set(from,[...(outgoing.get(from)??[]),to])}
-  const queue=nodes.filter(n=>incoming.get(n)===0);let seen=0;
-  for(let i=0;i<queue.length;i++){const from=queue[i];seen++;for(const to of outgoing.get(from)??[]){const n=incoming.get(to)!-1;incoming.set(to,n);if(n===0)queue.push(to)}}
-  if(seen!==nodes.length)fail(code,code==='GRAPH_WAIT_CYCLE'?'任务等待关系形成互等':'任务派发与依赖形成循环');
+  if(!isDirectedAcyclic(nodes,edges))fail(code,code==='GRAPH_WAIT_CYCLE'?'任务等待关系形成互等':'任务派发与依赖形成循环');
 }
 /** 仅当前计划的真实候选可满足前置；有固定 resultId 时不能换用其它结果。 */
 export function usableResult(task:TaskNode,planRevision:number,resultId?:string){return task.status==='result_ready'&&task.result?.planRevision===planRevision&&task.planRevision===planRevision&&(!resultId||task.result.resultId===resultId)}

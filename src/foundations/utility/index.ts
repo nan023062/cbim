@@ -6,3 +6,4 @@ export {formatJson,StrictJsonError,parseStrictJson,orderJsonValue,type JsonKeyOr
 export {SerialQueue,InFlightOperations,PendingRequests,type PendingReply} from './async';
 export {ByteLimitError,readBoundedBytes} from './bytes';
 export {LineFramer,redactLiteral,type LineFramePolicy} from './strings';
+export {isDirectedAcyclic} from './graphs';

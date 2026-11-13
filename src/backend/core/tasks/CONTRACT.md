@@ -837,3 +837,8 @@ TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/
 ### JSON 排序复用边界
 
 本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+
+
+### 图结构算法边界
+
+graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。

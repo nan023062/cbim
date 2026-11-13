@@ -10,7 +10,7 @@ export const logicalBoundaries = [
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
-    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts'],public:['src/foundations/utility/index.ts'],
+    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts','src/foundations/utility/graphs.ts'],public:['src/foundations/utility/index.ts'],
     dependencies:[],external:['jsonc-parser'],
   },
   {

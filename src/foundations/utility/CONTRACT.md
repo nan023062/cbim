@@ -4,12 +4,12 @@
 
 ## 入口与真实消费者
 
-- `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
+- `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`PendingRequests`、`isDirectedAcyclic`、`redactLiteral`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
 - `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
 - `json.ts`：JSON 格式化、严格解析及键排序，按 JSON 数据类别合并；各算法保留自己的输入输出和失败契约，不隐式串联。
-- `async.ts`：SerialQueue 和 InFlightOperations，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
-- `strings.ts`：字符串处理，当前承载 LF 增量分帧；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
-- 上述四个类别文件是私有实现，消费者只导入公开入口。`node.ts` 直接实现 SHA-256，保持 Node 依赖隔离，不额外建立只有一项算法的转发层。
+- `async.ts`：SerialQueue、InFlightOperations 和 PendingRequests，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
+- `strings.ts`：字符串处理，当前承载 LF 增量分帧及精确文本脱敏；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
+- `graphs.ts` 提供后端有向图无环判断。上述五个类别文件是私有实现，消费者只导入公开入口。`node.ts` 直接实现 SHA-256，保持 Node 依赖隔离，不额外建立只有一项算法的转发层。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
@@ -78,3 +78,8 @@ strings.ts 的 redactLiteral 使用非重叠 split/join，将非空精确凭据�
 ### 有时限的请求关联表
 
 async.ts 的 PendingRequests 保存实例 ID→结算回调/定时器。register 拒绝覆盖重复 ID，take 移除并清计时器，未知 ID 无副作用；rejectAll 按登记顺序拒绝并清理，可传错误工厂保留每请求独立错误身份，表不封闭。调用方使用不抛错的 Promise resolve/reject。超时回调仍决定单项或整体失败；计时器触发不自动删除项，须由适配器 take/rejectAll。表不创建协议 ID、发送、重试、杀进程或确认退出。
+
+
+### 后端有向图校验
+
+graphs.ts 的 isDirectedAcyclic 对唯一节点、完整端点执行无环判断；重复节点或缺端点抛错，自环返回 false，平行边逐条处理，空图为 true。Core 图规则已先校验节点和端点，用它分别核验派发/依赖图与等待图，领域边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 保留。此实现不依赖前端，也不提供授权或任务可执行保证。

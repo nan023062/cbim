@@ -1253,6 +1253,7 @@
         "unit": [
           "tests/unit/foundations/utility/bounded-bytes.test.ts",
           "tests/unit/foundations/utility/digest.test.ts",
+          "tests/unit/foundations/utility/graphs.test.ts",
           "tests/unit/foundations/utility/in-flight.test.ts",
           "tests/unit/foundations/utility/json-order.test.ts",
           "tests/unit/foundations/utility/json-text.test.ts",

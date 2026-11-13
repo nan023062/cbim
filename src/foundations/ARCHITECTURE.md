@@ -32,7 +32,7 @@ class N_src_foundations_web["web/"] {
 ## 子目录导航
 
 - [files/](files/ARCHITECTURE.md)：Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。
-- [utility/](utility/ARCHITECTURE.md)：通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
+- [utility/](utility/ARCHITECTURE.md)：通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集；graphs.ts 提供后端无环判断。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
 - [web/](web/ARCHITECTURE.md)：独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。
 
 [返回上层](../ARCHITECTURE.md)。

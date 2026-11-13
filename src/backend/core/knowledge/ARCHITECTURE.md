@@ -201,6 +201,8 @@ class N_src_backend_core_knowledge_portable_package_ts["portable-package.ts"] {
 
 ### 固定快照读取的逻辑边界与公共入口
 
+`knowledge.ts` 的真实目录探测通过独立 `foundations/files` 的公开 `exists` 入口复用文件机制；知识布局、结构验证、指纹与事务仍由知识模块拥有。下述固定快照读取模型不因此引入文件 I/O。
+
 跨模块查询统一导入 [read-models.ts](./read-models/index.ts) 的 `Team`、`BusinessWorkspace`、`context`、`data`、`content`；[snapshot.ts](./read-models/snapshot.ts)、[team/model.ts](./read-models/team.ts)、[workspace/model.ts](./read-models/workspace.ts) 是同一个逻辑读取模块的私有实现。逻辑归属按职责声明，不要求把既有文件搬到同一目录。
 
 读取模块依赖纯快照 [types.ts](./types.ts)、Foundation 的错误／JSON／序列化能力及内置项目根定义，不依赖知识写入端口、查询编排、Application、存储或引擎 SDK。读取只消费给定快照，不主动修改它、不重新读取磁盘；快照有效性与版本仍由调用方负责，接口不承诺把调用者持有的对象自动冻结。

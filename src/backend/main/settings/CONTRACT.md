@@ -29,3 +29,9 @@ browserRobotsPolicy 为 allow/respect；新配置和缺少字段的旧文件默�
 LlmProfiles 忽略旧供应商 engine，由调用方传入独立引擎，通过 connectionForEngine 选择主接口、明确的兼容接口或精确官方预设，再生成单一地址的公开快照；未传引擎不补 Pi 字段。配置细则见 [模型服务契约](../models/CONTRACT.md)。岗位读取沿已经采纳的 snapshot.engine，保证旧原生岗位和缺省 Pi 的配置哈希可核实。无效、禁用或不兼容的选择明确拒绝。
 
 MainAgentSettings 为每个工作区的 cbim:main 保存唯一选型，复用自定义 Agent 的 AgentModelSelection 契约。对话栏和团队页面共享 read/configure，不再把选型存入会话 localStorage；内置主 Agent 的能力文件不因此可编辑。文件保存 version、revision、selection，null 采用 Pi 与本机默认模型。configure 在当前实例和 revision 校验后持有模型短锁原子写盘；读写失败保留原文件，版本冲突不得自动覆盖。配置本身不触发执行，新发送冻结配置，已受理队列和运行保持原快照。
+
+## 机制与业务分离
+
+`WebSettings` / `BudgetSettings` / `AdmissionSettings` 各自拥有 `foundations/concurrency` 的 `SerialQueue`；一次保存失败向该调用者抛出，队列继续受理后续操作。`foundations/files` 提供同目录临时文件替换，版本校验、密钥加解密、字段兼容和默认策略仍由各设置类决定。队列不跨实例或跨进程互斥，也不提供事务回滚。
+
+模块单元直接创建设置服务与临时目录，不加载 Application；IPC 契约与应用装配验证独立保留，避免保存规则的修改迫使单元夹具启动完整应用。

@@ -2,6 +2,14 @@
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
   {
+    id:'file-foundations',prefix:'src/foundations/files/',public:['src/foundations/files/index.ts'],
+    dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
+  },
+  {
+    id:'concurrency-foundations',prefix:'src/foundations/concurrency/',public:['src/foundations/concurrency/index.ts'],
+    dependencies:[],external:[],
+  },
+  {
     id:'web-foundations',
     files:['src/foundations/web/index.ts','src/foundations/web/contracts.ts','src/foundations/web/browser-reader.ts','src/foundations/web/page-reader.ts','src/foundations/web/public-http.ts','src/foundations/web/browser-proxy.ts','src/foundations/web/web-content.ts','src/foundations/web/electron-browser-reader.ts'],
     public:['src/foundations/web/index.ts','src/foundations/web/electron-browser-reader.ts'],
@@ -148,8 +156,8 @@ export const logicalBoundaries = [
   },
   {
     id:'agent-history-file-store', files:['src/backend/main/history/file-store.ts'],
-    public:['src/backend/main/history/file-store.ts'], dependencies:['pure-foundation'],
-    imports:['src/backend/core/foundation/files.ts','src/backend/core/team/session-history-storage.ts'],external:['node:fs/promises','node:path'],
+    public:['src/backend/main/history/file-store.ts'], dependencies:['pure-foundation','file-foundations'],
+    imports:['src/backend/core/team/session-history-storage.ts'],external:['node:fs/promises','node:path'],
   },
   {
     id:'execution-view', prefix:'src/frontend/execution-view/',

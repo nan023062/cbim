@@ -5,7 +5,7 @@
 import fs from 'node:fs/promises';
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {repositoryConnectionGrantSchema,repositoryConnectionReceiptSchema,type RepositoryConnectionGrant,type RepositoryConnectionReceipt} from '../../core/connectors/repository-connection';

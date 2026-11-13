@@ -1,6 +1,7 @@
 /**
  * 作用定位：Core 知识规则：校验领域结构、专业正文和引用，并派生注册索引。
  * 设计原因：调度、桌面和外部适配共用规则；模块 Workflow 的显式程序条件不能绕过完整事务校验。Ajv 使用不改变字段值的兼容副本，原严格 JSON 解析仍保留危险键和重复键拒绝。历史作者和维护声明不再关联真人花名册；结构校验不签发执行或架构批准。
+ * 机制边界：存在探测复用独立文件基础库；知识路径、验证和索引语义仍由本模块决定。
  */
 import fs from 'node:fs/promises';
 import {ConnectorRegistry} from '../connectors/registry';
@@ -8,7 +9,7 @@ import path from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
 import ignore from 'ignore';
 import {hash,json} from '../foundation/serialization';
-import {exists} from '../foundation/files';
+import {exists} from '../../../foundations/files';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {moduleSections,moduleBodyTemplate} from '../workspace/module-outline';
 import type {KnowledgeFile,Validation,Issue,ModuleNode} from './types';

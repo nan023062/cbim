@@ -14,6 +14,12 @@
 
 ```mermaid
 classDiagram
+class N_src_foundations_concurrency["concurrency/"] {
+  <<directory>>
+}
+class N_src_foundations_files["files/"] {
+  <<directory>>
+}
 class N_src_foundations_web["web/"] {
   <<directory>>
 }
@@ -25,6 +31,8 @@ class N_src_foundations_web["web/"] {
 
 ## 子目录导航
 
+- [concurrency/](concurrency/ARCHITECTURE.md)：实例级串行执行基础方案：保证任务顺序并在一次失败后继续；不拥有业务关闭、重试、权限或证据日志失败策略。
+- [files/](files/ARCHITECTURE.md)：Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。
 - [web/](web/ARCHITECTURE.md)：独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。
 
 [返回上层](../ARCHITECTURE.md)。
@@ -39,6 +47,12 @@ class N_src_foundations_web["web/"] {
 
 `foundations` 承载高内聚、可独立复用的技术解决方案，不依赖 Core、Main、Scheduler、Bridge、Frontend 或任何其他项目模块，包含类型依赖。仅允许本层内部、标准库及必要第三方库；各能力拥有自己的契约、状态和资源生命周期，不建立万能工具容器。
 
-当前只迁移已核实的网页能力到 [web](web/CONTRACT.md)。不把其他模块同名的 foundation 目录机械归并，也不据此宣称全仓工具已经解耦。调用者通过各能力公开入口单向使用；平台实现单独入口加载，Node 入口不隐式加载 Electron。
+当前能力为 [web](web/CONTRACT.md)、[files](files/CONTRACT.md) 与 [concurrency](concurrency/CONTRACT.md)。各能力按明确契约独立组织，不把其他模块同名的 foundation 目录机械归并。调用者通过各能力公开入口单向使用；平台实现单独入口加载，Node 入口不隐式加载 Electron。
 
-当前消费者是 Main 的 WebService 和桌面装配；业务层仍拥有 Agent 工具注册、用户设置、凭据及来源信任标记。新增消费者应先核实运行环境，再声明允许依赖；不能让基础类库反向引用消费者实现。分层检查器和网页能力公开入口检查共同约束以上方向。
+网页消费者是 Main 的 WebService 和桌面装配；文件原语服务 Core 知识探测及 Main 存储，队列服务 Main 设置/模型。业务层仍拥有 Agent 工具注册、用户设置、凭据、事务及来源信任标记。Core 可单向消费基础类库，但不因此获得 Main、平台装配或具体引擎的依赖权。新增消费者须核实环境；不能让基础类库反向引用消费者实现。分层检查器和每项能力的公开入口检查共同约束以上方向。
+
+## 共性选择与退出边界
+
+文件 I/O 和实例排队具有真实多消费者、机制一致的证据，契约仍应随缺陷和真实扩展验证；不因抽取一次即宣称永久稳定。JSON/指纹的领域错误码与序列化格式、运行日志的失败屏障、受控文件的原生身份校验、引擎 SDK 的协议差异仍由所属模块维护。不能把这些差异压成万能工具或让基础库依赖业务识别分支。
+
+新增解决方案前须核实真实消费者、共同不变量、变化点及失败/资源语义；新增同类业务应主要组合机制并实现本地策略。文件和队列的独立单元在 `tests/unit/foundations`，公共基础能力不得依赖完整应用夹具。

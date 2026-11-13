@@ -16,6 +16,14 @@ test('foundations is independent even for type dependencies; Main consumes only 
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
+test.each([['files','text-files','file-foundations'],['concurrency','serial-queue','concurrency-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
+  const entry=`src/foundations/${capability}/index.ts`,inner=`src/foundations/${capability}/${implementation}.ts`;
+  expect(audit({[entry]:'export const value=1;','src/backend/core/example.ts':`import {value} from '../../foundations/${capability}';`}).ok).toBe(true);
+  const reverse=audit({[entry]:"import type {Value} from '../../backend/core/example';",'src/backend/core/example.ts':'export interface Value {}'});
+  expect(reverse.violations).not.toEqual([]);
+  const privateEntry=audit({[inner]:'export const value=1;','src/backend/main/example.ts':`import {value} from '../../foundations/${capability}/${implementation}';`});
+  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary}));
+});
 function audit(files:Record<string,string>){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cbim-dependencies-'));temporary.push(root);
   for(const [name,content] of Object.entries(files)){const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content)}

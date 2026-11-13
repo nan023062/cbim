@@ -4,7 +4,7 @@
  * 设计原因：调度状态不属于 .cbim 知识；依赖工作区独占锁和唯一调度器串行写入，原子替换失败时保留原文件，损坏数据不得当成空清单覆盖。
  */
 import fs from 'node:fs/promises';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';
 import {automationStateSchema,type AutomationState,type AutomationStorage} from '../../core/automation/contracts';
 

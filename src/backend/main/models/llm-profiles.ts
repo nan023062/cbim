@@ -6,12 +6,13 @@
  * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
 import fs from 'node:fs/promises';
+import {SerialQueue} from '../../../foundations/concurrency';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';
 import {connectionForEngine} from '../../core/models/provider-connections';
 import {parseModelCatalog} from '../../core/models/catalog';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';
 import {connectionSchema,definition,type LlmDefinition,type LlmSettings} from '../../core/models/config';
 export type {LlmDefinition,LlmProfile,LlmSettings} from '../../core/models/config';
@@ -38,7 +39,8 @@ function selectConfiguration(data:ModelFile,id?:string,modelId?:string,engine?:L
   return {definition,profile};
 }
 export class LlmProfiles {
-  private queue:Promise<unknown>=Promise.resolve();
+  /** 保存与受控选型回调共用本实例队列；失败只拒绝本次调用，不自动重试。 */
+  private readonly queue=new SerialQueue();
   constructor(private filename:string,private cipher?:SecretCipher){}
   private async read():Promise<ModelFile>{
     let raw:any;try{raw=JSON.parse(await fs.readFile(this.filename,'utf8'))}catch(e:any){if(e.code==='ENOENT')return {version:1,profiles:[]};throw Error('模型配置读取失败，请检查配置文件')}
@@ -48,7 +50,7 @@ export class LlmProfiles {
   }
   private view(data:ModelFile):LlmSettings{return {selectedId:data.selectedId,secureStorage:this.cipher?.available()===true,profiles:data.profiles.map(({encryptedKey,...p})=>({...p,hasKey:!!encryptedKey}))}}
   async list(){return this.view(await this.read())}
-  private change<T>(operation:()=>Promise<T>){const result=this.queue.then(operation);this.queue=result.catch(()=>{});return result}
+  private change<T>(operation:()=>Promise<T>){return this.queue.run(operation)}
   /** 空密钥保留原值；主接口变更或新增自定义凭据目标必须重新输入，纯改名、模型范围调整和移除兼容接口不需要。 */
   save(input:unknown){return this.change(async()=>{
     const r=z.object({id:z.string().uuid().optional(),profile:definition,apiKey:z.string().max(16000).optional()}).strict().parse(input);

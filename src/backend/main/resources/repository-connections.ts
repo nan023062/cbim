@@ -8,7 +8,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {isDeepStrictEqual} from 'node:util';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {hash,json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import type {KnowledgeWorkspace,KnowledgeCommit} from '../../core/knowledge/ports';

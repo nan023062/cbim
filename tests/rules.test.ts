@@ -2,7 +2,6 @@ import {knowledgeFixture} from './knowledge-fixture';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {fixture} from './helpers';
 import {moduleFiles,summary} from './data/knowledge';
 import {json,hash} from '../src/backend/core/foundation/serialization';
 import {parseJson} from '../src/backend/core/knowledge/knowledge';

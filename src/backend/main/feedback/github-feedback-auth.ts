@@ -8,7 +8,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {fail,Fault} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {KernelLock} from '../platform/locking';

@@ -4,8 +4,9 @@
  * 设计原因：只有可靠保存的设置才影响新运行；串行版本校验防止多个窗口相互覆盖，降低上限不结束已经获准的运行。
  */
 import fs from 'node:fs/promises';
+import {SerialQueue} from '../../../foundations/concurrency';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';
 import {admissionPolicySchema,type AdmissionPolicy} from '../../core/runtime/admission';
 import type {GlobalRunAdmission} from '../../scheduler-engine/admission/run-admission';
@@ -19,10 +20,11 @@ export interface AdmissionSettingsStorage {
 const disk:AdmissionSettingsStorage={read:filename=>fs.readFile(filename,'utf8'),write:atomic};
 /** 应用唯一实例；只在 init 成功后向桌面提供配置入口。 */
 export class AdmissionSettings {
-  private pending:Promise<unknown>=Promise.resolve();
+  /** 初始加载与保存共用实例队列；可靠写盘后才由本类发布并发策略。 */
+  private readonly queue=new SerialQueue();
   private initialized=false;
   constructor(private filename:string,private admission:GlobalRunAdmission,private storage:AdmissionSettingsStorage=disk){}
-  private serial<T>(work:()=>Promise<T>):Promise<T>{const next=this.pending.then(work);this.pending=next.catch(()=>{});return next}
+  private serial<T>(work:()=>Promise<T>):Promise<T>{return this.queue.run(work)}
   /** 在任何工作区开启前读取；缺文件沿用默认 4，损坏配置明确失败，不擅自覆盖用户设置。 */
   init():Promise<void>{return this.serial(async()=>{
     if(this.initialized)return;

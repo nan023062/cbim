@@ -26,16 +26,16 @@ class N_src_foundations["foundations/"] {
 class N_src_frontend["frontend/"] {
   <<directory>>
 }
-N_src_backend ..> N_src_bridge : 导入依赖
 N_src_backend ..> N_src_foundations : 导入依赖
+N_src_backend ..> N_src_bridge : 导入依赖
 N_src_bridge ..> N_src_backend : 导入依赖
 N_src_frontend ..> N_src_bridge : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `backend` → `bridge`：导入。
 - `backend` → `foundations`：导入。
+- `backend` → `bridge`：导入。
 - `bridge` → `backend`：导入。
 - `frontend` → `bridge`：导入。
 

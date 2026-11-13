@@ -4,8 +4,9 @@
  * 设计原因：默认关闭且仅接受用户显式设置；版本化原子写盘避免多个窗口覆盖，运行中的周期不随设置改变，失败保留原策略。
  */
 import fs from 'node:fs/promises';
+import {SerialQueue} from '../../../foundations/concurrency';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';
 import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../core/budget/scope-budget';
 
@@ -17,9 +18,10 @@ const disk:BudgetSettingsStorage={read:filename=>fs.readFile(filename,'utf8'),wr
 /** 应用只装配一份；read 返回副本，不允许调用方修改已保存策略或已有目标的冻结副本。 */
 export class BudgetSettings {
   private policy?:ScopeBudgetPolicy;
-  private pending:Promise<unknown>=Promise.resolve();
+  /** 初始加载与保存共用实例队列；预算规则和 revision 仍由本类判断。 */
+  private readonly queue=new SerialQueue();
   constructor(private readonly filename:string,private readonly storage:BudgetSettingsStorage=disk){}
-  private serial<T>(work:()=>Promise<T>):Promise<T>{const next=this.pending.then(work);this.pending=next.catch(()=>{});return next}
+  private serial<T>(work:()=>Promise<T>):Promise<T>{return this.queue.run(work)}
   /** 在工作区装配前恢复；仅缺文件使用关闭默认值，损坏文件不会悄悄禁用用户限额。 */
   init():Promise<void>{return this.serial(async()=>{
     if(this.policy)return;

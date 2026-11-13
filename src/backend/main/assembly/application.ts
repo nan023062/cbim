@@ -53,7 +53,7 @@ import type {AgentHistoryService} from '../../scheduler-engine/history/agent-his
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
 import {Catalog} from '../workspace/catalog';
 import {Paths} from '../platform/paths';
-import {exists} from '../../core/foundation/files';
+import {exists} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';
 import {Rules} from '../../core/knowledge/knowledge';
 import {Workspace} from '../workspace/workspace';

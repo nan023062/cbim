@@ -1,4 +1,4 @@
-import {required} from './helpers';
+import {required} from './support/assertions';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';

@@ -1,5 +1,5 @@
 import {governanceCommandReceipts} from '../src/bridge/contracts/ipc-governance';
-import {required} from './helpers';
+import {required} from './support/assertions';
 import type {GovernanceIpcResponses} from '../src/bridge/contracts/ipc-governance';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';

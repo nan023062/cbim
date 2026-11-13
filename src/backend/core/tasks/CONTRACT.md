@@ -832,3 +832,8 @@ workspace-member-invariants 在提交与重放当时的前缀上核实主 actor 
 TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/run/planRevision，附主 run、理由和时间；不修改 result.acceptance，不代表业务目标或人工验收。decision=reject 不可翻转，后续需新任务交付。图校验、增量归约与事务层分别校验局部绑定、不可改写及当前主身份/命令指纹/任务不被夹带修改。需要审批的依赖在启动事务内再次校验 candidateAccepted，避免只靠协调器视图放行。
 
 新创建、追加、替换、修订产生的依赖携带 condition.reviewRequired=true。无此标志的旧边按原规则重放；标志不能在已有边上移除或补写。追加/替换/修订的原子校验兼容两种历史形状，其余结果、版本和审计要求不变。批准只接受精确候选，旧结果或旧计划不可借用。
+
+
+### JSON 排序复用边界
+
+本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。

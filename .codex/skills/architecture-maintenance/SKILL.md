@@ -33,7 +33,7 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 - foundations → 自身、标准库和必要第三方库；作为独立基础类库，不依赖 Core 或任何其他项目模块。业务消费者只通过能力公开入口使用，平台适配独立入口加载。
 - backend/core → backend/core、foundations 的能力公开入口；不反向认识应用装配或具体引擎。
 - backend/engines → 自身、backend/core、foundations/utility 通用公开入口；不借此访问其他基础方案、Node 入口或私有实现，具体 SDK 与 HTTP 传输不得被 Core 反向引用。
-- backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
+- backend/scheduler-engine → 自身、backend/core、foundations/utility 的通用公开入口；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
 - backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts、foundations 的能力公开入口。
 - backend/updater → 自身、bridge/contracts、foundations/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
@@ -117,3 +117,5 @@ utility 的类图按实际类别文件表达 JSON、字符串、字节、异步�
 前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。后端图规则独立演进，不开放跨域依赖；拓扑单元与任务布局消费者分别验证。
 
 前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
+
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 foundations/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。

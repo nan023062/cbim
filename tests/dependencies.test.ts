@@ -5,6 +5,13 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 const temporary:string[]=[];
+test('调度器仅可组合 portable utility 公开入口',()=>{
+  const from='src/backend/scheduler-engine/context/a.ts';
+  for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','files/index.ts','web/index.ts']){
+    const to='src/foundations/'+target,relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
+    expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
+  }
+});
 test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
   const foundation='src/foundations/web/index.ts';
   expect(audit({[foundation]:'export const value=1;', 'src/backend/main/a.ts':"import {value} from '../../foundations/web';"}).ok).toBe(true);

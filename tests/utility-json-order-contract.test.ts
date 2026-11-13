@@ -3,6 +3,16 @@ import {createHash} from 'node:crypto';
 import {dispatchKnowledgeFingerprint,type PreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
 import {workspacePackageFingerprint,type WorkspacePackage} from '../src/backend/core/knowledge/portable-package';
 import {sameGoalValue} from '../src/backend/core/tasks/scope-goal';
+import {workspaceMemberCanonical} from '../src/backend/core/team/workspace-member-rules';
+import {knowledgeSourceCanonical} from '../src/backend/core/workspace/knowledge-source-rules';
+
+it('岗位与知识来源保留原字符序、数字键与 undefined 字节',()=>{
+  const value={z:undefined,a:[undefined,{é:2,Z:1}],10:'ten',2:'two'};
+  const expected='{"2":"two","10":"ten","a":[null,{"Z":1,"é":2}]}';
+  expect(workspaceMemberCanonical(value)).toBe(expected);
+  expect(knowledgeSourceCanonical(value)).toBe(expected);
+  expect(()=>workspaceMemberCanonical({value:1n})).toThrow();
+});
 
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 it('执行知识保留字符序指纹与根 fingerprint 排除，不排除嵌套同名字段',()=>{

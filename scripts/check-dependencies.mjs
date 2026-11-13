@@ -15,7 +15,7 @@ const layers = {
   foundations:['foundations'],
   'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
   'backend/core':['backend/core','foundations'],'backend/engines':['backend/engines','backend/core','foundations'],
-  'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],
+  'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core','foundations'],
   'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations'],
   'backend/updater':['backend/updater','bridge/contracts','foundations'],
   'bridge/contracts':['bridge/contracts','backend/core'],
@@ -60,6 +60,8 @@ const moduleBoundaries=[
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
+  // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/foundations/utility/index.ts']},
 ];
 const matchesBoundary=(file,entry)=>file===entry||(entry.endsWith('/')&&file.startsWith(entry));
 

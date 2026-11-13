@@ -249,3 +249,8 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。优先放入既有的 JSON、异步、字符串或字节类别，不按函数数量拆文件；只有出现不同变化原因、运行环境或明确独立契约边界时再拆分。类别合并不合并实例状态，也不统一不同协议的算法语义；通用入口不得导入 Node 入口。
 
 模块单元在 `tests/unit/foundations/utility/`，按队列、集合、分帧、键排序、格式化、摘要、严格 JSON、字节流分别验证；Core 指纹/名称/字节/错误兼容、流消费业务映射及 RPC 策略另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP/RPC、取消/排空、资料快照、知识校验、版本冲突和原指纹规则。
+
+
+### 后端 JSON 补齐迁移
+
+岗位登记、知识来源、负责人执行绑定、人工决定依据及调度执行上下文复用 orderJsonValue。前两项和人工依据省略对象 undefined，绑定与上下文保留；均使用字符比较器 a<b/-1、a>b/1，其余 0，不改为 localeCompare。手工拼接的 graph-reducer/module-governance 与按 Object.keys 排序后读取属性的 repeated-tool-failures 保留不同语义。调度器仅获通用 index 入口依赖，不开放 Node/files/web。

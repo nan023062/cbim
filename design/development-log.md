@@ -1,3 +1,11 @@
+## 2026-11-13：候选清单收尾三／后端 JSON 复用
+
+- 用户批量授权内，基线 ffe8c058，C3/L2。五处同义递归排序改为已有 orderJsonValue：岗位、来源、负责人绑定、人工决定依据、调度执行上下文。字符序与各自 undefined 规则显式保留，不改变输入、JSON 字节或领域指纹字段；手工拼接协议和排序后读取属性的不同实现保留。
+- 调度层仅开放 utility/index.ts，私有 JSON、Node/files/web 仍拒绝。初轮依赖回归发现通用许可遮住细粒度预算规则；首次移动受 CRLF 影响未移除旧行，第二次定位并清除，最终将通用规则放在专用规则之后。现有细粒度拒绝与新增入口许可测试均通过，未弱化原检测。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/json-order.test.ts tests/utility-json-order-contract.test.ts tests/workspace-member-core.test.ts tests/knowledge-source-core.test.ts tests/owner-execution-core.test.ts tests/module-ownership-core.test.ts tests/human-decisions-core.test.ts tests/human-continuation-core.test.ts tests/member-execution-context.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot；初轮 135 通过/1 失败，仅重跑受影响 dependencies 后 33/33 通过，合计 11 文件/136 项最终通过。选择依据为排序单元、迁移后的领域校验/指纹及变更的边界检查器。
+- pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过；规则修正后 pnpm check:dependencies 再核实 0 环/违规。未运行完整 Pi/服务集成、全仓、桌面或发布。
+- 五份类图、相关契约与源码注释、三宿主工作流及分层说明同步。Q1 历史字节；Q2 业务字段仍局限原消费者；Q3 单元/指纹与边界回归；Q4 utility/json.ts→五个适配；Q5 无新规则。历史频率未知，不把相似文本视为同一契约。独立本地提交未推送，保留人工 review。
+
 ## 2026-11-13：候选清单收尾二／前端本地记录读写
 
 - 用户批量授权内第二片，基线 d13f402d，C3/L2。精读岗位与模块负责人持久命令的读取、保存、恢复和失败路径，实际重复为同步 JSON 与 UTF-8 限额，不是整个命令状态机。

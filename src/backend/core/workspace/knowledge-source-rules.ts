@@ -1,8 +1,10 @@
 /**
  * 作用定位：来源代次日志的纯投影、游标、依据和幂等命令规则，供知识协调器与 DispatchStore 共同使用。
+ * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：只有原日志决定当前代次；prepare 不改变头，原 journal 证明的 committed 才退休/创建，rollback 不伪造新来源。
  * 职责边界：不读取文件或知识队列，不能自行证明 journal；调用者须在知识串行区提供真实事实。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {hash} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import {knowledgeSourceChangeSchema,knowledgeSourceLimits,knowledgeSourceKey,sameKnowledgeSourceKey,type KnowledgeSourceKey,type KnowledgeSourceRef,type KnowledgeSourceGeneration,type KnowledgeSourceChange,type KnowledgeSourceTransition,type KnowledgeSourceCursor,type KnowledgeSourceObservation,type SourceSelection,type KnowledgeSourceReceipt,type KnowledgeSourceCapture,type KnowledgeSourceReadState,type CapabilitySourceRef} from './knowledge-source';
@@ -13,7 +15,7 @@ export interface KnowledgeSourceRegistry {
 }
 /** 固定 JSON 对象键序、保持数组次序；不对客户端内容作默认补值或转换。 */
 export function knowledgeSourceCanonical(value:unknown):string {
-  const order=(item:unknown):unknown=>Array.isArray(item)?item.map(order):item&&typeof item==='object'?Object.fromEntries(Object.entries(item).filter(([,entry])=>entry!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,entry])=>[key,order(entry)])):item;
+  const order=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
   return JSON.stringify(order(value));
 }
 const equal=(a:unknown,b:unknown)=>knowledgeSourceCanonical(a)===knowledgeSourceCanonical(b);

@@ -1,10 +1,12 @@
 /**
  * 无模块自动执行只生成内存中的隐式全项目知识；正式模块及岗位登记均保持原样。
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
+ * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
  * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；旧真人维护字段只兼容历史，岗位责任和指引正文不能扩大工具权限。
  * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {resolveExecutionModules} from './automatic-context';
 import {hash} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
@@ -26,7 +28,7 @@ const standardIds=['business-execution','common-rules'];
 export type DispatchKnowledgeWorkspace=Pick<KnowledgeWorkspace,'entry'|'assert'|'snapshot'|'read'|'rules'>;
 /** 比较规范化 JSON，知识定义的对象字段排列不改变业务绑定，数组顺序保持原义。 */
 function canonical(value:unknown):string{
-  const order=(item:unknown):unknown=>Array.isArray(item)?item.map(order):item&&typeof item==='object'?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,order(v)])):item;
+  const order=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
   return JSON.stringify(order(value));
 }
 function sameBindings(task:TaskNode,prepared:PreparedDispatchKnowledge){

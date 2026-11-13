@@ -245,7 +245,7 @@ class N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegi
 N_src_backend_core_workspace_knowledge_source_rules_ts ..> N_src_backend_core_workspace_knowledge_source_rules_ts_KnowledgeSourceRegistry : 声明
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[knowledge-source.ts](knowledge-source.ts)。
 
 ### knowledge-source.ts
 
@@ -961,3 +961,8 @@ module-outline.ts 提供 moduleSections 与 moduleBodyTemplate，作为知识规
 assertModuleOwnershipExpectedBinding 由预览和事务共同使用：首次预期 null 遇到同岗位返回 OWNERSHIP_NO_CHANGE，遇到已有其它责任头返回 OWNERSHIP_ALREADY_EXISTS，并给出 inspect/expectedBinding 指引；非空预期过期仍返回 OWNERSHIP_BINDING_STALE。不自动覆盖预期或生成新关系，原命令回执查询优先。
 
 moduleOwnerInspect 的 moduleIds 分支可接收 matches：当前知识 revision、每模块已启用 memberId 或 null 以及主模型分析理由。该输入只表达本计划选择，不创建责任；显式/父级关系优先，不同岗位分组，输出保留完整原选择与缺口。
+
+
+### JSON 排序复用边界
+
+本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。

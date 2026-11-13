@@ -196,7 +196,7 @@ class N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding[
 N_src_backend_core_team_member_execution_binding_ts ..> N_src_backend_core_team_member_execution_binding_ts_OwnerExecutionBinding : 声明
 ```
 
-直接依赖：[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### member-execution-rules.ts
 
@@ -471,7 +471,7 @@ class N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry[
 N_src_backend_core_team_workspace_member_rules_ts ..> N_src_backend_core_team_workspace_member_rules_ts_WorkspaceMemberRegistry : 声明
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)、[workspace-member.ts](workspace-member.ts)。
 
 ### workspace-member-tools.ts
 
@@ -968,3 +968,8 @@ implicitModuleOwner 按本模块、最近祖先的非空责任记录解析；空
 workspace-member-tools 提供窄查询/预览/提交/原回执协议。主工具不接受 actor、工作区身份、命令或模型选型；登记继承静态 Agent 已配置模型，更新只能改元信息，adopt 仅采纳能力，模型参数采纳仍走桌面。查询差异即使失配也保留 current/adopted hash 和修复建议。
 
 workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命令指纹和审计，旧桌面指纹保持原样。共用一个岗位头、来源捕获及版本事务，历史任务/运行快照不随新采纳改变。
+
+
+### JSON 排序复用边界
+
+本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。

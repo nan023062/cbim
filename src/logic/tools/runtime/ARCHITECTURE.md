@@ -23,6 +23,7 @@
 | [knowledge-tools.ts](knowledge-tools.ts) | 向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。 |
 | [main-tool-contracts.ts](main-tool-contracts.ts) | 绑定主调度工具的公开回包、取消恢复说明及可信命令键，前置多边修订使用独立命令域。 |
 | [module-ownership-tools.ts](module-ownership-tools.ts) | 把本轮真实主运行的模块责任端口转换为发现、分类和执行一致的四工具。 |
+| [office-history-tools.ts](office-history-tools.ts) | 只向主运行提供当前办公室的话题归档读取工具。 |
 | [question-tools.ts](question-tools.ts) | 为已装配用户交互端口的主/成员运行提供结构化提问工具及严格答案回包。 |
 | [repository-tools.ts](repository-tools.ts) | 把主进程捕获的资源仓库只读端口装配为主调度可调用的两个工具。 |
 | [web-tools.ts](web-tools.ts) | 将主进程公开网页读取端口注册为两个只读主 Agent 工具。 |
@@ -153,6 +154,7 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"]
   -port
   -goals
   -reviews
+  -history
   -binding
   -definition()
   -available()
@@ -161,7 +163,7 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"]
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)。
+直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../rules/outcome.ts](../rules/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../tasks/rules/coordination-preview.ts](../../tasks/rules/coordination-preview.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/workflow-selection.ts](../../tasks/rules/workflow-selection.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../tasks/rules/command-verification.ts](../../tasks/rules/command-verification.ts)、[office-history-tools.ts](office-history-tools.ts)、[goal-tools.ts](goal-tools.ts)、[../../tasks/rules/queued-member-resume.ts](../../tasks/rules/queued-member-resume.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)。
 
 ### feedback-status-tool.ts
 
@@ -359,6 +361,26 @@ N_src_logic_tools_runtime_module_ownership_tools_ts ..> N_src_logic_tools_runtim
 
 直接依赖：[../rules/outcome.ts](../rules/outcome.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/results.ts](../rules/results.ts)、[../rules/policy/tool-policy.ts](../rules/policy/tool-policy.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/module-ownership-tool-policy.ts](../../workspace/rules/module-ownership-tool-policy.ts)、[../../workspace/rules/module-ownership-tools.ts](../../workspace/rules/module-ownership-tools.ts)。
 
+### office-history-tools.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts"] {
+  <<module>>
+}
+class N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools["OfficeHistoryTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -read
+  -identity
+}
+N_src_logic_tools_runtime_office_history_tools_ts ..> N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools : 声明
+```
+
+直接依赖：[../../tasks/rules/office-history.ts](../../tasks/rules/office-history.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/results.ts](../rules/results.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+
 ### question-tools.ts
 
 ```mermaid
@@ -472,6 +494,9 @@ classDiagram
 class N_src_logic_tools_runtime_dispatch_tools_ts["dispatch-tools.ts"] {
   <<module>>
 }
+class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts"] {
+  <<module>>
+}
 class N_src_logic_tools_runtime_goal_tools_ts["goal-tools.ts"] {
   <<module>>
 }
@@ -481,15 +506,20 @@ class N_src_logic_tools_runtime_coordination_contracts_ts["coordination-contract
 class N_src_logic_tools_runtime_main_tool_contracts_ts["main-tool-contracts.ts"] {
   <<module>>
 }
+N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_office_history_tools_ts : 导入依赖
+N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts : 导入依赖
+N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_coordination_contracts_ts : 导入依赖
+N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_main_tool_contracts_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_tools_runtime_knowledge_tools_ts["knowledge-tools.ts"] {
   <<module>>
 }
 class N_src_logic_tools_runtime_knowledge_contracts_ts["knowledge-contracts.ts"] {
   <<module>>
 }
-N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts : 导入依赖
-N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_coordination_contracts_ts : 导入依赖
-N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_main_tool_contracts_ts : 导入依赖
 N_src_logic_tools_runtime_knowledge_tools_ts ..> N_src_logic_tools_runtime_knowledge_contracts_ts : 导入依赖
 ```
 
@@ -740,3 +770,5 @@ CandidateReviewTools 由 AutoCollaboration 向主运行装配 cbim_dispatch_revi
 ## 当前工作区身份的缺省语义
 
 KnowledgeTools 的身份查询与身份默认值共用 currentIdentity：先 workspace.assert 核实本服务绑定实例，再取得 workspaceId/instanceId。知识工具 Schema 中这两个字段允许省略，解析时自动使用当前绑定；不会创建第二次模型工具调用或伪造查询事件，运行适配在 proposed 前冻结解析后的生效参数；有差异时另存 originalInput，原模型输入仍保留。显式旧 ID、其它工作区、null、空值仍校验并拒绝，不换绑也不自动重试。查询列表不要求可选 query；revision/requestId/planId 等业务字段按原 Schema 保持必填或可选，写入仍需原运行授权。其它有独立身份语义的成员、派发和治理工具不借此补业务身份。
+
+OfficeHistoryTools 组合到 DispatchTools，只在可信主运行装配 `cbim_office_history`。工作区/主根来自闭包，模型只能选本办公室的原话题引用；单次输出核原身份、操作及分页版本，历史用户/成员消息均按原来源解释。成员 Loop 不提供该工具。

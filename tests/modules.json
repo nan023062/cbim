@@ -167,6 +167,7 @@
           "tests/scope-continuation.test.ts",
           "tests/topic-interruption-service.test.ts",
           "tests/topic-interruption-pi.test.ts",
+          "tests/office-history-pi.test.ts",
           "tests/scope-goal.test.ts",
           "tests/scope-recovery.test.ts",
           "tests/scope-replan.test.ts",
@@ -752,7 +753,7 @@
         "src/logic/tasks/runtime/"
       ],
       "tests": {
-        "unit": [],
+        "unit": ["tests/office-history-service.test.ts"],
         "contract": [
           "tests/command-verification-service.test.ts"
         ],
@@ -793,6 +794,7 @@
       "tests": {
         "unit": [
           "tests/candidate-review-tools.test.ts",
+          "tests/office-history-tools.test.ts",
           "tests/coordination-schema.test.ts",
           "tests/web-tools.test.ts"
         ],

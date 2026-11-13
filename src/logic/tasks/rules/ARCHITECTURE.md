@@ -61,6 +61,7 @@
 | [member-topic-context-rules.ts](member-topic-context-rules.ts) | 按原办公室、角色和输入版本冻结并解析当前话题的成员上下文引用。 |
 | [member-topic-context.ts](member-topic-context.ts) | 声明子 Agent 当前话题上下文的不可变引用契约。 |
 | [module-ownership-invariants.ts](module-ownership-invariants.ts) | 将负责人控制面接到同一派发事务，重算关联任务影响并核实真实主运行来源。 |
+| [office-history.ts](office-history.ts) | 主 Session 按话题检索归档的只读协议，供历史服务与主 Agent 工具共用。 |
 | [owner-execution-invariants.ts](owner-execution-invariants.ts) | 校验负责人协议下的新计划、任务、前置增删闭包、预约和领取，以及历史冻结身份。 |
 | [persistent-write-input.ts](persistent-write-input.ts) | 后端从可信主 canonical 与唯一周期重建三项持久写命令的原查询引用。 |
 | [persistent-write-observation.ts](persistent-write-observation.ts) | 原治理观察、提案及责任变更的有界保存摘要，供影响报告与桌面共同读取。 |
@@ -1758,6 +1759,31 @@ class N_src_logic_tasks_rules_module_ownership_invariants_ts["module-ownership-i
 ```
 
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../workspace/rules/module-ownership-rules.ts](../../workspace/rules/module-ownership-rules.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[knowledge-source-invariants.ts](knowledge-source-invariants.ts)。
+
+### office-history.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tasks_rules_office_history_ts["office-history.ts"] {
+  <<module>>
+}
+class N_src_logic_tasks_rules_office_history_ts_OfficeHistoryQuery["OfficeHistoryQuery"] {
+  <<type>>
+
+}
+N_src_logic_tasks_rules_office_history_ts ..> N_src_logic_tasks_rules_office_history_ts_OfficeHistoryQuery : 声明
+class N_src_logic_tasks_rules_office_history_ts_OfficeHistoryEntry["OfficeHistoryEntry"] {
+  <<type>>
+
+}
+N_src_logic_tasks_rules_office_history_ts ..> N_src_logic_tasks_rules_office_history_ts_OfficeHistoryEntry : 声明
+class N_src_logic_tasks_rules_office_history_ts_OfficeHistoryResult["OfficeHistoryResult"] {
+  <<type>>
+
+}
+N_src_logic_tasks_rules_office_history_ts ..> N_src_logic_tasks_rules_office_history_ts_OfficeHistoryResult : 声明
+```
+
 
 ### owner-execution-invariants.ts
 
@@ -5285,3 +5311,5 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 整话题补充：`TopicInterruptionRequest` 固定工作区、主根、scope、输入版本、命令、原文/附件与选型。`topicInterruptions` 只追加，尚未消费的意图拒绝新派发和成员领取；请求保存不代表暂停成功。`wait.interruptionId` 只在主轮已可靠完成/取消、成员全部结算且无未知结果后建立，保留原任务图和目标版本。接续必须原样消费该请求，复用 continuations 推进输入版本和主运行清单；旧计划过期须重规划。公开摘要保留 requested/paused，详情保留原请求；未知退出没有 wait。重启未完成排空的 active 仍沿原恢复流程封存为 interrupted，不自动重发补充。
 
 `DispatchScope.followupOf` 保存用户新任务与同主 Session 已结束话题的关联。提交与重放均验证来源存在、已在此前关闭且不能改绑；排队、公开详情与摘要保留该引用，不复制正文，不继承原生线程或旧验收。
+
+`office-history` 定义主 Session → 话题 → 内容引用的只读检索。分页版本按当前公开目录或内容计算，后续页须携带原版本；各类记录保留真实 actor/task/run/inputRevision，不把历史资料变成用户授权。协议不接受工作区路径或任意主根覆盖。

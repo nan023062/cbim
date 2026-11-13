@@ -21,7 +21,7 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
   const cancelGoal='LOCAL_MEMBER_CANCEL: 本次任务必须重新批准';
   const plainGoal='LOCAL_MEMBER_PLAIN: 普通结束不能伪造交付';
   const acceptance=['实际文件内容为 member-result'];
-  const requests:{messages:{role:string;content:unknown}[]}[]=[];
+  const requests:{messages:{role:string;content:unknown}[];tools?:{function?:{name?:string}}[]}[]=[];
   const transportErrors:unknown[]=[];
   const turns=new Map<string,number>();
   const server=http.createServer(async(req,res)=>{
@@ -153,5 +153,6 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     await vi.waitFor(async()=>expect((await f.app.dispatch('dispatch.executionInspect',plainIdentity) as MemberExecutionView).task.status).toBe('blocked'),{timeout:15000,interval:30});
     expect(JSON.stringify(requests.at(-1)?.messages)).not.toContain(firstGoal);
     expect(transportErrors).toEqual([]);
+    expect(requests.every(body=>!body.tools?.some(tool=>tool.function?.name==='cbim_office_history'))).toBe(true);
   }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },90000);

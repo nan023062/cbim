@@ -25,6 +25,7 @@ import type {MainToolOutputBinding} from '../../tasks/rules/main-tool-output';
 import {checkedMainToolResult,mainToolContract} from './main-tool-contracts';
 import {commandReportContract,checkedCommandReportResult} from './command-report-contract';
 import {commandReportToolInputSchema,type CommandReportToolInput,type CommandVerificationReport} from '../../tasks/rules/command-verification';
+import type {OfficeHistoryTools} from './office-history-tools';
 import type {GoalTools} from './goal-tools';
 import {resumeMemberInputSchema,type ResumeMemberInput,type ResumeMemberReceipt} from '../../tasks/rules/queued-member-resume';
 import {abandonCheckpointInputSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../../tasks/rules/checkpoint-handoff';
@@ -108,14 +109,14 @@ export interface DispatchToolsPort {
 /** 工具解析在权限检查前和执行前各做一次，不默默剥离模型提供的额外字段。 */
 export class DispatchTools {
   private readonly binding:MainToolOutputBinding;
-  constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools,private readonly reviews?:CandidateReviewTools){this.binding=Object.freeze(structuredClone(port.binding))}
+  constructor(private readonly port:DispatchToolsPort,private readonly goals?:GoalTools,private readonly reviews?:CandidateReviewTools,private readonly history?:OfficeHistoryTools){this.binding=Object.freeze(structuredClone(port.binding))}
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
   get collaborationMode(){return this.port.collaborationMode??'team'}
   private definition(name:DispatchToolName){const definition=definitions[name];return name==='cbim_dispatch_cancel'&&!this.port.previewCancel?{...definition,schema:cancelQueuedTasksInputSchema}:definition}
   private available(name:string){return (name!=='cbim_dispatch_command_report'||!!this.port.commandReport)&&(name!=='cbim_dispatch_cancel'||!!this.port.cancel)&&(name!=='cbim_dispatch_replace_dependency'||!!this.port.replaceDependency)&&(name!=='cbim_dispatch_add_dependency'||!!this.port.addDependency)&&(name!=='cbim_dispatch_revise_dependencies'||!!this.port.reviseDependencies)&&(name!=='cbim_dispatch_resume'||!!this.port.resume)&&(name!=='cbim_dispatch_abandon_checkpoint'||!!this.port.abandonCheckpoint)}
-  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name])=>{const d=this.definition(name as DispatchToolName);return ({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>)),...(name==='cbim_dispatch_cancel'&&this.port.previewCancel?{version:2,outputSchema:{anyOf:[mainToolContract('cbim_dispatch_cancel').outputSchema,zodToJsonSchema(coordinationPreviewSchema)]}}:{})})}),...(this.goals?.list()??[]),...(this.reviews?.list()??[])]}
+  list(){return [...Object.entries(definitions).filter(([name])=>this.available(name)).map(([name])=>{const d=this.definition(name as DispatchToolName);return ({name,description:d.description,effects:d.effects,inputSchema:zodToJsonSchema(d.schema) as Record<string,unknown>,...(name==='cbim_dispatch_command_report'?commandReportContract():mainToolContract(name as Exclude<DispatchToolName,'cbim_dispatch_command_report'>)),...(name==='cbim_dispatch_cancel'&&this.port.previewCancel?{version:2,outputSchema:{anyOf:[mainToolContract('cbim_dispatch_cancel').outputSchema,zodToJsonSchema(coordinationPreviewSchema)]}}:{})})}),...(this.goals?.list()??[]),...(this.reviews?.list()??[]),...(this.history?.list()??[])]}
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
-  has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)||!!this.reviews?.has(name)}
+  has(name:string):boolean{return (Object.hasOwn(definitions,name)&&this.available(name))||!!this.goals?.has(name)||!!this.reviews?.has(name)||!!this.history?.has(name)}
   private parse(name:string,input:unknown){
     if(!Object.hasOwn(definitions,name)||!this.available(name))fail('TOOL_NOT_FOUND','当前运行没有此成员派发工具');
     const definition=this.definition(name as DispatchToolName),parsed=definition.schema.safeParse(input);
@@ -125,10 +126,11 @@ export class DispatchTools {
     return {name:name as DispatchToolName,args:parsed.data,effects:preview?['preview'] as const:definition.effects};
   }
   /** 描述入队/读取副作用；成员业务工具仍独立经过其运行权限，不继承本次免询问批准。 */
-  describe(name:string,input:unknown){if(this.reviews?.has(name))return this.reviews.describe(name,input);if(this.goals?.has(name))return this.goals.describe(name,input);const parsed=this.parse(name,input);return {effects:parsed.effects,native:false}}
+  describe(name:string,input:unknown){if(this.history?.has(name))return this.history.describe(name,input);if(this.reviews?.has(name))return this.reviews.describe(name,input);if(this.goals?.has(name))return this.goals.describe(name,input);const parsed=this.parse(name,input);return {effects:parsed.effects,native:false}}
   /** gate 后由桥调用；可信 toolCallId 用于持久化幂等，缺失时拒绝，不随机造新操作。 */
   async call(name:string,input:unknown,signal:AbortSignal,toolCallId?:string){
     signal.throwIfAborted();
+    if(this.history?.has(name))return this.history.call(name,input,signal);
     if(this.reviews?.has(name))return this.reviews.call(name,input,signal,toolCallId);
     if(this.goals?.has(name))return this.goals.call(name,input,signal,toolCallId);
     const parsed=this.parse(name,input);

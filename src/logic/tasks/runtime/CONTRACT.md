@@ -9,3 +9,5 @@ accept 仅允许后继使用此结果；reject 的候选不能作为最终目标
 ## 指定话题补充与排空
 
 `TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。
+
+OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封生成归档目录，仅选中引用才读 canonical 正文；不另存正文。完整公开消息按版本分块，内部成员提示词、原生会话和工具正文仍走公开白名单；旧记录缺少明确归属不按时间猜测。主归档和当前模型工作窗口分开，查询不启动、复活或验收历史运行。

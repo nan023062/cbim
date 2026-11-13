@@ -109,3 +109,5 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 活动话题的安全等待通过 `holdCollaboration` 占位，不把普通 pending 队列改写为 paused；文本和人工接续只解除本次话题的内存推进屏障，不批量恢复或暂停已有条目。原话题可靠完成后自动处理队首 pending。用户停止、未知结果、应用重启和既有 paused 队首仍要求明确继续，不能因话题完成而越过。
 
 历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。
+
+主 Agent 指引明确按 `cbim_office_history` 追溯本办公室原话题与内容、分块版本和 followupOf；当前运行窗口可压缩，但完整 canonical 保留。历史资料与旧验收不是本轮新授权，子 Agent 仍只得到当前话题的冻结上下文。

@@ -30,6 +30,7 @@ import type {AgentInstance} from '../../team/rules/agent-types';
 import type {TaskSpec} from '../../tasks/rules/types';
 import type {RunSummary} from '../../execution/rules/types';
 import {ScopeGoalService,type ScopeGoalPorts} from '../../tasks/runtime/scope-goal-service';
+import {OfficeHistoryService} from '../../tasks/runtime/office-history-service';
 import {TopicInterruptionService} from '../../tasks/runtime/topic-interruption-service';
 import {pendingTopicInterruption} from '../../tasks/rules/topic-interruption';
 import {ScopeContinuationService} from '../../tasks/runtime/scope-continuation-service';
@@ -82,6 +83,8 @@ export class WorkspaceDispatchService {
   readonly interruptions:TopicInterruptionService;
   /** 原运行插入的准备与接收，不创建新运行或修改原始输入。 */
   readonly activeInputs:ScopeActiveInputService;
+  /** 原主 Session 的话题与公开内容归档，按 canonical 引用读取，不复制正文。 */
+  readonly history:OfficeHistoryService;
   /** 已关闭周期的显式只读核实；创建新周期与原生上下文意图，不复活或重放来源。 */
   readonly recoveries:ScopeRecoveryService;
   /** 独立业务新周期；来源必须是完整完成的只读核实，不放宽 recoveries 的只读边界。 */
@@ -110,6 +113,7 @@ export class WorkspaceDispatchService {
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners,this.memberPauses);
     this.automaticReturns=new AutomaticReturnService(owner,store,this.goals,goalPorts,modelPorts);
     this.usage=new ScopeUsageService(owner,store,goalPorts);
+    this.history=new OfficeHistoryService(owner.entry.id,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets,this.memberPauses);
     this.interruptions=new TopicInterruptionService(owner,store);

@@ -20,6 +20,7 @@ export const domainRoots=[
 ];
 export const domainPublicEntries=new Set([
   "src/logic/tasks/rules/topic-interruption.ts",
+  "src/logic/tasks/rules/office-history.ts",
   "src/logic/tasks/rules/member-topic-context.ts",
   "src/logic/tasks/rules/member-topic-context-rules.ts",
   "src/logic/automation/rules/contracts.ts",

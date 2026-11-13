@@ -35,3 +35,5 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 本进程中新建安全等待时只调用 holdCollaboration，随后原目标显式接续并完成会自动交还普通队列。initialize 恢复旧等待仍调用持久暂停，保留应用重启后必须确认队列的规则；执行错误和未知结果继续使用 pauseCollaboration，不与安全等待混为一种状态。
 
 新话题的 followupOf 只接受同办公室已结束周期，入队和创建时分别核验；openScope 的幂等指纹包含来源。后续话题沿新队列身份创建，原周期不重开、不转移候选或验收。
+
+派发服务装配 OfficeHistoryService 复用原存储与受限 canonical 读取端口。AutoCollaboration 的主运行历史读取加入在途只读集合，整话题暂停等待其结束；读取不置 workRequested，也不驱动调度。不同办公室不可互读。

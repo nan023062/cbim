@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [main-command-request.ts](main-command-request.ts) | 共享主调度原命令的指纹构造，从已核实 canonical 参数复原历史请求，包含原子前置增删。 |
+| [office-history-service.ts](office-history-service.ts) | 按主 Session → 原话题 → 内容引用读取现有调度及公开对话日志。 |
 | [queued-dependency-addition-service.ts](queued-dependency-addition-service.ts) | 在同一派发事务核实未领取任务及两端后继，为原目标追加一条结果前置。 |
 | [queued-dependency-replacement-service.ts](queued-dependency-replacement-service.ts) | 主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。 |
 | [queued-dependency-revision-service.ts](queued-dependency-revision-service.ts) | 在同一可靠事务中退役和新增未领取目标的多条前置，保存原请求与完整闭包审计。 |
@@ -56,6 +57,38 @@ N_src_logic_tasks_runtime_main_command_request_ts ..> N_src_logic_tasks_runtime_
 ```
 
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/dispatch-commands.ts](../rules/dispatch-commands.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../rules/queued-task-cancel.ts](../rules/queued-task-cancel.ts)、[../rules/queued-dependency-replacement.ts](../rules/queued-dependency-replacement.ts)、[../rules/queued-dependency-addition.ts](../rules/queued-dependency-addition.ts)、[../rules/queued-dependency-revision.ts](../rules/queued-dependency-revision.ts)、[../rules/queued-member-resume.ts](../rules/queued-member-resume.ts)、[../rules/checkpoint-handoff.ts](../rules/checkpoint-handoff.ts)、[../rules/command-verification.ts](../rules/command-verification.ts)、[../rules/main-tool-output.ts](../rules/main-tool-output.ts)、[../../tools/runtime/main-tool-contracts.ts](../../tools/runtime/main-tool-contracts.ts)。
+
+### office-history-service.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tasks_runtime_office_history_service_ts["office-history-service.ts"] {
+  <<module>>
+}
+class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryPorts["OfficeHistoryPorts"] {
+  <<interface>>
+  +inspectMain()
+  +inspectMember()
+}
+N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryPorts : 声明
+class N_src_logic_tasks_runtime_office_history_service_ts_Entry["Entry"] {
+  <<interface>>
+  +reference
+  +read
+}
+N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_Entry : 声明
+class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService["OfficeHistoryService"] {
+  +read()
+  -workspaceId
+  -store
+  -ports
+  -index()
+  -publicRun()
+}
+N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../rules/dispatch-execution.ts](../rules/dispatch-execution.ts)、[../../runtime/monitoring/public-run-events.ts](../../runtime/monitoring/public-run-events.ts)、[../rules/scope-public.ts](../rules/scope-public.ts)、[../rules/office-history.ts](../rules/office-history.ts)。
 
 ### queued-dependency-addition-service.ts
 
@@ -620,3 +653,5 @@ accept 仅允许后继使用此结果；reject 的候选不能作为最终目标
 ## 指定话题补充与排空
 
 `TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。
+
+OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封生成归档目录，仅选中引用才读 canonical 正文；不另存正文。完整公开消息按版本分块，内部成员提示词、原生会话和工具正文仍走公开白名单；旧记录缺少明确归属不按时间猜测。主归档和当前模型工作窗口分开，查询不启动、复活或验收历史运行。

@@ -866,3 +866,5 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 整话题补充：`TopicInterruptionRequest` 固定工作区、主根、scope、输入版本、命令、原文/附件与选型。`topicInterruptions` 只追加，尚未消费的意图拒绝新派发和成员领取；请求保存不代表暂停成功。`wait.interruptionId` 只在主轮已可靠完成/取消、成员全部结算且无未知结果后建立，保留原任务图和目标版本。接续必须原样消费该请求，复用 continuations 推进输入版本和主运行清单；旧计划过期须重规划。公开摘要保留 requested/paused，详情保留原请求；未知退出没有 wait。重启未完成排空的 active 仍沿原恢复流程封存为 interrupted，不自动重发补充。
 
 `DispatchScope.followupOf` 保存用户新任务与同主 Session 已结束话题的关联。提交与重放均验证来源存在、已在此前关闭且不能改绑；排队、公开详情与摘要保留该引用，不复制正文，不继承原生线程或旧验收。
+
+`office-history` 定义主 Session → 话题 → 内容引用的只读检索。分页版本按当前公开目录或内容计算，后续页须携带原版本；各类记录保留真实 actor/task/run/inputRevision，不把历史资料变成用户授权。协议不接受工作区路径或任意主根覆盖。

@@ -1,3 +1,11 @@
+## 2026-11-14：办公室改版第 11 步——主 Agent 的按话题归档读取
+
+- 基线 `908a5d8d`。新增只读 `cbim_office_history`，主 Session → 话题 → 原内容引用，按需读取原目标/输入/补充、主轮、派发、成员公开对话及回传。正文沿 canonical 保存，不复制存储或按时间猜归属；长公开消息可完整分块，续页须核原版本。主工具绑定原办公室，成员 Loop 不提供归档入口；公开白名单继续隐藏内部提示词、原生信息及工具私有正文。
+- Q1 保护归属、真实发送者、子上下文隔离及原日志；Q2 协议归 Tasks rules，读取归 Tasks runtime，工具只适配和核回包，Dispatch 装配现有存储端口；Q3 选择新服务/工具、调度工具消费者、真实 Pi 主/成员链；Q4 OfficeHistoryService → OfficeHistoryTools → 主 DispatchTools，mainInstructions 说明读取及历史授权边界；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/office-history-service.test.ts tests/office-history-tools.test.ts tests/dispatch-tools.test.ts tests/auto-collaboration.test.ts tests/loop-engine.test.ts`：82/82。`tests/office-history-pi.test.ts`：1/1，真实 Application/Pi 在关联新话题调用归档并读到原用户输入，原话题保持结束；`tests/application-member-pi.test.ts tests/agent-role-instructions.test.ts`：11/11，真实成员请求不含归档工具且保持跨话题上下文隔离，均使用本机确定性供应商。
+- 首轮类型检查发现测试夹具使用不存在的 team 模式，模块检查发现服务单元直接校验另一模块 Schema；改为真实成员模式并将契约断言留给工具测试，精确重跑服务 4/4。最终 `pnpm typecheck`、`pnpm check:test-modules`（493 文件）与 `pnpm check:architecture`（748 代码/样式、1503 文件、0 差异/循环/违规）通过；公开入口精确登记，边界测试 12 通过/139 未选择。
+- 同步五个目录说明和类图；未跑全仓、真实桌面/在线模型、构建或发布。办公室人物/工位场景继续实施。
+
 ## 2026-11-14：办公室改版第 10 步——历史话题的关联新任务
 
 - 基线 `7c2db3b8`。历史话题按钮只设置明确可撤销的来源，用户发送后建立独立排队身份。followupOf 随编辑/重启及新周期保存；入队和建周期均核同办公室、已关闭来源，提交/重放拒绝改绑；旧单轮插入不能消费该任务。原话题保持结束，后续不继承旧验收，话题内可返回查看原话题。

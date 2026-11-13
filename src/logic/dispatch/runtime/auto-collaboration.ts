@@ -38,6 +38,7 @@ import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
 import type {DispatchTaskInput} from '../../tasks/rules/dispatch-commands';
 import type {GraphSnapshot,TaskNode} from '../../tasks/rules/graph-types';
 import {DispatchTools} from '../../tools/runtime/dispatch-tools';
+import {OfficeHistoryTools} from '../../tools/runtime/office-history-tools';
 import {GoalTools} from '../../tools/runtime/goal-tools';
 import {CandidateReviewTools} from '../../tools/runtime/candidate-review-tools';
 import {dependenciesReady} from '../../team/runtime/member-state';
@@ -451,7 +452,7 @@ export class AutoCollaboration {
       const graph=await this.dispatch.snapshot(this.identity(batch));
       if(!taskId)return graph;
       const task=graph.tasks.find(t=>t.taskId===taskId);if(!task)fail('TASK_NOT_FOUND','任务不属于当前主会话');return task;
-    }},goals,new CandidateReviewTools(binding,(input,id,signal)=>{this.assertLive(batch,signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.reviewCandidate(this.identity(batch),cycle.scopeId,runId,'candidate-review-'+hash(json({runId,id})),input,()=>this.assertLive(batch,signal)))}));
+    }},goals,new CandidateReviewTools(binding,(input,id,signal)=>{this.assertLive(batch,signal);cycle.workRequested=true;return this.track(cycle,this.dispatch.goals.reviewCandidate(this.identity(batch),cycle.scopeId,runId,'candidate-review-'+hash(json({runId,id})),input,()=>this.assertLive(batch,signal)))}),new OfficeHistoryTools(this.identity(batch),(query,signal)=>{this.assertLive(batch,signal);return this.track(cycle,this.dispatch.history.read(this.identity(batch),query,signal))}));
   }
   private identity(batch:{task:TaskSpec}){return {workspaceId:this.owner.entry.id,rootSessionId:batch.task.taskId}}
   /** 同一闭包用于实际命令和公开回包核验，不能从返回结果反推本轮身份。 */

@@ -232,3 +232,5 @@ CandidateReviewTools 由 AutoCollaboration 向主运行装配 cbim_dispatch_revi
 ## 当前工作区身份的缺省语义
 
 KnowledgeTools 的身份查询与身份默认值共用 currentIdentity：先 workspace.assert 核实本服务绑定实例，再取得 workspaceId/instanceId。知识工具 Schema 中这两个字段允许省略，解析时自动使用当前绑定；不会创建第二次模型工具调用或伪造查询事件，运行适配在 proposed 前冻结解析后的生效参数；有差异时另存 originalInput，原模型输入仍保留。显式旧 ID、其它工作区、null、空值仍校验并拒绝，不换绑也不自动重试。查询列表不要求可选 query；revision/requestId/planId 等业务字段按原 Schema 保持必填或可选，写入仍需原运行授权。其它有独立身份语义的成员、派发和治理工具不借此补业务身份。
+
+OfficeHistoryTools 组合到 DispatchTools，只在可信主运行装配 `cbim_office_history`。工作区/主根来自闭包，模型只能选本办公室的原话题引用；单次输出核原身份、操作及分页版本，历史用户/成员消息均按原来源解释。成员 Loop 不提供该工具。

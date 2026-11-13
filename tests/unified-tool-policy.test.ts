@@ -11,6 +11,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {memberToolEffects} from '../src/backend/core/team/workspace-member-tools';
+import {originalKnowledgeWrite} from '../src/backend/core/knowledge/knowledge-write-input';
 
 test('主岗位工具精确核知识范围，预览可读而提交保留 read/ask/execute 门禁',async()=>{
  for(const [name,effect] of Object.entries(memberToolEffects)){
@@ -56,7 +57,7 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
     const dispatch=f.app.memberDispatch(entry.id),manager=f.app.memberExecution(entry.id),identity={workspaceId:entry.id,rootSessionId:'policy-root'};
     for(const permission of ['read','ask','execute'] as const){
       turn=0;
-      const snap=await ws.snapshot();args={workspaceId:entry.id,instanceId:ws.instanceId,revision:snap.revision,requestId:randomUUID(),changes:[]};
+      const snap=await ws.snapshot();args={revision:snap.revision,requestId:randomUUID(),changes:[]};
       const scope=await dispatch.openScope(identity,'policy-'+permission,{message:'Inspect authorization receipts'},'policy-main-'+permission);
       await dispatch.goals.plan(identity,scope.scopeId,'policy-main-'+permission,'policy-plan-'+permission,{expectedRevision:1,objective:'Inspect authorization receipts',constraints:[],criteria:[{id:'receipt',text:'Actual tool authorization receipt',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,criterionIds:['receipt'],reason:'Registered executor'}],reason:'Explicit authorization probe'});
       const assigned=await dispatch.dispatchTask({...identity,commandId:'assign-'+permission,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[team.input.moduleId],ownerSelection,goal:'验证统一知识写入权限',acceptance:[{id:'receipt',text:'记录真实工具授权回执'}],prerequisites:[]}},scope.scopeId);
@@ -69,6 +70,9 @@ test('real Pi executor routes knowledge commit through read, ask and execute mod
       await manager.waitForSettlement(taskIdentity);
       const result=await new FileRunStorage().read(path.join(f.user,entry.id,'dispatch','runs','tasks',assigned.taskId,run.runId));
       expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
+      const proposed=result.events.find(e=>e.type==='tool.proposed'&&e.data.id==='knowledge-write')!;
+      expect(proposed.data.originalInput).toEqual(args);expect(proposed.data.input).toMatchObject({workspaceId:entry.id,instanceId:ws.instanceId,...args});
+      expect(originalKnowledgeWrite('cbim_knowledge_commit',proposed.data.input)).toMatchObject({kind:'request',request:{workspaceId:entry.id,instanceId:ws.instanceId,...args}});
       expect(result.memberBinding).toMatchObject({...taskIdentity,agentId:'.cbim/team/dev',runId:run.runId});
       expect(result.toolReceipts,JSON.stringify(result.events.filter(e=>e.type.startsWith('tool.')))).toMatchObject([{toolCallId:'knowledge-write',outcome:permission==='read'?'denied':'succeeded',workspaceId:entry.id,runId:run.runId,effects:['knowledge-write']}]);
       expect((await manager.inspect(taskIdentity)).task.assignee.agentInstanceId).not.toBe((await dispatch.snapshot(identity)).root.agent.agentInstanceId);

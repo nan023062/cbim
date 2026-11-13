@@ -19,6 +19,7 @@
 | [QuestionCard.tsx](QuestionCard.tsx) | 展示 Agent 的结构化问题，以选项卡及最后一项其它输入收集答案。 |
 | [questions.css](questions.css) | 结构化问题卡片的主题、选中态和输入排版。 |
 | [repairStreamingMarkdown.ts](repairStreamingMarkdown.ts) | 显示正在流入的 Markdown 时临时补齐未闭合语法。 |
+| [tool-failure-view.ts](tool-failure-view.ts) | 从已确认执行前拒绝的工具回包提取可读原因，兼容旧校验 JSON。 |
 | [tool-labels.ts](tool-labels.ts) | 工具轨道和实时活动预览共用的公开动作名称。 |
 | [ToolTimeline.tsx](ToolTimeline.tsx) | 把工具申请、授权、运行、输出及完成记录合并成可展开的执行时间线。 |
 | [transcript.ts](transcript.ts) | 将持久化执行事件投影为对话消息、工具证据与运行错误，目标返工反馈明确显示为系统消息。 |
@@ -122,6 +123,18 @@ class N_src_frontend_execution_view_repairStreamingMarkdown_ts["repairStreamingM
 ```
 
 
+### tool-failure-view.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_execution_view_tool_failure_view_ts["tool-failure-view.ts"] {
+  <<module>>
+  +rejectedToolView()
+}
+```
+
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+
 ### tool-labels.ts
 
 ```mermaid
@@ -143,7 +156,7 @@ class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 }
 ```
 
-直接依赖：[tool-labels.ts](tool-labels.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[knowledge-tool-view.css](knowledge-tool-view.css)。
+直接依赖：[tool-labels.ts](tool-labels.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[knowledge-tool-view.ts](knowledge-tool-view.ts)、[tool-failure-view.ts](tool-failure-view.ts)、[knowledge-tool-view.css](knowledge-tool-view.css)。
 
 ### transcript.ts
 
@@ -230,6 +243,9 @@ class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
 class N_src_frontend_execution_view_knowledge_tool_view_ts["knowledge-tool-view.ts"] {
   <<module>>
 }
+class N_src_frontend_execution_view_tool_failure_view_ts["tool-failure-view.ts"] {
+  <<module>>
+}
 class N_src_frontend_execution_view_knowledge_tool_view_css["knowledge-tool-view.css"] {
   <<stylesheet>>
 }
@@ -240,8 +256,19 @@ class N_src_frontend_execution_view_tool_labels_ts["tool-labels.ts"] {
   <<module>>
 }
 N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view_knowledge_tool_view_ts : 导入依赖
+N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view_tool_failure_view_ts : 导入依赖
 N_src_frontend_execution_view_ToolTimeline_tsx ..> N_src_frontend_execution_view_knowledge_tool_view_css : 导入依赖
 N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_tool_labels_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
+  <<component>>
+}
+class N_src_frontend_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
+  <<component>>
+}
 N_src_frontend_execution_view_WorkStatus_tsx ..> N_src_frontend_execution_view_ToolTimeline_tsx : 导入依赖
 ```
 
@@ -279,3 +306,8 @@ knowledge-tool-view 仅接受原 finished 调用的完整、同工作区知识�
 ### 失败与熔断显示
 
 ToolTimeline 在失败或未确认调用旁展示运行记录中的 nextStep；engine.status 的 label 缺省时使用 message/state，显示真实熔断原因。仅展示文本，不生成自动重试/核实动作，不改变原运行或业务验收状态。
+
+
+## 明确拒绝与旧参数错误
+
+ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/started/updated 时，只读渲染拒绝原因，并不调用核实控制插槽。tool-failure-view 兼容旧 message 内嵌的校验数组及当前 TOOL_INPUT_INVALID，展示缺失字段、格式说明与默认参数语义，不展示原始校验 JSON；原日志未修改。已放行或仅正文自称 rejected 的失败保持原核实入口，不能通过伪造正文隐藏可能发生的副作用。

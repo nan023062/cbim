@@ -1,4 +1,5 @@
 /**
+ * TOOL_INPUT_INVALID 明确表示执行前参数拒绝；普通执行异常仍保留 unknown，不据错误文字断言无副作用。
  * 作用定位：引擎工具回包的统一结果与下一步说明；独立于具体业务账本。
  * 设计原因：异常不能证明未执行，所有失败默认禁止自动重放；仅可信适配器可提供原命令的只读核实入口。
  */
@@ -24,7 +25,8 @@ export function toolFailureResult(error:unknown,rejected=false):ToolResult {
   const candidate=error as {reconciliation?:ToolReconciliation};
   const reconciliation=candidate?.reconciliation;
   const code=error instanceof Fault?error.code:'TOOL_ERROR';
-  const outcome=toolOutcome(rejected||code==='FORBIDDEN'?'rejected':'unknown',reconciliation);
+  const outcome=toolOutcome(rejected||code==='FORBIDDEN'||code==='TOOL_INPUT_INVALID'?'rejected':'unknown',reconciliation);
+  if(code==='TOOL_INPUT_INVALID')outcome.nextStep='本次尚未执行。请补齐列出的必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。';
   return {isError:true,content:[{type:'text',text:JSON.stringify({...outcome,code,message:error instanceof Error?error.message:String(error)})}],details:{outcome}};
 }
 /** 原领域文本不改写，避免破坏历史 Schema 与证据哈希；状态元数据是调用结果，不能当业务回执。 */

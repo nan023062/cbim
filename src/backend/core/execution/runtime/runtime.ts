@@ -1,4 +1,5 @@
 /**
+ * 执行前 Schema 异常转换为可读字段说明并保留错误码；此转换不用于已经执行后的失败。
  * 目录归属：backend/core/execution/runtime；运行生命周期内核。
 
  * 连续同工具同参数三次失败按提出顺序熔断；记录 blocked 原因并沿原停止/排空收束为失败，有未决副作用仍保持 interrupted，不重放。
@@ -58,6 +59,7 @@ import type {RunToolDescriptor} from '../../tools/policy/tool-policy';
 import type {WorkflowContractBinding} from '../../tasks/execution-context';
 import {workflowHasEffects} from '../../evidence/workflow-evidence';
 import {fail} from '../../foundation/errors';
+import {toolInputError} from '../../tools/input-validation';
 import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../../tasks/scope-active-input';
 import {scopedActiveInputHash} from '../../tasks/scope-active-input-rules';
 
@@ -86,6 +88,8 @@ export interface RuntimeOptions {
   workflowContracts?:WorkflowContractBinding[];
   /** 纯分类与参数解析，不询问批准或运行工具；同一个描述继续交给授权端，避免两套 effects 判断。 */
   describeTool?(call:ToolCall):RunToolDescriptor;
+  /** 可信适配器在日志与授权之前解析缺省参数；失败仍记录原请求并拒绝，不执行工具。 */
+  normalizeToolInput?(call:ToolCall):ToolCall['input'];
   /** 仅已领取续执行注入；复核原日志、文件、知识和原生指纹，覆盖 Runtime 与 Pi 准备窗口，不接受公开路径。 */
   assertMemberResume?():Promise<void>;
   /** 可信工厂根据已提交检查点数给出的剩余额度；每个运行仍只暂存一次，零表示只能继续交付。缺省沿用旧首段许可。 */
@@ -395,6 +399,8 @@ export class LoopRuntime {
           if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({codeCheckTools:codeChecks,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
+            const originalInput=structuredClone(call.input);let normalizationError:unknown;
+            try{if(this.options.normalizeToolInput)call.input=structuredClone(this.options.normalizeToolInput(structuredClone(call)))}catch(error){normalizationError=error}
             repeatedFailures.proposed(call);
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
             const scopedReason=executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
@@ -408,9 +414,10 @@ export class LoopRuntime {
             // 门闩明确拒绝的调用只记录拒绝事实，绝无执行机会，不能反过来阻塞已经获准的求助。
             if(!helpReason&&!stopping)activeCalls.add(call.id);
             calls.set(call.id,{call,decision:{allow:false},generation:taskTools.generation,overlappedEffect:workflows.length>0&&effectsInFlight.size>0});
-            await emit({type:'tool.proposed',data:{...call}});
-            let decision:ToolDecision,descriptor:RunToolDescriptor|undefined,planVersion:number|undefined;
+            await emit({type:'tool.proposed',data:{...call,...(!isDeepStrictEqual(originalInput,call.input)?{originalInput}:{})}});
+            let decision:ToolDecision,descriptor:RunToolDescriptor|undefined,planVersion:number|undefined,inputFailure:unknown;
             try{
+              if(normalizationError)throw normalizationError;
               if(repeatedFailures.blocked)decision={allow:false,reason:'TOOL_REPEAT_BLOCKED: 同一工具同参数连续失败三次，请核实原结果并修正原因'};
               else if(stopping)decision={allow:false,reason:'任务正在停止'};
               else if(helpReason)decision={allow:false,reason:helpReason};
@@ -420,8 +427,8 @@ export class LoopRuntime {
                 if(descriptor&&workflowHasEffects(descriptor.effects))planVersion=taskTools.beforeEffects();
                 decision=descriptor?await this.options.toolPolicy(structuredClone(call),structuredClone(descriptor)):await this.options.toolPolicy(structuredClone(call));
               }
-            }catch(error){const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
-            if(stopping)decision={...decision,allow:false,reason:'任务正在停止'};
+            }catch(error){inputFailure=toolInputError(error);error=inputFailure;const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
+            if(stopping){inputFailure=undefined;decision={...decision,allow:false,reason:'任务正在停止'}};
             // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
             if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','external-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
               if(workflows.length){
@@ -431,7 +438,7 @@ export class LoopRuntime {
               try{await taskTools.invalidate('即将执行可能改变产物的操作，需要重新验证',planVersion)}catch(error){const code=(error as {code?:string})?.code;decision={...decision,allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error))}}
             }
             calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});
-            if(!decision.allow)decision={...decision,reason:(toolFailureResult(decision.reason??'未获授权',true).content[0] as {text:string}).text};
+            if(!decision.allow)decision={...decision,reason:(toolFailureResult(inputFailure??decision.reason??'未获授权',true).content[0] as {text:string}).text};
             const authorization=await emit({type:decision.allow?'tool.allowed':'tool.denied',data:{id:call.id,name:call.name,input:call.input,...decision,...(Number.isSafeInteger(descriptor?.contractVersion)&&descriptor!.contractVersion!>0?{contractVersion:descriptor!.contractVersion}:{}),...(!decision.allow?{receipt:toolReceipt(identity,call,decision,'denied')}: {})}},true);
             if(stopping&&decision.allow){
               decision={...decision,allow:false,reason:'任务正在停止'};calls.set(call.id,{...calls.get(call.id)!,call,decision,generation:taskTools.generation});

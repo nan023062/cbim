@@ -33,3 +33,11 @@ it('缺失身份返回可读纠错提示且不执行，其他参数错误不泄�
   try{registry.resolve('cbim_skill_example',{workspaceId:'w',instanceId:'i',count:'private-body'})}catch(error){expect(String(error)).not.toContain('private-body');expect(String(error)).toContain('本次尚未执行')}
   expect(execute).not.toHaveBeenCalled();
 });
+
+it('实际Schema解析保留可选和默认语义，不将缺省项误报必填，也不把null当省略',()=>{
+  const registry=new ToolRegistry<boolean>();registry.register({name:'cbim_defaults',version:1,effects:['read'],inputSchema:{required:z.string(),query:z.string().optional(),count:z.number().default(5)},outputSchema:z.object({}),cancellation:{mode:'preflight_only',description:'开始前取消'},recovery:{mode:'read_again',description:'重新读取'},execute:()=>({})});
+  expect(registry.resolve('cbim_defaults',{required:'ok'}).args).toEqual({required:'ok',count:5});
+  expect(registry.resolve('cbim_defaults',{required:'ok',count:0,query:''}).args).toEqual({required:'ok',count:0,query:''});
+  try{registry.resolve('cbim_defaults',{})}catch(error){expect(String(error)).toContain('required：缺少必填字段');expect(String(error)).not.toContain('query：');expect(String(error)).not.toContain('count：')}
+  expect(()=>registry.resolve('cbim_defaults',{required:'ok',count:null})).toThrow('count：类型或格式');
+});

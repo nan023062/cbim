@@ -1,3 +1,15 @@
+## 2026-11-13：Issue #65 缺参提示、当前身份缺省与执行前拒绝展示
+
+- 来源：用户要求缺参明确字段、自动取得当前工作区身份，不展示原始校验 JSON 和副作用核实入口，并保留可选/default 语义。基线 `8061ae74`，本步开始工作区干净。读取开放清单只有 [#65](https://github.com/nan023062/cbim/issues/65)，本步对应正文第 6 项及身份获取体验，不关闭整单、不修改当前安装或历史日志。
+- 状态与边界：KnowledgeTools 身份查询和缺省身份共用当前绑定实例读取；仅 undefined 使用 Schema 默认，显式其它工作区/旧实例/null/空值仍拒绝。注册表保留实际 optional/default 解析，不自动补 revision/requestId/planId、目标或权限。其它派发/岗位等工具身份不借此被改写。预检只取得当前实例，不启动业务、切换工作区或重试未知写入。
+- 审计链：只在工具服务内部补身份会导致原 proposed 缺少知识事务身份，因此 loop-engine 将本实例知识工具的 normalizeInput 注入 Runtime。可信同步预解析在 proposed 前冻结生效 input；只有有差异时追加 originalInput 保存模型原值。授权、回执与原事务观察继续使用同一生效 input，执行端仍断言绑定实例。实际 Pi 回归验证缺身份的请求在 read 下拒绝，ask 下需批准，execute 下成功，并可由 originalKnowledgeWrite 从 canonical 参数重建原引用。
+- 错误与 UI：Core input-validation 复用无原值的字段说明；Runtime 在执行前将 ZodError 转为 TOOL_INPUT_INVALID 并保留 Fault 码，普通执行异常仍为 unknown。Bridge 仅公开纯字段格式化；ToolTimeline 只有真实 tool.denied 且没有 allowed/started/updated 才隐藏核实插槽。旧嵌套校验 JSON 以只读投影显示字段，不改日志；已放行或仅正文声称 rejected 的错误不隐藏核实能力。
+- 维护者阅读：input-validation/registry → KnowledgeTools 注册及 normalizeInput → assembly/loop-engine → Runtime.beforeTool → tool-failure-view/ToolTimeline。变化限于输入准备与拒绝展示；原领域 Schema、权限、事务、旧事件不迁移，批准或执行后失败不进入“尚未执行”说明。没有增加自动重试策略。
+- 验证选择及结果：`pnpm exec vitest run tests/tool-registry.test.ts tests/knowledge-tool-contracts.test.ts tests/knowledge-tool-view.test.ts tests/loop-engine.test.ts --reporter=dot`：22 通过，覆盖默认/可选/null、缺字段、错误身份、权限及历史提示。`pnpm exec vitest run tests/knowledge-tool-output.test.ts tests/unified-tool-policy.test.ts tests/workflow-runtime.test.ts --reporter=dot`：23 通过，覆盖原输出/权限/Workflow 消费者。
+- 审计补充验证：加入规范化后，`pnpm exec vitest run tests/unified-tool-policy.test.ts tests/loop-engine.test.ts --reporter=dot`：16 通过，其中真实 Pi 配本地 HTTP fixture，非在线供应商；将执行前失败细分为 describe/normalize 后，`pnpm exec vitest run tests/loop-engine.test.ts -t '执行前' --reporter=dot`：2 通过、8 未选中。共 46 个不同相关用例通过，不累计重复。
+- 静态与资料：首次 `pnpm typecheck` 暴露前端 JSON parse 后 unknown 失去字符串收窄，改用保留的字符串变量后通过；规范化接口增加后的类型检查发现返回 unknown 不能赋给工具对象输入，收紧为 ToolCall['input'] 后复核。`node scripts/source-architecture.mjs` 同步受影响类图；`pnpm check:architecture`：1366 文件、6943 依赖、0 循环/违规。同步 Core tools/runtime、assembly/tools、Bridge、execution-view 的注释与契约及 7 份架构文档。
+- 边界：未运行全量回归、桌面打包、安装升级、真实供应商请求或人工代码 review；截图网页抓取的空正文/搜索配置错误分类是另一项问题，本次未处理。尚未发布，后续集成和发布沿现有门禁；#65 其余事项保持开放。
+
 ## 2026-11-13：候选审阅阶段说明与依赖批准关口
 
 - 来源：用户直接要求“交付待审阅时展示完整阶段说明，并加审阅通过后才放行的依赖关口”；基线 `4bfc2b39`，开始时工作区干净。2026-11-13 拉取开放 Issues，只有 #65；本次为直接新增要求，不虚构关联工单，不关闭 #65，不修改安装版或用户正在执行的任务。

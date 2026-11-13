@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {modelStopError} from '../src/logic/execution/rules/model-errors';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {transcript} from '../src/view/execution-view/transcript';
 test('length is actionable, reports usage, and old logs are readable without rewriting',()=>{
  expect(modelStopError({stopReason:'length',usage:{output:4096,reasoning:4096}},4096)).toContain('推理 4096');
  expect(modelStopError({stopReason:'stop'})).toBeUndefined();

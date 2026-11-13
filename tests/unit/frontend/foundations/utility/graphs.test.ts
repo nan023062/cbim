@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {rankDirectedGraph,GraphTopologyError} from '../../../../../src/frontend/foundations/utility';
+import {rankDirectedGraph,GraphTopologyError} from '../../../../../src/view/foundations/utility';
 describe('frontend graph ranks',()=>{
   it('最长前驱分层、孤立节点及平行边保持确定结果',()=>{
     const ids=['a','b','c','d','alone'],edges:[string,string][]=[['a','b'],['a','c'],['b','c'],['c','d'],['c','d']];

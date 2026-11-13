@@ -1,5 +1,5 @@
 import {expect,test} from 'vitest';
-import {transcript,completionFeedback} from '../src/frontend/execution-view/transcript';
+import {transcript,completionFeedback} from '../src/view/execution-view/transcript';
 import type {RunSummary,EngineEvent} from '../src/logic/execution/rules/types';
 function run(events:EngineEvent[]):RunSummary{return {task:{taskId:'task',workspaceId:'workspace',root:'root',goal:'目标',moduleIds:[],acceptance:['验证']},runId:'run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:events.map((e,i)=>({...e,version:1,seq:i+1,taskId:'task',workspaceId:'workspace',runId:'run',time:'2026-11-06T00:00:00Z'}))}}
 test('text deltas are replaced by final text; follow-up user message and tool evidence remain ordered',()=>{

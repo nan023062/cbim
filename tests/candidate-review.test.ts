@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {MemberActivityCard} from '../src/view/tasks/MemberActivity';
 import {identity,request,candidate,approved} from './support/candidate-review';
 it.each(['pending','accept','reject'] as const)('任务详情与内联卡展示真实审阅阶段：%s',decision=>{
   const task=decision==='pending'?candidate():approved();if(decision==='reject')task.candidateReview!.decision='reject';

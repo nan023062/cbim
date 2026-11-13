@@ -18,9 +18,9 @@ const workspace=(await f.app.list()).entries.find(w=>w.id===entry.id)!;
 const html='<div id="root"></div><script type="module" src="./fixture.mjs"></script>';
 await fs.writeFile(path.join(out,'index.html'),html);
 await fs.writeFile(path.join(out,'fixture.mjs'),String.raw`
-import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
+import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
 window.cbim={call:async(action,args={})=>{const response=await fetch('/__engine_ipc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action,args})});const result=await response.json();if(!result.ok)throw Error(result.message);return result.value}};
-const {Conversation}=await import('/src/frontend/conversation/Conversation.tsx');const {TeamView}=await import('/src/frontend/team/TeamView.tsx');const {ModelSettings}=await import('/src/frontend/settings/ModelSettings.tsx');
+const {Conversation}=await import('/src/view/conversation/Conversation.tsx');const {TeamView}=await import('/src/view/team/TeamView.tsx');const {ModelSettings}=await import('/src/view/settings/ModelSettings.tsx');
 const workspace=`+JSON.stringify(workspace)+String.raw`;
 function App(){const [view,setView]=useState('a'),[snapshot,setSnapshot]=useState(),[tabs,setTabs]=useState([{id:'a',kind:'conversation',title:'对话一',draft:''},{id:'b',kind:'conversation',title:'对话二',draft:''}]);
 const refresh=async()=>setSnapshot(await window.cbim.call('snapshot',{id:workspace.id}));React.useEffect(()=>{void refresh()},[]);

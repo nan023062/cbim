@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {transcript} from '../src/view/execution-view/transcript';
 it('损坏附件 JSON 不能经公开预览返回伪造的字符串字段',async()=>{
  const f=await fixture();try{
   const entry=await f.app.dispatch('add',{path:f.a}),inputs=new ChatInputs(f.app.workspace(entry.id));

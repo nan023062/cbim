@@ -3,9 +3,9 @@ import {it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
-import {WorkspaceMemberCommands} from '../src/frontend/team/workspace-member-state';
-import {ModuleOwnershipCommands} from '../src/frontend/workspace/module-ownership-state';
-import {assignInlineOwner,readInlineOwners,inlineOwnerChoices} from '../src/frontend/workspace/inline-module-ownership';
+import {WorkspaceMemberCommands} from '../src/view/team/workspace-member-state';
+import {ModuleOwnershipCommands} from '../src/view/workspace/module-ownership-state';
+import {assignInlineOwner,readInlineOwners,inlineOwnerChoices} from '../src/view/workspace/inline-module-ownership';
 
 it('新岗位采纳 Agent 自选引擎和模型；失效选择不回落到本机默认',async()=>{
   const f=await setup();try{

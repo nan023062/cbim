@@ -4,8 +4,8 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
 import {connectionForEngine,providerSupportsEngine} from '../src/logic/models';
 import {identifyProvider} from '../src/logic/models';
-import {EngineModelPicker} from '../src/frontend/components/EngineModelPicker';
-import {ProviderConnections,ProviderConnectionTest,connectionTestNotice} from '../src/frontend/settings/ProviderConnections';
+import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
+import {ProviderConnections,ProviderConnectionTest,connectionTestNotice} from '../src/view/settings/ProviderConnections';
 
 const profile:LlmProfile={id:'11111111-1111-4111-8111-111111111111',name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'api-key',hasKey:true,defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,reasoning:true,contextWindow:1048576,maxTokens:4096}]};
 

@@ -12,7 +12,7 @@ import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member
 import {workspaceMemberModelSnapshotSchema} from '../src/logic/team/rules/workspace-member';
 import {objectOperation} from '../src/logic/knowledge/rules/object-crud';
 import {queuedMessageSchema} from '../src/logic/tasks/rules/queue';
-import {EngineModelPicker} from '../src/frontend/components/EngineModelPicker';
+import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
 
 const base:LlmDefinition={name:'Shared provider',api:'anthropic-messages',auth:'none',baseUrl:'http://127.0.0.1:1',defaultModel:'test',models:[{id:'test',name:'Test model',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]};
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-engine-config-'));return {models:new LlmProfiles(path.join(root,'models.json')),filename:path.join(root,'models.json'),cleanup:async()=>{if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-engine-config-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true})}}}

@@ -36,7 +36,7 @@ export const logicalBoundaries = [
     dependencies:['model-rules'],imports:['src/logic/team/rules/agent-runtime.ts','src/logic/execution/rules/model-errors.ts'],external:[],
   },
   {
-    id:'frontend-utility',prefix:'src/frontend/foundations/utility/',public:['src/frontend/foundations/utility/index.ts'],
+    id:'frontend-utility',prefix:'src/view/foundations/utility/',public:['src/view/foundations/utility/index.ts'],
     dependencies:['utility-foundations'],external:[],
   },
   {
@@ -195,9 +195,9 @@ export const logicalBoundaries = [
     imports:['src/logic/team/rules/session-history-storage.ts'],external:['node:fs/promises','node:path'],
   },
   {
-    id:'execution-view', prefix:'src/frontend/execution-view/',
-    public:['src/frontend/execution-view/WorkStatus.tsx','src/frontend/execution-view/ToolTimeline.tsx','src/frontend/execution-view/MarkdownMessage.tsx','src/frontend/execution-view/transcript.ts','src/frontend/execution-view/tool-labels.ts','src/frontend/execution-view/repairStreamingMarkdown.ts','src/frontend/execution-view/MessageQueue.tsx','src/frontend/execution-view/QuestionCard.tsx','src/frontend/execution-view/ComposerAttachments.tsx','src/frontend/execution-view/knowledge-tool-view.ts'],
-    dependencies:[], imports:['src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/frontend/components/Icon.tsx','src/frontend/components/RepositoryScopeDetails.tsx'],
+    id:'execution-view', prefix:'src/view/execution-view/',
+    public:['src/view/execution-view/WorkStatus.tsx','src/view/execution-view/ToolTimeline.tsx','src/view/execution-view/MarkdownMessage.tsx','src/view/execution-view/transcript.ts','src/view/execution-view/tool-labels.ts','src/view/execution-view/repairStreamingMarkdown.ts','src/view/execution-view/MessageQueue.tsx','src/view/execution-view/QuestionCard.tsx','src/view/execution-view/ComposerAttachments.tsx','src/view/execution-view/knowledge-tool-view.ts'],
+    dependencies:[], imports:['src/bridge/contracts/execution.ts','src/bridge/contracts/models.ts','src/bridge/contracts/chat.ts','src/bridge/contracts/knowledge-transactions.ts','src/view/components/Icon.tsx','src/view/components/RepositoryScopeDetails.tsx'],
     external:['react','react-markdown','remark-gfm','rehype-highlight'],
   },
   {

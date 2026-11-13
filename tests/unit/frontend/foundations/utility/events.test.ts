@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {SubscriptionSet} from '../../../../../src/frontend/foundations/utility';
+import {SubscriptionSet} from '../../../../../src/view/foundations/utility';
 
 it('实例隔离、注册不通知，同步按插入顺序通知',()=>{
   const first=new SubscriptionSet(),second=new SubscriptionSet(),calls:string[]=[];

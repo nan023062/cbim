@@ -1,5 +1,5 @@
 import {test,expect} from 'vitest';
-import {brainStatus} from '../src/frontend/conversation/brain-status';
+import {brainStatus} from '../src/view/conversation/brain-status';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 test('brain activity ignores telemetry and never needs reasoning text',()=>{
  const run={status:'running',events:[{type:'engine.status',data:{metric:'activity',label:'正在思考…'}},{type:'engine.status',data:{metric:'context',tokens:100}}]} as unknown as RunSummary;

@@ -42,7 +42,7 @@ it('未知操作和原型属性不落入历史处理器，保留主分派未知�
 it('全部契约与实际应用处理器、桌面入口双向完整对应',()=>{
   const names=new Set<string>();
   // 自动化沿用 0.1.7 的 actions 文件名，同样纳入真实处理器与共享契约的双向覆盖核对。
-  for(const file of [...fs.readdirSync('src/backend/main/ipc').filter(name=>name.endsWith('-handlers.ts')||name==='agent-history.ts'||name==='automation-actions.ts').map(name=>'src/bridge/server/ipc/'+name),'src/bridge/server/main.ts']){
+  for(const file of [...fs.readdirSync('src/bridge/server/ipc').filter(name=>name.endsWith('-handlers.ts')||name==='agent-history.ts'||name==='automation-actions.ts').map(name=>'src/bridge/server/ipc/'+name),'src/bridge/server/main.ts']){
     const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
     const visit=(node:ts.Node)=>{
       if(ts.isPropertyAssignment(node)&&ts.isStringLiteral(node.name))names.add(node.name.text);

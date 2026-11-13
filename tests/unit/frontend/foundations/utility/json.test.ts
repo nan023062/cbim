@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {equalJson} from '../../../../../src/frontend/foundations/utility';
+import {equalJson} from '../../../../../src/view/foundations/utility';
 
 it('忽略嵌套对象键顺序，保持数组顺序及值类型',()=>{
   expect(equalJson({b:[{y:2,x:1}],a:true},{a:true,b:[{x:1,y:2}]})).toBe(true);

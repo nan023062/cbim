@@ -1,11 +1,11 @@
 import {expect,test} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {layoutDispatchGraph,GRAPH_NODE_WIDTH,GRAPH_NODE_HEIGHT} from '../src/frontend/tasks/graph-layout';
-import {DispatchGraph} from '../src/frontend/tasks/DispatchGraph';
-import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
-import {MemberActivity} from '../src/frontend/tasks/MemberActivity';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
+import {layoutDispatchGraph,GRAPH_NODE_WIDTH,GRAPH_NODE_HEIGHT} from '../src/view/tasks/graph-layout';
+import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
+import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {MemberActivity} from '../src/view/tasks/MemberActivity';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
 import type {GraphSnapshot,TaskNode,GraphEdge} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-06T10:00:00.000Z';

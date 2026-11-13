@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {createGovernancePendingStore,checkedGovernanceReceipt,checkedGovernanceUnaccepted,isFirstGovernanceRejection,GOVERNANCE_PENDING_KEY,type GovernancePending} from '../src/frontend/governance/governance-pending';
+import {createGovernancePendingStore,checkedGovernanceReceipt,checkedGovernanceUnaccepted,isFirstGovernanceRejection,GOVERNANCE_PENDING_KEY,type GovernancePending} from '../src/view/governance/governance-pending';
 const pending:GovernancePending={workspaceId:'workspace',instanceId:'10000000-0000-4000-8000-000000000001',moduleId:'.cbim/workspace/project',commandId:'20000000-0000-4000-8000-000000000001',action:'apply'};
 it('反馈类明确预受理拒绝可识别，未知结果仍不能据此解除',()=>{
   for(const code of ['GOVERNANCE_FEEDBACK_STALE','GOVERNANCE_FEEDBACK_SOURCE','GOVERNANCE_ASSESSMENT'])expect(isFirstGovernanceRejection(new Error(code+': 拒绝本次受理'))).toBe(true);

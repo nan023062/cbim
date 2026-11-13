@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {AsyncGeneration} from '../../../../../src/frontend/foundations/utility';
+import {AsyncGeneration} from '../../../../../src/view/foundations/utility';
 
 describe('AsyncGeneration',()=>{
   it('同一代次允许多次捕获，不因捕获而作废其他读取',()=>{

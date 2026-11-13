@@ -9,7 +9,7 @@ import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
 import {projectCommandReceipt} from '../src/logic/tasks/rules/command-verification-output';
-import {memberDependencyRevisionHistory} from '../src/frontend/tasks/member-dependency-state';
+import {memberDependencyRevisionHistory} from '../src/view/tasks/member-dependency-state';
 import {MemberExecutionManager,type PreparedEngine} from '../src/logic/team/runtime/member-execution';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';

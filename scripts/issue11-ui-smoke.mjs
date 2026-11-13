@@ -6,7 +6,7 @@ import {chromium} from 'playwright-core';
 const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'issue11-ui.html'),'<div id="root"></div><script type="module" src="/test-results/issue11-ui.mjs"></script>');
 await fs.writeFile(path.join(out,'issue11-ui.mjs'),String.raw`
-import React from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
+import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
 const id='a'.repeat(64),entry={id,name:'project',path:'C:/fixture',state:'running',instanceId:'instance',tasks:[],revision:'revision'};
 window.fixture={calls:[],unexpected:[],running:true};
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});
@@ -24,7 +24,7 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
  if(action==='admission.read')return {kind:'snapshot',snapshot:{cursor:{streamId:'fixture',revision:1},policy:{revision:1,maxConcurrentRuns:4},occupied:[],waiting:[]}};
  f.unexpected.push(action);throw Error('Unexpected IPC '+action);
 }};
-const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
+const {App}=await import('/src/view/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
 `);
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;
 const checks=[],errors=[];

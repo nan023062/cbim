@@ -1,12 +1,12 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ScopeContinuationController,ScopeContinuationPool,checkedContinuationReceipt,continuationRejected,type ContinuationTarget,type ContinuationPorts} from '../src/frontend/tasks/continuation-state';
-import {continuationTarget,continuationModel,type ScopeContinuationView} from '../src/frontend/tasks/useScopeContinuation';
-import {ScopeContinuationForm} from '../src/frontend/tasks/ScopeContinuationForm';
+import {ScopeContinuationController,ScopeContinuationPool,checkedContinuationReceipt,continuationRejected,type ContinuationTarget,type ContinuationPorts} from '../src/view/tasks/continuation-state';
+import {continuationTarget,continuationModel,type ScopeContinuationView} from '../src/view/tasks/useScopeContinuation';
+import {ScopeContinuationForm} from '../src/view/tasks/ScopeContinuationForm';
 import type {GoalContinuationRequest,GoalContinuationReceipt,DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {continuationFiles,appendContinuationFiles} from '../src/frontend/tasks/continuation-attachments';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
+import {continuationFiles,appendContinuationFiles} from '../src/view/tasks/continuation-attachments';
 
 const target:ContinuationTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',waitId:'wait',expectedGoalRevision:3,expectedInputRevision:1};
 const options={provider:'cbim-11111111-1111-4111-8111-111111111111',profileId:'11111111-1111-4111-8111-111111111111',model:'model',permission:'ask' as const};

@@ -851,9 +851,9 @@
         "integration": []
       }
     },
-    "frontend/components": {
+    "view/components": {
       "roots": [
-        "src/frontend/components/"
+        "src/view/components/"
       ],
       "tests": {
         "unit": [],
@@ -863,9 +863,9 @@
         "integration": []
       }
     },
-    "frontend/conversation": {
+    "view/conversation": {
       "roots": [
-        "src/frontend/conversation/"
+        "src/view/conversation/"
       ],
       "tests": {
         "unit": [
@@ -883,9 +883,9 @@
         "integration": []
       }
     },
-    "frontend/execution-view": {
+    "view/execution-view": {
       "roots": [
-        "src/frontend/execution-view/"
+        "src/view/execution-view/"
       ],
       "tests": {
         "unit": [
@@ -900,9 +900,9 @@
         "integration": []
       }
     },
-    "frontend/governance": {
+    "view/governance": {
       "roots": [
-        "src/frontend/governance/"
+        "src/view/governance/"
       ],
       "tests": {
         "unit": [
@@ -914,9 +914,9 @@
         "integration": []
       }
     },
-    "frontend/knowledge": {
+    "view/knowledge": {
       "roots": [
-        "src/frontend/knowledge/"
+        "src/view/knowledge/"
       ],
       "tests": {
         "unit": [
@@ -929,9 +929,9 @@
         "integration": []
       }
     },
-    "frontend/resources": {
+    "view/resources": {
       "roots": [
-        "src/frontend/resources/"
+        "src/view/resources/"
       ],
       "tests": {
         "unit": [
@@ -942,9 +942,9 @@
         "integration": []
       }
     },
-    "frontend/runtime": {
+    "view/runtime": {
       "roots": [
-        "src/frontend/runtime/"
+        "src/view/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -955,9 +955,9 @@
         "integration": []
       }
     },
-    "frontend/settings": {
+    "view/settings": {
       "roots": [
-        "src/frontend/settings/"
+        "src/view/settings/"
       ],
       "tests": {
         "unit": [
@@ -967,9 +967,9 @@
         "integration": []
       }
     },
-    "frontend/shell": {
+    "view/shell": {
       "roots": [
-        "src/frontend/shell/"
+        "src/view/shell/"
       ],
       "tests": {
         "unit": [
@@ -981,9 +981,9 @@
         "integration": []
       }
     },
-    "frontend/tasks": {
+    "view/tasks": {
       "roots": [
-        "src/frontend/tasks/"
+        "src/view/tasks/"
       ],
       "tests": {
         "unit": [
@@ -1026,9 +1026,9 @@
         "integration": []
       }
     },
-    "frontend/team": {
+    "view/team": {
       "roots": [
-        "src/frontend/team/"
+        "src/view/team/"
       ],
       "tests": {
         "unit": [
@@ -1040,9 +1040,9 @@
         "integration": []
       }
     },
-    "frontend/updates": {
+    "view/updates": {
       "roots": [
-        "src/frontend/updates/"
+        "src/view/updates/"
       ],
       "tests": {
         "unit": [
@@ -1052,9 +1052,9 @@
         "integration": []
       }
     },
-    "frontend/workspace": {
+    "view/workspace": {
       "roots": [
-        "src/frontend/workspace/"
+        "src/view/workspace/"
       ],
       "tests": {
         "unit": [
@@ -1192,9 +1192,9 @@
         "integration": []
       }
     },
-    "frontend/foundations/utility": {
+    "view/foundations/utility": {
       "roots": [
-        "src/frontend/foundations/utility/"
+        "src/view/foundations/utility/"
       ],
       "tests": {
         "unit": [

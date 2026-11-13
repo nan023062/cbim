@@ -46,7 +46,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
-采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 领域规则已迁入 Logic，业务端口不能当作共享 Core。files/web 已迁入按平台隔离的 Core，Web 业务已迁入 Logic。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
+采用 Core、Logic、Bridge、View 四层，源码迁移已完成。Core 技术能力独立，Logic 持有业务，Bridge 负责消息与可信宿主，View 持有页面交互。改动同步导入、测试归属、类图和工作流，不恢复旧 backend/frontend 层级或无人使用的兼容转发。
 
 前后端可复用 src/core/utility 的相同契约，视图/业务专属策略仍分别维护，不相互引用业务实现，也不经 Bridge 转发工具。先核对共享 Core 契约与消费者语义；前端 equalJson 已组合共享排序，保留 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。共享 Core 不依赖三层业务或旧 backend/frontend，Node/Electron 不进入便携入口。
 
@@ -121,13 +121,13 @@ Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/t
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
 
-模型首批已迁入 src/logic/models：index.ts 为纯目录/连接/选型入口，service/index.ts 为配置持久化和受控凭据解析入口。前者不得加载后者，旧引擎/调度只能访问纯入口；旧 Main 通过服务入口装配。仅 bridge/contracts/models.ts 保留具名纯规则兼容出口，后续 Bridge DTO/预览迁移后退出，不能扩大为 Bridge/前端直达 Logic。Node files 位于 src/core/platform/node/files，Fault 位于 src/core/errors.ts，旧 errors.ts 是仍有消费者的同一异常兼容出口。主 Agent 设置和请求预算暂留旧目录，Logic 不得反向导入旧业务。模型单元、配置服务单元、UI/历史快照契约与 SDK 容量契约分别登记。
+模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；主 Agent 设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
 
 Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web、core/platform/node/web、core/platform/electron/web-reader.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/contracts/secrets.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
 
-反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧 Main 锁出口共享同一构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
+反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
 
-资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包/授权连接按其事务依赖继续迁移。
+资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
 
 四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
 

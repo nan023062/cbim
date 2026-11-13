@@ -1,11 +1,18 @@
-# 当前架构与迁移边界
+# Core、Logic、Bridge、View
 
-已建立共享 core：便携 utility、带码异常、独立 Node 摘要及文件。[logic/models](logic/models/CONTRACT.md) 已承接模型目录、连接、选型与配置服务。旧 backend 继续承载其他业务，frontend 暂承载视图，bridge 保持原通信实现；尚未整体改名为 logic/view。
+四层源码迁移已完成。旧 backend/frontend/foundations 源码目录已经退出，当前实现按以下职责维护。
 
-Core 不依赖其余层，前后端通过公开入口共享同一技术契约。平台依赖按环境隔离，View/前端不允许 Node/Electron。旧 backend/core 的领域规则与执行机制已迁入 Logic 各业务 rules/ports；不属于共享 Core。
+| 层 | 职责与修改入口 |
+| --- | --- |
+| [Core](core/ARCHITECTURE.md) | utility、错误与 JSON、文件/网页/锁/加密等技术机制；便携与 Node/Electron 入口分开，不依赖业务 |
+| [Logic](logic/ARCHITECTURE.md) | 领域规则、业务数据、运行编排、存储和业务平台实现；Application 持有唯一业务生命周期 |
+| [Bridge](bridge/ARCHITECTURE.md) | 通信契约、IPC/CLI/桌面服务端与 preload；适配 Logic，不持有第二套业务状态 |
+| [View](view/ARCHITECTURE.md) | React 页面、交互状态及视图专属适配；仅经 Bridge 通信，可组合便携 Core |
 
-目标四层和后续切片见 [四层架构设计](../design/four-layer-architecture.md)，实际 Core 边界见 [Core 契约](core/CONTRACT.md)。新目标目录的依赖规则已启用；旧目录保留细粒度限制；桥接 models.ts 精确重导出 Logic 模型纯入口，模型 service 宿主入口独立。Bridge 现有纯领域契约重导出是迁移期结构，不宣称目标已全部实现。
+依赖箭头从使用者指向被使用者。Core 不依赖其余三层；Logic 不导入 Bridge/View/Electron；View 与通信客户端不得加载 Node/Electron。Bridge contracts 只具名转接已登记的纯业务契约，不能暴露服务、凭据或平台入口。preload 是当前真实客户端实现，没有为目录完整预建 client 或 browser 模块。
 
-Web 工具协议与服务现位于 logic/web；Core 网页能力分为纯契约、Node 和 Electron 入口。仅 bridge/contracts/web.ts 保留既有设置协议的具名兼容导出，桌面注入浏览器；调度器不取得服务或平台访问权。
+跨模块使用 index.ts 或已经登记的细粒度公开文件。类型边也必须无环；不创建全域 barrel 强行合并纯契约和运行实现。规则不能依赖运行服务，具体引擎仅由 execution/assembly 选择，普通服务不得反向读取 Application。
 
-反馈纯协议及宿主服务已迁入 logic/feedback，旧 Main 仅装配与关闭服务。Core 提供原生锁，旧锁出口保留兼容；Bridge 仅转接公开连接设置。
+业务语义与状态归属保持：派发、知识和文件事务沿用原一致性边界；取消不代表物理操作退出，未知写入不自动重放。文件无环与目录迁移不等于依赖密集模块已全部拆分；后续治理从 [业务边界](logic/BOUNDARIES.md) 与具体模块契约进入。
+
+设计与切片依据见 [四层设计](../design/four-layer-architecture.md)，实际验证见 [开发记录](../design/development-log.md)。本地模块通过不代表全量 CI、制品、安装或发布验收通过。

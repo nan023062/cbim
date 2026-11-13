@@ -1,8 +1,8 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect,it} from 'vitest';
-import {GovernanceDecisionFeedback,GovernanceDecisionForm,GovernanceResponseDetails} from '../src/frontend/governance/GovernanceFeedback';
-import {governanceDecisionFields,governanceDecisionReviewKey,governanceResponsesCurrent,newGovernanceDecisionDraft,type GovernanceSelected} from '../src/frontend/governance/governance-feedback';
+import {GovernanceDecisionFeedback,GovernanceDecisionForm,GovernanceResponseDetails} from '../src/view/governance/GovernanceFeedback';
+import {governanceDecisionFields,governanceDecisionReviewKey,governanceResponsesCurrent,newGovernanceDecisionDraft,type GovernanceSelected} from '../src/view/governance/governance-feedback';
 import type {ModuleGovernanceDecision} from '../src/bridge/contracts/governance';
 
 const id=(n:number)=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`,digest='a'.repeat(64),time='2026-11-07T08:00:00.000Z';

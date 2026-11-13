@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {ScopeGoalPanel,goalTaskReference} from '../src/frontend/tasks/ScopeGoalPanel';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
+import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {ScopeGoalPanel,goalTaskReference} from '../src/view/tasks/ScopeGoalPanel';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
 import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';

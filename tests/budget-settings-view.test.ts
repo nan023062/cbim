@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {BudgetSettingsController,budgetSettingsInput} from '../src/frontend/settings/budget-settings-state';
+import {BudgetSettingsController,budgetSettingsInput} from '../src/view/settings/budget-settings-state';
 
 const deferred=<T,>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve}};
 describe('scope budget settings draft',()=>{

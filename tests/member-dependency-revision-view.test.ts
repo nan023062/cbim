@@ -3,9 +3,9 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {mainToolTask,mainToolBinding} from './main-tool-output-fixture';
 import type {TaskNode,DependencyRevision} from '../src/bridge/contracts/dispatch';
-import {MemberDependencyNotice} from '../src/frontend/tasks/MemberDependencyNotice';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {memberDependencyRevisionHistory} from '../src/frontend/tasks/member-dependency-state';
+import {MemberDependencyNotice} from '../src/view/tasks/MemberDependencyNotice';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {memberDependencyRevisionHistory} from '../src/view/tasks/member-dependency-state';
 const time='2026-11-08T00:00:00.000Z';
 function node():TaskNode{
  const task=mainToolTask(mainToolBinding,'target'),revision:DependencyRevision={commandId:'revise',scopeId:mainToolBinding.scopeId,mainRunId:mainToolBinding.runId,revisedAt:time,request:{expectedGraphCursor:{streamId:'graph',seq:5},expectedGoalRevision:2,target:{taskId:'target',expectedRevision:1,expectedPlanRevision:1},remove:[{edgeId:'old-edge',expectedRevision:1}],add:[{taskId:'new',expectedRevision:1,expectedPlanRevision:1}],reason:'<script>原子调整</script>'},goalPlanRevision:2,knowledgeRevision:'knowledge',removed:[{edgeId:'old-edge',edgeRevision:1,sourceTaskId:'old',sourceTaskRevision:1,sourcePlanRevision:1}],added:[{edgeId:'new-edge',sourceTaskId:'new',sourceTaskRevision:1,sourcePlanRevision:1}],trackedTaskIds:['old','target','new']};

@@ -330,4 +330,4 @@ Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridg
 
 编排协作与失败恢复约束集中见 [调度契约](SCHEDULING.md)。规则不能加载运行服务；具体引擎只由 execution/assembly 选择，其他编排依赖引擎契约。公开文件登记在 scripts/logic-runtime-entries.mjs，原私有预算边界仍有效。
 
-Application 持有业务生命周期，Bridge 适配器只增加 dispatch。资料、工作区和更新纯类型归 Logic；Electron 系统加密归 Core 独立平台入口，传输和窗口生命周期归 Bridge。旧 backend 源码已全部迁出，前端目录待下一片迁移。业务修改入口见 [边界导航](BOUNDARIES.md)。
+Application 持有业务生命周期，Bridge 适配器只增加 dispatch。资料、工作区和更新纯类型归 Logic；Electron 系统加密归 Core 独立平台入口，传输和窗口生命周期归 Bridge。旧 backend 与 frontend 源码已全部迁出，视图位于 src/view。业务修改入口见 [边界导航](BOUNDARIES.md)。

@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ControlledFileController,ControlledFilePool,checkedControlledFileReport,checkedFileCompensationReceipt,type ControlledFilePorts} from '../src/frontend/tasks/controlled-file-state';
-import {ControlledFilePanel,MemberControlledFiles} from '../src/frontend/tasks/ControlledFilePanel';
+import {ControlledFileController,ControlledFilePool,checkedControlledFileReport,checkedFileCompensationReceipt,type ControlledFilePorts} from '../src/view/tasks/controlled-file-state';
+import {ControlledFilePanel,MemberControlledFiles} from '../src/view/tasks/ControlledFilePanel';
 import type {ControlledFileReportInput,ControlledFileReport,ControlledFileOperationSummary,FileCompensationInput,FileCompensationPreview,FileCompensationReceipt} from '../src/bridge/contracts/controlled-files';
 import type {ExecutionReport} from '../src/bridge/contracts/dispatch';
 

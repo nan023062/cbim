@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest';
-import {JsonRecordStorage} from '../../../../../src/frontend/foundations/utility';
+import {JsonRecordStorage} from '../../../../../src/view/foundations/utility';
 describe('JsonRecordStorage',()=>{
   const port=(raw:string|null=null)=>({getItem:vi.fn(()=>raw),setItem:vi.fn()});
   it('每次读端口，区分缺失、null 和坏 JSON，不删除坏记录',()=>{

@@ -1,8 +1,8 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect,it,vi} from 'vitest';
-import {ToolTimeline as ToolActivity} from '../src/frontend/execution-view/ToolTimeline';
-import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
+import {ToolTimeline as ToolActivity} from '../src/view/execution-view/ToolTimeline';
+import {WorkStatus} from '../src/view/execution-view/WorkStatus';
 import type {RunSummary} from '../src/bridge/contracts/execution';
 
 const run:RunSummary={task:{taskId:'task',workspaceId:'workspace',root:'root',goal:'展示',moduleIds:[],acceptance:[]},runId:'run',status:'failed',acceptance:'not_evaluated',unresolvedTools:['call'],events:[

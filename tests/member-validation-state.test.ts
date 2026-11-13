@@ -1,8 +1,8 @@
 import {expect,test} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MemberValidationPanel} from '../src/frontend/tasks/MemberValidationPanel';
-import {memberValidationViews} from '../src/frontend/tasks/member-validation-state';
+import {MemberValidationPanel} from '../src/view/tasks/MemberValidationPanel';
+import {memberValidationViews} from '../src/view/tasks/member-validation-state';
 import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
 import type {RunSummary,StoredEvent} from '../src/logic/execution/rules/types';
 import type {ValidationResult} from '../src/logic/evidence/rules/validation';

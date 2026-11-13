@@ -1,7 +1,7 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect,it} from 'vitest';
-import {GovernanceOrigin} from '../src/frontend/governance/GovernanceOrigin';
+import {GovernanceOrigin} from '../src/view/governance/GovernanceOrigin';
 
 it('旧记录没有来源时不补造本机身份或人工批准',()=>{
   const html=renderToStaticMarkup(createElement(GovernanceOrigin,{}));

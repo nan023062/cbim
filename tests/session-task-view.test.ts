@@ -1,5 +1,5 @@
 import {test,expect} from 'vitest';
-import {sessionRuns,SessionTaskView} from '../src/frontend/tasks/SessionTaskView';
+import {sessionRuns,SessionTaskView} from '../src/view/tasks/SessionTaskView';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';

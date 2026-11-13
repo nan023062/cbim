@@ -7,7 +7,7 @@ import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {knowledgeContractResult} from './knowledge-contract-provider';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {transcript} from '../src/view/execution-view/transcript';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Skill and guarded submission (%s)',async mode=>{

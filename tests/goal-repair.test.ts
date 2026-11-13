@@ -3,7 +3,7 @@ import {goalRepairFeedback} from '../src/logic/dispatch/runtime/goal-repair';
 import {checkedRunInputSource} from '../src/logic/execution/rules/input-source';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {transcript} from '../src/view/execution-view/transcript';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 const scope={scopeId:'scope',workspaceId:'workspace',rootSessionId:'root',status:'active',createdAt:'2026-11-12T00:00:00.000Z',goal:{revision:1,input:{message:'开发',attachmentIds:[]}}} satisfies DispatchScope;

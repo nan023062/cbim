@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {conversationExecutionState} from '../src/frontend/conversation/conversation-state';
-import {UsageStatus} from '../src/frontend/conversation/UsageStatus';
-import {MessageQueue} from '../src/frontend/execution-view/MessageQueue';
-import {SendButton} from '../src/frontend/conversation/SendButton';
+import {conversationExecutionState} from '../src/view/conversation/conversation-state';
+import {UsageStatus} from '../src/view/conversation/UsageStatus';
+import {MessageQueue} from '../src/view/execution-view/MessageQueue';
+import {SendButton} from '../src/view/conversation/SendButton';
 import type {ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {RunSummary,QueuedMessage} from '../src/bridge/contracts/execution';
 

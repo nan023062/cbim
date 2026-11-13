@@ -1,16 +1,16 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ExecutionRecoveryController,ExecutionRecoveryPool,checkedRecoveryReceipt,recoveryRejected,type RecoveryPorts,type RecoveryTarget} from '../src/frontend/tasks/recovery-state';
-import {recoveryTarget,recoverySourceReason,type ExecutionRecoveryView} from '../src/frontend/tasks/useExecutionRecovery';
-import {ExecutionReportController} from '../src/frontend/tasks/execution-report-state';
-import {ExecutionRecoveryForm} from '../src/frontend/tasks/ExecutionRecoveryForm';
-import {ThreadHistoryNotice,threadResumeRun} from '../src/frontend/conversation/ThreadHistoryNotice';
-import {conversationUsage} from '../src/frontend/conversation/usage';
-import {UsageStatus} from '../src/frontend/conversation/UsageStatus';
+import {ExecutionRecoveryController,ExecutionRecoveryPool,checkedRecoveryReceipt,recoveryRejected,type RecoveryPorts,type RecoveryTarget} from '../src/view/tasks/recovery-state';
+import {recoveryTarget,recoverySourceReason,type ExecutionRecoveryView} from '../src/view/tasks/useExecutionRecovery';
+import {ExecutionReportController} from '../src/view/tasks/execution-report-state';
+import {ExecutionRecoveryForm} from '../src/view/tasks/ExecutionRecoveryForm';
+import {ThreadHistoryNotice,threadResumeRun} from '../src/view/conversation/ThreadHistoryNotice';
+import {conversationUsage} from '../src/view/conversation/usage';
+import {UsageStatus} from '../src/view/conversation/UsageStatus';
 import type {RecoveryRequest,RecoveryReceipt,ExecutionReport,TaskNode,GraphSnapshot,ScopeSummary} from '../src/bridge/contracts/dispatch';
 import type {RunSummary,ConversationThreadView} from '../src/bridge/contracts/execution';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
 
 const time='2026-11-07T00:00:00.000Z',command='22222222-2222-4222-8222-222222222222';
 const target={workspaceId:'workspace',rootSessionId:'root',source:{scopeId:'old-scope',taskId:'member',runId:'old-run',reportBasis:'a'.repeat(64)}} satisfies RecoveryTarget;

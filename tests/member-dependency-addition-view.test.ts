@@ -2,11 +2,11 @@ import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {DependencyAddition,DependencyReplacement,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
-import {memberDependencyAdditionHistory} from '../src/frontend/tasks/member-dependency-state';
-import {MemberDependencyNotice} from '../src/frontend/tasks/MemberDependencyNotice';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {MemberActivity} from '../src/frontend/tasks/MemberActivity';
-import {layoutDispatchGraph} from '../src/frontend/tasks/graph-layout';
+import {memberDependencyAdditionHistory} from '../src/view/tasks/member-dependency-state';
+import {MemberDependencyNotice} from '../src/view/tasks/MemberDependencyNotice';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {MemberActivity} from '../src/view/tasks/MemberActivity';
+import {layoutDispatchGraph} from '../src/view/tasks/graph-layout';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'},member={agentId:'cbim:executor',agentInstanceId:'member-instance',agentSessionId:'member-session',name:'执行者'};

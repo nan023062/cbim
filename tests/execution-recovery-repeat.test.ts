@@ -1,6 +1,6 @@
 import {it,expect,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {ExecutionRecoveryController,RECOVERY_SOURCE_HISTORY_LIMIT,RECOVERY_ROOT_HISTORY_LIMIT,RECOVERY_INDEX_BYTE_LIMIT,type RecoveryPorts,type RecoveryTarget,type RecoveryDraft,type RecoveryArchive} from '../src/frontend/tasks/recovery-state';
+import {ExecutionRecoveryController,RECOVERY_SOURCE_HISTORY_LIMIT,RECOVERY_ROOT_HISTORY_LIMIT,RECOVERY_INDEX_BYTE_LIMIT,type RecoveryPorts,type RecoveryTarget,type RecoveryDraft,type RecoveryArchive} from '../src/view/tasks/recovery-state';
 import type {RecoveryRequest,RecoveryReceipt} from '../src/bridge/contracts/dispatch';
 
 const target={workspaceId:'workspace',rootSessionId:'root',source:{scopeId:'source',taskId:'task',runId:'old-run',reportBasis:'a'.repeat(64)}} satisfies RecoveryTarget,fields={observation:'已看到部分文件',message:'只读核实现状'},options={profileId:'11111111-1111-4111-8111-111111111111',provider:'fixture',model:'fixture',permission:'read' as const};

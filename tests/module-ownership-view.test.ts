@@ -3,8 +3,8 @@ import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,ModuleOwnershipReceipt,ModuleOwnershipDetail,ModuleOwnershipPage} from '../src/bridge/contracts/module-ownership';
-import {ModuleOwnershipCommands,ModuleOwnershipCommandPool,checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,checkedModuleOwnershipReceipt,moduleOwnershipPreRejected,type ModuleOwnershipCommandPorts} from '../src/frontend/workspace/module-ownership-state';
-import {ModuleOwnershipDetailView} from '../src/frontend/workspace/ModuleOwnershipDetail';
+import {ModuleOwnershipCommands,ModuleOwnershipCommandPool,checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,checkedModuleOwnershipReceipt,moduleOwnershipPreRejected,type ModuleOwnershipCommandPorts} from '../src/view/workspace/module-ownership-state';
+import {ModuleOwnershipDetailView} from '../src/view/workspace/ModuleOwnershipDetail';
 
 const hash='a'.repeat(64),otherHash='b'.repeat(64),time='2026-11-07T14:00:00.000Z';
 const identity={workspaceId:'workspace',instanceId:randomUUID()},moduleId='.cbim/workspace/client';

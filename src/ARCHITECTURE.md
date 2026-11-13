@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-当前共享 Core 已建立于 src/core，backend/frontend 仍保留原业务与视图实现，bridge 为通信边界。目标 Logic/View 尚未整体迁移；公共机制通过 Core 公开入口共享，不开放前后端业务互引。
+Core 提供独立基础机制，Logic 持有业务规则/状态/运行，Bridge 负责通信与可信宿主，View 持有页面交互；旧后端/前端源码已迁出。类型边同样无环，具体私有入口继续收紧。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -20,33 +20,33 @@ class N_src_bridge["bridge/"] {
 class N_src_core["core/"] {
   <<directory>>
 }
-class N_src_frontend["frontend/"] {
+class N_src_logic["logic/"] {
   <<directory>>
 }
-class N_src_logic["logic/"] {
+class N_src_view["view/"] {
   <<directory>>
 }
 N_src_bridge ..> N_src_logic : 导入依赖
 N_src_bridge ..> N_src_core : 导入依赖
-N_src_frontend ..> N_src_bridge : 导入依赖
-N_src_frontend ..> N_src_core : 导入依赖
 N_src_logic ..> N_src_core : 导入依赖
+N_src_view ..> N_src_bridge : 导入依赖
+N_src_view ..> N_src_core : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `bridge` → `logic`：导入。
 - `bridge` → `core`：导入。
-- `frontend` → `bridge`：导入。
-- `frontend` → `core`：导入。
 - `logic` → `core`：导入。
+- `view` → `bridge`：导入。
+- `view` → `core`：导入。
 
 ## 子目录导航
 
 - [bridge/](bridge/ARCHITECTURE.md)：通信契约、可信服务端和 preload；业务状态归 Logic，平台技术机制归 Core 独立入口。
 - [core/](core/ARCHITECTURE.md)：四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
-- [frontend/](frontend/ARCHITECTURE.md)：React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
 - [logic/](logic/ARCHITECTURE.md)：业务规则、运行编排、存储与平台实现按领域组织；Application 统一持有真实生命周期，业务不依赖 Bridge/View/Electron。
+- [view/](view/ARCHITECTURE.md)：React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 
@@ -54,14 +54,21 @@ N_src_logic ..> N_src_core : 导入依赖
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-# 当前架构与迁移边界
+# Core、Logic、Bridge、View
 
-已建立共享 core：便携 utility、带码异常、独立 Node 摘要及文件。[logic/models](logic/models/CONTRACT.md) 已承接模型目录、连接、选型与配置服务。旧 backend 继续承载其他业务，frontend 暂承载视图，bridge 保持原通信实现；尚未整体改名为 logic/view。
+四层源码迁移已完成。旧 backend/frontend/foundations 源码目录已经退出，当前实现按以下职责维护。
 
-Core 不依赖其余层，前后端通过公开入口共享同一技术契约。平台依赖按环境隔离，View/前端不允许 Node/Electron。旧 backend/core 的领域规则与执行机制已迁入 Logic 各业务 rules/ports；不属于共享 Core。
+| 层 | 职责与修改入口 |
+| --- | --- |
+| [Core](core/ARCHITECTURE.md) | utility、错误与 JSON、文件/网页/锁/加密等技术机制；便携与 Node/Electron 入口分开，不依赖业务 |
+| [Logic](logic/ARCHITECTURE.md) | 领域规则、业务数据、运行编排、存储和业务平台实现；Application 持有唯一业务生命周期 |
+| [Bridge](bridge/ARCHITECTURE.md) | 通信契约、IPC/CLI/桌面服务端与 preload；适配 Logic，不持有第二套业务状态 |
+| [View](view/ARCHITECTURE.md) | React 页面、交互状态及视图专属适配；仅经 Bridge 通信，可组合便携 Core |
 
-目标四层和后续切片见 [四层架构设计](../design/four-layer-architecture.md)，实际 Core 边界见 [Core 契约](core/CONTRACT.md)。新目标目录的依赖规则已启用；旧目录保留细粒度限制；桥接 models.ts 精确重导出 Logic 模型纯入口，模型 service 宿主入口独立。Bridge 现有纯领域契约重导出是迁移期结构，不宣称目标已全部实现。
+依赖箭头从使用者指向被使用者。Core 不依赖其余三层；Logic 不导入 Bridge/View/Electron；View 与通信客户端不得加载 Node/Electron。Bridge contracts 只具名转接已登记的纯业务契约，不能暴露服务、凭据或平台入口。preload 是当前真实客户端实现，没有为目录完整预建 client 或 browser 模块。
 
-Web 工具协议与服务现位于 logic/web；Core 网页能力分为纯契约、Node 和 Electron 入口。仅 bridge/contracts/web.ts 保留既有设置协议的具名兼容导出，桌面注入浏览器；调度器不取得服务或平台访问权。
+跨模块使用 index.ts 或已经登记的细粒度公开文件。类型边也必须无环；不创建全域 barrel 强行合并纯契约和运行实现。规则不能依赖运行服务，具体引擎仅由 execution/assembly 选择，普通服务不得反向读取 Application。
 
-反馈纯协议及宿主服务已迁入 logic/feedback，旧 Main 仅装配与关闭服务。Core 提供原生锁，旧锁出口保留兼容；Bridge 仅转接公开连接设置。
+业务语义与状态归属保持：派发、知识和文件事务沿用原一致性边界；取消不代表物理操作退出，未知写入不自动重放。文件无环与目录迁移不等于依赖密集模块已全部拆分；后续治理从 [业务边界](logic/BOUNDARIES.md) 与具体模块契约进入。
+
+设计与切片依据见 [四层设计](../design/four-layer-architecture.md)，实际验证见 [开发记录](../design/development-log.md)。本地模块通过不代表全量 CI、制品、安装或发布验收通过。

@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {taskUsage,tokenCount} from '../src/frontend/conversation/usage';
+import {taskUsage,tokenCount} from '../src/view/conversation/usage';
 const run=(events:any[],status='completed')=>({status,events:events.map((e,i)=>({seq:i+1,time:new Date(i*1000).toISOString(),...e}))}) as RunSummary;
 const message=(data:any={})=>({type:'message',data:{usage:{input:100,output:50,reasoning:20,cacheRead:30,cacheWrite:10,cost:{total:0}},generationDurationMs:1000,...data}});
 test('task time excludes idle gaps, TPS excludes tool time and reasoning is not counted twice',()=>{

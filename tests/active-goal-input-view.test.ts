@@ -1,9 +1,9 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
-import {ScopeActiveInputs} from '../src/frontend/tasks/ScopeActiveInputs';
+import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {ScopeGoalPanel} from '../src/view/tasks/ScopeGoalPanel';
+import {ScopeActiveInputs} from '../src/view/tasks/ScopeActiveInputs';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import type {ScopeActiveInput,DispatchScope,DispatchSessionRead,GraphEventBatch} from '../src/bridge/contracts/dispatch';

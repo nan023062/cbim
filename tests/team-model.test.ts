@@ -1,9 +1,9 @@
 import {expect,test} from 'vitest';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
-import {availableTeamSkills,buildTeamModel,MAIN_AGENT,TEAM_ROOT,visibleTeamNodes} from '../src/frontend/team/team-model';
+import {availableTeamSkills,buildTeamModel,MAIN_AGENT,TEAM_ROOT,visibleTeamNodes} from '../src/view/team/team-model';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {TeamView} from '../src/frontend/team/TeamView';
+import {TeamView} from '../src/view/team/TeamView';
 
 function snapshot(files:Record<string,string|object>):Snapshot{return {workspaceId:'w',instanceId:'i',revision:'r',files:Object.entries(files).map(([path,value])=>({path,text:typeof value==='string'?value:JSON.stringify(value),hash:'hash'}))}}
 function skill(name:string){return {name,purpose:`${name}用途`,reference:`skills/${name}/SKILL.md`}}

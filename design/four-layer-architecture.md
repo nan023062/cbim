@@ -2,6 +2,10 @@
 
 来源：2026-11-13 用户明确选择 Core、逻辑层、桥接层、视图层，并要求先建立 Core 与依赖规则。本文是目标设计与迁移规格，不是实时待办；当前事实由 src 契约、实际代码及开发记录维护。
 
+## 当前落地结果
+
+2026-11-13：Core、Logic、Bridge、View 源码迁移已完成。业务生命周期归 logic/application，桌面主入口与冷启动归 bridge/server，旧 backend/frontend 已退出。纯契约和服务按实际使用保留 index.ts 或登记的细粒度入口；未创建无消费者的 browser/client 目录。以下目标设计保留原迁移依据，阶段记录按发生时状态阅读，最终结构以 src/CONTRACT.md 与类图为准。
+
 ## 目标目录
 
 ```text
@@ -36,7 +40,7 @@ src/
   main.ts                   薄装配入口，不作为第五个业务层
 ```
 
-目录随真实代码迁移创建，不预建空模块。逻辑业务模块以 index.ts 暴露最小服务/契约，内部按职责维护规则、服务和存储；不建立全业务共用的 services/data 大目录。Core 不持有业务身份、权限或事务。Main 的生命周期装配必须与可复用逻辑分开；迁移入口时逐项保留构建与冷壳路径，不能提前开放任意计算式加载。
+目录随真实代码迁移创建，不预建空模块。逻辑业务模块以 index.ts 或登记的细粒度文件暴露最小服务/契约，内部按职责维护规则、服务和存储；不建立全业务共用的 services/data 大目录。Core 不持有业务身份、权限或事务。Main 的生命周期装配必须与可复用逻辑分开；迁移入口时逐项保留构建与冷壳路径，不能提前开放任意计算式加载。
 
 ## 依赖规则
 
@@ -47,10 +51,10 @@ src/
 | Logic | 自身模块公开入口及适用的 Core；不引用 Bridge/View |
 | Bridge contracts | 纯通信契约与便携 Core；目标结构不引用 Logic 私有模型 |
 | Bridge client | contracts 与便携/浏览器 Core；不引用 server 或 Logic |
-| Bridge server | contracts、Logic 各模块 index.ts、便携/Node Core |
+| Bridge server | contracts、Logic 明确公开入口、便携/Node/Electron Core |
 | View | 自身、Bridge client/contracts、便携/浏览器 Core |
 
-类型、重导出、字面量动态加载与普通导入同样检查。新 Core 模块未登记则失败；私有实现不能从业务侧直达。旧目录的限制继续生效，不能借新 Core 放宽引擎、调度、更新子系统的 Node/files/web 访问。
+类型、重导出、字面量动态加载与普通导入同样检查。新 Core 模块未登记则失败；私有实现不能从业务侧直达。旧目录限制已经迁入对应新职责边界，旧层级本身已退出，不能借新 Core 放宽引擎、调度、更新子系统的 Node/files/web 访问。
 
 Bridge 是通信边界，不是业务服务定位器。Logic 定义自己的服务和状态；Bridge server 将外部 DTO 转为服务参数、订阅业务事件再转发。Logic 不反向依赖 IPC。主入口创建 Logic 实例并连接 Bridge，业务模块不导入主入口。
 
@@ -107,3 +111,7 @@ WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为
 ## 有状态服务与 Bridge 落地
 
 旧 Main/Updater 的业务服务、数据和状态已迁至 Logic 各域。业务 Application 只保留生命周期，Bridge Application 是仅增加 dispatch 的可替换适配器，未复制状态或更改关闭顺序。IPC、CLI、Electron utility 传输及桌面冷启动归 bridge/server；更新服务独立于普通业务应用，业务 DTO 归 Logic。系统加密机制归 Core Electron 独立入口。旧 backend 已无源码；View 将在最后一片迁移。
+
+## View 与最终规则收尾
+
+视图源码、样式、入口和测试归属迁入 src/view。正式依赖矩阵仅保留四层及运行环境子边界；旧源码层即使无导入也会被拒绝。浏览器协议、preload 和桌面 IPC 验证保留，模块单元与协作覆盖分开。本次完成目录与依赖迁移，不声称已解决原共享事务和依赖密集类的全部内聚问题。

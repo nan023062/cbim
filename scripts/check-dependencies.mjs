@@ -20,32 +20,23 @@ const layers = {
   'core/platform/node':['core/platform/node','core'],
   'core/platform/browser':['core/platform/browser','core'],
   'core/platform/electron':['core/platform/electron','core/platform/node','core'],
-  logic:['logic','core','core/platform/node','core/platform/electron'],
+  logic:['logic','core','core/platform/node'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
-  foundations:['foundations'],
-  'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
-  'backend/core':['backend/core','foundations','core','core/platform/node'],'backend/engines':['backend/engines','backend/core','foundations','core'],
-  'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core','foundations','core'],
-  'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations','core','core/platform/node'],
-  'backend/updater':['backend/updater','bridge/contracts','foundations','core'],
-  // 旧 Bridge 的 backend/core 纯契约重导出仍由逻辑边界逐项约束，随 DTO 迁移退出。
-  'bridge/contracts':['bridge/contracts','backend/core','core'],
+  'bridge/contracts':['bridge/contracts','core'],
   'bridge/preload':['bridge/preload','bridge/contracts','core'],
-  frontend:['frontend','bridge/contracts','core'],
 };
-// 新四层与旧目录并存；旧 backend/core 是业务，不属于共享 Core。
+// 四层已经落地；平台与桥接子边界继续独立检查，不接受已退出的源码层级。
 const layerOf = file => {
   if(file.startsWith('src/core/platform/'))return file.split('/').slice(1,4).join('/');
-  for(const layer of ['core','logic','view','frontend'])if(file.startsWith(`src/${layer}/`))return layer;
-  if(/^src\/backend\/core\/foundation\/(files|web)\//.test(file))return 'foundations';
+  for(const layer of ['core','logic','view'])if(file.startsWith('src/'+layer+'/'))return layer;
   return file.split('/').slice(1,3).join('/');
 };
 
 // 已迁移的查询边界按真实职责约束，而非把整个 core 的同层引用视为自由访问。
 // 精确文件是公开入口；以 / 结尾的路径表示已核实的完整边界（Foundation 不认识业务）。
-const foundation='src/backend/core/foundation/';
+const foundation='@shared-domain-foundations';
 const foundationEntries=['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts','src/logic/workspace/ports/paths.ts','src/logic/execution/ports/identity.ts'];
 const knowledgeTypes='src/logic/knowledge/rules/types.ts';
 const knowledgeSnapshot='src/logic/knowledge/rules/read-models/snapshot.ts';
@@ -56,39 +47,39 @@ const projectRoot='src/logic/workspace/rules/project-root.ts';
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
 const modelPublic='src/logic/models/index.ts';
 const modelService='src/logic/models/service/index.ts';
-// 迁移期只开放模型的两个具名入口；旧引擎/调度仅可读纯规则，只有宿主装配可加载服务。
-export function allowsModelMigration(from,to){
-  if(to===modelPublic)return /^src\/backend\/(core|engines|scheduler-engine|main)\//.test(from)||from==='src/bridge/contracts/models.ts';
-  return to===modelService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
+// 纯模型与有副作用的服务入口分开；引擎和编排的访问权由模块边界进一步收紧。
+export function allowsModelAccess(from,to){
+  if(to===modelPublic)return from.startsWith('src/logic/')||from==='src/bridge/contracts/models.ts';
+  return to===modelService&&(from.startsWith('src/bridge/server/')||isService(from));
 }
 const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','connectionForEngine','providerSupportsEngine','DiscoveredModel','engineSupportsApi','engineLabel','engineApi','loopEngineSchema','agentModelSelectionSchema','LoopEngine','AgentModelSelection']);
 // Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
 const webPublic='src/logic/web/index.ts';
 const webService='src/logic/web/service/index.ts';
-const allowsWebMigration=(from,to)=>
-  to===webPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/web.ts')||
-  to===webService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from))||
+const allowsWebAccess=(from,to)=>
+  to===webPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/web.ts')||
+  to===webService&&(from.startsWith('src/bridge/server/')||isService(from))||
   from==='src/bridge/server/main.ts'&&to==='src/core/platform/electron/web-reader.ts';
 // 反馈范围与纯协议由 Logic 拥有，平台服务只向宿主装配开放。
 const feedbackPublic='src/logic/feedback/index.ts';
 const feedbackService='src/logic/feedback/service/index.ts';
-const allowsFeedbackMigration=(from,to)=>
-  to===feedbackPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/github-feedback.ts')||
-  to===feedbackService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
+const allowsFeedbackAccess=(from,to)=>
+  to===feedbackPublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/github-feedback.ts')||
+  to===feedbackService&&(from.startsWith('src/bridge/server/')||isService(from));
 const resourcePublic='src/logic/resources/index.ts',resourceService='src/logic/resources/service/index.ts';
-const allowsResourceMigration=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
+const allowsResourceAccess=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/bridge/server/')||isService(from));
 const moduleBoundaries=[
   // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
   {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/main.ts','src/logic/updates/service/']},
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
-  {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
+  {sources:['src/view/foundations/'],allow:['src/view/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic]},
+  {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/core/utility/index.ts']},
-  {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
-  {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
+  {sources:['src/view/execution-view/'],allow:['src/view/execution-view/','src/view/components/','src/bridge/contracts/']},
+  {sources:['src/view/tasks/'],allow:['src/view/tasks/','src/view/execution-view/','src/view/components/','src/view/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/core/errors.ts','src/core/utility/index.ts','src/core/platform/node/digest.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
@@ -106,19 +97,12 @@ const moduleBoundaries=[
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/',...orchestrationRoots],allow:['src/backend/scheduler-engine/',...orchestrationRoots,'src/logic/execution/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic,webPublic,feedbackPublic]},
+  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
-  if(entry==='src/backend/core/'&&isDomainFile(file))return domainPublicEntries.has(file);
-  if(entry==='src/backend/core/'&&['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(file))return true;
-  if(entry===foundation&&foundationEntries.includes(file))return true;
-  if(file===entry)return true;
-  if(!entry.endsWith('/')||!file.startsWith(entry))return false;
-  // Core 的宽入口不包含独立逻辑基础层；根层领域约定也不包含技术子库。
-  // 保留原消费者许可，防止目录合并使引擎/调度或只读契约取得 files/web/Node 能力。
-  if(entry==='src/backend/core/'&&layerOf(file)==='foundations')return false;
-  if(entry===foundation&&file.slice(entry.length).includes('/'))return false;
-  return true;
+  if(entry==='@domain-public')return isDomainFile(file)&&domainPublicEntries.has(file)||['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(file);
+  if(entry===foundation)return foundationEntries.includes(file);
+  return file===entry||entry.endsWith('/')&&file.startsWith(entry);
 };
 
 // 非字面量加载不能静态证明目标，只允许逐项核实的外部依赖；表达式变化必须重新审核。
@@ -263,33 +247,33 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
+      if(e.to==='src/core/platform/electron/web-reader.ts'&&e.from!=='src/bridge/server/main.ts'&&!e.from.startsWith('src/core/platform/electron/'))return true;
       if(a==='logic'&&b==='core/platform/electron')return true;
       if(e.to.startsWith('src/logic/application/')&&!e.from.startsWith('src/logic/application/')&&!e.from.startsWith('src/bridge/server/'))return true;
-      const domainMigration=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(/^src\/backend\/(core|main|engines|scheduler-engine)\//.test(e.from)||e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/bridge/server/')||e.from.startsWith('src/logic/'));
-      const foundationMigration=/^src\/backend\/(engines|scheduler-engine)\//.test(e.from)&&['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(e.to);
-      const runtimeMigration=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/backend/main/')||e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
-      const serviceMigration=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
-      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to)||domainMigration||foundationMigration||runtimeMigration||serviceMigration;
-      if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!modelMigration)return true;
+      const domainAccess=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/bridge/server/')||e.from.startsWith('src/logic/'));
+      const runtimeAccess=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
+      const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
+      const publicAccess=allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
       if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&![modelPublic,feedbackPublic].includes(e.to))return true;
-      if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
-      // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
-      if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;
-      // 具体引擎选择仅属于调度装配，普通业务编排仍面向 Core 的契约。
-      if(a==='backend/scheduler-engine'&&b==='backend/engines'&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
+      if((!layers[a]||!layers[a].includes(b))&&!publicAccess)return true;
+      // 跨业务仅接受登记的细粒度入口或普通模块 index；较窄私有边界仍单独检查。
+      if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!publicAccess)return true;
+      // 具体引擎选择限制见上方；普通编排只面向业务契约。
     }
     const boundary=moduleBoundaries.find(rule=>rule.sources.some(source=>matchesBoundary(e.from,source)));
     return !!boundary&&!boundary.allow.some(target=>matchesBoundary(e.to,target));
   });
   const circular = cycles([...known.values()],edges);
   const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
+  for(const file of known.values())if(file.startsWith('src/')&&!layers[layerOf(file)])logical.violations.push({file,rule:'unknown-source-layer',boundary:layerOf(file)});
   logical.violations.push(...modelFacadeViolations);
   // 运行环境限制同时覆盖 npm/内置模块导入，避免绕过 Core 平台入口直接取得 Node/Electron。
   for(const reference of externalReferences){
     const layer=layerOf(reference.file);
-    if(['view','frontend','bridge/client','bridge/contracts','core/platform/browser'].includes(layer)
+    if(['view','bridge/client','bridge/contracts','core/platform/browser'].includes(layer)
       &&(reference.spec.startsWith('node:')||builtinModules.includes(reference.spec)||reference.spec==='electron'||reference.spec.startsWith('electron/'))){
       logical.violations.push({...reference,rule:'runtime-environment',boundary:layer});
     }

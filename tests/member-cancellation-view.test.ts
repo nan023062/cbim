@@ -2,12 +2,12 @@ import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
-import {committedMemberCancellation,memberCancellationLabel} from '../src/frontend/tasks/member-cancellation-state';
-import {MemberCancellationNotice} from '../src/frontend/tasks/MemberCancellationNotice';
-import {MemberActivity,memberTaskLabel} from '../src/frontend/tasks/MemberActivity';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {DispatchGraph} from '../src/frontend/tasks/DispatchGraph';
-import {sessionRoot} from '../src/frontend/tasks/SessionTaskView';
+import {committedMemberCancellation,memberCancellationLabel} from '../src/view/tasks/member-cancellation-state';
+import {MemberCancellationNotice} from '../src/view/tasks/MemberCancellationNotice';
+import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
+import {sessionRoot} from '../src/view/tasks/SessionTaskView';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'},member={agentId:'cbim:executor',agentInstanceId:'executor-instance',agentSessionId:'executor-session',name:'默认执行 Agent'};

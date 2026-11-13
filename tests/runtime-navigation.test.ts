@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {RuntimeNavigationResolver,bindRuntimeConversation,runtimeTaskSelection} from '../src/frontend/shell/runtime-navigation';
+import {RuntimeNavigationResolver,bindRuntimeConversation,runtimeTaskSelection} from '../src/view/shell/runtime-navigation';
 import type {WorkspaceView} from '../src/bridge/contracts/workspace';
-import type {TabLayout} from '../src/frontend/shell/tabs';
+import type {TabLayout} from '../src/view/shell/tabs';
 
 const target={workspaceId:'workspace-a',rootSessionId:'main-a',taskId:'member-a',scopeId:'scope-a'};
 const workspace:WorkspaceView={id:target.workspaceId,instanceId:'instance-a',name:'团队 A',path:'C:/project-a',state:'running',tasks:[]};

@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ArtifactReportController,checkedArtifactReport} from '../src/frontend/tasks/artifact-report-state';
-import {ArtifactReportPanel} from '../src/frontend/tasks/MemberArtifactReport';
+import {ArtifactReportController,checkedArtifactReport} from '../src/view/tasks/artifact-report-state';
+import {ArtifactReportPanel} from '../src/view/tasks/MemberArtifactReport';
 import type {ArtifactReport,ArtifactReportInput} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'root',taskId:'member',runId:'run'},time='2026-11-07T01:00:00.000Z',digest='a'.repeat(64);

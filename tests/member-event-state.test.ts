@@ -3,11 +3,11 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {MemberEventsRead,MemberRunView,TaskNode} from '../src/bridge/contracts/dispatch';
 import type {StoredEvent} from '../src/bridge/contracts/execution';
-import {applyMemberEvents,emptyMemberEvents,memberEventKey,memberPollDelay} from '../src/frontend/tasks/member-event-state';
-import {MemberRunTranscript} from '../src/frontend/tasks/MemberRunTranscript';
-import {MemberActivity} from '../src/frontend/tasks/MemberActivity';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {applyMemberEvents,emptyMemberEvents,memberEventKey,memberPollDelay} from '../src/view/tasks/member-event-state';
+import {MemberRunTranscript} from '../src/view/tasks/MemberRunTranscript';
+import {MemberActivity} from '../src/view/tasks/MemberActivity';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {transcript} from '../src/view/execution-view/transcript';
 
 const scope={workspaceId:'workspace',rootSessionId:'root',taskId:'task',runId:'run'};
 const view:MemberRunView={task:{workspaceId:scope.workspaceId,taskId:scope.taskId,root:'',goal:'核实真实产物',agentId:'developer',moduleIds:['module'],acceptance:['证据有效']},runId:scope.runId,status:'running',acceptance:'not_evaluated',unresolvedTools:[]};

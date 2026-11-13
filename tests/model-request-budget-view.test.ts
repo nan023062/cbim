@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createElement} from 'react';
-import {RequestBudgetController} from '../src/frontend/tasks/request-budget-state';
-import {ScopeBudgetPanel} from '../src/frontend/tasks/ScopeBudgetPanel';
-import {requestBudgetMoney} from '../src/frontend/tasks/RequestBudgetPanel';
-import {BudgetSettingsController,budgetSettingsInput} from '../src/frontend/settings/budget-settings-state';
+import {RequestBudgetController} from '../src/view/tasks/request-budget-state';
+import {ScopeBudgetPanel} from '../src/view/tasks/ScopeBudgetPanel';
+import {requestBudgetMoney} from '../src/view/tasks/RequestBudgetPanel';
+import {BudgetSettingsController,budgetSettingsInput} from '../src/view/settings/budget-settings-state';
 import {BudgetSettings} from '../src/logic/budget/settings/budget-settings';
 const query={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope'},report={...query,policyRevision:3,requests:2,reported:1,inFlight:0,unknown:1,denied:0,notSent:0,tokens:120,reservedTokens:69632,estimatedCostUsd:0.00014,reservedCostUsd:0.1,costComplete:true,overrun:0};
 it('金额展示去除浮点尾数，极小正值不显示为零',()=>{expect(requestBudgetMoney(0.0022399999999999994)).toBe('$0.00224');expect(requestBudgetMoney(0)).toBe('$0');expect(requestBudgetMoney(1e-20)).toBe('$1e-20');expect(requestBudgetMoney(Number.MIN_VALUE)).not.toBe('$0')});

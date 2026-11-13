@@ -5,7 +5,7 @@ import {FeedbackTools} from '../src/logic/tools/runtime/feedback-tools';
 import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
 import {toolReceiptSchema} from '../src/logic/tools/rules/receipt-schema';
 import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
-import {transcript} from '../src/frontend/execution-view/transcript';
+import {transcript} from '../src/view/execution-view/transcript';
 import type {FeedbackToolsPort,FeedbackScope} from '../src/logic/feedback';
 import type {RunSummary,EngineEvent,StoredEvent} from '../src/logic/execution/rules/types';
 

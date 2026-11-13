@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {SessionGraphProjection} from '../src/frontend/tasks/graph-state';
+import {SessionGraphProjection} from '../src/view/tasks/graph-state';
 import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import type {GraphEventBatch} from '../src/bridge/contracts/dispatch';
 

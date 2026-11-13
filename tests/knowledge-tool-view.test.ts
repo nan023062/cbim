@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ToolTimeline} from '../src/frontend/execution-view/ToolTimeline';
-import {knowledgeToolView} from '../src/frontend/execution-view/knowledge-tool-view';
+import {ToolTimeline} from '../src/view/execution-view/ToolTimeline';
+import {knowledgeToolView} from '../src/view/execution-view/knowledge-tool-view';
 import type {RunSummary} from '../src/bridge/contracts/execution';
 
 const identity={workspaceId:'workspace',instanceId:'instance',revision:'a'.repeat(64)};

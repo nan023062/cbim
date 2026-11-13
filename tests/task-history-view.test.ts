@@ -2,10 +2,10 @@ import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {GraphSnapshot,ScopeSummary,TaskNode} from '../src/bridge/contracts/dispatch';
-import {taskHistoryView} from '../src/frontend/tasks/task-history-state';
-import {DispatchGraph} from '../src/frontend/tasks/DispatchGraph';
-import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
-import {scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import {taskHistoryView} from '../src/view/tasks/task-history-state';
+import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
+import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-13T07:00:00.000Z';
 const agent={agentId:'dev',agentInstanceId:'dev-instance',agentSessionId:'dev-channel',name:'开发成员'};

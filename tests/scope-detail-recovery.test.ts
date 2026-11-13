@@ -13,8 +13,8 @@ import {projectMainScope,publicDispatchScopeSchema} from '../src/logic/tasks/rul
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {ScopeRecovery} from '../src/logic/tasks/rules/scope-recovery';
 import {recoveryRequestSource,recoverySourceSelection} from '../src/logic/tasks/rules/scope-recovery';
-import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {useScopeReplan,type ScopeReplanView} from '../src/frontend/tasks/useScopeReplan';
+import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {useScopeReplan,type ScopeReplanView} from '../src/view/tasks/useScopeReplan';
 
 afterEach(()=>vi.unstubAllGlobals());
 const profileId='11111111-1111-4111-8111-111111111111';

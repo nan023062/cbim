@@ -6,13 +6,13 @@ import type {DispatchScope,TaskNode} from '../src/bridge/contracts/dispatch';
 import type {OwnerExecutionBinding,TaskOwnerInspectOutput} from '../src/bridge/contracts/owner-execution';
 import {ownerExecutionSelectionFor} from '../src/logic/team/rules/member-execution-binding';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
-import {ownerTaskView,checkedOwnerInspection,OwnerInspectionController} from '../src/frontend/tasks/owner-execution-state';
-import {MemberOwnerNotice,OwnerExecutionDetails} from '../src/frontend/tasks/OwnerExecutionDetails';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {MemberActivity} from '../src/frontend/tasks/MemberActivity';
-import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
-import {scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {OwnerExecutionInspection} from '../src/frontend/tasks/OwnerExecutionInspection';
+import {ownerTaskView,checkedOwnerInspection,OwnerInspectionController} from '../src/view/tasks/owner-execution-state';
+import {MemberOwnerNotice,OwnerExecutionDetails} from '../src/view/tasks/OwnerExecutionDetails';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {MemberActivity} from '../src/view/tasks/MemberActivity';
+import {ScopeGoalPanel} from '../src/view/tasks/ScopeGoalPanel';
+import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {OwnerExecutionInspection} from '../src/view/tasks/OwnerExecutionInspection';
 
 const identity={workspaceId:'workspace-one',rootSessionId:'main-session'},time='2026-11-08T00:00:00.000Z',moduleId='.cbim/workspace/game',agentId='.cbim/team/developer',teamId='.cbim/team',hash='a'.repeat(64);
 function task():TaskNode {

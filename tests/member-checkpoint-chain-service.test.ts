@@ -4,7 +4,7 @@ import path from 'node:path';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
 import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {memberResumeRequests,currentMemberResumeRequest} from '../src/logic/tasks/rules/member-checkpoint-chain';
-import {memberCheckpointView} from '../src/frontend/tasks/member-checkpoint-state';
+import {memberCheckpointView} from '../src/view/tasks/member-checkpoint-state';
 import {validateDispatchExecution} from '../src/logic/tasks/rules/dispatch-invariants';
 
 type Fixture=Awaited<ReturnType<typeof checkpointServiceFixture>>;

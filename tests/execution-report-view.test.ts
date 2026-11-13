@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ExecutionReportController,applyExecutionReport,executionReportStale,type ExecutionReportSelection} from '../src/frontend/tasks/execution-report-state';
-import {ExecutionReportPanel} from '../src/frontend/tasks/MemberExecutionReport';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
+import {ExecutionReportController,applyExecutionReport,executionReportStale,type ExecutionReportSelection} from '../src/view/tasks/execution-report-state';
+import {ExecutionReportPanel} from '../src/view/tasks/MemberExecutionReport';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
 import type {ExecutionReport,ExecutionReportInput,TaskNode,ScopeSummary} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'root',taskId:'member',runId:'run'};

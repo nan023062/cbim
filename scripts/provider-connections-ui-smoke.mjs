@@ -9,10 +9,10 @@ const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{
 await fs.writeFile(path.join(out,'provider-connections-ui.html'),'<meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script type="module" src="/test-results/provider-connections-ui.tsx"></script>');
 await fs.writeFile(path.join(out,'provider-connections-ui.tsx'),String.raw`
 import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
-import '/src/frontend/shell/shell.css';
-import {definition} from '/src/backend/core/models/config.ts';
-import {connectionForEngine} from '/src/backend/core/models/provider-connections.ts';
-import {EngineModelPicker} from '/src/frontend/components/EngineModelPicker.tsx';
+import '/src/view/shell/shell.css';
+import {definition} from '/src/logic/models/index.ts';
+import {connectionForEngine} from '/src/logic/models/index.ts';
+import {EngineModelPicker} from '/src/view/components/EngineModelPicker.tsx';
 const id='11111111-1111-4111-8111-111111111111';
 window.fixture={calls:[],failTest:false,state:{selectedId:id,secureStorage:true,profiles:[{id,name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'api-key',hasKey:true,defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,reasoning:true,contextWindow:1048576,maxTokens:4096}]}]}};
 window.cbim={call:async(action,args)=>{
@@ -31,7 +31,7 @@ window.cbim={call:async(action,args)=>{
   }
   throw Error('Unexpected IPC '+action);
 }};
-const {ModelSettings}=await import('/src/frontend/settings/ModelSettings.tsx');
+const {ModelSettings}=await import('/src/view/settings/ModelSettings.tsx');
 function App(){
   const [models,setModels]=useState(structuredClone(window.fixture.state)),[selection,setSelection]=useState(null);
   window.fixture.refresh=()=>setModels(structuredClone(window.fixture.state));

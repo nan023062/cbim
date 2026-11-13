@@ -501,6 +501,7 @@ class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
 }
 class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
   +removeFile()
+  +submitInput()
   +submit()
   +retry()
   +query()
@@ -515,7 +516,6 @@ class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["Sc
   -emit()
   -store()
   -update()
-  -canEdit()
 }
 N_src_frontend_tasks_continuation_state_ts ..> N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController : 声明
 ```
@@ -528,6 +528,7 @@ class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
+  -canEdit()
   -source()
   -send()
 }
@@ -2870,6 +2871,7 @@ class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
 class N_src_frontend_tasks_useScopeContinuation_ts_ScopeContinuationView["ScopeContinuationView"] {
   <<interface>>
   +retry
+  +submitInput
   +pickFiles
   +removeFile
   +sourceSelectionKey
@@ -4029,7 +4031,7 @@ N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts 
 
 持久等待必须来自 `scope.status=waiting`，显示“等待补充 · 执行已暂停”；模型 `review.awaiting_user` 仅显示“已请求补充 · 等待暂停确认”，不冒充检查点已提交。`openScope` 包含 active/waiting，`activeScope` 仅含 active，`waitingScope` 仅含 waiting；三者从完整摘要列表选取，独立于历史浏览。自动选择优先未关闭周期，后台等待不能被最近历史覆盖。
 
-等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。显式正文与文件/图片补充及按已保存人工决定继续分别通过独立表单提交；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本、输入版本与创建时间，旧等待详情不能拼到新摘要上。
+等待卡展示摘要原因，展开后读取完整 `scope.wait.reason` 与记录时间；关闭后保留等待历史，但取消状态优先于旧等待状态。等待根保留“取消当前任务”，浏览历史时说明当前另有待补充目标，按钮不会复活所选历史。显式正文与附件补充可由等待时聊天发送或补充表单提交，按已保存人工决定继续保留独立表单；普通队列不能作为恢复入口，根队列也禁用“继续队列”。同版本详情必须匹配摘要中的等待身份、目标版本、输入版本与创建时间，旧等待详情不能拼到新摘要上。
 
 #### 显式补充与通信未知
 
@@ -4370,3 +4372,7 @@ MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影�
 ## 交付审阅阶段展示
 
 member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待、接受、拒绝三类说明。任务图可结合当前同周期活动成员解释等待原因；内联卡和任务详情常驻完整阶段及理由：成员交付 → 主 Agent 核对并接受/拒绝 → 放行需审阅的后继 → 整体集成 → 按目标要求用户验收。没有可靠主运行事实时不显示“正在审阅”。已批准仍不是最终目标或用户验收；旧依赖保留原规则。
+
+## 等待时聊天补充转交
+
+`useScopeContinuation.submitInput` 复用当前选中等待的严格身份、版本和模型校验。`ScopeContinuationController.submitInput` 先保存聊天正文与有序附件，再使用既有冻结命令提交；不同的已有目标草稿不会被覆盖。保存成功后补充记录持有正文，拒绝和未知结果也可在输入区表单找回；保存失败不清聊天草稿。表单、任务根与聊天共用同一控制器和锁，已受理或未知命令不能再次构造新提交。补充继续仍不代表人工验收，后端等待与队列准入不变。

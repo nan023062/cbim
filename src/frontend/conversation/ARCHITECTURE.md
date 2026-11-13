@@ -210,7 +210,7 @@ class N_src_frontend_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
 N_src_frontend_conversation_Conversation_tsx ..> N_src_frontend_conversation_Conversation_tsx_HistoryItem : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ConversationTurn.tsx](ConversationTurn.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[queue-insertion.ts](queue-insertion.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ConversationTurn.tsx](ConversationTurn.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[queue-insertion.ts](queue-insertion.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/ScopeContinuationForm.tsx](../tasks/ScopeContinuationForm.tsx)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
 
 ### ConversationEntries.tsx
 
@@ -372,6 +372,7 @@ class N_src_frontend_conversation_SendButton_tsx_SendButtonProps["SendButtonProp
   +onClick
   +isStreaming
   +queued
+  +continuing
   +stopLabel
 }
 N_src_frontend_conversation_SendButton_tsx ..> N_src_frontend_conversation_SendButton_tsx_SendButtonProps : 声明
@@ -683,18 +684,18 @@ note for Conversation "已有草稿与附件保留；开放任务只排队"
 
 全局准入票据独立于目标状态。`Conversation` 共享窗口级 `useAdmission`，在两个会话页签上方显示当前 root 的等待原因；只有有票且无实际占用时停止工作动画，并用请求时间冻结等待期间显示。读取失败不据旧票据断言已经停止。新聊天的容量拒绝发生在受理前，原发送流程只在成功后清空草稿，因而拒绝时保留正文与附件。
 
-`Conversation` 只接收当前工作区和主会话的运行、队列及目标投影。`conversationExecutionState` 把主模型执行、开放周期与持久等待分开；历史周期选择不参与发送、停止、排队或计时的判断。
+`Conversation` 只接收当前工作区和主会话的运行、队列及目标投影。`conversationExecutionState` 把主模型执行、开放周期与持久等待分开；历史周期选择不改变当前状态；补充发送必须先返回当前等待详情并核对身份，停止、排队及计时仍由当前目标决定。
 
 - `mainRunning` 只表示可插入消息的主运行。后端已提交 `waiting` 时，另一条轮询暂未追齐的 running 日志不能重新开启插入能力。
 - `executing` 驱动当前工作时间刷新与生成动画；持久等待没有后台模型工作，不计入等待时间。
-- `taskOpen` 包含执行和持久等待，保留停止/取消入口，普通发送统一走 `loop.enqueue`。普通排队消息不是目标补充，也不是人工验收。
+- `taskOpen` 包含执行和持久等待，保留停止/取消入口；活动执行中的普通发送走 `loop.enqueue`，持久等待时 `shouldQueue=false`，普通发送转交 `submitInput` 继续原目标。既有排队消息不自动变成目标补充，也不是人工验收。
 - `busy` 仍只表示用户操作正在提交，等待本身不会锁住附件、模型、权限选择或队列编辑。
 
-等待时输入区显示“当前目标等待补充；新消息会排队为下个任务”，取消按钮操作当前开放目标。模型与权限修改用于后续消息，不改变已冻结目标。`MessageQueue.continueDisabled` 只禁用“继续队列”，保留删除、编辑和排序；不传 `onInsert`，快捷键处理也拒绝插入。后端仍独立验证状态，界面不是权限边界。
+等待时输入区明确“发送将补充并继续原目标”，Enter 与发送按钮走同一可靠补充入口；模型与权限用于本次未提交补充，不改变已冻结请求。浏览历史时提供“返回当前等待目标”，详情未就绪禁止发送；Skill 新任务入口在等待期间禁用。取消按钮操作当前开放目标。`MessageQueue.continueDisabled` 只禁用“继续队列”，保留删除、编辑和排序；不传 `onInsert`，快捷键处理也拒绝插入。后端仍独立验证状态，界面不是权限边界。
 
 `UsageStatus.waitingSince` 只使用可信目标摘要的等待时间。它优先于尚未追齐的运行日志，停止生成动画，并限制尚显示 running 的旧记录计时不会越过等待检查点；不改写已有 token、费用或执行日志。
 
-当前等待目标卡片提供“补充并继续”表单。`Conversation` 装配唯一 `useScopeContinuation`，对话卡与任务根共享草稿、提交锁和回执；显式传入外壳 `active`，因此切换到其他会话、当前组件仅隐藏时也取消未完成的资料导入。此取消不消费等待、不撤销已受理命令，回到原会话不重新导入。表单不会消费或清空聊天草稿、附件和队列。提交时从输入区选定的有效供应商配置解析实际 `provider + profileId + model + permission`，完整请求先保存在本机再发送，后续修改模型和权限不改写已冻结请求。
+当前等待目标卡片提供“补充并继续”表单。`Conversation` 装配唯一 `useScopeContinuation`，对话卡与任务根共享草稿、提交锁和回执；显式传入外壳 `active`，因此切换到其他会话、当前组件仅隐藏时也取消未完成的资料导入。此取消不消费等待、不撤销已受理命令，回到原会话不重新导入。独立表单不会清空聊天草稿、附件和队列；普通发送时，聊天草稿及有序附件先持久转交给同一控制器，再清空聊天草稿。原表单已有不同草稿时拒绝覆盖并提示核对；保存失败保留聊天输入。输入区展示补充记录，明确拒绝可修正，通信未知只能查询或原请求重试，禁止再次普通发送。旧版误排队消息提示先删除再重新发送，不自动重放或删除。提交时从输入区选定的有效供应商配置解析实际 `provider + profileId + model + permission`，完整请求先保存在本机再发送，后续修改模型和权限不改写已冻结请求。
 
 普通排队消息、问题回答、工具批准及“继续队列”均不能恢复目标。显式补充不是人工验收；已受理只代表恢复意图持久化，实际运行/等待/结束继续由目标增量流显示。通信结果未知时保留原命令，重开只查询，不自动再次执行；表单仅在当前 waiting 身份和版本一致时可以首次提交或原请求重试，历史只读。
 

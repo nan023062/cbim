@@ -68,7 +68,7 @@ it('同一控制器的目录读取也共用锁，原生选择与取消使用同�
 });
 
 it('等待表单展示来源与取消，未知历史没有可编辑来源入口，正文和来源以文本转义',()=>{
-  const base:ScopeContinuationView={workspaceId:'workspace',attachments:[],importing:true,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:true,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{},sourceSelectionKey:'a',importSource:async()=>{},materialTargets:async()=>undefined,materialList:async()=>undefined,cancelImport:()=>{}};
+  const base:ScopeContinuationView={workspaceId:'workspace',attachments:[],importing:true,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:true,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},submitInput:async()=>{},query:async()=>{},retry:async()=>{},sourceSelectionKey:'a',importSource:async()=>{},materialTargets:async()=>undefined,materialList:async()=>undefined,cancelImport:()=>{}};
   const editable=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:base}));for(const text of ['目录清单','仓库资料','取消资料准备','迟到结果不会加入草稿'])expect(editable).toContain(text);
   expect(renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,editable:false}}))).not.toContain('continuation-sources');
   const manifest:ContinuationAttachmentManifest={version:2,expandedMessageHash:hash,expandedMessageBytes:100,items:[{attachmentId:randomUUID(),kind:'link',name:'<script>unsafe</script>',snapshotHash:hash,contentHash:hash,byteLength:20,contentKind:'url_reference',proof:{kind:'link',mode:'url_only',url:'https://example.com/',savedTextBytes:20,capturedAt:time}}]};

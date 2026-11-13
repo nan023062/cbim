@@ -27,6 +27,8 @@ export interface ScopeContinuationView {
   editable:boolean;canSubmit:boolean;canRetry:boolean;pending:boolean;
   error:string;modelLabel:string;
   edit:(text:string)=>void;submit:()=>Promise<void>;query:()=>Promise<void>;retry:()=>Promise<void>;
+  /** 显式将聊天草稿交给当前等待，成功返回表示可靠记录已接管草稿，不等于业务验收。 */
+  submitInput:(text:string,attachments:readonly ChatAttachment[])=>Promise<void>;
   pickFiles:()=>Promise<void>;removeFile:(id:string)=>void;
   /** 随原等待身份/选择代次变化，用于清除表单未提交的来源选择。 */
   sourceSelectionKey:string;
@@ -88,6 +90,10 @@ export function useScopeContinuation(workspaceId:string,rootSessionId:string|und
     cancelImport:()=>{if(target)controller?.cancelImport(target)},
     removeFile:id=>{if(editable&&target)controller!.removeFile(target,id)},
     submit:()=>refreshAfter(async()=>{if(editable&&target&&effectiveModel)await controller!.submit(target,effectiveModel.options)}),
+    submitInput:(text,attachments)=>refreshAfter(async()=>{
+      if(!editable||!target||!effectiveModel)throw Error('当前等待目标尚未就绪，请返回当前目标并核对补充记录。');
+      await controller!.submitInput(target,effectiveModel.options,text,attachments);
+    }),
     query:()=>refreshAfter(async()=>{if(record)await controller!.query(record.scopeId,record.waitId)}),
     retry:()=>refreshAfter(async()=>{if(target&&attempt?.phase==='unknown')await controller!.retry(target.scopeId,target.waitId)}),
   };

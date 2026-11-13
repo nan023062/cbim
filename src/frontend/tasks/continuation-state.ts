@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理显式目标补充的本地草稿、冻结请求与回执，不直接依赖 React 或桌面全局对象。
- * 设计原因：请求连同有序附件身份先保存再发送；首次明确预受理拒绝可编辑，通信未知仍冻结。两处目标卡共享草稿和选择器锁，迟到导入不得污染新等待，普通聊天草稿独立。
+ * 设计原因：请求连同有序附件身份先保存再发送；首次明确预受理拒绝可编辑，通信未知仍冻结。两处目标卡共享草稿和选择器锁，迟到导入不得污染新等待，普通聊天草稿仅在等待时显式发送后转交，先保存再由外壳清空。
  * 回执边界：首次受理后仅周期状态可更新；矛盾运行或附件清单保留旧回执并显示查询错误。
  * 成员等待：已核实的检查点/岗位/权限预受理拒绝保留可编辑草稿；曾通信未知的原请求仍冻结。
  */
@@ -161,6 +161,17 @@ export class ScopeContinuationController {
     const old=this.record(target.scopeId,target.waitId);if(!old?.attachments)return;
     const attachments=old.attachments.filter(item=>item.id!==id),{attachments:_,...draft}=old;
     this.update({...draft,...(attachments.length?{attachments}:{})});
+  }
+  /** 聊天发送在持久等待时显式转交正文与附件；先落盘再提交，不覆盖目标表单已有的不同草稿。 */
+  async submitInput(target:ContinuationTarget,options:GoalContinuationRequest['options'],text:string,attachments:readonly ChatAttachment[]):Promise<void>{
+    if(this.importing||!this.canEdit(target))throw Error('本次补充尚不能发送，请查看补充记录并查询原请求状态。');
+    const items=continuationAttachments(attachments),old=this.record(target.scopeId,target.waitId);
+    if(old&&(old.text.trim()||old.attachments?.length)&&(!equal(old.text,text)||!equal(old.attachments??[],items)))
+      throw Error('原目标已有补充草稿，请在下方“补充原目标”中核对并发送；聊天草稿已保留。');
+    const draft={scopeId:target.scopeId,waitId:target.waitId,text,...(items.length?{attachments:items}:{})};
+    if(!this.update(draft))throw Error(this.value.error);
+    // 从此正文由可靠补充记录持有；即使请求被拒绝或通信未知，也可在原记录中修正或查询。
+    await this.submit(target,options);
   }
   /** 第一次提交前保存完整请求；重复点击由控制器锁及已有 attempt 双重挡住。 */
   async submit(target:ContinuationTarget,options:GoalContinuationRequest['options']){

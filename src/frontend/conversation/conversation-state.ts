@@ -1,6 +1,6 @@
 /**
  * 作用定位：把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。
- * 设计原因：持久等待保留目标与取消入口，但没有模型执行；排队不能冒充补充或人工验收。等待事实优先于另一轮询暂未追齐的 running 日志。
+ * 设计原因：持久等待保留目标与取消入口，但没有模型执行；普通发送转交显式补充，既有队列不能冒充恢复或人工验收。等待事实优先于另一轮询暂未追齐的 running 日志。
  */
 import type {RunSummary} from '../../bridge/contracts/execution';
 import type {ScopeSummary} from '../../bridge/contracts/dispatch';
@@ -11,5 +11,5 @@ export function conversationExecutionState(latest:Pick<RunSummary,'status'>|unde
   const mainRunning=latest?.status==='running'&&!waiting;
   const executing=!waiting&&(mainRunning||openScope?.status==='active');
   const taskOpen=mainRunning||!!openScope;
-  return {waiting,mainRunning,executing,taskOpen,canInsert:mainRunning,canContinueQueue:!waiting,shouldQueue:taskOpen||queuedCount>0};
+  return {waiting,mainRunning,executing,taskOpen,canInsert:mainRunning,canContinueQueue:!waiting,shouldQueue:!waiting&&(taskOpen||queuedCount>0)};
 }

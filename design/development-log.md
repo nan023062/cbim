@@ -1,3 +1,14 @@
+## 2026-11-13：等待用户补充时普通发送续接原目标
+
+- 来源：用户截图反馈“准备好后回复继续”，输入却进入暂停队列且不能插入，形成原目标等待输入、队列等待原目标结束的互等。基线 `465f94a9`，开始时 develop 干净；开放清单仅 [#65](https://github.com/nan023062/cbim/issues/65)，本步补充其对话恢复相关进展，不关闭其它未完成项。
+- 根因与边界：Conversation 原先把所有开放目标的发送统一当队列消息，已有安全补充入口藏在目标卡。仅修前端发送策略和显式草稿转交，后端继续持有等待身份、两个预期版本、权限、受理回执和队列准入；不放开暂停队列、不插入已结束运行、不以文本“继续”冒充人工验收。所有补充正文均按等待状态路由，不靠关键词识别。
+- 实现：conversationExecutionState 在 waiting 时关闭 shouldQueue；Conversation 的 Enter/发送调用 useScopeContinuation.submitInput，先持久化正文及有序附件，再使用原控制器冻结和发送。与目标表单已有不同草稿冲突时保留双方并提示核对；本地保存失败不清输入。结果未知或明确拒绝时在输入区显示原补充表单，查询/修正/重试沿用原机制；未知请求禁止再次普通发送。历史选择必须先返回当前等待详情，不能向历史周期补写。按钮显示“补充并继续”，按下/释放间动作改变不误发。
+- 已误排队消息：不自动删除或重放；等待提示说明删除误排队的补充后重新发送，其它未来任务保留。等待期间 Skill 新任务入口禁用。当前安装版和用户运行数据未改动。
+- 受影响验证：状态投影与发送标签、补充控制器、共享附件入口三组单元覆盖正文/附件保存、身份隔离、冲突草稿、未知回执、重复请求以及原功能消费者。`pnpm exec vitest run tests/conversation-waiting.test.ts tests/scope-continuation-view.test.ts tests/continuation-source-view.test.ts --reporter=dot`：3 文件 / 35 用例通过。首次类型检查发现新增测试回执夹具缺 async，补齐后 `pnpm typecheck` 通过。
+- 界面专项：`node scripts/waiting-chat-ui-smoke.mjs` 使用真实 App/Conversation + 隔离确定性 IPC，Edge 无头验证两组：已有暂停队列时 Enter 只发送一次 loop.goalContinue 且身份/正文/引擎正确；发送按钮遇到 IPC_TIMEOUT 后保留原记录、显示查询入口且禁止重复普通发送。0 page errors，0 意外 IPC；报告 `test-results/waiting-chat-ui-report.json`、截图 `test-results/waiting-chat-recovery.png`。这是界面接线测试，不是在线模型或真实运行验收。
+- 维护：同步 conversation/tasks 注释、CONTRACT 与 2 份 ARCHITECTURE；`pnpm check:architecture` 通过（1367 文件 / 6944 依赖，0 循环/违规）。完整 review 范围为上述基线至本提交；阅读顺序 conversation-state → Conversation.send → useScopeContinuation.submitInput → ScopeContinuationController.submitInput → ScopeContinuationForm/SendButton。保护原有受理协议，变化局限于前端输入意图和可靠草稿转交。
+- 验证边界：未运行全仓回归、打包、安装升级、真实供应商续接；未发布，也不将单元或界面夹具等同人工代码审阅。后续集成/发布仍沿既有门禁。
+
 ## 2026-11-13：Issue #65 缺参提示、当前身份缺省与执行前拒绝展示
 
 - 来源：用户要求缺参明确字段、自动取得当前工作区身份，不展示原始校验 JSON 和副作用核实入口，并保留可选/default 语义。基线 `8061ae74`，本步开始工作区干净。读取开放清单只有 [#65](https://github.com/nan023062/cbim/issues/65)，本步对应正文第 6 项及身份获取体验，不关闭整单、不修改当前安装或历史日志。

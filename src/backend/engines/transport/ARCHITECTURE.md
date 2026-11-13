@@ -26,7 +26,7 @@ class N_src_backend_engines_transport_request_budget_transport_ts["request-budge
 }
 ```
 
-直接依赖：[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../core/budget/model-request-budget-rules.ts](../../core/budget/model-request-budget-rules.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../core/budget/model-request-budget-rules.ts](../../core/budget/model-request-budget-rules.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)。
 
 ### request-budget-usage.ts
 

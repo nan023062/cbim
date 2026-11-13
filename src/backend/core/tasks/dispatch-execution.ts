@@ -4,7 +4,7 @@
  * 职责边界：这里只持有无密钥的执行快照和原生会话定位，不进入公开任务图，也不把 completed 视为业务验收。
  */
 import type {MemberRunBinding} from '../execution/member-run';
-import type {ResolvedLlm} from '../models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import type {ChatPermission} from '../tools/policy/types';
 import type {PreparedDispatchKnowledge} from './execution-context';
 import type {TaskNode} from './graph-types';

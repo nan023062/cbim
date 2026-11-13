@@ -18,7 +18,7 @@ src/
     knowledge/              知识规则、查询与事务
     tasks/                  任务、目标与调度
     team/                   岗位、成员与归属
-    models/                 模型配置、选择与预算策略
+    models/                 模型目录、供应商连接、选型与配置服务
     execution/              运行循环及引擎适配
     resources/              资源与资料业务
     updates/                更新策略、状态与安装流程
@@ -75,3 +75,10 @@ Bridge 是通信边界，不是业务服务定位器。Logic 定义自己的服�
 独立 Core 单元、Node 摘要单元、前端 JSON 比较及直接控制器消费者、后端字节/排序/指纹/RPC 适配契约；类型检查、架构检查、测试模块检查与依赖检查器回归。无行为变化的其他业务不自动全量测试。
 
 先读 src/core/CONTRACT.md，再读 utility 与 platform/node 契约、前端 equalJson 适配及 scripts/check-dependencies.mjs。实际命令、失败及最终结果写开发记录。当前迁移期仍保留 backend/frontend，旧 Bridge contracts 对 backend/core 的受限引用尚未退出，不能把目标四层宣称为已完成的物理结构。
+
+
+## 模型首批迁移边界
+
+按用户要求，Logic 模型首批先于其余基础方案迁移。模型规则归 logic/models/index.ts，配置存储和凭据解析归 logic/models/service/index.ts。后者是明确登记的宿主入口，旧 Main 可以装配，旧引擎/调度不能加载；规则不得反向引用 service。随本批迁移 Node files 和通用 Fault，以避免 Logic 依赖旧 backend。主 Agent 设置和请求预算暂留原位。
+
+迁移期仅 bridge/contracts/models.ts 可具名重导出模型纯入口，其他 Bridge 文件通过该契约访问；不放宽成整个 Bridge 可引用 Logic，也不将业务规则塞进 Core。这个兼容出口保留现有同步草稿预览，后续 Bridge DTO/预览迁移需同时处理其真实消费者后退出。它是过渡事实，不是四层目标已经实现。

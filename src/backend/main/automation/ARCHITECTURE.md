@@ -59,7 +59,7 @@ class N_src_backend_main_automation_storage_ts_external_AutomationStorage["Autom
 N_src_backend_main_automation_storage_ts_external_AutomationStorage <|.. N_src_backend_main_automation_storage_ts_FileAutomations
 ```
 
-直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/automation/contracts.ts](../../core/automation/contracts.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/automation/contracts.ts](../../core/automation/contracts.ts)。
 
 ### 本目录调用边界
 

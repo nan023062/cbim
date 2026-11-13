@@ -6,7 +6,7 @@
 import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {scopeBudgetPolicySchema,type ScopeBudgetPolicy} from '../../core/budget/scope-budget';
 

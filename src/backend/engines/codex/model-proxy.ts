@@ -6,7 +6,7 @@
  */
 import http from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import type {RequestBudgetPort} from '../../core/models/request-budget';
 import {openRequestBudgetTransport,requestBudgetEndpoint} from '../transport/request-budget-transport';
 import {RequestBudgetUsageStream} from '../transport/request-budget-usage';

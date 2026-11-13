@@ -1,5 +1,5 @@
 /**
- * 目录归属：backend/main/models；模型配置持久化。
+ * 目录归属：logic/models/service；模型配置与运行快照。
  * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
  * 运行引擎由调用方独立传入；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
@@ -9,15 +9,10 @@ import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';
-import {connectionForEngine} from '../../core/models/provider-connections';
-import {parseModelCatalog} from '../../core/models/catalog';
-import {atomic} from '../../core/foundation/files';
-import {fail} from '../../core/foundation/errors';
-import {connectionSchema,definition,type LlmDefinition,type LlmSettings} from '../../core/models/config';
-export type {LlmDefinition,LlmProfile,LlmSettings} from '../../core/models/config';
-import type {SecretCipher,ResolvedLlm} from '../../core/models/ports';
-export type {SecretCipher,ResolvedLlm} from '../../core/models/ports';
+import {engineLabel,loopEngineSchema,connectionForEngine,parseModelCatalog,connectionSchema,definition,type LoopEngine,type LlmDefinition,type LlmSettings,type SecretCipher,type ResolvedLlm} from '../index';
+import {atomic} from '../../../core/platform/node/files';
+import {fail} from '../../../core/errors';
+export type {LlmDefinition,LlmProfile,LlmSettings,SecretCipher,ResolvedLlm} from '../index';
 interface DiskProfile extends LlmDefinition {id:string;encryptedKey?:string}
 interface ModelFile {version:1;selectedId?:string;profiles:DiskProfile[]}
 /** 明确岗位选型，不允许默认模型或主会话设置参与解析。 */

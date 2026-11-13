@@ -9,7 +9,7 @@ import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {Paths} from '../platform/paths';
-import {atomic,exists,readJson} from '../../core/foundation/files';
+import {atomic,exists,readJson} from '../../../core/platform/node/files';
 import {json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {KernelLock} from '../platform/locking';

@@ -131,7 +131,7 @@ class N_src_backend_main_feedback_github_feedback_auth_ts_GitHubFeedbackAuth["Gi
 N_src_backend_main_feedback_github_feedback_auth_ts ..> N_src_backend_main_feedback_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
 ```
 
-直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[github-api.ts](github-api.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../platform/locking.ts](../platform/locking.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[github-api.ts](github-api.ts)。
 
 ### github-feedback.ts
 
@@ -176,7 +176,7 @@ class N_src_backend_main_feedback_github_feedback_ts_GitHubFeedback["GitHubFeedb
 N_src_backend_main_feedback_github_feedback_ts ..> N_src_backend_main_feedback_github_feedback_ts_GitHubFeedback : 声明
 ```
 
-直接依赖：[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[../platform/locking.ts](../platform/locking.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-api.ts](github-api.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/connectors/github-feedback.ts](../../core/connectors/github-feedback.ts)、[../platform/locking.ts](../platform/locking.ts)、[github-feedback-auth.ts](github-feedback-auth.ts)、[github-api.ts](github-api.ts)。
 
 ### 本目录调用边界
 

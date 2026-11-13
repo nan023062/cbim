@@ -7,7 +7,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {KernelLock} from '../platform/locking';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
 import type {ResourceLibrarySnapshot} from '../../../bridge/contracts/resources';

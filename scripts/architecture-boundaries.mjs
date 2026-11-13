@@ -2,11 +2,26 @@
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
   {
+    id:'model-service',prefix:'src/logic/models/service/',public:['src/logic/models/service/index.ts'],
+    dependencies:['model-rules','core-errors','file-foundations','utility-foundations'],external:['node:fs/promises','node:crypto','zod'],
+  },
+  {
+    id:'model-rules',prefix:'src/logic/models/',public:['src/logic/models/index.ts'],
+    dependencies:[],external:['zod'],
+  },
+  {
+    id:'core-errors',files:['src/core/errors.ts'],public:['src/core/errors.ts'],dependencies:[],external:[],
+  },
+  {
+    id:'model-bridge-compatibility',files:['src/bridge/contracts/models.ts'],public:['src/bridge/contracts/models.ts'],
+    dependencies:['model-rules'],imports:['src/backend/core/team/agent-runtime.ts','src/backend/core/execution/model-errors.ts'],external:[],
+  },
+  {
     id:'frontend-utility',prefix:'src/frontend/foundations/utility/',public:['src/frontend/foundations/utility/index.ts'],
     dependencies:['utility-foundations'],external:[],
   },
   {
-    id:'file-foundations',prefix:'src/backend/core/foundation/files/',public:['src/backend/core/foundation/files/index.ts'],
+    id:'file-foundations',prefix:'src/core/platform/node/files/',public:['src/core/platform/node/files/index.ts'],
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
@@ -27,7 +42,7 @@ export const logicalBoundaries = [
     id:'pure-foundation',
     files:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],
     public:['src/backend/core/foundation/errors.ts','src/backend/core/foundation/json.ts','src/backend/core/foundation/serialization.ts'],
-    dependencies:['utility-foundations','utility-node-foundations'], external:[],
+    dependencies:['utility-foundations','utility-node-foundations','core-errors'], external:[],
   },
   {
     id:'knowledge-data', files:['src/backend/core/knowledge/types.ts'],
@@ -63,8 +78,8 @@ export const logicalBoundaries = [
   {
     id:'request-budget-service', files:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],
     public:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],
-    dependencies:['pure-foundation','request-budget-port'],
-    imports:['src/backend/core/budget/model-request-budget.ts','src/backend/core/budget/model-request-budget-rules.ts','src/backend/core/models/ports.ts','src/backend/core/models/request-budget.ts','src/backend/core/team/workspace-member-rules.ts'],external:['node:crypto'],
+    dependencies:['pure-foundation','request-budget-port','model-rules'],
+    imports:['src/backend/core/budget/model-request-budget.ts','src/backend/core/budget/model-request-budget-rules.ts','src/backend/core/models/request-budget.ts','src/backend/core/team/workspace-member-rules.ts'],external:['node:crypto'],
   },
   {
     id:'engine-tool-registry', files:['src/backend/core/execution/engine-tools.ts'],
@@ -113,8 +128,6 @@ export const logicalBoundaries = [
       "src/backend/core/automation/contracts.ts",
       "src/backend/core/team/agent-runtime.ts",
       "src/bridge/contracts/models.ts",
-      "src/backend/core/models/catalog.ts",
-      "src/backend/core/models/config.ts",
       "src/backend/core/execution/types.ts",
       "src/backend/core/connectors/github-feedback.ts",
       "src/backend/core/connectors/repository-connection.ts",

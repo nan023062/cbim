@@ -1,3 +1,16 @@
+## 2026-11-13：Logic 第一批／模型目录、供应商连接与选型
+
+- 来源：用户明确授权迁移第一批并运行模块测试；基线 aaa050df，初始工作区干净。开放 Issues 查询仅 #65，与本片无关，未修改无关工单或创建平行待办。C3/L3；沿模型设置、主 Agent 选型、岗位配置锁和执行快照核对真实消费者，未宣称全仓逐行审计。
+- 目录与规则迁到 src/logic/models，index.ts 为纯入口；LlmProfiles 迁入 service/llm-profiles.ts，经 service/index.ts 向宿主公开。两个边界分别登记，纯规则禁止导入服务、Node、Electron 或 SDK，Logic 不引用旧 backend、Bridge 或 View。旧 Main 的服务访问与旧 Core/引擎/调度的纯入口访问精确登记，没有开放整个 Logic。主 Agent 设置和逐请求预算仍留旧目录。
+- Node 单文件原语同步迁到 src/core/platform/node/files，真实消费者改为新入口，无旧 files 转发；通用 Fault/fail 位于 src/core/errors.ts，旧 errors.ts 仍被旧业务使用，作为同一构造器的兼容出口保留。服务只组合 Core 的文件、队列、错误与注入的加密端口；原文件格式、凭据保存条件、锁范围、延迟解密、运行快照及失败语义不变，不重写用户数据。
+- Bridge 配套限制：仅 bridge/contracts/models.ts 具名重导出纯模型规则，ipc-settings/model-actions 改经该契约使用 Schema。保留现有同步草稿预览及共同选型；检查拒绝星号、凭据类型和其他 Bridge 文件直接引入 Logic。此处为过渡债务，后续 DTO/预览迁移时连同真实消费者退出，未宣称 Bridge 已解耦。首轮类型检查发现漏导出 connectionSchema/definition，补齐原有校验契约后通过；首轮依赖检查发现服务穿透纯规则私有文件，改用 index.ts 后通过。
+- 测试责任调整：模型目录单元只验证 parseModelCatalog；原 Pi SDK 容量断言完整移入 model-capacity-sdk 契约。供应商无 UI 的 11 项断言移入独立模型单元，界面联合断言保留原契约；无跨套件导入或删除原覆盖。配置服务单元保留临时目录、加密替身、排队、锁内失效和错误验证；所有新增/移动归属同步 tests/modules.json。
+- 验证命令及选择依据：`pnpm test:module --module logic/models`，2 文件/12 项通过；`pnpm test:module --module logic/models/service`，2 文件/21 项通过。`pnpm exec vitest run tests/unit/foundations/files.test.ts tests/unit/core/errors.test.ts tests/engine-configuration.test.ts tests/provider-connections.test.ts tests/model-capacity-sdk.test.ts tests/main-agent-settings.test.ts tests/model-actions.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`，10 文件/126 项通过。选取依据为迁移基础机制、真实模型/界面/主 Agent/IPC 消费者及修改过的边界检查器；应用夹具仍按既有 integration 登记，未伪装成单元。合计 14 文件/159 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：98 目录/719 源码样式，1452 扫描文件/7162 依赖/0 环及违规，474 测试文件（133 unit、154 contract、187 integration）。规则新增纯入口/宿主入口、私有实现、反向依赖、运行环境和具名桥出口回归。
+- 迁移语法核对覆盖 62 个原有源码文件：61 个去除导入/重导出与注释后的语法一致，余下 auto-collaboration 仅改内联 import type 的路径，已核对完整 diff。原错误类/抛出实现保留，旧兼容出口指向同一构造器。用 Vite 自带 esbuild 对 logic/models/index.ts 和 bridge/contracts/models.ts 做 browser/esm/write:false 打包：分别 16/19 个输入、131704/132825 字节，无 service、平台或 Electron 输入，未写出构建制品。
+- 同步受影响源码注释、38 份生成类图、Core/Logic/旧模块契约、四层迁移设计、AGENTS 与三宿主工作流。9 份工作流一致；61 份受影响 Markdown 的 2039 个本地链接有效。Q1 保持选型优先级、原文件/快照及锁和失败语义；Q2 供应商变化归模型规则，存储/探测变化归服务，基础机制归 Core；Q3 用单模块行为、真实消费契约、静态边界及浏览器目标证明本片；Q4 models/CONTRACT.md → index.ts → provider-connections.ts 或 service/llm-profiles.ts；Q5 无新增自动治理规则。
+- 回退单位为本片目录、消费者、测试归属及边界规则的完整提交。保留人工 review；本轮不含 push、合并、全仓测试、完整桌面构建、在线供应商或发布验收。后续业务迁移不属于本次交付范围。
+
 ## 2026-11-13：四层架构第一片／共享 Core 与依赖规则
 
 - 来源：用户确认 Core、Logic、Bridge、View 四层，要求先建立 Core 和规则、再逐步迁移，并提供具体目录与第一步清单。基线 8b1dfd4e，初始工作区干净；C3/L3。当前开放 #65 与本片无关，按用户直接授权实施，不更改无关工单。目标及分片规格在 design/four-layer-architecture.md，当前实现契约在 src；不建立另一份实时待办。

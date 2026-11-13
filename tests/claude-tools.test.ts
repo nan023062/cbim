@@ -7,7 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {ClaudeCodeEngine} from '../src/backend/engines/claude/engine';
 import type {EngineEvent,ToolCall} from '../src/backend/core/execution/types';
 import type {EngineToolsPort} from '../src/backend/core/execution/engine-tools';
-import type {ResolvedLlm} from '../src/backend/core/models/ports';
+import type {ResolvedLlm} from '../src/logic/models';
 import {requestBudgetFixture} from './model-request-budget-fixture';
 import Ajv from 'ajv';
 

@@ -1,6 +1,5 @@
 /**
- * 作用定位：跨领域统一错误码与失败出口。
- * 设计原因：错误不依赖文件系统或应用生命周期，调用方可保留原始错误码。
+ * 作用定位：旧后端调用方使用的错误兼容出口，统一指向共享 Core。
+ * 设计原因：迁移中的领域仍使用此入口；保留同一个 Fault 构造器和错误码，新 Logic 直接使用 Core。
  */
-export class Fault extends Error {constructor(public code:string,message:string){super(message);this.name=code}}
-export function fail(code:string,message:string):never {throw new Fault(code,message)}
+export {Fault,fail} from '../../../core/errors';

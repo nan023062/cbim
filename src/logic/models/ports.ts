@@ -1,7 +1,7 @@
 /**
- * 目录归属：backend/core/models；模型配置与预算端口。
+ * 目录归属：logic/models；模型目录与纯选型规则。
  * 作用定位：模型运行快照与凭据加解密端口。
- * 设计原因：配置存储属于应用，各引擎只依赖运行快照，避免 Core 导入主进程存储实现。
+ * 设计原因：各引擎只依赖运行快照，平台经端口提供加密；纯模型契约不导入配置服务或主进程实现。
  */
 import type {LlmDefinition,LlmModel} from './config';
 import type {LoopEngine} from './engine';

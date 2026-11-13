@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from '../src/backend/engines/pi/runtime-config';
-import {modelSchema} from '../src/backend/core/models/config';
+import {modelSchema} from '../src/logic/models';
 import type {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
 import type {RunSummary} from '../src/backend/core/execution/types';
 

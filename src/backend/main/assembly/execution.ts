@@ -18,7 +18,7 @@ import path from 'node:path';
 import type {WebToolsPort} from '../../core/connectors/web-tools';
 import {FileRunStorage} from '../run-storage/run-storage';
 import {ChatInputs} from '../materials/chat-inputs';
-import type {LlmProfiles} from '../models/llm-profiles';
+import type {LlmProfiles} from '../../../logic/models/service';
 import type {Workspace} from '../workspace/workspace';
 import {KernelLock} from '../platform/locking';
 import {guard} from '../platform/tool-guard';

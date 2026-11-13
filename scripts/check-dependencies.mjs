@@ -50,17 +50,25 @@ const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
+const modelPublic='src/logic/models/index.ts';
+const modelService='src/logic/models/service/index.ts';
+// 迁移期只开放模型的两个具名入口；旧引擎/调度仅可读纯规则，只有宿主装配可加载服务。
+export function allowsModelMigration(from,to){
+  if(to===modelPublic)return /^src\/backend\/(core|engines|scheduler-engine|main)\//.test(from)||from==='src/bridge/contracts/models.ts';
+  return to===modelService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
+}
+const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','connectionForEngine','providerSupportsEngine','DiscoveredModel','engineSupportsApi','engineLabel','engineApi','loopEngineSchema','agentModelSelectionSchema','LoopEngine','AgentModelSelection']);
 const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/core/utility/index.ts']},
+  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/core/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
-  {sources:[foundation],allow:[foundation,'src/core/utility/index.ts','src/core/platform/node/digest.ts']},
+  {sources:[foundation],allow:[foundation,'src/core/errors.ts','src/core/utility/index.ts','src/core/platform/node/digest.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},
@@ -68,16 +76,16 @@ const moduleBoundaries=[
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
   {sources:['src/backend/core/knowledge/knowledge-queries.ts'],allow:['src/backend/core/knowledge/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
-  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/backend/core/foundation/files/index.ts','src/backend/core/team/session-history-storage.ts']},
+  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/core/platform/node/files/index.ts','src/backend/core/team/session-history-storage.ts']},
   {sources:['src/backend/core/budget/model-request-budget-storage.ts'],allow:['src/backend/core/budget/scope-budget.ts','src/backend/core/budget/model-request-budget.ts']},
   {sources:['src/backend/core/execution/engine-tools.ts'],allow:[]},
   {sources:['src/backend/core/execution/index.ts'],allow:['src/backend/core/execution/types.ts','src/backend/core/execution/storage.ts','src/backend/core/execution/runtime/runtime.ts','src/backend/core/execution/member-run.ts','src/backend/core/execution/input-source.ts','src/backend/core/execution/conversation-binding.ts']},
-  {sources:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],allow:[foundation,'src/backend/core/budget/model-request-budget-storage.ts','src/backend/core/budget/model-request-budget.ts','src/backend/core/budget/model-request-budget-rules.ts','src/backend/core/models/ports.ts','src/backend/core/models/request-budget.ts','src/backend/core/team/workspace-member-rules.ts','src/backend/scheduler-engine/budget/scope-budget-service.ts']},
+  {sources:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],allow:[foundation,'src/backend/core/budget/model-request-budget-storage.ts','src/backend/core/budget/model-request-budget.ts','src/backend/core/budget/model-request-budget-rules.ts',modelPublic,'src/backend/core/models/request-budget.ts','src/backend/core/team/workspace-member-rules.ts','src/backend/scheduler-engine/budget/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts']},
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(file===entry)return true;
@@ -98,7 +106,7 @@ export const externalLoads = [
   {file:'src/backend/main/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
   {file:'src/backend/main/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
   {file:'src/backend/main/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
-  {file:'tests/model-catalog.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
+  {file:'tests/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
@@ -158,7 +166,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
     if (errors.length) throw new Error(errors.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n'));
     compilerOptions = {...compilerOptions, ...parsed.options};
   }
-  const edges = [], unresolved = [], dynamic = [], external = [], externalReferences = [];
+  const edges = [], unresolved = [], dynamic = [], external = [], externalReferences = [], modelFacadeViolations=[];
   for (const file of unique) {
     const ast = ts.createSourceFile(file, fs.readFileSync(file,'utf8'), ts.ScriptTarget.Latest, true);
     if (ast.parseDiagnostics.length) throw new Error(`无法解析 ${relative(file)}：${ast.parseDiagnostics.map(e => ts.flattenDiagnosticMessageText(e.messageText,'\n')).join('\n')}`);
@@ -199,6 +207,11 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
+      if(relative(file)==='src/bridge/contracts/models.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/models(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
+        const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
+        const named=names&&(ts.isNamedExports(names)||ts.isNamedImports(names));
+        if(!named||names.elements.some(item=>!modelBridgeNames.has((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),line:ast.getLineAndCharacterOfPosition(node.getStart(ast)).line+1,rule:'model-bridge-export',boundary:'model-bridge-compatibility'});
+      }
       if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {if (node.moduleSpecifier) add(node,node.moduleSpecifier,node.isTypeOnly || node.importClause?.isTypeOnly ? 'type' : 'import/export');}
       else if (ts.isImportTypeNode(node)) add(node,ts.isLiteralTypeNode(node.argument) ? node.argument.literal : undefined,'import type');
       else if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) add(node,node.moduleReference.expression,'import equals');
@@ -214,9 +227,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      if(!layers[a]||!layers[a].includes(b))return true;
+      const modelMigration=allowsModelMigration(e.from,e.to);
+      if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
       // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
-      if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to))return true;
+      if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;
       // 具体引擎选择仅属于调度装配，普通业务编排仍面向 Core 的契约。
       if(a==='backend/scheduler-engine'&&b==='backend/engines'&&!e.from.startsWith('src/backend/scheduler-engine/assembly/'))return true;
     }
@@ -225,6 +239,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   });
   const circular = cycles([...known.values()],edges);
   const logical = checkLogicalBoundaries([...known.values()],edges,externalReferences);
+  logical.violations.push(...modelFacadeViolations);
   // 运行环境限制同时覆盖 npm/内置模块导入，避免绕过 Core 平台入口直接取得 Node/Electron。
   for(const reference of externalReferences){
     const layer=layerOf(reference.file);

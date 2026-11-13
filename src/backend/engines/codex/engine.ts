@@ -11,7 +11,7 @@ import {redactLiteral} from '../../../core/utility';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import type {RequestBudgetPort} from '../../core/models/request-budget';
 import {runtimeEngineTools,type EngineToolsPort} from '../../core/execution/engine-tools';
 import {engineInstructions} from '../../core/execution/engine-instructions';

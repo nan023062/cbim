@@ -8,7 +8,7 @@ import fs from 'node:fs/promises';
 import {readKnowledge} from './files';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {atomic,exists,readJson} from '../../core/foundation/files';
+import {atomic,exists,readJson} from '../../../core/platform/node/files';
 import {hash,json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import type {StoragePaths} from '../../core/foundation/paths';

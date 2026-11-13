@@ -61,7 +61,7 @@ export interface MainToolContext {
 }
 
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
-type Options={engine?:import('../../core/models/engine').LoopEngine;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
+type Options={engine?:import('../../../logic/models').LoopEngine;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
 type Cycle={collaborationMode?:'auto'|'team';task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;readOnly?:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary;options?:Options;repairs?:GoalRepairSource[]};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>;admissions:Map<string,{taskId?:string;withdraw:()=>void}>;recorded?:boolean;restored?:boolean;repair?:{source:GoalRepairSource;message:string}};

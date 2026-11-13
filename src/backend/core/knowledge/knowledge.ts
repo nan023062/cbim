@@ -9,7 +9,7 @@ import path from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
 import ignore from 'ignore';
 import {hash,json} from '../foundation/serialization';
-import {exists} from '../foundation/files';
+import {exists} from '../../../core/platform/node/files';
 import {parseWorkflowContract} from '../workspace/workflow-contract';
 import {moduleSections,moduleBodyTemplate} from '../workspace/module-outline';
 import type {KnowledgeFile,Validation,Issue,ModuleNode} from './types';

@@ -46,7 +46,7 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
-采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 仍是待迁移业务，不能整体当作新 Core。当前 files/web 仍留旧位置。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
+采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](../../../design/four-layer-architecture.md)。共享 Core 位于 src/core，便携与平台入口分开；旧 backend/core 仍是待迁移业务，不能整体当作新 Core。当前 web 仍留旧位置，files 已迁入 Core Node。迁移须同步真实导入、测试归属、架构生成器和三宿主工作流，不保留无人使用的旧路径转发。
 
 前后端可复用 src/core/utility 的相同契约，视图/业务专属策略仍分别维护，不相互引用业务实现，也不经 Bridge 转发工具。先核对共享 Core 契约与消费者语义；前端 equalJson 已组合共享排序，保留 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。共享 Core 不依赖三层业务或旧 backend/frontend，Node/Electron 不进入便携入口。
 
@@ -120,3 +120,5 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/take/rejectAll 仅管理 ID、回调与计时器。协议决定超时处置：Pi 单项未知、Codex 整体失败及杀进程必须保留；发送异常、重试与物理退出不下沉，分别验证乱序/重复回包、超时及关闭。
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
+
+模型首批已迁入 src/logic/models：index.ts 为纯目录/连接/选型入口，service/index.ts 为配置持久化和受控凭据解析入口。前者不得加载后者，旧引擎/调度只能访问纯入口；旧 Main 通过服务入口装配。仅 bridge/contracts/models.ts 保留具名纯规则兼容出口，后续 Bridge DTO/预览迁移后退出，不能扩大为 Bridge/前端直达 Logic。Node files 位于 src/core/platform/node/files，Fault 位于 src/core/errors.ts，旧 errors.ts 是仍有消费者的同一异常兼容出口。主 Agent 设置和请求预算暂留旧目录，Logic 不得反向导入旧业务。模型单元、配置服务单元、UI/历史快照契约与 SDK 容量契约分别登记。

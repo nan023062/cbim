@@ -3,7 +3,7 @@ import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-b
 import type {DispatchStore,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
 import type {RequestBudgetState,RequestBudgetStore} from '../src/backend/core/budget/model-request-budget-storage';
 import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
-import type {ResolvedLlm} from '../src/backend/core/models/ports';
+import type {ResolvedLlm} from '../src/logic/models';
 
 it('预算投影只在原事务中读取，隔离其它领域及嵌套状态，不能夹带跨域提交',async()=>{
   const state:DispatchState={workspaceId:'w',members:[],sessions:[],graphs:[],outbox:[],scopes:[{workspaceId:'w',rootSessionId:'root',scopeId:'scope',status:'active',createdAt:'2026-11-11T00:00:00Z',runTracking:{version:1,mainRunIds:['run']},budget:{version:1,policy:{revision:1,enabled:true,enforcement:'request',limits:{tokens:200}}}}]};

@@ -8,7 +8,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {hash,json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage} from '../../core/knowledge/portable-package';

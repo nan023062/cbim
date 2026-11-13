@@ -6,8 +6,8 @@
 import {z} from 'zod';
 import {webConfigureInput,type WebSettingsView} from '../../backend/core/connectors/web-tools';
 import {ipcId,noIpcArgs} from './ipc-shapes';
-import {type DiscoveredModel} from '../../backend/core/models/catalog';
-import {type LlmSettings,connectionSchema,definition} from '../../backend/core/models/config';
+import {type DiscoveredModel} from './models';
+import {type LlmSettings,connectionSchema,definition} from './models';
 import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from '../../backend/core/connectors/github-feedback';
 import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
 import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';

@@ -9,7 +9,7 @@ import {fail} from '../../core/foundation/errors';
 import type {RequestBudgetStore,RequestBudgetState,RequestBudgetAdmission} from '../../core/budget/model-request-budget-storage';
 import {requestBudgetBindingSchema,requestBudgetModelSchema,requestBudgetQuerySchema,requestBudgetUsageSchema,type RequestBudgetBinding,type RequestBudgetIntent,type ModelRequestBudgetChange} from '../../core/budget/model-request-budget';
 import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetCost,requestBudgetDecision,requestBudgetCommand,requestBudgetReceipt} from '../../core/budget/model-request-budget-rules';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../../core/models/request-budget';
 import {workspaceMemberModelHash} from '../../core/team/workspace-member-rules';
 

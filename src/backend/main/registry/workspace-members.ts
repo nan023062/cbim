@@ -5,7 +5,7 @@
  * 事务边界：能力采纳固定知识串行快照后进入同一 Store，未追踪来源捕获与岗位事件同事务；模型配置仍前后复验，不宣称拥有跨存储原子锁。原命令先查回执，重开不能重做已提交动作。
  */
 import {data} from '../../core/knowledge/read-models';
-import {agentModelSelectionSchema} from '../../core/models/engine';
+import {agentModelSelectionSchema} from '../../../logic/models';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';

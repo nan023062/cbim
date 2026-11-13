@@ -33,11 +33,11 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 新四层以 [四层设计](../../../design/four-layer-architecture.md) 为目标：Core 不依赖业务，Logic 依赖适用 Core，Bridge 服务端依赖 Logic 公开入口，View 只使用 Bridge 客户端/契约与便携 Core。当前 src/core 已建立，旧 backend/frontend 和 Bridge 的旧领域契约重导出仍按现有规则受限；不得把目标画成全部已迁移。
 
 - 共享 Core → 自身获准入口与第三方库；utility 不依赖平台，platform/node 与前端/Bridge 客户端隔离。旧 foundations 逻辑层当前仅含 backend/core/foundation/files、web，不反向依赖业务。
-- 旧 backend/core → 自身、旧 files/web 获准入口、共享 core/utility 与独立 Node 摘要；不反向认识应用装配或具体引擎。
+- 旧 backend/core → 自身、旧 web 与 Core Node files 获准入口、共享 core/utility 与独立 Node 摘要；不反向认识应用装配或具体引擎。
 - backend/engines → 自身、backend/core、core/utility 通用公开入口；不借此访问其他基础方案、Node 入口或私有实现，具体 SDK 与 HTTP 传输不得被 Core 反向引用。
 - backend/scheduler-engine → 自身、backend/core、core/utility 的通用公开入口；assembly 中的引擎装配可以依赖 backend/engines。
 - backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
-- backend/main → 自身、backend/scheduler-engine、旧 backend/core、backend/updater、bridge/contracts、旧 files/web 及共享 Core 获准入口。
+- backend/main → 自身、backend/scheduler-engine、旧 backend/core、backend/updater、bridge/contracts、旧 web 与 Core Node files 及共享 Core 获准入口。
 - backend/updater → 自身、bridge/contracts、core/utility 通用公开入口；更新程序不得反向依赖 Main、调度或业务运行时，不能跨入 utility Node 入口或其他基础方案。
 - bridge/contracts → 自身、backend/core 的公开契约和纯函数。
 - frontend → 自身、bridge/contracts、共享 core/utility 公开入口；具体模块的窄依赖规则仍生效。
@@ -127,3 +127,5 @@ utility 的类图按实际类别文件表达 JSON、字符串、字节、异步�
 Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/take/rejectAll 仅管理 ID、回调与计时器。协议决定超时处置：Pi 单项未知、Codex 整体失败及杀进程必须保留；发送异常、重试与物理退出不下沉，分别验证乱序/重复回包、超时及关闭。
 
 后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
+
+模型首批已迁入 src/logic/models：index.ts 为纯目录/连接/选型入口，service/index.ts 为配置持久化和受控凭据解析入口。前者不得加载后者，旧引擎/调度只能访问纯入口；旧 Main 通过服务入口装配。仅 bridge/contracts/models.ts 保留具名纯规则兼容出口，后续 Bridge DTO/预览迁移后退出，不能扩大为 Bridge/前端直达 Logic。Node files 位于 src/core/platform/node/files，Fault 位于 src/core/errors.ts，旧 errors.ts 是仍有消费者的同一异常兼容出口。主 Agent 设置和请求预算暂留旧目录，Logic 不得反向导入旧业务。模型单元、配置服务单元、UI/历史快照契约与 SDK 容量契约分别登记。

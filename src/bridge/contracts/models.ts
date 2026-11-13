@@ -3,14 +3,15 @@
  * 设计原因：仅重导出无凭据公开契约和纯函数，不向渲染进程暴露配置存储或密钥端口。
  * 公开内置引擎目录、显示名、协议兼容规则和独立 Agent 选型契约，渲染层不导入具体引擎或凭据。
  * 供应商预设和单接口解析为纯配置投影，与后端启动共用；不暴露凭据解析或联网能力。
+ * 迁移兼容：这是唯一允许重导出 Logic 模型纯入口的桥文件；后续 DTO/预览迁移后退出，不开放服务或任意星号导出。
  */
-export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings,LlmApi,AlternateConnection} from '../../backend/core/models/config';
-export {llmApiSchema} from '../../backend/core/models/config';
-export {providerPresets,identifyProvider} from '../../backend/core/models/provider-presets';
-export {connectionForEngine,providerSupportsEngine} from '../../backend/core/models/provider-connections';
+export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings,LlmApi,AlternateConnection} from '../../logic/models';
+export {llmApiSchema,connectionSchema,definition} from '../../logic/models';
+export {providerPresets,identifyProvider} from '../../logic/models';
+export {connectionForEngine,providerSupportsEngine} from '../../logic/models';
 export {mainAgentSettingsSchema} from '../../backend/core/team/agent-runtime';
 export type {MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
-export type {DiscoveredModel} from '../../backend/core/models/catalog';
+export type {DiscoveredModel} from '../../logic/models';
 export {modelStopError} from '../../backend/core/execution/model-errors';
-export {engineSupportsApi,engineLabel,engineApi,loopEngineSchema,agentModelSelectionSchema} from '../../backend/core/models/engine';
-export type {LoopEngine,AgentModelSelection} from '../../backend/core/models/engine';
+export {engineSupportsApi,engineLabel,engineApi,loopEngineSchema,agentModelSelectionSchema} from '../../logic/models';
+export type {LoopEngine,AgentModelSelection} from '../../logic/models';

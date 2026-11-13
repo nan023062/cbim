@@ -5,8 +5,8 @@ import http from 'node:http';
 import {deflateSync} from 'node:zlib';
 import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import {parseModelCatalog} from '../src/backend/core/models/catalog';
-import {modelSchema} from '../src/backend/core/models/config';
+import {parseModelCatalog} from '../src/logic/models';
+import {modelSchema} from '../src/logic/models';
 import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
 import type {RunSummary} from '../src/backend/core/execution/types';
 

@@ -10,7 +10,7 @@ import {codexFixture} from './codex-fixture';
 import {budgetScopes} from './scope-budget-fixture';
 import {requestBudgetReportSchema} from '../src/backend/core/budget/model-request-budget';
 import {NativeSessionFiles} from '../src/backend/main/platform/native-session-files';
-import type {LoopEngine} from '../src/backend/core/models/engine';
+import type {LoopEngine} from '../src/logic/models';
 
 const profile=(baseUrl:string,engine:LoopEngine)=>({name:'Application '+engine,api:engine==='codex'?'openai-responses' as const:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:engine==='codex'?'codex-test-model':'request-budget-model',models:[{id:engine==='codex'?'codex-test-model':'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
 

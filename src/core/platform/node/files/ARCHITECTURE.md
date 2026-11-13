@@ -1,8 +1,8 @@
-# src/backend/core/foundation/files 架构
+# src/core/platform/node/files 架构
 
 ## 目录定位
 
-Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。
+Node 单文件 I/O 基础方案：存在探测、JSON 读取、内容 fsync 后原子替换；路径权限、并发顺序和业务事务属于调用方。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -19,7 +19,7 @@ Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子�
 
 ```mermaid
 classDiagram
-class N_src_backend_core_foundation_files_index_ts["index.ts"] {
+class N_src_core_platform_node_files_index_ts["index.ts"] {
   <<module>>
 }
 ```
@@ -29,7 +29,7 @@ class N_src_backend_core_foundation_files_index_ts["index.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_backend_core_foundation_files_text_files_ts["text-files.ts"] {
+class N_src_core_platform_node_files_text_files_ts["text-files.ts"] {
   <<module>>
   +exists()
   +atomic()
@@ -42,13 +42,13 @@ class N_src_backend_core_foundation_files_text_files_ts["text-files.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_backend_core_foundation_files_index_ts["index.ts"] {
+class N_src_core_platform_node_files_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_backend_core_foundation_files_text_files_ts["text-files.ts"] {
+class N_src_core_platform_node_files_text_files_ts["text-files.ts"] {
   <<module>>
 }
-N_src_backend_core_foundation_files_index_ts ..> N_src_backend_core_foundation_files_text_files_ts : 导入依赖
+N_src_core_platform_node_files_index_ts ..> N_src_core_platform_node_files_text_files_ts : 导入依赖
 ```
 
 
@@ -72,6 +72,6 @@ N_src_backend_core_foundation_files_index_ts ..> N_src_backend_core_foundation_f
 - `exists` 保持 access 失败即 false 的原语义，不能区分缺失与无权限；不得据此授予访问。`readJson<T>` 不验证 T 对应的业务 Schema，解析/读取错误由调用方处理。
 - 调用者负责可信路径、权限、版本冲突、跨进程锁、序列化格式和提交后状态发布。同一路径的并发写不会由基础库自动合并；需要顺序时消费者组合独立队列。
 
-真实消费者为知识文件探测、Main 的配置、资源、工作区、历史及存储适配。新增一种配置不修改原子替换机制，只在业务模块定义 Schema、路径和生效规则。对受控文件写入、命名空间身份核验、签名更新和多文件日志事务，不以此原语替换其安全/一致性流程。
+真实消费者为知识文件探测、Logic 模型服务与 Main 的配置、资源、工作区、历史及存储适配。新增一种配置不修改原子替换机制，只在业务模块定义 Schema、路径和生效规则。对受控文件写入、命名空间身份核验、签名更新和多文件日志事务，不以此原语替换其安全/一致性流程。
 
 模块测试在 `tests/unit/foundations/files.test.ts`；失败清理使用真实目录及受控写入故障，不初始化 Application。

@@ -39,7 +39,7 @@ class N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView["MainAgentS
 N_src_backend_core_team_agent_runtime_ts ..> N_src_backend_core_team_agent_runtime_ts_MainAgentSettingsView : 声明
 ```
 
-直接依赖：[../models/engine.ts](../models/engine.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)。
 
 ### agent-types.ts
 
@@ -147,7 +147,7 @@ class N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding["
 N_src_backend_core_team_automatic_execution_ts ..> N_src_backend_core_team_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../models/engine.ts](../models/engine.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../workspace/project-root.ts](../workspace/project-root.ts)。
 
 ### implicit-module-owner.ts
 
@@ -700,7 +700,7 @@ class N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail["Workspa
 N_src_backend_core_team_workspace_member_ts ..> N_src_backend_core_team_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../models/engine.ts](../models/engine.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../workspace/knowledge-source.ts](../workspace/knowledge-source.ts)。
 
 ### 本目录调用边界
 

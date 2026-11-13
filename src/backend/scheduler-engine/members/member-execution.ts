@@ -25,7 +25,7 @@ import {fail} from '../../core/foundation/errors';
 import {hash,json} from '../../core/foundation/serialization';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {LoopRuntime} from '../../core/execution/runtime/runtime';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import type {RunSummary,StoredEvent,ToolCall,ToolDecision,ChatPermission} from '../../core/execution/types';
 import {publicRunFailure} from '../../core/execution/run-failure';
 import type {DispatchRun} from '../../core/tasks/dispatch-execution';

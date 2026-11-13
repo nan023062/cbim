@@ -9,7 +9,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {networkInterfaces} from 'node:os';
 import {z} from 'zod';
 import {Paths} from '../platform/paths';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {json} from '../../core/foundation/serialization';
 import {LocalRepository,type RepositoryStore,saveSchema,removeSchema} from './resource-store';

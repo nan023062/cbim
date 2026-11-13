@@ -4,7 +4,7 @@ import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-s
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
 import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
-import type {ResolvedLlm} from '../src/backend/core/models/ports';
+import type {ResolvedLlm} from '../src/logic/models';
 import type {ScopeBudgetPolicy} from '../src/backend/core/budget/scope-budget';
 
 export const budgetTestModel:ResolvedLlm={profile:{id:'budget-model',name:'Budget model',model:'budget-model',api:'openai-completions',baseUrl:'http://127.0.0.1:1/v1',auth:'none',contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}},apiKey:''};

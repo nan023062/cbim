@@ -5,7 +5,7 @@
  * 工作预算只控制压缩时机，不能缩小 model.contextWindow 而意外截断输出。
  * 来源：makecindy/cindy@56b6e9a，Apache-2.0，许可见 legal/cindy-LICENSE。
  */
-import type {LlmModel} from '../../core/models/config';
+import type {LlmModel} from '../../../logic/models';
 
 /** 可选设置缺省保持 Pi 原生压缩阈值；输出容量不参与工作预算的改写。 */
 export function buildPiRuntimeSettings(model?:Pick<LlmModel,'contextWindow'|'workingContextWindow'|'compactionPercent'>){

@@ -29,7 +29,7 @@ import type {ControlledFiles} from '../file-operations/controlled-files';
 import type {IsolatedExecutions} from '../file-operations/isolated-executions';
 import {dispatchApplication} from '../ipc/dispatch';
 import type {ApplicationServices} from '../ipc/services';
-import {LlmProfiles,type SecretCipher} from '../models/llm-profiles';
+import {LlmProfiles,type SecretCipher} from '../../../logic/models/service';
 import {MainAgentSettings} from '../models/main-agent-settings';
 import {AdmissionSettings} from '../settings/admission-settings';
 import {BudgetSettings} from '../settings/budget-settings';
@@ -53,7 +53,7 @@ import type {AgentHistoryService} from '../../scheduler-engine/history/agent-his
 import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
 import {Catalog} from '../workspace/catalog';
 import {Paths} from '../platform/paths';
-import {exists} from '../../core/foundation/files';
+import {exists} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {Rules} from '../../core/knowledge/knowledge';
 import {Workspace} from '../workspace/workspace';

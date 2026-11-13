@@ -6,10 +6,10 @@
 import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {webConfigureInput,type WebSettingsView} from '../../core/connectors/web-tools';
-import type {SecretCipher} from '../../core/models/ports';
+import type {SecretCipher} from '../../../logic/models';
 const schema=z.object({revision:z.number().int().positive(),enabled:z.boolean(),encryptedKey:z.string().optional(),browserRobotsPolicy:z.enum(['allow','respect']).default('allow')}).strict();
 /** robots 策略由每次网页读取捕获；搜索开关及密钥独立生效。旧文件缺省 allow，旧客户端保存不重置策略。 */
 export class WebSettings {

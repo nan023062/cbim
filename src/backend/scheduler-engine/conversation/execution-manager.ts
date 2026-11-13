@@ -16,7 +16,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {mainAgentId} from './main-agent';
 import {z} from 'zod';
-import {loopEngineSchema} from '../../core/models/engine';
+import {loopEngineSchema} from '../../../logic/models';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import {fail,Fault} from '../../core/foundation/errors';
 import {safeId} from '../../core/foundation/identity';

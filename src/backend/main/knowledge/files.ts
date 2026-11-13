@@ -10,7 +10,7 @@ import type {KnowledgeFile} from '../../core/knowledge/types';
 import {isKnowledge,excluded} from '../../core/knowledge/knowledge';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
-import {exists} from '../../core/foundation/files';
+import {exists} from '../../../core/platform/node/files';
 export async function readKnowledge(paths:Paths,root:string){
   const result:KnowledgeFile[]=[];
   async function walk(relative:string){const absolute=await paths.knowledge(root,relative+'/__check__');const dir=path.dirname(absolute);

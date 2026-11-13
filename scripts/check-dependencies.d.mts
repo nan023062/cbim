@@ -7,5 +7,6 @@ export interface DependencyReport {
   logicalCoverage:{id:string;files:number}[];
 }
 export const roots:string[];
+export function allowsModelMigration(from:string,to:string):boolean;
 export const externalLoads:{file:string; expression:string; reason:string}[];
 export function auditDependencies(root?:string, options?:{roots?:string[]; externalLoads?:typeof externalLoads}):DependencyReport;

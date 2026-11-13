@@ -25,7 +25,7 @@ import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../core/execution/types';
 import {PiRpc,type PiCommand} from './rpc';
 import {openBridge,bridgeExtensionForSource,type KnowledgeBridge} from './bridge';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import {modelStopError} from '../../core/execution/model-errors';
 import {buildPiRuntimeSettings,requestedThinkingLevel} from './runtime-config';
 import {nativeToolNames} from '../../core/tools/native-tools';

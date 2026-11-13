@@ -3,7 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import type {Application} from '../src/backend/main/assembly/application';
-import type {LlmDefinition} from '../src/backend/core/models/config';
+import type {LlmDefinition} from '../src/logic/models';
 import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';
 import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
 import {seedTeam} from './team-fixture';

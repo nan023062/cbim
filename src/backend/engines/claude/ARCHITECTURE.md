@@ -97,7 +97,7 @@ class N_src_backend_engines_claude_engine_ts_external_AgentEngine["AgentEngine (
 N_src_backend_engines_claude_engine_ts_external_AgentEngine <|.. N_src_backend_engines_claude_engine_ts_ClaudeCodeEngine
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[tools.ts](tools.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[tools.ts](tools.ts)。
 
 ### sdk.ts
 

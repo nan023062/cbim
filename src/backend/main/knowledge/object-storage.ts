@@ -8,7 +8,7 @@ import path from 'node:path';
 import type {ObjectPlan,ObjectStorage} from '../../core/knowledge/object-storage';
 import type {KnowledgeFile} from '../../core/knowledge/types';
 import type {StoragePaths} from '../../core/foundation/paths';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {json} from '../../core/foundation/serialization';
 import {fail} from '../../core/foundation/errors';
 

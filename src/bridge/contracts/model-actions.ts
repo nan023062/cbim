@@ -5,7 +5,7 @@
  * 连接测试显式选择引擎并返回实际协议/地址，不接受临时任意转发目标。
  */
 import {z} from 'zod';
-import {connectionSchema,definition,type LlmSettings} from '../../backend/core/models/config';
+import {connectionSchema,definition,type LlmSettings} from './models';
 import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
 import {loopEngineSchema,type LoopEngine,type LlmApi,type DiscoveredModel} from './models';
 

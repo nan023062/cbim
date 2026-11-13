@@ -52,7 +52,7 @@ class N_src_backend_main_governance_storage_module_governance_store_ts_ModuleGov
 N_src_backend_main_governance_storage_module_governance_store_ts ..> N_src_backend_main_governance_storage_module_governance_store_ts_ModuleGovernanceStore : 声明
 ```
 
-直接依赖：[../../../core/foundation/files/index.ts](../../../core/foundation/files/index.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/governance/module-governance.ts](../../../core/governance/module-governance.ts)、[../../../core/governance/module-governance-rules.ts](../../../core/governance/module-governance-rules.ts)、[../../../core/governance/module-governance-feedback.ts](../../../core/governance/module-governance-feedback.ts)。
+直接依赖：[../../../../core/platform/node/files/index.ts](../../../../core/platform/node/files/index.ts)、[../../../core/foundation/serialization.ts](../../../core/foundation/serialization.ts)、[../../../core/foundation/errors.ts](../../../core/foundation/errors.ts)、[../../../core/governance/module-governance.ts](../../../core/governance/module-governance.ts)、[../../../core/governance/module-governance-rules.ts](../../../core/governance/module-governance-rules.ts)、[../../../core/governance/module-governance-feedback.ts](../../../core/governance/module-governance-feedback.ts)。
 
 
 ## 子目录导航

@@ -2,7 +2,7 @@
 
 portable-package 的递归对象排序组合 utility.orderJsonValue，继续使用本机 localeCompare、不预先省略 undefined 对象属性。workspacePackageFingerprint 仍只排除根 fingerprint，数组顺序、JSON 文本和 hash 保持原义；包布局、字段检查、导入冲突及知识事务没有迁入基础库。
 
-`knowledge.ts` 的真实目录探测通过独立 `backend/core/foundation/files` 的公开 `exists` 入口复用文件机制；知识布局、结构验证、指纹与事务仍由知识模块拥有。下述固定快照读取模型不因此引入文件 I/O。
+`knowledge.ts` 的真实目录探测通过独立 `core/platform/node/files` 的公开 `exists` 入口复用文件机制；知识布局、结构验证、指纹与事务仍由知识模块拥有。下述固定快照读取模型不因此引入文件 I/O。
 
 跨模块查询统一导入 [read-models.ts](./read-models/index.ts) 的 `Team`、`BusinessWorkspace`、`context`、`data`、`content`；[snapshot.ts](./read-models/snapshot.ts)、[team/model.ts](./read-models/team.ts)、[workspace/model.ts](./read-models/workspace.ts) 是同一个逻辑读取模块的私有实现。逻辑归属按职责声明，不要求把既有文件搬到同一目录。
 

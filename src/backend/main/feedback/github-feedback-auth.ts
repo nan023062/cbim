@@ -8,11 +8,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {atomic} from '../../core/foundation/files';
+import {atomic} from '../../../core/platform/node/files';
 import {fail,Fault} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
 import {KernelLock} from '../platform/locking';
-import type {SecretCipher} from '../../core/models/ports';
+import type {SecretCipher} from '../../../logic/models';
 import {githubFeedbackConfigSchema,type GitHubFeedbackStatus,type FeedbackScope,type FeedbackConnectionCheck} from '../../core/connectors/github-feedback';
 import {githubRequest,type GitHubRequest} from './github-api';
 

@@ -38,11 +38,11 @@ import {mainInstructions,collaborationInstructions} from '../conversation/main-a
 import type {ChatPermission} from '../../core/execution/types';
 import {ClaudeCodeEngine} from '../../engines/claude/engine';
 import {CodexEngine} from '../../engines/codex/engine';
-import type {LoopEngine} from '../../core/models/engine';
+import type {LoopEngine} from '../../../logic/models';
 import {LoopRuntime,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../../core/execution';
 import {PiEngine} from '../../engines/pi/engine';
 import type {PiCommand} from '../../engines/pi/rpc';
-import type {ResolvedLlm} from '../../core/models/ports';
+import type {ResolvedLlm} from '../../../logic/models';
 import {authorizeRunTool,type RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 import {progressTool} from '../../core/evidence/progress-tools';
 import {pinRuntimeEngine} from '../../engines/runtime-binding';

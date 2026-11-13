@@ -43,7 +43,7 @@ class N_src_backend_main_settings_admission_settings_ts_AdmissionSettings["Admis
 N_src_backend_main_settings_admission_settings_ts ..> N_src_backend_main_settings_admission_settings_ts_AdmissionSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/admission/run-admission.ts](../../scheduler-engine/admission/run-admission.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/runtime/admission.ts](../../core/runtime/admission.ts)、[../../scheduler-engine/admission/run-admission.ts](../../scheduler-engine/admission/run-admission.ts)。
 
 ### budget-settings.ts
 
@@ -71,7 +71,7 @@ class N_src_backend_main_settings_budget_settings_ts_BudgetSettings["BudgetSetti
 N_src_backend_main_settings_budget_settings_ts ..> N_src_backend_main_settings_budget_settings_ts_BudgetSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/budget/scope-budget.ts](../../core/budget/scope-budget.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/budget/scope-budget.ts](../../core/budget/scope-budget.ts)。
 
 ### web-settings.ts
 
@@ -93,7 +93,7 @@ class N_src_backend_main_settings_web_settings_ts_WebSettings["WebSettings"] {
 N_src_backend_main_settings_web_settings_ts ..> N_src_backend_main_settings_web_settings_ts_WebSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/foundation/files/index.ts](../../core/foundation/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/connectors/web-tools.ts](../../core/connectors/web-tools.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/connectors/web-tools.ts](../../core/connectors/web-tools.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)。
 
 
 ## 子目录导航
@@ -142,6 +142,6 @@ MainAgentSettings 为每个工作区的 cbim:main 保存唯一选型，复用自
 
 ## 机制与业务分离
 
-`WebSettings` / `BudgetSettings` / `AdmissionSettings` 各自拥有 `core/utility` 的 `SerialQueue`；一次保存失败向该调用者抛出，队列继续受理后续操作。`backend/core/foundation/files` 提供同目录临时文件替换，版本校验、密钥加解密、字段兼容和默认策略仍由各设置类决定。队列不跨实例或跨进程互斥，也不提供事务回滚。
+`WebSettings` / `BudgetSettings` / `AdmissionSettings` 各自拥有 `core/utility` 的 `SerialQueue`；一次保存失败向该调用者抛出，队列继续受理后续操作。`core/platform/node/files` 提供同目录临时文件替换，版本校验、密钥加解密、字段兼容和默认策略仍由各设置类决定。队列不跨实例或跨进程互斥，也不提供事务回滚。
 
 模块单元直接创建设置服务与临时目录，不加载 Application；IPC 契约与应用装配验证独立保留，避免保存规则的修改迫使单元夹具启动完整应用。

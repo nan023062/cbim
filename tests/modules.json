@@ -363,13 +363,8 @@
         "src/backend/core/models/"
       ],
       "tests": {
-        "unit": [
-          "tests/model-catalog.test.ts"
-        ],
-        "contract": [
-          "tests/engine-configuration.test.ts",
-          "tests/provider-connections.test.ts"
-        ],
+        "unit": [],
+        "contract": [],
         "integration": []
       }
     },
@@ -522,7 +517,9 @@
         "unit": [
           "tests/model-request-budget-usage.test.ts"
         ],
-        "contract": [],
+        "contract": [
+          "tests/model-capacity-sdk.test.ts"
+        ],
         "integration": []
       }
     },
@@ -600,10 +597,7 @@
         "src/backend/main/models/"
       ],
       "tests": {
-        "unit": [
-          "tests/llm.test.ts",
-          "tests/owner-model-configuration.test.ts"
-        ],
+        "unit": [],
         "contract": [],
         "integration": []
       }
@@ -888,18 +882,6 @@
       "tests": {
         "unit": [
           "tests/ipc-preload.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      }
-    },
-    "foundations/files": {
-      "roots": [
-        "src/backend/core/foundation/files/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/unit/foundations/files.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1312,6 +1294,66 @@
       "tests": {
         "unit": [
           "tests/unit/foundations/utility/digest.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/models": {
+      "roots": [
+        "src/logic/models/index.ts",
+        "src/logic/models/catalog.ts",
+        "src/logic/models/config.ts",
+        "src/logic/models/engine.ts",
+        "src/logic/models/provider-connections.ts",
+        "src/logic/models/provider-presets.ts",
+        "src/logic/models/ports.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/model-catalog.test.ts",
+          "tests/unit/logic/models/provider-connections.test.ts"
+        ],
+        "contract": [
+          "tests/engine-configuration.test.ts",
+          "tests/provider-connections.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "logic/models/service": {
+      "roots": [
+        "src/logic/models/service/",
+        "src/logic/models/index.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/llm.test.ts",
+          "tests/owner-model-configuration.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "core/platform/node/files": {
+      "roots": [
+        "src/core/platform/node/files/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/files.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "core/errors": {
+      "roots": [
+        "src/core/errors.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/core/errors.test.ts"
         ],
         "contract": [],
         "integration": []

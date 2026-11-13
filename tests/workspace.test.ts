@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request,moduleFiles} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {exists,readJson} from '../src/backend/core/foundation/files';
+import {exists,readJson} from '../src/core/platform/node/files';
 import {json} from '../src/backend/core/foundation/serialization';
 import {Workspace} from '../src/backend/main/workspace/workspace';
 import {KernelLock} from '../src/backend/main/platform/locking';

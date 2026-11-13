@@ -5,7 +5,7 @@
  */
 import {fail} from '../../core/foundation/errors';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../core/execution/conversation-binding';
-import {agentModelSelectionSchema} from '../../core/models/engine';
+import {agentModelSelectionSchema} from '../../../logic/models';
 import {data} from '../../core/knowledge/read-models';
 import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {TaskSpec} from '../../core/tasks/types';

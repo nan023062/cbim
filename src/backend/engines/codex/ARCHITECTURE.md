@@ -112,7 +112,7 @@ class N_src_backend_engines_codex_engine_ts_external_AgentEngine["AgentEngine (�
 N_src_backend_engines_codex_engine_ts_external_AgentEngine <|.. N_src_backend_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### model-proxy.ts
 
@@ -124,7 +124,7 @@ class N_src_backend_engines_codex_model_proxy_ts["model-proxy.ts"] {
 }
 ```
 
-直接依赖：[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../transport/request-budget-usage.ts](../transport/request-budget-usage.ts)、[tools.ts](tools.ts)。
+直接依赖：[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../transport/request-budget-usage.ts](../transport/request-budget-usage.ts)、[tools.ts](tools.ts)。
 
 ### rpc.ts
 

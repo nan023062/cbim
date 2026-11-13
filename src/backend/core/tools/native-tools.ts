@@ -5,7 +5,7 @@
  * 预检按所选引擎裁剪真实能力；Codex 通过宿主复用 Pi 文件/命令操作，Claude Code 不提供独立 ls，不能以 Pi 清单承诺该能力。
  */
 import type {RunToolDescriptor} from './policy/tool-policy';
-import type {LoopEngine} from '../models/engine';
+import type {LoopEngine} from '../../../logic/models';
 
 const definitions:Readonly<Record<string,RunToolDescriptor>>={read:{effects:['read'],native:true},grep:{effects:['read'],native:true},find:{effects:['read'],native:true},ls:{effects:['read'],native:true},bash:{effects:['command'],native:true},write:{effects:['business-write'],native:true},edit:{effects:['business-write'],native:true}};
 /** 返回独立的描述，调用方不能改变后续运行的注册分类。 */

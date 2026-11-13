@@ -45,7 +45,7 @@ class N_src_backend_scheduler_engine_budget_model_request_budget_service_ts_Mode
 N_src_backend_scheduler_engine_budget_model_request_budget_service_ts ..> N_src_backend_scheduler_engine_budget_model_request_budget_service_ts_ModelRequestBudgetService : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/budget/model-request-budget-storage.ts](../../core/budget/model-request-budget-storage.ts)、[../../core/budget/model-request-budget.ts](../../core/budget/model-request-budget.ts)、[../../core/budget/model-request-budget-rules.ts](../../core/budget/model-request-budget-rules.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)。
+直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/budget/model-request-budget-storage.ts](../../core/budget/model-request-budget-storage.ts)、[../../core/budget/model-request-budget.ts](../../core/budget/model-request-budget.ts)、[../../core/budget/model-request-budget-rules.ts](../../core/budget/model-request-budget-rules.ts)、[../../../logic/models/index.ts](../../../logic/models/index.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../../core/team/workspace-member-rules.ts](../../core/team/workspace-member-rules.ts)。
 
 ### scope-budget-service.ts
 

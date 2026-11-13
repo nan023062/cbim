@@ -182,7 +182,7 @@ class N_src_backend_main_main_ts["main.ts"] {
 - [ipc/](ipc/ARCHITECTURE.md)：应用 action 路由；等待资料独立导入/目录/取消入口不启动模型，受理只读保存快照。队列插入传递原expectedRunId，由调度拒绝缺失、过期及停止。公开准入游标读取和版本化设置，不开放许可领取/撤销。报告、核实和业务重规划保持独立；启动额度不足明确未受理，桌面发送方在 Electron 接入处核验。 人工提交参数不接受 actor，保存不启动模型；查询保留历史身份。 161项应用操作按业务组装配，request统一保留关闭/受理前错误码后解析，实际处理器受响应映射约束。 dispatch.ownerInspect 只读核原任务并返回当前观察；正式派发必须显式绑定主周期。 dispatch.commandReport 固定原工作区、主根、运行和调用，桌面与模型共用同一只读服务。 五项影响观察／处置／原回执／历史／关联入口相互分开，查询不启动新任务；保存只接受本机显式决定。 四个文件报告/补偿入口固定原调用或原命令；actor 由桌面入口注入，查询不启动文件操作，补偿不得改变目标路径或内容。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识仓库文件、事务、缓存及对象写入实现。与 Core 的规则/存储端口单向连接，物理写入和授权语义不因目录迁移变化。
 - [materials/](materials/ARCHITECTURE.md)：聊天输入、附件与引用材料的本机采集/持久化；保存的快照不自动证明当前来源有效。
-- [models/](models/ARCHITECTURE.md)：模型配置、密钥保护、认证与参数迁移。持有本机配置和凭据，公开能力契约位于 Core/models。
+- [models/](models/ARCHITECTURE.md)：仅保留主 Agent 设置及工作区 revision 校验；模型配置服务已迁至 logic/models/service，通过其公开入口使用配置短锁。
 - [platform/](platform/ARCHITECTURE.md)：平台实现按职责分区：isolation 处理受限进程及恢复，files 处理受控文件操作；锁、网络等其他平台能力仍在本层。不是一个业务领域。 Paths 拒绝更新资源/引擎缓存及其别名作为业务工程。
 - [registry/](registry/ARCHITECTURE.md)：岗位、来源与责任登记的应用服务；协调知识、文件实现和 Core 的规则，不拥有正式运行准入。
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。 本地资源库不能指向签名程序缓存，避免数据编辑入口改变受管代码。

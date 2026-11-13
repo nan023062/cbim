@@ -13,7 +13,7 @@ import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';
 import type {Paths} from '../platform/paths';
 import type {MainAgentSettings} from '../models/main-agent-settings';
-import type {LlmProfiles} from '../models/llm-profiles';
+import type {LlmProfiles} from '../../../logic/models/service';
 import type {ResourceRepositories} from '../resources/resource-repository';
 import type {RepositoryConnections} from '../resources/repository-connections';
 import type {GitHubFeedback} from '../feedback/github-feedback';

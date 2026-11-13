@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-按运行环境隔离基础实现；当前只有 Node 摘要，不预建无实现的能力。共享 utility 不依赖平台实现。
+按运行环境隔离基础实现；当前 Node 提供摘要与单文件 I/O，便携 Core 不依赖平台实现。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -25,7 +25,7 @@ class N_src_core_platform_node["node/"] {
 
 ## 子目录导航
 
-- [node/](node/ARCHITECTURE.md)：Node 专属摘要公开入口 digest.ts，仅以 node:crypto 计算 SHA-256；字段选择、序列化、权限与验签由业务负责。前端、桥接客户端及便携 Core 不得依赖此目录。
+- [node/](node/ARCHITECTURE.md)：Node 专属摘要及文件能力分别从 digest.ts 与 files/index.ts 公开；不决定业务字段、路径权限或事务。浏览器与便携入口禁止加载本目录。
 
 [返回上层](../ARCHITECTURE.md)。
 

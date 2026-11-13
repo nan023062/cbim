@@ -5,7 +5,39 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 const temporary:string[]=[];
-const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:'src/backend/core/foundation/'+target;
+test.each([
+  ['src/backend/main/assembly/app.ts','src/logic/models/service/index.ts',true],
+  ['src/backend/core/team/example.ts','src/logic/models/index.ts',true],
+  ['src/backend/engines/example.ts','src/logic/models/index.ts',true],
+  ['src/backend/scheduler-engine/context/example.ts','src/logic/models/index.ts',true],
+  ['src/bridge/contracts/models.ts','src/logic/models/index.ts',true],
+  ['src/bridge/contracts/other.ts','src/logic/models/index.ts',false],
+  ['src/bridge/contracts/models.ts','src/logic/models/service/index.ts',false],
+  ['src/bridge/client/models.ts','src/logic/models/index.ts',false],
+  ['src/frontend/settings/models.ts','src/logic/models/index.ts',false],
+  ['src/backend/engines/example.ts','src/logic/models/service/index.ts',false],
+  ['src/backend/scheduler-engine/context/example.ts','src/logic/models/service/index.ts',false],
+  ['src/backend/main/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
+  ['src/backend/main/assembly/app.ts','src/logic/models/config.ts',false],
+  ['src/backend/main/assembly/app.ts','src/logic/tasks/index.ts',false],
+  ['src/logic/models/index.ts','src/logic/models/service/index.ts',false],
+  ['src/logic/models/config.ts','src/backend/core/foundation/errors.ts',false],
+  ['src/logic/models/service/llm-profiles.ts','src/bridge/contracts/models.ts',false],
+] as const)('模型迁移入口 %s → %s 许可为 %s',(from,to,allowed)=>{
+  const relative=path.posix.relative(path.posix.dirname(from),to);
+  const name=from==='src/bridge/contracts/models.ts'?'LoopEngine':'Value';
+  const result=audit({[from]:`import type {${name}} from '${relative.startsWith('.')?relative:'./'+relative}';`,[to]:`export type ${name}=string;`});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+test.each(['src/logic/models/index.ts','src/logic/models/extra.ts'])('纯模型文件 %s 不得引入平台或第三方 SDK',file=>{
+  for(const spec of ['node:fs','electron','@anthropic-ai/claude-agent-sdk'])expect(audit({[file]:`import '${spec}';`}).ok).toBe(false);
+});
+test.each(["export * from '../../logic/models';","export type {ResolvedLlm} from '../../logic/models';","export type {SecretCipher as PublicCipher} from '../../logic/models';"])('桥接模型兼容出口拒绝扩散：%s',source=>{
+  const result=audit({'src/bridge/contracts/models.ts':source,'src/logic/models/index.ts':'export interface ResolvedLlm {} export interface SecretCipher {}'});
+  expect(result.unresolved).toEqual([]);
+  expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'model-bridge-export'}));
+});
+const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:target.startsWith('files/')?'src/core/platform/node/'+target:'src/backend/core/foundation/'+target;
 test.each([
   ['src/view/tasks/model.ts','src/core/utility/index.ts',true],
   ['src/frontend/foundations/utility/json.ts','src/core/utility/index.ts',true],

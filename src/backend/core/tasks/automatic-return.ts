@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {fail} from '../foundation/errors';
 import type {GraphSnapshot} from './graph-types';
 import {sameGoalValue} from './scope-goal';
-import {loopEngineSchema} from '../models/engine';
+import {loopEngineSchema} from '../../../logic/models';
 
 const id=z.string().min(1).max(512),digest=z.string().regex(/^[a-f0-9]{64}$/);
 export const automaticReturnSchema=z.object({mainRunId:id,taskIds:z.array(id).min(1).max(100).refine(ids=>new Set(ids).size===ids.length),sourceLogHash:digest,modelHash:digest,recordedAt:z.string().datetime(),options:z.object({engine:loopEngineSchema.optional(),collaborationMode:z.enum(['auto','team']).optional(),provider:id,model:id,profileId:id,permission:z.enum(['read','ask','execute']),allowNativeExecution:z.boolean(),turnTimeoutMs:z.number().positive().optional()}).strict()}).strict();

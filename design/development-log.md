@@ -1,3 +1,13 @@
+## 2026-11-13：CI 按变更分流、耗时均衡与公共检查去重
+
+- 来源：用户授权三项 CI 优化并要求一次真实 CI 验证效果，独立工单 [#68](https://github.com/nan023062/cbim/issues/68)。基线 `bff94f9bdb2914b26e668ef819d0e0493f571a94`，原工作区网页读取、架构与任务图修改保留，使用独立检出。本步只改开发验证，不修改产品运行逻辑、分支保护或发布新客户端。
+- 分流：PR 依据 base/head 的 merge-base 差异，解析 NUL 分隔状态并同时检查重命名/复制的新旧路径。仅 README、发布记录与官网静态文件白名单可走轻量；业务资料、配置、空/未知差异一律完整。轻量核对空白及新增本地链接，涉及官网运行原 14 场景。新增范围与入口说明见 [CI 验证说明](task/ci-validation.md)。
+- 分片：Vitest 从真实发现全集按历史耗时确定性分配四片，保持 fileParallelism=false 和原超时。权重来自两轮已通过 CI，435 个已有文件均保留；新/改名测试自动以默认耗时纳入。每片输出发现全集和分配清单，汇总 job 对照实际执行报告核验无遗漏、无重复。未知权重不是跳过条件。
+- 去重：公共类型/架构/品牌/官网检查独立一次，与四片并行；各 runner 自身的依赖复制、Electron 身份和临时路径检查仍分别执行。固定汇总严格区分所选路径、预期跳过与异常跳过；手动诊断保留独立名称。网站预览使用随机回环端口及自有子进程 IPC 回执，避免误测其他正在运行的预览实例。
+- 本地验证：`pnpm exec vitest run tests/ci-validation.test.mjs --reporter=dot` 最终 34 用例通过；同文件 `--shard=1/1` 通过，证明真实 Vitest 分片入口接入。`pnpm typecheck` 通过；`CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ node scripts/ci-website-smoke.mjs` 14 场景通过、0 页面错误。两份 YAML 解析、git diff --check 及三个宿主入口/引用的一致性检查通过。没有 src 变化，不生成源码类图；原架构检查仍在真实 CI 执行。
+- 补充核实：Vitest list --filesOnly 枚举 436 文件，但该入口不调用分片；最初尝试读分片清单得到 ENOENT，未把枚举误计为执行证据，改用真实 `run --shard=1/1` 与 CI 产物校验。仅验证相关控制逻辑，本地不运行产品全量；真实完整 CI 的精确提交、全部用例覆盖与前后耗时追加到 #68/对应 PR，避免为结果回填再跑同一全量。
+- 维护范围：同步 AGENTS 验证范围、开发/发布说明三入口及发布 runbook。后续调整从 ci-scope.mjs 白名单、ci-test-shards.ts 分配策略、ci-test-coverage.mjs 覆盖核对入手；状态汇总与实际执行均不因优化而放宽。
+
 ## 2026-11-13：C 0.1.15 / R4 公开升级通过与官网收尾
 
 - 来源：用户明确要求提交 PR 并发布；[产品 PR #66](https://github.com/nan023062/cbim/pull/66) 已正常合并为 `b00f6928c7e110ec204326d9cceaaf228d6ec74f`，完整树等同冻结 source `ae6deee959cec22db2daff8abc75aa90439e7825`。完整四片 CI [43386158632](https://github.com/nan023062/cbim/actions/runs/43386158632) 为 435 文件 / 2966 通过 / 0 失败 / 2 跳过；跳过均因 runner 缺真实历史 EXE，未新增 skip。

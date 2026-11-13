@@ -1,0 +1,21 @@
+name: Install locked CI dependencies
+description: Reuse Node/pnpm and bounded copy-install policy in Windows validation jobs
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: '22.19.0'
+        cache: pnpm
+    - name: Install locked dependencies
+      shell: pwsh
+      run: |
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+          pnpm install --frozen-lockfile --package-import-method=copy
+          $installCode = $LASTEXITCODE
+          if ($installCode -eq 0) { exit 0 }
+          if ($attempt -eq 3) { exit $installCode }
+          Write-Warning "Dependency installation failed ($installCode); retry $attempt/2."
+          Start-Sleep -Seconds (10 * $attempt)
+        }

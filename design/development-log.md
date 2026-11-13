@@ -1,3 +1,12 @@
+## 2026-11-13：utility 按数据与问题类别合并文件
+
+- 用户直接指定本轮整理：工具函数与数据结构按类别内聚，不采用一函数一文件；开放 Issue #65 与本步无关，未推进其状态。核对基线 `9cccc94e` 的 utility 全部实现、公开出口、依赖白名单、消费者契约测试和现行 AI 工作流，范围为文件组织，不扩展业务行为。
+- utility 从 10 个源码文件合并为 6 个：`json.ts` 收拢格式化、严格解析、键排序；`async.ts` 收拢实例串行队列和在途集合；`strings.ts` 承载文本分帧；`bytes.ts` 承载有界字节流收集；`index.ts` 保持通用公开导出；`node.ts` 直接提供 SHA-256 并隔离 Node 依赖。删除旧私有路径，消费者导入和状态归属保持不变。
+- 文件边界按类别组织，算法契约和实例状态仍独立：JSON 排序策略与严格解析不隐式组合；Promise 快照不代替物理退出；字符串与字节计量保持分离。现有单元套件继续按具体行为职责拆分，不因源码合并而混合测试。后续同类能力优先进入已有类别，明确的变化原因、环境或契约差异才驱动新文件。
+- 同步全部受影响源码文件头与关键接口说明、utility CONTRACT、utility 与 foundations 两份 ARCHITECTURE、生成器目录定位、依赖白名单及对应私有路径回归。开发、架构治理、架构维护三个 Skill 的三宿主共 9 个入口一致，本地引用有效；工作流明确禁止机械的一函数一文件。
+- 选取依据：公开 API 未变，验证 utility 各行为及真实消费者组合；依赖文件列表改变，验证分层检测器。`pnpm test:module --module foundations/utility --kind all`：13 文件/52 项通过；`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`：2 文件/32 项通过。额外用 TypeScript AST 打印去注释后的声明，与基线逐项比较，12 个声明实现完全一致。
+- `pnpm typecheck`、`pnpm check:architecture`（91 目录/709 源码样式，1430 扫描文件/7101 含类型依赖，0 环/违规）、`pnpm check:test-modules`（462 文件：123 unit、152 contract、187 integration）及 diff 空白检查通过。未运行全仓回归、桌面、构建或发布验收；本步独立本地提交，未推送或发布。
+
 ## 2026-11-13：合并远端 CI 与取消修复，收齐本地变动
 
 - 用户授权提交/push 全部改动；任务历史视图已独立提交 `d342c05e`。正常合并远端 develop `9e3f4d49`，保留本地网页/基础库/测试模块化成果和远端 CI 分流、分片计时与覆盖核对、#70 取消修复回归；不强推或改写远端历史。

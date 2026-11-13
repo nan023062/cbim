@@ -1,12 +1,15 @@
 # 通用算法与数据结构
 
-本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。每项能力独立实现、具名导出，不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
+本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 
 ## 入口与真实消费者
 
 - `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
 - `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
-- `serial-queue.ts`、`in-flight.ts`、`line-framer.ts`、`json-order.ts`、`json-text.ts`、`digest.ts`、`bounded-bytes.ts`、`strict-json.ts` 是私有实现，消费者只导入上述公开入口。
+- `json.ts`：JSON 格式化、严格解析及键排序，按 JSON 数据类别合并；各算法保留自己的输入输出和失败契约，不隐式串联。
+- `async.ts`：SerialQueue 和 InFlightOperations，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
+- `strings.ts`：字符串处理，当前承载 LF 增量分帧；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
+- 上述四个类别文件是私有实现，消费者只导入公开入口。`node.ts` 直接实现 SHA-256，保持 Node 依赖隔离，不额外建立只有一项算法的转发层。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
@@ -57,6 +60,6 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 
 ### 扩展入口
 
-新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。功能按职责拆文件，公共入口只做导出；通用入口不得导入 Node 入口。
+新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。优先放入既有的 JSON、异步、字符串或字节类别，不按函数数量拆文件；只有出现不同变化原因、运行环境或明确独立契约边界时再拆分。类别合并不合并实例状态，也不统一不同协议的算法语义；通用入口不得导入 Node 入口。
 
 模块单元在 `tests/unit/foundations/utility/`，按队列、集合、分帧、键排序、格式化、摘要、严格 JSON、字节流分别验证；Core 指纹/名称/字节/错误兼容、流消费业务映射及 RPC 策略另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP/RPC、取消/排空、资料快照、知识校验、版本冲突和原指纹规则。

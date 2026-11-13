@@ -16,7 +16,7 @@ test('foundations is independent even for type dependencies; Main consumes only 
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
-test.each([['files','text-files','file-foundations'],['utility','serial-queue','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
+test.each([['files','text-files','file-foundations'],['utility','async','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
   const entry=`src/foundations/${capability}/index.ts`,inner=`src/foundations/${capability}/${implementation}.ts`;
   expect(audit({[entry]:'export const value=1;','src/backend/core/example.ts':`import {value} from '../../foundations/${capability}';`}).ok).toBe(true);
   const reverse=audit({[entry]:"import type {Value} from '../../backend/core/example';",'src/backend/core/example.ts':'export interface Value {}'});
@@ -33,10 +33,8 @@ function audit(files:Record<string,string>){
 test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
   const result=audit({'src/foundations/utility/index.ts':"export {sha256} from './node';",'src/foundations/utility/node.ts':"export const sha256=()=>'';"});
   expect(result.violations).not.toEqual([]);
-  const direct=audit({'src/foundations/utility/json-text.ts':"import {createHash} from 'node:crypto';"});
+  const direct=audit({'src/foundations/utility/json.ts':"import {createHash} from 'node:crypto';"});
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
-  const privateDigest=audit({'src/foundations/utility/digest.ts':'export const value=1;','src/backend/main/example.ts':"import {value} from '../../foundations/utility/digest';"});
-  expect(privateDigest.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'utility-node-foundations'}));
 });
 test('Updater 只组合 utility 通用入口，不能借基础层依赖其他方案或 Node 入口',()=>{
   expect(audit({'src/backend/updater/a.ts':"import {value} from '../../foundations/utility';",'src/foundations/utility/index.ts':'export const value=1;'}).ok).toBe(true);
@@ -260,7 +258,7 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
 
 test('engines may use portable utility but not other foundation capabilities',()=>{
   const from='src/backend/engines/pi/rpc.ts';
-  for(const target of ['utility/index.ts','utility/node.ts','utility/line-framer.ts','files/index.ts','web/index.ts']){
+  for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','files/index.ts','web/index.ts']){
     const to='src/foundations/'+target,relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }

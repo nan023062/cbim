@@ -1,9 +1,8 @@
 /**
- * 作用定位：有界收集 Web ReadableStream 的字节，不发起 HTTP 或解释内容。
- * 设计原因：统一字节上限和 reader 生命周期；显式取消挂起读取，不依赖 fetch 继续转发信号。
- * 职责边界：拥有本次 reader 锁与监听，不拥有底层连接；取消不等待任意底层 cancel Promise 完成。
+ * 作用定位：字节处理工具，当前提供传入 Web ReadableStream 的有界收集。
+ * 设计原因：按字节处理类别维护大小限制和 reader 生命周期；不发起网络请求或解释内容。
+ * 职责边界：只拥有本次 reader，不拥有底层连接；取消不等待不合作的底层 cancel Promise 完成。
  */
-
 /** 流超过调用者给定字节上限；业务错误码、重试及显示文案由消费者决定。 */
 export class ByteLimitError extends RangeError {
   constructor(readonly maxBytes:number){super('Byte stream exceeds limit');this.name='ByteLimitError'}

@@ -6,7 +6,7 @@ import ts from 'typescript';
 
 const scope={
   "src/foundations/files": "Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。",
-  "src/foundations/utility": "通用算法与数据结构：严格 JSON、文本格式化、有界字节流、实例串行队列及 Node 独立入口的 SHA-256；不发起文件/网络访问，不拥有业务身份、事务或权限。 键排序的比较器与字段规则由消费者指定；InFlightOperations 只等 Promise 快照，LineFramer 只拆 LF 帧，业务生命周期和协议留在适配器。",
+  "src/foundations/utility": "通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列及在途集合；strings.ts 提供文本分帧；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。",
   "src/foundations": "独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。能力按独立契约和生命周期组织。",
   "src/foundations/web": "独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。",
   "src/backend/bootstrap": "固定冷壳入口：先验证同 C 的签名资源集合，再放行候选访问原 profile；独立选择日志、单实例、失败恢复及按需引擎下载由冷壳持有。计算式 main.js 装载保留可审计的源码依赖边。",

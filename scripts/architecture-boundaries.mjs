@@ -6,11 +6,11 @@ export const logicalBoundaries = [
     dependencies:[],external:['node:fs/promises','node:path','node:crypto'],
   },
   {
-    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts','src/foundations/utility/strict-json.ts','src/foundations/utility/bounded-bytes.ts','src/foundations/utility/json-order.ts','src/foundations/utility/in-flight.ts','src/foundations/utility/line-framer.ts'],public:['src/foundations/utility/index.ts'],
+    id:'utility-foundations',files:['src/foundations/utility/index.ts','src/foundations/utility/json.ts','src/foundations/utility/async.ts','src/foundations/utility/strings.ts','src/foundations/utility/bytes.ts'],public:['src/foundations/utility/index.ts'],
     dependencies:[],external:['jsonc-parser'],
   },
   {
-    id:'utility-node-foundations',files:['src/foundations/utility/node.ts','src/foundations/utility/digest.ts'],public:['src/foundations/utility/node.ts'],
+    id:'utility-node-foundations',files:['src/foundations/utility/node.ts'],public:['src/foundations/utility/node.ts'],
     dependencies:[],external:['node:crypto'],
   },
   {

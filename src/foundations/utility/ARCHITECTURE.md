@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-通用算法与数据结构：严格 JSON、文本格式化、有界字节流、实例串行队列及 Node 独立入口的 SHA-256；不发起文件/网络访问，不拥有业务身份、事务或权限。 键排序的比较器与字段规则由消费者指定；InFlightOperations 只等 Promise 快照，LineFramer 只拆 LF 帧，业务生命周期和协议留在适配器。
+通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列及在途集合；strings.ts 提供文本分帧；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,24 +10,43 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [bounded-bytes.ts](bounded-bytes.ts) | 有界收集 Web ReadableStream 的字节，不发起 HTTP 或解释内容。 |
-| [digest.ts](digest.ts) | Node 环境的 SHA-256 摘要算法，无文件、网络或业务状态。 |
-| [in-flight.ts](in-flight.ts) | 实例内跟踪已开始的 Promise，供消费者等待当前在途操作快照。 |
+| [async.ts](async.ts) | 异步执行工具，提供实例内串行队列和在途 Promise 集合。 |
+| [bytes.ts](bytes.ts) | 字节处理工具，当前提供传入 Web ReadableStream 的有界收集。 |
 | [index.ts](index.ts) | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
-| [json-order.ts](json-order.ts) | 递归复制 JSON 形状的值并排列对象键，不序列化、不计算指纹。 |
-| [json-text.ts](json-text.ts) | 将给定数据格式化为两空格缩进、末尾换行的 JSON 文本。 |
-| [line-framer.ts](line-framer.ts) | 把已解码文本按 LF 拆帧，保留未终止尾部并按调用方规则限制单帧。 |
-| [node.ts](node.ts) | utility 需要 Node 标准库的独立公开入口。 |
-| [serial-queue.ts](serial-queue.ts) | utility 的实例级串行执行结构，按提交顺序执行，同一队列最多执行一个任务。 |
-| [strict-json.ts](strict-json.ts) | 严格 JSON 语法及重复键检查，无领域错误码、Schema 或 I/O。 |
+| [json.ts](json.ts) | JSON 数据处理工具，集中提供格式化、严格解析和递归键排序。 |
+| [node.ts](node.ts) | utility 的 Node 专属公开入口，当前提供 SHA-256 摘要。 |
+| [strings.ts](strings.ts) | 字符串处理工具，当前提供已解码文本的 LF 增量分帧。 |
 
 ## 架构类图
 
-### bounded-bytes.ts
+### async.ts
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+class N_src_foundations_utility_async_ts["async.ts"] {
+  <<module>>
+}
+class N_src_foundations_utility_async_ts_SerialQueue["SerialQueue"] {
+  +run()
+  +drain()
+  -tail
+}
+N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_SerialQueue : 声明
+class N_src_foundations_utility_async_ts_InFlightOperations["InFlightOperations"] {
+  +track()
+  +size
+  +drain()
+  -pending
+}
+N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_InFlightOperations : 声明
+```
+
+
+### bytes.ts
+
+```mermaid
+classDiagram
+class N_src_foundations_utility_bytes_ts["bytes.ts"] {
   <<module>>
   +readBoundedBytes()
 }
@@ -35,45 +54,17 @@ class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+class N_src_foundations_utility_bytes_ts["bytes.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_bounded_bytes_ts_ByteLimitError["ByteLimitError"] {
+class N_src_foundations_utility_bytes_ts_ByteLimitError["ByteLimitError"] {
   +maxBytes
 }
-N_src_foundations_utility_bounded_bytes_ts ..> N_src_foundations_utility_bounded_bytes_ts_ByteLimitError : 声明
-class N_src_foundations_utility_bounded_bytes_ts_external_RangeError["RangeError (外部契约)"] {
+N_src_foundations_utility_bytes_ts ..> N_src_foundations_utility_bytes_ts_ByteLimitError : 声明
+class N_src_foundations_utility_bytes_ts_external_RangeError["RangeError (外部契约)"] {
   <<external>>
 }
-N_src_foundations_utility_bounded_bytes_ts_external_RangeError <|-- N_src_foundations_utility_bounded_bytes_ts_ByteLimitError
-```
-
-
-### digest.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_digest_ts["digest.ts"] {
-  <<module>>
-  +sha256()
-}
-```
-
-
-### in-flight.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_in_flight_ts["in-flight.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_in_flight_ts_InFlightOperations["InFlightOperations"] {
-  +track()
-  +size
-  +drain()
-  -pending
-}
-N_src_foundations_utility_in_flight_ts ..> N_src_foundations_utility_in_flight_ts_InFlightOperations : 声明
+N_src_foundations_utility_bytes_ts_external_RangeError <|-- N_src_foundations_utility_bytes_ts_ByteLimitError
 ```
 
 
@@ -85,62 +76,40 @@ class N_src_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[json-text.ts](json-text.ts)、[serial-queue.ts](serial-queue.ts)、[bounded-bytes.ts](bounded-bytes.ts)、[strict-json.ts](strict-json.ts)、[json-order.ts](json-order.ts)、[in-flight.ts](in-flight.ts)、[line-framer.ts](line-framer.ts)。
+直接依赖：[json.ts](json.ts)、[async.ts](async.ts)、[bytes.ts](bytes.ts)、[strings.ts](strings.ts)。
 
-### json-order.ts
+### json.ts
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_json_order_ts["json-order.ts"] {
+class N_src_foundations_utility_json_ts["json.ts"] {
   <<module>>
+  +parseStrictJson()
+  +formatJson()
   +orderJsonValue()
 }
 ```
 
 ```mermaid
 classDiagram
-class N_src_foundations_utility_json_order_ts["json-order.ts"] {
+class N_src_foundations_utility_json_ts["json.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_json_order_ts_JsonKeyOrder["JsonKeyOrder"] {
+class N_src_foundations_utility_json_ts_StrictJsonError["StrictJsonError"] {
+  +reason
+  +key
+}
+N_src_foundations_utility_json_ts ..> N_src_foundations_utility_json_ts_StrictJsonError : 声明
+class N_src_foundations_utility_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
+  <<external>>
+}
+N_src_foundations_utility_json_ts_external_SyntaxError <|-- N_src_foundations_utility_json_ts_StrictJsonError
+class N_src_foundations_utility_json_ts_JsonKeyOrder["JsonKeyOrder"] {
   <<interface>>
   +compareKeys
   +omitUndefinedProperties
 }
-N_src_foundations_utility_json_order_ts ..> N_src_foundations_utility_json_order_ts_JsonKeyOrder : 声明
-```
-
-
-### json-text.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_json_text_ts["json-text.ts"] {
-  <<module>>
-  +formatJson()
-}
-```
-
-
-### line-framer.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_line_framer_ts["line-framer.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_line_framer_ts_LineFramePolicy["LineFramePolicy"] {
-  <<interface>>
-  +checkLine
-  +checkRemainder
-}
-N_src_foundations_utility_line_framer_ts ..> N_src_foundations_utility_line_framer_ts_LineFramePolicy : 声明
-class N_src_foundations_utility_line_framer_ts_LineFramer["LineFramer"] {
-  +push()
-  -policy
-  -remainder
-}
-N_src_foundations_utility_line_framer_ts ..> N_src_foundations_utility_line_framer_ts_LineFramer : 声明
+N_src_foundations_utility_json_ts ..> N_src_foundations_utility_json_ts_JsonKeyOrder : 声明
 ```
 
 
@@ -150,50 +119,30 @@ N_src_foundations_utility_line_framer_ts ..> N_src_foundations_utility_line_fram
 classDiagram
 class N_src_foundations_utility_node_ts["node.ts"] {
   <<module>>
-}
-```
-直接依赖：[digest.ts](digest.ts)。
-
-### serial-queue.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_serial_queue_ts["serial-queue.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_serial_queue_ts_SerialQueue["SerialQueue"] {
-  +run()
-  +drain()
-  -tail
-}
-N_src_foundations_utility_serial_queue_ts ..> N_src_foundations_utility_serial_queue_ts_SerialQueue : 声明
-```
-
-
-### strict-json.ts
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
-  <<module>>
-  +parseStrictJson()
+  +sha256()
 }
 ```
 
+
+### strings.ts
+
 ```mermaid
 classDiagram
-class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
+class N_src_foundations_utility_strings_ts["strings.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_strict_json_ts_StrictJsonError["StrictJsonError"] {
-  +reason
-  +key
+class N_src_foundations_utility_strings_ts_LineFramePolicy["LineFramePolicy"] {
+  <<interface>>
+  +checkLine
+  +checkRemainder
 }
-N_src_foundations_utility_strict_json_ts ..> N_src_foundations_utility_strict_json_ts_StrictJsonError : 声明
-class N_src_foundations_utility_strict_json_ts_external_SyntaxError["SyntaxError (外部契约)"] {
-  <<external>>
+N_src_foundations_utility_strings_ts ..> N_src_foundations_utility_strings_ts_LineFramePolicy : 声明
+class N_src_foundations_utility_strings_ts_LineFramer["LineFramer"] {
+  +push()
+  -policy
+  -remainder
 }
-N_src_foundations_utility_strict_json_ts_external_SyntaxError <|-- N_src_foundations_utility_strict_json_ts_StrictJsonError
+N_src_foundations_utility_strings_ts ..> N_src_foundations_utility_strings_ts_LineFramer : 声明
 ```
 
 
@@ -204,48 +153,22 @@ classDiagram
 class N_src_foundations_utility_index_ts["index.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_json_text_ts["json-text.ts"] {
+class N_src_foundations_utility_json_ts["json.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_serial_queue_ts["serial-queue.ts"] {
+class N_src_foundations_utility_async_ts["async.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_bounded_bytes_ts["bounded-bytes.ts"] {
+class N_src_foundations_utility_bytes_ts["bytes.ts"] {
   <<module>>
 }
-class N_src_foundations_utility_strict_json_ts["strict-json.ts"] {
+class N_src_foundations_utility_strings_ts["strings.ts"] {
   <<module>>
 }
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_text_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_serial_queue_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_bounded_bytes_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_strict_json_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_foundations_utility_index_ts["index.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_json_order_ts["json-order.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_in_flight_ts["in-flight.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_line_framer_ts["line-framer.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_node_ts["node.ts"] {
-  <<module>>
-}
-class N_src_foundations_utility_digest_ts["digest.ts"] {
-  <<module>>
-}
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_order_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_in_flight_ts : 导入依赖
-N_src_foundations_utility_index_ts ..> N_src_foundations_utility_line_framer_ts : 导入依赖
-N_src_foundations_utility_node_ts ..> N_src_foundations_utility_digest_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_json_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_async_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_bytes_ts : 导入依赖
+N_src_foundations_utility_index_ts ..> N_src_foundations_utility_strings_ts : 导入依赖
 ```
 
 
@@ -263,13 +186,16 @@ N_src_foundations_utility_node_ts ..> N_src_foundations_utility_digest_ts : 导�
 
 # 通用算法与数据结构
 
-本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。每项能力独立实现、具名导出，不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
+本模块提供领域无关的数据处理算法、传入字节流的有界消费及实例内执行结构，不依赖 Core、Main、Scheduler、Bridge、Frontend 或其他 foundations 能力。工具函数与数据结构按数据类别和问题种类内聚组织，具名导出，不采用一函数一文件，也不建立万能 Utility 类、全局实例或服务定位器。不发起文件/网络访问，不拥有平台进程、权限和业务事务；流消费者只接管调用者传入流的 reader。
 
 ## 入口与真实消费者
 
 - `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
 - `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
-- `serial-queue.ts`、`in-flight.ts`、`line-framer.ts`、`json-order.ts`、`json-text.ts`、`digest.ts`、`bounded-bytes.ts`、`strict-json.ts` 是私有实现，消费者只导入上述公开入口。
+- `json.ts`：JSON 格式化、严格解析及键排序，按 JSON 数据类别合并；各算法保留自己的输入输出和失败契约，不隐式串联。
+- `async.ts`：SerialQueue 和 InFlightOperations，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
+- `strings.ts`：字符串处理，当前承载 LF 增量分帧；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
+- 上述四个类别文件是私有实现，消费者只导入公开入口。`node.ts` 直接实现 SHA-256，保持 Node 依赖隔离，不额外建立只有一项算法的转发层。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
@@ -320,6 +246,6 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 
 ### 扩展入口
 
-新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。功能按职责拆文件，公共入口只做导出；通用入口不得导入 Node 入口。
+新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。优先放入既有的 JSON、异步、字符串或字节类别，不按函数数量拆文件；只有出现不同变化原因、运行环境或明确独立契约边界时再拆分。类别合并不合并实例状态，也不统一不同协议的算法语义；通用入口不得导入 Node 入口。
 
 模块单元在 `tests/unit/foundations/utility/`，按队列、集合、分帧、键排序、格式化、摘要、严格 JSON、字节流分别验证；Core 指纹/名称/字节/错误兼容、流消费业务映射及 RPC 策略另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP/RPC、取消/排空、资料快照、知识校验、版本冲突和原指纹规则。

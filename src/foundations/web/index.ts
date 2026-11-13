@@ -4,7 +4,8 @@
  */
 export {WebPageReader} from './page-reader';
 export {PublicHttp,publicUrl,publicAddress} from './public-http';
+export {openBrowserProxy,type BrowserProxyTransport} from './browser-proxy';
 export type {PublicHttpTransport,PublicHttpResponse,PublicHttpBytes} from './public-http';
 export {htmlMarkdown,truncateParagraphs} from './web-content';
 export type {BrowserReader,BrowserPage} from './browser-reader';
-export type {PageReadInput} from './contracts';
+export type {PageReadInput,BrowserRobotsPolicy} from './contracts';

@@ -12,7 +12,7 @@
 | --- | --- |
 | [admission-settings.ts](admission-settings.ts) | 持久化应用级并发上限，并在工作区装配前恢复准入策略。 |
 | [budget-settings.ts](budget-settings.ts) | 可靠保存新目标的额度及显式逐请求模式，供调度器创建周期时冻结，缺省模式保留原软限额语义。 |
-| [web-settings.ts](web-settings.ts) | 版本化保存 Brave 搜索开关及加密凭据，桌面只取得摘要。 |
+| [web-settings.ts](web-settings.ts) | 版本化保存浏览器 robots 策略、Brave 搜索开关及加密凭据，桌面只取得摘要。 |
 
 ## 架构类图
 
@@ -110,7 +110,9 @@ N_src_backend_main_settings_web_settings_ts ..> N_src_backend_main_settings_web_
 
 ### Brave 搜索配置
 
-WebSettings 使用 revision 校验并串行原子保存开关与系统加密密钥；无安全加密端口时拒绝保存/使用密钥，不明文回退。移除密钥同时关闭搜索，读取只返回 hasKey。主进程网络适配器是 resolve 的唯一生产消费者；配置修改不触发搜索或模型请求。
+WebSettings 使用 revision 校验并串行原子保存浏览器 robots 策略、搜索开关与系统加密密钥；无安全加密端口时拒绝保存/使用密钥，不明文回退。移除密钥同时关闭搜索，密钥读取只返回 hasKey。主进程网络适配器是 resolve 的唯一生产消费者；配置修改不触发搜索或模型请求。
+
+browserRobotsPolicy 为 allow/respect；新配置和缺少字段的旧文件默认 allow。旧客户端保存省略此字段时保留当前值，不重置为默认。策略不依赖 Brave 密钥或安全存储；WebService 每次读取捕获已保存策略，正在执行的读取不被中途改写。
 
 # 本机设置持久化边界
 

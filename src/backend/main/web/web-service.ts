@@ -13,16 +13,17 @@ export class WebService implements WebToolsPort {
   private readonly pages:WebPageReader;
   private nextSearchAt=0;
   constructor(
-    private readonly settings:Pick<WebSettings,'resolve'>,
+    private readonly settings:Pick<WebSettings,'resolve'> & Partial<Pick<WebSettings,'read'>>,
     private readonly client:Pick<PublicHttp,'read'>=new PublicHttp(undefined,'CBIMBot/0.1'),
     private readonly timing:{now():number;wait(ms:number,signal:AbortSignal):Promise<void>;interval:number}={now:()=>Date.now(),wait:(ms,signal)=>delay(ms,undefined,{signal}),interval:1000},
     browser?:BrowserReader,
   ){
     this.pages=new WebPageReader(client,timing,browser,'CBIMBot/0.1');
   }
-  /** 基础类库负责静态/浏览器路径，业务层统一标记来源不可信，工具协议保持兼容。 */
+  /** 每次读取捕获已保存策略；基础类库按策略分隔缓存，搜索开关不影响正文读取。 */
   async fetch(raw:Parameters<WebToolsPort['fetch']>[0],signal:AbortSignal){
-    const page=await this.pages.fetch(webFetchInput.parse(raw),signal);
+    const browserRobotsPolicy=this.settings.read?.().browserRobotsPolicy??'allow';
+    const page=await this.pages.fetch(webFetchInput.parse(raw),signal,{browserRobotsPolicy});
     return {...page,untrusted:true as const};
   }
   private async pace(_url:URL,signal:AbortSignal){

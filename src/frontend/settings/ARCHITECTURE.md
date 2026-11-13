@@ -19,7 +19,7 @@
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
 | [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按引擎连接测试。 |
 | [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
-| [WebSettings.tsx](WebSettings.tsx) | 桌面网页搜索配置，保存 Brave 开关与密钥。 |
+| [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
 
 ## 架构类图
 
@@ -259,7 +259,7 @@ N_src_frontend_settings_SettingsView_tsx ..> N_src_frontend_settings_GitHubFeedb
 
 ### 网页与搜索
 
-WebSettings 显示 Brave Search API 开关与密码输入；明确查询词发送给供应商。保存成功清空输入，移除密钥同时关闭；无安全存储时禁填。版本冲突刷新摘要，保留未成功保存的输入；不提供密钥读取或测试搜索自动调用。
+WebSettings 显示浏览器 robots 策略（默认允许读正文、可选遵守规则）、Brave Search API 开关与密码输入；明确查询词发送给供应商。策略不依赖搜索密钥，可在安全存储不可用时保存。保存成功清空密钥输入，移除密钥同时关闭搜索；无安全存储时禁填密钥。版本冲突刷新配置摘要，保留未成功保存的密钥输入；不提供密钥读取或测试搜索自动调用。
 
 # 设置界面
 

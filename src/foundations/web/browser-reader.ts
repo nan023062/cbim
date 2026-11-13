@@ -9,7 +9,7 @@ export interface BrowserPage {
   /** 浏览器采集已达到内部上限；服务再次按用户 maxChars 截断时不能丢失此事实。 */
   truncated:boolean;
 }
-/** 匿名读取独占临时会话，必须响应取消并释放窗口；authorize 核实所有 HTTP 资源的 robots，文档额外节流。 */
+/** 匿名读取独占临时会话；authorize 逐资源应用宿主捕获的访问策略，文档额外节流。取消须释放窗口和连接。 */
 export interface BrowserReader {
   read(url:string,signal:AbortSignal,authorize:(url:string,signal:AbortSignal,document?:boolean)=>Promise<void>):Promise<BrowserPage>;
 }

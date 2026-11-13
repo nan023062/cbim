@@ -1,6 +1,6 @@
 ### 公开网页工具
 
-`web-tools.ts` 固定 cbim_web_fetch/url/maxChars 与 cbim_web_search/query/count，严格拒绝多余字段。正文上限 20000 Unicode 字符，默认12000；搜索默认5条、最多10条，只返回标题、URL、摘要。结果标记 untrusted；资料不是指令或验收证据。设置只公开版本、Brave、开关、是否有密钥与安全存储状态。
+`web-tools.ts` 固定 cbim_web_fetch/url/maxChars 与 cbim_web_search/query/count，严格拒绝多余字段。正文上限 20000 Unicode 字符，默认12000；搜索默认5条、最多10条，只返回标题、URL、摘要。结果标记 untrusted；资料不是指令或验收证据。设置公开版本、Brave、开关、是否有密钥、安全存储状态及 browserRobotsPolicy（allow/respect）；策略仅允许设置入口修改，不属于模型工具输入。配置输入策略可省略以兼容旧客户端，实际缺省与持久化由 Main/settings 管理。
 
 ### GitHub 反馈纯协议
 

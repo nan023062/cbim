@@ -24,7 +24,7 @@ export function publicUrl(value:string):URL {
   url.hash='';return url;
 }
 export interface PublicHttpResponse {status:number;headers:http.IncomingHttpHeaders;body:string}
-/** 浏览器资源保留二进制；仍经过同一 DNS 固定与体积边界，不把图片或脚本当 UTF-8 正文解码。 */
+/** 原始资源保留二进制；同样受 DNS 固定与体积限制，不预先当作 UTF-8 正文解码。 */
 export interface PublicHttpBytes {status:number;headers:http.IncomingHttpHeaders;body:Buffer}
 /** 测试端口只由可信装配提供，不属于 IPC 或模型参数。lookup 返回全部地址，request 必须遵守传入 lookup。 */
 export interface PublicHttpTransport {
@@ -40,7 +40,7 @@ export class PublicHttp {
     try{return {...response,body:new TextDecoder('utf-8',{fatal:true}).decode(response.body)}}
     catch{throw Error('WEB_CONTENT: 响应编码无效或不受支持')}
   }
-  /** 可信浏览器适配可提高单资源上限至 8 MiB；不接收页面的 Cookie、Authorization 或写请求。 */
+  /** 可信调用者可设置请求头与至多 8 MiB 的资源上限；仅 GET，不自动读取宿主 Cookie 或登录态。 */
   async readBytes(raw:string,signal:AbortSignal,options:{headers?:Record<string,string>;maxBytes?:number}={}):Promise<PublicHttpBytes>{
     if(options.maxBytes!==undefined&&(!Number.isSafeInteger(options.maxBytes)||options.maxBytes<1))throw Error('WEB_SIZE: 资源字节上限必须为正整数');
     const byteLimit=Math.min(8*limit,Math.max(1,options.maxBytes??limit));

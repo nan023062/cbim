@@ -1,3 +1,16 @@
+## 2026-11-13：浏览器 robots 可配置与 Saltline 实站读取
+
+- 来源：用户直接要求“浏览器访问的 robots 策略改成可配置，默认允许读正文，Saltline 实站要能读通”。基线 `61bc5d76`；本轮查询开放 Issues 为 #65、#68，未发现对应新工单，沿已关闭 #39 的能力增量实施，不重开或对外回填。原任务历史折叠前端工作保留，不纳入本次提交。
+- S1–S4 / C3 / L3：策略值属于产品设置，WebSettings 持久化并通过既有 IPC/界面公开；WebService 每次调用捕获值，基础读取器只接收 allow/respect 契约。foundations 仍只依赖自身、标准库和必要第三方库，不反向依赖 Core、Main 或前端。独立网络连接与平台渲染分开，避免为一个站点修改搜索或 Agent 工具协议。
+- S5：设置→网页与搜索增加浏览器 robots 策略，默认 allow，strict 对应 respect。旧配置缺字段默认 allow，旧客户端省略字段保留已保存值；不需要 Brave 密钥或安全存储。静态路径仍遵守 robots；allow 下静态 robots 拒绝也可触发一次浏览器兜底，respect 对浏览器所有资源核实 robots。缓存按策略分隔，正在执行的读取使用捕获值，后续调用使用新配置。
+- 实站根因与调整：解除 robots 限制后，旧 protocol.handle→Node HTTPS 路径仍进入 challenge_redirect 并收到 HTTP 403，补临时 Cookie 未解决，不能据此认定页面私有。最终使用 Chromium 原生网络，经基础类库 openBrowserProxy 固定公网 TCP 地址；CONNECT 不终止 TLS，原生 webRequest 逐资源执行 robots/权限策略。恢复站点当次匿名 Cookie，结束即清理，仍不共享用户登录态、不发送认证头或写请求。禁止内网/保留地址、校验全部 DNS，取消销毁窗口及代理连接。
+- 资源边界：两个匿名槽位、每次 30 秒、32 文档/框架、160 资源/连接，代理累计 32 MiB，连接空闲 15 秒；新原生路径的字节上限计算 HTTPS 隧道字节或 HTTP 响应体，不再声称旧协议转发器的“单个解压资源 8 MiB/8 并行请求”约束。静态 PublicHttp 仍保持原体积规则。仍不自动登录、点击游戏或识别 canvas 像素。
+- S6 定向选择：web-service（31）覆盖原读取/搜索消费者；web-browser-fallback（22）覆盖策略、缓存隔离、取消和一次兜底；web-settings（3）覆盖旧文件迁移、重启、旧客户端保存及实际 IPC；web-tools-pi（1）覆盖真实工具回传；dependencies（25）/layer-boundaries（2）覆盖基础层与公开入口；新增 web-browser-proxy（7）覆盖 HTTP 固定地址、CONNECT 透明传输、混合 DNS 拒绝、取消及累计字节上限。最终 7 文件、91 个不同用例通过，不累计复跑。
+- 实际命令：`pnpm exec vitest run tests/web-browser-proxy.test.ts tests/web-browser-fallback.test.ts tests/web-settings.test.ts tests/web-service.test.ts tests/web-tools-pi.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`；初轮暴露测试参数数组被 it.each 展开及测试直接导入私有实现，修正参数与经公开入口消费后，`pnpm exec vitest run tests/web-browser-proxy.test.ts tests/dependencies.test.ts` 31 项通过；最后新增体积用例以 `pnpm exec vitest run tests/web-browser-proxy.test.ts -t '响应超过累计字节上限'` 通过，其他 6 项仅因选择器未重跑。类型初检修正 HTTP headers 的索引类型后 `pnpm typecheck` 通过。`pnpm check:architecture`：89 目录、702 源码/样式、1387 扫描文件、7018 条依赖，0 环/违规。
+- 真实 Chromium：`node scripts/web-browser-smoke.mjs` 9 项通过，使用生产原生网络与受控代理，仅可信测试 TCP 装配映射夹具；覆盖 JS/跨域 iframe、登录/404 区分、严格 robots 在传输前拒绝、匿名 Cookie 不跨次保留、认证头/写请求/弹窗禁止、取消、私网拒绝、失败复用和静态空正文完整兜底。首轮明文夹具暴露 agent:false 忽略 createConnection，已改为专有 Agent 固定连接并补单元验证，没有放宽公网边界。
+- Saltline 验收：`node scripts/web-browser-smoke.mjs --live-only` 使用实际 WebSettings（默认 allow）→WebService→WebPageReader→ElectronBrowserReader→受控代理。2026-11-13T09:18:52.276Z 返回标题 Saltline，正文含 SALTLINE、Deploy、Mission、操作说明与任务说明，cached=false、untrusted=true、truncated=false。脚本强制同时断言游戏标题与 Deploy，失败退出非零；证据为 `test-results/web-browser-smoke/live.json`，夹具证据为 report.json。不复用 Cindy 浏览器结果冒充 CBIM 验收。
+- S7：同步 foundations/web、Core/connectors、Main/settings/web/ipc、bridge/contracts、frontend/settings 的源码注释、契约和目录类图。review 顺序为 WebSettings/设置 UI → WebService → page-reader 策略捕获及缓存 → electron-browser-reader/browser-proxy 连接/会话生命周期。保护静态解析、搜索凭据、工具输入及公网边界，浏览器网络实现变化留在 foundations 内。未运行全量回归、完整桌面设置点击/打包、安装升级；未推送、合并或发布，不将源码验收说成已安装生效。
+
 ## 2026-11-13：网页浏览器兜底与独立 foundations 基础类库
 
 - 来源：用户明确要求静态抓取失败/正文为空时改用真实浏览器，并补充 foundations 不依赖 Core 或任何其他项目模块。已查询开放 Issues（当时仅 #65），回读已关闭 [#39](https://github.com/nan023062/cbim/issues/39) 的原网页能力与讨论；本步是用户直接授权的增量，不重开旧工单、不创建或回填新 Issue。分析起点 `ae6deee9`，期间独立发布工作合并至 `bff94f9b`；既有任务历史折叠前端改动保留，不纳入本提交。

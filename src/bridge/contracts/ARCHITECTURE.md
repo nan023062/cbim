@@ -1438,9 +1438,9 @@ chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予�
 
 models 公开纯供应商预设和 connectionForEngine/providerSupportsEngine；配置可带 autoDetect 与 alternateConnections，不包含密钥。model-actions 的 models.test 可显式带 engine，返回实际 api/baseUrl/engine；测试只接受已保存配置身份与型号，不接受临时转发地址。未传 engine 保持主接口行为。
 
-### 网页搜索设置
+### 网页与搜索设置
 
-ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；只公开凭据是否存在，不返回密钥。网页执行端口不暴露给渲染进程。
+ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；公开 browserRobotsPolicy（allow/respect），配置输入可省略以兼容旧调用；只公开凭据是否存在，不返回密钥。网页执行与代理端口不暴露给渲染进程。
 
 ### 桌面更新状态
 

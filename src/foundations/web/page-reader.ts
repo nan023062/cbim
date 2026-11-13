@@ -5,7 +5,7 @@
  */
 import robotsParser from 'robots-parser';
 import {setTimeout as delay} from 'node:timers/promises';
-import {pageReadInput,type PageReadInput} from './contracts';
+import {pageReadInput,browserRobotsPolicy,type PageReadInput,type BrowserRobotsPolicy} from './contracts';
 import {PublicHttp,publicUrl,type PublicHttpResponse} from './public-http';
 import {htmlMarkdown,truncateParagraphs} from './web-content';
 import type {BrowserReader} from './browser-reader';
@@ -43,23 +43,26 @@ export class WebPageReader {
     if(entry.rules.isAllowed(url.href,this.userAgent)===false)throw Error('WEB_ROBOTS: 来源 robots 禁止读取该页面');
     return (entry.rules.getCrawlDelay(this.userAgent)??0)*1000;
   }
-  /** 静态阶段最多 30 秒；可恢复失败时桌面最多再读一次浏览器。取消、地址/robots/限流拒绝不兜底。 */
-  async fetch(raw:PageReadInput,signal:AbortSignal){
-    try{return await this.fetchStatic(raw,signal)}catch(error){
+  /** 每次捕获宿主 robots 策略，默认允许浏览器读取。策略分隔缓存；取消、公网和限流边界不变。 */
+  async fetch(raw:PageReadInput,signal:AbortSignal,options:{browserRobotsPolicy?:BrowserRobotsPolicy}={}){
+    const policy=browserRobotsPolicy.parse(options.browserRobotsPolicy??'allow');
+    try{return await this.fetchStatic(raw,signal,policy)}catch(error){
       signal.throwIfAborted();
       const reason=error instanceof Error?error.message:String(error);
-      if(!this.browser||!/^WEB_(NETWORK|DNS|ABORTED|HTTP_4XX|HTTP_5XX|ACCESS|LOGIN|CONTENT_EMPTY|CONTENT|ENCODING|CONTENT_TYPE|BROWSER_REQUIRED):/.test(reason))throw error;
+      const recoverable=/^WEB_(NETWORK|DNS|ABORTED|HTTP_4XX|HTTP_5XX|ACCESS|LOGIN|CONTENT_EMPTY|CONTENT|ENCODING|CONTENT_TYPE|BROWSER_REQUIRED):/.test(reason);
+      if(!this.browser||!(recoverable||policy==='allow'&&reason.startsWith('WEB_ROBOTS:')))throw error;
       const input=pageReadInput.parse(raw),initial=publicUrl(input.url);
       try{
         const page=await this.browser.read(initial.href,signal,async(raw,active,document=true)=>{
-          const url=publicUrl(raw),crawlDelay=await this.allowed(url,active);
+          active.throwIfAborted();
+          const url=publicUrl(raw),crawlDelay=policy==='respect'?await this.allowed(url,active):0;
           if(document)await this.pace(url,active,crawlDelay);
         });
         signal.throwIfAborted();publicUrl(page.url);
         if(!page.markdown.trim())throw Error('WEB_CONTENT_EMPTY: 浏览器未取得可读正文，不能据此认定需要登录');
         const capturedAt=new Date(this.timing.now()).toISOString();
         if(this.pages.size>=30)this.pages.delete(this.pages.keys().next().value!);
-        this.pages.set(initial.href,{...page,capturedAt,expires:this.timing.now()+ttl});
+        this.pages.set(`${policy}:${initial.href}`,{...page,capturedAt,expires:this.timing.now()+ttl});
         const content=truncateParagraphs(page.markdown,input.maxChars??12000);
         return {url:page.url,title:page.title,...content,truncated:page.truncated||content.truncated,capturedAt,cached:false};
       }catch(failure){
@@ -69,8 +72,8 @@ export class WebPageReader {
     }
   }
   /** 静态读取本身不启动浏览器；只有 fetch 的单一出口决定是否兜底，避免循环重试。 */
-  private async fetchStatic(raw:PageReadInput,signal:AbortSignal){
-    const input=pageReadInput.parse(raw),initial=publicUrl(input.url),deadline=AbortSignal.any([signal,AbortSignal.timeout(30000)]),key=initial.href;
+  private async fetchStatic(raw:PageReadInput,signal:AbortSignal,policy:BrowserRobotsPolicy){
+    const input=pageReadInput.parse(raw),initial=publicUrl(input.url),deadline=AbortSignal.any([signal,AbortSignal.timeout(30000)]),key=`${policy}:${initial.href}`;
     deadline.throwIfAborted();const cached=this.pages.get(key);
     if(cached&&cached.expires>this.timing.now()){const {url,title,markdown,capturedAt}=cached,content=truncateParagraphs(markdown,input.maxChars??12000);return {url,title,...content,truncated:cached.truncated||content.truncated,capturedAt,cached:true}}
     let url=initial;

@@ -6,9 +6,9 @@ chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明
 
 settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 LlmProfiles。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
 
-### 搜索设置 IPC
+### 网页设置 IPC
 
-web.settings 返回无密钥摘要；web.configure 用 revision/开关/可选新密钥或 clearKey 显式保存，退出期间拒绝写。没有任意 URL 抓取 IPC，网络仅从可信主 Agent 工具端口进入。
+web.settings 返回无密钥摘要及 browserRobotsPolicy；web.configure 用 revision/开关/可选新密钥或 clearKey 显式保存，可选 allow/respect 策略，省略时保留当前策略，退出期间拒绝写。没有任意 URL 抓取 IPC，网络仅从可信主 Agent 工具端口进入。
 
 ### 桌面软件更新
 

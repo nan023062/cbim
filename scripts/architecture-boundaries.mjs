@@ -3,7 +3,7 @@
 export const logicalBoundaries = [
   {
     id:'web-foundations',
-    files:['src/foundations/web/index.ts','src/foundations/web/contracts.ts','src/foundations/web/browser-reader.ts','src/foundations/web/page-reader.ts','src/foundations/web/public-http.ts','src/foundations/web/web-content.ts','src/foundations/web/electron-browser-reader.ts'],
+    files:['src/foundations/web/index.ts','src/foundations/web/contracts.ts','src/foundations/web/browser-reader.ts','src/foundations/web/page-reader.ts','src/foundations/web/public-http.ts','src/foundations/web/browser-proxy.ts','src/foundations/web/web-content.ts','src/foundations/web/electron-browser-reader.ts'],
     public:['src/foundations/web/index.ts','src/foundations/web/electron-browser-reader.ts'],
     dependencies:[],external:['zod','parse5','robots-parser','ipaddr.js','electron','node:http','node:https','node:dns/promises','node:net','node:zlib','node:timers/promises','node:crypto'],
   },

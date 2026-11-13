@@ -2,6 +2,14 @@ import {expect,test} from 'vitest';
 import {mainAgentId,mainAgentInstructions,mainInstructions,collaborationInstructions} from '../src/backend/scheduler-engine/conversation/main-agent';
 import {loopInstructions} from '../src/backend/scheduler-engine/context/team-workflow';
 
+test.each(['auto','team'] as const)('新主轮 %s 区分原生历史与当前目标，不把原因询问扩大成开发',mode=>{
+  const text=mainInstructions(mode);
+  expect(text).toContain('cbim_workspace_identity 核实当前 workspaceId/instanceId');
+  expect(text).toContain('先 cbim_goal_inspect 核实当前 scopeId');
+  expect(text).toContain('旧计划保留在原周期');
+  expect(text).toContain('用户只问中断原因时先解释');
+});
+
 test('Team 及旧无模式主会话直接执行默认模块，自定义派发保留角色边界',()=>{
   expect(mainAgentId).toBe('cbim:main');
   for(const required of ['当前主会话的唯一调度 Agent','对于业务生产，每个模块未指定自定义 Agent 时默认由你在当前主会话实现','真实业务模块','Team 成员','cbim:executor','cbim_dispatch_task','cbim_dispatch_inspect','结束本轮让调度引擎继续执行','核实真实回执','可靠调度及运行/工具事件'])expect(mainAgentInstructions).toContain(required);

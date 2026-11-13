@@ -1,3 +1,13 @@
+## 2026-11-13：Issue #65 多轮失败的日志核实与确定性修复
+
+- 来源：[Issue #65](https://github.com/nan023062/cbim/issues/65)，开放清单只有此项，基线 `bf63b3a9`。用户确认 Codex 和 Claude Code 均出现问题，并授权只读本地 CBIM 对话日志；读取 webfps 对应运行事件及 dispatch 记录，未修改已安装应用、工作区或会话数据，原始日志与私有诊断未提交仓库。
+- Claude 根因：本地 `9ed3dad6` 运行的 assistant 原文记录 API 400，`cbim_dispatch_cancel` 的 `#/anyOf/0/properties/expectedGraphCursor` 指针失效。`engines/claude/tools.ts` 顶层联合投影前保存原定义图并重定位引用，保留递归与转义指针，不改原领域校验。真实取消工具目录和实际 Claude SDK 发出的本地 HTTP 请求均验证可编译。
+- 原生误拦截：`.cbim_write_probe` 被子串规则误判；两条管道 grep 仅过滤 ls/curl 输出也被当作递归搜索。`main/platform/tool-guard.ts` 按完整路径段判断，已知文件工具仅检查定位字段；仅允许可确认的标准输入 grep，文件参数、递归、重定向及展开仍拒绝。现存链接与显式知识路径保护保留；该规则不是 OS 沙箱。
+- 参数与目标：反馈 Skill 缺身份曾产生原始 Zod 错误；`core/tools/registry.ts` 现返回字段和身份获取入口，不回显正文、不自动填身份。`conversation/main-agent.ts` 指引每轮核实例、继续正式业务先核当前目标。日志证明普通发送开启新 scope，原 plan 未删除；旧版本审阅失败后 goal-repair 已重新规划。此次未改调度状态机，也未降低计划覆盖全部验收条件或人工验收要求。
+- 验证选择：门禁、注册表、角色指引是直接变化单元；知识工具与统一策略覆盖调用方；Claude Schema 与真实 SDK 请求覆盖本次 400 的实际目录路径。`pnpm exec vitest run tests/native-tool-guard.test.ts tests/tool-registry.test.ts tests/agent-role-instructions.test.ts --reporter=dot`：18 通过；`pnpm exec vitest run tests/knowledge-tool-contracts.test.ts tests/unified-tool-policy.test.ts --reporter=dot`：9 通过；`pnpm exec vitest run tests/claude-schema.test.ts --reporter=dot`：2 通过；`pnpm exec vitest run tests/claude-tools.test.ts -t 'real Claude internal tool receives' --reporter=dot`：1 通过、8 未选中。补充 shell 分隔符保护后仅重跑 `tests/native-tool-guard.test.ts`：5 通过。共 30 个不同用例通过，不把重跑计成新增。
+- 同步维护：上述四处源码文件头/关键行为说明、各目录 CONTRACT 与 ARCHITECTURE；`node scripts/source-architecture.mjs` 更新四份，`pnpm check:architecture` 通过，1358 文件、6904 依赖、0 循环/违规。`pnpm typecheck` 首次发现新测试夹具含多余身份字段，按真实 MainToolOutputBinding 修正后复跑通过；对应两个 Schema 用例复跑通过。
+- 验证边界与剩余：未运行全量回归、打包、安装升级、真实供应商请求或人工代码 review。Codex `3c2256e2` 的请求未完整完成没有对应长写入失败证据；后续 3202–12495 字符写入实际成功，不能据此虚构长度阈值。Windows `/tmp` 在 Bash 与原生工具解析到不同盘符，明确 D 盘绝对路径已在原记录成功，本次未改路径适配。Issue 保持开放追踪这些剩余项，不把局部修复报告为整单完成。
+
 ## 2026-11-13：C 0.1.15 / R3 公开与真实升级通过
 
 - 用户追加授权自动提交 PR 并发布。[PR #63](https://github.com/nan023062/cbim/pull/63) 正常合并，冻结源码 `98b7caf9`，merge `e85a81f0`；准确 head 完整 Windows 四片通过：427 文件、2886 通过、0 失败、2 个因缺专用历史 EXE 的既有跳过。

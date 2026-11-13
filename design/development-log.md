@@ -1,3 +1,12 @@
+## 2026-11-14：四层迁移推送与全量回归
+
+- 来源：用户明确要求推送这批迁移提交并执行一次全量回归；延续本会话已授权迁移，无对应迁移 Issue，不扩展到开放的 #65。工作区干净，远端无分歧，将 `de333bf0..eaa85d9d` 共 10 笔提交推送至 `origin/develop`，本地与远端 SHA 均核实为 `eaa85d9d4ef5637608ae50d7af226c4ffa80da01`。
+- 命令：`git push origin develop`；`gh workflow run validate.yml --ref develop -f scope=full`。运行 [Validate CBIM #43458901536](https://github.com/nan023062/cbim/actions/runs/43458901536)，验证提交为上述 `eaa85d9d`，最终结论 success。
+- 四片 Windows 完整执行当前发现的 482 个测试文件：第 1 片 120 文件 / 961 通过；第 2 片 121 文件 / 741 通过；第 3 片 121 文件 / 837 通过 / 1 跳过；第 4 片 120 文件 / 744 通过 / 1 跳过。合计 **3283 通过、0 失败、2 跳过**。两项跳过来自 `owner-execution-legacy.test.ts` 和 `knowledge-source-lifecycle-application.test.ts` 的既有条件：CI 没有对应历史 EXE，不代表这两项历史制品兼容验收通过。
+- CI 中 `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules`、官网构建及浏览器检查全部通过。四片分别执行 `pnpm exec vitest run --shard=<1–4>/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json`，最终汇总验证实际发现、分配与执行全集一致，无遗漏或重复。
+- 下载全部四片报告到本地忽略目录 `test-results/migration-full-43458901536/windows-validation-<1–4>/`，执行 `node scripts/ci-test-coverage.mjs test-results/migration-full-43458901536` 再核对，返回 482 文件 / 3283 通过 / 0 失败 / 2 跳过，发现集摘要 `8ec9b4032222d8b1ecf3bcb32e4bbd4ab48627298b9f5cf801458fcceaec6fc3`。远端报告由该运行的 artifacts 留存。
+- 本次没有产品代码修复；验证记录单独提交。全量回归已完成，未合并到 master、未执行桌面打包或安装升级验收、未发布；保留旧空目录的环境策略限制不影响干净 CI 检出。
+
 ## 2026-11-13：连续迁移第五批／View 与四层规则收尾
 
 - 用户授权连续完成所有迁移，基线 8aa3533c。原 frontend 源码、样式和入口迁入 src/view；182 个受影响源码 AST 比对无实现差异。Core、Logic、Bridge、View 均已落地，旧 backend/frontend/foundations 源码层级不再获准，新旧路径不保留无消费者转发。

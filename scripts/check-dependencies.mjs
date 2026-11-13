@@ -32,10 +32,13 @@ const knowledgeSnapshot='src/backend/core/knowledge/read-models/snapshot.ts';
 const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
+// utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
+const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts'];
 const moduleBoundaries=[
+  {sources:utilityPortable,allow:utilityPortable},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
-  {sources:[foundation],allow:[foundation]},
+  {sources:[foundation],allow:[foundation,'src/foundations/utility/index.ts','src/foundations/utility/node.ts']},
   {sources:[knowledgeTypes],allow:[]},
   {sources:[knowledgeSnapshot],allow:[knowledgeTypes,foundation]},
   {sources:[teamView],allow:[knowledgeTypes,knowledgeSnapshot,foundation]},

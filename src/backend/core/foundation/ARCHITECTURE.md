@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-领域共用错误、序列化、严格 JSON、标识及路径端口。独立文件 I/O 已归 foundations/files；StoragePaths 的可选 protectedRoots 标明安装目录之外的程序缓存，实际路径核验仍归平台。
+领域共用错误、严格 JSON、标识及路径端口；hash/json 兼容名称重导出 utility 唯一算法。独立文件 I/O 已归 foundations/files；StoragePaths 的 protectedRoots 声明额外程序缓存，路径核验仍归平台。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,7 +14,7 @@
 | [identity.ts](identity.ts) | 运行记录路径中任务和执行标识的格式检查。 |
 | [json.ts](json.ts) | 严格 JSON 解析，拒绝重复字段与无效语法。 |
 | [paths.ts](paths.ts) | 工作区身份与受控路径解析端口。 |
-| [serialization.ts](serialization.ts) | 一致的内容哈希与 JSON 序列化。 |
+| [serialization.ts](serialization.ts) | Core 既有 hash/json 名称的兼容适配，算法实现归独立 utility 基础库。 |
 
 ## 架构类图
 
@@ -94,11 +94,9 @@ N_src_backend_core_foundation_paths_ts ..> N_src_backend_core_foundation_paths_t
 classDiagram
 class N_src_backend_core_foundation_serialization_ts["serialization.ts"] {
   <<module>>
-  +hash()
-  +json()
 }
 ```
-
+直接依赖：[../../../foundations/utility/node.ts](../../../foundations/utility/node.ts)、[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
 
 ### 本目录调用边界
 

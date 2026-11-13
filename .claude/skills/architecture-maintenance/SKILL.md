@@ -74,6 +74,8 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 ## 5. 验证后再报告
 
+utility 的类图必须分别表达各算法模块、实例数据结构与通用/Node 公开入口。当前 SerialQueue 归 `src/foundations/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core 的 hash/json 兼容出口仍保留，注明算法只在 utility 实现。
+
 测试也按职责维护：所有单元套件归属一个模块，数据/纯断言/临时目录与 Application 集成夹具分离；不导入其他测试套件，不依赖执行顺序。测试归属在 `tests/modules.json`，不是实时待办。涉及测试增删、导入或夹具变化时运行 `pnpm check:test-modules`；模块单元与跨模块契约/集成分别记录，禁止仅改变分类绕过解耦。该检查可证明登记和静态依赖边界，断言责任及共享状态仍需代码 review。
 
 按 [AGENTS.md 的验证范围](../../../AGENTS.md#日常验证范围) 选择与实际变化相关的检查，不设置每次源码修改必跑的固定套餐：

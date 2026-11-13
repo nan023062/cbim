@@ -4,7 +4,7 @@
  * 设计原因：密钥不进入工具参数、模型上下文或返回值；并发保存以 revision 校验，系统加密不可用时不回退明文。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../../foundations/concurrency';
+import {SerialQueue} from '../../../foundations/utility';
 import {z} from 'zod';
 import {atomic} from '../../../foundations/files';
 import {fail} from '../../core/foundation/errors';

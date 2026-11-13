@@ -893,18 +893,6 @@
         "integration": []
       }
     },
-    "foundations/concurrency": {
-      "roots": [
-        "src/foundations/concurrency/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/unit/foundations/concurrency.test.ts"
-        ],
-        "contract": [],
-        "integration": []
-      }
-    },
     "foundations/files": {
       "roots": [
         "src/foundations/files/"
@@ -1253,6 +1241,22 @@
           "tests/test-modules.test.ts"
         ],
         "contract": [],
+        "integration": []
+      }
+    },
+    "foundations/utility": {
+      "roots": [
+        "src/foundations/utility/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/foundations/utility/digest.test.ts",
+          "tests/unit/foundations/utility/json-text.test.ts",
+          "tests/unit/foundations/utility/serial-queue.test.ts"
+        ],
+        "contract": [
+          "tests/utility-serialization-contract.test.ts"
+        ],
         "integration": []
       }
     }

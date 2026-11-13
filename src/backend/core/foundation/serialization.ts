@@ -1,7 +1,6 @@
 /**
- * 作用定位：一致的内容哈希与 JSON 序列化。
- * 设计原因：知识版本及幂等指纹共用确定格式，不承担物理存储。
+ * 作用定位：Core 既有 hash/json 名称的兼容适配，算法实现归独立 utility 基础库。
+ * 设计原因：知识版本及幂等指纹保留原字节、错误和导入契约；重导出唯一实现，避免全仓消费者同时改名。
  */
-import {createHash} from 'node:crypto';
-export const hash=(value:string|Buffer)=>createHash('sha256').update(value).digest('hex');
-export const json=(v:unknown)=>JSON.stringify(v,null,2)+'\n';
+export {sha256 as hash} from '../../../foundations/utility/node';
+export {formatJson as json} from '../../../foundations/utility';

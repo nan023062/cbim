@@ -46,6 +46,8 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
+需要通用数据处理或实例队列时，先核对 `src/foundations/utility/CONTRACT.md` 与公开入口；算法/数据结构按职责拆实现，Node 能力使用独立入口。业务字段、权限、事务与恢复策略留在消费者；迁移保持原字节和失败语义，兼容出口明确说明是否仍在使用。
+
 所有单元测试按责任模块组织，实施前核实 `tests/modules.json` 中被测模块、unit/contract/integration 分类及夹具依赖。一个单元套件只验证一个模块；不得直接或间接加载完整 Application、导入其他测试套件、依赖测试顺序或遗留状态。纯数据/断言/临时目录与应用装配分别维护。无关责任拆成不同套件；真实跨模块契约及集成覆盖保留，不能靠改分类掩盖耦合。
 
 优先用 `pnpm test:module --module <模块>` 选择单元，实际受影响协作另加 `--kind contract` / `--kind integration`，或使用精确文件/用例选择器。测试增删、归属、导入或夹具变化时同步目录并执行 `pnpm check:test-modules`。CI 检查所有已提交测试；新测试不得遗漏登记。静态依赖通过仍需 review 断言是否围绕同一行为责任，不能声称机器已证明全部语义解耦。

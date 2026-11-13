@@ -6,7 +6,7 @@ import ts from 'typescript';
 
 const scope={
   "src/foundations/files": "Node 单文件 I/O 基础方案：存在探测、JSON 读取、同步后原子替换；路径授权、跨进程锁和业务事务由消费者拥有。",
-  "src/foundations/concurrency": "实例级串行执行基础方案：保证任务顺序并在一次失败后继续；不拥有业务关闭、重试、权限或证据日志失败策略。",
+  "src/foundations/utility": "通用算法与数据结构：JSON 文本格式化、实例级串行队列及独立 Node 入口的 SHA-256；不拥有文件/网络 I/O、业务身份、事务或权限。",
   "src/foundations": "独立基础类库，承载高内聚技术解决方案；只依赖本层、标准库和必要第三方库，不依赖 Core 或任何业务模块。能力按独立契约和生命周期组织。",
   "src/foundations/web": "独立网页读取方案：安全公网 HTTP、正文提取、robots/缓存/限速与可注入浏览器兜底；Node 公共入口不加载 Electron，具体 Chromium 适配有独立入口。",
   "src/backend/bootstrap": "固定冷壳入口：先验证同 C 的签名资源集合，再放行候选访问原 profile；独立选择日志、单实例、失败恢复及按需引擎下载由冷壳持有。计算式 main.js 装载保留可审计的源码依赖边。",
@@ -22,7 +22,7 @@ const scope={
   "src/backend/core/execution/capabilities": "执行模块内部的成员能力组合与受控工具门面。把冻结 Workflow、身份、证据和平台端口投影为可调用能力；不把工具发现或模型完成当作授权与业务验收。",
   "src/backend/core/execution/runtime": "执行模块内部运行机制：回合驱动、事件、工具协调、输出验证与计量。继续依赖领域规则与能力，迁移不拆分运行状态所有权；依赖过密仍是独立治理项。",
   "src/backend/core/file-operations": "受控文件操作和隔离执行的冻结协议、规则与恢复状态。平台副作用经端口实现，不因物理目录聚合改变授权、路径校验或证据效力。",
-  "src/backend/core/foundation": "领域共用错误、序列化、严格 JSON、标识及路径端口。独立文件 I/O 已归 foundations/files；StoragePaths 的可选 protectedRoots 标明安装目录之外的程序缓存，实际路径核验仍归平台。",
+  "src/backend/core/foundation": "领域共用错误、严格 JSON、标识及路径端口；hash/json 兼容名称重导出 utility 唯一算法。独立文件 I/O 已归 foundations/files；StoragePaths 的 protectedRoots 声明额外程序缓存，路径核验仍归平台。",
   "src/backend/core/governance": "模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。",
   "src/backend/core/knowledge": "知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。 read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。",
   "src/backend/core/knowledge/read-models": "知识只读模型边界：snapshot、team、workspace 是私有实现，只通过 index.ts 提供公开查询。类型、领域工程定义与纯基础构成允许依赖；不加载查询编排、文件存储或 SDK。",

@@ -1,3 +1,16 @@
+## 2026-11-13：utility 算法与数据结构基础库，迁入实例串行队列
+
+- 来源与 S1：用户要求创建 `foundations/utility`，并明确将实例级串行执行方案迁入；基线 `2a2dca39`。已核实开放 Issues 当前仅 #65，无对应本片工单，沿直接授权实施，不新增或回填外部 Issue。原任务历史界面并行改动完整保留；未整合远端另一轮 HTTP/CI 改动，本片不修改该请求路径。
+- S2–S4 / C3 / L2：核实 SerialQueue 及五个设置/模型消费者、Core serialization 与知识/证据消费者。utility 归领域无关算法和数据结构，分别实现、具名导出；通用入口无 Node 依赖，Node 摘要单独公开入口。文件、网页、原生进程、权限、事务、业务关闭和失败屏障仍在原模块。未预建无消费者容器，也未统一不同 canonical 排序。
+- S5：SerialQueue 实现与原 2 项测试迁入 utility，WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 改用新公开入口，旧 concurrency 四文件及目录清理。保留队列顺序、调用者失败可见、失败后继续、drain 等待调用时队尾及实例隔离语义。新增 formatJson 与 sha256；Core hash/json 直接重导出唯一实现以保留现有消费者名称，适配出口尚未退役。JSON 缩进/末尾 LF/异常和顶层 undefined 的既有行为、摘要 UTF-8 与字节视图语义均固定，业务字段与指纹规范化仍由调用者决定。
+- S6 选取依据：utility 三类单元验证原语；兼容契约核对旧名称确为同一实现；五个队列消费者覆盖并发版本、保存失败及模型锁；知识和产物证据验证现有字节/指纹消费；依赖与测试检查器覆盖本次规则变更。
+  - `pnpm test:module --module foundations/utility`：3 文件 / 6 项通过。
+  - `pnpm exec vitest run tests/utility-serialization-contract.test.ts tests/budget-settings.test.ts tests/admission-settings.test.ts tests/main-agent-settings.test.ts tests/web-settings.test.ts tests/owner-model-configuration.test.ts tests/rules.test.ts tests/artifact-evidence.test.ts tests/dependencies.test.ts tests/test-modules.test.ts --reporter=dot`：10 文件 / 72 项通过。共 13 文件 / 78 项，不重复累计。
+  - `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：91 目录 / 708 源码样式、1412 扫描文件 / 7043 依赖、0 环/违规；451 测试文件，116 unit / 148 contract / 187 integration。检查包含保留的并行工作，不将其计入本片提交。
+- 资料与流程：更新 utility 文件头、接口、契约/类图，foundations、Core/foundation 与上层 Core、Main/settings/models 的相关类图和契约。AGENTS 与开发/演进/维护三类 Skill 的三个宿主入口同步 utility 归属、环境边界、真实消费者和字节兼容要求；9 份入口一致，本地引用与 diff 空白检查通过。模块目录和检查器移除旧 concurrency 归属；历史记录中的旧路径保留为历史。
+- S7 / 四问：保护原队列与字节算法，机制变化限制在 utility，业务策略保持原服务；只验证以上实际入口及消费者，不扩大全仓。后续同类能力从 utility/CONTRACT → index/node → 独立实现与模块单元修改；不要向统一类添加业务开关。Q5 的 utility 归属为用户明确要求，未新增定时自动化。完整 review 入口是本片相对 `2a2dca39` 的 diff；回退需同时恢复消费者、旧入口及依赖/测试归属，不能保留两份队列实现。
+- 未运行全量回归、桌面、构建/安装/升级或浏览器实站；未推送、合并、发布或对外回填，尚待人工代码 review。
+
 ## 2026-11-13：模块测试目录、CI 门禁与 AI 开发流程同步
 
 - 来源：同轮用户直接授权，前一切片提交 `3d6a091d` 已完成基础能力及实际产品测试拆分。本片不继续扩张产品重构，将单元职责/夹具边界接入现有开发流程与 PR 验证；未创建新的任务系统或定时自动化。

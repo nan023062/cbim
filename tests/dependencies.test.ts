@@ -16,7 +16,7 @@ test('foundations is independent even for type dependencies; Main consumes only 
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
-test.each([['files','text-files','file-foundations'],['concurrency','serial-queue','concurrency-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
+test.each([['files','text-files','file-foundations'],['utility','serial-queue','utility-foundations']])('Core 可组合 %s 公开入口，基础库不能反向引用业务或暴露私有实现',(capability,implementation,boundary)=>{
   const entry=`src/foundations/${capability}/index.ts`,inner=`src/foundations/${capability}/${implementation}.ts`;
   expect(audit({[entry]:'export const value=1;','src/backend/core/example.ts':`import {value} from '../../foundations/${capability}';`}).ok).toBe(true);
   const reverse=audit({[entry]:"import type {Value} from '../../backend/core/example';",'src/backend/core/example.ts':'export interface Value {}'});
@@ -29,6 +29,15 @@ function audit(files:Record<string,string>){
   for(const [name,content] of Object.entries(files)){const file=path.join(root,name);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content)}
   return auditDependencies(root,{externalLoads:[]});
 }
+
+test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
+  const result=audit({'src/foundations/utility/index.ts':"export {sha256} from './node';",'src/foundations/utility/node.ts':"export const sha256=()=>'';"});
+  expect(result.violations).not.toEqual([]);
+  const direct=audit({'src/foundations/utility/json-text.ts':"import {createHash} from 'node:crypto';"});
+  expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
+  const privateDigest=audit({'src/foundations/utility/digest.ts':'export const value=1;','src/backend/main/example.ts':"import {value} from '../../foundations/utility/digest';"});
+  expect(privateDigest.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'utility-node-foundations'}));
+});
 
 test('fixed bootstrap generated loading remains a real source edge and cannot hide cycles or missing code',()=>{
   const load="import {createRequire} from 'node:module'; const loadApplication=createRequire(import.meta.url); loadApplication(entry);";

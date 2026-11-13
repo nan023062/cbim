@@ -6,7 +6,7 @@
  * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
 import fs from 'node:fs/promises';
-import {SerialQueue} from '../../../foundations/concurrency';
+import {SerialQueue} from '../../../foundations/utility';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {engineLabel,loopEngineSchema,type LoopEngine} from '../../core/models/engine';

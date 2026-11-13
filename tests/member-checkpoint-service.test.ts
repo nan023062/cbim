@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
 

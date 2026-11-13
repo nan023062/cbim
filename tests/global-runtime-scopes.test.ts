@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import {fixture} from './helpers';
 import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {projectRuntimeScope} from '../src/logic/runtime/rules/runtime-scope';
 import {runtimeCursorSchema,runtimeScopeSchema,runtimeReadSchema,runtimeSnapshotSchema} from '../src/logic/runtime/rules/runtime-validation';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';

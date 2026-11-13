@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {BudgetSettings,type BudgetSettingsStorage} from '../src/backend/main/settings/budget-settings';
+import {BudgetSettings,type BudgetSettingsStorage} from '../src/logic/budget/settings/budget-settings';
 
 function memory(initial?:string){let value=initial,failWrite=false,writes=0;const storage:BudgetSettingsStorage={read:async()=>{if(value===undefined)throw Object.assign(Error('missing'),{code:'ENOENT'});return value},write:async(_file,next)=>{if(failWrite)throw Error('disk full');writes++;value=next}};return {storage,get value(){return value},get writes(){return writes},set failWrite(v:boolean){failWrite=v}}}
 describe('versioned scope budget settings',()=>{

@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {moduleFiles} from './data/knowledge';
 import {originalKnowledgeWrite} from '../src/logic/knowledge/rules/knowledge-write-input';
-import {observeKnowledgeTransaction} from '../src/backend/main/evidence/knowledge-effect-reader';
+import {observeKnowledgeTransaction} from '../src/logic/evidence/service/knowledge-effect-reader';
 import {artifactRuntimeFixture} from './artifact-runtime-fixture';
 
 it('v2刷新按原版本提交派生索引，重复不写，异参、旧版、陈旧版本和取消均不新建事务',async()=>{

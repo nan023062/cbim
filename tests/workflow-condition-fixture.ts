@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {DispatchMutation,DispatchMessage} from '../src/logic/dispatch/rules/dispatch-storage';

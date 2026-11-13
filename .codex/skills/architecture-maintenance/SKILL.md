@@ -137,3 +137,5 @@ Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分�
 资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包/授权连接按其事务依赖继续迁移。
 
 四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
+
+有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。

@@ -5,6 +5,7 @@ import {builtinModules} from 'node:module';
 import ts from 'typescript';
 import {checkLogicalBoundaries} from './architecture-boundaries.mjs';
 import {isDomainFile,domainPublicEntries} from './logic-domain-entries.mjs';
+import {isService,servicePublicEntries,businessDataEntries} from './logic-service-entries.mjs';
 import {isEngine,isOrchestration,orchestrationRoots,runtimePublicEntries} from './logic-runtime-entries.mjs';
 
 // 检查维护中的代码，而非编译后的 JS；类型边和 re-export 同样构成架构依赖。
@@ -22,7 +23,7 @@ const layers = {
   logic:['logic','core','core/platform/node','core/platform/electron'],
   view:['view','bridge/client','bridge/contracts','core','core/platform/browser'],
   'bridge/client':['bridge/client','bridge/contracts','core','core/platform/browser'],
-  'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node'],
+  'bridge/server':['bridge/server','bridge/contracts','logic','core','core/platform/node','core/platform/electron'],
   foundations:['foundations'],
   'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
   'backend/core':['backend/core','foundations','core','core/platform/node'],'backend/engines':['backend/engines','backend/core','foundations','core'],
@@ -58,7 +59,7 @@ const modelService='src/logic/models/service/index.ts';
 // 迁移期只开放模型的两个具名入口；旧引擎/调度仅可读纯规则，只有宿主装配可加载服务。
 export function allowsModelMigration(from,to){
   if(to===modelPublic)return /^src\/backend\/(core|engines|scheduler-engine|main)\//.test(from)||from==='src/bridge/contracts/models.ts';
-  return to===modelService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
+  return to===modelService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
 }
 const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','connectionForEngine','providerSupportsEngine','DiscoveredModel','engineSupportsApi','engineLabel','engineApi','loopEngineSchema','agentModelSelectionSchema','LoopEngine','AgentModelSelection']);
 // Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
@@ -66,24 +67,26 @@ const webPublic='src/logic/web/index.ts';
 const webService='src/logic/web/service/index.ts';
 const allowsWebMigration=(from,to)=>
   to===webPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/web.ts')||
-  to===webService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'))||
-  from==='src/backend/main/main.ts'&&to==='src/core/platform/electron/web-reader.ts';
+  to===webService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from))||
+  from==='src/bridge/server/main.ts'&&to==='src/core/platform/electron/web-reader.ts';
 // 反馈范围与纯协议由 Logic 拥有，平台服务只向宿主装配开放。
 const feedbackPublic='src/logic/feedback/index.ts';
 const feedbackService='src/logic/feedback/service/index.ts';
 const allowsFeedbackMigration=(from,to)=>
   to===feedbackPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/github-feedback.ts')||
-  to===feedbackService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
+  to===feedbackService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
 const resourcePublic='src/logic/resources/index.ts',resourceService='src/logic/resources/service/index.ts';
-const allowsResourceMigration=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
+const allowsResourceMigration=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/')||isService(from));
 const moduleBoundaries=[
+  // 冷壳只持有更新状态和已验证业务入口，不直接装配普通业务服务。
+  {sources:['src/bridge/server/bootstrap/'],allow:['src/bridge/server/bootstrap/','src/bridge/server/main.ts','src/logic/updates/service/']},
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
   {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/core/utility/index.ts']},
+  {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/core/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},
   {sources:['src/frontend/tasks/'],allow:['src/frontend/tasks/','src/frontend/execution-view/','src/frontend/components/','src/frontend/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/core/errors.ts','src/core/utility/index.ts','src/core/platform/node/digest.ts']},
@@ -94,7 +97,7 @@ const moduleBoundaries=[
   {sources:[businessView],allow:[knowledgeTypes,knowledgeSnapshot,projectRoot,foundation]},
   {sources:['src/logic/knowledge/rules/knowledge-queries.ts'],allow:['src/logic/knowledge/rules/read-models/index.ts',knowledgeTypes,foundation]},
   // 文件索引只实现稳定存储契约；工作区身份、服务和日志读取由 workspace 装配。
-  {sources:['src/backend/main/history/file-store.ts'],allow:[foundation,'src/core/platform/node/files/index.ts','src/logic/team/rules/session-history-storage.ts']},
+  {sources:['src/logic/history/service/file-store.ts'],allow:[foundation,'src/core/platform/node/files/index.ts','src/logic/team/rules/session-history-storage.ts']},
   {sources:['src/logic/budget/rules/model-request-budget-storage.ts'],allow:['src/logic/budget/rules/scope-budget.ts','src/logic/budget/rules/model-request-budget.ts']},
   {sources:['src/logic/execution/rules/engine-tools.ts'],allow:[]},
   {sources:['src/logic/execution/rules/index.ts'],allow:['src/logic/execution/rules/types.ts','src/logic/execution/rules/storage.ts','src/logic/execution/rules/runtime/runtime.ts','src/logic/execution/rules/member-run.ts','src/logic/execution/rules/input-source.ts','src/logic/execution/rules/conversation-binding.ts']},
@@ -124,14 +127,14 @@ export const externalLoads = [
   {file:'src/logic/execution/engines/native-tools.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从冷壳验签固定的 E 目录、旧 pi-runtime 或开发依赖加载 1.5.0 的独立文件/命令操作，不接受模型或工作区给定的模块路径'},
   {file:'src/logic/execution/engines/claude/sdk.ts',expression:'import(pathToFileURL(entry).href)',reason:'仅从固定 CBIM claude-runtime 或开发依赖解析官方 Claude Agent SDK，不接受外部路径'},
   {file:'src/core/platform/node/locking.ts', expression:"requireNative(packagedNative&&fs.existsSync(packagedNative)?packagedNative:'koffi')", reason:'仅从安装包或 node_modules 加载第三方 koffi 原生库'},
-  {file:'src/backend/main/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
-  {file:'src/backend/main/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
-  {file:'src/backend/main/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
+  {file:'src/logic/file-operations/platform/files/controlled-file-win32.ts', expression:'requireNative(koffiPath)', reason:'专用 utility 的私有参数仅由 Main 固定 resources/koffi 或 require.resolve(koffi) 注入；独立 Electron 测试宿主同样使用真实第三方库，不来自模型或桌面 IPC'},
+  {file:'src/logic/file-operations/platform/isolation/isolation-recovery-win32.ts', expression:'requireNative(koffiPath)', reason:'只接受Main私有装配的resources/koffi或require.resolve(koffi)，用于实际原进程/Job/目录核实，不接模型或桌面路径'},
+  {file:'src/logic/file-operations/platform/isolation/isolated-node-win32.ts', expression:'requireNative(koffiPath)', reason:'隔离平台装配固定 resources/koffi 或 require.resolve(koffi)；仅加载第三方原生库，业务请求不能提供该私有参数'},
   {file:'tests/model-capacity-sdk.test.ts', expression:"import(pathToFileURL(path.resolve('node_modules/@earendil-works/pi-ai/dist/api/simple-options.js')).href)", reason:'测试固定版本的第三方 Pi 内部容量函数'},
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
-  {file:'src/backend/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/backend/main/main.ts'},
+  {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/main.ts'},
 ];
 
 /** 返回强连通分量及其中全部依赖边，不遗漏类型环、长环或自引用。 */
@@ -260,10 +263,14 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      const domainMigration=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(/^src\/backend\/(core|main|engines|scheduler-engine)\//.test(e.from)||e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/logic/'));
+      if(a==='logic'&&b==='core/platform/electron')return true;
+      if(e.to.startsWith('src/logic/application/')&&!e.from.startsWith('src/logic/application/')&&!e.from.startsWith('src/bridge/server/'))return true;
+      const domainMigration=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(/^src\/backend\/(core|main|engines|scheduler-engine)\//.test(e.from)||e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/bridge/server/')||e.from.startsWith('src/logic/'));
       const foundationMigration=/^src\/backend\/(engines|scheduler-engine)\//.test(e.from)&&['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(e.to);
-      const runtimeMigration=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/backend/main/')||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
-      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to)||domainMigration||foundationMigration||runtimeMigration;
+      const runtimeMigration=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/backend/main/')||e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
+      const serviceMigration=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
+      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to)||domainMigration||foundationMigration||runtimeMigration||serviceMigration;
+      if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!modelMigration)return true;
       if(isEngine(e.to)&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
       if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&![modelPublic,feedbackPublic].includes(e.to))return true;

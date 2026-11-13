@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';import path from 'node:path';import os from 'node:os';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {createHash} from 'node:crypto';
 import {latestExecutable} from './build-artifact.mjs';
-import type {IsolatedNodeResult} from '../src/backend/main/platform/isolation/isolated-node-protocol';
+import type {IsolatedNodeResult} from '../src/logic/file-operations/platform/isolation/isolated-node-protocol';
 
 // 真实打包EXE以自身Node模式加载打包平台端口；生成的宿主仅用于本机测试，不向产品新增调试IPC。
 const executable=await latestExecutable(),root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-isolation-exe-')),report=path.join(root,'result.json'),host=path.join(root,'host.cjs'),outside=path.join(root,'private.txt');

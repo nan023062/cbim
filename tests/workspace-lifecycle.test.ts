@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {Application} from '../src/backend/main/assembly/application';
+import {Application} from '../src/bridge/server/application';
 import {AutoCollaboration} from '../src/logic/dispatch/runtime/auto-collaboration';
 import {readJson,exists} from '../src/core/platform/node/files';
 

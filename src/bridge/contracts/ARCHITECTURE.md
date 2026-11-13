@@ -18,7 +18,7 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
-| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、后台预下载进度与用户确认重启安装的公开 IPC 数据。 |
+| [desktop-updates.ts](desktop-updates.ts) | 桌面更新的通信类型和版本展示文本。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
@@ -53,7 +53,7 @@
 | [usage.ts](usage.ts) | 向界面公开 Core 的纯执行计量函数及单轮用量类型。 |
 | [web.ts](web.ts) | 迁移期网页设置的具名通信契约出口。 |
 | [workspace-members.ts](workspace-members.ts) | 公开项目岗位登记、预览与原命令回执的数据协议，供 Main IPC 和团队页面核对身份。 |
-| [workspace-view.ts](workspace-view.ts) | 工作区登记与运行视图的公开数据，供 IPC 协议和界面共同引用。 |
+| [workspace-view.ts](workspace-view.ts) | 转接工作区业务公开数据。 |
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
 ## 架构类图
@@ -210,24 +210,6 @@ classDiagram
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_chat_ts_ChatAttachment["ChatAttachment"] {
-  <<interface>>
-  +id
-  +kind
-  +name
-  +source
-  +note
-}
-N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachment : 声明
-class N_src_bridge_contracts_chat_ts_ChatAttachmentPreview["ChatAttachmentPreview"] {
-  <<interface>>
-  +name
-  +source
-  +note
-  +text
-  +image
-}
-N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachmentPreview : 声明
 class N_src_bridge_contracts_chat_ts_ChatMaterialImport["ChatMaterialImport"] {
   <<type>>
 
@@ -235,7 +217,7 @@ class N_src_bridge_contracts_chat_ts_ChatMaterialImport["ChatMaterialImport"] {
 N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatMaterialImport : 声明
 ```
 
-直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)。
+直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/materials/contracts.ts](../../logic/materials/contracts.ts)。
 
 ### command-verification.ts
 
@@ -267,37 +249,7 @@ class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_desktop_updates_ts_DesktopRelease["DesktopRelease"] {
-  <<interface>>
-  +version
-  +tag
-  +notes
-  +publishedAt
-  +delivery
-  +resourceVersion
-}
-N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopRelease : 声明
-class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpdateStatus"] {
-  <<interface>>
-  +currentVersion
-  +currentNotes
-  +enabled
-  +currentResourceVersion
-  +enginePreparations
-  +phase
-  +release
-  +progress
-  +checkedAt
-  +error
-}
-N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus : 声明
-```
-
+直接依赖：[../../logic/updates/contracts.ts](../../logic/updates/contracts.ts)。
 
 ### dispatch.ts
 
@@ -1049,35 +1001,9 @@ class N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput["ImportWork
   +planId
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput : 声明
-class N_src_bridge_contracts_resources_ts_PublishWorkspaceResult["PublishWorkspaceResult"] {
-  <<interface>>
-  +repository
-  +resourceId
-  +warnings
-  +removedBindings
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceResult : 声明
 ```
 
-```mermaid
-classDiagram
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_resources_ts_ImportWorkspacePreview["ImportWorkspacePreview"] {
-  <<type>>
-  +planId
-  +kind
-  +mode
-  +targetRoot
-  +files
-  +warnings
-  +removedBindings
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspacePreview : 声明
-```
-
-直接依赖：[../../logic/resources/index.ts](../../logic/resources/index.ts)、[../../logic/knowledge/rules/portable-package.ts](../../logic/knowledge/rules/portable-package.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)。
+直接依赖：[../../logic/resources/index.ts](../../logic/resources/index.ts)、[../../logic/knowledge/rules/portable-package.ts](../../logic/knowledge/rules/portable-package.ts)、[../../logic/resources/packages/contracts.ts](../../logic/resources/packages/contracts.ts)。
 
 ### runtime.ts
 
@@ -1146,37 +1072,8 @@ classDiagram
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry["WorkspaceEntry"] {
-  <<interface>>
-  +id
-  +path
-  +name
-  +lastOpened
-  +previousIds
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry : 声明
-class N_src_bridge_contracts_workspace_view_ts_Catalog["Catalog"] {
-  <<interface>>
-  +version
-  +entries
-  +recent
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_Catalog : 声明
-class N_src_bridge_contracts_workspace_view_ts_WorkspaceView["WorkspaceView"] {
-  <<interface>>
-  +state
-  +error
-  +tasks
-  +revision
-  +changed
-  +instanceId
-  +knowledgeErrors
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_WorkspaceView : 声明
-N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry <|-- N_src_bridge_contracts_workspace_view_ts_WorkspaceView
 ```
-
-直接依赖：[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)。
+直接依赖：[../../logic/workspace/contracts.ts](../../logic/workspace/contracts.ts)。
 
 ### workspace.ts
 

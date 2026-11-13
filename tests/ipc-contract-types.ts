@@ -1,5 +1,5 @@
 import type {IpcCaller,IpcCall} from '../src/bridge/contracts/ipc-call';
-import type {AgentHistoryQueryPort} from '../src/backend/main/ipc/agent-history';
+import type {AgentHistoryQueryPort} from '../src/bridge/server/ipc/agent-history';
 
 // 只由 tsc 检查，不执行无效 IPC；防止迁移后又通过宽重载逃逸。
 async function assertHistoryContract(call:IpcCaller,port:AgentHistoryQueryPort){

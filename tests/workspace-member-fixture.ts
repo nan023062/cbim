@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {LlmDefinition} from '../src/logic/models';
 import type {WorkspaceMemberChangeInput} from '../src/logic/team/rules/workspace-member';
 import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';

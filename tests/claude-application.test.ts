@@ -8,7 +8,7 @@ import {registerFixtureOwner} from './owner-execution-fixture';
 import {modelRequestBudgetProvider} from './model-request-budget-provider';
 import {budgetScopes} from './scope-budget-fixture';
 import {requestBudgetReportSchema} from '../src/logic/budget/rules/model-request-budget';
-import {NativeSessionFiles} from '../src/backend/main/platform/native-session-files';
+import {NativeSessionFiles} from '../src/logic/execution/platform/native-session-files';
 
 const profile=(baseUrl:string,engine:'pi'|'claude-code')=>({name:'Shared Anthropic',api:'anthropic-messages' as const,baseUrl,auth:'none' as const,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]});
 test('真实主会话切换 Pi → Claude → Pi，各用原生文件并经请求账本结算',async()=>{

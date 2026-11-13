@@ -8,8 +8,8 @@ import {conversationExecutionState} from '../src/frontend/conversation/conversat
 import {SessionTaskView} from '../src/frontend/tasks/SessionTaskView';
 import {scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
 import type {ScopeSummary} from '../src/bridge/contracts/dispatch';
-import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
-import type {ApplicationServices} from '../src/backend/main/ipc/services';
+import {dispatchApplication} from '../src/bridge/server/ipc/dispatch';
+import type {ApplicationServices} from '../src/bridge/server/ipc/services';
 
 const run=():RunSummary=>({task:{workspaceId:'workspace',taskId:'root',root:'/workspace',goal:'主任务',moduleIds:[],acceptance:[],agentId:'cbim:main',mode:'chat'},runId:'run-before',status:'running',acceptance:'not_evaluated',unresolvedTools:[],events:[]});
 const deferred=<T>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve}};

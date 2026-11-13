@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
-import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
-import type {ApplicationServices} from '../src/backend/main/ipc/services';
+import {dispatchApplication} from '../src/bridge/server/ipc/dispatch';
+import type {ApplicationServices} from '../src/bridge/server/ipc/services';
 import {checkedIpcCall,parseIpcRequest} from '../src/bridge/contracts/ipc-call';
 
 it.each([

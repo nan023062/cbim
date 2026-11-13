@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';

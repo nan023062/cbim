@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {RepositoryConnectionPreview,RepositoryConnectionCommit,RepositoryConnectionReceipt,RepositoryConnectionCheck,RepositoryConnectionList} from '../src/logic/connectors/rules/repository-connection';
 import {seedRepositoryConnection,repositoryConnectionFixture as data,repositoryConnectionRunFiles} from './repository-connection-fixture';
 

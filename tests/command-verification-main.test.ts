@@ -5,7 +5,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../src/logic/tools/rules/results';

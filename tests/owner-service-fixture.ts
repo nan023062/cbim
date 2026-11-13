@@ -1,5 +1,5 @@
-import type {Application} from '../src/backend/main/assembly/application';
-import type {Workspace} from '../src/backend/main/workspace/workspace';
+import type {Application} from '../src/bridge/server/application';
+import type {Workspace} from '../src/logic/workspace/service/workspace';
 import {registerFixtureOwner} from './owner-execution-fixture';
 
 /** 服务测试显式采用真实岗位与唯一工作区账本；不修改 seedTeam，不启动模型或改变产品门禁。 */

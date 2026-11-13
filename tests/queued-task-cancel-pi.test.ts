@@ -5,8 +5,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {queuedTaskCancelProvider,queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 import {seedQueuedTaskCancel,queuedTaskCancelRecords} from './queued-task-cancel-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 

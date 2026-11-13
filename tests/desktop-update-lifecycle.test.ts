@@ -1,9 +1,9 @@
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater/desktop-updates';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/logic/updates/service/desktop-updates';
 import {fixture} from './helpers';
 import {moduleFiles,request} from './data/knowledge';
 

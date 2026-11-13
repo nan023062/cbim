@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 import type {ContinuationSourceItem} from '../src/logic/tasks/rules/scope-continuation-attachments';

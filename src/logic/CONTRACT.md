@@ -1,6 +1,6 @@
 # Logic 业务层
 
-Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridge、View 或旧 backend。模型、Web、反馈与资源仓库服务已经迁入；其余领域规则由旧 backend/core 迁入对应业务的 rules 目录，执行身份和工作区路径归 ports。具体引擎已迁入 execution/engines，准入和引擎装配归 execution，其他编排归各业务 runtime/monitoring。宿主服务与桌面入口仍在迁移中。
+Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridge、View 或旧 backend。模型、Web、反馈与资源仓库服务已经迁入；其余领域规则由旧 backend/core 迁入对应业务的 rules 目录，执行身份和工作区路径归 ports。具体引擎已迁入 execution/engines，准入和引擎装配归 execution，其他编排归各业务 runtime/monitoring。有状态服务、存储与业务平台已迁入对应领域；IPC、桌面和冷启动已迁入 Bridge/server。
 
 公开入口按真实消费者登记在 scripts/logic-domain-entries.mjs。规则保留细粒度入口，不通过一个领域总 barrel 同时加载纯契约、运行规则和平台实现；类型依赖同样受无环检查约束。读模型、预算存储端口、引擎工具注册等较窄边界仍限制私有文件访问。
 
@@ -9,3 +9,5 @@ Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridg
 模型/Web/反馈/资源的纯入口与 service 入口分开。Bridge 只暴露需要传输的类型；宿主通过公开服务入口装配，浏览器不能加载 Node/Electron。目录导航见 [类图](ARCHITECTURE.md)。
 
 编排协作与失败恢复约束集中见 [调度契约](SCHEDULING.md)。规则不能加载运行服务；具体引擎只由 execution/assembly 选择，其他编排依赖引擎契约。公开文件登记在 scripts/logic-runtime-entries.mjs，原私有预算边界仍有效。
+
+Application 持有业务生命周期，Bridge 适配器只增加 dispatch。资料、工作区和更新纯类型归 Logic；Electron 系统加密归 Core 独立平台入口，传输和窗口生命周期归 Bridge。旧 backend 源码已全部迁出，前端目录待下一片迁移。业务修改入口见 [边界导航](BOUNDARIES.md)。

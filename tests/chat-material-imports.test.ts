@@ -4,7 +4,7 @@ import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {RemoteRepository} from '../src/logic/resources/service';
 import {hash} from '../src/core/platform/node/serialization';
 import {continuationSourceSnapshotSchema} from '../src/logic/tasks/rules/continuation-source-snapshot';

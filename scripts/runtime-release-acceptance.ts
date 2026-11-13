@@ -6,10 +6,10 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {execFileSync,spawn} from 'node:child_process';
 import {_electron as electron,type ElectronApplication,type Page} from 'playwright-core';
-import {RuntimeStore} from '../src/backend/updater/runtime-store';
-import {RuntimeJournal} from '../src/backend/updater/runtime-journal';
-import {verifyRuntimeManifest,type ColdRuntime} from '../src/backend/updater/runtime-manifest';
-import {selectBootResources} from '../src/backend/bootstrap/selection';
+import {RuntimeStore} from '../src/logic/updates/service/runtime-store';
+import {RuntimeJournal} from '../src/logic/updates/service/runtime-journal';
+import {verifyRuntimeManifest,type ColdRuntime} from '../src/logic/updates/service/runtime-manifest';
+import {selectBootResources} from '../src/bridge/server/bootstrap/selection';
 import type {} from '../src/bridge/contracts/workspace';
 
 async function main(){

@@ -5,7 +5,7 @@ import {expect,it} from 'vitest';
 import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 import type {HumanDecisionKind,HumanDecisionPreview} from '../src/logic/tasks/rules/human-decisions';
 import type {GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import {humanServiceFixture} from './human-decision-service-fixture';
 
 type Fixture=Awaited<ReturnType<typeof humanServiceFixture>>;

@@ -6,7 +6,7 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/logic/execution/rules';
 import {PiEngine} from '../src/logic/execution/engines/pi/engine';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 it('real Pi resumes member results as custom data, then preserves ordinary user follow-ups',async()=>{
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-continuation-pi-')),root=path.join(directory,'workspace'),agentHome=path.join(directory,'pi');

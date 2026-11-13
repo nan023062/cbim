@@ -3,8 +3,8 @@ import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {verifyRuntimeCandidate,verifyPublishedPackage} from './runtime-candidate';
 import {assertFrozenSource} from './runtime-packaging';
-import {downloadRuntimeManifest} from '../src/backend/updater/runtime-download';
-import {verifyRuntimeManifest} from '../src/backend/updater/runtime-manifest';
+import {downloadRuntimeManifest} from '../src/logic/updates/service/runtime-download';
+import {verifyRuntimeManifest} from '../src/logic/updates/service/runtime-manifest';
 
 const repo='nan023062/cbim';
 const gh=(args:string[])=>execFileSync('gh',args,{encoding:'utf8',maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']}).trim();

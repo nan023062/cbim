@@ -8,7 +8,7 @@ import {gzipSync} from 'node:zlib';
 import {ElectronHttpExecutor} from 'electron-updater/out/electronHttpExecutor';
 import type {AppAdapter} from 'electron-updater/out/AppAdapter';
 import type {NsisUpdater} from 'electron-updater';
-import {desktopInstallerName,desktopReleaseBase} from '../src/backend/updater/desktop-releases';
+import {desktopInstallerName,desktopReleaseBase} from '../src/logic/updates/service/desktop-releases';
 
 // 只替换宿主和网络边界；版本解析、差分计划、Range 下载、SHA-512、缓存和全量回退均用真实依赖。
 const state=vi.hoisted(()=>({app:undefined as AppAdapter|undefined,executor:undefined as ElectronHttpExecutor|undefined,updater:undefined as NsisUpdater|undefined}));
@@ -25,7 +25,7 @@ vi.mock('electron-updater',async importOriginal=>{
     quitAndInstall=vi.fn();
   }};
 });
-import {NsisUpdateInstaller} from '../src/backend/updater/nsis-updater';
+import {NsisUpdateInstaller} from '../src/logic/updates/service/nsis-updater';
 
 const oldVersion='0.1.9',newVersion='0.2.0';
 const release={version:newVersion,tag:'desktop-v'+newVersion,notes:'',publishedAt:'2026-11-12T00:00:00Z'};

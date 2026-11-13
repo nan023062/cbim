@@ -1,4 +1,4 @@
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import type {GraphIdentity} from '../src/logic/tasks/rules/graph-types';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {WorkspaceMemberModelSnapshot} from '../src/logic/team/rules/workspace-member';

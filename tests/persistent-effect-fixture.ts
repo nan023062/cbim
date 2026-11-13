@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {setTimeout as delay} from 'node:timers/promises';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {EffectObservationInput} from '../src/logic/tasks/rules/effect-observation';
 import {moduleGovernanceToolsProvider,moduleGovernanceToolsFixture} from './module-governance-tools-provider';

@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {hash} from '../src/core/platform/node/serialization';
 import {dispatchKnowledgeFingerprint} from '../src/logic/tasks/rules/execution-context';
 import type {PreparedDispatchKnowledge} from '../src/logic/tasks/rules/execution-context';

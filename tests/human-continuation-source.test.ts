@@ -6,7 +6,7 @@ import {checkedRunInputSource,type HumanDecisionsSource} from '../src/logic/exec
 import {bridgeExtensionForSource} from '../src/logic/execution/engines/pi/bridge';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 const source=():HumanDecisionsSource=>({kind:'human_decisions',continuationId:'continuation',scopeId:'scope',waitId:'wait',inputRevision:2,decisionRevision:3,decisionIds:['decision-a','decision-b']});
 it('严格人工来源只含固定身份并复制集合，不接受模型权限/正文/actor或畸形版本',()=>{

@@ -3,7 +3,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
 import type {HumanDecisionPreview,HumanDecisionRequest} from '../src/logic/tasks/rules/human-decisions';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
 import {request} from './data/knowledge';

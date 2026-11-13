@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';import path from 'node:path';import os from 'n
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import {RunScopedExecution,type ScopedExecutionPort} from '../src/logic/execution/rules/capabilities/run-scoped-execution';
 import type {EngineContext,AgentEngine} from '../src/logic/execution/rules/types';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {hash} from '../src/core/platform/node/serialization';
 import {artifactBinding as binding,deferred} from './artifact-runtime-fixture';

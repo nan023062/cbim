@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {hash} from '../src/core/platform/node/serialization';
 import {summarizeWorkspaceMember,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberChangeInput,type WorkspaceMemberModelSnapshot} from '../src/logic/team/rules/workspace-member';
 import {workspaceMemberCapabilityHash,workspaceMemberCommand,workspaceMemberHash,workspaceMemberModelHash,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt} from '../src/logic/team/rules/workspace-member-rules';

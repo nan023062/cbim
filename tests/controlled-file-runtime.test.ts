@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';import os from 'node:os';import path from 'nod
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 import {RunControlledFile,type ControlledFileRunPort} from '../src/logic/execution/rules/capabilities/run-controlled-file';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {controlledFileWriteToolName as tool,type ControlledFileWriteApplied} from '../src/logic/file-operations/rules/controlled-file-operation';
 import {controlledFileOperationId} from '../src/logic/file-operations/rules/controlled-file-rules';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';

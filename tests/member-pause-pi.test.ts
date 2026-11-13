@@ -5,8 +5,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {memberPauseProvider,memberPauseData as data} from './member-pause-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from './member-checkpoint-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as const)('durable member pause and explicit continuation through real Pi (%s)',async mode=>{

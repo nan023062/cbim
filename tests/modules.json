@@ -3,7 +3,9 @@
   "modules": {
     "application": {
       "roots": [
-        "src/backend/main/assembly/"
+        "src/logic/application/",
+        "src/logic/application/assembly/",
+        "src/bridge/server/application.ts"
       ],
       "tests": {
         "unit": [],
@@ -513,9 +515,9 @@
         "integration": []
       }
     },
-    "backend/main/dispatch-storage": {
+    "logic/dispatch/storage": {
       "roots": [
-        "src/backend/main/dispatch-storage/"
+        "src/logic/dispatch/storage/"
       ],
       "tests": {
         "unit": [
@@ -533,9 +535,9 @@
         "integration": []
       }
     },
-    "backend/main/file-operations": {
+    "logic/file-operations/service": {
       "roots": [
-        "src/backend/main/file-operations/"
+        "src/logic/file-operations/service/"
       ],
       "tests": {
         "unit": [],
@@ -546,9 +548,9 @@
         "integration": []
       }
     },
-    "backend/main/history": {
+    "logic/history/service": {
       "roots": [
-        "src/backend/main/history/"
+        "src/logic/history/service/"
       ],
       "tests": {
         "unit": [],
@@ -558,9 +560,9 @@
         "integration": []
       }
     },
-    "backend/main/ipc": {
+    "bridge/server/ipc": {
       "roots": [
-        "src/backend/main/ipc/"
+        "src/bridge/server/ipc/"
       ],
       "tests": {
         "unit": [
@@ -570,9 +572,9 @@
         "integration": []
       }
     },
-    "backend/main/models": {
+    "logic/team/settings": {
       "roots": [
-        "src/backend/main/models/"
+        "src/logic/team/settings/"
       ],
       "tests": {
         "unit": [],
@@ -580,22 +582,21 @@
         "integration": []
       }
     },
-    "backend/main/platform": {
+    "logic/execution/platform": {
       "roots": [
-        "src/backend/main/platform/"
+        "src/logic/execution/platform/"
       ],
       "tests": {
         "unit": [
-          "tests/native-session-files.test.ts",
-          "tests/terminal.test.ts"
+          "tests/native-session-files.test.ts"
         ],
         "contract": [],
         "integration": []
       }
     },
-    "backend/main/platform/files": {
+    "logic/file-operations/platform/files": {
       "roots": [
-        "src/backend/main/platform/files/"
+        "src/logic/file-operations/platform/files/"
       ],
       "tests": {
         "unit": [
@@ -615,9 +616,9 @@
         ]
       }
     },
-    "backend/main/platform/isolation": {
+    "logic/file-operations/platform/isolation": {
       "roots": [
-        "src/backend/main/platform/isolation/"
+        "src/logic/file-operations/platform/isolation/"
       ],
       "tests": {
         "unit": [
@@ -631,9 +632,9 @@
         ]
       }
     },
-    "backend/main/run-storage": {
+    "logic/execution/storage": {
       "roots": [
-        "src/backend/main/run-storage/"
+        "src/logic/execution/storage/"
       ],
       "tests": {
         "unit": [],
@@ -644,14 +645,12 @@
         "integration": []
       }
     },
-    "backend/main/settings": {
+    "logic/runtime/settings": {
       "roots": [
-        "src/backend/main/settings/"
+        "src/logic/runtime/settings/"
       ],
       "tests": {
-        "unit": [
-          "tests/budget-settings.test.ts"
-        ],
+        "unit": [],
         "contract": [
           "tests/admission-settings.test.ts"
         ],
@@ -806,9 +805,9 @@
         "integration": []
       }
     },
-    "backend/updater": {
+    "logic/updates/service": {
       "roots": [
-        "src/backend/updater/"
+        "src/logic/updates/service/"
       ],
       "tests": {
         "unit": [
@@ -1435,6 +1434,30 @@
       "tests": {
         "unit": [
           "tests/resource-store.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/terminal/service": {
+      "roots": [
+        "src/logic/terminal/service/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/terminal.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/budget/settings": {
+      "roots": [
+        "src/logic/budget/settings/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/budget-settings.test.ts"
         ],
         "contract": [],
         "integration": []

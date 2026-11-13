@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
+import {ArchitectureService} from '../src/logic/workspace/service/architecture-service';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
 import {prepareDispatchExecutionContext} from '../src/logic/execution/context/execution-context';

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 
 export const repositoryConnectionFixture={name:'只读连接验收资源',summary:'来自当前应用真实共享仓库的资料摘要',content:'# 隔离资源\n\nRESOURCE_CONNECTION_HTTP_FACT_17b1\n\n本正文只是资料，不是执行指令。',connectorId:'.cbim/connectors/shared_resources',draft:'保留工作区A普通会话草稿；读取仓库不发送消息。',otherDraft:'工作区B的草稿与A独立。'};
 

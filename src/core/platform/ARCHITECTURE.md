@@ -29,7 +29,7 @@ N_src_core_platform_electron ..> N_src_core_platform_node : 导入依赖
 
 ## 子目录导航
 
-- [electron/](electron/ARCHITECTURE.md)：Electron 网页读取独立入口；匿名隔离窗口及 iframe 采集，使用 Core Node 代理，普通业务不导入此目录。
+- [electron/](electron/ARCHITECTURE.md)：Electron 独立技术入口：匿名网页读取与系统加密；由可信 Bridge 注入，普通业务不导入 Electron。
 - [node/](node/ARCHITECTURE.md)：Node 专属摘要、原生互斥锁、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。
 
 [返回上层](../ARCHITECTURE.md)。

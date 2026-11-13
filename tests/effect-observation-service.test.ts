@@ -8,7 +8,7 @@ import type {DispatchStore,DispatchCommand,DispatchMutation} from '../src/logic/
 import type {EffectDispositionInput} from '../src/logic/tasks/rules/effect-observation';
 import {projectEffectDispositionMutation} from '../src/logic/tasks/rules/effect-observation-invariants';
 import {EffectObservationService} from '../src/logic/evidence/runtime/effect-observation-service';
-import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
+import {ArtifactFiles,normalizeArtifactPath} from '../src/logic/file-operations/platform/files/artifact-files';
 import {reportFixture,reportIdentity,reportInputs,evidenceFor,reportBinding} from './command-verification-fixture';
 import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
 import {artifactRuntimeFixture,artifactBinding,invoke,seedProgress} from './artifact-runtime-fixture';

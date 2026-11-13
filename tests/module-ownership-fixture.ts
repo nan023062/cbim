@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import {seedWorkspaceMembers,commitWorkspaceMember,workspaceMemberFixture} from './workspace-member-fixture';
 import {moduleFiles,summary} from './data/knowledge';

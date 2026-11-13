@@ -7,7 +7,7 @@ import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import {controlledFileChangeSchema,type ControlledFileChange} from '../src/logic/file-operations/rules/controlled-file-event';
 import {controlledFileReportSchema,fileCompensationPreviewSchema,fileCompensationReceiptSchema,type ControlledFileReportInput,type FileCompensationInput} from '../src/logic/file-operations/rules/controlled-file-operation';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {controlledFileProvider,controlledFileFixture as data,controlledFact,type ControlledFileMode} from './controlled-file-provider';
 import {createControlledHost,holdControlledReadonlyMapping} from './controlled-file-electron-fixture';
 import {additionRecords} from './queued-dependency-addition-fixture';

@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import {knowledgeSourceFixture as data} from './knowledge-source-lifecycle-fixture';
 
 // Test-only separate process: hold precisely after the actual committed knowledge journal and before the real source final write.

@@ -1,3 +1,12 @@
+## 2026-11-13：连续迁移第四批／业务服务、更新与宿主桥接
+
+- 用户已授权连续完成迁移，基线 a54a7c06。94 个旧 Main/Updater/Bootstrap 源文件迁入各领域 service/storage/platform、Logic Application 与 Bridge/server。系统加密归 Core Electron，旧锁转发删除，仍使用唯一 KernelLock。旧 backend 已无维护源码。
+- Application 的状态、构造及全部生命周期实现经 AST 去除 imports/dispatch/接口声明后与原版一致。Bridge 适配器继承业务实例且只补充 dispatch；不覆盖业务方法、不复制状态。其余语法差异仅两个文件的类型导入拆分/别名；附件、工作区、包结果和更新类型归业务，Bridge 具名转接，业务到 Bridge 的反向依赖清零。
+- 保留原权限、事务、共享账本、未知结果、取消和排空；引擎选择、冷壳可见范围、规则到服务与服务到 Application 方向分别检查。实际跨模块公开入口单独登记。终端与预算设置单元归属随真实职责拆开，原集成覆盖保留。构建输入路径与固定输出文件名对应关系已核对，未运行制品或升级验收。
+- pnpm typecheck、pnpm check:architecture（128 目录/733 源码样式，1477 文件/7208 依赖，0 环/违规）、pnpm check:test-modules（482 文件）通过。tests/dependencies.test.ts、tests/layer-boundaries.test.ts、tests/test-modules.test.ts 合计 153 项不同用例通过；迁移时修正模拟输入的相对路径，保留禁向、私有入口和完整应用夹具断言。新增 6 项宿主/生命周期边界回归。
+- pnpm exec vitest run tests/command-evidence-store.test.ts tests/ipc-requests.test.ts tests/native-session-files.test.ts tests/artifact-files.test.ts tests/controlled-namespace-platform.test.ts tests/png-artifact-files.test.ts tests/scoped-execution-platform.test.ts tests/isolated-node.test.ts tests/desktop-updates.test.ts tests/nsis-differential-download.test.ts tests/nsis-updater.test.ts tests/release-http.test.ts tests/update-restart-profile.test.ts tests/terminal.test.ts tests/budget-settings.test.ts tests/dispatch-store.test.ts tests/request-budget-ports.test.ts tests/run-journal-integrity.test.ts tests/agent-history-assembly.test.ts tests/controlled-file-service.test.ts tests/isolated-executions.test.ts tests/runtime-manifest.test.ts tests/runtime-journal.test.ts tests/runtime-store.test.ts tests/runtime-updates.test.ts tests/application-runtime.test.ts tests/chat-inputs.test.ts tests/workspace-packages.test.ts tests/ipc-desktop.test.ts tests/workspace.test.ts tests/knowledge-source-lifecycle-fault.test.ts --reporter=default：31 文件/215 项通过。覆盖受影响模块单元及工作区、知识事务故障、IPC、受控文件、派发存储和更新恢复实际协作；不是全仓回归。测试合计 34 文件/368 项。
+- 注释、类图、业务契约与调度说明、四层设计、三宿主工作流同步；孤立旧目录契约已归回所属模块。Q1 原事实与关闭顺序；Q2 业务生命周期与消息路由拆开；Q3 模块及直接协作验证；Q4 Logic/BOUNDARIES、Application 与 Bridge/server 类图；Q5 无。未运行全仓、完整桌面、构建或安装升级。下一片迁移 View 并清理过渡边界，当前仅本地提交。
+
 ## 2026-11-13: Logic execution and orchestration migration
 
 - Authorized sequential four-layer migration; baseline 02ec6db1. Moved 95 engine/orchestration files into their Logic domains. 110 affected source files compared by TypeScript AST: no implementation differences after import/comment normalization. Kept native protocol, durable identity, permission, recovery, cancellation and build output semantics.

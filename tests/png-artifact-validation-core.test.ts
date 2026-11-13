@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {deflateSync} from 'node:zlib';
-import {decodePngRaster,validatePngArtifact} from '../src/backend/main/platform/files/png-validator';
+import {decodePngRaster,validatePngArtifact} from '../src/logic/file-operations/platform/files/png-validator';
 import {pngImageSchema,pngValidationLimits} from '../src/logic/workspace/rules/png-validation-schema';
 import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-contract';
 import {pngBytes,pngChunk,pngSignature} from './png-validation-data';

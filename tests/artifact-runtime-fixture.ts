@@ -4,13 +4,13 @@ import os from 'node:os';
 import path from 'node:path';
 import {vi} from 'vitest';
 import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type ToolDecision} from '../src/logic/execution/rules';
-import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {ArtifactFiles,normalizeArtifactPath} from '../src/logic/file-operations/platform/files/artifact-files';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {ArtifactCapturePort} from '../src/logic/execution/rules/capabilities/artifact-capture';
 import {jsonToolResult} from '../src/logic/tools/rules/results';
 import type {RuntimeOptions} from '../src/logic/execution/rules/runtime/runtime';
 import type {ValidationFilePort} from '../src/logic/execution/rules/capabilities/run-validation';
-import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
+import {OutputManifestFiles} from '../src/logic/file-operations/platform/files/output-manifest-files';
 import type {OutputManifestCapturePort} from '../src/logic/execution/rules/capabilities/output-manifest-capture';
 import type {ArtifactTransitionRunPort} from '../src/logic/execution/rules/capabilities/run-artifact-transition';
 

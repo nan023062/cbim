@@ -4,7 +4,7 @@ import path from 'node:path';
 import {revisionFixture} from './queued-dependency-revision-fixture';
 import type {DispatchMutation,DispatchCommand} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {ReviseQueuedDependenciesInput} from '../src/logic/tasks/rules/queued-dependency-revision';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
@@ -12,7 +12,7 @@ import {projectCommandReceipt} from '../src/logic/tasks/rules/command-verificati
 import {memberDependencyRevisionHistory} from '../src/frontend/tasks/member-dependency-state';
 import {MemberExecutionManager,type PreparedEngine} from '../src/logic/team/runtime/member-execution';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
 
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}

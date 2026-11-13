@@ -12,7 +12,7 @@
   },
   "scripts": {
     "start": "electron-forge start",
-    "loop": "tsx src/backend/main/commands/loop-cli.ts",
+    "loop": "tsx src/bridge/server/commands/loop-cli.ts",
     "typecheck": "tsc --noEmit",
     "build:brand": "node scripts/build-brand-assets.mjs",
     "check:brand": "node scripts/build-brand-assets.mjs --check",

@@ -77,7 +77,7 @@ export function checkTestModules(root=process.cwd(),options={}){
         if(seen.has(file))errors.push(`Duplicate owner: ${file}`);seen.add(file);entries.push({file,module,kind});
         if(kind!=='unit')continue;
         const dependencies=reachable(file,graph);
-        const assembly=[...dependencies].find(value=>value==='src/backend/main/assembly/application.ts'||value==='tests/helpers.ts');
+        const assembly=[...dependencies].find(value=>value==='src/logic/application/application.ts'||value==='tests/helpers.ts');
         if(assembly)errors.push(`Unit loads application: ${file} -> ${assembly}`);
         const foreign=testSubjects(root,file,report.edges).filter(target=>![...definition.roots,...supportRoots].some(prefix=>belongs(target,prefix)));
         if(foreign.length)errors.push(`Unit crosses module: ${file} -> ${foreign.join(', ')}`);

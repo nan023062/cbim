@@ -9,8 +9,8 @@ import {fixture} from './helpers';
 import {request,summary} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import type {TaskSpec,StoredEvent} from '../src/logic/execution/rules/types';
 import type {AgentHistoryRoles,AgentHistoryPage,AgentHistorySession,AgentHistoryRun,AgentHistoryEventsRead} from '../src/logic/team/rules/session-history';
 

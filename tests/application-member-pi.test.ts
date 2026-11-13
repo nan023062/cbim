@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {MemberExecutionView,MemberStartReceipt} from '../src/logic/tasks/rules/member-commands';
 import type {OpenGraphReceipt,DispatchReceipt} from '../src/logic/tasks/rules/dispatch-commands';
 import type {ChatApproval} from '../src/logic/tools/rules/policy/types';

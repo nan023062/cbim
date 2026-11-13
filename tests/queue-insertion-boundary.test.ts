@@ -8,7 +8,7 @@ import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import type {AgentEngine,EngineEvent,InputImage} from '../src/logic/execution/rules/types';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 const gate=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
 const options={provider:'test',model:'original',permission:'read' as const,allowNativeExecution:false};

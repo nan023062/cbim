@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {generateKeyPairSync,createHash,sign} from 'node:crypto';
 import {archiveDirectory} from '../scripts/runtime-packaging';
-import type {ColdRuntime,RuntimeManifest} from '../src/backend/updater/runtime-manifest';
+import type {ColdRuntime,RuntimeManifest} from '../src/logic/updates/service/runtime-manifest';
 
 export const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 export async function runtimeFixture(){

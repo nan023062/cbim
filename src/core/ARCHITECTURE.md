@@ -37,6 +37,7 @@ class N_src_core_json_ts["json.ts"] {
 }
 N_src_core_json_ts ..> N_src_core_utility : 导入依赖
 N_src_core_json_ts ..> N_src_core_errors_ts : 导入依赖
+N_src_core_platform ..> N_src_core_contracts : 导入依赖
 N_src_core_platform ..> N_src_core_web : 导入依赖
 N_src_core_platform ..> N_src_core_errors_ts : 导入依赖
 N_src_core_platform ..> N_src_core_utility : 导入依赖
@@ -46,6 +47,7 @@ N_src_core_platform ..> N_src_core_utility : 导入依赖
 
 - `json.ts` → `utility`：导入。
 - `json.ts` → `errors.ts`：导入。
+- `platform` → `contracts`：导入。
 - `platform` → `web`：导入。
 - `platform` → `errors.ts`：导入。
 - `platform` → `utility`：导入。

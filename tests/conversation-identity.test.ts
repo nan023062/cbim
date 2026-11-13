@@ -5,7 +5,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 
 async function registerExecutor(app:Application,workspaceId:string,moduleId:string){
   const settings=await app.models.save({profile:{name:'Conversation identity fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Conversation identity fixture')!;
@@ -14,7 +14,7 @@ async function registerExecutor(app:Application,workspaceId:string,moduleId:stri
 import {json} from '../src/core/platform/node/serialization';
 import type {TaskSpec} from '../src/logic/tasks/rules/types';
 import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 
 it('主对话绑定可靠复用本会话根实例；不同主会话拥有独立实例且普通聊天不制造任务',async()=>{
   const f=await fixture();try{

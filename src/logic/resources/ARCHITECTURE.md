@@ -17,6 +17,9 @@
 
 ```mermaid
 classDiagram
+class N_src_logic_resources_packages["packages/"] {
+  <<directory>>
+}
 class N_src_logic_resources_service["service/"] {
   <<directory>>
 }
@@ -27,16 +30,21 @@ class N_src_logic_resources_index_ts["index.ts"] {
   <<module>>
 }
 N_src_logic_resources_index_ts ..> N_src_logic_resources_contracts_ts : 导入依赖
+N_src_logic_resources_packages ..> N_src_logic_resources_index_ts : 导入依赖
+N_src_logic_resources_packages ..> N_src_logic_resources_service : 导入依赖
 N_src_logic_resources_service ..> N_src_logic_resources_index_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `index.ts` → `contracts.ts`：导入。
+- `packages` → `index.ts`：导入。
+- `packages` → `service`：导入。
 - `service` → `index.ts`：导入。
 
 ## 子目录导航
 
+- [packages/](packages/ARCHITECTURE.md)：静态知识包的发布与预览导入；同时核仓库和知识版本，正式导入复用原知识事务。
 - [service/](service/ARCHITECTURE.md)：本地/HTTP 资源仓库、版本与身份校验、共享代际与取消；宿主仅提供目录边界，不持有应用或 Bridge。
 
 [返回上层](../ARCHITECTURE.md)。

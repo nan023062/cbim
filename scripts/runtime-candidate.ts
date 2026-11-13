@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {RuntimeStore} from '../src/backend/updater/runtime-store';
-import {downloadRuntimePackage} from '../src/backend/updater/runtime-download';
-import {verifyRuntimeManifest,type ColdRuntime,type RuntimePackage} from '../src/backend/updater/runtime-manifest';
+import {RuntimeStore} from '../src/logic/updates/service/runtime-store';
+import {downloadRuntimePackage} from '../src/logic/updates/service/runtime-download';
+import {verifyRuntimeManifest,type ColdRuntime,type RuntimePackage} from '../src/logic/updates/service/runtime-manifest';
 import {fileHash} from './runtime-packaging';
 
 /** 发布前用与客户端相同的 ZIP/文件验证器检查全部 R/E；旧 E 可以从固定公共源读取。 */

@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type MemberRunLaunch,type ToolDecision} from '../src/logic/execution/rules';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {MemberHelpTools} from '../src/logic/tasks/rules/member-help-tools';
 import {memberHelpStagedSchema} from '../src/logic/tasks/rules/member-help';
 

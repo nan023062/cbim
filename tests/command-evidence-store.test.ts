@@ -2,7 +2,7 @@ import {afterEach,expect,test,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {hash} from '../src/core/platform/node/serialization';
 import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {GraphEventBatch,GraphIdentity} from '../src/logic/tasks/rules/graph-types';

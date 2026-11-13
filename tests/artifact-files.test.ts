@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles,normalizeArtifactPath,artifactFileLimits} from '../src/backend/main/platform/files/artifact-files';
+import {ArtifactFiles,normalizeArtifactPath,artifactFileLimits} from '../src/logic/file-operations/platform/files/artifact-files';
 
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-artifacts-'));let alive=true;const files=new ArtifactFiles(root,()=>{if(!alive)throw Error('工作区已退役')});return {root,files,retire:()=>{alive=false},cleanup:async()=>{const target=path.resolve(root);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-artifacts-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}}}
 it('hashes actual binary bytes and preserves path case; explicit comparison detects changed and missing without writing',async()=>{

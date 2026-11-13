@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {HumanDecisionKind} from '../src/logic/tasks/rules/human-decisions';
 import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
 import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';

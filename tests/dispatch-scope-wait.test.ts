@@ -10,9 +10,9 @@ import {json,hash} from '../src/core/platform/node/serialization';
 import type {AgentEngine,EngineContext,RunSummary,TaskSpec} from '../src/logic/execution/rules/types';
 import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
 

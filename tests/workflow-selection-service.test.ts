@@ -7,7 +7,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {hash,json} from '../src/core/platform/node/serialization';
 import type {WorkflowSelection} from '../src/logic/tasks/rules/workflow-selection';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
 import {prepareDispatchExecutionContext,memberExecutionPrompt} from '../src/logic/execution/context/execution-context';

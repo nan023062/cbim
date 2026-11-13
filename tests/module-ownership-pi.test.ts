@@ -1,8 +1,8 @@
 import {it,expect,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import {moduleOwnershipProvider,moduleOwnershipToolNames,type ModuleOwnershipMode} from './module-ownership-provider';
 import {seedModuleOwnership,moduleOwnershipFixture as data,moduleOwnershipDetail,moduleOwnershipJournal,moduleOwnershipKnowledgeEvidence,moduleOwnershipRunRecords,moduleOwnershipNativeBytes} from './module-ownership-fixture';

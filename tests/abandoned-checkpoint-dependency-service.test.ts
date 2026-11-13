@@ -2,7 +2,7 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {queuedDependencyReplacementSelection} from '../src/logic/tasks/rules/queued-dependency-replacement-rules';
 import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {RunSummary} from '../src/logic/execution/rules/types';

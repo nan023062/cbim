@@ -1,5 +1,5 @@
 import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
-import type {Workspace} from '../src/backend/main/workspace/workspace';
+import type {Workspace} from '../src/logic/workspace/service/workspace';
 import {summary,moduleFiles} from './data/knowledge';
 export async function seedTeam(w:Workspace){
   const service=knowledgeTools(w),identity={workspaceId:w.entry.id,instanceId:w.instanceId};

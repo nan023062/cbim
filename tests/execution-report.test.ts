@@ -3,7 +3,7 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
 import {ExecutionReportService} from '../src/logic/evidence/runtime/execution-report-service';
 import {executionReportInputSchema,executionReportSchema} from '../src/logic/tasks/rules/execution-report';
@@ -18,7 +18,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 async function setup(){

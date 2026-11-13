@@ -17,15 +17,20 @@ classDiagram
 class N_src_logic_connectors_rules["rules/"] {
   <<directory>>
 }
+class N_src_logic_connectors_service["service/"] {
+  <<directory>>
+}
+N_src_logic_connectors_service ..> N_src_logic_connectors_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `service` → `rules`：导入。
 
 ## 子目录导航
 
 - [rules/](rules/ARCHITECTURE.md)：链接器定义、查询与唯一身份检查；反馈协议已迁入 Logic，现存连接协议不发网络请求或授予权限。
+- [service/](service/ARCHITECTURE.md)：资源仓库连接授权、版本核实与读取取消；与静态包发布和仓库存储分开。
 
 [返回上层](../ARCHITECTURE.md)。
 

@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {artifactBaselineFixture as data} from './artifact-baseline-provider';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import {artifactReportSchema,type ArtifactFileCheck} from '../src/logic/evidence/rules/artifact-baseline';
 export {queuedTaskCancelRecords as artifactBaselineRecords} from './queued-task-cancel-fixture';
 export {reportFiles as artifactBaselineFiles} from './execution-report-fixture';

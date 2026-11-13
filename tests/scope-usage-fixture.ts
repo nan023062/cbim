@@ -3,7 +3,7 @@ import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {scopeUsageReportSchema,type ScopeUsageReport} from '../src/logic/budget/rules/scope-usage';

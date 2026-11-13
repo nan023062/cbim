@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
+import {requestBudgetStore} from '../src/logic/dispatch/storage/request-budget-store';
 import type {DispatchStore,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {RequestBudgetState,RequestBudgetStore} from '../src/logic/budget/rules/model-request-budget-storage';
 import {ModelRequestBudgetService} from '../src/logic/budget/runtime/model-request-budget-service';

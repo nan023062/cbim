@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {afterEach,beforeEach,expect,it} from 'vitest';
-import {CodeCheckRunner} from '../src/backend/main/platform/files/code-check-runner';
+import {CodeCheckRunner} from '../src/logic/file-operations/platform/files/code-check-runner';
 import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-contract';
 import {codeCheckPassed,frozenCodeChecks,selectCodeCheck,codeRequirementsHash,type CodeCheckBinding} from '../src/logic/evidence/rules/code-check';
 import {preparedArtifactScopes} from '../src/logic/workspace/rules/artifact-scope';

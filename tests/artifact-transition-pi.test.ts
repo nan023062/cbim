@@ -7,7 +7,7 @@ import {completeOutputProvider,completeOutputData as d} from './complete-output-
 import {completeOutputRecords,completeOutputSourceBytes} from './complete-output-pi-fixture';
 import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
 import {outputManifestReportSchema} from '../src/logic/evidence/rules/output-manifest';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 it.each(['automatic','changed','human'] as const)('真实 Pi + Electron utility 删除移动证明和原清单接受（%s）',async mode=>{
   const provider=await completeOutputProvider(mode,true);let host=await createControlledHost(),keep=false;

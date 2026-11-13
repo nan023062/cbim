@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
+import {ArtifactFiles} from '../src/logic/file-operations/platform/files/artifact-files';
 import {pngValidationData as d,pngBytes} from './png-validation-data';
 const bytes=Buffer.from(d.good,'base64'),fact=(value:Uint8Array,relativePath=d.file)=>({relativePath,byteLength:value.byteLength,sha256:createHash('sha256').update(value).digest('hex')});
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-png-platform-'));let alive=true;return {root,file:path.join(root,d.file),port:new ArtifactFiles(root,()=>{if(!alive)throw Error('retired')}),retire:()=>{alive=false},cleanup:async()=>{const target=path.resolve(root);expect(path.dirname(target)).toBe(path.resolve(os.tmpdir()));expect(path.basename(target)).toMatch(/^cbim-png-platform-/);await fs.rm(target,{recursive:true,force:true})}}}

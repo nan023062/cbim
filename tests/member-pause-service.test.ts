@@ -4,7 +4,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {memberPauseServiceFixture} from './member-pause-service-fixture';
 import {memberPauseSelection} from '../src/logic/tasks/rules/member-pause-rules';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';

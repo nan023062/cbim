@@ -103,3 +103,7 @@ WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为
 ## 引擎与编排迁移落地
 
 95 个具体引擎和编排文件已迁入 Logic。引擎归 execution/engines；admission、assembly、context 归 execution，conversation、dispatch、tasks、evidence、budget、team、history、tools、automation 的编排归各自 runtime，全局只读监管归 runtime/monitoring。保留实际细粒度入口、规则到运行服务的禁向依赖及只有引擎装配选择具体适配器的限制。打包输出名、用户数据目录和原生协议未改变。
+
+## 有状态服务与 Bridge 落地
+
+旧 Main/Updater 的业务服务、数据和状态已迁至 Logic 各域。业务 Application 只保留生命周期，Bridge Application 是仅增加 dispatch 的可替换适配器，未复制状态或更改关闭顺序。IPC、CLI、Electron utility 传输及桌面冷启动归 bridge/server；更新服务独立于普通业务应用，业务 DTO 归 Logic。系统加密机制归 Core Electron 独立入口。旧 backend 已无源码；View 将在最后一片迁移。

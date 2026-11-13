@@ -6,9 +6,9 @@ import {request,moduleFiles} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
 import {buildWorkspacePackage,parseWorkspacePackage,workspacePackageFingerprint,type WorkspacePackage} from '../src/logic/knowledge/rules/portable-package';
-import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {WorkspacePackages} from '../src/logic/resources/packages/workspace-packages';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 
 async function setup(){
   const f=await fixture();try{

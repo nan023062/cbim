@@ -5,7 +5,7 @@ import os from 'node:os';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 import type {UserContinuationSource} from '../src/logic/execution/rules/input-source';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};
 const source:UserContinuationSource={kind:'user-continuation',continuationId:'input-command',scopeId:'scope-one',waitId:'wait-one',inputRevision:2};

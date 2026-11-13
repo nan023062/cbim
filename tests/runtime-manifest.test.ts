@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {runtimeFixture,digest} from './runtime-fixture';
-import {verifyRuntimeManifest,runtimeRelativePath,validateRuntimeFiles,runtimePackageUrl} from '../src/backend/updater/runtime-manifest';
+import {verifyRuntimeManifest,runtimeRelativePath,validateRuntimeFiles,runtimePackageUrl} from '../src/logic/updates/service/runtime-manifest';
 it('authenticates exact payload bytes, C/platform/fingerprint and bounded freshness; installed releases work offline',async()=>{
   const f=await runtimeFixture();try{
     expect(verifyRuntimeManifest(f.envelope(),f.cold).manifest.resourceVersion).toBe(1);

@@ -5,7 +5,7 @@ import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {RemoteRepository} from '../src/logic/resources/service';
-import {RepositoryConnectionStore} from '../src/backend/main/resources/repository-connection-store';
+import {RepositoryConnectionStore} from '../src/logic/connectors/service/repository-connection-store';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};
 async function configured(){const f=await fixture(),folder=path.join(f.temp,'repo');await fs.mkdir(folder);await f.app.resources.configure({mode:'local',location:folder});await f.app.resources.startSharing({lan:false,port:0});const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),identity={workspaceId:entry.id,instanceId:ws.instanceId},repositoryId=f.app.resources.status().config!.repositoryId,connectorId='.cbim/connectors/team_resources';

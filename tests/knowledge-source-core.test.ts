@@ -13,7 +13,7 @@ import {moduleOwnershipBasis,moduleOwnershipCommand,moduleOwnershipHash,moduleOw
 import {moduleOwnershipImpact} from '../src/logic/tasks/rules/module-ownership-invariants';
 import {projectKnowledgeSourceMutation} from '../src/logic/tasks/rules/knowledge-source-invariants';
 import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 
 const workspaceId='source-workspace',instanceId=randomUUID(),at='2026-11-08T06:00:00.000Z',later='2026-11-08T06:00:01.000Z';
 const agent:KnowledgeSourceKey={kind:'agent',sourceId:'.cbim/team/dev'},moduleKey:KnowledgeSourceKey={kind:'module',sourceId:'.cbim/workspace/game'};

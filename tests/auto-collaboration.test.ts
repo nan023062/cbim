@@ -9,7 +9,7 @@ import type {TaskSpec,RunSummary} from '../src/logic/execution/rules/types';
 import type {GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
 import type {ExecutionAdmissionWait} from '../src/logic/execution/admission/admission-wait';
-import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
+import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
 import {mainToolOwnerSelection,mainToolReplacement} from './main-tool-output-fixture';
 import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-addition';

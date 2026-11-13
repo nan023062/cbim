@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {request} from './data/knowledge';
 import {seedJsonValidation,jsonValidationRecords} from './json-validation-fixture';
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';

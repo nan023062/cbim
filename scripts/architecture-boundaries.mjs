@@ -1,8 +1,13 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'system-secret-cipher',files:['src/core/platform/electron/secrets.ts'],public:['src/core/platform/electron/secrets.ts'],dependencies:['secret-contract'],external:['electron']},
+  {id:'material-data',files:['src/logic/materials/contracts.ts'],public:['src/logic/materials/contracts.ts'],dependencies:[],external:[]},
+  {id:'workspace-data',files:['src/logic/workspace/contracts.ts'],public:['src/logic/workspace/contracts.ts'],dependencies:['knowledge-data'],external:[]},
+  {id:'package-data',files:['src/logic/resources/packages/contracts.ts'],public:['src/logic/resources/packages/contracts.ts'],dependencies:['knowledge-data','resource-contract'],external:[]},
+  {id:'update-data',files:['src/logic/updates/contracts.ts'],public:['src/logic/updates/contracts.ts'],dependencies:[],external:[]},
   {id:'resource-service',prefix:'src/logic/resources/service/',public:['src/logic/resources/service/index.ts'],dependencies:['resource-contract','core-errors','file-foundations','utility-foundations','utility-node-foundations','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto','node:http','node:net','node:os']},
-  {id:'resource-contract',prefix:'src/logic/resources/',public:['src/logic/resources/index.ts'],dependencies:[],external:[]},
+  {id:'resource-contract',files:['src/logic/resources/index.ts','src/logic/resources/contracts.ts'],public:['src/logic/resources/index.ts'],dependencies:[],external:[]},
   {id:'feedback-http',files:['src/logic/feedback/service/github-api.ts'],public:['src/logic/feedback/service/github-api.ts'],dependencies:['core-errors','utility-foundations'],external:[]},
   {id:'feedback-service',prefix:'src/logic/feedback/service/',public:['src/logic/feedback/service/index.ts'],dependencies:['feedback-contract','feedback-http','core-errors','secret-contract','file-foundations','utility-node-foundations','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto']},
   {id:'feedback-contract',prefix:'src/logic/feedback/',public:['src/logic/feedback/index.ts'],dependencies:[],external:['zod']},
@@ -130,7 +135,8 @@ export const logicalBoundaries = [
       "src/bridge/contracts/workspace-view.ts"
     ],
     "dependencies": [
-      "knowledge-data"
+      "knowledge-data",
+      "workspace-data"
     ],
     "imports": [
       "src/logic/automation/rules/contracts.ts",
@@ -184,8 +190,8 @@ export const logicalBoundaries = [
     ]
   },
   {
-    id:'agent-history-file-store', files:['src/backend/main/history/file-store.ts'],
-    public:['src/backend/main/history/file-store.ts'], dependencies:['core-errors','pure-foundation','file-foundations'],
+    id:'agent-history-file-store', files:['src/logic/history/service/file-store.ts'],
+    public:['src/logic/history/service/file-store.ts'], dependencies:['core-errors','pure-foundation','file-foundations'],
     imports:['src/logic/team/rules/session-history-storage.ts'],external:['node:fs/promises','node:path'],
   },
   {

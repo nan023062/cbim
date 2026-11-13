@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {workspaceMemberSchema,workspaceMemberModelSnapshotSchema,workspaceMemberChangeInputSchema,workspaceMemberCommitInputSchema,workspaceMemberReceiptSchema,workspaceMemberListInputSchema,workspaceMemberListSchema,workspaceMemberCurrentDiffSchema,workspaceMemberCapabilitySchema,workspaceMemberChangeSchema,workspaceMemberLimits,type WorkspaceMember,type WorkspaceMemberChange,type WorkspaceMemberChangeInput,type WorkspaceMemberProposed,type WorkspaceMemberModelSnapshot} from '../src/logic/team/rules/workspace-member';
 import {workspaceMemberModelHash,workspaceMemberCapabilityHash,workspaceMemberHash,workspaceMemberCommand,workspaceMemberPreviewBasis,workspaceMemberProposed,workspaceMemberReceipt,workspaceMemberChangedFields,applyWorkspaceMemberChange} from '../src/logic/team/rules/workspace-member-rules';
 import {projectWorkspaceMemberMutation} from '../src/logic/tasks/rules/workspace-member-invariants';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {hash} from '../src/core/platform/node/serialization';
 import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 

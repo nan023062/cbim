@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 import {originalPersistentWrite,persistentWriteIdentity} from '../src/logic/tasks/rules/persistent-write-input';
-import {observePersistentWrite} from '../src/backend/main/evidence/persistent-effect-reader';
+import {observePersistentWrite} from '../src/logic/evidence/service/persistent-effect-reader';
 import {preparePersistentEffect,verifyPersistentEffectOriginal} from './persistent-effect-fixture';
 import {hash} from '../src/core/platform/node/serialization';
 

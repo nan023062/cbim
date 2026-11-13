@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Electron 网页读取独立入口；匿名隔离窗口及 iframe 采集，使用 Core Node 代理，普通业务不导入此目录。
+Electron 独立技术入口：匿名网页读取与系统加密；由可信 Bridge 注入，普通业务不导入 Electron。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,9 +10,20 @@ Electron 网页读取独立入口；匿名隔离窗口及 iframe 采集，使用
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [secrets.ts](secrets.ts) | 用 Electron 系统加密能力保护 LLM 与 GitHub 反馈凭据。 |
 | [web-reader.ts](web-reader.ts) | 基础网页能力的 Electron/Chromium 适配，采集脚本执行后的正文及跨域 iframe。 |
 
 ## 架构类图
+
+### secrets.ts
+
+```mermaid
+classDiagram
+class N_src_core_platform_electron_secrets_ts["secrets.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../contracts/secrets.ts](../../contracts/secrets.ts)。
 
 ### web-reader.ts
 

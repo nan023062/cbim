@@ -14,9 +14,6 @@
 
 ```mermaid
 classDiagram
-class N_src_backend["backend/"] {
-  <<directory>>
-}
 class N_src_bridge["bridge/"] {
   <<directory>>
 }
@@ -29,10 +26,8 @@ class N_src_frontend["frontend/"] {
 class N_src_logic["logic/"] {
   <<directory>>
 }
-N_src_backend ..> N_src_bridge : 导入依赖
-N_src_backend ..> N_src_logic : 导入依赖
-N_src_backend ..> N_src_core : 导入依赖
 N_src_bridge ..> N_src_logic : 导入依赖
+N_src_bridge ..> N_src_core : 导入依赖
 N_src_frontend ..> N_src_bridge : 导入依赖
 N_src_frontend ..> N_src_core : 导入依赖
 N_src_logic ..> N_src_core : 导入依赖
@@ -40,21 +35,18 @@ N_src_logic ..> N_src_core : 导入依赖
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `backend` → `bridge`：导入。
-- `backend` → `logic`：导入。
-- `backend` → `core`：导入。
 - `bridge` → `logic`：导入。
+- `bridge` → `core`：导入。
 - `frontend` → `bridge`：导入。
 - `frontend` → `core`：导入。
 - `logic` → `core`：导入。
 
 ## 子目录导航
 
-- [backend/](backend/ARCHITECTURE.md)：待迁移宿主服务、调度编排、引擎与启动更新；领域规则已迁入 Logic，共享技术机制归 Core。
-- [bridge/](bridge/ARCHITECTURE.md)：前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。
+- [bridge/](bridge/ARCHITECTURE.md)：通信契约、可信服务端和 preload；业务状态归 Logic，平台技术机制归 Core 独立入口。
 - [core/](core/ARCHITECTURE.md)：四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
 - [frontend/](frontend/ARCHITECTURE.md)：React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
-- [logic/](logic/ARCHITECTURE.md)：Logic 已迁入领域规则、端口，以及模型、Web、反馈和资源仓库服务；各模块继续拥有原状态和失败语义。其余服务、调度及引擎正在分批迁入。
+- [logic/](logic/ARCHITECTURE.md)：业务规则、运行编排、存储与平台实现按领域组织；Application 统一持有真实生命周期，业务不依赖 Bridge/View/Electron。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 

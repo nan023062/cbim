@@ -6,8 +6,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {businessReplanProvider,businessReplanFixture as data} from './business-replan-provider';
 import {prepareBusinessReplan} from './business-replan-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {ReplanRequest,ReplanReceipt,ReplanPreview} from '../src/logic/tasks/rules/scope-replan';
 import type {ConversationThreadView} from '../src/logic/execution/rules/types';
 

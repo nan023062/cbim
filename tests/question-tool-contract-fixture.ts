@@ -1,10 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {questionContractData as data} from './question-tool-contract-provider';

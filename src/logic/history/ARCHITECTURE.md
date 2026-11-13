@@ -17,15 +17,20 @@ classDiagram
 class N_src_logic_history_runtime["runtime/"] {
   <<directory>>
 }
+class N_src_logic_history_service["service/"] {
+  <<directory>>
+}
+N_src_logic_history_service ..> N_src_logic_history_runtime : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `service` → `runtime`：导入。
 
 ## 子目录导航
 
 - [runtime/](runtime/ARCHITECTURE.md)：会话履历查询编排，依赖 Core 履历契约，实际文件索引在 main/history。
+- [service/](service/ARCHITECTURE.md)：履历应用装配与文件索引。assembly.ts 连接角色/运行来源，file-store.ts 只实现 SessionHistoryStorage；文件存储不得反向依赖装配或工作区服务。
 
 [返回上层](../ARCHITECTURE.md)。
 

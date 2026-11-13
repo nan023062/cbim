@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {DispatchMutation,DispatchMessage} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {seedTeam} from './team-fixture';

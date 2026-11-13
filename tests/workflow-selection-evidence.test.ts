@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {expect,it} from 'vitest';
 import {humanServiceFixture} from './human-decision-service-fixture';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 
 it('人工来源不能把默认任务当作显式首项的候选，拒绝不改原等待和历史',async()=>{

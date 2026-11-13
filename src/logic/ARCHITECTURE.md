@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Logic 已迁入领域规则、端口，以及模型、Web、反馈和资源仓库服务；各模块继续拥有原状态和失败语义。其余服务、调度及引擎正在分批迁入。
+业务规则、运行编排、存储与平台实现按领域组织；Application 统一持有真实生命周期，业务不依赖 Bridge/View/Electron。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -14,6 +14,9 @@ Logic 已迁入领域规则、端口，以及模型、Web、反馈和资源仓�
 
 ```mermaid
 classDiagram
+class N_src_logic_application["application/"] {
+  <<directory>>
+}
 class N_src_logic_automation["automation/"] {
   <<directory>>
 }
@@ -29,18 +32,23 @@ class N_src_logic_conversation["conversation/"] {
 class N_src_logic_dispatch["dispatch/"] {
   <<directory>>
 }
-class N_src_logic_evidence["evidence/"] {
-  <<directory>>
-}
+N_src_logic_application ..> N_src_logic_automation : 导入依赖
+N_src_logic_application ..> N_src_logic_budget : 导入依赖
+N_src_logic_application ..> N_src_logic_dispatch : 导入依赖
+N_src_logic_application ..> N_src_logic_conversation : 导入依赖
+N_src_logic_application ..> N_src_logic_connectors : 导入依赖
+N_src_logic_automation ..> N_src_logic_conversation : 导入依赖
+N_src_logic_automation ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_budget ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_budget : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_conversation : 导入依赖
-N_src_logic_dispatch ..> N_src_logic_evidence : 导入依赖
-N_src_logic_evidence ..> N_src_logic_dispatch : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_evidence["evidence/"] {
+  <<directory>>
+}
 class N_src_logic_execution["execution/"] {
   <<directory>>
 }
@@ -56,18 +64,27 @@ class N_src_logic_governance["governance/"] {
 class N_src_logic_history["history/"] {
   <<directory>>
 }
-class N_src_logic_knowledge["knowledge/"] {
-  <<directory>>
-}
-N_src_logic_execution ..> N_src_logic_knowledge : 导入依赖
+N_src_logic_evidence ..> N_src_logic_file_operations : 导入依赖
+N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
+N_src_logic_evidence ..> N_src_logic_governance : 导入依赖
+N_src_logic_execution ..> N_src_logic_evidence : 导入依赖
 N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_execution ..> N_src_logic_feedback : 导入依赖
 N_src_logic_execution ..> N_src_logic_governance : 导入依赖
+N_src_logic_file_operations ..> N_src_logic_evidence : 导入依赖
+N_src_logic_file_operations ..> N_src_logic_execution : 导入依赖
+N_src_logic_governance ..> N_src_logic_execution : 导入依赖
 N_src_logic_history ..> N_src_logic_execution : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_knowledge["knowledge/"] {
+  <<directory>>
+}
+class N_src_logic_materials["materials/"] {
+  <<directory>>
+}
 class N_src_logic_models["models/"] {
   <<directory>>
 }
@@ -80,39 +97,72 @@ class N_src_logic_runtime["runtime/"] {
 class N_src_logic_tasks["tasks/"] {
   <<directory>>
 }
+N_src_logic_knowledge ..> N_src_logic_models : 导入依赖
+N_src_logic_materials ..> N_src_logic_tasks : 导入依赖
+N_src_logic_materials ..> N_src_logic_knowledge : 导入依赖
+N_src_logic_resources ..> N_src_logic_knowledge : 导入依赖
+N_src_logic_runtime ..> N_src_logic_tasks : 导入依赖
+N_src_logic_tasks ..> N_src_logic_models : 导入依赖
+N_src_logic_tasks ..> N_src_logic_knowledge : 导入依赖
+N_src_logic_tasks ..> N_src_logic_runtime : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_team["team/"] {
+  <<directory>>
+}
+class N_src_logic_terminal["terminal/"] {
   <<directory>>
 }
 class N_src_logic_tools["tools/"] {
   <<directory>>
 }
-N_src_logic_runtime ..> N_src_logic_tasks : 导入依赖
-N_src_logic_runtime ..> N_src_logic_team : 导入依赖
-N_src_logic_runtime ..> N_src_logic_tools : 导入依赖
-N_src_logic_tasks ..> N_src_logic_team : 导入依赖
-N_src_logic_tasks ..> N_src_logic_models : 导入依赖
-N_src_logic_tasks ..> N_src_logic_tools : 导入依赖
-N_src_logic_tasks ..> N_src_logic_runtime : 导入依赖
-N_src_logic_team ..> N_src_logic_models : 导入依赖
-N_src_logic_team ..> N_src_logic_tasks : 导入依赖
-N_src_logic_team ..> N_src_logic_runtime : 导入依赖
-N_src_logic_tools ..> N_src_logic_models : 导入依赖
-N_src_logic_tools ..> N_src_logic_team : 导入依赖
-N_src_logic_tools ..> N_src_logic_tasks : 导入依赖
-```
-
-```mermaid
-classDiagram
+class N_src_logic_updates["updates/"] {
+  <<directory>>
+}
 class N_src_logic_web["web/"] {
   <<directory>>
 }
 class N_src_logic_workspace["workspace/"] {
   <<directory>>
 }
+N_src_logic_team ..> N_src_logic_workspace : 导入依赖
+N_src_logic_tools ..> N_src_logic_workspace : 导入依赖
+N_src_logic_tools ..> N_src_logic_team : 导入依赖
+N_src_logic_tools ..> N_src_logic_web : 导入依赖
+N_src_logic_workspace ..> N_src_logic_team : 导入依赖
+N_src_logic_workspace ..> N_src_logic_tools : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `application` → `web`：导入。
+- `application` → `automation`：导入。
+- `application` → `file-operations`：导入。
+- `application` → `budget`：导入。
+- `application` → `models`：导入。
+- `application` → `team`：导入。
+- `application` → `runtime`：导入。
+- `application` → `feedback`：导入。
+- `application` → `execution`：导入。
+- `application` → `dispatch`：导入。
+- `application` → `materials`：导入。
+- `application` → `history`：导入。
+- `application` → `conversation`：导入。
+- `application` → `workspace`：导入。
+- `application` → `knowledge`：导入。
+- `application` → `resources`：导入。
+- `application` → `connectors`：导入。
+- `application` → `governance`：导入。
+- `application` → `tasks`：导入。
+- `application` → `tools`：导入。
+- `application` → `evidence`：导入。
+- `automation` → `workspace`：导入。
+- `automation` → `conversation`：导入。
+- `automation` → `dispatch`：导入。
+- `automation` → `knowledge`：导入。
+- `automation` → `team`：导入。
 - `budget` → `team`：导入。
 - `budget` → `dispatch`：导入。
 - `budget` → `tasks`：导入。
@@ -120,6 +170,8 @@ class N_src_logic_workspace["workspace/"] {
 - `budget` → `execution`：导入。
 - `budget` → `knowledge`：导入。
 - `connectors` → `tools`：导入。
+- `connectors` → `knowledge`：导入。
+- `connectors` → `resources`：导入。
 - `conversation` → `tools`：导入。
 - `conversation` → `models`：导入。
 - `conversation` → `knowledge`：导入。
@@ -145,6 +197,7 @@ class N_src_logic_workspace["workspace/"] {
 - `evidence` → `execution`：导入。
 - `evidence` → `runtime`：导入。
 - `evidence` → `team`：导入。
+- `evidence` → `governance`：导入。
 - `execution` → `runtime`：导入。
 - `execution` → `tools`：导入。
 - `execution` → `web`：导入。
@@ -160,10 +213,16 @@ class N_src_logic_workspace["workspace/"] {
 - `execution` → `governance`：导入。
 - `execution` → `team`：导入。
 - `execution` → `budget`：导入。
-- `file-operations` → `workspace`：导入。
 - `file-operations` → `evidence`：导入。
+- `file-operations` → `workspace`：导入。
+- `file-operations` → `tasks`：导入。
+- `file-operations` → `execution`：导入。
 - `file-operations` → `dispatch`：导入。
 - `file-operations` → `team`：导入。
+- `governance` → `tasks`：导入。
+- `governance` → `execution`：导入。
+- `governance` → `workspace`：导入。
+- `governance` → `knowledge`：导入。
 - `history` → `execution`：导入。
 - `history` → `dispatch`：导入。
 - `history` → `tasks`：导入。
@@ -172,6 +231,12 @@ class N_src_logic_workspace["workspace/"] {
 - `knowledge` → `connectors`：导入。
 - `knowledge` → `workspace`：导入。
 - `knowledge` → `models`：导入。
+- `knowledge` → `dispatch`：导入。
+- `materials` → `tasks`：导入。
+- `materials` → `execution`：导入。
+- `materials` → `knowledge`：导入。
+- `materials` → `connectors`：导入。
+- `resources` → `knowledge`：导入。
 - `runtime` → `execution`：导入。
 - `runtime` → `dispatch`：导入。
 - `runtime` → `tasks`：导入。
@@ -210,11 +275,17 @@ class N_src_logic_workspace["workspace/"] {
 - `tools` → `execution`：导入。
 - `tools` → `knowledge`：导入。
 - `tools` → `web`：导入。
+- `workspace` → `knowledge`：导入。
 - `workspace` → `team`：导入。
 - `workspace` → `tools`：导入。
+- `workspace` → `execution`：导入。
+- `workspace` → `tasks`：导入。
+- `workspace` → `dispatch`：导入。
+- `workspace` → `governance`：导入。
 
 ## 子目录导航
 
+- [application/](application/ARCHITECTURE.md)：唯一应用生命周期：装配业务服务，按工作区实例打开、撤票、取消、排空与关闭；不导入 IPC 或 Electron。
 - [automation/](automation/ARCHITECTURE.md)：自动化计划、触发条件及计划契约；服务与规则分开归属，实际依赖通过明确入口验证。
 - [budget/](budget/ARCHITECTURE.md)：模型请求额度与作用域预算规则；服务与规则分开归属，实际依赖通过明确入口验证。
 - [connectors/](connectors/ARCHITECTURE.md)：连接器定义、登记和能力契约；服务与规则分开归属，实际依赖通过明确入口验证。
@@ -227,12 +298,15 @@ class N_src_logic_workspace["workspace/"] {
 - [governance/](governance/ARCHITECTURE.md)：模块治理、反馈及责任规则；服务与规则分开归属，实际依赖通过明确入口验证。
 - [history/](history/ARCHITECTURE.md)：按主会话与角色读取运行履历的业务服务；日志事实与文件索引通过端口提供。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识数据、只读视图、查询和写入端口；服务与规则分开归属，实际依赖通过明确入口验证。
+- [materials/](materials/ARCHITECTURE.md)：聊天资料的身份、预览契约与采集保存服务；来源证明由业务持有，桥接仅传输受限数据。
 - [models/](models/ARCHITECTURE.md)：模型目录、公开配置 Schema、供应商预设与引擎接口选择；index.ts 是纯公共入口，不加载 Node 或服务。配置服务位于 service，旧预算端口和主 Agent 设置不属于本片。
 - [resources/](resources/ARCHITECTURE.md)：资源定义、分类、仓库快照与公开状态的纯业务契约；仓库存储和共享由 service 负责。
 - [runtime/](runtime/ARCHITECTURE.md)：运行状态及终态事实规则；服务与规则分开归属，实际依赖通过明确入口验证。
 - [tasks/](tasks/ARCHITECTURE.md)：目标、任务依赖、人工决策及协作状态规则；服务与规则分开归属，实际依赖通过明确入口验证。
 - [team/](team/ARCHITECTURE.md)：团队成员、岗位与履历契约；服务与规则分开归属，实际依赖通过明确入口验证。
+- [terminal/](terminal/ARCHITECTURE.md)：桌面手动命令终端业务；按工作区与页签持有进程和有界输出，不向界面暴露 Node。
 - [tools/](tools/ARCHITECTURE.md)：工具登记、结果协议及业务工具输入规则；服务与规则分开归属，实际依赖通过明确入口验证。
+- [updates/](updates/ARCHITECTURE.md)：桌面资源与安装更新状态和服务；校验签名、原子选择、失败恢复与业务应用生命周期分离。
 - [web/](web/ARCHITECTURE.md)：网页工具与设置纯契约；service 提供网络业务适配和配置持久化，工具权限与宿主装配在外层。
 - [workspace/](workspace/ARCHITECTURE.md)：工作区定义、工作流和执行范围规则；服务与规则分开归属，实际依赖通过明确入口验证。
 
@@ -246,7 +320,7 @@ class N_src_logic_workspace["workspace/"] {
 
 # Logic 业务层
 
-Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridge、View 或旧 backend。模型、Web、反馈与资源仓库服务已经迁入；其余领域规则由旧 backend/core 迁入对应业务的 rules 目录，执行身份和工作区路径归 ports。具体引擎已迁入 execution/engines，准入和引擎装配归 execution，其他编排归各业务 runtime/monitoring。宿主服务与桌面入口仍在迁移中。
+Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridge、View 或旧 backend。模型、Web、反馈与资源仓库服务已经迁入；其余领域规则由旧 backend/core 迁入对应业务的 rules 目录，执行身份和工作区路径归 ports。具体引擎已迁入 execution/engines，准入和引擎装配归 execution，其他编排归各业务 runtime/monitoring。有状态服务、存储与业务平台已迁入对应领域；IPC、桌面和冷启动已迁入 Bridge/server。
 
 公开入口按真实消费者登记在 scripts/logic-domain-entries.mjs。规则保留细粒度入口，不通过一个领域总 barrel 同时加载纯契约、运行规则和平台实现；类型依赖同样受无环检查约束。读模型、预算存储端口、引擎工具注册等较窄边界仍限制私有文件访问。
 
@@ -255,3 +329,5 @@ Logic 拥有业务规则、服务与状态，单向组合 Core，不依赖 Bridg
 模型/Web/反馈/资源的纯入口与 service 入口分开。Bridge 只暴露需要传输的类型；宿主通过公开服务入口装配，浏览器不能加载 Node/Electron。目录导航见 [类图](ARCHITECTURE.md)。
 
 编排协作与失败恢复约束集中见 [调度契约](SCHEDULING.md)。规则不能加载运行服务；具体引擎只由 execution/assembly 选择，其他编排依赖引擎契约。公开文件登记在 scripts/logic-runtime-entries.mjs，原私有预算边界仍有效。
+
+Application 持有业务生命周期，Bridge 适配器只增加 dispatch。资料、工作区和更新纯类型归 Logic；Electron 系统加密归 Core 独立平台入口，传输和窗口生命周期归 Bridge。旧 backend 源码已全部迁出，前端目录待下一片迁移。业务修改入口见 [边界导航](BOUNDARIES.md)。

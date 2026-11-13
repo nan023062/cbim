@@ -5,7 +5,7 @@ import path from 'node:path';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {reportFixture} from './execution-report-provider';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 
 /** Seed only the caller's isolated project/user root; no account or user project is reused. */
 export async function seedExecutionReport(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>void}){

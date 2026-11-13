@@ -4,9 +4,7 @@
  * 设计原因：附件正文和来源证明由主进程快照保存，界面只传身份；资源资料仅为只读参考，不授予安装或执行权限。
  */
 export type {ChatPermission,ChatApproval} from '../../logic/execution/rules/types';
-export interface ChatAttachment {id:string;kind:'file'|'folder'|'link'|'web'|'connector'|'repository_resource';name:string;source:string;note?:string}
-/** 图片仅来自当前工作区已保存快照；禁止 SVG/HTML 与任意预览 URL。 */
-export interface ChatAttachmentPreview {name:string;source:string;note?:string;text:string;image?:{mimeType:'image/png'|'image/jpeg'|'image/gif'|'image/webp';data:string}}
+export type {ChatAttachment,ChatAttachmentPreview} from '../../logic/materials/contracts';
 /** 只识别整个剪贴板为绝对路径列表的情况；普通句子、相对路径和 URL 保持文本，不猜测用户意图。 */
 export function pastedLocalPaths(text:string):string[]|undefined {
   if(!text.trim()||text.length>32768*12||text.includes('\0'))return;

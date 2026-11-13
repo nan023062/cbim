@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
+import {OutputManifestFiles} from '../src/logic/file-operations/platform/files/output-manifest-files';
 import {artifactScopeSchema,preparedArtifactScopes,type ArtifactScopeBinding} from '../src/logic/workspace/rules/artifact-scope';
 import {outputManifestSnapshotSchema} from '../src/logic/evidence/rules/output-manifest';
 import {outputManifestHash} from '../src/logic/evidence/rules/output-manifest-evidence';

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import {workspaceMemberDetailSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema} from '../src/logic/team/rules/workspace-member';
 import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema} from '../src/logic/workspace/rules/module-ownership';
 import {ownerExecutionDiscoverySchema} from '../src/logic/team/rules/owner-execution-discovery';

@@ -7,9 +7,9 @@ import {WorkspaceExecutionManager,type ExecutionCollaboration} from '../src/logi
 import type {WorkspaceLoopOptions} from '../src/logic/execution/assembly/loop-engine';
 import type {ExecutionLaunchContext} from '../src/logic/execution/admission/admission-wait';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,TaskSpec} from '../src/logic/execution/rules/types';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';

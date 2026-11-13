@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {hash} from '../src/core/platform/node/serialization';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {ControlledFileChange,ControlledWritePrepared,FileCompensationPrepared} from '../src/logic/file-operations/rules/controlled-file-event';

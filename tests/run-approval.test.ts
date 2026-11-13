@@ -1,4 +1,4 @@
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {test,expect} from 'vitest';
 import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import {fixture} from './helpers';

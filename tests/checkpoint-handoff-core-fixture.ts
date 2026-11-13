@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {hash} from '../src/core/platform/node/serialization';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import type {DispatchState,DispatchMutation,CheckpointMessage,AssignmentMessage} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {GraphEventBatch,TaskNode} from '../src/logic/tasks/rules/graph-types';
 import type {MemberCheckpointRecord} from '../src/logic/tasks/rules/member-checkpoint';

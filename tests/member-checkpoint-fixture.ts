@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import {request} from './data/knowledge';

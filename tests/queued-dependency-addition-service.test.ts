@@ -7,7 +7,7 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
 import type {AddQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-addition';
 import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';

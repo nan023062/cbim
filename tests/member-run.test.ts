@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec,type RuntimeOptions,type MemberRunLaunch} from '../src/logic/execution/rules';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 
 class Engine implements AgentEngine {
   readonly kind='pi';context!:EngineContext;ran=false;closed=false;

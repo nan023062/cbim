@@ -6,7 +6,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {json} from '../src/core/platform/node/serialization';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import path from 'node:path';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';

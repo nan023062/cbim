@@ -8,8 +8,8 @@ import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspac
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import type {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import type {TaskSpec} from '../src/logic/execution/rules/types';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 

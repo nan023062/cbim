@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {attachmentFixture as data,waitingAttachmentsProvider,requestImages} from './waiting-attachments-provider';
 import {attachmentHash,attachmentWait,seedWaitingAttachments} from './waiting-attachments-fixture';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {hash,json} from '../src/core/platform/node/serialization';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';

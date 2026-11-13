@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,EngineEvent} from '../src/logic/execution/rules/types';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {hash,json} from '../src/core/platform/node/serialization';
 import {scopedActiveInputHash} from '../src/logic/tasks/rules/scope-active-input-rules';
 

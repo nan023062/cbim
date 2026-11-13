@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {vi} from 'vitest';
 import {manifestFixture,manifestContracts} from './output-manifest-fixture';
 import {artifactBinding,invoke,seedProgress} from './artifact-runtime-fixture';
-import {Win32ControlledFile} from '../src/backend/main/platform/files/controlled-file-win32';
+import {Win32ControlledFile} from '../src/logic/file-operations/platform/files/controlled-file-win32';
 import type {ArtifactTransitionRunPort} from '../src/logic/execution/rules/capabilities/run-artifact-transition';
 import type {ArtifactTransitionDefinition} from '../src/logic/workspace/rules/artifact-scope';
 import {preparedArtifactScopes} from '../src/logic/workspace/rules/artifact-scope';

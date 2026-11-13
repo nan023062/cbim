@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {afterEach,expect,it,vi} from 'vitest';
-import {createAgentHistory,type AgentHistoryWorkspace} from '../src/backend/main/history/assembly';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {createAgentHistory,type AgentHistoryWorkspace} from '../src/logic/history/service/assembly';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import type {TaskSpec} from '../src/logic/execution/rules/types';
 
 const cleanups:(()=>Promise<void>)[]=[];

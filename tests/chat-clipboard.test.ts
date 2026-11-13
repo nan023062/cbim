@@ -5,7 +5,7 @@ import {pathToFileURL} from 'node:url';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {pastedLocalPaths} from '../src/bridge/contracts/chat';
 import {pastedImage} from '../src/frontend/conversation/pasted-images';
 import {ComposerAttachments} from '../src/frontend/execution-view/ComposerAttachments';

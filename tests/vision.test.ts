@@ -4,7 +4,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {deflateSync} from 'node:zlib';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {parseModelCatalog} from '../src/logic/models';
 import {modelSchema} from '../src/logic/models';
 import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';

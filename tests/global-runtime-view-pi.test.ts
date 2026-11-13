@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
 import {runtimeSnapshotSchema,runtimeReadSchema} from '../src/logic/runtime/rules/runtime-validation';

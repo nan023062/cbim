@@ -1,10 +1,10 @@
 import {it,expect,vi} from 'vitest';
 import path from 'node:path';
 import {runtimeFixture,digest} from './runtime-fixture';
-import {RuntimeStore} from '../src/backend/updater/runtime-store';
-import {RuntimeJournal} from '../src/backend/updater/runtime-journal';
-import {RuntimeUpdates} from '../src/backend/updater/runtime-updates';
-import {DesktopUpdates} from '../src/backend/updater/desktop-updates';
+import {RuntimeStore} from '../src/logic/updates/service/runtime-store';
+import {RuntimeJournal} from '../src/logic/updates/service/runtime-journal';
+import {RuntimeUpdates} from '../src/logic/updates/service/runtime-updates';
+import {DesktopUpdates} from '../src/logic/updates/service/desktop-updates';
 it('same-C R update prepares files and used engines, then switches only after explicit drain without NSIS',async()=>{
   const f=await runtimeFixture();let service:DesktopUpdates|undefined;try{
     const download=vi.fn(f.download),store=new RuntimeStore(path.join(f.root,'cache'),f.cold,download),journal=new RuntimeJournal(path.join(f.root,'cache/state'),{digest:digest(f.envelope().payload),resourceVersion:1});

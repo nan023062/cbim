@@ -7,11 +7,11 @@ import type {ExecutionCollaboration} from '../src/logic/conversation/runtime/exe
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../src/logic/execution/rules/types';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
 import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import type {ExecutionLaunchContext,ExecutionAdmissionWait} from '../src/logic/execution/admission/admission-wait';
-import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
+import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
 
 const options={provider:'test',model:'model-one',permission:'ask' as const,allowNativeExecution:true};
 const source=(continuationId='continuation-one',messageIds=['result-one'],taskIds=['member-task-one']):RunInputSource=>({kind:'member-results',continuationId,messageIds,taskIds});

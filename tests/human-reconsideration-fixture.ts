@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {humanServiceFixture} from './human-decision-service-fixture';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
 import type {HumanDecisionKind,HumanDecisionPreviewInput} from '../src/logic/tasks/rules/human-decisions';
 import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 

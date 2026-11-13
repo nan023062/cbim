@@ -21,7 +21,7 @@ it('合法单模块单元可选中，空模块及非法测试类型不会降级�
 });
 it('不允许单元通过辅助文件间接加载完整应用，也禁止类型引用掩盖依赖',()=>{
   for(const clause of ['import','import type']){
-    const f=sample({'tests/example.test.ts':"import './fixture';",'tests/fixture.ts':`${clause} {Application} from '../src/backend/main/assembly/application';`,'src/backend/main/assembly/application.ts':'export class Application {}'});
+    const f=sample({'tests/example.test.ts':"import './fixture';",'tests/fixture.ts':`${clause} {Application} from '../src/logic/application/application';`,'src/logic/application/application.ts':'export class Application {}'});
     expect(f.run().errors.some(error=>error.includes('Unit loads application'))).toBe(true);
   }
 });

@@ -9,7 +9,7 @@ import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execu
 import {json} from '../src/core/platform/node/serialization';
 import {projectMainScope} from '../src/logic/tasks/rules/main-tool-output';
 import type {GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {GoalTools} from '../src/logic/tools/runtime/goal-tools';
 import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';

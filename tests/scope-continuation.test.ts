@@ -8,8 +8,8 @@ import type {TaskSpec} from '../src/logic/execution/rules/types';
 import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {goalInputRevision,goalNeedsReplan} from '../src/logic/tasks/rules/scope-goal';
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 const plan:GoalPlanInput={expectedRevision:1,objective:'先核实目标再交付',constraints:[],criteria:[{id:'human',text:'保留真正人工验收',kind:'human'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['human'],reason:'管理目标'}],reason:'先等待补充'};

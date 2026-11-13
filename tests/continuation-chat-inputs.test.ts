@@ -3,7 +3,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {it,expect,vi} from 'vitest';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {hash} from '../src/core/platform/node/serialization';
 import {continuationAttachmentLimits} from '../src/logic/tasks/rules/scope-continuation-attachments';
 

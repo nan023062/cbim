@@ -4,8 +4,8 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {dependencyReplacementProvider,dependencyReplacementFixture as data} from './queued-dependency-replacement-provider';
 import {seedDependencyReplacement,dependencyRecords,dependencyRuns,assertDependencyReplacement} from './queued-dependency-replacement-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {GraphSnapshot,GraphDelta} from '../src/logic/tasks/rules/graph-types';
 
 it.each(['complete','stop','restart-held'] as const)('replaces one queued prerequisite with a real candidate while preserving original downstream identities (%s)',async mode=>{

@@ -8,8 +8,8 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {scopeContinuationProvider,continuationFixture} from './scope-continuation-provider';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 

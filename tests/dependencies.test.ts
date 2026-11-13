@@ -5,10 +5,23 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 test.each([
+  ['src/logic/workspace/service/workspace.ts','src/logic/application/application.ts',false],
+  ['src/logic/application/application.ts','src/bridge/server/ipc/dispatch.ts',false],
+  ['src/logic/application/application.ts','src/core/platform/electron/secrets.ts',false],
+  ['src/bridge/server/bootstrap/desktop.ts','src/logic/workspace/service/workspace.ts',false],
+  ['src/bridge/server/application.ts','src/logic/application/application.ts',true],
+  ['src/bridge/server/main.ts','src/core/platform/electron/secrets.ts',true],
+] as const)('service migration preserves lifecycle and host boundaries: %s -> %s',(from,to,allowed)=>{
+  const spec=path.posix.relative(path.posix.dirname(from),to);
+  const result=audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+
+test.each([
   ['src/logic/tasks/rules/graph.ts','src/logic/models/service/index.ts',false],
-  ['src/logic/tasks/rules/graph.ts','src/backend/main/workspace/workspace.ts',false],
+  ['src/logic/tasks/rules/graph.ts','src/logic/workspace/service/workspace.ts',false],
   ['src/core/json.ts','src/logic/knowledge/rules/types.ts',false],
-  ['src/backend/main/assembly/application.ts','src/logic/tasks/rules/unregistered.ts',false],
+  ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
 ] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
@@ -16,31 +29,31 @@ test.each([
 });
 
 test.each([
-  ['src/backend/main/assembly/application.ts','src/logic/resources/service/index.ts',true],
+  ['src/logic/application/application.ts','src/logic/resources/service/index.ts',true],
   ['src/logic/resources/service/resource-store.ts','src/core/platform/node/locking.ts',true],
-  ['src/logic/resources/service/resource-repository.ts','src/backend/main/platform/paths.ts',false],
+  ['src/logic/resources/service/resource-repository.ts','src/logic/workspace/service/paths.ts',false],
   ['src/logic/resources/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
   ['src/logic/tools/runtime/repository-tools.ts','src/logic/resources/service/index.ts',false],
   ['src/logic/resources/index.ts','src/logic/resources/service/index.ts',false],
   ['src/frontend/resources/example.ts','src/logic/resources/index.ts',false],
-  ['src/backend/main/assembly/application.ts','src/logic/resources/service/resource-store.ts',false],
+  ['src/logic/application/application.ts','src/logic/resources/service/resource-store.ts',false],
 ] as const)('资源迁移边界 %s → %s = %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
   expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
 });
 
 test.each([
-  ['src/backend/main/assembly/application.ts','src/logic/feedback/service/index.ts',true],
+  ['src/logic/application/application.ts','src/logic/feedback/service/index.ts',true],
   ['src/backend/core/tools/scope-schema.ts','src/logic/feedback/index.ts',true],
   ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/index.ts',true],
   ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
   ['src/logic/execution/engines/pi/engine.ts','src/logic/feedback/index.ts',false],
-  ['src/backend/main/assembly/application.ts','src/logic/feedback/service/github-feedback.ts',false],
+  ['src/logic/application/application.ts','src/logic/feedback/service/github-feedback.ts',false],
   ['src/logic/feedback/contracts.ts','src/backend/core/tools/scope-schema.ts',false],
   ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
   ['src/logic/feedback/service/github-feedback.ts','src/core/platform/node/locking.ts',true],
   ['src/logic/feedback/service/github-feedback.ts','src/core/contracts/secrets.ts',true],
-  ['src/logic/feedback/service/github-feedback.ts','src/backend/main/platform/locking.ts',false],
+  ['src/logic/feedback/service/github-feedback.ts','src/logic/execution/platform/locking.ts',false],
   ['src/logic/feedback/service/github-feedback.ts','src/logic/models/index.ts',false],
   ['src/bridge/contracts/other.ts','src/logic/feedback/index.ts',false],
   ['src/frontend/settings/feedback.ts','src/logic/feedback/index.ts',false],
@@ -64,8 +77,8 @@ const temporary:string[]=[];
 test.each([
   ['src/logic/web/service/web-service.ts','src/core/platform/node/web/index.ts',true],
   ['src/logic/web/service/web-settings.ts','src/core/contracts/secrets.ts',true],
-  ['src/backend/main/assembly/application.ts','src/logic/web/service/index.ts',true],
-  ['src/backend/main/main.ts','src/core/platform/electron/web-reader.ts',true],
+  ['src/logic/application/application.ts','src/logic/web/service/index.ts',true],
+  ['src/bridge/server/main.ts','src/core/platform/electron/web-reader.ts',true],
   ['src/backend/main/other.ts','src/core/platform/electron/web-reader.ts',false],
   ['src/logic/tools/runtime/web-tools.ts','src/logic/web/index.ts',true],
   ['src/logic/tools/runtime/web-tools.ts','src/logic/web/service/index.ts',false],
@@ -77,7 +90,7 @@ test.each([
   ['src/frontend/settings/web.ts','src/logic/web/index.ts',false],
   ['src/bridge/client/web.ts','src/logic/web/service/index.ts',false],
   ['src/bridge/contracts/other.ts','src/logic/web/index.ts',false],
-  ['src/logic/web/service/web-settings.ts','src/backend/main/settings/budget-settings.ts',false],
+  ['src/logic/web/service/web-settings.ts','src/logic/budget/settings/budget-settings.ts',false],
 ] as const)('Web 迁移边界 %s → %s = %s',(from,to,allowed)=>{
   const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
   const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
@@ -90,7 +103,7 @@ test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实�
   for(const file of ['src/core/web/extra.ts',entry])for(const dependency of ['node:http','electron'])expect(audit({[file]:`import '${dependency}';`}).ok).toBe(false);
 });
 test.each([
-  ['src/backend/main/assembly/app.ts','src/logic/models/service/index.ts',true],
+  ['src/logic/application/assembly/app.ts','src/logic/models/service/index.ts',true],
   ['src/backend/core/team/example.ts','src/logic/models/index.ts',true],
   ['src/logic/execution/engines/example.ts','src/logic/models/index.ts',true],
   ['src/logic/execution/context/example.ts','src/logic/models/index.ts',true],
@@ -101,9 +114,9 @@ test.each([
   ['src/frontend/settings/models.ts','src/logic/models/index.ts',false],
   ['src/logic/execution/engines/example.ts','src/logic/models/service/index.ts',false],
   ['src/logic/execution/context/example.ts','src/logic/models/service/index.ts',false],
-  ['src/backend/main/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
-  ['src/backend/main/assembly/app.ts','src/logic/models/config.ts',false],
-  ['src/backend/main/assembly/app.ts','src/logic/tasks/index.ts',false],
+  ['src/logic/application/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
+  ['src/logic/application/assembly/app.ts','src/logic/models/config.ts',false],
+  ['src/logic/application/assembly/app.ts','src/logic/tasks/index.ts',false],
   ['src/logic/models/index.ts','src/logic/models/service/index.ts',false],
   ['src/logic/models/config.ts','src/backend/core/foundation/errors.ts',false],
   ['src/logic/models/service/llm-profiles.ts','src/bridge/contracts/models.ts',false],
@@ -158,7 +171,7 @@ test('新 Core 未登记模块与便携模块中的 Node 导入都被拒绝',()=
   const hiddenNode=audit({'src/core/utility/extra.ts':"import fs from 'node:fs';"});
   expect(hiddenNode.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
-test.each(['src/view/tasks/model.ts','src/frontend/tasks/model.ts','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
+test.each(['src/view/tasks/model.ts','./src/frontend/tasks/model.ts','src/bridge/client/call.ts','src/bridge/contracts/example.ts'])('浏览器或纯通信文件 %s 不得直接导入 Node/Electron',from=>{
   for(const spec of ['node:fs','fs/promises','electron','electron/main']){
     const result=audit({[from]:`import '${spec}';`});
     expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'runtime-environment',file:from}));
@@ -187,14 +200,14 @@ test('foundations is independent even for type dependencies; Main consumes only 
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依赖父层约定或业务',(capability)=>{
   const from=foundationFile(`${capability}/index.ts`);
-  for(const to of ['src/backend/core/foundation/errors.ts','src/backend/core/foundation/identity.ts','src/backend/core/foundation/paths.ts','src/backend/core/tasks/example.ts']){
+  for(const to of ['src/backend/core/foundation/errors.ts','./src/backend/core/foundation/identity.ts','src/backend/core/foundation/paths.ts','src/backend/core/tasks/example.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`export type {Value} from '${relative}';`,[to]:'export type Value=string;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
   }
 });
 test('Updater 与 Bridge 不因目录合并取得额外 Core 或基础库访问权',()=>{
-  for(const [from,to] of [['src/backend/updater/example.ts','src/backend/core/foundation/errors.ts'],['src/bridge/contracts/example.ts','src/core/platform/node/digest.ts']]){
+  for(const [from,to] of [['src/logic/updates/service/example.ts','src/backend/core/foundation/errors.ts'],['src/bridge/contracts/example.ts','src/core/platform/node/digest.ts']]){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`import type {Value} from '${relative}';`,[to]:'export type Value=string;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
@@ -245,21 +258,21 @@ test('utility 通用入口禁止通过重导出连带装载 Node 入口',()=>{
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'external-dependency',boundary:'utility-foundations'}));
 });
 test('Updater 只组合 utility 通用入口，不能借基础层依赖其他方案或 Node 入口',()=>{
-  expect(audit({'src/backend/updater/a.ts':"import {value} from '../../core/utility';",'src/core/utility/index.ts':'export const value=1;'}).ok).toBe(true);
+  expect(audit({'src/logic/updates/service/a.ts':"import {value} from '../../../core/utility';",'src/core/utility/index.ts':'export const value=1;'}).ok).toBe(true);
   for(const target of ['utility/node','files','web']){
     const file=foundationFile(target==='utility/node'?target+'.ts':target+'/index.ts');
-    const result=audit({'src/backend/updater/a.ts':`import {value} from '${path.posix.relative('src/backend/updater',file)}';`,[file]:'export const value=1;'});
+    const result=audit({'src/logic/updates/service/a.ts':`import {value} from '${path.posix.relative('src/logic/updates/service',file)}';`,[file]:'export const value=1;'});
     expect(result.unresolved).toEqual([]);expect(result.violations).not.toEqual([]);
   }
 });
 
 test('fixed bootstrap generated loading remains a real source edge and cannot hide cycles or missing code',()=>{
   const load="import {createRequire} from 'node:module'; const loadApplication=createRequire(import.meta.url); loadApplication(entry);";
-  const valid=audit({'src/backend/bootstrap/desktop.ts':load,'src/backend/main/main.ts':'export function startDesktop(){}'});
-  expect(valid.ok).toBe(true);expect(valid.edges).toContainEqual(expect.objectContaining({from:'src/backend/bootstrap/desktop.ts',to:'src/backend/main/main.ts',kind:'generated-dynamic/require'}));
-  expect(audit({'src/backend/bootstrap/desktop.ts':load}).unresolved).not.toEqual([]);
-  const reverse=audit({'src/backend/bootstrap/desktop.ts':load,'src/backend/main/main.ts':"import '../bootstrap/desktop';"});expect(reverse.cycles).toHaveLength(1);expect(reverse.ok).toBe(false);
-  expect(audit({'src/backend/bootstrap/desktop.ts':load.replace('loadApplication(entry)','loadApplication(other)'),'src/backend/main/main.ts':''}).dynamic).not.toEqual([]);
+  const valid=audit({'src/bridge/server/bootstrap/desktop.ts':load,'src/bridge/server/main.ts':'export function startDesktop(){}'});
+  expect(valid.ok).toBe(true);expect(valid.edges).toContainEqual(expect.objectContaining({from:'src/bridge/server/bootstrap/desktop.ts',to:'src/bridge/server/main.ts',kind:'generated-dynamic/require'}));
+  expect(audit({'src/bridge/server/bootstrap/desktop.ts':load}).unresolved).not.toEqual([]);
+  const reverse=audit({'src/bridge/server/bootstrap/desktop.ts':load,'src/bridge/server/main.ts':"import './bootstrap/desktop';"});expect(reverse.cycles).toHaveLength(1);expect(reverse.ok).toBe(false);
+  expect(audit({'src/bridge/server/bootstrap/desktop.ts':load.replace('loadApplication(entry)','loadApplication(other)'),'src/bridge/server/main.ts':''}).dynamic).not.toEqual([]);
 });
 
 test('all maintained code has no cycles including type dependencies and no unreviewed loads',()=>{
@@ -312,7 +325,7 @@ test('P1 narrow boundaries reject restored write access, shared stores and busin
     ['src/logic/knowledge/rules/knowledge-queries.ts','./ports','src/logic/knowledge/rules/ports.ts','knowledge-query-orchestration'],
     ['src/logic/knowledge/rules/knowledge-queries.ts','./knowledge-refresh','src/logic/knowledge/rules/knowledge-refresh.ts','knowledge-query-orchestration'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-port'],
-    ['src/logic/budget/runtime/model-request-budget-service.ts','../../../logic/dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
+    ['src/logic/budget/runtime/model-request-budget-service.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
     ['src/logic/budget/runtime/model-request-budget-service.ts','./scope-budget-service','src/logic/budget/runtime/scope-budget-service.ts','request-budget-service'],
     ['src/logic/execution/rules/engine-tools.ts','./capabilities/member-tool-capabilities','src/logic/execution/rules/capabilities/member-tool-capabilities.ts','engine-tool-registry'],
   ];
@@ -322,7 +335,7 @@ test('P1 narrow boundaries reject restored write access, shared stores and busin
   }
 });
 test('test data rejects Application imports and private helper reexports',()=>{
-  const direct=audit({'tests/data/knowledge.ts':"import type {App} from '../../src/backend/main/assembly/application';",'src/backend/main/assembly/application.ts':'export class App {}'});
+  const direct=audit({'tests/data/knowledge.ts':"import type {App} from '../../src/logic/application/application';",'src/logic/application/application.ts':'export class App {}'});
   expect(direct.logicalViolations).toContainEqual(expect.objectContaining({rule:'logical-direction',boundary:'test-data'}));expect(direct.ok).toBe(false);
   const privateEntry=audit({'tests/data/private.ts':'export const value=1;','tests/sample.ts':"export {value} from './data/private';"});
   expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'test-data'}));expect(privateEntry.ok).toBe(false);
@@ -396,7 +409,7 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     [contracts,snapshot],[snapshot,team],[team,workspace],[workspace,team],
     [team,port],[query,port],['src/core/json.ts',contracts],
     ['tests/knowledge-data.ts','tests/helpers.ts'],
-    ['tests/knowledge-fixture.ts','src/backend/main/assembly/application.ts'],
+    ['tests/knowledge-fixture.ts','src/logic/application/application.ts'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],
@@ -422,8 +435,8 @@ test('snapshot contracts and domain views reject reverse or private dependencies
   }).ok).toBe(true);
 });
 test('history persistence rejects workspace and runtime assembly even through type dependencies',()=>{
-  const from='src/backend/main/history/file-store.ts';
-  for(const to of ['src/backend/main/workspace/workspace.ts','src/backend/main/workspace/agent-history.ts','src/logic/history/runtime/agent-history.ts']){
+  const from='src/logic/history/service/file-store.ts';
+  for(const to of ['src/logic/workspace/service/workspace.ts','src/logic/workspace/service/agent-history.ts','src/logic/history/runtime/agent-history.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`export type {T} from '${relative}';`,[to]:'export type T=string;'});
     expect(result.cycles).toEqual([]);expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
@@ -432,11 +445,12 @@ test('history persistence rejects workspace and runtime assembly even through ty
 });
 
 test('updater stays independent of application runtime and business services',()=>{
-  for(const target of ['main','scheduler-engine','core']){
-    const result=audit({'src/backend/updater/a.ts':`import type {T} from '../${target}/b';`,[`src/backend/${target}/b.ts`]:'export type T=string;'});
+  const from='src/logic/updates/service/a.ts';
+  for(const target of ['src/logic/application/application.ts','src/logic/runtime/monitoring/global-runtime.ts','src/logic/knowledge/rules/types.ts']){
+    const result=audit({[from]:`import type {T} from '${path.posix.relative(path.posix.dirname(from),target)}';`,[target]:'export type T=string;'});
     expect(result.violations).toHaveLength(1);
   }
-  expect(audit({'src/backend/main/a.ts':"import type {T} from '../updater/b';",'src/backend/updater/b.ts':"export type {T} from '../../bridge/contracts/c';",'src/bridge/contracts/c.ts':'export type T=string;'}).ok).toBe(true);
+  expect(audit({'src/bridge/server/main.ts':"import type {T} from '../../logic/updates/service/runtime-host';",'src/logic/updates/service/runtime-host.ts':"export type {T} from '../contracts';",'src/logic/updates/contracts.ts':'export type T=string;'}).ok).toBe(true);
 });
 test('frontend and backend can only meet through the public bridge contracts',()=>{
   const fixtures:Record<string,string>[]=[
@@ -453,11 +467,11 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
   const cases=[
     ['src/frontend/execution-view/WorkStatus.tsx','../tasks/useExecutionRecovery','src/frontend/tasks/useExecutionRecovery.ts','execution-view'],
     ['src/frontend/execution-view/ToolTimeline.tsx','../tasks/ToolActivity','src/frontend/tasks/ToolActivity.tsx','execution-view'],
-    ['src/backend/main/history/file-store.ts','../workspace/workspace','src/backend/main/workspace/workspace.ts','agent-history-file-store'],
-    ['src/backend/main/history/file-store.ts','../../../logic/history/runtime/agent-history','src/logic/history/runtime/agent-history.ts','agent-history-file-store'],
-    ['src/bridge/contracts/agent-history-ipc.ts','../../backend/main/assembly/application','src/backend/main/assembly/application.ts','ipc-contract'],
+    ['src/logic/history/service/file-store.ts','../../workspace/service/workspace','src/logic/workspace/service/workspace.ts','agent-history-file-store'],
+    ['src/logic/history/service/file-store.ts','../runtime/agent-history','src/logic/history/runtime/agent-history.ts','agent-history-file-store'],
+    ['src/bridge/contracts/agent-history-ipc.ts','../../logic/application/application','src/logic/application/application.ts','ipc-contract'],
     ['src/bridge/contracts/ipc-loop.ts','../../logic/conversation/runtime/execution-manager','src/logic/conversation/runtime/execution-manager.ts','ipc-contract'],
-    ['src/bridge/contracts/ipc-desktop.ts','../../backend/main/main','src/backend/main/main.ts','ipc-contract'],
+    ['src/bridge/contracts/ipc-desktop.ts','../server/main','src/bridge/server/main.ts','ipc-contract'],
   ];
   for(const [file,spec,target,boundary] of cases){
     const result=audit({[file]:`import type {T} from '${spec}';`,[target]:'export interface T {}'});
@@ -478,7 +492,7 @@ test('concrete engines depend on domain contracts; only execution assembly may s
   expect(audit({[engine]:"import type {T} from '../../rules/types';",[contract]:'export interface T {}'}).ok).toBe(true);
   const reversed=audit({[contract]:"import type {T} from '../engines/pi/engine';",[engine]:'export interface T {}'});
   expect(reversed.violations).toHaveLength(1);expect(reversed.ok).toBe(false);
-  const bypass=audit({'src/backend/main/assembly/entry.ts':"import type {T} from '../../../logic/execution/engines/pi/engine';",[engine]:'export interface T {}'});
+  const bypass=audit({'src/logic/application/assembly/entry.ts':"import type {T} from '../../../logic/execution/engines/pi/engine';",[engine]:'export interface T {}'});
   expect(bypass.violations).toHaveLength(1);expect(bypass.ok).toBe(false);
   for(const directory of ['execution/assembly','team/runtime']){
     const from='src/logic/'+directory+'/entry.ts',spec=path.posix.relative(path.posix.dirname(from),engine);

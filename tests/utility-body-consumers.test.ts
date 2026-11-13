@@ -1,9 +1,9 @@
 import {expect,it,vi} from 'vitest';
 import {RemoteRepository} from '../src/logic/resources/service';
 import {githubRequest} from '../src/logic/feedback/service/github-api';
-import {readUrlSource} from '../src/backend/main/materials/chat-source-readers';
-import {releaseRequest} from '../src/backend/updater/release-http';
-import {downloadRuntimeManifest} from '../src/backend/updater/runtime-download';
+import {readUrlSource} from '../src/logic/materials/service/chat-source-readers';
+import {releaseRequest} from '../src/logic/updates/service/release-http';
+import {downloadRuntimeManifest} from '../src/logic/updates/service/runtime-download';
 import {MAX_BYTES} from '../src/logic/resources/service';
 
 // 所有断言围绕同一组合契约：utility 的取消事实由调用方映射，不丢失原业务错误或触发重发。

@@ -14,18 +14,31 @@
 
 ```mermaid
 classDiagram
+class N_src_logic_file_operations_platform["platform/"] {
+  <<directory>>
+}
 class N_src_logic_file_operations_rules["rules/"] {
   <<directory>>
 }
+class N_src_logic_file_operations_service["service/"] {
+  <<directory>>
+}
+N_src_logic_file_operations_platform ..> N_src_logic_file_operations_rules : 导入依赖
+N_src_logic_file_operations_service ..> N_src_logic_file_operations_platform : 导入依赖
+N_src_logic_file_operations_service ..> N_src_logic_file_operations_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `platform` → `rules`：导入。
+- `service` → `platform`：导入。
+- `service` → `rules`：导入。
 
 ## 子目录导航
 
+- [platform/](platform/ARCHITECTURE.md)：业务文件与隔离执行的平台实现；权限、占位、日志和恢复语义属于受控操作，不抽成通用 Core。
 - [rules/](rules/ARCHITECTURE.md)：受控文件操作和隔离执行的冻结协议、规则与恢复状态。平台副作用经端口实现，不因物理目录聚合改变授权、路径校验或证据效力。
+- [service/](service/ARCHITECTURE.md)：受控文件操作与隔离执行的应用服务，连接冻结授权、工作区身份与 platform 实现；不把底层完成当业务验收。 所有受控文件与删除/移动操作继续拒绝安装、用户及独立 R/E 缓存根。
 
 [返回上层](../ARCHITECTURE.md)。
 

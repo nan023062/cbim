@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 
 const cleanups:(()=>Promise<void>)[]=[];

@@ -7,8 +7,8 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request,moduleFiles} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
-import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
-import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
+import {WorkspacePackages} from '../src/logic/resources/packages/workspace-packages';
+import {ArchitectureService} from '../src/logic/workspace/service/architecture-service';
 import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../src/logic/governance/rules/module-governance';
 import {json} from '../src/core/platform/node/serialization';
 

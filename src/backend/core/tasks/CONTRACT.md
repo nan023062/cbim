@@ -1,3 +1,7 @@
+### 对象排序与历史指纹
+
+任务、周期、检查点与依赖规则的 9 处对象递归排序组合 utility.orderJsonValue，本地适配继续指定历史比较器和 undefined 规则。execution-context 使用字符序并保留属性，scope-goal 使用字符序并省略；dispatch-invariants 使用 localeCompare 并保留，其余已迁移适配使用 localeCompare 并省略。序列化、根 fingerprint 排除、不可变前缀与原事务核验仍在任务规则中；不迁移旧记录、不重算授权或替换原指纹。graph-reducer 的手写字符串重放算法保留独立边界。
+
 ### 重启后自动接收已完成的成员结果
 
 主轮结算后、成员启动前，`AutomaticReturnService.record` 在原派发日志追加 `automaticReturns`，冻结主 run、精确成员集合、日志/模型指纹及原公开运行选项。`automatic-return.ts` 负责严格结构与只追加不变量；缺省旧记录不补造恢复资格，不保存密钥、临时批准或附件字节。最多 32 个批次，与主轮上限一致。

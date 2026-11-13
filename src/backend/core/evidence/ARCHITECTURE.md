@@ -144,7 +144,7 @@ class N_src_backend_core_evidence_artifact_evidence_ts_Issue["Issue"] {
 N_src_backend_core_evidence_artifact_evidence_ts ..> N_src_backend_core_evidence_artifact_evidence_ts_Issue : 声明
 ```
 
-直接依赖：[../file-operations/scoped-execution.ts](../file-operations/scoped-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../file-operations/scoped-execution.ts](../file-operations/scoped-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)、[artifact-baseline.ts](artifact-baseline.ts)。
 
 ### artifact-tools.ts
 
@@ -319,7 +319,7 @@ class N_src_backend_core_evidence_output_manifest_identity_ts["output-manifest-i
 }
 ```
 
-直接依赖：[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[output-manifest.ts](output-manifest.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[output-manifest.ts](output-manifest.ts)。
 
 ### output-manifest-tools.ts
 
@@ -591,7 +591,7 @@ class N_src_backend_core_evidence_validation_evidence_ts_ValidationWorkflowBindi
 N_src_backend_core_evidence_validation_evidence_ts ..> N_src_backend_core_evidence_validation_evidence_ts_ValidationWorkflowBinding : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[validation.ts](validation.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[artifact-baseline.ts](artifact-baseline.ts)、[validation.ts](validation.ts)。
 
 ### validation-tools.ts
 
@@ -705,7 +705,7 @@ class N_src_backend_core_evidence_workflow_evidence_ts_WorkflowProgressContext["
 N_src_backend_core_evidence_workflow_evidence_ts ..> N_src_backend_core_evidence_workflow_evidence_ts_WorkflowProgressContext : 声明
 ```
 
-直接依赖：[code-check.ts](code-check.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../tasks/execution-context.ts](../tasks/execution-context.ts)、[progress.ts](progress.ts)、[../tasks/types.ts](../tasks/types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[../tools/questions.ts](../tools/questions.ts)、[../tasks/command-verification.ts](../tasks/command-verification.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[code-check.ts](code-check.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../tasks/execution-context.ts](../tasks/execution-context.ts)、[progress.ts](progress.ts)、[../tasks/types.ts](../tasks/types.ts)、[../tools/types.ts](../tools/types.ts)、[../tools/native-tools.ts](../tools/native-tools.ts)、[../tools/questions.ts](../tools/questions.ts)、[../tasks/command-verification.ts](../tasks/command-verification.ts)、[artifact-evidence.ts](artifact-evidence.ts)、[validation.ts](validation.ts)、[validation-evidence.ts](validation-evidence.ts)、[../workspace/json-validation-schema.ts](../workspace/json-validation-schema.ts)、[complete-output-evidence.ts](complete-output-evidence.ts)、[output-manifest.ts](output-manifest.ts)、[output-manifest-evidence.ts](output-manifest-evidence.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)。
 
 ### 本目录调用边界
 
@@ -1031,6 +1031,8 @@ N_src_backend_core_evidence_workflow_evidence_ts ..> N_src_backend_core_evidence
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 代码检查与交付
+
+对象排序机制由 utility.orderJsonValue 提供，各证据适配保留原字段与指纹规则：artifact-evidence 使用 localeCompare，workflow-evidence/validation-evidence 使用字符序且省略 undefined，output-manifest-identity 使用字符序并保留属性。最终 JSON 序列化、Schema 复核、证据来源和验收均留在本目录，未升级历史摘要或统一排序策略。
 
 Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、args、cwd、timeoutMs 和 success。必须同时声明 `artifactScope` 和 `requireCompleteManifest`，暂不支持 `executionScope` 混用。旧 Workflow 无此字段时行为不变。
 

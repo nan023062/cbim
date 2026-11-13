@@ -1,5 +1,11 @@
 # Codex 适配边界
 
+## JSONL 与在途处理
+
+CodexRpc 组合 utility.LineFramer，只对完整非空白帧解析 JSON；完整帧保留 CR 并按 UTF-8 字节计量，尾部也使用原 32 MiB 上限，不交付 EOF 尾部。坏协议、超时、请求关联和进程终止仍归 RPC。通知顺序继续用本地 Promise 链，不能被 InFlightOperations 的无序集合代替。
+
+RPC handling 与 codexTools.active 使用各自 InFlightOperations，只跟踪原处理 Promise 并等待快照。工具 stop/close 仍发出原取消；RPC close 仍先拒绝请求、关闭 stdin、等待真实 child exit，再等处理集合，不把 Promise 完成当成副作用撤销或资源退出。
+
 ## 无进展超时
 
 `CodexEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。公开消息与宿主工具事件续期，原生正文/推理/命令输出增量先核当前 thread/turn；旧轮迟到输出不能续期。停止和 close 释放计时器，超时沿原失败、工具停止和进程排空路径结算；RPC 请求自己的确认期限保持原义。

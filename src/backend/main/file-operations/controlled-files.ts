@@ -4,7 +4,9 @@
  * 作用定位：已打开工作区的受控写入与桌面补偿服务，连接运行许可、私有备份、独占子进程和唯一 DispatchStore。
  * 设计原因：文件 IO 永不进入 Store 回调；prepared/executing 的可靠保存先于写入，保存未知不重做。运行解除待核实屏障只接受原 not_applied 与进程退出，不凭错误码或查无推断。
  * 受控文件平台的禁止边界包含独立 R/E 缓存，避免业务文件工具修改下一次将执行的签名程序。
+ * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
+import {InFlightOperations} from '../../../foundations/utility';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
 import {isDeepStrictEqual as equal} from 'node:util';
@@ -30,13 +32,13 @@ const code=(e:unknown)=>{const value=(e as {code?:unknown})?.code;return typeof 
 const publicValue=<T>(value:T):T=>{if(Buffer.byteLength(JSON.stringify(value),'utf8')>controlledFileLimits.outputBytes)fail('CONTROLLED_OUTPUT_LIMIT','回包超过有界上限');return value};
 /** 仅 Main 实际装配实例；没有 utility 传输时查询历史仍可用，新写和补偿明确拒绝。 */
 export class ControlledFiles {
-  private blobs:ControlledFileBlobs;private closed=false;private operations=new Set<Promise<unknown>>();private controllers=new Set<AbortController>();
+  private blobs:ControlledFileBlobs;private closed=false;private operations=new InFlightOperations();private controllers=new Set<AbortController>();
   private heldReleases=new Set<()=>void>();
   constructor(private readonly owner:Workspace,private readonly store:DispatchStore,private readonly lease:WorkspaceExecutionLease,private readonly transport:ControlledFileTransport|undefined,private readonly inspect:(run:DispatchRun)=>Promise<RunSummary>,private readonly isCurrent:()=>boolean){this.blobs=new ControlledFileBlobs(path.join(owner.paths.project(owner.entry.id),'controlled-files','blobs'))}
   private assert(identity?:{workspaceId:string;instanceId:string}){this.owner.assert(identity);if(this.closed||!this.isCurrent())fail('CONTROLLED_UNAVAILABLE','工作区正在关闭，不能开始文件操作')}
   private platform(){if(!this.transport)fail('CONTROLLED_PLATFORM_UNSUPPORTED','当前宿主没有受控文件 utility 传输');return this.transport}
   private protectedRoots(){return [this.owner.paths.userRoot,this.owner.paths.installRoot,...(this.owner.paths.protectedRoots??[])]}
-  private tracked<T>(signal:AbortSignal|undefined,use:(signal:AbortSignal)=>Promise<T>):Promise<T>{const controller=new AbortController();this.controllers.add(controller);const combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;const result=use(combined);this.operations.add(result);void result.finally(()=>{this.operations.delete(result);this.controllers.delete(controller)}).catch(()=>{});return result}
+  private tracked<T>(signal:AbortSignal|undefined,use:(signal:AbortSignal)=>Promise<T>):Promise<T>{const controller=new AbortController();this.controllers.add(controller);const combined=signal?AbortSignal.any([signal,controller.signal]):controller.signal;const result=use(combined);this.operations.track(result);void result.finally(()=>{this.controllers.delete(controller)}).catch(()=>{});return result}
   /** 工厂冻结真实已领取上下文；以后岗位变化不替换原运行配置，写前仍核原 run/lease 和停止。 */
   forRun(run:DispatchRun,scopeId:string):ControlledFileRunPort|undefined{
     if(!this.transport)return;const saved=structuredClone(run);if(!saved.prepared.memberContext&&!saved.prepared.fallbackBinding)return;
@@ -118,5 +120,5 @@ export class ControlledFiles {
   /** 按稳定本机 commandId 只读原阶段；缺记录不证明未执行，也不创建子进程、补偿或第二个命令。 */
   async receipt(raw:unknown){const input=fileCompensationLookupSchema.parse(raw);this.owner.assert();if(input.workspaceId!==this.owner.entry.id)fail('CONTROLLED_FILE_IDENTITY','工作区身份不一致');const head=controlledFileOperation(await this.store.read(),fileCompensationId(input));if(!head)return undefined;if(head.intent.kind!=='desktop_compensation'||head.intent.request.rootSessionId!==input.rootSessionId)fail('CONTROLLED_FILE_IDENTITY','原补偿不属于当前会话');return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head)))}
   /** 停止后仅排空原操作；无法确认 child 退出时保留租约与服务实例，调用方不得继续关闭 Store。 */
-  async close(){this.closed=true;for(const controller of this.controllers)controller.abort(Error('工作区关闭'));await Promise.allSettled([...this.operations]);await this.transport?.drain(this.owner.entry.path);for(const release of this.heldReleases)release();this.heldReleases.clear()}
+  async close(){this.closed=true;for(const controller of this.controllers)controller.abort(Error('工作区关闭'));await this.operations.drain();await this.transport?.drain(this.owner.entry.path);for(const release of this.heldReleases)release();this.heldReleases.clear()}
 }

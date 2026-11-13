@@ -6,3 +6,6 @@ export {formatJson} from './json-text';
 export {SerialQueue} from './serial-queue';
 export {ByteLimitError,readBoundedBytes} from './bounded-bytes';
 export {StrictJsonError,parseStrictJson} from './strict-json';
+export {orderJsonValue,type JsonKeyOrder} from './json-order';
+export {InFlightOperations} from './in-flight';
+export {LineFramer,type LineFramePolicy} from './line-framer';

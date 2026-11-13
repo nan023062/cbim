@@ -5,11 +5,17 @@
  * 职责边界：超时/坏协议终止原进程，不自动重发；close 等待真实退出和已接收处理排空。
  */
 import {spawn,type ChildProcessWithoutNullStreams} from 'node:child_process';
+import {LineFramer,InFlightOperations} from '../../../foundations/utility';
 
 export class CodexRpc {
-  private child?:ChildProcessWithoutNullStreams;private exit?:Promise<void>;private closing=false;private failure?:Error;private buffer='';private sequence=0;
+  private child?:ChildProcessWithoutNullStreams;private exit?:Promise<void>;private closing=false;private failure?:Error;private sequence=0;
+  /** 完整非空行及尾部均保留 UTF-8 字节限额；CR 仍包含在完整行的计量内。 */
+  private readonly frames=new LineFramer({
+    checkLine:line=>{if(line.trim()&&Buffer.byteLength(line)>32*1024*1024)throw Error('Codex 消息超出限制')},
+    checkRemainder:text=>{if(Buffer.byteLength(text)>32*1024*1024)throw Error('Codex 消息超出限制')},
+  });
   private pending=new Map<number,{resolve:(value:any)=>void;reject:(error:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
-  private handling=new Set<Promise<void>>();
+  private handling=new InFlightOperations();
   private notifications:Promise<void>=Promise.resolve();
   constructor(private notify:(method:string,params:any)=>Promise<void>,private requestHandler:(method:string,params:any)=>Promise<unknown>,private failed:(error:Error)=>void){}
   start(binary:string,cwd:string,env:NodeJS.ProcessEnv,args:string[]){
@@ -17,8 +23,7 @@ export class CodexRpc {
     this.exit=new Promise(resolve=>{child.once('error',error=>{this.fail(error);resolve()});child.once('close',(code,signal)=>{if(!this.closing)this.fail(Error('Codex 进程提前退出 ('+(code??signal)+')'));resolve()})});
     child.stderr.resume();child.stdin.on('error',error=>this.fail(error));child.stdout.setEncoding('utf8');
     child.stdout.on('data',(chunk:string)=>{
-      this.buffer+=chunk;let offset:number;
-      try{while((offset=this.buffer.indexOf('\n'))>=0){const line=this.buffer.slice(0,offset);this.buffer=this.buffer.slice(offset+1);if(!line.trim())continue;if(Buffer.byteLength(line)>32*1024*1024)throw Error('Codex 消息超出限制');this.receive(JSON.parse(line))}if(Buffer.byteLength(this.buffer)>32*1024*1024)throw Error('Codex 消息超出限制')}catch(error){this.fail(error instanceof Error?error:Error(String(error)))}
+      try{this.frames.push(chunk,line=>{if(line.trim())this.receive(JSON.parse(line))})}catch(error){this.fail(error instanceof Error?error:Error(String(error)))}
     });
   }
   private receive(value:any){
@@ -26,7 +31,7 @@ export class CodexRpc {
     if(typeof value.method==='string'){
       const work=(value.id!==undefined?(async()=>{const result=await this.requestHandler(value.method,value.params);this.send({id:value.id,result})})():this.notifications.then(()=>this.notify(value.method,value.params))).catch(error=>this.fail(error instanceof Error?error:Error(String(error))));
       if(value.id===undefined)this.notifications=work;
-      this.handling.add(work);void work.finally(()=>this.handling.delete(work));
+      this.handling.track(work);
     }else if(value.id!==undefined){const pending=this.pending.get(value.id);if(!pending)return;this.pending.delete(value.id);clearTimeout(pending.timer);value.error?pending.reject(Error(String(value.error.message??'Codex 拒绝请求'))):pending.resolve(value.result)}
     else throw Error('Codex 返回不可关联的消息');
   }
@@ -38,5 +43,5 @@ export class CodexRpc {
   send(value:unknown){if(this.failure||this.closing||!this.child)throw this.failure??Error('Codex 不可用');this.child.stdin.write(JSON.stringify(value)+'\n')}
   private fail(error:Error){if(this.failure)return;this.failure=error;for(const entry of this.pending.values()){clearTimeout(entry.timer);entry.reject(error)}this.pending.clear();this.child?.kill();this.failed(error)}
   /** 停止接收后续请求并等待操作处理排空；不将进程退出解释为已撤销工具副作用。 */
-  async close(){this.closing=true;for(const entry of this.pending.values()){clearTimeout(entry.timer);entry.reject(Error('Codex 已关闭'))}this.pending.clear();this.child?.stdin.end();const timer=setTimeout(()=>this.child?.kill(),1000);try{await this.exit;await Promise.allSettled([...this.handling])}finally{clearTimeout(timer)}}
+  async close(){this.closing=true;for(const entry of this.pending.values()){clearTimeout(entry.timer);entry.reject(Error('Codex 已关闭'))}this.pending.clear();this.child?.stdin.end();const timer=setTimeout(()=>this.child?.kill(),1000);try{await this.exit;await this.handling.drain()}finally{clearTimeout(timer)}}
 }

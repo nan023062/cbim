@@ -147,8 +147,8 @@ class N_src_backend_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
   -exit
   -closing
   -failure
-  -buffer
   -sequence
+  -frames
   -pending
   -handling
   -notifications
@@ -170,6 +170,7 @@ class N_src_backend_engines_codex_rpc_ts_CodexRpc["CodexRpc"] {
 N_src_backend_engines_codex_rpc_ts ..> N_src_backend_engines_codex_rpc_ts_CodexRpc : 声明
 ```
 
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
 
 ### session.ts
 
@@ -208,7 +209,7 @@ class N_src_backend_engines_codex_tools_ts_CodexToolSpec["CodexToolSpec"] {
 N_src_backend_engines_codex_tools_ts ..> N_src_backend_engines_codex_tools_ts_CodexToolSpec : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)。
 
 ### 本目录调用边界
 
@@ -267,6 +268,12 @@ N_src_backend_engines_codex_model_proxy_ts ..> N_src_backend_engines_codex_tools
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # Codex 适配边界
+
+## JSONL 与在途处理
+
+CodexRpc 组合 utility.LineFramer，只对完整非空白帧解析 JSON；完整帧保留 CR 并按 UTF-8 字节计量，尾部也使用原 32 MiB 上限，不交付 EOF 尾部。坏协议、超时、请求关联和进程终止仍归 RPC。通知顺序继续用本地 Promise 链，不能被 InFlightOperations 的无序集合代替。
+
+RPC handling 与 codexTools.active 使用各自 InFlightOperations，只跟踪原处理 Promise 并等待快照。工具 stop/close 仍发出原取消；RPC close 仍先拒绝请求、关闭 stdin、等待真实 child exit，再等处理集合，不把 Promise 完成当成副作用撤销或资源退出。
 
 ## 无进展超时
 

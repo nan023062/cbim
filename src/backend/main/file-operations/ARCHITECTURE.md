@@ -82,7 +82,7 @@ class N_src_backend_main_file_operations_controlled_files_ts_ControlledFiles["Co
 N_src_backend_main_file_operations_controlled_files_ts ..> N_src_backend_main_file_operations_controlled_files_ts_ControlledFiles : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/capabilities/run-controlled-file.ts](../../core/execution/capabilities/run-controlled-file.ts)、[../../core/file-operations/controlled-file-operation.ts](../../core/file-operations/controlled-file-operation.ts)、[../../core/file-operations/controlled-file-event.ts](../../core/file-operations/controlled-file-event.ts)、[../../core/file-operations/controlled-file-rules.ts](../../core/file-operations/controlled-file-rules.ts)、[../../core/file-operations/controlled-file-invariants.ts](../../core/file-operations/controlled-file-invariants.ts)、[../platform/files/controlled-file-blobs.ts](../platform/files/controlled-file-blobs.ts)、[../platform/files/controlled-file-protocol.ts](../platform/files/controlled-file-protocol.ts)、[../../scheduler-engine/admission/workspace-lease.ts](../../scheduler-engine/admission/workspace-lease.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../workspace/workspace.ts](../workspace/workspace.ts)、[../../core/dispatch/dispatch-storage.ts](../../core/dispatch/dispatch-storage.ts)、[../../core/tasks/dispatch-execution.ts](../../core/tasks/dispatch-execution.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[../../core/execution/capabilities/run-controlled-file.ts](../../core/execution/capabilities/run-controlled-file.ts)、[../../core/file-operations/controlled-file-operation.ts](../../core/file-operations/controlled-file-operation.ts)、[../../core/file-operations/controlled-file-event.ts](../../core/file-operations/controlled-file-event.ts)、[../../core/file-operations/controlled-file-rules.ts](../../core/file-operations/controlled-file-rules.ts)、[../../core/file-operations/controlled-file-invariants.ts](../../core/file-operations/controlled-file-invariants.ts)、[../platform/files/controlled-file-blobs.ts](../platform/files/controlled-file-blobs.ts)、[../platform/files/controlled-file-protocol.ts](../platform/files/controlled-file-protocol.ts)、[../../scheduler-engine/admission/workspace-lease.ts](../../scheduler-engine/admission/workspace-lease.ts)。
 
 ### isolated-executions.ts
 
@@ -137,3 +137,13 @@ N_src_backend_main_file_operations_isolated_executions_ts ..> N_src_backend_main
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 受控文件的服务关闭边界
+
+ControlledFiles 的 operations 组合 utility.InFlightOperations，只跟踪原操作 Promise；controllers、closed、heldReleases 仍由服务维护。关闭先拒绝新业务并撤销原控制器，再等待当前操作集合、核实平台 transport.drain，最后释放原租约。排空失败不跳过平台核实或释放屏障。
+
+对象身份、字节备份、阶段账本、一次授权、补偿预览与显式提交保留在本目录及 Core 原契约中。基础集合不发起文件操作，不创建重试/恢复或全局共享状态。

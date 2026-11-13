@@ -3,7 +3,9 @@
  * 范围模式的cbim_scoped_read可在原写待核实时只读观察；隔离命令仍被未知写屏障阻断。
  * 作用定位：正式成员受控文件工具的单次授权与短门闩，平台写入只经过此可信运行端口。
  * 设计原因：授权来自 Runtime 自身可靠 allowed 追加返回值，不信任引擎 emit；调用失败后整轮只保留读取与求助，只有可信未写证明才能解除屏障。停止须排空实际文件进程。
+ * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
+import {InFlightOperations} from '../../../../foundations/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {hash} from '../../foundation/serialization';
@@ -23,7 +25,7 @@ export class RunControlledFile {
   private reserved?:{id:string;input:ControlledFileWriteInput;inputHash:string;allowedSeq?:number;consumed:boolean;settled:boolean;finished:boolean;validated:boolean;failedEvent:boolean;safeNoWrite:boolean};
   /** 独立于在途调用；工具已返回失败也不能解除本轮写入、交付和检查点屏障。 */
   private unverified=new Set<string>();
-  private controller=new AbortController();private pending=new Set<Promise<unknown>>();
+  private controller=new AbortController();private pending=new InFlightOperations();
   private readonly scopeId:string;
   constructor(private readonly binding:ControlledFileBinding,private readonly port:ControlledFileRunPort,private readonly assertReady:(id:string)=>void){this.binding=structuredClone(binding);this.scopeId=port.scopeId}
   /** 在审批 await 之前预占；执行与工具终态都完成后才释放，伪早到 finished 不能解除实际 IO 占位。 */
@@ -45,7 +47,7 @@ export class RunControlledFile {
   assertVerified(){if(this.unverified.size)fail('CONTROLLED_FILE_REVIEW_REQUIRED','原受控写结果待核实，本轮不能提交交付或安全交接')}
   stop(){this.controller.abort(Error('运行已停止'))}
   /** 端口任何排空错误都表示物理退出未确认；统一稳定代码，外层不能按普通工具失败释放租约。 */
-  async drain(){await Promise.allSettled([...this.pending]);try{await this.port.drain()}catch{fail('CONTROLLED_FILE_DRAIN_PENDING','文件进程尚未确认退出，请保留工作区并核实原操作')}}
+  async drain(){await this.pending.drain();try{await this.port.drain()}catch{fail('CONTROLLED_FILE_DRAIN_PENDING','文件进程尚未确认退出，请保留工作区并核实原操作')}}
   async list(){return [{name:controlledFileWriteToolName,version:1,effects:['business-write'] as const,description:'仅替换一个已存在的 UTF-8 普通文件，expectedBefore 必须来自实际读取。先可靠保存 before，再由独占句柄写入；只有 applied 是可靠成功，未知不得重试。此工具不自动回滚，也不替代实际 read、产物基线与验收。',inputSchema:zodToJsonSchema(controlledFileWriteInputSchema),outputSchema:zodToJsonSchema(controlledFileWriteOutputSchema),cancellation:{mode:'preflight_only' as const,description:'停止阻止尚未开始的写入；发出内容写后可能部分写入，只有原记录可确认结果。'},recovery:{mode:'inspect_before_retry' as const,description:'桌面查询原任务/运行/调用的受控记录；原调用不重放，补偿须另行显式提交。'}}]}
   async call(name:string,raw:unknown,id?:string,signal?:AbortSignal){
     if(name!==controlledFileWriteToolName||!id)fail('CONTROLLED_FILE_CALL','受控写入缺少真实调用身份');
@@ -55,7 +57,7 @@ export class RunControlledFile {
     const check=()=>{activeSignal.throwIfAborted();this.assertReady(id)};let operation:Promise<ControlledFileWriteApplied>|undefined,dispatched=false;
     const authorization={toolCallId:id,inputHash:reservation.inputHash,allowedSeq:reservation.allowedSeq};
     this.unverified.add(id);
-    try{check();dispatched=true;operation=this.port.write(input,authorization,activeSignal,check);this.pending.add(operation);const result=await operation;const output=checkedJsonToolResult(name,{state:'applied',operation:result},controlledFileWriteOutputSchema.superRefine((value,ctx)=>{const v=value.operation;if(!equal(v.binding,bound)||v.operationId!==controlledFileOperationId(bound,id)||v.scopeId!==this.scopeId||v.toolCallId!==id||v.inputHash!==reservation.inputHash||v.relativePath!==expected.path||!equal(v.before,expected.expectedBefore)||v.after.byteLength!==Buffer.byteLength(expected.content,'utf8')||v.after.sha256!==hash(expected.content))ctx.addIssue({code:'custom',message:'受控写回包与原授权或请求不一致'})}));reservation.validated=true;return output}
+    try{check();dispatched=true;operation=this.port.write(input,authorization,activeSignal,check);this.pending.track(operation);const result=await operation;const output=checkedJsonToolResult(name,{state:'applied',operation:result},controlledFileWriteOutputSchema.superRefine((value,ctx)=>{const v=value.operation;if(!equal(v.binding,bound)||v.operationId!==controlledFileOperationId(bound,id)||v.scopeId!==this.scopeId||v.toolCallId!==id||v.inputHash!==reservation.inputHash||v.relativePath!==expected.path||!equal(v.before,expected.expectedBefore)||v.after.byteLength!==Buffer.byteLength(expected.content,'utf8')||v.after.sha256!==hash(expected.content))ctx.addIssue({code:'custom',message:'受控写回包与原授权或请求不一致'})}));reservation.validated=true;return output}
     catch(error){
       // 错误码或当前相同字节都不是未写证明。可信端口必须核原 not_applied 及真实退出，失败保持屏障和原错误。
       if(!dispatched)reservation.safeNoWrite=true;
@@ -63,6 +65,6 @@ export class RunControlledFile {
       if(reservation.safeNoWrite)this.unverified.delete(id);
       throw error;
     }
-    finally{if(operation)this.pending.delete(operation);reservation.settled=true;this.release()}
+    finally{reservation.settled=true;this.release()}
   }
 }

@@ -3,13 +3,16 @@
  * 作用定位：在派发事务提交与重放时保护冻结额度、真实运行准入证明和不可改写的预算拒绝事实。
  * 设计原因：单独保存“允许”会被后续运行误用；证明必须和唯一新增主运行或成员领取一起提交，拒绝只能记录原因，不能消费等待或改变目标。
  * 职责边界：这里核对已有证明及跨对象关系，不重新读取日志或判断模型账单；可信观察由调度层在同一事务内取得。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchMutation,DispatchState} from '../dispatch/dispatch-storage';
 import type {DispatchScope} from '../tasks/dispatch-scope';
 import {evaluateScopeBudget,scopeBudgetSchema,type ScopeBudgetObservation} from './scope-budget';
 
-const normalize=(value:unknown):unknown=>Array.isArray(value)?value.map(normalize):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,normalize(v)])):value;
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const normalize=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(left:unknown,right:unknown)=>JSON.stringify(normalize(left))===JSON.stringify(normalize(right));
 function valid(value:unknown,message:string):asserts value {if(!value)fail('GRAPH_INPUT_INVALID',message)}
 function memberRuns(state:DispatchState,scope:DispatchScope){

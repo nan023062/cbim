@@ -1,16 +1,22 @@
 /**
  * 目录归属：backend/engines/pi；Pi 引擎适配。
  * 作用定位：大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。
- * 设计原因：图片事件按单行限制为 32 MiB，容纳受限附件的编码开销；将 JSONL 拆包、命令关联和进程退出统一处理，超时命令不自动重放；错误出口使用注入的脱敏函数去除模型凭据。
+ * 设计原因：图片事件保留每行 32×1024×1024 个 UTF-16 code unit 限制；utility 只拆帧，命令关联、进程退出与脱敏留在本适配器，超时命令不自动重放。
  */
 import {spawn,type ChildProcessWithoutNullStreams} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
+import {LineFramer} from '../../../foundations/utility';
 
 /** 要启动的程序、前置参数和环境覆盖；以 shell:false 隐藏启动并用管道通信。 */
 export interface PiCommand {command:string;args:string[];env?:NodeJS.ProcessEnv}
 export class PiRpc {
   private child?:ChildProcessWithoutNullStreams;
-  private buffer='';private dead=false;
+  private dead=false;
+  /** 保留 Pi 的 UTF-16 长度与完整行去 CR/忽略空白规则，不改为字节限制。 */
+  private readonly frames=new LineFramer({
+    checkLine:raw=>{const line=raw.replace(/\r$/,'');if(line.trim()&&line.length>32*1024*1024)throw Error('Pi 事件超过大小限制')},
+    checkRemainder:text=>{if(text.length>32*1024*1024)throw Error('Pi 事件超过大小限制')},
+  });
   private pending=new Map<string,{resolve:(v:any)=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
   private exitPromise?:Promise<void>;
   constructor(private onEvent:(event:any)=>void,private onExit:(error:Error)=>void,private redact:(message:string)=>string=message=>message){}
@@ -24,21 +30,15 @@ export class PiRpc {
     child.stdin.on('error',error=>this.fail(error));
     child.stdout.on('data',(chunk:string)=>{
       // 用户消息事件包含图片 base64；容纳附件总计 20 MiB 后的编码开销，仍限制单行大小。
-      this.buffer+=chunk;
-      let offset:number;
-      while((offset=this.buffer.indexOf('\n'))>=0){
-        const line=this.buffer.slice(0,offset).replace(/\r$/,'');this.buffer=this.buffer.slice(offset+1);if(!line.trim())continue;
-        if(line.length>32*1024*1024){this.fail(Error('Pi 事件超过大小限制'));child.kill();return}
-        try{
+      try{this.frames.push(chunk,raw=>{
+        const line=raw.replace(/\r$/,'');if(!line.trim())return;
           const event=JSON.parse(line);
           if(event.type==='response'){
-            const pending=this.pending.get(event.id);if(!pending)continue;
+            const pending=this.pending.get(event.id);if(!pending)return;
             clearTimeout(pending.timer);this.pending.delete(event.id);
             if(event.success)pending.resolve(event.data);else pending.reject(Error(this.redact(String(event.error||'Pi 拒绝命令'))));
           }else this.onEvent(event);
-        }catch(error){this.fail(error instanceof Error?error:Error(String(error)));child.kill();return}
-      }
-      if(this.buffer.length>32*1024*1024){this.fail(Error('Pi 事件超过大小限制'));child.kill()}
+      })}catch(error){this.fail(error instanceof Error?error:Error(String(error)));child.kill()}
     });
   }
   /** 使用独立命令 ID 等待对应回复；超时只报告未知结果，不自动重试。 */

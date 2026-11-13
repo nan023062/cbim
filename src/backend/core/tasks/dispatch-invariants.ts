@@ -5,7 +5,9 @@
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
  * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加与检查点放弃须完整核验后才给通用门禁精确许可，人工保存与显式接续不能冒充完成或自行消费等待。
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {z} from 'zod';
 import {candidateAccepted} from './candidate-review';
 import {hash,json} from '../foundation/serialization';
@@ -50,7 +52,8 @@ const active=(run:DispatchRun)=>run.status==='starting'||run.status==='running';
 const sameGraph=(a:GraphIdentity,b:GraphIdentity)=>a.workspaceId===b.workspaceId&&a.rootSessionId===b.rootSessionId;
 const sameAgent=(a:AgentRef,b:AgentRef)=>a.agentId===b.agentId&&a.agentInstanceId===b.agentInstanceId&&a.agentSessionId===b.agentSessionId;
 /** JSON 属性顺序不影响身份；数组顺序仍是冻结输入的一部分。 */
-function ordered(value:unknown):unknown {return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:false});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function lookupTask(state:DispatchState,ref:GraphIdentity,taskId:string){return state.graphs.find(graph=>sameGraph(graph.identity,ref))?.tasks.find(task=>task.taskId===taskId)}

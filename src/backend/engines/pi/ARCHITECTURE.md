@@ -142,8 +142,8 @@ class N_src_backend_engines_pi_rpc_ts_PiRpc["PiRpc"] {
   -onExit
   -redact
   -child
-  -buffer
   -dead
+  -frames
   -pending
   -exitPromise
   -fail()
@@ -151,6 +151,7 @@ class N_src_backend_engines_pi_rpc_ts_PiRpc["PiRpc"] {
 N_src_backend_engines_pi_rpc_ts ..> N_src_backend_engines_pi_rpc_ts_PiRpc : 声明
 ```
 
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)。
 
 ### runtime-config.ts
 
@@ -202,6 +203,10 @@ N_src_backend_engines_pi_engine_ts ..> N_src_backend_engines_pi_request_budget_b
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### JSONL 分帧
+
+PiRpc 组合 utility.LineFramer，按 LF 逐条同步消费；完整行先去单个 CR、忽略空白，再按原 32×1024×1024 个 UTF-16 code unit 限制。未终止尾部直接按同一字符限额检查，EOF 不当作完整消息。JSON 解析、命令关联、脱敏、失败及 kill 保留在 PiRpc；前一合法帧先交付，后续坏帧不撤销它。
 
 ### 无进展超时
 

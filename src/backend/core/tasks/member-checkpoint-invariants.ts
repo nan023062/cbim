@@ -3,7 +3,9 @@
  * 持久等待仅允许原 wait 明确列出的未预约检查点；原证明不变，实际消费仍限原活动周期的唯一预约。
  * 作用定位：检查成员逐段检查点、不可变预约历史和每段唯一消费在图/运行/邮箱联合事务中的一致性。
  * 设计原因：不能只在工具入口防重；存储重放和普通事务须保留原负责人及流程选择，活动周期取消检查点只接受完整交接放弃校验产生的窄许可。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
@@ -13,7 +15,8 @@ import {memberResumeSelection} from './queued-member-resume-rules';
 import {goalNeedsReplan} from './scope-goal';
 import {memberResumeRequests,currentMemberResumeRequest,validMemberCheckpointChain} from './member-checkpoint-chain';
 import {sameWorkflowSelectionsForModules} from './workflow-selection';
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 const fixed=(task:TaskNode)=>({goal:task.goal,acceptance:task.acceptance,modules:task.modules,workflowSelections:task.workflowSelections,ownerBinding:task.ownerBinding,fallbackBinding:task.fallbackBinding,assignee:task.assignee,requester:task.requester,scopeId:task.scopeId,planRevision:task.planRevision});

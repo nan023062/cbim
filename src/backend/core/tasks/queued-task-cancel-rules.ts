@@ -1,7 +1,9 @@
 /**
  * 作用定位：在存储屏障内检查未启动任务及启用依赖的完整撤销集合。
  * 设计原因：服务提交与持久重放共用同一规则，防止领取竞争、跨周期改写、漏掉下游或把已经执行的任务伪装为未执行。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {GraphIdentity,TaskNode} from './graph-types';
@@ -50,7 +52,8 @@ export function queuedCancellationSelection(state:DispatchState,identity:GraphId
   return {graph,scope,tasks,assignments,members};
 }
 
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,ordered(item)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const valid=(value:unknown,message:string)=>check(value,'GRAPH_INPUT_INVALID',message);
 /** 追加与重放都检查同一原子形状；不能用直接存储事务绕过闭包、领取状态或不可变历史。 */

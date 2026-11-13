@@ -3,14 +3,17 @@
  * 作用定位：校验前置替换的原子审计，以及所有依赖边变更的持久化边界。
  * 设计原因：服务核实证据后仍须防止通用事务绕过换边协议；追加边只能消费先前完整不变量核实的本批许可，退役边与历史审计不可复活。
  * 职责边界：纯状态约束不读取模型日志；canonical 证据与当前知识由提交服务在同一存储屏障内核实。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {fail} from '../foundation/errors';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../dispatch/dispatch-storage';
 import type {TaskNode} from './graph-types';
 import {dependencyReplacementSchema,type DependencyReplacement} from './queued-dependency-replacement';
 import {queuedDependencyReplacementSelection} from './queued-dependency-replacement-rules';
 
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}
 

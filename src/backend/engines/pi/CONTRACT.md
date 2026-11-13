@@ -1,3 +1,7 @@
+### JSONL 分帧
+
+PiRpc 组合 utility.LineFramer，按 LF 逐条同步消费；完整行先去单个 CR、忽略空白，再按原 32×1024×1024 个 UTF-16 code unit 限制。未终止尾部直接按同一字符限额检查，EOF 不当作完整消息。JSON 解析、命令关联、脱敏、失败及 kill 保留在 PiRpc；前一合法帧先交付，后续坏帧不撤销它。
+
 ### 无进展超时
 
 `PiEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。`message_update` 的非空 text/thinking/toolcall 增量、统一消息和工具事件续期；推理内容不入日志，自动重试、摘要重试和普通状态通知不续期。只有连续静默超过原 `turnTimeoutMs` 才报明确的 Pi 无进展错误，运行总时长可以跨过原 30 分钟上限。

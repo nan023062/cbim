@@ -433,7 +433,7 @@ class N_src_backend_core_tasks_dispatch_invariants_ts["dispatch-invariants.ts"] 
 }
 ```
 
-直接依赖：[candidate-review.ts](candidate-review.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../models/config.ts](../models/config.ts)、[../models/engine.ts](../models/engine.ts)、[execution-context.ts](execution-context.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../models/config.ts](../models/config.ts)、[../models/engine.ts](../models/engine.ts)、[execution-context.ts](execution-context.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
 
 ### dispatch-receipt.ts
 
@@ -455,7 +455,7 @@ class N_src_backend_core_tasks_dispatch_scope_invariants_ts["dispatch-scope-inva
 }
 ```
 
-直接依赖：[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-active-input-rules.ts](scope-active-input-rules.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[scope-recovery.ts](scope-recovery.ts)、[effect-observation-invariants.ts](effect-observation-invariants.ts)、[scope-replan.ts](scope-replan.ts)、[fresh-context.ts](fresh-context.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[automatic-return.ts](automatic-return.ts)、[scope-run-invariants.ts](scope-run-invariants.ts)、[../budget/scope-budget.ts](../budget/scope-budget.ts)、[../budget/scope-budget-invariants.ts](../budget/scope-budget-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[human-decisions.ts](human-decisions.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)、[member-pause-rules.ts](member-pause-rules.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-goal.ts](scope-goal.ts)、[scope-continuation.ts](scope-continuation.ts)、[scope-continuation-record.ts](scope-continuation-record.ts)、[scope-active-input.ts](scope-active-input.ts)、[scope-active-input-rules.ts](scope-active-input-rules.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[scope-recovery.ts](scope-recovery.ts)、[effect-observation-invariants.ts](effect-observation-invariants.ts)、[scope-replan.ts](scope-replan.ts)、[fresh-context.ts](fresh-context.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[automatic-return.ts](automatic-return.ts)、[scope-run-invariants.ts](scope-run-invariants.ts)、[../budget/scope-budget.ts](../budget/scope-budget.ts)、[../budget/scope-budget-invariants.ts](../budget/scope-budget-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[human-decisions.ts](human-decisions.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)、[member-pause-rules.ts](member-pause-rules.ts)。
 
 ### dispatch-scope.ts
 
@@ -704,7 +704,7 @@ class N_src_backend_core_tasks_execution_context_ts_PreparedDispatchKnowledge["P
 N_src_backend_core_tasks_execution_context_ts ..> N_src_backend_core_tasks_execution_context_ts_PreparedDispatchKnowledge : 声明
 ```
 
-直接依赖：[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[../workspace/execution-scope.ts](../workspace/execution-scope.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/agent-types.ts](../team/agent-types.ts)、[graph-types.ts](graph-types.ts)、[../workspace/workflow-contract.ts](../workspace/workflow-contract.ts)、[../workspace/artifact-scope.ts](../workspace/artifact-scope.ts)、[../workspace/execution-scope.ts](../workspace/execution-scope.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[../team/workspace-member.ts](../team/workspace-member.ts)、[../team/workspace-member-rules.ts](../team/workspace-member-rules.ts)。
 
 ### execution-report.ts
 
@@ -1387,7 +1387,7 @@ class N_src_backend_core_tasks_member_checkpoint_evidence_ts_Binding["Binding"] 
 N_src_backend_core_tasks_member_checkpoint_evidence_ts ..> N_src_backend_core_tasks_member_checkpoint_evidence_ts_Binding : 声明
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../tools/receipts.ts](../tools/receipts.ts)、[../tools/types.ts](../tools/types.ts)、[../evidence/artifact-evidence.ts](../evidence/artifact-evidence.ts)、[member-checkpoint.ts](member-checkpoint.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../foundation/serialization.ts](../foundation/serialization.ts)、[../tools/receipts.ts](../tools/receipts.ts)、[../tools/types.ts](../tools/types.ts)、[../evidence/artifact-evidence.ts](../evidence/artifact-evidence.ts)、[member-checkpoint.ts](member-checkpoint.ts)。
 
 ### member-checkpoint-invariants.ts
 
@@ -1399,7 +1399,7 @@ class N_src_backend_core_tasks_member_checkpoint_invariants_ts["member-checkpoin
 }
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[queued-member-resume.ts](queued-member-resume.ts)、[queued-member-resume-rules.ts](queued-member-resume-rules.ts)、[scope-goal.ts](scope-goal.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[workflow-selection.ts](workflow-selection.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[queued-member-resume.ts](queued-member-resume.ts)、[queued-member-resume-rules.ts](queued-member-resume-rules.ts)、[scope-goal.ts](scope-goal.ts)、[member-checkpoint-chain.ts](member-checkpoint-chain.ts)、[workflow-selection.ts](workflow-selection.ts)。
 
 ### member-checkpoint-ledger.ts
 
@@ -1906,7 +1906,7 @@ class N_src_backend_core_tasks_queued_dependency_replacement_invariants_ts["queu
 }
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-dependency-replacement.ts](queued-dependency-replacement.ts)、[queued-dependency-replacement-rules.ts](queued-dependency-replacement-rules.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-dependency-replacement.ts](queued-dependency-replacement.ts)、[queued-dependency-replacement-rules.ts](queued-dependency-replacement-rules.ts)。
 
 ### queued-dependency-replacement-rules.ts
 
@@ -2055,7 +2055,7 @@ class N_src_backend_core_tasks_queued_task_cancel_rules_ts["queued-task-cancel-r
 }
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel.ts](queued-task-cancel.ts)。
 
 ### queued-task-cancel.ts
 
@@ -2347,7 +2347,7 @@ class N_src_backend_core_tasks_scope_goal_ts_ScopeGoalReview["ScopeGoalReview"] 
 N_src_backend_core_tasks_scope_goal_ts ..> N_src_backend_core_tasks_scope_goal_ts_ScopeGoalReview : 声明
 ```
 
-直接依赖：[../team/automatic-execution.ts](../team/automatic-execution.ts)、[workflow-selection.ts](workflow-selection.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[member-pause.ts](member-pause.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../team/automatic-execution.ts](../team/automatic-execution.ts)、[workflow-selection.ts](workflow-selection.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../team/member-execution-binding.ts](../team/member-execution-binding.ts)、[member-pause.ts](member-pause.ts)。
 
 ### scope-public.ts
 
@@ -2508,7 +2508,7 @@ class N_src_backend_core_tasks_scope_run_invariants_ts["scope-run-invariants.ts"
 }
 ```
 
-直接依赖：[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[fresh-context.ts](fresh-context.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../foundation/errors.ts](../foundation/errors.ts)、[../dispatch/dispatch-storage.ts](../dispatch/dispatch-storage.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[scope-run-tracking.ts](scope-run-tracking.ts)、[fresh-context.ts](fresh-context.ts)。
 
 ### scope-run-tracking.ts
 
@@ -4269,6 +4269,10 @@ N_src_backend_core_tasks_workspace_member_invariants_ts ..> N_src_backend_core_t
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 对象排序与历史指纹
+
+任务、周期、检查点与依赖规则的 9 处对象递归排序组合 utility.orderJsonValue，本地适配继续指定历史比较器和 undefined 规则。execution-context 使用字符序并保留属性，scope-goal 使用字符序并省略；dispatch-invariants 使用 localeCompare 并保留，其余已迁移适配使用 localeCompare 并省略。序列化、根 fingerprint 排除、不可变前缀与原事务核验仍在任务规则中；不迁移旧记录、不重算授权或替换原指纹。graph-reducer 的手写字符串重放算法保留独立边界。
 
 ### 重启后自动接收已完成的成员结果
 

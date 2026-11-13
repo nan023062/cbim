@@ -4,7 +4,9 @@
  * 作用定位：定义目标输入、版本化计划、审阅证据及转换规则；业务拒绝精确绑定旧候选，新候选仍须独立验收。
  * 设计原因：计划与模型回合分离，原始需求不可改写；业务分配保留负责人选择及可信绑定、可选 Workflow，显式补充使旧计划过期，历史缺省不伪造新身份。
  * 职责边界：主角色可直接执行并引用本轮业务工具证据，成员专属 Workflow 仍只绑定成员任务；人工满足项须引用真实决定及显式接续，complete 仅是申请。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
 import {workflowSelectionsSchema,validateWorkflowSelections,type WorkflowSelection} from './workflow-selection';
@@ -90,7 +92,8 @@ export function goalInputRevision(value:{inputRevision?:number}):number{return v
 /** 真实用户补充之后保留旧计划供回顾和 human 约束，但不可沿该计划派工或完成。 */
 export function goalNeedsReplan(goal:DispatchScopeGoal):boolean{return !!goal.plan&&goalInputRevision(goal.plan)!==goalInputRevision(goal)}
 
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,item])=>item!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,item])=>[key,ordered(item)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
 export const sameGoalValue=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition{if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 /** 提交与重放共用；supplement 来自已核实等待消费，activeSupplement 仅在 validateScopeActiveInputs 匹配真实 pending→accepted 时传入，二者互斥，不能作为普通决策提升输入版本的豁免。 */

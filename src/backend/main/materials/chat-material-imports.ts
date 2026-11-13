@@ -2,7 +2,9 @@
  * 目录归属：backend/main/materials；显式资料导入与附件快照。
  * 作用定位：应用内显式资料导入的取消、工作区归属及真实资源仓库读取入口。
  * 设计原因：导入不启动模型；每个 importId 只执行一次，取消先到也保留墓碑。慢网络和原生选择器不能跨实例返回，仓库授权仍由原连接闭包核实。
+ * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
+import {InFlightOperations} from '../../../foundations/utility';
 import {z} from 'zod';
 import {fail} from '../../core/foundation/errors';
 import {hash} from '../../core/foundation/serialization';
@@ -25,7 +27,7 @@ function input<T>(schema:z.ZodType<T>,raw:unknown){const parsed=schema.safeParse
 type ImportOperation={workspaceId:string;controller:AbortController;started:boolean;finished:boolean};
 /** 应用持有一份；退出或工作区退役先撤销在途导入，不恢复网络操作或重放旧 importId。 */
 export class ChatMaterialImports {
-  private operations=new Map<string,ImportOperation>();private pending=new Set<Promise<unknown>>();private closed=false;
+  private operations=new Map<string,ImportOperation>();private pending=new InFlightOperations();private closed=false;
   constructor(private workspace:(id:string)=>KnowledgeWorkspace,private repositories:RepositoryConnections){}
   private key(id:string,importId:string){return id+':'+importId}
   private assert(owner:KnowledgeWorkspace,signal?:AbortSignal){signal?.throwIfAborted();if(this.closed)fail('ATTACHMENT_IMPORT_CLOSED','资料导入服务正在关闭');owner.assert();if(this.workspace(owner.entry.id)!==owner)fail('ATTACHMENT_IMPORT_STALE','工作区实例已变化，请重新选择资料')}
@@ -41,7 +43,7 @@ export class ChatMaterialImports {
     if(operation.started)fail('ATTACHMENT_IMPORT_REUSED','原导入已经处理，请核实原结果；再次导入需要新的操作标识');
     const owner=this.workspace(id);this.assert(owner);operation.started=true;
     const pending=(async()=>{try{const value=await work(owner,operation.controller.signal);this.assert(owner,operation.controller.signal);return value}finally{operation.finished=true}})();
-    this.pending.add(pending);void pending.finally(()=>this.pending.delete(pending)).catch(()=>{});return pending;
+    return this.pending.track(pending);
   }
   /** 只展示真实已授权且共享就绪的连接；不发送 HTTP，不回传令牌或地址。 */
   async targets(raw:unknown){const {id}=input(z.object({id:z.string().min(1).max(128)}).strict(),raw),owner=this.workspace(id);this.assert(owner);
@@ -78,5 +80,5 @@ export class ChatMaterialImports {
     });
   }
   retireWorkspace(id:string){for(const value of this.operations.values())if(value.workspaceId===id&&!value.finished)value.controller.abort(Object.assign(Error('工作区已关闭，资料导入已取消'),{code:'ATTACHMENT_IMPORT_CANCELLED'}))}
-  async close(){this.closed=true;for(const value of this.operations.values())value.controller.abort();await Promise.allSettled([...this.pending])}
+  async close(){this.closed=true;for(const value of this.operations.values())value.controller.abort();await this.pending.drain()}
 }

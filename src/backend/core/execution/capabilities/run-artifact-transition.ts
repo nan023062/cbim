@@ -4,7 +4,9 @@
  * 作用定位：正式成员删除/移动工具的唯一授权、写前核实和可靠阶段记录，平台副作用只通过此运行端口。
  * 设计原因：模型只选冻结要求和原清单；先保存 prepared/executing 再操作，未知结果保持本轮读/求助屏障。
  * 职责边界：不自动回滚或重发，保存成功仍须真实工具结束后才能形成证明；停止排空实际文件工人。
+ * 机制边界：utility 仅跟踪在途 Promise；停止接单、取消、物理退出核实与占用释放仍由本模块决定。
  */
+import {InFlightOperations} from '../../../../foundations/utility';
 import {isDeepStrictEqual as equal} from 'node:util';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {hash} from '../../foundation/serialization';
@@ -32,7 +34,7 @@ export interface ArtifactTransitionRunPort {
 export class RunArtifactTransition implements ArtifactTransitionToolPort {
   private readonly events:StoredEvent[]=[];
   private readonly controller=new AbortController();
-  private readonly pending=new Set<Promise<unknown>>();
+  private readonly pending=new InFlightOperations();
   /** 与在途门闩独立；失败工具已返回也不能换调用 ID 继续写入或交付。 */
   private readonly unverified=new Set<string>();
   private reserved?:{id:string;input:ArtifactTransitionInput;inputHash:string;before:OutputManifestRecord;operation:ArtifactTransitionDefinition;allowedSeq?:number;result?:ArtifactTransitionApplied;consumed:boolean;settled:boolean;validated:boolean;finished:boolean;badFinish:boolean};
@@ -71,7 +73,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort {
   /** 供实际交付与终态复核，不能以成功模型回合解除未知副作用。 */
   assertVerified(){if(this.unverified.size)fail('ARTIFACT_TRANSITION_REVIEW_REQUIRED','原删除/移动结果待核实，不能交付或安全交接')}
   stop(){this.controller.abort(Error('运行已停止删除/移动'))}
-  async drain(){await Promise.allSettled([...this.pending]);await this.port.drain()}
+  async drain(){await this.pending.drain();await this.port.drain()}
   async list(){return [{name:artifactTransitionToolName,version:1,effects:['business-write'] as const,description:'按冻结 artifactScope.transitions 的模块和序号执行一个真实文件删除或不覆盖移动。必须显式引用本轮有效写前完整清单；只支持本机 NTFS 普通 UTF-8 文件，先可靠保存阶段再操作，完成后须重新采集完整清单。失败/未知不能换调用重试，不提供自动恢复。',inputSchema:zodToJsonSchema(artifactTransitionInputSchema),outputSchema:zodToJsonSchema(artifactTransitionOutputSchema),cancellation:{mode:'preflight_only' as const,description:'停止可阻止发出操作；已经发出的结果须按原阶段核实。'},recovery:{mode:'inspect_before_retry' as const,description:'只查询原操作事实；工具不自动重发或恢复，原成功链才可用于完整验收。'}}]}
   async call(name:string,raw:unknown,id?:string,signal?:AbortSignal){
     const input=artifactTransitionInputSchema.parse(raw),current=this.reserved;
@@ -92,8 +94,8 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort {
       check();const afterSnapshot=await this.manifests.capture(this.scopes,active);check();if(!equal(afterSnapshot,expectedArtifactTransitionSnapshot(before,current.operation)))fail('ARTIFACT_TRANSITION_AFTER_CHANGED','操作后的完整集合或移动两端不符合原操作，保留阶段等待核实');
       await this.manifests.assertCurrentKnowledge();check();const after={afterManifestHash:outputManifestHash(afterSnapshot),appliedAt:new Date().toISOString()},appliedSeq=(await this.context.save({type:'artifact.transition_applied',data:{operationId:prepared.operationId,executingSeq,afterSnapshot,...after}})).seq;check();
       return artifactTransitionAppliedValue(prepared,{preparedSeq,executingSeq,appliedSeq},after);
-    })();this.pending.add(work);
+    })();this.pending.track(work);
     try{const operation=await work,result=checkedJsonToolResult(name,{state:'applied',operation},artifactTransitionOutputSchema);current.result=structuredClone(operation);current.validated=true;return result}
-    finally{this.pending.delete(work);current.settled=true;this.release()}
+    finally{current.settled=true;this.release()}
   }
 }

@@ -1,3 +1,16 @@
+## 2026-11-13：utility 候选 5–7 与兼容策略组合
+
+- S1 / 来源：用户直接授权继续候选提炼，并确认“完成剩余 5–7 即可”；原名单没有第 8 项。基线 `e6a5dd39`，本次开放 Issues 查询仅 #65，与本片无对应关系，未新建/修改外部工单。保留原任务历史视图的 7 个并行文件，不纳入提交。
+- S2–S4 / C3、L2：核对 Core 证据/预算/知识/任务的对象排序、Main 文件/资料和三种 Run 能力的在途集合、Pi/Codex RPC。保护共同遍历/集合/拆行机制，把历史比较器、字段省略、业务关闭门禁、物理退出和协议限额留在调用方；未逐行审计全仓，也不把无环等同语义解耦。
+- S5：新增 `orderJsonValue`，迁移 15 个 Core 排序适配，逐一保留 localeCompare/字符序及 undefined 规则；JSON 序列化与根 fingerprint 排除不变。新增 `InFlightOperations`，迁移 ControlledFiles、ChatMaterialImports、RunControlledFile/RunScopedExecution/RunArtifactTransition、codexTools 和 CodexRpc 共 7 处集合。新增 `LineFramer`，迁移 Pi/Codex 两处 LF 缓冲，保留 Pi 的 UTF-16 长度与去 CR、Codex 的 UTF-8 字节/原 CR、完整空白帧忽略及尾部限额。没有统一 RPC、取消控制器、短门闩或业务恢复。
+- 兼容性实证：修改前保存 15 个真实排序实现，以 TypeScript 转译执行与新基础函数比较；6 组输入包含数组空位、undefined、数字键、危险键和非 ASCII，90 次对象结构/最终 JSON 比较一致。原始基线与结果留在本机 `test-results/utility-5-7/`；长期回归由模块单元和 `utility-json-order-contract.test.ts` 的真实消费者契约承担。保留图重放/治理手写字符串 canonical、工具失败参数和调度内部比较，不将不同序列化契约强行统一。
+- 模块单元：`pnpm exec vitest run tests/unit/foundations/utility/json-order.test.ts tests/unit/foundations/utility/in-flight.test.ts tests/unit/foundations/utility/line-framer.test.ts --reporter=dot`，3 文件/11 项通过。分别验证递归排序/不修改输入/策略与数组、集合身份/实例隔离/快照排空/拒绝、拆帧/尾部/错误顺序/字符字节差异，不加载应用。
+- 生命周期与协议消费者：`pnpm exec vitest run tests/utility-json-order-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/pi-rpc.test.ts tests/codex-tools.test.ts tests/controlled-file-runtime.test.ts tests/scoped-execution-runtime.test.ts tests/artifact-transition-runtime.test.ts tests/chat-material-imports.test.ts tests/controlled-file-service.test.ts --reporter=dot`，9 文件/76 项通过。覆盖历史指纹、模拟管道的策略差异与关闭等待、真实子进程 Pi RPC/受控 Codex 工具、取消与未知写屏障；平台替身/本机受控协议证据不冒充在线模型或全部 Windows 物理故障验收。
+- 排序消费者：`pnpm exec vitest run tests/artifact-evidence.test.ts tests/workflow-evidence.test.ts tests/output-manifest-evidence.test.ts tests/json-artifact-validation-core.test.ts tests/scope-budget.test.ts tests/workspace-packages.test.ts tests/member-execution-context.test.ts tests/member-checkpoint-domain.test.ts tests/member-checkpoint-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-task-cancel.test.ts tests/scope-goal.test.ts tests/scope-run-tracking.test.ts tests/queued-dependency-addition-core.test.ts --reporter=dot`，14 文件/157 项通过，按本次证据/预算/知识/任务规则适配选取。
+- S6：引擎增加 utility 通用入口访问权，明确禁止 Node 入口、私有实现、files/web；未放宽 Core 反向依赖或调度装配限定。`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`，2 文件/32 项通过。以上合计 28 文件/276 项，无重复累计。`pnpm typecheck`、`pnpm check:architecture`（91 目录、713 源码/样式，1426 扫描文件、7096 含类型依赖，0 环/违规）、`pnpm check:test-modules`（460 文件：121 unit、152 contract、187 integration）通过。统计含已有并行源码；不是全仓测试结论。
+- 文档与 AI 工作流：同步变更源码文件头/公共接口、utility 与消费者 CONTRACT、13 份受影响类图及生成器；三宿主的开发/架构演进/架构维护入口共 9 份同步，描述现有机制入口、兼容性检查、模块单元与消费者验证。未改产品内置业务 Skill、全局模型规则或 CI。`git diff --check`、相对文件链接及三宿主逐字一致性检查通过。
+- S7 / 交接：Review 顺序为 `src/foundations/utility/CONTRACT.md` → 三个独立实现 → 原排序适配、业务关闭/物理退出路径、Pi/Codex RPC → 独立单元与消费者契约。新增业务排序规则、限额或关闭策略在本地适配修改；共同机制缺陷才修改 utility，并沿真实消费者验证。源代码自查与测试已完成，人工 review 尚未发生；不以一次提炼证明长期稳定。保留原 locale 依赖及快照等待边界，未添加定时任务。未运行全仓回归、桌面冒烟、打包或安装验收，未推送、合并或发布。
+
 ## 2026-11-13：utility 候选 1–4 收敛与消费者迁移
 
 - 来源与 S1：用户直接授权继续提炼候选 1–4，并同步类图和 AI 工作流；基线 `8eb1c7da`。已核对当前 Issues，无本切片对应工单，不新增或回填外部 Issue。候选 2（SHA-256）与 4（JSON 文本格式化）沿用上一提交，补齐候选 1（有界字节流）与 3（严格 JSON）。原任务历史视图的并行改动保留，不纳入本提交。

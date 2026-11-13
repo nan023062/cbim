@@ -14,7 +14,7 @@ const key = value => process.platform === 'win32' ? slash(path.resolve(value)).t
 const layers = {
   foundations:['foundations'],
   'backend/bootstrap':['backend/bootstrap','backend/updater','backend/main'],
-  'backend/core':['backend/core','foundations'],'backend/engines':['backend/engines','backend/core'],
+  'backend/core':['backend/core','foundations'],'backend/engines':['backend/engines','backend/core','foundations'],
   'backend/scheduler-engine':['backend/scheduler-engine','backend/engines','backend/core'],
   'backend/main':['backend/main','backend/scheduler-engine','backend/core','backend/updater','bridge/contracts','foundations'],
   'backend/updater':['backend/updater','bridge/contracts','foundations'],
@@ -33,9 +33,11 @@ const teamView='src/backend/core/knowledge/read-models/team.ts';
 const businessView='src/backend/core/knowledge/read-models/workspace.ts';
 const projectRoot='src/backend/core/workspace/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
-const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts','src/foundations/utility/strict-json.ts','src/foundations/utility/bounded-bytes.ts'];
+const utilityPortable=['src/foundations/utility/index.ts','src/foundations/utility/json-text.ts','src/foundations/utility/serial-queue.ts','src/foundations/utility/strict-json.ts','src/foundations/utility/bounded-bytes.ts','src/foundations/utility/json-order.ts','src/foundations/utility/in-flight.ts','src/foundations/utility/line-framer.ts'];
 const moduleBoundaries=[
   {sources:utilityPortable,allow:utilityPortable},
+  // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
+  {sources:['src/backend/engines/'],allow:['src/backend/engines/','src/backend/core/','src/foundations/utility/index.ts']},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/backend/updater/'],allow:['src/backend/updater/','src/bridge/contracts/','src/foundations/utility/index.ts']},
   {sources:['src/frontend/execution-view/'],allow:['src/frontend/execution-view/','src/frontend/components/','src/bridge/contracts/']},

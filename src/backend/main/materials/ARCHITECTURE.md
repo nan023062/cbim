@@ -103,7 +103,7 @@ class N_src_backend_main_materials_chat_material_imports_ts_ChatMaterialImports[
 N_src_backend_main_materials_chat_material_imports_ts ..> N_src_backend_main_materials_chat_material_imports_ts_ChatMaterialImports : 声明
 ```
 
-直接依赖：[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[chat-inputs.ts](chat-inputs.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
+直接依赖：[../../../foundations/utility/index.ts](../../../foundations/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)、[../resources/repository-connections.ts](../resources/repository-connections.ts)、[chat-inputs.ts](chat-inputs.ts)、[chat-source-readers.ts](chat-source-readers.ts)。
 
 ### chat-source-readers.ts
 
@@ -151,6 +151,8 @@ N_src_backend_main_materials_chat_material_imports_ts ..> N_src_backend_main_mat
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # materials 持久化契约
+
+ChatMaterialImports.pending 使用 utility.InFlightOperations 跟踪原工作 Promise；导入 ID 去重、workspace 代际、closed、取消表与迟到选择拒绝仍由资料服务维护。close 先停止接单并撤销原控制器，再等待调用时在途快照；集合不决定保存位置、不接受半截结果或跨工作区重试。
 
 网页资料的 reader 生命周期统一由 utility.readBoundedBytes 负责：累计字节上限为原 1 MiB，取消显式结束挂起读取，失败不返回前缀。URL/媒体类型/声明长度、15 秒期限、严格 UTF-8、摘录和来源 hash 仍由 chat-source-readers 决定；来源事实只基于完整原字节。清理仅请求取消，不等待不合作的底层 cancel Promise；不因此声称底层网络物理退出。取消/超限/错误类型或坏 UTF-8 仍不保存资料快照。
 

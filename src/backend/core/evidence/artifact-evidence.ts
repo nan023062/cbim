@@ -5,7 +5,9 @@
  * 设计原因：工具成功、采集暂存事件及文件字节不能互相代替；参数与结果哈希、调用顺序、固定身份全部匹配后才发布引用，避免两套较宽松证据规则。
  * 职责边界：不读取文件、不授权恢复；事件可省略无关消息，但顺序必须递增，完整日志连续性和磁盘完整性由 canonical 读取方核实。
  * 外部写按保守副作用时序使旧基线失效；GitHub 回执仍不能充当文件采集来源。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {z} from 'zod';
 import {scopedReadInputSchema} from '../file-operations/scoped-execution';
 import {fail} from '../foundation/errors';
@@ -25,7 +27,8 @@ const captureName='cbim_task_artifact_capture';
 /** 文件基线与完整清单共用保守失效边界；命令是否实际写文件不能只靠模型声明判断。 */
 export const artifactEventChangesFiles=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&(Array.isArray(event.data.effects)&&event.data.effects.some(effect=>['business-write','knowledge-write','external-write','command'].includes(String(effect)))||['write','edit','bash'].includes(String(event.data.name)));
 const altered=artifactEventChangesFiles;
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,ordered(v)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(value:unknown,message:string):asserts value{if(!value)fail('ARTIFACT_EVIDENCE_INVALID',message)}
 function bound(events:readonly ArtifactEvidenceEvent[],binding:Binding){let previous=0;for(const event of events){valid(Number.isSafeInteger(event.seq)&&event.seq>previous&&event.workspaceId===binding.workspaceId&&event.taskId===binding.taskId&&event.runId===binding.runId&&event.data&&typeof event.data==='object'&&!Array.isArray(event.data),'采集事件顺序或运行身份不一致');previous=event.seq;if(event.type==='run.started'){const task=event.data.task as {workspaceId?:unknown;taskId?:unknown;agentId?:unknown;mode?:unknown}|undefined;valid(equal(event.data.memberBinding,binding)&&!event.data.conversationBinding&&task?.workspaceId===binding.workspaceId&&task.taskId===binding.taskId&&task.agentId===binding.agentId&&task.mode!=='chat','采集日志头不属于本次成员运行')}}}

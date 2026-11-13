@@ -258,6 +258,14 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
   }
 });
 
+test('engines may use portable utility but not other foundation capabilities',()=>{
+  const from='src/backend/engines/pi/rpc.ts';
+  for(const target of ['utility/index.ts','utility/node.ts','utility/line-framer.ts','files/index.ts','web/index.ts']){
+    const to='src/foundations/'+target,relative=path.posix.relative(path.posix.dirname(from),to);
+    expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
+  }
+});
+
 test('concrete engines depend on Core; only scheduler assembly may select engines',()=>{
   const engine='src/backend/engines/pi/engine.ts',contract='src/backend/core/execution/types.ts';
   expect(audit({[engine]:"import type {T} from '../../core/execution/types';",[contract]:'export interface T {}'}).ok).toBe(true);

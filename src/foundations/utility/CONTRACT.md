@@ -4,9 +4,9 @@
 
 ## 入口与真实消费者
 
-- `index.ts`：公开 `SerialQueue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
+- `index.ts`：公开 `SerialQueue`、`InFlightOperations`、`LineFramer`、`orderJsonValue`、`formatJson`、`readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`；使用语言/Web Streams 原语和 jsonc-parser，没有 Node 加载。
 - `node.ts`：公开 `sha256`，仅依赖 `node:crypto`；调用者明确选择运行环境。
-- `serial-queue.ts`、`json-text.ts`、`digest.ts`、`bounded-bytes.ts`、`strict-json.ts` 是私有实现，消费者只导入上述公开入口。
+- `serial-queue.ts`、`in-flight.ts`、`line-framer.ts`、`json-order.ts`、`json-text.ts`、`digest.ts`、`bounded-bytes.ts`、`strict-json.ts` 是私有实现，消费者只导入上述公开入口。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
 - Core `foundation/serialization.ts` 保留 `hash/json` 名称兼容，直接重导出 utility 的算法；实现只有一份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `foundation/json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Main 的资源仓库、GitHub 请求、网页资料，以及 Updater 的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
@@ -37,8 +37,26 @@
 
 解析不进行危险键裁剪、Schema 校验、字段排序或大小/深度限制；资源预算、原字节身份与错误对外映射由消费者决定。远端 HTTP 的普通 JSON 解码未擅自改成严格解析，避免改变已有协议。
 
+### 对象键递归排序
+
+`orderJsonValue(value, policy)` 只递归复制并排序自身可枚举字符串键，比较器必须显式传入；`omitUndefinedProperties` 只决定对象 undefined 属性是否省略。数组顺序、空位和元素保持原义，整数键仍按 JS 对象枚举规则输出。只处理既有 JSON 形状快照，不验证 Schema、危险键、循环或深度，不承担序列化、摘要、身份和业务验收。
+
+15 个 Core 适配保留四种历史组合：artifact-evidence、预算/周期运行、检查点和依赖替换/任务取消沿用 localeCompare 并省略 undefined；portable-package、dispatch-invariants 沿用 localeCompare 并保留属性；workflow-evidence、validation-evidence、scope-goal 沿用字符序并省略；output-manifest-identity、execution-context 沿用字符序并保留。最终 JSON 字节与历史指纹不升级，localeCompare 不保证跨语言环境统一。图重放/治理的手写字符串 canonical、工具失败参数及调度内部比较未整体替换；它们须另核序列化和边界，不能仅凭函数名相同统一。
+
+### 在途操作集合
+
+`InFlightOperations.track(promise)` 按 Promise 身份去重、原样返回，成功或失败后移除；不启动任务、不重试，不生成未处理的清理拒绝。`size` 是当前集合大小，`drain()` 等调用时快照全部 settled 后返回，后来加入的任务不延长本次等待。它不封闭集合、不取消任务、不聚合历史错误，也不证明进程退出。
+
+ControlledFiles、ChatMaterialImports、三种 Run 能力、Codex 工具及 RPC 处理分别拥有实例。业务继续先停止接单/发出取消，再等待集合及平台 drain/真实 child exit，最后按原规则释放占用。未知写屏障、短门闩、授权和物理退出失败不因 Promise 已 settled 而解除；动态新增任务或循环排空场景不能机械替换成快照等待。
+
+### LF 文本分帧
+
+`LineFramer` 只持有单输入流的尾部字符串，`push` 同步依次交付 LF 终止帧（不含 LF）；不 trim、解析消息或在 EOF 交付尾部。完整帧与未终止尾部由两个显式检查函数限定，异常原样传出。检查/消费者异常停止本次处理，已交付消息不回滚，后续帧仍留在实例；回调不得重入 push。按输入字符串缓冲，无全局共享状态，不声称对传入整个 chunk 有额外内存上限。
+
+Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 数、完整行先去单个 CR，Codex 用 UTF-8 字节数且保留 CR；两者忽略完整空白行，尾部仍检查。错误文案、请求关联、通知顺序、超时、凭据脱敏与进程终止留在适配器，不能借公共拆行统一协议策略。
+
 ### 扩展入口
 
 新增算法或数据结构须先给出真实用途、状态归属、输入输出、复杂度及失败语义；标准库已足够时直接使用，不为预想需求添加集合、缓存或调度框架。功能按职责拆文件，公共入口只做导出；通用入口不得导入 Node 入口。
 
-模块单元在 `tests/unit/foundations/utility/`，按队列、格式化、摘要、严格 JSON、字节流分别验证；Core 名称/字节/错误兼容与流消费业务映射另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP 取消/超时、资料快照、知识校验、版本冲突和原指纹规则。
+模块单元在 `tests/unit/foundations/utility/`，按队列、集合、分帧、键排序、格式化、摘要、严格 JSON、字节流分别验证；Core 指纹/名称/字节/错误兼容、流消费业务映射及 RPC 策略另做契约测试。模块测试不加载 Application；消费者保留真实 HTTP/RPC、取消/排空、资料快照、知识校验、版本冲突和原指纹规则。

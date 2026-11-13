@@ -7,7 +7,9 @@
  * 作用定位：核实可选 Workflow 的计划前置、工具回执及精确 必验文件结构出口，供运行时与调度结算共用。
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
  * 职责边界：仅作确定性记录校验；选定 必验文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
+ * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
+import {orderJsonValue} from '../../../foundations/utility';
 import {selectCodeCheck,verifyCodeChecks,type CodeCheckRecord} from './code-check';
 import {fail} from '../foundation/errors';
 import {hash} from '../foundation/serialization';
@@ -32,7 +34,8 @@ export interface WorkflowRunIdentity {workspaceId:string;taskId:string;runId:str
 /** 只能由本轮装配提供；任务要求不可由模型在创建局部计划时扩大或删减。 */
 export interface WorkflowProgressContext {bindings:WorkflowContractBinding[];task:Pick<TaskSpec,'goal'|'acceptance'>;identity:WorkflowRunIdentity}
 function valid(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
-function ordered(value:unknown):unknown{return Array.isArray(value)?value.map(ordered):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([,v])=>v!==undefined).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([key,v])=>[key,ordered(v)])):value}
+/** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
+const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
 const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const hex=(value:unknown)=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 /** 单次操作的分类由真实注册端口提供；本函数不从模型参数猜测副作用。 */

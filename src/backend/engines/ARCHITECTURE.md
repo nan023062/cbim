@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-具体引擎适配边界：Pi、Claude、Codex 及其共享 HTTP 预算传输和原生工具加载。依赖 Core 的引擎/模型契约，由 scheduler-engine/assembly 选择并注入；不持有任务派发与应用存储。 runtime-binding 在 agentHome 固定原生会话的 E 摘要；包变化时拒绝无兼容依据的恢复，历史不删除、不自动迁移。
+具体引擎适配边界：Pi、Claude、Codex 及其共享 HTTP 预算传输和原生工具加载。依赖 Core 的引擎/模型契约，由 scheduler-engine/assembly 选择并注入；不持有任务派发与应用存储。 runtime-binding 在 agentHome 固定原生会话的 E 摘要；包变化时拒绝无兼容依据的恢复，历史不删除、不自动迁移。 可组合 utility 通用入口的分帧与在途集合，不依赖其 Node 入口或其他基础方案。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -101,6 +101,10 @@ class N_src_backend_engines_runtime_binding_ts["runtime-binding.ts"] {
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 受管引擎包与原生历史
+
+## 通用机制组合
+
+Pi/Codex RPC 的文本缓冲由 `foundations/utility` 的 LineFramer 持有，协议策略留在各适配器；Pi 按 UTF-16 长度、Codex 按 UTF-8 字节保留原限额，完整空白帧/CR/未终止尾部按原规则处理。Codex 的工具调用与 RPC 处理使用实例 InFlightOperations；通知链、停止接单、取消、原请求身份及真实进程退出仍归引擎。引擎只允许依赖 utility 通用公开入口，不访问其他基础方案或其私有实现。
 
 ## 按执行进展续期
 

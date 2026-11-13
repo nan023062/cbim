@@ -1,5 +1,7 @@
 # 代码检查与交付
 
+对象排序机制由 utility.orderJsonValue 提供，各证据适配保留原字段与指纹规则：artifact-evidence 使用 localeCompare，workflow-evidence/validation-evidence 使用字符序且省略 undefined，output-manifest-identity 使用字符序并保留属性。最终 JSON 序列化、Schema 复核、证据来源和验收均留在本目录，未升级历史摘要或统一排序策略。
+
 Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、args、cwd、timeoutMs 和 success。必须同时声明 `artifactScope` 和 `requireCompleteManifest`，暂不支持 `executionScope` 混用。旧 Workflow 无此字段时行为不变。
 
 `cbim_code_check_run` 只接受空对象，运行时经 command 权限执行整组检查并保存 `code.validation_checked`。同一组绑定同一份输入快照；非零退出、超时、输出超限、源码在检查期间变化均拒绝通过。test-summary-json 要求 stdout 唯一一行 `CBIM_TEST_SUMMARY {"passed":1,"failed":0,"skipped":0}`，通过数不得低于 minPassed；摘要由项目测试适配脚本输出，其真实性取决于冻结脚本，系统不推断测试覆盖了全部需求。

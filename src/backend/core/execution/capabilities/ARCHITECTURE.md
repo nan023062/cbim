@@ -234,7 +234,7 @@ class N_src_backend_core_execution_capabilities_run_artifact_transition_ts_exter
 N_src_backend_core_execution_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort <|.. N_src_backend_core_execution_capabilities_run_artifact_transition_ts_RunArtifactTransition
 ```
 
-直接依赖：[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[../../file-operations/artifact-transition-evidence.ts](../../file-operations/artifact-transition-evidence.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/output-manifest.ts](../../evidence/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
+直接依赖：[../../../../foundations/utility/index.ts](../../../../foundations/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../workspace/artifact-scope.ts](../../workspace/artifact-scope.ts)、[../../file-operations/artifact-transition.ts](../../file-operations/artifact-transition.ts)、[../../file-operations/artifact-transition-evidence.ts](../../file-operations/artifact-transition-evidence.ts)、[../../evidence/output-manifest-evidence.ts](../../evidence/output-manifest-evidence.ts)、[../../evidence/output-manifest.ts](../../evidence/output-manifest.ts)、[output-manifest-capture.ts](output-manifest-capture.ts)、[../member-run.ts](../member-run.ts)、[../types.ts](../types.ts)。
 
 ### run-code-check.ts
 
@@ -334,7 +334,7 @@ class N_src_backend_core_execution_capabilities_run_controlled_file_ts_RunContro
 N_src_backend_core_execution_capabilities_run_controlled_file_ts ..> N_src_backend_core_execution_capabilities_run_controlled_file_ts_RunControlledFile : 声明
 ```
 
-直接依赖：[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/controlled-file-rules.ts](../../file-operations/controlled-file-rules.ts)。
+直接依赖：[../../../../foundations/utility/index.ts](../../../../foundations/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/controlled-file-rules.ts](../../file-operations/controlled-file-rules.ts)。
 
 ### run-scoped-execution.ts
 
@@ -371,7 +371,7 @@ class N_src_backend_core_execution_capabilities_run_scoped_execution_ts_RunScope
 N_src_backend_core_execution_capabilities_run_scoped_execution_ts ..> N_src_backend_core_execution_capabilities_run_scoped_execution_ts_RunScopedExecution : 声明
 ```
 
-直接依赖：[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/scoped-execution.ts](../../file-operations/scoped-execution.ts)、[../../workspace/execution-scope.ts](../../workspace/execution-scope.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/isolated-execution-recovery.ts](../../file-operations/isolated-execution-recovery.ts)。
+直接依赖：[../../../../foundations/utility/index.ts](../../../../foundations/utility/index.ts)、[../../foundation/serialization.ts](../../foundation/serialization.ts)、[../../foundation/errors.ts](../../foundation/errors.ts)、[../../tools/results.ts](../../tools/results.ts)、[../../file-operations/scoped-execution.ts](../../file-operations/scoped-execution.ts)、[../../workspace/execution-scope.ts](../../workspace/execution-scope.ts)、[../../file-operations/controlled-file-operation.ts](../../file-operations/controlled-file-operation.ts)、[../../file-operations/isolated-execution-recovery.ts](../../file-operations/isolated-execution-recovery.ts)。
 
 ### run-validation.ts
 
@@ -500,3 +500,13 @@ N_src_backend_core_execution_capabilities_run_validation_ts ..> N_src_backend_co
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 运行能力的在途与退出边界
+
+RunControlledFile、RunScopedExecution、RunArtifactTransition 分别持有 utility.InFlightOperations，跟踪已经发出的原端口 Promise，drain 等待调用时快照。基础集合不改变一次性授权、原参数 hash、事件顺序、短门闩或 unknown 写屏障，也不接管取消控制器。
+
+Promise settled 仅代表调用返回。三种能力继续执行各自平台 drain，保持物理退出未确认时的错误与占用；RunScopedExecution 的 physicalUnknown、受控写 confirmNotApplied、产物阶段及验收规则留在原能力。基础库不得自动重发、补偿或释放工作区租约。

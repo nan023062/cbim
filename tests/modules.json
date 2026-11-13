@@ -1252,13 +1252,18 @@
         "unit": [
           "tests/unit/foundations/utility/bounded-bytes.test.ts",
           "tests/unit/foundations/utility/digest.test.ts",
+          "tests/unit/foundations/utility/in-flight.test.ts",
+          "tests/unit/foundations/utility/json-order.test.ts",
           "tests/unit/foundations/utility/json-text.test.ts",
+          "tests/unit/foundations/utility/line-framer.test.ts",
           "tests/unit/foundations/utility/serial-queue.test.ts",
           "tests/unit/foundations/utility/strict-json.test.ts"
         ],
         "contract": [
           "tests/utility-body-consumers.test.ts",
           "tests/utility-json-contract.test.ts",
+          "tests/utility-json-order-contract.test.ts",
+          "tests/utility-rpc-framing-contract.test.ts",
           "tests/utility-serialization-contract.test.ts"
         ],
         "integration": []

@@ -6,8 +6,8 @@ import http from 'node:http';
 import {timingSafeEqual} from 'node:crypto';
 import type {AddressInfo} from 'node:net';
 import {readBoundedBytes,ByteLimitError} from '../../../core/utility';
-import {fail} from '../../core/foundation/errors';
-import {json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {formatJson as json} from '../../../core/utility';
 import {MAX_BYTES,snapshotSchema,type RepositoryStore} from './resource-store';
 
 export function repositoryUrl(input:string){let url:URL;try{url=new URL(input)}catch{fail('URL','请输入有效的 HTTP 或 HTTPS 仓库地址')}

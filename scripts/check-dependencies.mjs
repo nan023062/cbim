@@ -71,6 +71,8 @@ const feedbackService='src/logic/feedback/service/index.ts';
 const allowsFeedbackMigration=(from,to)=>
   to===feedbackPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/github-feedback.ts')||
   to===feedbackService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
+const resourcePublic='src/logic/resources/index.ts',resourceService='src/logic/resources/service/index.ts';
+const allowsResourceMigration=(from,to)=>to===resourcePublic&&from==='src/bridge/contracts/resources.ts'||to===resourceService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
 const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
@@ -220,6 +222,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
+      if(relative(file)==='src/bridge/contracts/resources.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/resources(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
+        const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
+        if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['resourceKinds','resourceCategories','ResourceKind','ResourceCategory','ResourceDefinition','ResourceLibrarySnapshot','RepositoryConfig','RepositorySession','RepositoryStatus'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'resource-bridge-export',boundary:'resource-contract'});
+      }
       if(relative(file)==='src/bridge/contracts/github-feedback.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/feedback(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
         const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
         if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['githubFeedbackConfigSchema','GitHubFeedbackConfig','GitHubFeedbackStatus'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'feedback-bridge-export',boundary:'feedback-bridge-compatibility'});
@@ -248,7 +254,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to);
+      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to)||allowsFeedbackMigration(e.from,e.to)||allowsResourceMigration(e.from,e.to);
       if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
       // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
       if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;

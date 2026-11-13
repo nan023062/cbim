@@ -1,6 +1,8 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'resource-service',prefix:'src/logic/resources/service/',public:['src/logic/resources/service/index.ts'],dependencies:['resource-contract','core-errors','file-foundations','utility-foundations','utility-node-foundations','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto','node:http','node:net','node:os']},
+  {id:'resource-contract',prefix:'src/logic/resources/',public:['src/logic/resources/index.ts'],dependencies:[],external:[]},
   {id:'feedback-http',files:['src/logic/feedback/service/github-api.ts'],public:['src/logic/feedback/service/github-api.ts'],dependencies:['core-errors','utility-foundations'],external:[]},
   {id:'feedback-service',prefix:'src/logic/feedback/service/',public:['src/logic/feedback/service/index.ts'],dependencies:['feedback-contract','feedback-http','core-errors','secret-contract','file-foundations','utility-node-foundations','kernel-lock'],external:['zod','node:fs/promises','node:path','node:crypto']},
   {id:'feedback-contract',prefix:'src/logic/feedback/',public:['src/logic/feedback/index.ts'],dependencies:[],external:['zod']},

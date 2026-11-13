@@ -5,8 +5,8 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
-import {LocalRepository} from '../src/backend/main/resources/resource-store';
-import {RemoteRepository,serveRepository} from '../src/backend/main/resources/resource-http';
+import {LocalRepository} from '../src/logic/resources/service';
+import {RemoteRepository,serveRepository} from '../src/logic/resources/service';
 
 it('生产共享服务的只读令牌实际允许GET但拒绝POST/DELETE，不改变真实仓库',async()=>{
   const f=await fixture(),folder=path.join(f.temp,'readonly-repo');await fs.mkdir(folder);const store=new LocalRepository(folder),initial=await store.initialize(),readToken='reader-token-with-enough-bytes',writeToken='writer-token-with-enough-bytes';

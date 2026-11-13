@@ -12,9 +12,6 @@
 | --- | --- |
 | [repository-connection-store.ts](repository-connection-store.ts) | 在应用用户目录保存工作区资源仓库只读授权及原命令回执。 |
 | [repository-connections.ts](repository-connections.ts) | 桌面资源仓库连接的知识预览/登记、独立本机授权和显式 HTTP 只读核验。 |
-| [resource-http.ts](resource-http.ts) | RemoteRepository 与 serveRepository：HTTP 客户端和本机仓库共享服务。 |
-| [resource-repository.ts](resource-repository.ts) | ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。 |
-| [resource-store.ts](resource-store.ts) | RepositoryStore 与 LocalRepository：本地资源仓库校验、版本检查及原子更新。 |
 | [workspace-packages.ts](workspace-packages.ts) | 把当前工作区的静态团队/业务架构发布到统一资源仓库，并提供持久化导入预览与显式提交。 |
 
 ## 架构类图
@@ -144,141 +141,7 @@ class N_src_backend_main_resources_repository_connections_ts_RepositoryConnectio
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connections_ts_RepositoryConnections : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/connectors/definition.ts](../../core/connectors/definition.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[resource-repository.ts](resource-repository.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
-
-### resource-http.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
-  <<module>>
-  +repositoryUrl()
-  +serveRepository()
-}
-```
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_http_ts_RemoteRepository["RemoteRepository"] {
-  +url
-  +expectedId
-  +read()
-  +save()
-  +remove()
-  -token
-  -request()
-}
-N_src_backend_main_resources_resource_http_ts ..> N_src_backend_main_resources_resource_http_ts_RemoteRepository : 声明
-class N_src_backend_main_resources_resource_http_ts_external_RepositoryStore["RepositoryStore (外部契约)"] {
-  <<external>>
-}
-N_src_backend_main_resources_resource_http_ts_external_RepositoryStore <|.. N_src_backend_main_resources_resource_http_ts_RemoteRepository
-```
-
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)。
-
-### resource-repository.ts
-
-成员 1/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_repository_ts_SharedRepositoryReadConnection["SharedRepositoryReadConnection"] {
-  <<interface>>
-  +repositoryId
-  +connectionId
-  +assertCurrent()
-  +read()
-}
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_repository_ts_SharedRepositoryReadConnection : 声明
-class N_src_backend_main_resources_resource_repository_ts_Config["Config"] {
-  <<type>>
-
-}
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_repository_ts_Config : 声明
-class N_src_backend_main_resources_resource_repository_ts_ResourceRepositories["ResourceRepositories"] {
-  +init()
-  +status()
-  +sharedIdentity()
-  +readConnection()
-  +configure()
-  +setAccountSession()
-  +read()
-  +save()
-  +remove()
-  +startSharing()
-  +connection()
-  +stopSharing()
-  +close()
-  -paths
-  -session
-  -localConfig
-}
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_repository_ts_ResourceRepositories : 声明
-```
-
-成员 2/2（同名节点为同一声明，跨图合并阅读）。
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_repository_ts_ResourceRepositories["ResourceRepositories"] {
-  -config
-  -configError
-  -sharing
-  -shareToken
-  -queue
-  -readSharing
-  -settingsFile
-  -serial()
-  -store()
-  -identity()
-  -retireSharing()
-  -applyConfig()
-}
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_repository_ts_ResourceRepositories : 声明
-```
-
-直接依赖：[../platform/paths.ts](../platform/paths.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[resource-store.ts](resource-store.ts)、[resource-http.ts](resource-http.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
-
-### resource-store.ts
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_store_ts["resource-store.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_store_ts_RepositoryStore["RepositoryStore"] {
-  <<interface>>
-  +read()
-  +save()
-  +remove()
-}
-N_src_backend_main_resources_resource_store_ts ..> N_src_backend_main_resources_resource_store_ts_RepositoryStore : 声明
-class N_src_backend_main_resources_resource_store_ts_LocalRepository["LocalRepository"] {
-  +root
-  +initialize()
-  +read()
-  +save()
-  +remove()
-  -file
-  -lock()
-  -checkFile()
-  -update()
-}
-N_src_backend_main_resources_resource_store_ts ..> N_src_backend_main_resources_resource_store_ts_LocalRepository : 声明
-N_src_backend_main_resources_resource_store_ts_RepositoryStore <|.. N_src_backend_main_resources_resource_store_ts_LocalRepository
-```
-
-直接依赖：[../platform/locking.ts](../platform/locking.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/connectors/definition.ts](../../core/connectors/definition.ts)、[../../core/connectors/repository-connection.ts](../../core/connectors/repository-connection.ts)、[repository-connection-store.ts](repository-connection-store.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../core/connectors/repository-tools.ts](../../core/connectors/repository-tools.ts)。
 
 ### workspace-packages.ts
 
@@ -319,7 +182,7 @@ class N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages["Work
 N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resources_workspace_packages_ts_WorkspacePackages : 声明
 ```
 
-直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/portable-package.ts](../../core/knowledge/portable-package.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[resource-repository.ts](resource-repository.ts)。
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../core/foundation/serialization.ts](../../core/foundation/serialization.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/knowledge/portable-package.ts](../../core/knowledge/portable-package.ts)、[../../core/knowledge/ports.ts](../../core/knowledge/ports.ts)、[../../core/knowledge/types.ts](../../core/knowledge/types.ts)、[../../core/knowledge/planned-commit.ts](../../core/knowledge/planned-commit.ts)、[../../../bridge/contracts/resources.ts](../../../bridge/contracts/resources.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)。
 
 ### 本目录调用边界
 
@@ -331,34 +194,7 @@ class N_src_backend_main_resources_repository_connections_ts["repository-connect
 class N_src_backend_main_resources_repository_connection_store_ts["repository-connection-store.ts"] {
   <<module>>
 }
-class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_store_ts["resource-store.ts"] {
-  <<module>>
-}
 N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_repository_connection_store_ts : 导入依赖
-N_src_backend_main_resources_repository_connections_ts ..> N_src_backend_main_resources_resource_repository_ts : 导入依赖
-N_src_backend_main_resources_resource_http_ts ..> N_src_backend_main_resources_resource_store_ts : 导入依赖
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_store_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_backend_main_resources_resource_repository_ts["resource-repository.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_resource_http_ts["resource-http.ts"] {
-  <<module>>
-}
-class N_src_backend_main_resources_workspace_packages_ts["workspace-packages.ts"] {
-  <<module>>
-}
-N_src_backend_main_resources_resource_repository_ts ..> N_src_backend_main_resources_resource_http_ts : 导入依赖
-N_src_backend_main_resources_workspace_packages_ts ..> N_src_backend_main_resources_resource_repository_ts : 导入依赖
 ```
 
 
@@ -449,3 +285,5 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 `WorkspacePackages` 新预览保存 v2 完整不可变计划，源资源指纹、目标域和 add/replace 语义由真实包规划生成；原样 wire 指纹不经 Schema 键序重排。提交仅把计划引用交给固定知识加载器，不能用可变 committed/result 缓存证明来源结算或知识成功。
 
 缓存回执必须与原知识 journal（含需要时的索引 journal）一致。重开后已提交旧计划仅查询并返回原真实回执，不续办旧实例清理、索引或替换；没有原成功日志的旧实例计划拒绝。全包净差异为空继续拒绝，实际整体 replace 中未变字节的对象仍按明确替换域轮换代次。
+
+资源仓库实现已迁到 src/logic/resources/service，纯定义归 src/logic/resources；旧 Main/resources 暂留与知识事务相关的连接授权和发布导入。宿主目录通过 ResourceRepositoryPaths 注入，Logic 不依赖 Main Paths 或 Bridge。

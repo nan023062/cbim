@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
-import {RemoteRepository} from '../src/backend/main/resources/resource-http';
+import {RemoteRepository} from '../src/logic/resources/service';
 import {RepositoryConnectionStore} from '../src/backend/main/resources/repository-connection-store';
 
 const deferred=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>resolve=done);return {promise,resolve}};

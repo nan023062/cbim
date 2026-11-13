@@ -5,6 +5,8 @@ import path from 'node:path';
 import ts from 'typescript';
 
 const scope={
+  "src/logic/resources": "资源定义、分类、仓库快照与公开状态的纯业务契约；仓库存储和共享由 service 负责。",
+  "src/logic/resources/service": "本地/HTTP 资源仓库、版本与身份校验、共享代际与取消；宿主仅提供目录边界，不持有应用或 Bridge。",
   "src/logic/feedback": "反馈输入、确定性正文、可信范围与公开连接契约；纯入口不加载持久化、网络或原生锁。",
   "src/logic/feedback/service": "GitHub 设备授权、加密连接和提交账本；有界 HTTP、先落盘后提交、未知结果只核实，宿主负责装配和关闭。",
   "src/logic/web/service": "WebService 的正文适配和 Brave 搜索；WebSettings 的版本、搜索开关、robots 策略和加密配置。公开服务入口与纯协议分开。",
@@ -16,7 +18,7 @@ const scope={
   "src/core/platform/node/files": "Node 单文件 I/O 基础方案：存在探测、JSON 读取、内容 fsync 后原子替换；路径权限、并发顺序和业务事务属于调用方。",
   "src/logic/models/service": "LlmProfiles 配置持久化、公开快照、受控锁内选型与延迟解密；index.ts 仅向宿主提供服务，平台加密由端口注入。",
   "src/logic/models": "模型目录、公开配置 Schema、供应商预设与引擎接口选择；index.ts 是纯公共入口，不加载 Node 或服务。配置服务位于 service，旧预算端口和主 Agent 设置不属于本片。",
-  "src/logic": "Logic 已迁入模型、Web 与反馈的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。",
+  "src/logic": "Logic 已迁入模型、Web、反馈与资源仓库的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。",
   "src/core": "四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。",
   "src/core/platform": "按运行环境隔离基础实现；Node 提供摘要、原生锁、文件和网页，Electron 提供匿名网页适配。便携 Core 不依赖平台。",
   "src/core/platform/node": "Node 专属摘要、原生互斥锁、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。",

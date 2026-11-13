@@ -57,7 +57,7 @@ import {exists} from '../../../core/platform/node/files';
 import {fail} from '../../core/foundation/errors';
 import {Rules} from '../../core/knowledge/knowledge';
 import {Workspace} from '../workspace/workspace';
-import {ResourceRepositories} from '../resources/resource-repository';
+import {ResourceRepositories} from '../../../logic/resources/service';
 import {RepositoryConnections} from '../resources/repository-connections';
 import type {WorkspaceMembers} from '../registry/workspace-members';
 import type {ModuleOwnerships} from '../registry/module-ownerships';

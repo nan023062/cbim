@@ -1,3 +1,11 @@
+## 2026-11-13：连续迁移第一批／资源仓库
+
+- 用户授权依次完成剩余四层迁移；基线 650c186e，初始干净，开放 Issue 仅无关 #65。C3/L3。先迁边界已闭合的 LocalRepository、RemoteRepository、ResourceRepositories 到 logic/resources/service；Bridge 的纯资源定义归 logic/resources，包/知识事务仍待其依赖闭合后迁移。ResourceRepositoryPaths 仅注入三个目录属性，替代对 Main Paths 的类型依赖；既有 Paths 结构兼容。
+- 保持原 CAS、锁名、摘要、文件格式、取消、只读共享代际与未知写结果；Logic 不依赖 Main 或 Bridge。新增公开入口与精确迁移许可，调用方及原 HTTP 子进程测试入口同步。源码注释、类图、契约、四层设计与三宿主工作流同步。
+- 类型及架构、测试归属检查通过：105 目录/730 源码样式，1471 文件/7201 依赖，0 环/违规；482 测试文件（138 unit、154 contract、190 integration）。命令：pnpm typecheck、pnpm check:architecture、pnpm check:test-modules。
+- `pnpm exec vitest run tests/resource-store.test.ts tests/resource-repository.test.ts tests/repository-connection-http.test.ts tests/repository-connection-service.test.ts tests/repository-tools.test.ts tests/chat-material-imports.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`：9 文件/180 项通过；`pnpm exec vitest run tests/utility-body-consumers.test.ts -t repository --reporter=default`：2 项通过、9 项按选择器未运行。合计 10 文件/182 项，覆盖本模块 CAS、共享/授权/资料消费者、真实网络取消及修改过的检测规则，不运行无关全仓。
+- Q1 原身份/版本/权限与提交语义；Q2 仓库服务与知识包事务分别定位；Q3 单元与实际协作验证保留；Q4 logic/resources 的纯入口和 service 契约；Q5 无。回退单位为此片全部路径、消费者与规则。仅本地提交；后续继续领域、调度、Bridge/View 与旧入口清理，不将本片视为全部完成。
+
 ## 2026-11-13：Logic 第三步／反馈服务
 
 - 来源：用户明确授权迁移反馈服务并运行反馈模块测试；基线 ac62d9d3，初始工作区干净。开放 Issues 查询仅 #65，与本次目录迁移无关，未写入无关工单。C3/L3；阅读反馈输入、授权、账本、HTTP、工具策略、Main/IPC 装配和原生锁实际依赖，本片不包含资源或模块治理反馈业务迁移。

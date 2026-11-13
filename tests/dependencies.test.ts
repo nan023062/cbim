@@ -5,6 +5,20 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 test.each([
+  ['src/backend/main/assembly/application.ts','src/logic/resources/service/index.ts',true],
+  ['src/logic/resources/service/resource-store.ts','src/core/platform/node/locking.ts',true],
+  ['src/logic/resources/service/resource-repository.ts','src/backend/main/platform/paths.ts',false],
+  ['src/logic/resources/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
+  ['src/backend/scheduler-engine/tools/repository-tools.ts','src/logic/resources/service/index.ts',false],
+  ['src/logic/resources/index.ts','src/logic/resources/service/index.ts',false],
+  ['src/frontend/resources/example.ts','src/logic/resources/index.ts',false],
+  ['src/backend/main/assembly/application.ts','src/logic/resources/service/resource-store.ts',false],
+] as const)('资源迁移边界 %s → %s = %s',(from,to,allowed)=>{
+  const spec=path.posix.relative(path.posix.dirname(from),to);
+  expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);
+});
+
+test.each([
   ['src/backend/main/assembly/application.ts','src/logic/feedback/service/index.ts',true],
   ['src/backend/core/tools/scope-schema.ts','src/logic/feedback/index.ts',true],
   ['src/backend/scheduler-engine/tools/feedback-tools.ts','src/logic/feedback/index.ts',true],

@@ -3,7 +3,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {expect,it,vi} from 'vitest';
 import {fixture} from './helpers';
-import {RemoteRepository} from '../src/backend/main/resources/resource-http';
+import {RemoteRepository} from '../src/logic/resources/service';
 import {RepositoryTools} from '../src/backend/scheduler-engine/tools/repository-tools';
 import {repositoryGetOutputSchema,repositoryListOutputSchema} from '../src/backend/core/connectors/repository-tools';
 import {hash} from '../src/backend/core/foundation/serialization';

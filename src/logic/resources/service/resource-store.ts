@@ -6,11 +6,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {KernelLock} from '../platform/locking';
+import {KernelLock} from '../../../core/platform/node/locking';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {hash,json} from '../../core/foundation/serialization';
-import type {ResourceLibrarySnapshot} from '../../../bridge/contracts/resources';
+import {fail} from '../../../core/errors';
+import {sha256 as hash} from '../../../core/platform/node/digest';
+import {formatJson as json} from '../../../core/utility';
+import type {ResourceLibrarySnapshot} from '..';
 
 export const MAX_BYTES=8*1024*1024;
 export const resourceFields=z.object({kind:z.enum(['connector','team','agent','skill','architecture','module','workflow']),name:z.string().trim().min(1).max(100),summary:z.string().trim().max(1000),content:z.string().min(1).max(2*1024*1024).refine(value=>Buffer.byteLength(value)<=2*1024*1024,'单项资源正文不能超过 2 MiB')}).strict();

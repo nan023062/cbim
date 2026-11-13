@@ -8,13 +8,14 @@ import path from 'node:path';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {networkInterfaces} from 'node:os';
 import {z} from 'zod';
-import {Paths} from '../platform/paths';
+/** 宿主提供运行目录边界；服务不取得工程身份、知识路径或应用装配能力。 */
+export interface ResourceRepositoryPaths {readonly userRoot:string;readonly installRoot:string;readonly protectedRoots?:readonly string[]}
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {json} from '../../core/foundation/serialization';
+import {fail} from '../../../core/errors';
+import {formatJson as json} from '../../../core/utility';
 import {LocalRepository,type RepositoryStore,saveSchema,removeSchema} from './resource-store';
 import {RemoteRepository,repositoryUrl,serveRepository} from './resource-http';
-import type {RepositoryStatus,RepositorySession,ResourceLibrarySnapshot} from '../../../bridge/contracts/resources';
+import type {RepositoryStatus,RepositorySession,ResourceLibrarySnapshot} from '..';
 
 /** 只在主进程闭包中使用，既不暴露令牌/地址，也不提供 save/remove；每次读取真正经过 HTTP。 */
 export interface SharedRepositoryReadConnection {
@@ -31,7 +32,7 @@ export class ResourceRepositories{
   private localConfig:Extract<Config,{mode:'local'}>|null=null;
   private config:Config|null=null;private configError?:string;private sharing?:Awaited<ReturnType<typeof serveRepository>>;private shareToken?:string;private queue:Promise<unknown>=Promise.resolve();
   private readSharing?:{connectionId:string;repositoryId:string;token:string;controller:AbortController};
-  constructor(private paths:Paths){}
+  constructor(private paths:ResourceRepositoryPaths){}
   private get settingsFile(){return path.join(this.paths.userRoot,'resource-repository-settings.json')}
   private serial<T>(fn:()=>Promise<T>){const result=this.queue.catch(()=>{}).then(fn);this.queue=result;return result}
   async init(){try{const saved=configSchema.parse(JSON.parse(await fs.readFile(this.settingsFile,'utf8')));if(saved.mode==='local'){this.localConfig=saved;this.config=saved}else{this.configError='旧版远端配置已停用。未登录时请选择本地目录；服务器仓库将由账号登录后自动提供。'}}catch(e:any){if(e.code!=='ENOENT')this.configError='仓库配置无效，请检查 resource-repository-settings.json 或重新选择仓库'}}

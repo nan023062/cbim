@@ -1,5 +1,5 @@
 import http from 'node:http';
-import {RemoteRepository} from '../src/backend/main/resources/resource-http';
+import {RemoteRepository} from '../src/logic/resources/service';
 
 // 真实独立 Node 进程核实先取消、后超时；避免测试运行器共享 fetch/AbortSignal 状态影响计时。
 async function main(){

@@ -56,7 +56,7 @@ N_src_logic ..> N_src_core : 导入依赖
 - [bridge/](bridge/ARCHITECTURE.md)：前后端通信边界：contracts 声明公开数据，preload 提供 Electron 安全桥。契约可重导出 Core 公开类型和纯函数，不暴露后端服务、凭据和存储实现。
 - [core/](core/ARCHITECTURE.md)：四层架构的共享基础公共层：utility 提供便携算法与数据结构，platform 隔离运行环境；不依赖业务、桥接或视图。前端比较和后端指纹适配组合相同排序实现，业务策略留在消费者。
 - [frontend/](frontend/ARCHITECTURE.md)：React 桌面界面。业务消费通信 contracts、自身组件及前端 foundations 的公开入口；前端基础库不反向引用页面或通信契约，不依赖后端公共库、调度或主进程实现。
-- [logic/](logic/ARCHITECTURE.md)：Logic 已迁入模型、Web 与反馈的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
+- [logic/](logic/ARCHITECTURE.md)：Logic 已迁入模型、Web、反馈与资源仓库的规则和服务；其他后端业务仍在旧目录，状态与生命周期由各业务模块拥有。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
 

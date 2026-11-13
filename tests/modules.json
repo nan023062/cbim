@@ -1426,6 +1426,29 @@
         "contract": [],
         "integration": []
       }
+    },
+    "logic/resources": {
+      "roots": [
+        "src/logic/resources/index.ts",
+        "src/logic/resources/contracts.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/resources/service": {
+      "roots": [
+        "src/logic/resources/service/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/resource-store.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
     }
   }
 }

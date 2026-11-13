@@ -87,7 +87,6 @@ class N_src_backend_main_settings["settings/"] {
 class N_src_backend_main_workspace["workspace/"] {
   <<directory>>
 }
-N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_workspace ..> N_src_backend_main_platform : 导入依赖
 N_src_backend_main_workspace ..> N_src_backend_main_registry : 导入依赖
 ```
@@ -141,7 +140,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `main.ts` → `materials`：导入。
 - `materials` → `resources`：导入。
 - `registry` → `knowledge`：导入。
-- `resources` → `platform`：导入。
 - `workspace` → `platform`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `governance`：导入。

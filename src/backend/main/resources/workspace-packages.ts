@@ -16,7 +16,7 @@ import type {KnowledgeWorkspace,KnowledgeCommit} from '../../core/knowledge/port
 import type {ChangeRequest} from '../../core/knowledge/types';
 import {knowledgePlanHash,type PackagePlanV2} from '../../core/knowledge/planned-commit';
 import type {PublishWorkspaceResult,ImportWorkspacePreview} from '../../../bridge/contracts/resources';
-import type {ResourceRepositories} from './resource-repository';
+import type {ResourceRepositories} from '../../../logic/resources/service';
 
 const identity={workspaceId:z.string().min(1).max(200),instanceId:z.string().uuid()};
 const version={...identity,revision:z.string().min(1),repositoryId:z.string().uuid(),repositoryRevision:z.string().min(1)};

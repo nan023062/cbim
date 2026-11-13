@@ -46,7 +46,7 @@
 | [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
 | [owner-execution.ts](owner-execution.ts) | 公开岗位执行的选择、冻结绑定及纯身份校验，供任务和目标视图核对历史归属。 |
 | [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
-| [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
+| [resources.ts](resources.ts) | 资源界面的通信类型及静态资源包操作协议。 |
 | [runtime.ts](runtime.ts) | 公开应用级成员、任务、目标周期和已报告用量的只读契约及严格传输校验。 |
 | [scope-budget.ts](scope-budget.ts) | 公开目标周期额度策略及只读逐请求摘要，供设置和目标卡片经 IPC 展示；不公开预留或终态写入端口。 |
 | [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
@@ -1016,59 +1016,6 @@ classDiagram
 class N_src_bridge_contracts_resources_ts["resources.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_resources_ts_ResourceKind["ResourceKind"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceKind : 声明
-class N_src_bridge_contracts_resources_ts_ResourceCategory["ResourceCategory"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceCategory : 声明
-class N_src_bridge_contracts_resources_ts_ResourceDefinition["ResourceDefinition"] {
-  <<interface>>
-  +id
-  +kind
-  +name
-  +summary
-  +content
-  +updatedAt
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceDefinition : 声明
-class N_src_bridge_contracts_resources_ts_ResourceLibrarySnapshot["ResourceLibrarySnapshot"] {
-  <<interface>>
-  +repositoryId
-  +revision
-  +items
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceLibrarySnapshot : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_resources_ts_RepositoryConfig["RepositoryConfig"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositoryConfig : 声明
-class N_src_bridge_contracts_resources_ts_RepositorySession["RepositorySession"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositorySession : 声明
-class N_src_bridge_contracts_resources_ts_RepositoryStatus["RepositoryStatus"] {
-  <<interface>>
-  +session
-  +source
-  +config
-  +error
-  +sharing
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositoryStatus : 声明
 class N_src_bridge_contracts_resources_ts_PublishWorkspaceInput["PublishWorkspaceInput"] {
   <<interface>>
   +workspaceId
@@ -1082,13 +1029,6 @@ class N_src_bridge_contracts_resources_ts_PublishWorkspaceInput["PublishWorkspac
   +summary
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceInput : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
 class N_src_bridge_contracts_resources_ts_ImportWorkspacePreviewInput["ImportWorkspacePreviewInput"] {
   <<interface>>
   +workspaceId
@@ -1117,6 +1057,13 @@ class N_src_bridge_contracts_resources_ts_PublishWorkspaceResult["PublishWorkspa
   +removedBindings
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceResult : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_resources_ts["resources.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_resources_ts_ImportWorkspacePreview["ImportWorkspacePreview"] {
   <<type>>
   +planId
@@ -1130,7 +1077,7 @@ class N_src_bridge_contracts_resources_ts_ImportWorkspacePreview["ImportWorkspac
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspacePreview : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/portable-package.ts](../../backend/core/knowledge/portable-package.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)。
+直接依赖：[../../logic/resources/index.ts](../../logic/resources/index.ts)、[../../backend/core/knowledge/portable-package.ts](../../backend/core/knowledge/portable-package.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)。
 
 ### runtime.ts
 

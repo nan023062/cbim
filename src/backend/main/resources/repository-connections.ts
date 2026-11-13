@@ -22,7 +22,7 @@ import {
   type RepositoryConnectionIdentity,type RepositoryConnectionPreview,type RepositoryConnectionCommit,type RepositoryConnectionGrant,type RepositoryConnectionReceipt,
 } from '../../core/connectors/repository-connection';
 import {RepositoryConnectionStore} from './repository-connection-store';
-import type {ResourceRepositories,SharedRepositoryReadConnection} from './resource-repository';
+import type {ResourceRepositories,SharedRepositoryReadConnection} from '../../../logic/resources/service';
 import {
   repositoryListInputSchema,repositoryGetInputSchema,repositoryToolLimits,
   type RepositoryToolsPort,type RepositoryToolTarget,

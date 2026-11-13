@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
 import {fixture} from './helpers';
-import {ResourceRepositories} from '../src/backend/main/resources/resource-repository';
-import {LocalRepository} from '../src/backend/main/resources/resource-store';
+import {ResourceRepositories} from '../src/logic/resources/service';
+import {LocalRepository} from '../src/logic/resources/service';
 import {resourceKinds} from '../src/bridge/contracts/resources';
 
 it('三类资源共用一个本地仓库和远端服务，切换统一生效',async()=>{

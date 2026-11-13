@@ -91,3 +91,7 @@ WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为
 ## 反馈迁移切片
 
 反馈协议、范围、GitHub 授权与提交服务归 logic/feedback；纯 index.ts 与宿主 service/index.ts 分开。原 scope-schema 组合并重导出本域范围，避免 Logic 反向依赖工具体系。KernelLock 实现进入 core/platform/node/locking.ts，旧出口共享同一构造器以兼容工作区/资源消费者。bridge/contracts/github-feedback.ts 仅转接配置 Schema 与公开状态；旧 Main 通过服务公开入口装配，工具只能读纯契约。凭据、发送屏障、原目标核实与持久化字节保持；资源业务不在本片范围。
+
+## 资源仓库迁移切片
+
+边界已闭合的本地仓库、HTTP 和共享生命周期迁入 logic/resources/service；资源定义与状态归纯入口。目录通过结构端口注入。知识包与仓库授权连接需随知识业务继续迁移，当前不将未完成部分画成已迁移。

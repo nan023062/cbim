@@ -1,3 +1,7 @@
+### 成员当前话题资料
+
+`memberExecutionPrompt` 在原任务、前置和冻结知识之外接收可信装配解析的当前话题资料，并明确资料不能改写派发范围、权限或验收。成员仍不获得主会话全部聊天。旧运行缺少引用时只使用原任务输入，不猜历史；所有引擎消费同一可信装配提示词。
+
 ### 只读知识查询编排
 
 `logic/knowledge/rules/knowledge-queries.ts` 组合该域 read-models 中的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。本目录的执行上下文和内部知识工具使用同一个查询入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。

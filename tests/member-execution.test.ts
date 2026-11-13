@@ -88,6 +88,9 @@ it('成员领取后执行、返回带证据的候选、原请求人确认收件�
     expect(JSON.stringify(view)).not.toMatch(/sessionFile|agentDefinition|apiKey/);
     const next=await f.assign();await f.start(next.taskId);expect((await f.settled(next.taskId)).task.status).toBe('result_ready');
     expect(f.contexts[1].nativeSessionId).not.toBe(f.contexts[0].nativeSessionId);expect(f.contexts[1].task.ownerBinding).toEqual(f.contexts[0].task.ownerBinding);
+    const state=await f.store.read(),second=state.runs!.find(run=>run.binding.taskId===next.taskId)!;
+    expect(second.topicContext).toMatchObject({scopeId:f.scopeId,rootSessionId:f.identity.rootSessionId,agentId:f.agentId,priorTasks:[{taskId:assigned.taskId,resultId:view.task.result!.resultId}]});
+    expect(JSON.stringify(view)).not.toContain('topicContext');
   }finally{await f.cleanup()}
 });
 

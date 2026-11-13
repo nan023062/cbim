@@ -15,7 +15,7 @@
  * 影响观察另提供安全文件读取、短只读占用、原知识/治理/责任及受控阶段查询；端口复用唯一存储及已有受控报告，不启动模型、文件子进程或旧提交，明确处置、新只读核实与业务修复各走独立门禁。
  * 岗位引擎来自采纳快照；原生能力预检与会话指纹按 Pi/Claude Code/Codex 分开装配，主模型不能覆盖它。
  * 请求账本只注入预算专用 Store 适配，预留仍在工作区唯一串行事务中裁决。
- * 成员与主会话共用受管引擎解析；受控文件能力同时保护安装目录、用户目录与独立更新缓存。
+ * 成员与主会话共用受管引擎解析；成员启动前按冻结引用解析当前话题资料，三引擎均不注入其他话题历史。受控文件能力保护安装、用户与更新目录。
  */
 import path from 'node:path';
 import type {Workspace} from '../../workspace/service/workspace';
@@ -27,6 +27,7 @@ import {MemberExecutionManager,type PreparedEngine} from '../../team/runtime/mem
 import {createWorkspaceLoop} from '../../execution/assembly/loop-engine';
 import type {EngineRuntimeResolver} from '../../execution/rules/engine-runtime';
 import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../execution/context/execution-context';
+import {resolveMemberTopicContext} from '../../tasks/rules/member-topic-context-rules';
 import {ArtifactFiles,normalizeArtifactPath} from '../../file-operations/platform/files/artifact-files';
 import {CodeCheckRunner} from '../../file-operations/platform/files/code-check-runner';
 import {OutputManifestFiles} from '../../file-operations/platform/files/output-manifest-files';
@@ -109,6 +110,9 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');
         if(JSON.stringify(run.model)!==JSON.stringify(llm.profile))throw Error('成员运行模型快照与启动配置不一致');
         const checkpointState=await store.read(),previous=run.resumeFrom?checkpointState.runs?.find(old=>old.binding.runId===run.resumeFrom!.runId):undefined;
+        const topic=checkpointState.scopes?.find(scope=>scope.scopeId===task.scopeId),topicGraph=checkpointState.graphs.find(graph=>graph.identity.rootSessionId===run.binding.rootSessionId);
+        if(run.topicContext&&(!topic||!topicGraph))fail('MEMBER_TOPIC_CONTEXT_IDENTITY','原话题资料缺失，未启动成员');
+        const topicContext=run.topicContext?resolveMemberTopicContext(run.topicContext,task,topic!,topicGraph!):undefined;
         if(run.resumeFrom&&(!previous?.checkpointProof||previous.checkpointProof.checkpoint.checkpointId!==run.resumeFrom.checkpointId))fail('MEMBER_CHECKPOINT_INVALID','续执行缺少原检查点证明');
         const executionScope=preparedExecutionScope(run.prepared.modules.map(module=>({contract:module.workflowContract})));
         const scopedExecution=executionScope?new ScopedExecutionFiles(workspace.entry.path,executionScope,()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EXECUTION_SCOPE_STOPPED','工作区正在停止')},[workspace.paths.userRoot,workspace.paths.installRoot,...(workspace.paths.protectedRoots??[])],isolatedExecutions.forRun(run,task.scopeId!,executionScope)):undefined;
@@ -123,7 +127,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
         },{
           memberCheckpointAllowance:memberCheckpointLimit-(task.checkpoints?.length??0),
           requestBudget:()=>requestBudgets.forRun({rootSessionId:run.binding.rootSessionId,taskId:task.taskId,runId:run.binding.runId,scopeId:task.scopeId,kind:'member'},llm),
-          storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
+          storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites,topicContext),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>runFiles.captureFiles(paths,signal)},
           manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>runManifests.capture(scopes,signal)},
           codeChecks:new CodeCheckRunner(workspace.entry.path,()=>workspace.assert()),

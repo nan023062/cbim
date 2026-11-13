@@ -12,12 +12,13 @@
  * 作用定位：让已派发任务在独立成员执行通道中运行，已登记办公室同角色串行领取，提交启动、结果、中断及一次安全停泊/续执行事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
- * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
+ * 领取边界：冻结当前话题资料引用，前置与原生上下文不能跨话题。新输入未核实/重规划时保留待办；已执行成员仍结算真实事实。
  * Claude/Codex 首轮允许延迟绑定真实原生文件；Codex 仅在 starting→running 时采纳 App Server 分配的线程 ID，之后身份与文件冻结。
  * 失败或中断的任务卡原因取自本轮 canonical 终态，经公开诊断转换后同事务保存到 task.waitReason 与 run.error。
  */
 import {workspaceMemberEngine,type WorkspaceMemberModelRef} from '../rules/workspace-member';
 import {teamSessionBusy} from '../rules/team-session';
+import {createMemberTopicContext} from '../../tasks/rules/member-topic-context-rules';
 import {sameAutomaticExecutionForModules} from '../rules/automatic-execution';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -186,8 +187,8 @@ export class MemberExecutionManager {
         this.check(input.workspaceId);
         const {graph,task,member,session}=memberTask(state,input.rootSessionId,input.taskId);
         if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='waiting'))fail('GOAL_WAITING','当前主会话目标处于安全等待，不能从历史任务启动执行');
-        // 主实例只承担调度；即便旧图保留曾经的 self 任务，也不能再启动为业务执行者。
-        if(member.agentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 不直接执行业务，请使用执行 Agent');
+        // 主 Agent 通过原主会话工作；旧 self 任务不能绕过主会话身份另建执行通道。
+        if(member.agentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 应在原主会话执行，不能创建独立成员通道');
         if(member.lifecycle==='released')fail('MEMBER_RELEASED','执行实例已随调度周期释放，不能再次启动');
         if(task.scopeId&&!state.scopes?.some(scope=>scope.scopeId===task.scopeId&&scope.workspaceId===input.workspaceId&&scope.rootSessionId===input.rootSessionId&&scope.status==='active'))fail('DISPATCH_SCOPE_CLOSED','任务调度周期已结束，不能启动执行实例');
         if(state.scopes?.some(scope=>scope.scopeId===task.scopeId&&scope.recovery)&&input.options.permission!=='read')fail('RECOVERY_READONLY','只读核实周期的成员不能提升权限执行业务写入、知识写入或命令');
@@ -204,6 +205,7 @@ export class MemberExecutionManager {
         const previous=(state.runs??[]).filter(r=>r.binding.agentSessionId===session.agentSessionId).at(-1);
         if(resuming&&(!previous||!previous.checkpointProof||assignment.kind!=='assignment'||assignment.resumeFrom?.runId!==previous.binding.runId||assignment.resumeFrom.checkpointId!==previous.checkpointProof.checkpoint.checkpointId||assignment.messageId!==resumeRequest!.requestId||session.lastRunId!==previous.binding.runId))fail('MEMBER_RESUME_NOT_ALLOWED','续执行预约、检查点或原生通道已经失效');
         if(previous){
+          if(previous.binding.taskId!==task.taskId||graph.tasks.find(value=>value.taskId===previous.binding.taskId)?.scopeId!==task.scopeId)fail('MEMBER_TOPIC_CONTEXT_IDENTITY','原生成员上下文不能跨任务或话题复用');
           if(previous.status!=='completed')fail('MEMBER_SESSION_REVIEW_REQUIRED','该成员通道上次运行未安全结束，请先核实；本阶段不自动续接异常通道');
           const summary=await this.ports.inspect(previous);
           if(summary.status!=='completed'||summary.unresolvedTools.length||!summary.sessionFile||json(summary.memberBinding)!==json(previous.binding)||!isDeepStrictEqual(summary.task.fallbackBinding,previous.prepared.fallbackBinding)||!isDeepStrictEqual(summary.task.ownerBinding,previous.prepared.memberContext?.binding)||summary.task.workspaceId!==input.workspaceId||summary.task.root!==this.owner.entry.path||summary.task.taskId!==previous.binding.taskId||summary.task.agentId!==previous.binding.agentId||summary.runId!==previous.binding.runId||summary.sessionFile!==previous.session.sessionFile)fail('MEMBER_SESSION_REVIEW_REQUIRED','成员通道历史未通过核实，不能自动续接');
@@ -240,6 +242,7 @@ export class MemberExecutionManager {
         if(member.configurationRevision!==prepared.knowledgeRevision)fail('DISPATCH_CONTEXT_CHANGED','成员配置版本已变化，请重新登记派发');
         const prerequisites=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId).map(edge=>{
           const source=graph.tasks.find(t=>t.nodeId===edge.fromNodeId)!;
+          if(source.scopeId!==task.scopeId)fail('MEMBER_TOPIC_CONTEXT_IDENTITY','成员前置候选必须来自当前话题');
           return {taskId:source.taskId,planRevision:source.planRevision,result:structuredClone(source.result!)};
         });
         if(resuming){
@@ -250,7 +253,9 @@ export class MemberExecutionManager {
           await verifyMemberCheckpointProof(this.owner,task,previous!,this.checkpointPorts(),assertCurrent,previous!.checkpointProof,state.runs);assertCurrent();
         }
         const leaseEpoch=member.leaseEpoch+(resuming?1:0);
-        const run:DispatchRun={binding:{workspaceId:input.workspaceId,teamId:member.teamId,agentId:member.agentId,agentInstanceId:member.agentInstanceId,agentSessionId:session.agentSessionId,rootSessionId:input.rootSessionId,taskId:task.taskId,runId,leaseEpoch,planRevision:task.planRevision},assignmentMessageId:assignment.messageId,status:'starting',prepared:resuming?structuredClone(previous!.prepared):prepared,prerequisites,model:engine.model,permission:options.permission,turnTimeoutMs:options.turnTimeoutMs,session:{nativeSessionId:session.nativeSessionId??session.agentSessionId,...(previous?{sessionFile:previous.session.sessionFile}:{})},createdAt:new Date().toISOString(),...(resuming?{resumeFrom:{checkpointId:task.checkpoints!.at(-1)!.checkpointId,runId:previous!.binding.runId}}:{})};
+        const logical=state.teamSessions?.find(value=>value.rootSessionId===input.rootSessionId&&value.agentId===member.agentId);
+        const topicContext=scope&&logical?createMemberTopicContext(task,scope,graph,logical):undefined;
+        const run:DispatchRun={binding:{workspaceId:input.workspaceId,teamId:member.teamId,agentId:member.agentId,agentInstanceId:member.agentInstanceId,agentSessionId:session.agentSessionId,rootSessionId:input.rootSessionId,taskId:task.taskId,runId,leaseEpoch,planRevision:task.planRevision},assignmentMessageId:assignment.messageId,status:'starting',prepared:resuming?structuredClone(previous!.prepared):prepared,prerequisites,...(topicContext?{topicContext}:{}),model:engine.model,permission:options.permission,turnTimeoutMs:options.turnTimeoutMs,session:{nativeSessionId:session.nativeSessionId??session.agentSessionId,...(previous?{sessionFile:previous.session.sessionFile}:{})},createdAt:new Date().toISOString(),...(resuming?{resumeFrom:{checkpointId:task.checkpoints!.at(-1)!.checkpointId,runId:previous!.binding.runId}}:{})};
         const updated={...task,status:'queued' as const,waitReason:undefined,revision:task.revision+1,activeRunId:runId,runIds:[...task.runIds,runId],updatedAt:run.createdAt};
         const occupied={...member,leaseEpoch,activity:'communicating' as const,activeTaskId:task.taskId,activeRunId:runId,waitingTaskIds:member.waitingTaskIds.filter(id=>id!==task.taskId),communicatingMessageIds:[assignment.messageId]};
         const dependencies=(resuming?[]:graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId)).map(edge=>{

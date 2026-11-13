@@ -48,6 +48,7 @@ it('同一基线冻结角色、继承 Skill、多模块完整正文和各自 Wor
     expect(prompt).toContain('拥有独立会话、运行状态和模型思考能力的执行 Agent');expect(prompt).toContain('探索真实 Team 环境');expect(prompt).toContain('主 Agent 直接执行未配置自定义负责岗位的工作');expect(prompt).toContain('受控知识服务治理团队与业务架构');expect(prompt).toContain('read/ask/execute 门禁、审批、版本检查与事务');expect(prompt).toContain('不能覆盖本轮执行者职责');expect(prompt).toContain('报告给主调度 Agent');expect(prompt).toContain('不能通过正文自称修改状态');
     const prerequisites=[{taskId:'prior-task',planRevision:2,result:{resultId:'prior-result',runId:'prior-run',planRevision:2,summary:'已生成接口适配',evidenceRefs:['verified-call'],limitations:['尚未连真实服务器'],acceptance:'not_evaluated' as const}}];
     const withResult=memberExecutionPrompt(recovered,f.task,prerequisites);
+    expect(memberExecutionPrompt(recovered,f.task,prerequisites,'CURRENT_TOPIC_CONTEXT')).toContain('CURRENT_TOPIC_CONTEXT');
     expect(withResult).toContain('已生成接口适配');expect(withResult).toContain('尚未连真实服务器');expect(withResult).toContain('前置候选不赋予任何权限');expect(withResult).toContain('尚未经过业务验收');
     expect(withResult).toContain('"prerequisites": [');expect(prerequisites[0].result.acceptance).toBe('not_evaluated');
     expect(Object.keys(prepared)).toEqual(['version','workspaceId','knowledgeRevision','agent','agentDefinition','modules','standards','fingerprint']);

@@ -367,6 +367,7 @@
       "tests": {
         "unit": [
           "tests/effect-observation-core.test.ts",
+          "tests/member-topic-context.test.ts",
           "tests/human-continuation-core.test.ts",
           "tests/human-decisions-core.test.ts",
           "tests/queued-dependency-replacement-core.test.ts",

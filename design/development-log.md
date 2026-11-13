@@ -1,3 +1,11 @@
+## 2026-11-14：办公室改版第 6 步——成员当前话题上下文隔离
+
+- 基线 `99356503`。成员每轮冻结办公室、逻辑 Session、话题和输入版本，以及同角色同话题的历史候选引用；提示词只解析原引用，拒绝身份或版本漂移。新补充优先进入有界上下文，明确遗漏数量，原归档不截断。跨话题前置任务在派发和运行事务两处拒绝；不同任务保留独立原生通道，长期逻辑会话不会带入其它话题的原生历史。
+- Q1 保护租约、检查点与原生通道身份；Q2 引用契约和纯解析归 Tasks，领取归 Team，装配归 Application；Q3 选取上下文、派发持久事务、实际成员领取和 Pi 装配消费者；Q4 `member-topic-context` → `member-topic-context-rules` → `MemberExecutionManager` → `member-dispatch`；Q5 无新增通用规范。主会话完整归档和整话题打断仍需后续切片。
+- `pnpm exec vitest run tests/member-topic-context.test.ts tests/member-execution-context.test.ts tests/member-execution.test.ts tests/dispatch-execution-store.test.ts tests/dispatch-scope.test.ts`：49/49 通过。补充最新输入优先与真实请求断言后，`pnpm exec vitest run tests/member-topic-context.test.ts tests/application-member-pi.test.ts tests/member-checkpoint-domain.test.ts`：12/12 通过，实际 Pi 第二话题请求不含第一话题正文；`tests/dispatch-scope.test.ts -t '新话题拒绝'`：1 通过、9 未选择。
+- 首轮架构检查发现引用类型经解析逻辑回到运行记录的类型环，已拆分纯契约与算法并登记两个细粒度公开入口。修复后 `tests/member-topic-context.test.ts tests/dispatch-execution-store.test.ts`：14/14；`tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`：9 通过、139 未选择。最终 `pnpm typecheck`、`pnpm check:architecture`（741 代码/样式、1490 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（487 文件）和 `git diff --check` 通过。
+- 同步五个受影响目录的源码说明、CONTRACT 和类图。未运行全仓回归、桌面冒烟、构建、安装升级或发布；实际 Pi 集成使用本地受控服务，不代表在线模型验收。独立本地保存。
+
 ## 2026-11-14：办公室改版第 5 步——普通输入排队与话题身份衔接
 
 - 基线 `3d126a9e`。普通输入在开放/等待话题期间均入队，不再自动转为等待目标的补充；补充保留目标内的明确独立表单。移除界面 Ctrl+Enter/队列项的单轮原生 steer，避免把它误认为整话题暂停；底层旧协议及回归覆盖保留，整话题插入另行实施。

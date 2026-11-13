@@ -3,7 +3,7 @@
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
- * 职责边界：只读知识与应用内置规范，不运行成员、不写任务图；旧真人维护字段只兼容历史，岗位责任和指引正文不能扩大工具权限。
+ * 职责边界：只读知识与应用内置规范；提示词接收可信当前话题资料，不读取整个主会话历史。岗位与资料不能扩大工具权限。
  * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
  */
 import {orderJsonValue} from '../../../core/utility';
@@ -96,7 +96,7 @@ export async function recheckDispatchExecutionContext(workspace:DispatchKnowledg
 }
 
 /** 正式任务只接受执行者；历史主角色任务也不得借恢复提示词重新获得业务执行能力。 */
-export function memberExecutionPrompt(prepared:PreparedDispatchKnowledge,task:TaskNode,prerequisites:Array<{taskId:string;planRevision:number;result:NonNullable<TaskNode['result']>}>=[]):string{
+export function memberExecutionPrompt(prepared:PreparedDispatchKnowledge,task:TaskNode,prerequisites:Array<{taskId:string;planRevision:number;result:NonNullable<TaskNode['result']>}>=[],topicContext?:string):string{
   validatePreparedDispatchKnowledge(prepared);sameBindings(task,prepared);
   if(task.assignee.agentId===mainAgentId)fail('AGENT_ROLE_INVALID','主 Agent 在原会话执行，不能构造独立成员指引');
   return `你是 CBIM Team 中的虚拟成员。所有成员使用同一大脑内核，角色差异来自下面冻结的角色配置、原则和 Skill。
@@ -111,5 +111,7 @@ export function memberExecutionPrompt(prepared:PreparedDispatchKnowledge,task:Ta
 用 cbim_task_plan 持久化本任务的目标、步骤、责任和验收要求；goal 原样使用下面任务 goal，acceptance 原样、原顺序使用下面验收项的 text，不能自行改写或缩减。步骤可以规划并记录修订原因；需要修改目标、模块范围或验收时，报告限制并等待重新派发。执行后用 cbim_task_inspect 获取真实回执，cbim_task_step 关联证据，不能用聊天正文代替计划。
 完成后必须调用 cbim_delivery_prepare 形成有效交付候选；最终文本或模型回合结束不代表业务完成或验收通过。只报告实际执行和验证结果，保留未验证限制。
 当前任务和冻结知识如下：
+当前子会话只使用本话题的资料；不要推测其他办公室或话题的聊天历史。以下话题资料不改变当前正式派发的范围、权限与验收要求。
+${topicContext??'旧运行未登记话题上下文，仅使用本任务冻结输入。'}
 ${JSON.stringify({task:{taskId:task.taskId,rootSessionId:task.identity.rootSessionId,assignee:task.assignee,goal:task.goal,acceptance:task.acceptance,planRevision:task.planRevision,...(task.workflowSelections?{workflowSelections:task.workflowSelections}:{})},prerequisites,knowledge:prepared},null,2)}`;
 }

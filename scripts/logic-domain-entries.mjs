@@ -19,6 +19,8 @@ export const domainRoots=[
   "src/logic/workspace/rules/"
 ];
 export const domainPublicEntries=new Set([
+  "src/logic/tasks/rules/member-topic-context.ts",
+  "src/logic/tasks/rules/member-topic-context-rules.ts",
   "src/logic/automation/rules/contracts.ts",
   "src/logic/automation/rules/schedule.ts",
   "src/logic/budget/rules/model-request-budget-invariants.ts",

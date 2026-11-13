@@ -12,6 +12,7 @@ import type {AgentInstance,AgentSessionBinding} from '../src/logic/team/rules/ag
 import type {AgentRef,GraphEventBatch,GraphIdentity,TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {seedExecutionOwner} from './owner-execution-store-support';
 import {bindingFor} from './owner-execution-core-fixture';
+import {createMemberTopicContext} from '../src/logic/tasks/rules/member-topic-context-rules';
 
 const identity:GraphIdentity={workspaceId:'workspace-1',rootSessionId:'root-session-1'};
 const createdAt='2026-11-06T10:00:00.000Z',startedAt='2026-11-06T10:00:01.000Z',settledAt='2026-11-06T10:00:02.000Z';
@@ -56,6 +57,19 @@ async function setup(){
   await store.transact(command('dispatch'),async state=>({members:[{...member(dev),executionScopeId:'owner-scope',executionTaskId:'task-1',lifecycle:'active'}],sessions:[session(dev)],batch:batch('dispatch',2,[{type:'task.upserted',task:task(state)},{type:'edge.upserted',edge:{edgeId:'edge-1',identity,kind:'dispatch',fromNodeId:`session:${identity.rootSessionId}`,toNodeId:'task:task-1',revision:1,enabled:true}},{type:'agent.upserted',agent:{agentInstanceId:dev.agentInstanceId,agentId:dev.agentId,name:dev.name,revision:1,state:'idle',waitingTaskIds:[]}}]),messages:[{kind:'assignment',messageId:'message-1',commandId:'dispatch',identity,from:main,to:dev,taskId:'task-1',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch'}));
   return {dir,store,cleanup:async()=>{await store.close();await fs.rm(dir,{recursive:true,force:true})}};
 }
+
+test('话题上下文引用随领取持久保存，跨话题伪造和运行中改绑被事务拒绝',async()=>{
+  const f=await setup();try{
+    const logical={...identity,sessionId:'logical-dev',agentId:dev.agentId,teamId:'.cbim/team',createdAt};
+    await f.store.transact(command('logical'),async()=>({teamSessions:[logical],receipt:true}));
+    const freeze=(state:DispatchState)=>createMemberTopicContext(state.graphs[0].tasks[0],state.scopes!.find(scope=>scope.scopeId==='owner-scope')!,state.graphs[0],logical);
+    await expect(f.store.transact(command('invalid-context'),async state=>{const mutation=claimMutation(state,'invalid-context');mutation.runs![0].topicContext={...freeze(state),scopeId:'foreign'};return mutation})).rejects.toThrow();
+    expect((await f.store.read()).runs).toEqual([]);
+    await f.store.transact(command('valid-context'),async state=>{const mutation=claimMutation(state,'valid-context');mutation.runs![0].topicContext=freeze(state);return mutation});
+    await expect(f.store.transact(command('rebind-context'),async state=>{const mutation=runningMutation(state,'rebind-context');mutation.runs![0].topicContext={...mutation.runs![0].topicContext!,scopeId:'foreign'};return mutation})).rejects.toThrow();
+    const saved=await f.store.read();await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);try{expect((await reopened.read()).runs).toEqual(saved.runs)}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
 
 test('registered owner claim is atomic, idempotent and does not assert execution started',async()=>{
   const f=await setup();try{

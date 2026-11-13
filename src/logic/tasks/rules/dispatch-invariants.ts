@@ -3,7 +3,7 @@
  * 每个私有检查点证明和交接信封都绑定自己的原运行，逐段记录不能借用第一段证明。
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；跨对象约束归 Logic 纯规则，磁盘适配器负责可靠提交。长期团队对话还限制同办公室同角色的并行领取，不能换执行实例绕过。
- * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加与检查点放弃须完整核验后才给通用门禁精确许可，人工保存与显式接续不能冒充完成或自行消费等待。
+ * 职责边界：不启动模型、不访问文件、不签发权限；新话题上下文引用须匹配原办公室/角色，原生通道不跨任务复用，历史无协议不补造。人工保存与接续不能冒充完成。
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  */
@@ -14,6 +14,8 @@ import {hash,json} from '../../../core/platform/node/serialization';
 import {fail} from '../../../core/errors';
 import {connectionSchema,modelSchema} from '../../models';
 import {teamSessionBusy} from '../../team/rules/team-session';
+import {memberTopicContextSchema} from './member-topic-context';
+import {createMemberTopicContext} from './member-topic-context-rules';
 import {loopEngineSchema} from '../../models';
 import {validatePreparedDispatchKnowledge} from './execution-context';
 import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from '../../dispatch/rules/dispatch-storage';
@@ -44,6 +46,7 @@ const messageShape=z.discriminatedUnion('kind',[
 const resultShape=z.object({resultId:id,runId:id,planRevision:z.number().int().positive().safe(),summary:z.string().trim().min(1).max(100000),evidenceRefs:z.array(id),limitations:z.array(z.string().trim().min(1).max(100000)),acceptance:z.literal('not_evaluated')}).strict();
 const runShape=z.object({binding:z.object({workspaceId:id,teamId:id,agentId:id,agentInstanceId:id,agentSessionId:id,rootSessionId:id,taskId:id,runId:id,leaseEpoch:z.number().int().nonnegative().safe(),planRevision:z.number().int().positive().safe()}).strict(),assignmentMessageId:id,
   resumeFrom:memberResumeFromSchema.optional(),checkpointProof:memberCheckpointProofSchema.optional(),
+  topicContext:memberTopicContextSchema.optional(),
   status:z.enum(['starting','running','completed','failed','cancelled','interrupted']),prepared:z.unknown(),model:z.record(z.unknown()),permission:z.enum(['read','ask','execute']),
   prerequisites:z.array(z.object({taskId:id,planRevision:z.number().int().positive().safe(),result:resultShape}).strict()).optional(),
   turnTimeoutMs:z.number().int().positive().safe().optional(),session:z.object({nativeSessionId:id,sessionFile:z.string().min(1).max(32768).optional()}).strict(),
@@ -104,11 +107,17 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
     valid(!teamSessionBusy(state.teamSessions??[],state.runs??[],binding,binding.runId),'同一办公室的同一 Agent 不能同时领取多个任务');
     valid(member.leaseEpoch===binding.leaseEpoch&&member.configurationRevision===run.prepared.knowledgeRevision,'领取时的成员代际或知识基线已过期');
     const graph=state.graphs.find(item=>sameGraph(item.identity,binding))!;
+    if(run.topicContext){
+      const scope=state.scopes?.find(value=>value.scopeId===task.scopeId&&sameGraph(value,binding)),logical=state.teamSessions?.find(value=>value.sessionId===run.topicContext!.sessionId);
+      valid(scope&&logical&&equal(run.topicContext,createMemberTopicContext(task,scope,graph,logical)),'成员话题引用必须来自当前话题与角色');
+      valid(!state.runs?.some(other=>other.binding.runId!==binding.runId&&other.session.nativeSessionId===run.session.nativeSessionId&&other.binding.taskId!==binding.taskId),'成员原生上下文不能跨任务复用');
+    }
     const dependencies=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId),prerequisites=run.prerequisites??[];
     valid(prerequisites.length===dependencies.length&&new Set(prerequisites.map(item=>item.taskId)).size===prerequisites.length,'冻结前置候选须完整对应任务入向依赖');
     for(const edge of dependencies){
       if(edge.kind!=='dependency')continue;
       const source=graph.tasks.find(item=>item.nodeId===edge.fromNodeId),frozen=prerequisites.find(item=>item.taskId===source?.taskId);
+      if(run.topicContext)valid(source?.scopeId===task.scopeId,'成员话题前置候选不能来自其他话题');
       valid(source?.status==='result_ready'&&frozen&&frozen.planRevision===source.planRevision&&frozen.planRevision===edge.condition.planRevision&&frozen.result.resultId===edge.condition.resultId&&equal(frozen.result,source.result),'领取时须锁定当前计划下的前置候选及结果内容');
       if(edge.condition.reviewRequired)valid(candidateAccepted(source),'领取时前置候选尚未通过主 Agent 审阅');
     }

@@ -399,6 +399,7 @@ export class WorkspaceDispatchService {
       for(const prerequisite of input.task.prerequisites){
         const source=graph.tasks.find(t=>t.taskId===prerequisite.taskId);
         if(!source)fail('GRAPH_REFERENCE_INVALID','前置任务不在当前主会话图中');
+        if(trustedScopeId&&source.scopeId!==trustedScopeId)fail('MEMBER_TOPIC_CONTEXT_IDENTITY','新派发的前置任务必须属于当前话题，不能混入其他话题上下文');
         if(source.planRevision!==prerequisite.expectedPlanRevision)fail('GRAPH_REVISION_CONFLICT','前置任务计划版本已变化');
         const ready=source.status==='result_ready'&&source.result?.planRevision===source.planRevision;
         if(!ready||!candidateAccepted(source))waiting=true;

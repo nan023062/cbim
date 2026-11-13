@@ -30,6 +30,8 @@ test.each([
   ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
   ['src/logic/tasks/rules/scope-view.ts','src/logic/team/rules/team-session.ts',true],
+  ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context.ts',true],
+  ['src/logic/team/runtime/member-execution.ts','src/logic/tasks/rules/member-topic-context-rules.ts',true],
   ['src/logic/team/rules/team-session.ts','src/logic/team/runtime/agent-manager.ts',false],
 ] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);

@@ -42,6 +42,16 @@ it('新周期首轮与回注清单原子登记，重复不增量、旧周期不�
   }finally{await f.cleanup()}
 });
 
+it('新话题拒绝把旧话题任务作为前置，避免跨话题候选进入子 Agent',async()=>{
+  const f=await setup();try{
+    await f.openPlanned('first-topic');const prior=await f.service.dispatchTask(f.input('old-task'),'first-topic');
+    await f.service.closeScope(f.identity,'first-topic','cancelled');await f.openPlanned('next-topic');
+    const next=f.input('new-task');
+    await expect(f.service.dispatchTask({...next,task:{...next.task,prerequisites:[{taskId:prior.taskId,expectedPlanRevision:1}]}},'next-topic')).rejects.toMatchObject({code:'MEMBER_TOPIC_CONTEXT_IDENTITY'});
+    expect((await f.service.snapshot(f.identity)).tasks).toHaveLength(1);
+  }finally{await f.cleanup()}
+});
+
 it('同一用户周期幂等复用，主会话周期互斥；不同主会话隔离且关闭不可重开',async()=>{
   const f=await setup();try{
     const [first,same]=await Promise.all([f.service.openScope(f.identity,'scope-one'),f.service.openScope(f.identity,'scope-one')]);

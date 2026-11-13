@@ -14,17 +14,22 @@
 
 ```mermaid
 classDiagram
+class N_src_logic_runtime_monitoring["monitoring/"] {
+  <<directory>>
+}
 class N_src_logic_runtime_rules["rules/"] {
   <<directory>>
 }
+N_src_logic_runtime_monitoring ..> N_src_logic_runtime_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `monitoring` → `rules`：导入。
 
 ## 子目录导航
 
+- [monitoring/](monitoring/ARCHITECTURE.md)：监管、履历与全局并发准入职责分离。可靠提交同步周期白名单，scope-only 更新独立游标，未变投影不重复发布；检查点计待办而不占活动名额，报告用量不授予额度或恢复权。
 - [rules/](rules/ARCHITECTURE.md)：应用级只读监管、真实周期白名单与独立准入契约。周期等待/结算和模型轮次分开，严格传输不补造缺失计量；游标、票据和占用不签发恢复权。
 
 [返回上层](../ARCHITECTURE.md)。

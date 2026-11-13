@@ -20,7 +20,7 @@ import {isolationOriginSchema,type IsolationLifecycle,type IsolationOrigin} from
 import {FileIsolationRecords,isolationOperationId,type IsolationHead,type IsolationChange} from '../platform/isolation/isolation-records';
 import {Win32IsolationRecovery} from '../platform/isolation/isolation-recovery-win32';
 import type {Workspace} from '../workspace/workspace';
-import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
+import type {WorkspaceExecutionLease} from '../../../logic/execution/admission/workspace-lease';
 const requireRuntime=createRequire(typeof __filename==='string'?__filename:import.meta.url);
 const issue=(error:unknown)=>{const code=(error as {code?:unknown})?.code;return typeof code==='string'&&/^[A-Z0-9_]{1,100}$/.test(code)?code:'ISOLATION_UNVERIFIABLE'};
 /** 每个已打开工作区唯一实例；由工作区锁保护跨进程写入，显式清理在本实例串行。 */

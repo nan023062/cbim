@@ -13,11 +13,11 @@ import {replanRequestSchema,replanReceiptSchema,type ReplanRequest} from '../src
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {EngineContext,TaskSpec,RunSummary} from '../src/logic/execution/rules/types';
-import type {ScopeGoalPorts} from '../src/backend/scheduler-engine/goals/scope-goal-service';
+import type {ScopeGoalPorts} from '../src/logic/tasks/runtime/scope-goal-service';
 
 async function setup(human=false,legacy=false,multi=false,splitMain=false){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot(),moduleId=team.input.moduleId;

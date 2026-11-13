@@ -8,7 +8,7 @@ import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import type {ChatApproval} from '../src/logic/tools/rules/policy/types';
 import type {RunSummary} from '../src/logic/execution/rules/types';
-import {validateMemberWorkflow} from '../src/backend/scheduler-engine/members/member-workflow';
+import {validateMemberWorkflow} from '../src/logic/team/runtime/member-workflow';
 import {workflowConditionProvider,workflowConditionFixture as data,type WorkflowConditionMode} from './workflow-condition-provider';
 import {seedWorkflowCondition,workflowConditionRecords,workflowConditionLogBytes} from './workflow-condition-fixture';
 

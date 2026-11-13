@@ -13,7 +13,7 @@ async function registerExecutor(app:Application,workspaceId:string,moduleId:stri
 }
 import {json} from '../src/core/platform/node/serialization';
 import type {TaskSpec} from '../src/logic/tasks/rules/types';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 
 it('主对话绑定可靠复用本会话根实例；不同主会话拥有独立实例且普通聊天不制造任务',async()=>{

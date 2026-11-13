@@ -1,8 +1,8 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
-import {RunInactivityTimer} from '../src/backend/engines/run-inactivity';
-import {PiEngine} from '../src/backend/engines/pi/engine';
-import {CodexEngine} from '../src/backend/engines/codex/engine';
-import {ClaudeCodeEngine} from '../src/backend/engines/claude/engine';
+import {RunInactivityTimer} from '../src/logic/execution/engines/run-inactivity';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
+import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
+import {ClaudeCodeEngine} from '../src/logic/execution/engines/claude/engine';
 
 beforeEach(()=>vi.useFakeTimers());
 afterEach(()=>vi.useRealTimers());

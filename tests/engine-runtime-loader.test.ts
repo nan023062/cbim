@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import {managedNativeTools} from '../src/backend/engines/native-tools';
+import {managedNativeTools} from '../src/logic/execution/engines/native-tools';
 import {runtimeFixture,digest} from './runtime-fixture';
 it('loads the real pinned Pi tool library from an explicit engine root without using its entry as a command',async()=>{
   const f=await runtimeFixture();try{

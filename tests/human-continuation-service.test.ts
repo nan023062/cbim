@@ -6,7 +6,7 @@ import type {HumanContinuationRequest} from '../src/logic/tasks/rules/human-cont
 import type {GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {humanServiceFixture,latch} from './human-decision-service-fixture';
 import {request as knowledgeRequest} from './data/knowledge';
 

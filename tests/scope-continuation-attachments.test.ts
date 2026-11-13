@@ -10,7 +10,7 @@ import {continuationAttachmentManifestSchema,assertContinuationAttachmentManifes
 import {goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 function manifest(ids:string[],message='补充说明'):ContinuationAttachmentManifestV1{return {version:1,items:ids.map((attachmentId,index)=>({attachmentId,kind:'file',contentKind:index?'image':'text',name:index?'figure.png':'notes.txt',snapshotHash:hash('snapshot-'+index),contentHash:hash('content-'+index),byteLength:16,...(index?{mimeType:'image/png' as const}:{})})) as ContinuationAttachmentManifestV1['items'],expandedMessageHash:hash(message+'\n保存的附件快照'),expandedMessageBytes:256}}
 function lookup(input:GoalContinuationRequest){const {workspaceId,rootSessionId,scopeId,commandId}=input;return {workspaceId,rootSessionId,scopeId,commandId}}

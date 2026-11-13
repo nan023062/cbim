@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
-import {PiEngine} from '../src/backend/engines/pi/engine';
-import {CodexEngine} from '../src/backend/engines/codex/engine';
-import {ClaudeCodeEngine} from '../src/backend/engines/claude/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
+import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
+import {ClaudeCodeEngine} from '../src/logic/execution/engines/claude/engine';
 
 it('引擎保留凭据选择策略，Pi 仅对 api-key 模式替换',()=>{
   const options:any={llm:{apiKey:'secret',profile:{auth:'api-key'}}};

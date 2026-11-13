@@ -29,9 +29,9 @@ class N_src_frontend["frontend/"] {
 class N_src_logic["logic/"] {
   <<directory>>
 }
-N_src_backend ..> N_src_core : 导入依赖
-N_src_backend ..> N_src_logic : 导入依赖
 N_src_backend ..> N_src_bridge : 导入依赖
+N_src_backend ..> N_src_logic : 导入依赖
+N_src_backend ..> N_src_core : 导入依赖
 N_src_bridge ..> N_src_logic : 导入依赖
 N_src_frontend ..> N_src_bridge : 导入依赖
 N_src_frontend ..> N_src_core : 导入依赖
@@ -40,9 +40,9 @@ N_src_logic ..> N_src_core : 导入依赖
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `backend` → `core`：导入。
-- `backend` → `logic`：导入。
 - `backend` → `bridge`：导入。
+- `backend` → `logic`：导入。
+- `backend` → `core`：导入。
 - `bridge` → `logic`：导入。
 - `frontend` → `bridge`：导入。
 - `frontend` → `core`：导入。

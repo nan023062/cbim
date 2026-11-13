@@ -10,10 +10,10 @@ import {json} from '../src/core/platform/node/serialization';
 import {projectMainScope} from '../src/logic/tasks/rules/main-tool-output';
 import type {GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {GoalTools} from '../src/backend/scheduler-engine/tools/goal-tools';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {GoalTools} from '../src/logic/tools/runtime/goal-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 
 it.each(['goal','dispatch'] as const)('真实 %s 事务提交后的坏回包只报告输出失败，原事实仍可读且不重放',async kind=>{
   const f=await fixture();let store:FileDispatchStore|undefined;

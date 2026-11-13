@@ -39,7 +39,7 @@ class N_src_backend_main_history_assembly_ts_AgentHistoryWorkspace["AgentHistory
 N_src_backend_main_history_assembly_ts ..> N_src_backend_main_history_assembly_ts_AgentHistoryWorkspace : 声明
 ```
 
-直接依赖：[../../../logic/execution/ports/identity.ts](../../../logic/execution/ports/identity.ts)、[../../scheduler-engine/history/agent-history.ts](../../scheduler-engine/history/agent-history.ts)、[file-store.ts](file-store.ts)、[../run-storage/run-storage.ts](../run-storage/run-storage.ts)。
+直接依赖：[../../../logic/execution/ports/identity.ts](../../../logic/execution/ports/identity.ts)、[../../../logic/history/runtime/agent-history.ts](../../../logic/history/runtime/agent-history.ts)、[file-store.ts](file-store.ts)、[../run-storage/run-storage.ts](../run-storage/run-storage.ts)。
 
 ### file-store.ts
 

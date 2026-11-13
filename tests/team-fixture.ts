@@ -1,4 +1,4 @@
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
 import {summary,moduleFiles} from './data/knowledge';
 export async function seedTeam(w:Workspace){

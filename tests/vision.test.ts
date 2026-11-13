@@ -7,7 +7,7 @@ import {fixture} from './helpers';
 import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
 import {parseModelCatalog} from '../src/logic/models';
 import {modelSchema} from '../src/logic/models';
-import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
+import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 // Generate a valid 2x2 RGB PNG with real CRCs, so Pi's decoder is exercised too.

@@ -11,9 +11,9 @@ import {recoveryRequestSchema,recoveryReceiptSchema,type RecoveryRequest} from '
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 

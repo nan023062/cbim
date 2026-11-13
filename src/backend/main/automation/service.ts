@@ -5,17 +5,17 @@
  */
 import path from 'node:path';
 import type {Workspace} from '../workspace/workspace';
-import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
-import type {AutoCollaboration} from '../../scheduler-engine/dispatch/auto-collaboration';
-import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
-import {AutomationScheduler} from '../../scheduler-engine/automation/scheduler';
+import type {WorkspaceExecutionManager} from '../../../logic/conversation/runtime/execution-manager';
+import type {AutoCollaboration} from '../../../logic/dispatch/runtime/auto-collaboration';
+import type {WorkspaceDispatchService} from '../../../logic/dispatch/runtime/dispatch-service';
+import {AutomationScheduler} from '../../../logic/automation/runtime/scheduler';
 import {FileAutomations} from './storage';
 import {automationIdentitySchema,type AutomationDefinition,type AutomationRunner,type AutomationCatalog} from '../../../logic/automation/rules/contracts';
 import {Team,BusinessWorkspace} from '../../../logic/knowledge/rules/read-models';
 import {builtinSkills,Builtins} from '../../../logic/knowledge/rules/builtins';
 import {fail} from '../../../core/errors';
 import type {OwnerExecutionSelection} from '../../../logic/team/rules/member-execution-binding';
-import {executionOptions} from '../../scheduler-engine/conversation/execution-manager';
+import {executionOptions} from '../../../logic/conversation/runtime/execution-manager';
 
 /** Main 内部持有，公开 IPC 只能取得经实例校验的服务；所有动作仍由串行调度器裁决。 */
 export class WorkspaceAutomations {

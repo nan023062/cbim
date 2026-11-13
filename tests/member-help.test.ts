@@ -11,12 +11,12 @@ import {jsonToolResult} from '../src/logic/tools/rules/results';
 import {memberHelpInputSchema} from '../src/logic/tasks/rules/member-help';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {memberHelpCandidate} from '../src/backend/scheduler-engine/members/member-help-state';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {memberHelpCandidate} from '../src/logic/team/runtime/member-help-state';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {EngineContext,RunSummary} from '../src/logic/execution/rules/types';
-import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import type {MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
 
 async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'post-denial'='help'){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;

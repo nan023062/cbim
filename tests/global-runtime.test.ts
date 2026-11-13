@@ -1,5 +1,5 @@
 import {expect,test} from 'vitest';
-import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
+import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import type {RunSummary,StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 import type {AgentInstance} from '../src/logic/team/rules/agent-types';
 import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';

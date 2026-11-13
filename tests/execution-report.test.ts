@@ -4,8 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {ExecutionReportService} from '../src/backend/scheduler-engine/evidence/execution-report-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {ExecutionReportService} from '../src/logic/evidence/runtime/execution-report-service';
 import {executionReportInputSchema,executionReportSchema} from '../src/logic/tasks/rules/execution-report';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import type {ToolCall,ToolDecision} from '../src/logic/tools/rules/types';
@@ -19,7 +19,7 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {json} from '../src/core/platform/node/serialization';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 async function setup(){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-report-')),identity={workspaceId:'workspace-1',rootSessionId:'root-1'},taskId='task-1',runId='run-1';

@@ -1,6 +1,6 @@
 import {test,expect} from 'vitest';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';

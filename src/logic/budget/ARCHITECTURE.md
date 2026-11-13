@@ -17,15 +17,20 @@ classDiagram
 class N_src_logic_budget_rules["rules/"] {
   <<directory>>
 }
+class N_src_logic_budget_runtime["runtime/"] {
+  <<directory>>
+}
+N_src_logic_budget_runtime ..> N_src_logic_budget_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `runtime` → `rules`：导入。
 
 ## 子目录导航
 
 - [rules/](rules/ARCHITECTURE.md)：预算领域：Scope 使用量、预占/结算、模型请求规则和存储端口。规则不访问应用文件与具体传输，业务服务在 scheduler-engine/budget。
+- [runtime/](runtime/ARCHITECTURE.md)：预算应用服务：协调请求和目标预算预占/结算，通过明确存储端口保存结果；不直接访问共享派发 Store。
 
 [返回上层](../ARCHITECTURE.md)。
 

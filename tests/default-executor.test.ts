@@ -1,7 +1,7 @@
 import {expect,test} from 'vitest';
 import {fixture} from './helpers';
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
-import {resolveConversationAgent,resolveDispatchAgent} from '../src/backend/scheduler-engine/context/dispatch-context';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
+import {resolveConversationAgent,resolveDispatchAgent} from '../src/logic/execution/context/dispatch-context';
 
 test('空团队不再提供内置执行员，主会话保持唯一身份且旧角色不能重新派发',async()=>{
   const f=await fixture();

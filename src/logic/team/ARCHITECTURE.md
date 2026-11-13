@@ -17,15 +17,20 @@ classDiagram
 class N_src_logic_team_rules["rules/"] {
   <<directory>>
 }
+class N_src_logic_team_runtime["runtime/"] {
+  <<directory>>
+}
+N_src_logic_team_runtime ..> N_src_logic_team_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `runtime` → `rules`：导入。
 
 ## 子目录导航
 
 - [rules/](rules/ARCHITECTURE.md)：Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履历契约。主实例归主会话，业务实例归周期与任务；履历按角色聚合真实通道，释放或删定义后保留，旧记录不补造实例。另含稳定工作区岗位的严格DTO、采纳快照与不可变登记规则；岗位启用不等于执行许可。 model.ts 是知识读取模块的私有实现，外部通过 knowledge/read-models 访问；岗位与执行状态契约不归读取视图所有。 负责岗位选择、冻结执行绑定、当前来源/能力/模型判定及只读分组发现均为纯契约；同角色多岗位独立。
+- [runtime/](runtime/ARCHITECTURE.md)：正式成员执行、自动协作与检查点服务；按冻结任务/Workflow 建立真实运行，保留取消、等待与证据绑定。
 
 [返回上层](../ARCHITECTURE.md)。
 

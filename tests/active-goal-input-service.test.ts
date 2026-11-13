@@ -7,14 +7,14 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../src/logic/tools/rules/results';
 import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import type {TaskSpec} from '../src/logic/execution/rules/types';
 import type {DispatchCommand,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 const plan=(expectedRevision=1):GoalPlanInput=>({expectedRevision,objective:'维护知识',constraints:['不改业务文件'],criteria:[{id:'c1',text:'提交可追溯',kind:'evidence'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['c1'],reason:'知识治理'}],reason:'保存完整目标'});

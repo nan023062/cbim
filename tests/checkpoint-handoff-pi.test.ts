@@ -6,7 +6,7 @@ import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
-import type {MemberCheckpointHistoryPorts} from '../src/backend/scheduler-engine/members/member-checkpoint-verifier';
+import type {MemberCheckpointHistoryPorts} from '../src/logic/team/runtime/member-checkpoint-verifier';
 import {seedCheckpointHandoff,changeCheckpointOwner,checkpointHandoffRecords,checkpointHandoffRunBytes,checkpointHandoffClosed} from './checkpoint-handoff-fixture';
 import {checkpointHandoffProvider,checkpointHandoffData as data,type CheckpointHandoffMode} from './checkpoint-handoff-provider';
 import {additionRunBytes,additionRunByteEvidence} from './queued-dependency-addition-fixture';

@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {ScopeUsageService} from '../src/backend/scheduler-engine/budget/scope-usage-service';
+import {ScopeUsageService} from '../src/logic/budget/runtime/scope-usage-service';
 import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import type {RunSummary,TaskSpec,EngineEvent} from '../src/logic/execution/rules/types';

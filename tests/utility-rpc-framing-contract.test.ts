@@ -1,8 +1,8 @@
 import {expect,it,vi,afterEach} from 'vitest';
 import {EventEmitter} from 'node:events';
 import {PassThrough} from 'node:stream';
-import {PiRpc} from '../src/backend/engines/pi/rpc';
-import {CodexRpc} from '../src/backend/engines/codex/rpc';
+import {PiRpc} from '../src/logic/execution/engines/pi/rpc';
+import {CodexRpc} from '../src/logic/execution/engines/codex/rpc';
 
 const fixture=vi.hoisted(()=>({spawn:vi.fn()}));
 vi.mock('node:child_process',()=>({spawn:fixture.spawn}));

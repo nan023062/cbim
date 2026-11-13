@@ -438,9 +438,9 @@
         "integration": []
       }
     },
-    "backend/engines": {
+    "logic/execution/engines": {
       "roots": [
-        "src/backend/engines/"
+        "src/logic/execution/engines/"
       ],
       "tests": {
         "unit": [
@@ -453,9 +453,9 @@
         "integration": []
       }
     },
-    "backend/engines/claude": {
+    "logic/execution/engines/claude": {
       "roots": [
-        "src/backend/engines/claude/"
+        "src/logic/execution/engines/claude/"
       ],
       "tests": {
         "unit": [
@@ -467,9 +467,9 @@
         "integration": []
       }
     },
-    "backend/engines/codex": {
+    "logic/execution/engines/codex": {
       "roots": [
-        "src/backend/engines/codex/"
+        "src/logic/execution/engines/codex/"
       ],
       "tests": {
         "unit": [
@@ -481,9 +481,9 @@
         "integration": []
       }
     },
-    "backend/engines/pi": {
+    "logic/execution/engines/pi": {
       "roots": [
-        "src/backend/engines/pi/"
+        "src/logic/execution/engines/pi/"
       ],
       "tests": {
         "unit": [
@@ -499,9 +499,9 @@
         "integration": []
       }
     },
-    "backend/engines/transport": {
+    "logic/execution/engines/transport": {
       "roots": [
-        "src/backend/engines/transport/"
+        "src/logic/execution/engines/transport/"
       ],
       "tests": {
         "unit": [
@@ -658,9 +658,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/admission": {
+    "logic/execution/admission": {
       "roots": [
-        "src/backend/scheduler-engine/admission/"
+        "src/logic/execution/admission/"
       ],
       "tests": {
         "unit": [],
@@ -670,9 +670,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/automation": {
+    "logic/automation/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/automation/"
+        "src/logic/automation/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -682,9 +682,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/budget": {
+    "logic/budget/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/budget/"
+        "src/logic/budget/runtime/"
       ],
       "tests": {
         "unit": [
@@ -694,9 +694,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/conversation": {
+    "logic/conversation/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/conversation/"
+        "src/logic/conversation/runtime/"
       ],
       "tests": {
         "unit": [
@@ -714,9 +714,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/dispatch": {
+    "logic/dispatch/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/dispatch/"
+        "src/logic/dispatch/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -728,9 +728,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/evidence": {
+    "logic/evidence/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/evidence/"
+        "src/logic/evidence/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -743,9 +743,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/goals": {
+    "logic/tasks/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/goals/"
+        "src/logic/tasks/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -755,9 +755,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/history": {
+    "logic/history/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/history/"
+        "src/logic/history/runtime/"
       ],
       "tests": {
         "unit": [],
@@ -767,9 +767,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/runtime": {
+    "logic/runtime/monitoring": {
       "roots": [
-        "src/backend/scheduler-engine/runtime/"
+        "src/logic/runtime/monitoring/"
       ],
       "tests": {
         "unit": [
@@ -782,9 +782,9 @@
         "integration": []
       }
     },
-    "backend/scheduler-engine/tools": {
+    "logic/tools/runtime": {
       "roots": [
-        "src/backend/scheduler-engine/tools/"
+        "src/logic/tools/runtime/"
       ],
       "tests": {
         "unit": [

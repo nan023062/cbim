@@ -8,7 +8,7 @@ import {json} from '../src/core/platform/node/serialization';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
 import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
-import * as loops from '../src/backend/scheduler-engine/assembly/loop-engine';
+import * as loops from '../src/logic/execution/assembly/loop-engine';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import type {TaskSpec} from '../src/logic/execution/rules/types';
 import {registerServiceOwner} from './owner-service-fixture';

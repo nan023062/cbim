@@ -10,11 +10,11 @@ import type {TaskSpec} from '../../../logic/tasks/rules/types';
 import {moduleOwnershipMainActorSchema} from '../../../logic/workspace/rules/module-ownership';
 import {moduleOwnershipMainCommandId} from '../../../logic/workspace/rules/module-ownership-rules';
 import {moduleOwnerInspectInputSchema,moduleOwnerPreviewInputSchema,moduleOwnerCommitInputSchema,moduleOwnerReceiptInputSchema,type ModuleOwnershipToolsPort} from '../../../logic/workspace/rules/module-ownership-tools';
-import type {MainToolContext} from '../../scheduler-engine/dispatch/auto-collaboration';
+import type {MainToolContext} from '../../../logic/dispatch/runtime/auto-collaboration';
 import type {KnowledgeWorkspace} from '../../../logic/knowledge/rules/ports';
 import type {ModuleOwnerships} from './module-ownerships';
 import type {WorkspaceMembers} from './workspace-members';
-import type {OwnerExecutionService} from '../../scheduler-engine/dispatch/owner-execution-service';
+import type {OwnerExecutionService} from '../../../logic/dispatch/runtime/owner-execution-service';
 import {isDeepStrictEqual} from 'node:util';
 
 /** 只在本轮 createEngine 同步工厂装配；调用方已经建立真实主 scope，未装配成员没有入口。 */

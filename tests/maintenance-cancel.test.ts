@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
 import {fixture} from './helpers';
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 
 // Keep this regression independent of fixture changes for external host integration.

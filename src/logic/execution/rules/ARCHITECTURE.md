@@ -266,7 +266,7 @@ class N_src_logic_execution_rules_usage_ts["usage.ts"] {
 
 `publicRunFailure` 为成员任务卡和执行详情提供同一套无副作用诊断转换。已知无进展超时、旧整轮超时、事件过大、进程退出、输出长度限制、认证/限流/网络错误重建具体说明；任意供应商错误、原生路径、凭据和工具正文不直接公开，无法识别的原始原因保留在 canonical 日志。数值仅从有限的错误形态提取，转换不修改历史、不认定副作用已撤销、不触发重试。
 
-当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [backend/engines](../../../backend/engines/ARCHITECTURE.md)，由 [调度装配](../../../backend/scheduler-engine/assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
+当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [backend/engines](../engines/ARCHITECTURE.md)，由 [调度装配](../assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
 
 ### 原主轮插入与停止边界
 

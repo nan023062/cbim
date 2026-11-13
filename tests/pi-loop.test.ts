@@ -5,13 +5,13 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
 import {LoopRuntime} from '../src/logic/execution/rules';
-import {PiEngine} from '../src/backend/engines/pi/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {guard} from '../src/backend/main/platform/tool-guard';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {nativeToolDescriptor} from '../src/logic/tools/rules/native-tools';
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
-import {loopInstructions,prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
+import {loopInstructions,prepareTeamTask} from '../src/logic/execution/context/team-workflow';
 
 /** Real pinned Pi kernel contract with real knowledge/policy services and a deterministic localhost model; not an Application business launch. */
 it('rejects the old Application business entry while trusted Core Pi gates tools, settles, resumes, and stops its persisted session',async()=>{

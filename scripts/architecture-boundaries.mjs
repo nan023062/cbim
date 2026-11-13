@@ -84,8 +84,8 @@ export const logicalBoundaries = [
     imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/scope-budget.ts'], external:[],
   },
   {
-    id:'request-budget-service', files:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],
-    public:['src/backend/scheduler-engine/budget/model-request-budget-service.ts'],
+    id:'request-budget-service', files:['src/logic/budget/runtime/model-request-budget-service.ts'],
+    public:['src/logic/budget/runtime/model-request-budget-service.ts'],
     dependencies:['core-errors','pure-foundation','request-budget-port','model-rules'],
     imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts'],external:['node:crypto'],
   },

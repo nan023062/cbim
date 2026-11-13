@@ -1,6 +1,6 @@
 import {test,expect,vi} from 'vitest';
-import {GoalTools,type GoalToolsPort} from '../src/backend/scheduler-engine/tools/goal-tools';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {GoalTools,type GoalToolsPort} from '../src/logic/tools/runtime/goal-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {mainToolBinding,mainToolGraph,mainToolTask,mainToolScope,mainToolOwnerSelection} from './main-tool-output-fixture';

@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
 import type {DispatchStore,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {RequestBudgetState,RequestBudgetStore} from '../src/logic/budget/rules/model-request-budget-storage';
-import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
+import {ModelRequestBudgetService} from '../src/logic/budget/runtime/model-request-budget-service';
 import type {ResolvedLlm} from '../src/logic/models';
 
 it('预算投影只在原事务中读取，隔离其它领域及嵌套状态，不能夹带跨域提交',async()=>{

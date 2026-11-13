@@ -8,9 +8,9 @@ import {json} from '../src/core/platform/node/serialization';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {dispatchKnowledgeFingerprint,validatePreparedDispatchKnowledge,preparedWorkflowContracts} from '../src/logic/tasks/rules/execution-context';
-import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
-import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,memberExecutionPrompt} from '../src/backend/scheduler-engine/context/execution-context';
-import {assertLegacyWorkflowCompatible,prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
+import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
+import {prepareDispatchExecutionContext,recheckDispatchExecutionContext,memberExecutionPrompt} from '../src/logic/execution/context/execution-context';
+import {assertLegacyWorkflowCompatible,prepareTeamTask} from '../src/logic/execution/context/team-workflow';
 
 async function setup(){
   const f=await fixture();

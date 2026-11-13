@@ -1,7 +1,7 @@
 import {vi} from 'vitest';
 import {manifestFixture,manifestInput,manifestContracts} from './output-manifest-fixture';
 import {seedProgress,invoke,artifactBinding} from './artifact-runtime-fixture';
-import {OutputManifestReportService} from '../src/backend/scheduler-engine/evidence/output-manifest-report-service';
+import {OutputManifestReportService} from '../src/logic/evidence/runtime/output-manifest-report-service';
 import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {OutputManifestSnapshot,OutputManifestStaged} from '../src/logic/evidence/rules/output-manifest';

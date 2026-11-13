@@ -8,9 +8,9 @@ import {json} from '../src/core/platform/node/serialization';
 import type {AddQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-addition';
 import type {DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import {registerServiceOwner} from './owner-service-fixture';
 
 function deferred(){let resolve!:()=>void;const promise=new Promise<void>(r=>{resolve=r});return {promise,resolve}}

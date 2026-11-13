@@ -1,8 +1,8 @@
 import {expect,test,vi} from 'vitest';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {mainToolBinding} from './main-tool-output-fixture';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 
 const input={expectedGraphCursor:{streamId:'stream-one',seq:5},targets:[{taskId:'task-one',expectedRevision:2},{taskId:'task-two',expectedRevision:1}],reason:'等待用户补充，撤销尚未启动的依赖工作'};
 function fixture(){

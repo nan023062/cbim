@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import type {TaskNode} from '../src/bridge/contracts/dispatch';
-import {CandidateReviewTools} from '../src/backend/scheduler-engine/tools/candidate-review-tools';
+import {CandidateReviewTools} from '../src/logic/tools/runtime/candidate-review-tools';
 import {binding,request,approved} from './support/candidate-review';
 it('审阅工具要求可信调用，输出绑定当前主运行；坏回包不重放',async()=>{
   const save=vi.fn(async()=>approved()),tools=new CandidateReviewTools(binding,save),signal=new AbortController().signal;

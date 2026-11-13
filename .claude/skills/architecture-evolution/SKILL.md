@@ -124,3 +124,5 @@ Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分�
 反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧 Main 锁出口共享同一构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
 
 资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖 Main Paths 或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包/授权连接按其事务依赖继续迁移。
+
+四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。

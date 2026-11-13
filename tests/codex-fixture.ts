@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
-import {CodexEngine} from '../src/backend/engines/codex/engine';
+import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
 import type {EngineContext,EngineEvent,ToolCall} from '../src/logic/execution/rules/types';
 import type {ResolvedLlm} from '../src/logic/models';
 

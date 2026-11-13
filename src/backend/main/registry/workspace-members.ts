@@ -26,7 +26,7 @@ import {
   workspaceMemberHash,workspaceMemberModelHash,workspaceMemberPreviewBasis,
   workspaceMemberProposed,workspaceMemberReceipt,
 } from '../../../logic/team/rules/workspace-member-rules';
-import {resolveDispatchAgent} from '../../scheduler-engine/context/dispatch-context';
+import {resolveDispatchAgent} from '../../../logic/execution/context/dispatch-context';
 import type {Snapshot} from '../../../logic/knowledge/rules/types';
 import {knowledgeSourcePending} from '../../../logic/workspace/rules/knowledge-source-rules';
 import type {SourceSelection,KnowledgeSourceReadState} from '../../../logic/workspace/rules/knowledge-source';

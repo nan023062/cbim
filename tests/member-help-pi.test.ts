@@ -6,7 +6,7 @@ import {memberHelpProvider,memberHelpFixture as data} from './member-help-provid
 import {seedMemberHelp,memberHelpRecords} from './member-help-fixture';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
 

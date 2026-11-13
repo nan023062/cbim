@@ -1,8 +1,8 @@
 import {expect,test,vi} from 'vitest';
 import {hash,json} from '../src/core/platform/node/serialization';
 import {Fault} from '../src/core/errors';
-import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {reportBinding as binding,reportIdentity as identity,reportInputs,reportFixture,evidenceFor,rawInputHash} from './command-verification-fixture';
 

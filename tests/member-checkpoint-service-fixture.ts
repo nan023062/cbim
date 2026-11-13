@@ -15,11 +15,11 @@ import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import type {TaskSpec} from '../src/logic/execution/rules/types';
 import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {recheckDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
-import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../src/backend/scheduler-engine/members/member-checkpoint-verifier';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {recheckDispatchExecutionContext} from '../src/logic/execution/context/execution-context';
+import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../src/logic/team/runtime/member-checkpoint-verifier';
 import {registerServiceOwner} from './owner-service-fixture';
 import {memberCheckpointLimit} from '../src/logic/tasks/rules/member-checkpoint';
 

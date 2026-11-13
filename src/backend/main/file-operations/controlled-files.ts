@@ -23,7 +23,7 @@ import {controlledFileOperationId,controlledFileOwnerBindingHash,controlledFileR
 import {projectControlledFileMutation} from '../../../logic/file-operations/rules/controlled-file-invariants';
 import {ControlledFileBlobs} from '../platform/files/controlled-file-blobs';
 import type {ControlledFileTransport,ExclusiveControlledFile} from '../platform/files/controlled-file-protocol';
-import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
+import type {WorkspaceExecutionLease} from '../../../logic/execution/admission/workspace-lease';
 
 const now=()=>new Date().toISOString();
 const fact=(bytes:Uint8Array):ControlledFileContentFact=>({byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});

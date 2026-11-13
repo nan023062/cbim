@@ -15,8 +15,8 @@ import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-s
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {MemberExecutionManager,type PreparedEngine} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 const plan=(expectedRevision=1):GoalPlanInput=>({expectedRevision,objective:'维护团队知识',constraints:['不得写业务工程'],criteria:[{id:'c1',text:'知识提交可以追溯',kind:'evidence'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['c1'],reason:'主角色负责治理'}],reason:'保存治理目标'});

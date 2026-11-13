@@ -2,7 +2,7 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {AgentHistoryService} from '../src/backend/scheduler-engine/history/agent-history';
+import {AgentHistoryService} from '../src/logic/history/runtime/agent-history';
 import {FileAgentHistoryStore} from '../src/backend/main/history/file-store';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import type {StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';

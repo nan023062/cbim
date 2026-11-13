@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {checkedRunInputSource,type HumanDecisionsSource} from '../src/logic/execution/rules/input-source';
-import {bridgeExtensionForSource} from '../src/backend/engines/pi/bridge';
+import {bridgeExtensionForSource} from '../src/logic/execution/engines/pi/bridge';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';

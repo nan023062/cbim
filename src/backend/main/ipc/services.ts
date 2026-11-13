@@ -18,10 +18,10 @@ import type {ResourceRepositories} from '../../../logic/resources/service';
 import type {RepositoryConnections} from '../resources/repository-connections';
 import type {GitHubFeedback} from '../../../logic/feedback/service';
 import type {ModuleGovernanceService} from '../governance/module-governance';
-import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
-import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
-import type {MemberExecutionManager} from '../../scheduler-engine/members/member-execution';
-import type {AgentHistoryService} from '../../scheduler-engine/history/agent-history';
+import type {WorkspaceExecutionManager} from '../../../logic/conversation/runtime/execution-manager';
+import type {WorkspaceDispatchService} from '../../../logic/dispatch/runtime/dispatch-service';
+import type {MemberExecutionManager} from '../../../logic/team/runtime/member-execution';
+import type {AgentHistoryService} from '../../../logic/history/runtime/agent-history';
 import type {RuntimeCursor,RuntimeRead,RuntimeSnapshot} from '../../../logic/runtime/rules/types';
 import type {Catalog as CatalogData, WorkspaceView} from '../../../bridge/contracts/workspace';
 import type {AdmissionSettings} from '../settings/admission-settings';
@@ -32,7 +32,7 @@ import type {ControlledFiles} from '../file-operations/controlled-files';
 import type {IsolatedExecutions} from '../file-operations/isolated-executions';
 import type {ChatMaterialImports} from '../materials/chat-material-imports';
 import type {AdmissionCursor,AdmissionRead} from '../../../logic/runtime/rules/admission';
-import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
+import type {ModelRequestBudgetService} from '../../../logic/budget/runtime/model-request-budget-service';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
 export interface ApplicationServices {

@@ -887,7 +887,7 @@ N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules
 
 `maintenance.ts` 仅保留旧记录的类型说明。新模块不生成 maintenance，新任务不生成 maintenanceBindingId / maintainerPersonIds；旧文件与历史字段保持原样，不再读取花名册或核对真人状态、组和确认时间。模块 Schema 将旧 maintenance 作为可选历史对象接受，不赋予资格。
 
-Team 派工仍由岗位 memberId、模块负责人、能力与模型来源、权限及 Workflow 决定。authors 不赋予责任；知识解析与任务冻结仍核对身份、知识版本、模块与流程，不自动刷新旧任务。新旧任务均由 [任务图契约](../../tasks/rules/CONTRACT.md) 和 [上下文装配](../../../backend/scheduler-engine/context/CONTRACT.md) 约束。
+Team 派工仍由岗位 memberId、模块负责人、能力与模型来源、权限及 Workflow 决定。authors 不赋予责任；知识解析与任务冻结仍核对身份、知识版本、模块与流程，不自动刷新旧任务。新旧任务均由 [任务图契约](../../tasks/rules/CONTRACT.md) 和 [上下文装配](../../execution/context/CONTRACT.md) 约束。
 
 ### 单模块岗位负责人控制面
 

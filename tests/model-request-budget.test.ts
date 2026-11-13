@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {requestBudgetFixture,budgetAttempt,budgetUsage,budgetTestModel} from './model-request-budget-fixture';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
+import {ModelRequestBudgetService} from '../src/logic/budget/runtime/model-request-budget-service';
 import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
 import {requestBudgetCommand,requestBudgetReceipt,requestBudgetReservation,requestBudgetReport,requestBudgetRecords,requestBudgetDecision,requestBudgetCost} from '../src/logic/budget/rules/model-request-budget-rules';
 import type {ModelRequestBudgetChange} from '../src/logic/budget/rules/model-request-budget';

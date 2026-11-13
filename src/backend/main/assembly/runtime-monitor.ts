@@ -10,11 +10,11 @@ import type {Workspace} from '../workspace/workspace';
 import {FileRunStorage} from '../run-storage/run-storage';
 import {safeId} from '../../../logic/execution/ports/identity';
 import type {DispatchObserver} from '../../../logic/dispatch/rules/dispatch-storage';
-import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
-import type {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
-import type {MemberExecutionManager} from '../../scheduler-engine/members/member-execution';
-import type {GlobalRuntimeManager} from '../../scheduler-engine/runtime/global-runtime';
-import type {AgentHistoryService} from '../../scheduler-engine/history/agent-history';
+import type {WorkspaceDispatchService} from '../../../logic/dispatch/runtime/dispatch-service';
+import type {WorkspaceExecutionManager} from '../../../logic/conversation/runtime/execution-manager';
+import type {MemberExecutionManager} from '../../../logic/team/runtime/member-execution';
+import type {GlobalRuntimeManager} from '../../../logic/runtime/monitoring/global-runtime';
+import type {AgentHistoryService} from '../../../logic/history/runtime/agent-history';
 
 /** 只保留稳定错误码，不将磁盘路径、工具输出和异常堆栈复制进全局监控。 */
 function diagnostic(label:string,error:unknown){

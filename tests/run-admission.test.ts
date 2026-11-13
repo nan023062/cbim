@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest';
-import {GlobalRunAdmission,type AdmissionAttempt,type LocalAdmissionPort} from '../src/backend/scheduler-engine/admission/run-admission';
+import {GlobalRunAdmission,type AdmissionAttempt,type LocalAdmissionPort} from '../src/logic/execution/admission/run-admission';
 import {admissionReadSchema,admissionSnapshotSchema,type AdmissionRequest} from '../src/logic/runtime/rules/admission';
 
 const request=(id:string,patch:Partial<AdmissionRequest>={}):AdmissionRequest=>({workspaceId:'workspace',ownerEpoch:1,rootSessionId:'root-'+id,requestId:id,source:'member',workspacePermission:'read',...patch});

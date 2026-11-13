@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {PiEngine} from '../src/backend/engines/pi/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import type {EngineEvent} from '../src/logic/execution/rules/types';
 
 it.each([

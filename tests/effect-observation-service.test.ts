@@ -7,12 +7,12 @@ import {hash} from '../src/core/platform/node/serialization';
 import type {DispatchStore,DispatchCommand,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {EffectDispositionInput} from '../src/logic/tasks/rules/effect-observation';
 import {projectEffectDispositionMutation} from '../src/logic/tasks/rules/effect-observation-invariants';
-import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
+import {EffectObservationService} from '../src/logic/evidence/runtime/effect-observation-service';
 import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
 import {reportFixture,reportIdentity,reportInputs,evidenceFor,reportBinding} from './command-verification-fixture';
-import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
+import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
 import {artifactRuntimeFixture,artifactBinding,invoke,seedProgress} from './artifact-runtime-fixture';
-import type {EffectSourceRead} from '../src/backend/scheduler-engine/evidence/effect-source';
+import type {EffectSourceRead} from '../src/logic/evidence/runtime/effect-source';
 import type {EffectObservationReport} from '../src/logic/tasks/rules/effect-observation';
 
 const actor={kind:'local_desktop' as const,interaction:'explicit_submit' as const};

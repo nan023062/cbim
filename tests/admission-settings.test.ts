@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
+import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
 import {AdmissionSettings,type AdmissionSettingsStorage} from '../src/backend/main/settings/admission-settings';
 
 it('默认4可靠保存后切换，重开保留版本和上限；设置读取不生成占用',async()=>{

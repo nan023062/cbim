@@ -2,7 +2,7 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {artifactRuntimeFixture,seedProgress,invoke,captureInput,artifactBinding} from './artifact-runtime-fixture';
-import {ArtifactReportService} from '../src/backend/scheduler-engine/evidence/artifact-report-service';
+import {ArtifactReportService} from '../src/logic/evidence/runtime/artifact-report-service';
 import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {RunSummary} from '../src/logic/execution/rules/types';

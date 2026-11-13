@@ -5,7 +5,7 @@ import {isProgressEvidence} from '../src/logic/tasks/rules/member-tool-output';
 import {evaluateWorkflowDelivery} from '../src/logic/evidence/rules/workflow-evidence';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../src/logic/tools/rules/results';
-import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
+import {memberCandidate} from '../src/logic/team/runtime/member-state';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {mainToolOutputSchema,projectMainScope} from '../src/logic/tasks/rules/main-tool-output';

@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import type {Bridge} from '../src/bridge/contracts/workspace';
 import {randomUUID} from 'node:crypto';
-import {AutomationScheduler} from '../src/backend/scheduler-engine/automation/scheduler';
+import {AutomationScheduler} from '../src/logic/automation/runtime/scheduler';
 import {nextAutomationAt} from '../src/logic/automation/rules/schedule';
 import {automationDefinitionSchema,type AutomationDefinition,type AutomationRunner,type AutomationState} from '../src/logic/automation/rules/contracts';
 

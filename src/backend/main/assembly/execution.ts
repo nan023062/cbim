@@ -24,12 +24,12 @@ import {KernelLock} from '../platform/locking';
 import {guard} from '../platform/tool-guard';
 import {hash} from '../../../core/platform/node/serialization';
 import {fail} from '../../../core/errors';
-import {WorkspaceExecutionManager} from '../../scheduler-engine/conversation/execution-manager';
-import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
+import {WorkspaceExecutionManager} from '../../../logic/conversation/runtime/execution-manager';
+import {createWorkspaceLoop} from '../../../logic/execution/assembly/loop-engine';
 import type {EngineRuntimeResolver} from '../../../logic/execution/rules/engine-runtime';
-import {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
-import type {AutoCollaboration} from '../../scheduler-engine/dispatch/auto-collaboration';
-import type {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceExecutionLease} from '../../../logic/execution/admission/workspace-lease';
+import type {AutoCollaboration} from '../../../logic/dispatch/runtime/auto-collaboration';
+import type {WorkspaceDispatchService} from '../../../logic/dispatch/runtime/dispatch-service';
 import {admissionRequestId,acquireExecutionLease,type WorkspaceAdmission} from './execution-admission';
 import type {GitHubFeedback} from '../../../logic/feedback/service';
 import type {RepositoryConnections} from '../resources/repository-connections';
@@ -38,7 +38,7 @@ import {mainWorkspaceMemberTools} from '../registry/main-workspace-member-tools'
 import {mainModuleOwnershipTools} from '../registry/main-module-ownership-tools';
 import type {ModuleOwnerships} from '../registry/module-ownerships';
 import type {WorkspaceMembers} from '../registry/workspace-members';
-import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
+import type {ModelRequestBudgetService} from '../../../logic/budget/runtime/model-request-budget-service';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。

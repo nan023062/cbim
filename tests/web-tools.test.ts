@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {WebTools} from '../src/backend/scheduler-engine/tools/web-tools';
+import {WebTools} from '../src/logic/tools/runtime/web-tools';
 const signal=()=>new AbortController().signal;
 
 it('工具严格输入、有界输出、只读分类且只调用一次，取消不返回结果',async()=>{

@@ -20,7 +20,7 @@ test.each([
   ['src/logic/resources/service/resource-store.ts','src/core/platform/node/locking.ts',true],
   ['src/logic/resources/service/resource-repository.ts','src/backend/main/platform/paths.ts',false],
   ['src/logic/resources/service/resource-store.ts','src/bridge/contracts/resources.ts',false],
-  ['src/backend/scheduler-engine/tools/repository-tools.ts','src/logic/resources/service/index.ts',false],
+  ['src/logic/tools/runtime/repository-tools.ts','src/logic/resources/service/index.ts',false],
   ['src/logic/resources/index.ts','src/logic/resources/service/index.ts',false],
   ['src/frontend/resources/example.ts','src/logic/resources/index.ts',false],
   ['src/backend/main/assembly/application.ts','src/logic/resources/service/resource-store.ts',false],
@@ -32,9 +32,9 @@ test.each([
 test.each([
   ['src/backend/main/assembly/application.ts','src/logic/feedback/service/index.ts',true],
   ['src/backend/core/tools/scope-schema.ts','src/logic/feedback/index.ts',true],
-  ['src/backend/scheduler-engine/tools/feedback-tools.ts','src/logic/feedback/index.ts',true],
-  ['src/backend/scheduler-engine/tools/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
-  ['src/backend/engines/pi/engine.ts','src/logic/feedback/index.ts',false],
+  ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/index.ts',true],
+  ['src/logic/tools/runtime/feedback-tools.ts','src/logic/feedback/service/index.ts',false],
+  ['src/logic/execution/engines/pi/engine.ts','src/logic/feedback/index.ts',false],
   ['src/backend/main/assembly/application.ts','src/logic/feedback/service/github-feedback.ts',false],
   ['src/logic/feedback/contracts.ts','src/backend/core/tools/scope-schema.ts',false],
   ['src/logic/feedback/index.ts','src/logic/feedback/service/index.ts',false],
@@ -67,9 +67,9 @@ test.each([
   ['src/backend/main/assembly/application.ts','src/logic/web/service/index.ts',true],
   ['src/backend/main/main.ts','src/core/platform/electron/web-reader.ts',true],
   ['src/backend/main/other.ts','src/core/platform/electron/web-reader.ts',false],
-  ['src/backend/scheduler-engine/tools/web-tools.ts','src/logic/web/index.ts',true],
-  ['src/backend/scheduler-engine/tools/web-tools.ts','src/logic/web/service/index.ts',false],
-  ['src/backend/scheduler-engine/tools/web-tools.ts','src/core/platform/node/web/index.ts',false],
+  ['src/logic/tools/runtime/web-tools.ts','src/logic/web/index.ts',true],
+  ['src/logic/tools/runtime/web-tools.ts','src/logic/web/service/index.ts',false],
+  ['src/logic/tools/runtime/web-tools.ts','src/core/platform/node/web/index.ts',false],
   ['src/logic/web/index.ts','src/logic/web/service/index.ts',false],
   ['src/logic/web/service/web-service.ts','src/core/platform/electron/web-reader.ts',false],
   ['src/core/web/index.ts','src/core/platform/node/web/index.ts',false],
@@ -92,15 +92,15 @@ test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实�
 test.each([
   ['src/backend/main/assembly/app.ts','src/logic/models/service/index.ts',true],
   ['src/backend/core/team/example.ts','src/logic/models/index.ts',true],
-  ['src/backend/engines/example.ts','src/logic/models/index.ts',true],
-  ['src/backend/scheduler-engine/context/example.ts','src/logic/models/index.ts',true],
+  ['src/logic/execution/engines/example.ts','src/logic/models/index.ts',true],
+  ['src/logic/execution/context/example.ts','src/logic/models/index.ts',true],
   ['src/bridge/contracts/models.ts','src/logic/models/index.ts',true],
   ['src/bridge/contracts/other.ts','src/logic/models/index.ts',false],
   ['src/bridge/contracts/models.ts','src/logic/models/service/index.ts',false],
   ['src/bridge/client/models.ts','src/logic/models/index.ts',false],
   ['src/frontend/settings/models.ts','src/logic/models/index.ts',false],
-  ['src/backend/engines/example.ts','src/logic/models/service/index.ts',false],
-  ['src/backend/scheduler-engine/context/example.ts','src/logic/models/service/index.ts',false],
+  ['src/logic/execution/engines/example.ts','src/logic/models/service/index.ts',false],
+  ['src/logic/execution/context/example.ts','src/logic/models/service/index.ts',false],
   ['src/backend/main/assembly/app.ts','src/logic/models/service/llm-profiles.ts',false],
   ['src/backend/main/assembly/app.ts','src/logic/models/config.ts',false],
   ['src/backend/main/assembly/app.ts','src/logic/tasks/index.ts',false],
@@ -166,7 +166,7 @@ test.each(['src/view/tasks/model.ts','src/frontend/tasks/model.ts','src/bridge/c
   }
 });
 test('调度器仅可组合 portable utility 公开入口',()=>{
-  const from='src/backend/scheduler-engine/context/a.ts';
+  const from='src/logic/execution/context/a.ts';
   for(const target of ['utility/index.ts','utility/node.ts','utility/json.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to).replace(/\.ts$/,'');
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
@@ -312,8 +312,8 @@ test('P1 narrow boundaries reject restored write access, shared stores and busin
     ['src/logic/knowledge/rules/knowledge-queries.ts','./ports','src/logic/knowledge/rules/ports.ts','knowledge-query-orchestration'],
     ['src/logic/knowledge/rules/knowledge-queries.ts','./knowledge-refresh','src/logic/knowledge/rules/knowledge-refresh.ts','knowledge-query-orchestration'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','../../dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-port'],
-    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','../../../logic/dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
-    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','./scope-budget-service','src/backend/scheduler-engine/budget/scope-budget-service.ts','request-budget-service'],
+    ['src/logic/budget/runtime/model-request-budget-service.ts','../../../logic/dispatch/rules/dispatch-storage','src/logic/dispatch/rules/dispatch-storage.ts','request-budget-service'],
+    ['src/logic/budget/runtime/model-request-budget-service.ts','./scope-budget-service','src/logic/budget/runtime/scope-budget-service.ts','request-budget-service'],
     ['src/logic/execution/rules/engine-tools.ts','./capabilities/member-tool-capabilities','src/logic/execution/rules/capabilities/member-tool-capabilities.ts','engine-tool-registry'],
   ];
   for(const [file,spec,target,boundary] of cases){
@@ -398,9 +398,9 @@ test('snapshot contracts and domain views reject reverse or private dependencies
     ['tests/knowledge-data.ts','tests/helpers.ts'],
     ['tests/knowledge-fixture.ts','src/backend/main/assembly/application.ts'],
     ['src/logic/budget/rules/model-request-budget-storage.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
-    ['src/backend/scheduler-engine/budget/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
+    ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/dispatch/rules/dispatch-storage.ts'],
     ['src/logic/execution/rules/engine-tools.ts','src/logic/evidence/rules/progress-tools.ts'],
-    ['src/logic/execution/rules/index.ts','src/backend/engines/pi/engine.ts'],
+    ['src/logic/execution/rules/index.ts','src/logic/execution/engines/pi/engine.ts'],
     ['src/frontend/execution-view/WorkStatus.tsx','src/frontend/tasks/useExecutionRecovery.ts'],
     ['src/frontend/execution-view/ToolTimeline.tsx','src/frontend/conversation/Conversation.tsx'],
     ['src/frontend/tasks/MemberRunTranscript.tsx','src/frontend/conversation/ConversationTurn.tsx'],
@@ -423,7 +423,7 @@ test('snapshot contracts and domain views reject reverse or private dependencies
 });
 test('history persistence rejects workspace and runtime assembly even through type dependencies',()=>{
   const from='src/backend/main/history/file-store.ts';
-  for(const to of ['src/backend/main/workspace/workspace.ts','src/backend/main/workspace/agent-history.ts','src/backend/scheduler-engine/history/agent-history.ts']){
+  for(const to of ['src/backend/main/workspace/workspace.ts','src/backend/main/workspace/agent-history.ts','src/logic/history/runtime/agent-history.ts']){
     const relative=path.posix.relative(path.posix.dirname(from),to);
     const result=audit({[from]:`export type {T} from '${relative}';`,[to]:'export type T=string;'});
     expect(result.cycles).toEqual([]);expect(result.violations).toHaveLength(1);expect(result.ok).toBe(false);
@@ -454,9 +454,9 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
     ['src/frontend/execution-view/WorkStatus.tsx','../tasks/useExecutionRecovery','src/frontend/tasks/useExecutionRecovery.ts','execution-view'],
     ['src/frontend/execution-view/ToolTimeline.tsx','../tasks/ToolActivity','src/frontend/tasks/ToolActivity.tsx','execution-view'],
     ['src/backend/main/history/file-store.ts','../workspace/workspace','src/backend/main/workspace/workspace.ts','agent-history-file-store'],
-    ['src/backend/main/history/file-store.ts','../../scheduler-engine/history/agent-history','src/backend/scheduler-engine/history/agent-history.ts','agent-history-file-store'],
+    ['src/backend/main/history/file-store.ts','../../../logic/history/runtime/agent-history','src/logic/history/runtime/agent-history.ts','agent-history-file-store'],
     ['src/bridge/contracts/agent-history-ipc.ts','../../backend/main/assembly/application','src/backend/main/assembly/application.ts','ipc-contract'],
-    ['src/bridge/contracts/ipc-loop.ts','../../backend/scheduler-engine/conversation/execution-manager','src/backend/scheduler-engine/conversation/execution-manager.ts','ipc-contract'],
+    ['src/bridge/contracts/ipc-loop.ts','../../logic/conversation/runtime/execution-manager','src/logic/conversation/runtime/execution-manager.ts','ipc-contract'],
     ['src/bridge/contracts/ipc-desktop.ts','../../backend/main/main','src/backend/main/main.ts','ipc-contract'],
   ];
   for(const [file,spec,target,boundary] of cases){
@@ -466,22 +466,23 @@ test('P2 shared rendering, IPC contracts and history storage reject business con
 });
 
 test('engines may use portable utility but not other foundation capabilities',()=>{
-  const from='src/backend/engines/pi/rpc.ts';
+  const from='src/logic/execution/engines/pi/rpc.ts';
   for(const target of ['utility/index.ts','utility/node.ts','utility/strings.ts','utility/graphs.ts','files/index.ts','web/index.ts']){
     const to=foundationFile(target),relative=path.posix.relative(path.posix.dirname(from),to);
     expect(audit({[from]:`import type {T} from '${relative}';`,[to]:'export type T=string;'}).ok).toBe(target==='utility/index.ts');
   }
 });
 
-test('concrete engines depend on Core; only scheduler assembly may select engines',()=>{
-  const engine='src/backend/engines/pi/engine.ts',contract='src/backend/core/execution/types.ts';
-  expect(audit({[engine]:"import type {T} from '../../core/execution/types';",[contract]:'export interface T {}'}).ok).toBe(true);
-  const reversed=audit({[contract]:"import type {T} from '../../engines/pi/engine';",[engine]:'export interface T {}'});
+test('concrete engines depend on domain contracts; only execution assembly may select engines',()=>{
+  const engine='src/logic/execution/engines/pi/engine.ts',contract='src/logic/execution/rules/types.ts';
+  expect(audit({[engine]:"import type {T} from '../../rules/types';",[contract]:'export interface T {}'}).ok).toBe(true);
+  const reversed=audit({[contract]:"import type {T} from '../engines/pi/engine';",[engine]:'export interface T {}'});
   expect(reversed.violations).toHaveLength(1);expect(reversed.ok).toBe(false);
-  const bypass=audit({'src/backend/main/assembly/entry.ts':"import type {T} from '../../engines/pi/engine';",[engine]:'export interface T {}'});
+  const bypass=audit({'src/backend/main/assembly/entry.ts':"import type {T} from '../../../logic/execution/engines/pi/engine';",[engine]:'export interface T {}'});
   expect(bypass.violations).toHaveLength(1);expect(bypass.ok).toBe(false);
-  for(const directory of ['assembly','members']){
-    const result=audit({['src/backend/scheduler-engine/'+directory+'/entry.ts']:"import type {T} from '../../engines/pi/engine';",[engine]:'export interface T {}'});
-    expect(result.ok).toBe(directory==='assembly');
+  for(const directory of ['execution/assembly','team/runtime']){
+    const from='src/logic/'+directory+'/entry.ts',spec=path.posix.relative(path.posix.dirname(from),engine);
+    const result=audit({[from]:`import type {T} from '${spec}';`,[engine]:'export interface T {}'});
+    expect(result.ok).toBe(directory==='execution/assembly');
   }
 });

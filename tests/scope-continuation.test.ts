@@ -10,7 +10,7 @@ import {goalInputRevision,goalNeedsReplan} from '../src/logic/tasks/rules/scope-
 import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 const plan:GoalPlanInput={expectedRevision:1,objective:'先核实目标再交付',constraints:[],criteria:[{id:'human',text:'保留真正人工验收',kind:'human'}],assignments:[{agentId:'cbim:main',moduleIds:[],criterionIds:['human'],reason:'管理目标'}],reason:'先等待补充'};
 const review:GoalReviewInput={expectedRevision:2,decision:'awaiting_user',checks:[{criterionId:'human',outcome:'needs_human',reason:'等待用户补充，不等于人工签署',evidence:[]}],superseded:[],gaps:['需补充'],reason:'等待补充输出形式'};

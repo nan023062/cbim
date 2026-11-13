@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {MemberValidationPanel} from '../src/frontend/tasks/MemberValidationPanel';
 import {memberValidationViews} from '../src/frontend/tasks/member-validation-state';
-import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
+import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
 import type {RunSummary,StoredEvent} from '../src/logic/execution/rules/types';
 import type {ValidationResult} from '../src/logic/evidence/rules/validation';
 

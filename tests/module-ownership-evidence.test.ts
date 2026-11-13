@@ -4,7 +4,7 @@ import {jsonToolResult} from '../src/logic/tools/rules/results';
 import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
 import {isProgressEvidence} from '../src/logic/tasks/rules/member-tool-output';
 import {evaluateWorkflowDelivery} from '../src/logic/evidence/rules/workflow-evidence';
-import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
+import {memberCandidate} from '../src/logic/team/runtime/member-state';
 import {moduleOwnershipToolEffects} from '../src/logic/workspace/rules/module-ownership-tool-policy';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import type {RunSummary} from '../src/logic/execution/rules/types';

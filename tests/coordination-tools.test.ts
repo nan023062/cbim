@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {CoordinationTools} from '../src/backend/scheduler-engine/tools/coordination-tools';
-import {GoalTools} from '../src/backend/scheduler-engine/tools/goal-tools';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {CoordinationTools} from '../src/logic/tools/runtime/coordination-tools';
+import {GoalTools} from '../src/logic/tools/runtime/goal-tools';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {mainToolBinding,mainToolGraph,mainToolScope} from './main-tool-output-fixture';
 import {memberPauseServiceFixture} from './member-pause-service-fixture';
 

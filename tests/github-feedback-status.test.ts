@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {FeedbackStatusTool} from '../src/backend/scheduler-engine/tools/feedback-status-tool';
+import {FeedbackStatusTool} from '../src/logic/tools/runtime/feedback-status-tool';
 import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
 import type {FeedbackConnectionCheck} from '../src/logic/feedback';
 

@@ -9,7 +9,7 @@ import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../../core/errors';
 import {admissionPolicySchema,type AdmissionPolicy} from '../../../logic/runtime/rules/admission';
-import type {GlobalRunAdmission} from '../../scheduler-engine/admission/run-admission';
+import type {GlobalRunAdmission} from '../../../logic/execution/admission/run-admission';
 
 const storedPolicy=z.object({version:z.literal(1),policy:admissionPolicySchema}).strict();
 /** 文件适配可在测试注入失败；产品固定使用原子提交，不向 IPC 暴露路径或写入函数。 */

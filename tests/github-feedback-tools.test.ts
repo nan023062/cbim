@@ -1,10 +1,10 @@
 import {describe,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import Ajv from 'ajv';
-import {FeedbackTools} from '../src/backend/scheduler-engine/tools/feedback-tools';
+import {FeedbackTools} from '../src/logic/tools/runtime/feedback-tools';
 import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
 import {toolReceiptSchema} from '../src/logic/tools/rules/receipt-schema';
-import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
+import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
 import {transcript} from '../src/frontend/execution-view/transcript';
 import type {FeedbackToolsPort,FeedbackScope} from '../src/logic/feedback';
 import type {RunSummary,EngineEvent,StoredEvent} from '../src/logic/execution/rules/types';

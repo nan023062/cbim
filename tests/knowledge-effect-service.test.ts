@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {hash,json} from '../src/core/platform/node/serialization';
 import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
-import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
+import {EffectObservationService} from '../src/logic/evidence/runtime/effect-observation-service';
 import type {KnowledgeTransactionObservation} from '../src/logic/knowledge/rules/knowledge-write-observation';
 import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/logic/knowledge/rules/knowledge-write-input';
 import {reportFixture,reportIdentity} from './command-verification-fixture';

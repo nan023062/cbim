@@ -4,7 +4,7 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {PiRpc} from '../src/backend/engines/pi/rpc';
+import {PiRpc} from '../src/logic/execution/engines/pi/rpc';
 import type {InputImage} from '../src/logic/execution/rules/types';
 import type {QueuedMessage} from '../src/logic/tasks/rules/queue';
 import {insertionData as data,insertionProvider} from './queue-insertion-provider';

@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {MemberEventStreams} from '../src/backend/scheduler-engine/runtime/member-events';
+import {MemberEventStreams} from '../src/logic/runtime/monitoring/member-events';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import type {RunSummary,StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';

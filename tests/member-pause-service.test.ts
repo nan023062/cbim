@@ -5,11 +5,11 @@ import {randomUUID} from 'node:crypto';
 import {memberPauseServiceFixture} from './member-pause-service-fixture';
 import {memberPauseSelection} from '../src/logic/tasks/rules/member-pause-rules';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
 import {hash} from '../src/core/platform/node/serialization';
-import {checkedMainToolResult} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {checkedMainToolResult} from '../src/logic/tools/runtime/main-tool-contracts';
 import {projectMainScope} from '../src/logic/tasks/rules/main-tool-scope';
 
 it('可靠检查点和原后继持久等待，重开不重放；明确继续一次消费，仍以原权限和身份续执行',async()=>{

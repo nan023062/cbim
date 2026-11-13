@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
+import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
 
 it('预约独立信封并幂等，实际领取才新增run；同实例原模型权限保留，历史检查点不改写',async()=>{

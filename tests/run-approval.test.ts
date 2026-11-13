@@ -1,6 +1,6 @@
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {test,expect} from 'vitest';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import {fixture} from './helpers';
 test('approve all skips later confirmations only for the current run; next run asks again',async()=>{
  const f=await fixture();let manager:WorkspaceExecutionManager|undefined;try{

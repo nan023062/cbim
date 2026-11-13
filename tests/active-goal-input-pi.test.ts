@@ -5,7 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/backend/main/assembly/application';
 import {Paths} from '../src/backend/main/platform/paths';
-import {PiRpc} from '../src/backend/engines/pi/rpc';
+import {PiRpc} from '../src/logic/execution/engines/pi/rpc';
 import type {QueuedMessage} from '../src/logic/tasks/rules/queue';
 import {activeInputProvider,activeInputData as data,type ActiveInputMode} from './active-goal-input-provider';
 import {activeInputWait,seedActiveInput} from './active-goal-input-fixture';

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import {publicRunFailure} from '../src/logic/execution/rules/run-failure';
-import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
+import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
 import type {StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 
 it.each([

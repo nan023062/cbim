@@ -6,7 +6,7 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
 import {mainGovernanceTools} from '../src/backend/main/governance/main-governance-tools';
-import {GovernanceTools} from '../src/backend/scheduler-engine/tools/governance-tools';
+import {GovernanceTools} from '../src/logic/tools/runtime/governance-tools';
 import {governanceGetOutputSchema,governanceWriteOutputSchema,governanceReceiptOutputSchema,type GovernanceToolsPort} from '../src/logic/governance/rules/module-governance-tools';
 import type {TaskSpec} from '../src/logic/tasks/rules/types';
 import {moduleGovernanceMainCommandId} from '../src/logic/governance/rules/module-governance-rules';

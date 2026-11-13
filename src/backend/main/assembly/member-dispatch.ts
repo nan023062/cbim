@@ -19,20 +19,20 @@
  */
 import path from 'node:path';
 import type {Workspace} from '../workspace/workspace';
-import {WorkspaceDispatchService} from '../../scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../../../logic/dispatch/runtime/dispatch-service';
 import type {DispatchObserver} from '../../../logic/dispatch/rules/dispatch-storage';
 import type {LlmProfiles} from '../../../logic/models/service';
-import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
-import {MemberExecutionManager,type PreparedEngine} from '../../scheduler-engine/members/member-execution';
-import {createWorkspaceLoop} from '../../scheduler-engine/assembly/loop-engine';
+import type {WorkspaceExecutionLease} from '../../../logic/execution/admission/workspace-lease';
+import {MemberExecutionManager,type PreparedEngine} from '../../../logic/team/runtime/member-execution';
+import {createWorkspaceLoop} from '../../../logic/execution/assembly/loop-engine';
 import type {EngineRuntimeResolver} from '../../../logic/execution/rules/engine-runtime';
-import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../scheduler-engine/context/execution-context';
+import {memberExecutionPrompt,recheckDispatchExecutionContext} from '../../../logic/execution/context/execution-context';
 import {ArtifactFiles,normalizeArtifactPath} from '../platform/files/artifact-files';
 import {CodeCheckRunner} from '../platform/files/code-check-runner';
 import {OutputManifestFiles} from '../platform/files/output-manifest-files';
 import {NativeSessionFiles} from '../platform/native-session-files';
 import {memberCheckpointLimit} from '../../../logic/tasks/rules/member-checkpoint';
-import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../../scheduler-engine/members/member-checkpoint-verifier';
+import {verifyMemberCheckpointProof,verifyMemberCheckpointInputs} from '../../../logic/team/runtime/member-checkpoint-verifier';
 import {randomUUID} from 'node:crypto';
 import {FileRunStorage} from '../run-storage/run-storage';
 import {guard} from '../platform/tool-guard';
@@ -56,7 +56,7 @@ import {createArtifactTransitionPort} from '../file-operations/artifact-transiti
 import type {ControlledFileTransport} from '../platform/files/controlled-file-protocol';
 import {observeKnowledgeTransaction} from '../evidence/knowledge-effect-reader';
 import {observePersistentWrite} from '../evidence/persistent-effect-reader';
-import {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';
+import {ModelRequestBudgetService} from '../../../logic/budget/runtime/model-request-budget-service';
 import {requestBudgetStore} from '../dispatch-storage/request-budget-store';
 
 /** 应用对每个活动工作区只调用一次；关闭服务必须早于释放工作区锁。 */

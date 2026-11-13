@@ -2,7 +2,7 @@ import {test,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
+import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
 test('queue ordering, task isolation and interrupted starting receipts survive restart without replay',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-'));try{
  const file=path.join(dir,'queue.json'),q=new MessageQueue(file);await q.load();

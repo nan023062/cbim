@@ -6,7 +6,7 @@ import type {VerifiableMainToolName} from '../src/logic/tasks/rules/command-veri
 import {hash,json} from '../src/core/platform/node/serialization';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../src/logic/tools/rules/results';
-import {CommandVerificationService} from '../src/backend/scheduler-engine/evidence/command-verification-service';
+import {CommandVerificationService} from '../src/logic/evidence/runtime/command-verification-service';
 import {mainToolBinding,mainToolGraph,mainToolScope,mainToolReplacement,mainToolTime,mainToolTask} from './main-tool-output-fixture';
 
 export const reportBinding={...mainToolBinding,runId:'main-run'},reportIdentity={workspaceId:reportBinding.workspaceId,rootSessionId:reportBinding.rootSessionId,runId:reportBinding.runId,toolCallId:'original-call'};

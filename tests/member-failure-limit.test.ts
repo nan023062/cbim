@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
+import {memberFailureStopReason} from '../src/logic/dispatch/runtime/member-failure-limit';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {appendScopeMainRun,createScopeRunTracking} from '../src/logic/tasks/rules/scope-run-tracking';
 

@@ -1,8 +1,8 @@
 import {test,expect,vi} from 'vitest';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {mainToolBinding,mainToolTask,mainToolOwnerSelection} from './main-tool-output-fixture';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 
 const task={agentId:'.cbim/team/developer',moduleIds:['.cbim/workspace/client'],ownerSelection:mainToolOwnerSelection(['.cbim/workspace/client']),goal:'核实资源加载',acceptance:[{id:'verified',text:'提供真实读取证据'}]};
 function fixture(){

@@ -1,5 +1,5 @@
 import {expect,test} from 'vitest';
-import {QuestionQueue} from '../src/backend/scheduler-engine/conversation/questions';
+import {QuestionQueue} from '../src/logic/conversation/runtime/questions';
 const args={questions:[{question:'下一步？',options:[{label:'双人模式'},{label:'音效'}]}]};
 test('question answers are task-bound, validated and consumed once',async()=>{
  const queue=new QuestionQueue(),wait=queue.ask('task',args,new AbortController().signal),id=queue.list('task')[0].id;

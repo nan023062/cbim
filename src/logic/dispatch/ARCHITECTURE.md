@@ -17,15 +17,20 @@ classDiagram
 class N_src_logic_dispatch_rules["rules/"] {
   <<directory>>
 }
+class N_src_logic_dispatch_runtime["runtime/"] {
+  <<directory>>
+}
+N_src_logic_dispatch_runtime ..> N_src_logic_dispatch_rules : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `runtime` → `rules`：导入。
 
 ## 子目录导航
 
 - [rules/](rules/ARCHITECTURE.md)：派发存储及命令端口：保持当前宽存储接口和原子性边界。只是明确接口目录，尚未拆分共享 DispatchStore；任务规则仍在 tasks，编排在 scheduler-engine/dispatch。
+- [runtime/](runtime/ARCHITECTURE.md)：派发编排：任务状态、领取、图依赖与应用命令通过 Core 的派发端口写入；共享 Store 尚未拆分。
 
 [返回上层](../ARCHITECTURE.md)。
 

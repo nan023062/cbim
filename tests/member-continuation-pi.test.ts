@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {LoopRuntime,type TaskSpec,type RunInputSource} from '../src/logic/execution/rules';
-import {PiEngine} from '../src/backend/engines/pi/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 it('real Pi resumes member results as custom data, then preserves ordinary user follow-ups',async()=>{

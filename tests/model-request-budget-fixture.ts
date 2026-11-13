@@ -1,8 +1,8 @@
 import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {ModelRequestBudgetService} from '../src/backend/scheduler-engine/budget/model-request-budget-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {ModelRequestBudgetService} from '../src/logic/budget/runtime/model-request-budget-service';
 import {requestBudgetStore} from '../src/backend/main/dispatch-storage/request-budget-store';
 import type {ResolvedLlm} from '../src/logic/models';
 import type {ScopeBudgetPolicy} from '../src/logic/budget/rules/scope-budget';

@@ -3,7 +3,7 @@ import {ControlledFiles} from '../src/backend/main/file-operations/controlled-fi
 import {ControlledFileBlobs} from '../src/backend/main/platform/files/controlled-file-blobs';
 import type {ControlledFileTransport,ExclusiveControlledFile} from '../src/backend/main/platform/files/controlled-file-protocol';
 import type {Workspace} from '../src/backend/main/workspace/workspace';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {controlledFileOperation,controlledFileOperationId} from '../src/logic/file-operations/rules/controlled-file-rules';
 import {hash} from '../src/core/platform/node/serialization';

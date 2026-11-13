@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {LoopRuntime,type TaskSpec,type MemberRunLaunch} from '../src/logic/execution/rules';
-import {PiEngine} from '../src/backend/engines/pi/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 /** Real pinned Pi; the deterministic localhost provider proves native session behavior without external model calls. */

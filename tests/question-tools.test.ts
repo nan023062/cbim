@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
-import {QuestionTools,questionTool} from '../src/backend/scheduler-engine/tools/question-tools';
-import {QuestionQueue} from '../src/backend/scheduler-engine/conversation/questions';
+import {QuestionTools,questionTool} from '../src/logic/tools/runtime/question-tools';
+import {QuestionQueue} from '../src/logic/conversation/runtime/questions';
 import {questionToolName,questionInput,questionResultSchema,questionResultForInput} from '../src/logic/tools/rules/questions';
 import {toolMetadataSchema} from '../src/logic/tools/rules/contracts';
 

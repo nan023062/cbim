@@ -2,12 +2,12 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
-import {PiEngine} from '../src/backend/engines/pi/engine';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
 import type {AgentEngine,EngineEvent,InputImage} from '../src/logic/execution/rules/types';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
-import type {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
+import type {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 
 const gate=()=>{let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}};

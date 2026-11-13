@@ -99,3 +99,7 @@ WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为
 ## 领域规则迁移落地
 
 旧 backend/core 的领域规则与端口已迁入 Logic 各业务 rules/ports；JSON 错误适配与摘要兼容函数归共享 Core。按真实消费者保留细粒度公开入口，并继续执行私有读模型、规则到服务和运行环境边界检查。没有新增全域 barrel，也没有更改业务状态、事务与恢复行为。宿主服务、调度、Bridge 与 View 仍按后续分片迁移。
+
+## 引擎与编排迁移落地
+
+95 个具体引擎和编排文件已迁入 Logic。引擎归 execution/engines；admission、assembly、context 归 execution，conversation、dispatch、tasks、evidence、budget、team、history、tools、automation 的编排归各自 runtime，全局只读监管归 runtime/monitoring。保留实际细粒度入口、规则到运行服务的禁向依赖及只有引擎装配选择具体适配器的限制。打包输出名、用户数据目录和原生协议未改变。

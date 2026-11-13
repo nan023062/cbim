@@ -7,7 +7,7 @@ import {hash} from '../src/core/platform/node/serialization';
 import type {DispatchMutation,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {AgentInstance, AgentSessionBinding} from '../src/logic/team/rules/agent-types';
 import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/logic/tasks/rules/graph-types';
-import {prepareMember} from '../src/backend/scheduler-engine/members/agent-manager';
+import {prepareMember} from '../src/logic/team/runtime/agent-manager';
 import {seedExecutionOwner} from './owner-execution-store-support';
 import {bindingFor} from './owner-execution-core-fixture';
 

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {goalRepairFeedback} from '../src/backend/scheduler-engine/dispatch/goal-repair';
+import {goalRepairFeedback} from '../src/logic/dispatch/runtime/goal-repair';
 import {checkedRunInputSource} from '../src/logic/execution/rules/input-source';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';

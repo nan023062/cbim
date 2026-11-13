@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';

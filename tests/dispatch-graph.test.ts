@@ -3,7 +3,7 @@ import {applyGraphBatch,readGraphDelta} from '../src/logic/tasks/rules/graph-red
 import {validateGraph} from '../src/logic/tasks/rules/graph-rules';
 import {validateTaskNode} from '../src/logic/tasks/rules/graph-rules';
 import {memberReviewStage} from '../src/frontend/tasks/member-review-state';
-import {dependenciesReady} from '../src/backend/scheduler-engine/members/member-state';
+import {dependenciesReady} from '../src/logic/team/runtime/member-state';
 import type {AgentRef,GraphChange,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
 
 const identity={workspaceId:'workspace-1',rootSessionId:'conversation-1'};

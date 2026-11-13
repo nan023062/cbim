@@ -3,9 +3,9 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {buildPiRuntimeSettings,requestedThinkingLevel} from '../src/backend/engines/pi/runtime-config';
+import {buildPiRuntimeSettings,requestedThinkingLevel} from '../src/logic/execution/engines/pi/runtime-config';
 import {modelSchema} from '../src/logic/models';
-import type {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import type {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 /** A queued resume receipt identifies the previous run; wait for its actual successor before asserting Pi events. */

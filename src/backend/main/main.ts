@@ -22,7 +22,7 @@ import {ChatInputs} from './materials/chat-inputs';
 import {systemSecretCipher} from './platform/secrets';
 import {Paths} from './platform/paths';
 import {json} from '../../core/platform/node/serialization';
-import {knowledgeTools} from '../scheduler-engine/tools/knowledge-tools';
+import {knowledgeTools} from '../../logic/tools/runtime/knowledge-tools';
 import {DesktopUpdates} from '../updater/desktop-updates';
 import {latestDesktopRelease} from '../updater/desktop-releases';
 import {NsisUpdateInstaller} from '../updater/nsis-updater';

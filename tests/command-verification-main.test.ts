@@ -6,14 +6,14 @@ import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 import {toolReceipt} from '../src/logic/tools/rules/receipts';
 import {jsonToolResult} from '../src/logic/tools/rules/results';
 import type {GoalPlanInput} from '../src/logic/tasks/rules/scope-goal';
 import type {TaskSpec} from '../src/logic/tasks/rules/types';
 import type {VerifiableMainToolName,CommandVerificationReport} from '../src/logic/tasks/rules/command-verification';
 import {reportFixture,reportInputs,reportIdentity,reportBinding,evidenceFor} from './command-verification-fixture';
-import {restoreMainCommand} from '../src/backend/scheduler-engine/goals/main-command-request';
+import {restoreMainCommand} from '../src/logic/tasks/runtime/main-command-request';
 
 test('实际Application三种已提交命令经原canonical只读查询；cancel无伪goal版本，unknown不清除且重开不重放',async()=>{
   const f=await fixture();try{

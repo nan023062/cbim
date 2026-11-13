@@ -6,9 +6,9 @@
 import {fail} from '../../../core/errors';
 import {hash} from '../../../core/platform/node/serialization';
 import type {AdmissionRequest} from '../../../logic/runtime/rules/admission';
-import type {GlobalRunAdmission} from '../../scheduler-engine/admission/run-admission';
-import type {WorkspaceExecutionLease} from '../../scheduler-engine/admission/workspace-lease';
-import type {ExecutionAdmissionWait} from '../../scheduler-engine/admission/admission-wait';
+import type {GlobalRunAdmission} from '../../../logic/execution/admission/run-admission';
+import type {WorkspaceExecutionLease} from '../../../logic/execution/admission/workspace-lease';
+import type {ExecutionAdmissionWait} from '../../../logic/execution/admission/admission-wait';
 
 /** 每次工作区装配固定一份；isCurrent 在退役时立刻失效，不等于监管投影是否仍有历史。 */
 export interface WorkspaceAdmission {manager:GlobalRunAdmission;ownerEpoch:number;isCurrent():boolean;signal?:AbortSignal}

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
 import type {ApplicationServices} from '../src/backend/main/ipc/services';
 import {applyScopeBatch,validateScopeSnapshot,type ScopeSnapshot,type ScopeCursor,type DispatchSessionRead} from '../src/bridge/contracts/dispatch';

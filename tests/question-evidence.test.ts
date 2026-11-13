@@ -13,7 +13,7 @@ import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-cont
 import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
 import {isProgressEvidence,memberToolOutputSchema} from '../src/logic/tasks/rules/member-tool-output';
 import {evaluateWorkflowDelivery,validateWorkflowEvidence} from '../src/logic/evidence/rules/workflow-evidence';
-import {memberCandidate} from '../src/backend/scheduler-engine/members/member-state';
+import {memberCandidate} from '../src/logic/team/runtime/member-state';
 import {humanServiceFixture} from './human-decision-service-fixture';
 
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},task={workspaceId:identity.workspaceId,taskId:identity.taskId,goal:'核验真实成果',acceptance:['读取文件']};

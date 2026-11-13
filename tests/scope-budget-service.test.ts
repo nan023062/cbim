@@ -2,7 +2,7 @@ import {expect,it,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import type {ScopeBudgetPolicy} from '../src/logic/budget/rules/scope-budget';
 import type {RunSummary,TaskSpec,EngineEvent} from '../src/logic/execution/rules/types';
 

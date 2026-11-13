@@ -11,7 +11,7 @@ import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {fixture} from './helpers';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 const at='2026-11-07T10:00:00.000Z';
 const policy:ScopeBudgetPolicy={revision:3,enabled:true,limits:{tokens:100}};

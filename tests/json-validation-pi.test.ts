@@ -9,7 +9,7 @@ import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
 import type {ArtifactFileCheck} from '../src/logic/evidence/rules/artifact-baseline';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import {memberWorkflowFiles,validateMemberWorkflow} from '../src/backend/scheduler-engine/members/member-workflow';
+import {memberWorkflowFiles,validateMemberWorkflow} from '../src/logic/team/runtime/member-workflow';
 import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
 import {humanContinuationReceiptSchema,type HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
 import {jsonValidationProvider,jsonValidationFixture,type JsonValidationMode} from './json-validation-provider';

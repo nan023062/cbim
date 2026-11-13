@@ -10,8 +10,8 @@ import {queuedCancellationSelection} from '../src/logic/tasks/rules/queued-task-
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type PreparedEngine} from '../src/logic/team/runtime/member-execution';
 import {registerFixtureOwner} from './owner-execution-fixture';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {TaskSpec} from '../src/logic/execution/rules/types';

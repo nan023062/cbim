@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedModuleOwnership,moduleOwnershipJournal} from './module-ownership-fixture';
-import {ModuleOwnershipTools} from '../src/backend/scheduler-engine/tools/module-ownership-tools';
+import {ModuleOwnershipTools} from '../src/logic/tools/runtime/module-ownership-tools';
 import {mainModuleOwnershipTools} from '../src/backend/main/registry/main-module-ownership-tools';
 import {moduleOwnershipMainCommandId} from '../src/logic/workspace/rules/module-ownership-rules';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';

@@ -1,6 +1,6 @@
 import {test,expect,vi} from 'vitest';
 import path from 'node:path';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 import type {RunStorage} from '../src/logic/execution/rules/storage';

@@ -9,17 +9,17 @@ import {json} from '../src/core/platform/node/serialization';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
-import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
+import type {MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
-import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
+import type {ExecutionAdmissionWait} from '../src/logic/execution/admission/admission-wait';
 import {registerServiceOwner} from './owner-service-fixture';
-import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
+import {memberFailureStopReason} from '../src/logic/dispatch/runtime/member-failure-limit';
 
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}
 async function setup(useBuiltin=false){

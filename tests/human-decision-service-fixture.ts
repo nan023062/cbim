@@ -16,14 +16,14 @@ import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
 import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
 import type {HumanDecisionPreviewInput} from '../src/logic/tasks/rules/human-decisions';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {recheckDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {recheckDispatchExecutionContext} from '../src/logic/execution/context/execution-context';
 import {preparedWorkflowContracts} from '../src/logic/tasks/rules/execution-context';
 import {validationTool} from '../src/logic/evidence/rules/validation-tools';
 import {registerFixtureOwner} from './owner-execution-fixture';
-import type {PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
+import type {PreparedEngine} from '../src/logic/team/runtime/member-execution';
 
 export function latch(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}}
 export async function humanServiceFixture(options:{candidates?:number;command?:boolean;jsonValidation?:boolean;validationFiles?:number;completeManifest?:boolean}={}){

@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {WorkspaceMemberTools} from '../src/backend/scheduler-engine/tools/workspace-member-tools';
+import {WorkspaceMemberTools} from '../src/logic/tools/runtime/workspace-member-tools';
 import {workspaceMemberMainCommandId} from '../src/logic/team/rules/workspace-member-rules';
 const binding={workspaceId:'workspace',instanceId:randomUUID(),rootSessionId:'root',scopeId:randomUUID(),agentInstanceId:randomUUID(),agentSessionId:randomUUID(),runId:randomUUID()};
 const {workspaceId,instanceId:_,...source}=binding;

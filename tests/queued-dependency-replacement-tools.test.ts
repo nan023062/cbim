@@ -1,5 +1,5 @@
 import {expect,test,vi} from 'vitest';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
 import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
 import {mainToolBinding} from './main-tool-output-fixture';
 

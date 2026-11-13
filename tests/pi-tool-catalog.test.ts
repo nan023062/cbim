@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest';
-import {openBridge} from '../src/backend/engines/pi/bridge';
+import {openBridge} from '../src/logic/execution/engines/pi/bridge';
 
 it('records active tool names and diagnoses missing registration without invoking any tool',async()=>{
   const report=vi.fn(async()=>{}),call=vi.fn(async()=>({content:[{type:'text',text:'unused'}]}));

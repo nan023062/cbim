@@ -1,3 +1,11 @@
+## 2026-11-13：CI 暴露的 Node 22 仓库正文取消缺口
+
+- 来源：[#68](https://github.com/nan023062/cbim/issues/68) 实际 CI 两轮均在同一 HTTP 回归失败，独立缺陷 [#70](https://github.com/nan023062/cbim/issues/70)。补充 execFile 诊断后确认被原有 15 秒期限终止、没有业务结果输出；没有原样无限重跑。
+- 定位：本地原 Node 24.13 通过不代表 CI Node 22.19 通过。下载并核对官方 SHA-256 的便携 Node 22.19 后定向复现；阶段探针记录两次请求均抵达、第一次取消已返回、两个 8 秒信号均已触发，但第二次正文读取仍挂起。因此不更换 CI 版本、不增大期限、不跳过用例。
+- 修复：RemoteRepository 私有 readBody 显式把取消/超时信号传给 reader.cancel，唤醒挂起 read；finally 移除监听并释放锁。请求层仍负责 CANCELLED/TIMEOUT 分类，半截正文不能成为仓库结果。固定 8 秒、大小边界、权限和无自动重试均保持；只修该仓库 HTTP 消费者，不扩展为通用网络重构。
+- 单元选择与结果：在 Node 22.19 下运行 `node node_modules/vitest/vitest.mjs run tests/repository-connection-http.test.ts --reporter=verbose`，5 用例通过，原真实超时约 8.3 秒返回；包含新增的 fetch 不转发取消时显式取消正文并释放锁回归。直接消费者 `repository-connection-service.test.ts`、`repository-tools.test.ts`、`chat-material-imports.test.ts` 同版本定向验证 23 用例通过，覆盖授权/撤销、工具读取和聊天资料捕获。调用 node 为 test-results 中的便携 22.19 可执行文件，不更改全局环境。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（0 类图差异、0 循环、0 边界违规）；同步 resource-http.ts 文件头/私有生命周期注释、资源 CONTRACT.md 及 ARCHITECTURE.md 的 readBody 成员和行为说明。后续完整 CI 使用新的精确提交；未打包、未发布新客户端。
+
 ## 2026-11-13：CI 按变更分流、耗时均衡与公共检查去重
 
 - 来源：用户授权三项 CI 优化并要求一次真实 CI 验证效果，独立工单 [#68](https://github.com/nan023062/cbim/issues/68)。基线 `bff94f9bdb2914b26e668ef819d0e0493f571a94`，原工作区网页读取、架构与任务图修改保留，使用独立检出。本步只改开发验证，不修改产品运行逻辑、分支保护或发布新客户端。

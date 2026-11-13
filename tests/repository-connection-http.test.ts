@@ -34,6 +34,17 @@ it('真实8秒超时覆盖挂起正文；超时没有自动重试且不泄露凭
   const result=JSON.parse(stdout);expect(stderr).toBe('');expect(result).toMatchObject({cancellation:'CANCELLED',code:'TIMEOUT',calls:2,leaked:false});expect(result.elapsedMs).toBeGreaterThanOrEqual(7900);expect(result.elapsedMs).toBeLessThan(12_000);
 },18_000);
 
+it('fetch未向正文转发取消时仍显式取消reader并释放锁，不交付半截正文',async()=>{
+  let reading!:()=>void,source!:ReadableStreamDefaultController<Uint8Array>;const arrived=new Promise<void>(resolve=>reading=resolve),cancel=vi.fn();
+  const body=new ReadableStream<Uint8Array>({start(controller){source=controller;controller.enqueue(new TextEncoder().encode('{'))},pull(){reading()},cancel});
+  const fetch=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(body)),controller=new AbortController();let deadline:ReturnType<typeof setTimeout>|undefined;
+  try{
+    const read=new RemoteRepository('http://127.0.0.1','private-test-token').read(controller.signal);await arrived;controller.abort();
+    await expect(Promise.race([read,new Promise((_,reject)=>{deadline=setTimeout(()=>reject(Error('body read remained pending')),1000)})])).rejects.toMatchObject({code:'CANCELLED'});
+    expect(cancel).toHaveBeenCalledTimes(1);expect(body.locked).toBe(false);expect(fetch).toHaveBeenCalledTimes(1);
+  }finally{clearTimeout(deadline);source.error(Error('fixture cleanup'));fetch.mockRestore()}
+});
+
 it('停止与重新共享永久退役旧只读端口，新代际仍经过HTTP',async()=>{
   const f=await fixture();try{const folder=path.join(f.temp,'repo');await fs.mkdir(folder);await f.app.resources.configure({mode:'local',location:folder});await f.app.resources.startSharing({lan:false,port:0});const id=f.app.resources.status().config!.repositoryId,first=f.app.resources.readConnection(id),read=vi.spyOn(RemoteRepository.prototype,'read');
     try{await first.read();expect(read).toHaveBeenCalledTimes(1);await f.app.resources.stopSharing();await expect(first.read()).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_STALE'});await f.app.resources.startSharing({lan:false,port:0});const next=f.app.resources.readConnection(id);expect(next.connectionId).not.toBe(first.connectionId);await expect(first.read()).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_STALE'});await next.read();expect(read).toHaveBeenCalledTimes(2)}finally{read.mockRestore()}

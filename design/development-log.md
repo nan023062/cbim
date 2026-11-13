@@ -1,3 +1,10 @@
+## 2026-11-13：候选清单收尾二／前端本地记录读写
+
+- 用户批量授权内第二片，基线 d13f402d，C3/L2。精读岗位与模块负责人持久命令的读取、保存、恢复和失败路径，实际重复为同步 JSON 与 UTF-8 限额，不是整个命令状态机。
+- 新 storage.ts 的 JsonRecordStorage 注入存储端口、键与容量；两控制器迁移，原紧凑字节、空串规则、限额/IO 错误、先更新内存后写盘顺序不变。128 条数、schema、回执、corrupt/unavailable、未知只查询/显式重送仍属业务，其他不同存储策略未机械迁移。
+- 验证命令：pnpm exec vitest run tests/unit/frontend/foundations/utility/storage.test.ts tests/inline-module-ownership.test.ts tests/knowledge-source-view.test.ts tests/module-ownership-view.test.ts tests/workspace-member-view.test.ts --reporter=dot：5 文件/40 项通过。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过，0 环/违规，467 测试登记。独立单元覆盖 UTF-8 精确边界、坏数据保留、端口故障及不缓存；消费者覆盖存储失败与未知恢复。
+- utility/team/workspace 三份类图、契约、源码注释及三宿主工作流同步。Q1 原字节与故障策略；Q2 业务变化局限控制器；Q3 独立存储及直接消费者；Q4 storage.ts→两个 Commands；Q5 无新规则，历史频率未知。未运行全量、桌面或发布；本地独立提交未推送，保留人工 review。
+
 ## 2026-11-13：候选清单收尾一／前端拓扑分层
 
 - 用户授权依次完成原清单；从当前会话核实剩余前端图布局/本地记录及后端 JSON/脱敏/RPC/图校验六项，当前开放 #65 无关，未更改工单。基线 4a1b2858，C3/L2，沿 tasks/graph-layout 精读真实启用边、分层、坐标及三套消费者测试。

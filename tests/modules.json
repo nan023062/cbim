@@ -1295,7 +1295,8 @@
           "tests/unit/frontend/foundations/utility/async.test.ts",
           "tests/unit/frontend/foundations/utility/events.test.ts",
           "tests/unit/frontend/foundations/utility/graphs.test.ts",
-          "tests/unit/frontend/foundations/utility/json.test.ts"
+          "tests/unit/frontend/foundations/utility/json.test.ts",
+          "tests/unit/frontend/foundations/utility/storage.test.ts"
         ],
         "contract": [],
         "integration": []

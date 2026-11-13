@@ -165,10 +165,10 @@ class N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommands
   +query()
   +restore()
   -ports
+  -records
   -value
   -listeners
   -pending
-  -unavailable
 }
 N_src_frontend_workspace_module_ownership_state_ts ..> N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommands : 声明
 ```
@@ -181,6 +181,7 @@ class N_src_frontend_workspace_module_ownership_state_ts["module-ownership-state
   <<module>>
 }
 class N_src_frontend_workspace_module_ownership_state_ts_ModuleOwnershipCommands["ModuleOwnershipCommands"] {
+  -unavailable
   -corrupt
   -emit()
   -save()
@@ -411,3 +412,8 @@ inline-module-ownership 在新登记时同时传递 Agent runtime 的 engine、p
 ### 模块责任命令订阅
 
 ModuleOwnershipCommands 组合前端 SubscriptionSet 管理本实例监听器，保存或请求状态改变后同步通知。canRelease 仍同时检查监听器与未决请求；持久命令、未知结果、查询/重送及池回收策略留在原控制器。
+
+
+### 本地记录存储边界
+
+命令控制器组合前端 JsonRecordStorage，仍使用原键、紧凑 JSON 字节与 2 MiB 上限。基础库仅解析/序列化和调用存储；条数、记录身份、回执匹配、坏数据保留与禁写、内存发布和未知请求恢复保持原顺序，不自动重送。

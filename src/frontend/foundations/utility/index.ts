@@ -6,3 +6,4 @@ export {equalJson} from './json';
 export {SubscriptionSet} from './events';
 export {AsyncGeneration} from './async';
 export {rankDirectedGraph,GraphTopologyError} from './graphs';
+export {JsonRecordStorage,type TextStorage} from './storage';

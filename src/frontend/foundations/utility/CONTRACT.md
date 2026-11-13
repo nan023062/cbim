@@ -44,3 +44,8 @@ async.ts 的 AsyncGeneration 提供 capture、advance、isCurrent。每实例持
 ## 有向图分层
 
 私有类别 graphs.ts 的 rankDirectedGraph 接收节点 ID 与边二元组，返回最长前驱层级。输入不修改，孤立节点为 0，平行边逐条计数；GraphTopologyError 区分重复节点、缺端点与环。前端任务布局是实际消费者，边启用条件、任务身份、原错误文案、同层稳定顺序、像素与 SVG 路由仍留在 tasks。与后端图算法独立实现和测试。
+
+
+## 本地 JSON 记录
+
+storage.ts 的 JsonRecordStorage 注入 TextStorage、键及字节上限，每次读写直接调用端口，不缓存或恢复。read 将 null/空串视为缺失，其余按 UTF-8 上限检查后 JSON.parse；write 先序列化、检查，再 setItem；超过上限使用调用方文案，读写/序列化错误原样传播。输入和返回仍须业务校验；只适用原来将空串视为缺失的消费者。岗位与模块负责人是当前消费者，128 条数、schema/身份、损坏锁定及先更新内存后写盘顺序均留在控制器。

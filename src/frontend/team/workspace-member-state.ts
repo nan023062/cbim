@@ -1,10 +1,11 @@
 /**
  * 作用定位：项目岗位页面的严格回包核对与持久提交控制器；跨同工作区页面共享未决命令。
  * 设计原因：完整岗位页与模块卡片共用同一命令池，登记不因超时重复创建。来源只随明确能力采纳改变；先保存完整原请求再发送，未知只查询或明确重送。
+ * 存储边界：JsonRecordStorage 只读写有界 JSON；格式校验、损坏锁定、内存更新顺序与未知命令恢复仍归本控制器。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {SubscriptionSet,equalJson as same} from '../foundations/utility';
+import {JsonRecordStorage,SubscriptionSet,equalJson as same} from '../foundations/utility';
 import {workspaceMemberCommitInputSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema} from '../../bridge/contracts/workspace-members';
 import type {WorkspaceMemberIdentity,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,WorkspaceMemberLookup} from '../../bridge/contracts/workspace-members';
 
@@ -60,11 +61,13 @@ export function workspaceMemberPreRejected(error:unknown){return /^MEMBER_(?:INP
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class WorkspaceMemberCommands {
   readonly storageKey:string;
+  private readonly records:JsonRecordStorage;
   private value:WorkspaceMemberCommandState={records:[],error:''};
   private listeners=new SubscriptionSet();private pending=new Set<string>();private unavailable=false;private corrupt=false;
   constructor(readonly workspaceId:string,private ports:WorkspaceMemberCommandPorts){
     this.storageKey='cbim.workspace-members.commands.v1.'+workspaceId;
-    try{const raw=ports.storage.getItem(this.storageKey);if(!raw)return;if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('超过本机记录容量');const parsed=JSON.parse(raw);if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
+    this.records=new JsonRecordStorage(ports.storage,this.storageKey,2*1024*1024);
+    try{const parsed=this.records.read('超过本机记录容量');if(parsed===undefined)return;if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
       const records:WorkspaceMemberAttempt[]=parsed.records.map((item:any)=>{const request=workspaceMemberCommitInputSchema.parse(item.request);if(request.workspaceId!==workspaceId||ids.has(request.commandId)||Object.keys(item).some(key=>!['request','phase','uncertain','receipt','error'].includes(key))||!['submitting','unknown','accepted','rejected'].includes(item.phase)||typeof item.uncertain!=='boolean'||item.phase==='rejected'&&item.uncertain||item.phase==='unknown'&&!item.uncertain||item.error!==undefined&&typeof item.error!=='string')throw Error('请求身份或状态错误');ids.add(request.commandId);const receipt=item.receipt?checkedWorkspaceMemberReceipt(item.receipt,request):undefined;if(item.phase==='accepted'?!receipt:receipt!==undefined)throw Error('回执与提交状态不一致');return {request,phase:item.phase==='submitting'?'unknown':item.phase,uncertain:item.uncertain||['submitting','unknown'].includes(item.phase),receipt,error:item.error}});this.value={records,error:''};
     }catch(error){this.corrupt=true;this.unavailable=true;this.value={records:[],error:'岗位本机提交记录无法读取，未发送请求：'+message(error)}}
   }
@@ -76,7 +79,7 @@ export class WorkspaceMemberCommands {
   private emit(){this.listeners.notify()}
   private save(record:WorkspaceMemberAttempt){
     const records=[...this.value.records],index=records.findIndex(item=>item.request.commandId===record.request.commandId);if(index<0)records.push(record);else records[index]=record;this.value={records,error:''};
-    try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}
+    try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');this.records.write({version:1,workspaceId:this.workspaceId,records},'本机记录超过 2 MiB');this.unavailable=false;this.emit();return true}
     catch(error){this.unavailable=true;this.value={records,error:'本机保存失败，保留原命令并停止新提交：'+message(error)};this.emit();return false}
   }
   /** 显式选择/提交后发送当前预览；返回本次原命令记录，避免组合调用错取其它页面的最后一条记录。 */

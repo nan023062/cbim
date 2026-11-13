@@ -62,3 +62,8 @@ useHistorySessions/useHistoryRuns 固定各自操作与身份，公共分页实�
 ### 岗位命令订阅
 
 WorkspaceMemberCommands 的 listeners 由前端 SubscriptionSet 独立持有，subscribe 返回按函数身份退订的函数；保存或请求状态更新后同步 notify。canRelease 仍同时检查监听器与未决请求，集合不拥有命令日志、回执或共享池回收决策。
+
+
+### 本地记录存储边界
+
+命令控制器组合前端 JsonRecordStorage，仍使用原键、紧凑 JSON 字节与 2 MiB 上限。基础库仅解析/序列化和调用存储；条数、记录身份、回执匹配、坏数据保留与禁写、内存发布和未知请求恢复保持原顺序，不自动重送。

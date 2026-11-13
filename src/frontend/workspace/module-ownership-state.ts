@@ -1,10 +1,11 @@
 /**
  * 作用定位：模块负责人面板的回包核对和持久原命令状态，跨业务架构与项目岗位视图共享。
  * 设计原因：模块卡片与完整责任页共用命令池，更换负责人和同负责人采纳来源分别核对；未知不代表未保存，重开只查原命令，不补造来源。
+ * 存储边界：JsonRecordStorage 只读写有界 JSON；格式校验、损坏锁定、内存更新顺序与未知命令恢复仍归本控制器。
  * 公共比较：通过前端 utility 保持原键排序与空值语义；身份、版本、回执和恢复决策仍由本控制器负责。
  * 订阅边界：前端 SubscriptionSet 只持有监听器；通知时机、状态、轮询及销毁仍由本控制器决定。
  */
-import {SubscriptionSet,equalJson as same} from '../foundations/utility';
+import {JsonRecordStorage,SubscriptionSet,equalJson as same} from '../foundations/utility';
 import {moduleOwnershipCommitInputSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema,moduleOwnershipPageSchema,moduleOwnershipDetailSchema,isModuleOwnershipSourceAdoption} from '../../bridge/contracts/module-ownership';
 import {sourceReadStateMatches} from '../../bridge/contracts/knowledge-source';
 import type {ModuleOwnershipIdentity,ModuleOwnershipPreviewInput,ModuleOwnershipPreview,ModuleOwnershipCommitInput,ModuleOwnershipReceipt,ModuleOwnershipListInput,ModuleOwnershipByMemberInput,ModuleOwnershipPage,ModuleOwnershipGetInput,ModuleOwnershipDetail,ModuleOwnershipLookup,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
@@ -58,11 +59,13 @@ export function moduleOwnershipPreRejected(error:unknown){return /^OWNERSHIP_(?:
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class ModuleOwnershipCommands {
   readonly storageKey:string;
+  private readonly records:JsonRecordStorage;
   private value:ModuleOwnershipCommandState={records:[],error:''};
   private listeners=new SubscriptionSet();private pending=new Set<string>();private unavailable=false;private corrupt=false;
   constructor(readonly workspaceId:string,private ports:ModuleOwnershipCommandPorts){
     this.storageKey='cbim.module-ownership.commands.v1.'+workspaceId;
-    try{const raw=ports.storage.getItem(this.storageKey);if(!raw)return;if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('超过本机记录容量');const parsed=JSON.parse(raw);if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
+    this.records=new JsonRecordStorage(ports.storage,this.storageKey,2*1024*1024);
+    try{const parsed=this.records.read('超过本机记录容量');if(parsed===undefined)return;if(parsed.version!==1||parsed.workspaceId!==workspaceId||Object.keys(parsed).some(key=>!['version','workspaceId','records'].includes(key))||!Array.isArray(parsed.records)||parsed.records.length>128)throw Error('记录格式错误');const ids=new Set<string>();
       const records:ModuleOwnershipAttempt[]=parsed.records.map((item:any)=>{const request=moduleOwnershipCommitInputSchema.parse(item.request);if(request.workspaceId!==workspaceId||ids.has(request.commandId)||Object.keys(item).some(key=>!['request','phase','uncertain','receipt','error'].includes(key))||!['submitting','unknown','accepted','rejected'].includes(item.phase)||typeof item.uncertain!=='boolean'||item.phase==='rejected'&&item.uncertain||item.phase==='unknown'&&!item.uncertain||item.error!==undefined&&typeof item.error!=='string')throw Error('请求身份或状态错误');ids.add(request.commandId);const receipt=item.receipt?checkedModuleOwnershipReceipt(item.receipt,request):undefined;if(item.phase==='accepted'?!receipt:receipt!==undefined)throw Error('回执与提交状态不一致');return {request,phase:item.phase==='submitting'?'unknown':item.phase,uncertain:item.uncertain||['submitting','unknown'].includes(item.phase),receipt,error:item.error}});this.value={records,error:''};
     }catch(error){this.corrupt=true;this.unavailable=true;this.value={records:[],error:'责任本机提交记录无法读取，未发送请求：'+message(error)}}
   }
@@ -74,7 +77,7 @@ export class ModuleOwnershipCommands {
   private emit(){this.listeners.notify()}
   private save(record:ModuleOwnershipAttempt){
     const records=[...this.value.records],index=records.findIndex(item=>item.request.commandId===record.request.commandId);if(index<0)records.push(record);else records[index]=record;this.value={records,error:''};
-    try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');const raw=JSON.stringify({version:1,workspaceId:this.workspaceId,records});if(new TextEncoder().encode(raw).length>2*1024*1024)throw Error('本机记录超过 2 MiB');this.ports.storage.setItem(this.storageKey,raw);this.unavailable=false;this.emit();return true}
+    try{if(this.corrupt||records.length>128)throw Error('本机记录不可写或达到 128 条上限');this.records.write({version:1,workspaceId:this.workspaceId,records},'本机记录超过 2 MiB');this.unavailable=false;this.emit();return true}
     catch(error){this.unavailable=true;this.value={records,error:'本机保存失败，保留原命令并停止新提交：'+message(error)};this.emit();return false}
   }
   /** 当前明确选择对应预览才提交；返回本次命令记录，不能从共享池最后一条推测调用结果。 */

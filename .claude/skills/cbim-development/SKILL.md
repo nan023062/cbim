@@ -108,3 +108,5 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 - `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md` 三份内容保持一致。Issue 状态、优先级和下一项不写死在 Skill 中，每次从当前仓库重新核实。
 
 前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。后端图规则独立演进，不开放跨域依赖；拓扑单元与任务布局消费者分别验证。
+
+前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。

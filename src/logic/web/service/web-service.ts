@@ -1,24 +1,26 @@
 /**
  * 作用定位：将基础网页读取方案适配到 CBIM 工具协议，并连接用户配置的 Brave 搜索。
- * 设计原因：网页抓取与渲染在 core/foundation/web 内闭合；本层只处理业务配置和不可信资料标记。
+ * 设计原因：网页抓取与渲染经 Core 的独立平台入口提供；本层只处理业务配置和不可信资料标记。
  */
 import {setTimeout as delay} from 'node:timers/promises';
 import {z} from 'zod';
-import {webFetchInput,webSearchInput,type WebToolsPort} from '../../core/connectors/web-tools';
-import {WebPageReader,PublicHttp,publicUrl,type BrowserReader} from '../../core/foundation/web';
-import type {WebSettings} from '../settings/web-settings';
+import {webFetchInput,webSearchInput,type WebToolsPort} from '..';
+import {WebPageReader,PublicHttp,publicUrl,type BrowserReader} from '../../../core/platform/node/web';
+import type {WebSettings} from './web-settings';
 const resultsSchema=z.object({web:z.object({results:z.array(z.object({title:z.string(),url:z.string(),description:z.string().optional()}))}).optional()});
 /** 应用级配置适配；页面缓存属于 WebPageReader，搜索节流只针对固定 Brave API。 */
 export class WebService implements WebToolsPort {
-  private readonly pages:WebPageReader;
+  private readonly pages:Pick<WebPageReader,'fetch'>;
   private nextSearchAt=0;
   constructor(
     private readonly settings:Pick<WebSettings,'resolve'> & Partial<Pick<WebSettings,'read'>>,
     private readonly client:Pick<PublicHttp,'read'>=new PublicHttp(undefined,'CBIMBot/0.1'),
     private readonly timing:{now():number;wait(ms:number,signal:AbortSignal):Promise<void>;interval:number}={now:()=>Date.now(),wait:(ms,signal)=>delay(ms,undefined,{signal}),interval:1000},
     browser?:BrowserReader,
+    /** 可替换读取端口；缺省组合真实 Core 读取器，缓存及浏览器资源仍由读取器拥有。 */
+    pageReader?:Pick<WebPageReader,'fetch'>,
   ){
-    this.pages=new WebPageReader(client,timing,browser,'CBIMBot/0.1');
+    this.pages=pageReader??new WebPageReader(client,timing,browser,'CBIMBot/0.1');
   }
   /** 每次读取捕获已保存策略；基础类库按策略分隔缓存，搜索开关不影响正文读取。 */
   async fetch(raw:Parameters<WebToolsPort['fetch']>[0],signal:AbortSignal){

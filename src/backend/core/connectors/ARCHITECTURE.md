@@ -15,7 +15,6 @@
 | [registry.ts](registry.ts) | 链接器领域封装，管理插件或资源仓库的静态身份、查询与重复校验。 |
 | [repository-connection.ts](repository-connection.ts) | 桌面资源仓库链接器的输入、静态登记、独立只读授权与 HTTP 核验回执协议。 |
 | [repository-tools.ts](repository-tools.ts) | 主 Loop 资源仓库只读工具的严格分页、正文分块协议和可信捕获端口。 |
-| [web-tools.ts](web-tools.ts) | 公开网页读取与搜索的有界工具协议，以及桌面 robots/搜索设置契约。 |
 
 ## 架构类图
 
@@ -316,32 +315,6 @@ N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connect
 
 直接依赖：[definition.ts](definition.ts)、[../tools/scope-schema.ts](../tools/scope-schema.ts)。
 
-### web-tools.ts
-
-```mermaid
-classDiagram
-class N_src_backend_core_connectors_web_tools_ts["web-tools.ts"] {
-  <<module>>
-}
-class N_src_backend_core_connectors_web_tools_ts_WebSettingsView["WebSettingsView"] {
-  <<interface>>
-  +revision
-  +provider
-  +enabled
-  +hasKey
-  +secureStorage
-  +browserRobotsPolicy
-}
-N_src_backend_core_connectors_web_tools_ts ..> N_src_backend_core_connectors_web_tools_ts_WebSettingsView : 声明
-class N_src_backend_core_connectors_web_tools_ts_WebToolsPort["WebToolsPort"] {
-  <<interface>>
-  +fetch()
-  +search()
-}
-N_src_backend_core_connectors_web_tools_ts ..> N_src_backend_core_connectors_web_tools_ts_WebToolsPort : 声明
-```
-
-
 ### 本目录调用边界
 
 ```mermaid
@@ -376,9 +349,9 @@ N_src_backend_core_connectors_repository_tools_ts ..> N_src_backend_core_connect
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-### 公开网页工具
+### 已迁出的公开网页工具
 
-`web-tools.ts` 固定 cbim_web_fetch/url/maxChars 与 cbim_web_search/query/count，严格拒绝多余字段。正文上限 20000 Unicode 字符，默认12000；搜索默认5条、最多10条，只返回标题、URL、摘要。结果标记 untrusted；资料不是指令或验收证据。设置公开版本、Brave、开关、是否有密钥、安全存储状态及 browserRobotsPolicy（allow/respect）；策略仅允许设置入口修改，不属于模型工具输入。配置输入策略可省略以兼容旧客户端，实际缺省与持久化由 Main/settings 管理。
+网页工具协议已迁到 [Logic Web](../../../logic/web/CONTRACT.md)，由 `src/logic/web/index.ts` 公开；本目录不再保留 `web-tools.ts`。原输入限制、Unicode 正文上限、搜索结果与 untrusted 语义保持不变。浏览器 robots 策略及 Brave 配置的缺省、加密与持久化归 `src/logic/web/service`，模型工具不能修改这些设置。
 
 ### GitHub 反馈纯协议
 

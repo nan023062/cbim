@@ -1,3 +1,14 @@
+## 2026-11-13：Logic 第二批第一片／Web 服务
+
+- 来源：用户明确授权迁移 Web 服务并运行 Web 模块测试；基线 03abb281，初始工作区干净。开放 Issues 仅 #65，与本片无关，未修改无关工单。C3/L3；范围为网页协议、服务、配置及其技术基础和消费者，不包含反馈及资源业务迁移。
+- `src/logic/web/index.ts` 公开纯业务契约，`service/index.ts` 公开 WebService/WebSettings。便携协议及正文转换迁入 Core web，HTTP/代理/页面读取进入 Core platform/node/web，Electron 读取器单独装配。旧 Web 目录及转发入口删除；SecretCipher 提升为 Core 契约，models/ports 保留同名类型重导出兼容原消费者。文件格式、策略缺省、凭据保存、缓存及错误语义不变，不改写用户数据。
+- 迁移例外限定为公开入口：旧 Core/Main/调度只按规则访问 Web 纯契约，Main 与桥服务访问 service/index.ts，Electron 读取器仅由桌面 main.ts 装配。bridge/contracts/web.ts 只具名导出 webConfigureInput/WebSettingsView；拒绝星号、服务、凭据及私有文件穿透，前端与桥客户端仍禁止平台实现。WebService 增加可选第五个读取端口参数，原四参和默认真实读取器不变，使业务适配单元独立于 Core 读取实现。
+- 测试按责任拆分：原 robots/缓存/重定向等用例移入 web-page-reader，正文转换移入 web-content；真实 HTTP 取消/限额移入 web-http-transport，与真实代理一同明确登记为 integration。web-browser-fallback 保留真实读取器和服务的 contract 覆盖。服务单元增加策略捕获、取消信号、untrusted 标记、非法输入拒绝和原始失败透传；设置单元保持临时目录及加密替身。原断言保留，无跨测试套件导入，归属同步 tests/modules.json。
+- 验证选择为迁移模块、Web IPC/工具消费者和修改过的边界检查器。`pnpm test:module --module logic/web/service`：2 文件/7 项通过。`pnpm exec vitest run tests/web-content.test.ts tests/web-foundations.test.ts tests/web-page-reader.test.ts tests/web-browser-fallback.test.ts tests/web-browser-proxy.test.ts tests/web-http-transport.test.ts tests/web-tools.test.ts tests/web-settings-ipc.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`：11 文件/177 项通过。合计 13 文件/184 项；未以全仓测试替代模块验证。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：102 目录/724 源码样式，1460 扫描文件/7176 依赖/0 环及违规；477 测试文件（134 unit、154 contract、189 integration）。迁移语法比较覆盖 18 个原有源码文件，除 WebService 的可选端口注入外，去除导入、重导出和注释后的实现一致。
+- 使用 Vite 自带 esbuild 做 browser/esm/write:false 打包：logic/web/index.ts、bridge/contracts/web.ts、core/web/index.ts 分别为 12/13/32 个输入，无服务或平台实现。Electron 测试夹具以 node/esm、external electron、write:false 构建通过（56 输入），未启动 Electron。同步文件头和接口注释、受影响类图、Core/Logic/旧目录契约、四层设计、AGENTS 及三个宿主工作流；末轮旧链接说明修正后重新生成类图，0 漂移。
+- Q1 保持抓取/robots/缓存/持久化原行为；Q2 业务配置归 Logic，读取机制按平台归 Core，资源生命周期不进入 UI；Q3 分开验证单元、跨模块兜底和真实网络边界；Q4 logic/web/CONTRACT.md → service，技术机制从 core/web 与 platform/node/web 下钻；Q5 无新增自动治理。回退单位为本片迁移、消费者、测试归属与边界规则的完整提交，保留人工 review。本轮不含 push、全量回归、真实网站、完整桌面运行或发布验收。
+
 ## 2026-11-13：Logic 第一批／模型目录、供应商连接与选型
 
 - 来源：用户明确授权迁移第一批并运行模块测试；基线 aaa050df，初始工作区干净。开放 Issues 查询仅 #65，与本片无关，未修改无关工单或创建平行待办。C3/L3；沿模型设置、主 Agent 选型、岗位配置锁和执行快照核对真实消费者，未宣称全仓逐行审计。

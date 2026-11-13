@@ -25,7 +25,7 @@
 import {QuestionTools} from '../tools/question-tools';
 import path from 'node:path';
 import {WebTools} from '../tools/web-tools';
-import type {WebToolsPort} from '../../core/connectors/web-tools';
+import type {WebToolsPort} from '../../../logic/web';
 import fs from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {randomUUID} from 'node:crypto';

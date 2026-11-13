@@ -4,7 +4,7 @@
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。类型不替代身份和权限校验。
  */
 import {z} from 'zod';
-import {webConfigureInput,type WebSettingsView} from '../../backend/core/connectors/web-tools';
+import {webConfigureInput,type WebSettingsView} from './web';
 import {ipcId,noIpcArgs} from './ipc-shapes';
 import {type DiscoveredModel} from './models';
 import {type LlmSettings,connectionSchema,definition} from './models';

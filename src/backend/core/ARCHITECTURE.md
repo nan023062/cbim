@@ -159,7 +159,7 @@ N_src_backend_core_workspace ..> N_src_backend_core_tools : 导入依赖
 - [evidence/](evidence/ARCHITECTURE.md)：证据领域：输出清单、产物、命令/人工/效果观察与完成报告规则。记录、有效性和业务验收分别核实；平台读取在 main/evidence，编排在 scheduler-engine/evidence。
 - [execution/](execution/ARCHITECTURE.md)：引擎无关的运行契约与执行入口。runtime、capabilities 是同一执行模块的内部职责分区，不声明为已经独立解耦的子系统；状态、日志和授权语义保持原有契约。具体引擎由上层装配。 EngineRuntimeResolver 是受管引擎已验证包的窄契约；不包含下载实现、活动指针或用户凭据。
 - [file-operations/](file-operations/ARCHITECTURE.md)：受控文件操作和隔离执行的冻结协议、规则与恢复状态。平台副作用经端口实现，不因物理目录聚合改变授权、路径校验或证据效力。
-- [foundation/](foundation/ARCHITECTURE.md)：迁移期后端领域约定与适配：标识、路径、JSON Fault 和 hash/json 保留；errors.ts 为共享 Core Fault 的在用兼容出口。utility 与 Node files 已迁出，web 暂留原独立边界。
+- [foundation/](foundation/ARCHITECTURE.md)：迁移期领域标识、路径、JSON Fault 与摘要兼容适配；算法、文件和网页基础机制已迁入共享 Core，不再包含技术子库。
 - [governance/](governance/ARCHITECTURE.md)：模块知识治理的纯协议、保护规则与有界主工具投影。可信来源、冻结意见引用与本机评价独立于正式实施，旧意见替代不改历史，不把治理记录当业务验收。
 - [knowledge/](knowledge/ARCHITECTURE.md)：知识快照、校验、领域查询、对象变更和可移植静态包规划。私有v2计划冻结有序操作与整包替换范围，公共变更不能提供来源证明；物理事务与缓存经端口注入。团队能力可独立复用，业务模板必须完整，不携带动态成员或任务。 KnowledgeQueries 只接收 snapshot；KnowledgeRefresh 独立持有身份核实、原回执查询与提交。 read-models.ts 是固定快照读取的公开入口，snapshot 与 Team/BusinessWorkspace 模型属于同一私有实现边界；查询编排不反向进入纯快照契约。 产品反馈 Skill 只读发布两套上下文格式，不包含 GitHub 创建接口。 快照数据与只读访问是独立公共边界；索引刷新通过收窄端口调用原知识事务，不导入团队或模块查询视图。 SourceSnapshotReader 只提供知识队列外层的同版快照，调用方不得在任务事务内反向获取。 原知识工具和事务观察共用实际输入解析，纯摘要区分未查到、持久阶段及不可核实，不返回正文或私有路径。
 - [models/](models/ARCHITECTURE.md)：仅保留逐请求预算窄端口；模型目录、配置契约和选型已迁至 logic/models，具体传输仍由 engines/transport 实现。

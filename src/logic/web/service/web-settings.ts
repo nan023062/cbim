@@ -1,5 +1,5 @@
 /**
- * 目录归属：backend/main/settings；预算、并发与搜索设置。
+ * 目录归属：logic/web/service；网页配置持久化。
  * 作用定位：版本化保存浏览器 robots 策略、Brave 搜索开关及加密凭据，桌面只取得摘要。
  * 设计原因：密钥不进入工具参数、模型上下文或返回值；并发保存以 revision 校验，系统加密不可用时不回退明文。
  */
@@ -7,9 +7,9 @@ import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
-import {fail} from '../../core/foundation/errors';
-import {webConfigureInput,type WebSettingsView} from '../../core/connectors/web-tools';
-import type {SecretCipher} from '../../../logic/models';
+import {fail} from '../../../core/errors';
+import {webConfigureInput,type WebSettingsView} from '..';
+import type {SecretCipher} from '../../../core/contracts/secrets';
 const schema=z.object({revision:z.number().int().positive(),enabled:z.boolean(),encryptedKey:z.string().optional(),browserRobotsPolicy:z.enum(['allow','respect']).default('allow')}).strict();
 /** robots 策略由每次网页读取捕获；搜索开关及密钥独立生效。旧文件缺省 allow，旧客户端保存不重置策略。 */
 export class WebSettings {

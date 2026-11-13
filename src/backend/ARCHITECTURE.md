@@ -34,8 +34,8 @@ class N_src_backend_updater["updater/"] {
 }
 N_src_backend_bootstrap ..> N_src_backend_updater : 导入依赖
 N_src_backend_engines ..> N_src_backend_core : 导入依赖
-N_src_backend_main ..> N_src_backend_core : 导入依赖
 N_src_backend_main ..> N_src_backend_scheduler_engine : 导入依赖
+N_src_backend_main ..> N_src_backend_core : 导入依赖
 N_src_backend_main ..> N_src_backend_updater : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_core : 导入依赖
 N_src_backend_scheduler_engine ..> N_src_backend_engines : 导入依赖
@@ -45,8 +45,8 @@ N_src_backend_scheduler_engine ..> N_src_backend_engines : 导入依赖
 
 - `bootstrap` → `updater`：导入。
 - `engines` → `core`：导入。
-- `main` → `core`：导入。
 - `main` → `scheduler-engine`：导入。
+- `main` → `core`：导入。
 - `main` → `updater`：导入。
 - `scheduler-engine` → `core`：导入。
 - `scheduler-engine` → `engines`：导入。

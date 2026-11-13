@@ -16,20 +16,27 @@
 
 ```mermaid
 classDiagram
+class N_src_core_contracts["contracts/"] {
+  <<directory>>
+}
 class N_src_core_platform["platform/"] {
   <<directory>>
 }
 class N_src_core_utility["utility/"] {
   <<directory>>
 }
+class N_src_core_web["web/"] {
+  <<directory>>
+}
 class N_src_core_errors_ts["errors.ts"] {
   <<module>>
 }
+N_src_core_platform ..> N_src_core_web : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-本层无目录间直接导入关系。
+- `platform` → `web`：导入。
 
 ### errors.ts 公开入口
 
@@ -44,8 +51,10 @@ class N_src_core_errors_ts["errors.ts"] {
 
 ## 子目录导航
 
-- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；当前 Node 提供摘要与单文件 I/O，便携 Core 不依赖平台实现。
+- [contracts/](contracts/ARCHITECTURE.md)：通用技术端口；当前 SecretCipher 由模型和 Web 共同使用，具体平台实现由宿主注入。
+- [platform/](platform/ARCHITECTURE.md)：按运行环境隔离基础实现；Node 提供摘要、文件和网页，Electron 提供匿名网页适配。便携 Core 不依赖平台。
 - [utility/](utility/ARCHITECTURE.md)：前后端共享通用算法与数据结构，按 JSON、字符串、字节、异步协调和图类别内聚。index.ts 是便携公开入口；Node 摘要归 ../platform/node/digest.ts。无业务、Node、Electron 或页面依赖；排序比较器、字段规则、生命周期和业务策略由消费者持有。
+- [web/](web/ARCHITECTURE.md)：纯网页输入/浏览器契约与 HTML 正文算法；公开 index.ts，不加载 Node、Electron 或业务。
 
 [返回上层](../ARCHITECTURE.md)。
 
@@ -63,6 +72,9 @@ Core 是四层架构的基础公共层，不含业务规则、通信操作、页
 
 前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
 
-旧 backend/core 是待迁移的业务层，不属于本目录；backend/core/foundation 的 safeId、StoragePaths 和 JSON/摘要适配保留；errors.ts 为共享 Fault 的在用兼容出口。Node files 已迁入 platform/node/files，web 尚未迁移。当前 Logic 已完成模型首批，其他业务及 Bridge/View 尚未整体迁移；目标结构与分片方式见 [四层设计](../../design/four-layer-architecture.md)。
+旧 backend/core 是待迁移的业务层，不属于本目录；backend/core/foundation 的 safeId、StoragePaths 和 JSON/摘要适配保留；errors.ts 为共享 Fault 的在用兼容出口。Node files 已迁入 platform/node/files，Web 已迁入 Logic，网页基础能力按平台迁入 Core。当前 Logic 已完成模型与 Web，其他业务及 Bridge/View 尚未整体迁移；目标结构与分片方式见 [四层设计](../../design/four-layer-architecture.md)。
 
 没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
+
+
+Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。

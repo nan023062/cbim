@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
-import {WebPageReader,type BrowserReader,type BrowserPage,type PublicHttpResponse} from '../src/backend/core/foundation/web';
-import {WebService} from '../src/backend/main/web/web-service';
+import {WebPageReader,type BrowserReader,type BrowserPage,type PublicHttpResponse} from '../src/core/platform/node/web';
+import {WebService} from '../src/logic/web/service';
 
 const signal=()=>new AbortController().signal;
 const page:BrowserPage={url:'https://example.com/',title:'Rendered',markdown:'动态正文',truncated:false};

@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-Node 专属摘要及文件能力分别从 digest.ts 与 files/index.ts 公开；不决定业务字段、路径权限或事务。浏览器与便携入口禁止加载本目录。
+Node 专属摘要、单文件 I/O 与网页读取，分别通过独立公开入口使用；不依赖业务或 Electron。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -17,6 +17,9 @@ Node 专属摘要及文件能力分别从 digest.ts 与 files/index.ts 公开；
 ```mermaid
 classDiagram
 class N_src_core_platform_node_files["files/"] {
+  <<directory>>
+}
+class N_src_core_platform_node_web["web/"] {
   <<directory>>
 }
 class N_src_core_platform_node_digest_ts["digest.ts"] {
@@ -42,6 +45,7 @@ class N_src_core_platform_node_digest_ts["digest.ts"] {
 ## 子目录导航
 
 - [files/](files/ARCHITECTURE.md)：Node 单文件 I/O 基础方案：存在探测、JSON 读取、内容 fsync 后原子替换；路径权限、并发顺序和业务事务属于调用方。
+- [web/](web/ARCHITECTURE.md)：Node 网页读取机制：安全 HTTP、静态正文、robots、节流、缓存和一次浏览器兜底；仅组合 Core 纯网页入口。
 
 [返回上层](../ARCHITECTURE.md)。
 

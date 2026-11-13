@@ -1,6 +1,6 @@
-### Brave 搜索配置
+### 已迁出的网页配置
 
-WebSettings 使用 revision 校验并串行原子保存浏览器 robots 策略、搜索开关与系统加密密钥；无安全加密端口时拒绝保存/使用密钥，不明文回退。移除密钥同时关闭搜索，密钥读取只返回 hasKey。主进程网络适配器是 resolve 的唯一生产消费者；配置修改不触发搜索或模型请求。
+`WebSettings` 已迁到 [Logic Web 服务](../../../logic/web/service/CONTRACT.md)，本目录不再实现网页配置。它仍使用 revision 校验并串行原子保存浏览器 robots 策略、搜索开关与系统加密密钥；无安全加密端口时拒绝保存/使用密钥，不明文回退。移除密钥同时关闭搜索，公开读取只返回 hasKey；`WebService` 按请求解析搜索凭据，配置修改不触发搜索或模型请求。
 
 browserRobotsPolicy 为 allow/respect；新配置和缺少字段的旧文件默认 allow。旧客户端保存省略此字段时保留当前值，不重置为默认。策略不依赖 Brave 密钥或安全存储；WebService 每次读取捕获已保存策略，正在执行的读取不被中途改写。
 
@@ -35,3 +35,5 @@ MainAgentSettings 为每个工作区的 cbim:main 保存唯一选型，复用自
 `WebSettings` / `BudgetSettings` / `AdmissionSettings` 各自拥有 `core/utility` 的 `SerialQueue`；一次保存失败向该调用者抛出，队列继续受理后续操作。`core/platform/node/files` 提供同目录临时文件替换，版本校验、密钥加解密、字段兼容和默认策略仍由各设置类决定。队列不跨实例或跨进程互斥，也不提供事务回滚。
 
 模块单元直接创建设置服务与临时目录，不加载 Application；IPC 契约与应用装配验证独立保留，避免保存规则的修改迫使单元夹具启动完整应用。
+
+WebSettings 已迁入 logic/web/service，当前目录仅保留预算与准入配置；上文保存语义由迁移后的 WebSettings 继续实现。

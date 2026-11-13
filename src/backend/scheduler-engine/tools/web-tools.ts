@@ -3,7 +3,7 @@
  * 设计原因：小型严格 Schema 不暴露凭据或网络开关；分类和输出验证独立于真实网络实现。
  */
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {webFetchInput,webFetchOutput,webSearchInput,webSearchOutput,type WebToolsPort} from '../../core/connectors/web-tools';
+import {webFetchInput,webFetchOutput,webSearchInput,webSearchOutput,type WebToolsPort} from '../../../logic/web';
 import {checkedJsonToolResult} from '../../core/tools/results';
 import type {RunToolDescriptor} from '../../core/tools/policy/tool-policy';
 const fetchName='cbim_web_fetch',searchName='cbim_web_search';

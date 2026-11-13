@@ -6,6 +6,34 @@ import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 const temporary:string[]=[];
 test.each([
+  ['src/logic/web/service/web-service.ts','src/core/platform/node/web/index.ts',true],
+  ['src/logic/web/service/web-settings.ts','src/core/contracts/secrets.ts',true],
+  ['src/backend/main/assembly/application.ts','src/logic/web/service/index.ts',true],
+  ['src/backend/main/main.ts','src/core/platform/electron/web-reader.ts',true],
+  ['src/backend/main/other.ts','src/core/platform/electron/web-reader.ts',false],
+  ['src/backend/scheduler-engine/tools/web-tools.ts','src/logic/web/index.ts',true],
+  ['src/backend/scheduler-engine/tools/web-tools.ts','src/logic/web/service/index.ts',false],
+  ['src/backend/scheduler-engine/tools/web-tools.ts','src/core/platform/node/web/index.ts',false],
+  ['src/logic/web/index.ts','src/logic/web/service/index.ts',false],
+  ['src/logic/web/service/web-service.ts','src/core/platform/electron/web-reader.ts',false],
+  ['src/core/web/index.ts','src/core/platform/node/web/index.ts',false],
+  ['src/core/platform/node/web/index.ts','src/core/platform/electron/web-reader.ts',false],
+  ['src/frontend/settings/web.ts','src/logic/web/index.ts',false],
+  ['src/bridge/client/web.ts','src/logic/web/service/index.ts',false],
+  ['src/bridge/contracts/other.ts','src/logic/web/index.ts',false],
+  ['src/logic/web/service/web-settings.ts','src/backend/main/settings/budget-settings.ts',false],
+] as const)('Web 迁移边界 %s → %s = %s',(from,to,allowed)=>{
+  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
+  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+test('Web 桥仅公开设置协议，便携入口禁止加载平台或网络实现',()=>{
+  const entry='src/logic/web/index.ts';
+  expect(audit({[entry]:'export type WebSettingsView={};','src/bridge/contracts/web.ts':"export type {WebSettingsView} from '../../logic/web';"}).ok).toBe(true);
+  for(const source of ["export * from '../../logic/web';","export type {WebToolsPort} from '../../logic/web';"]){const result=audit({[entry]:'export type WebToolsPort={};','src/bridge/contracts/web.ts':source});expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'web-bridge-export'}))}
+  for(const file of ['src/core/web/extra.ts',entry])for(const dependency of ['node:http','electron'])expect(audit({[file]:`import '${dependency}';`}).ok).toBe(false);
+});
+test.each([
   ['src/backend/main/assembly/app.ts','src/logic/models/service/index.ts',true],
   ['src/backend/core/team/example.ts','src/logic/models/index.ts',true],
   ['src/backend/engines/example.ts','src/logic/models/index.ts',true],
@@ -37,7 +65,7 @@ test.each(["export * from '../../logic/models';","export type {ResolvedLlm} from
   expect(result.unresolved).toEqual([]);
   expect(result.logicalViolations).toContainEqual(expect.objectContaining({rule:'model-bridge-export'}));
 });
-const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:target.startsWith('files/')?'src/core/platform/node/'+target:'src/backend/core/foundation/'+target;
+const foundationFile=(target:string)=>target==='utility/node.ts'?'src/core/platform/node/digest.ts':target.startsWith('utility/')?'src/core/'+target:/^(files|web)\//.test(target)?'src/core/platform/node/'+target:'src/backend/core/foundation/'+target;
 test.each([
   ['src/view/tasks/model.ts','src/core/utility/index.ts',true],
   ['src/frontend/foundations/utility/json.ts','src/core/utility/index.ts',true],
@@ -89,16 +117,16 @@ test('调度器仅可组合 portable utility 公开入口',()=>{
   }
 });
 test('foundations is independent even for type dependencies; Main consumes only public web entries',()=>{
-  const foundation='src/backend/core/foundation/web/index.ts';
-  expect(audit({[foundation]:'export const value=1;', 'src/backend/main/a.ts':"import {value} from '../core/foundation/web';"}).ok).toBe(true);
+  const foundation='src/core/platform/node/web/index.ts';
+  expect(audit({[foundation]:'export const value=1;', 'src/backend/main/a.ts':"import {value} from '../../core/platform/node/web';"}).ok).toBe(true);
   for(const target of ['backend/core','backend/main','backend/scheduler-engine','frontend','bridge/contracts']){
     const relative=path.posix.relative(path.posix.dirname(foundation),`src/${target}/a.ts`);
     const result=audit({[foundation]:`import type {Value} from '${relative}';`,[`src/${target}/a.ts`]:'export interface Value {}'});
     expect(result.unresolved).toEqual([]);
     expect(result.ok).toBe(false);expect(result.violations).not.toEqual([]);
   }
-  const privateEntry=audit({'src/backend/core/foundation/web/page-reader.ts':'export class WebPageReader {}','src/backend/main/a.ts':"import {WebPageReader} from '../core/foundation/web/page-reader';"});
-  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-foundations'}));
+  const privateEntry=audit({'src/core/platform/node/web/page-reader.ts':'export class WebPageReader {}','src/backend/main/a.ts':"import {WebPageReader} from '../../core/platform/node/web/page-reader';"});
+  expect(privateEntry.logicalViolations).toContainEqual(expect.objectContaining({rule:'private-entry',boundary:'web-node'}));
 });
 afterEach(()=>{for(const root of temporary.splice(0))fs.rmSync(root,{recursive:true,force:true})});
 test.each(['utility','files','web'])('合并后的 %s 子库仍不能反向依赖父层约定或业务',(capability)=>{

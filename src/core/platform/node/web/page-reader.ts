@@ -1,14 +1,14 @@
 /**
- * 目录归属：foundations/web；独立网页读取方案。
+ * 目录归属：core/platform/node/web；独立网页读取方案。
  * 作用定位：静态正文、一次浏览器兜底、robots、域名节流与短缓存。
  * 设计原因：传输由 PublicHttp 固定地址，渲染经 BrowserReader 注入；不认识 Agent、业务配置或应用生命周期。
  */
 import robotsParser from 'robots-parser';
 import {setTimeout as delay} from 'node:timers/promises';
-import {pageReadInput,browserRobotsPolicy,type PageReadInput,type BrowserRobotsPolicy} from './contracts';
+import {pageReadInput,browserRobotsPolicy,type PageReadInput,type BrowserRobotsPolicy} from '../../../web';
 import {PublicHttp,publicUrl,type PublicHttpResponse} from './public-http';
-import {htmlMarkdown,truncateParagraphs} from './web-content';
-import type {BrowserReader} from './browser-reader';
+import {htmlMarkdown,truncateParagraphs} from '../../../web';
+import type {BrowserReader} from '../../../web';
 const ttl=5*60*1000;
 function status(response:PublicHttpResponse){
   if(response.status===401||response.status===407)throw Error('WEB_LOGIN: 该来源需要登录或认证');

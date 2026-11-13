@@ -1,12 +1,12 @@
 # 网页基础能力
 
-本目录归档于后端 core/foundation，仍是独立逻辑基础库；父目录领域约定、Core 业务和上层服务都不能成为它的依赖。物理合并不改变 HTTP、浏览器及入口隔离。
+本目录是 Core 的 Node 网页读取能力，单向组合 core/web 的纯契约与正文算法，不依赖 Logic、Bridge、View 或旧后端。
 
 ## 边界与入口
 
-`index.ts` 是 Node 公开入口，提供 `WebPageReader`、`PublicHttp`、`openBrowserProxy`、正文转换及输入/浏览器契约；`electron-browser-reader.ts` 是宿主可选的 Electron 入口。内部文件不可被业务层直接引用。类库不依赖任何其他项目模块，不认识 CBIM 工作区、Agent、工具名、Brave 设置或用户凭据。
+`index.ts` 是 Node 公开入口，提供 `WebPageReader`、`PublicHttp`、`openBrowserProxy`、正文转换及输入/浏览器契约；`../../electron/web-reader.ts` 是宿主可选的 Electron 入口。内部文件不可被业务层直接引用。Node 类库只依赖 Core 纯网页入口及获准第三方，不认识 CBIM 工作区、Agent、工具名、Brave 设置或用户凭据。
 
-WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 BrowserReader。Main/WebService 只负责业务输入校验、来源不可信标记与 Brave 查询；Main 桌面入口在 ready 后注入 ElectronBrowserReader。Node/CLI 未注入时保留原静态读取与错误，不假装提供浏览器能力。
+WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 BrowserReader。Logic/WebService 只负责业务输入校验、来源不可信标记与 Brave 查询；旧 Main 桌面装配入口在 ready 后注入 ElectronBrowserReader。Node/CLI 未注入时保留原静态读取与错误，不假装提供浏览器能力。
 
 ## 读取与状态
 
@@ -29,4 +29,4 @@ WebPageReader → 静态 PublicHttp + HTML 提取 → 必要时调用注入的 B
 
 网页缓存/robots/正文契约是稳定候选，尚无长期独立使用证据；浏览器实现随平台 API 变化，业务设置随供应商/产品需求变化，两者分开。新增浏览器实现仅实现 BrowserReader 并在宿主装配，新增搜索供应商不修改基础读取器。
 
-阅读顺序：contracts/browser-reader → page-reader → public-http/web-content → electron-browser-reader/browser-proxy。定向测试见 `tests/web-service.test.ts`、`tests/web-browser-fallback.test.ts`、`tests/web-browser-proxy.test.ts`；`scripts/web-browser-smoke.mjs` 构建独立真实 Electron 夹具，不操作用户 CBIM 实例。`--live-only` 沿生产 WebService 读取 Saltline，缺少游戏标题与 Deploy 即失败，不将抓取外壳视作通过。全量回归和桌面制品验收仍由集成/发布执行。
+阅读顺序：contracts/browser-reader → page-reader → public-http 与 Core web-content → Electron web-reader/browser-proxy。定向测试见 `tests/web-service.test.ts`、`tests/web-browser-fallback.test.ts`、`tests/web-browser-proxy.test.ts`；`scripts/web-browser-smoke.mjs` 构建独立真实 Electron 夹具，不操作用户 CBIM 实例。`--live-only` 沿生产 WebService 读取 Saltline，缺少游戏标题与 Deploy 即失败，不将抓取外壳视作通过。全量回归和桌面制品验收仍由集成/发布执行。

@@ -16,7 +16,7 @@
 pnpm test:module --list
 pnpm test:module --module foundations/files
 pnpm test:module --module backend/main/settings
-pnpm test:module --module backend/main/web --kind contract --list
+pnpm test:module --module logic/web/service --kind contract --list
 pnpm check:test-modules
 ```
 

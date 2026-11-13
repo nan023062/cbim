@@ -15,7 +15,7 @@
  * 执行工厂把宿主的固定引擎解析端口传给调度装配；公开聊天选项不能替换该端口或传入下载路径。
  */
 import path from 'node:path';
-import type {WebToolsPort} from '../../core/connectors/web-tools';
+import type {WebToolsPort} from '../../../logic/web';
 import {FileRunStorage} from '../run-storage/run-storage';
 import {ChatInputs} from '../materials/chat-inputs';
 import type {LlmProfiles} from '../../../logic/models/service';

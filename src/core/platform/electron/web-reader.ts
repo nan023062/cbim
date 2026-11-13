@@ -8,9 +8,9 @@ import {BrowserWindow,session} from 'electron';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {z} from 'zod';
-import {publicUrl} from './public-http';
-import {openBrowserProxy,type BrowserProxyTransport} from './browser-proxy';
-import type {BrowserReader,BrowserPage} from './browser-reader';
+import {publicUrl} from '../node/web';
+import {openBrowserProxy,type BrowserProxyTransport} from '../node/web';
+import type {BrowserReader,BrowserPage} from '../../web';
 
 // 固定脚本读取可见 DOM；返回值始终不可信，不插入模型生成的代码，不点击、不提交表单。
 const snapshotScript=`(() => {

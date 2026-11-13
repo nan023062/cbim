@@ -7,7 +7,7 @@
  * 职责边界：这里只声明内部调用能力，不代表渲染进程可以直接访问这些服务。
  * 请求预算只公开只读摘要；预留和终态仅由真实运行装配端口持有。
  */
-import type {WebSettings} from '../settings/web-settings';
+import type {WebSettings} from '../../../logic/web/service';
 import type {WorkspaceAutomations} from '../automation/service';
 import type {Catalog} from '../workspace/catalog';
 import type {Workspace} from '../workspace/workspace';

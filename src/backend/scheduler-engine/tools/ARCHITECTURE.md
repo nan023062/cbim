@@ -420,7 +420,7 @@ class N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools["WebTools"] {
 N_src_backend_scheduler_engine_tools_web_tools_ts ..> N_src_backend_scheduler_engine_tools_web_tools_ts_WebTools : 声明
 ```
 
-直接依赖：[../../core/connectors/web-tools.ts](../../core/connectors/web-tools.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)。
+直接依赖：[../../../logic/web/index.ts](../../../logic/web/index.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/tools/policy/tool-policy.ts](../../core/tools/policy/tool-policy.ts)。
 
 ### workspace-member-tools.ts
 

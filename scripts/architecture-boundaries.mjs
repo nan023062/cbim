@@ -1,13 +1,20 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'secret-contract',files:['src/core/contracts/secrets.ts'],public:['src/core/contracts/secrets.ts'],dependencies:[],external:[]},
+  {id:'web-service',prefix:'src/logic/web/service/',public:['src/logic/web/service/index.ts'],dependencies:['web-contract','web-node','web-portable','core-errors','secret-contract','file-foundations','utility-foundations'],external:['zod','node:fs/promises','node:timers/promises']},
+  {id:'web-contract',prefix:'src/logic/web/',public:['src/logic/web/index.ts'],dependencies:[],external:['zod']},
+  {id:'web-portable',prefix:'src/core/web/',public:['src/core/web/index.ts'],dependencies:[],external:['zod','parse5']},
+  {id:'web-node',prefix:'src/core/platform/node/web/',public:['src/core/platform/node/web/index.ts'],dependencies:['web-portable'],external:['robots-parser','ipaddr.js','node:http','node:https','node:dns/promises','node:net','node:zlib','node:timers/promises']},
+  {id:'web-electron',files:['src/core/platform/electron/web-reader.ts'],public:['src/core/platform/electron/web-reader.ts'],dependencies:['web-portable','web-node'],external:['electron','node:crypto','node:timers/promises','zod']},
+  {id:'web-bridge-compatibility',files:['src/bridge/contracts/web.ts'],public:['src/bridge/contracts/web.ts'],dependencies:['web-contract'],external:[]},
   {
     id:'model-service',prefix:'src/logic/models/service/',public:['src/logic/models/service/index.ts'],
     dependencies:['model-rules','core-errors','file-foundations','utility-foundations'],external:['node:fs/promises','node:crypto','zod'],
   },
   {
     id:'model-rules',prefix:'src/logic/models/',public:['src/logic/models/index.ts'],
-    dependencies:[],external:['zod'],
+    dependencies:['secret-contract'],external:['zod'],
   },
   {
     id:'core-errors',files:['src/core/errors.ts'],public:['src/core/errors.ts'],dependencies:[],external:[],
@@ -31,12 +38,6 @@ export const logicalBoundaries = [
   {
     id:'utility-node-foundations',files:['src/core/platform/node/digest.ts'],public:['src/core/platform/node/digest.ts'],
     dependencies:[],external:['node:crypto'],
-  },
-  {
-    id:'web-foundations',
-    files:['src/backend/core/foundation/web/index.ts','src/backend/core/foundation/web/contracts.ts','src/backend/core/foundation/web/browser-reader.ts','src/backend/core/foundation/web/page-reader.ts','src/backend/core/foundation/web/public-http.ts','src/backend/core/foundation/web/browser-proxy.ts','src/backend/core/foundation/web/web-content.ts','src/backend/core/foundation/web/electron-browser-reader.ts'],
-    public:['src/backend/core/foundation/web/index.ts','src/backend/core/foundation/web/electron-browser-reader.ts'],
-    dependencies:[],external:['zod','parse5','robots-parser','ipaddr.js','electron','node:http','node:https','node:dns/promises','node:net','node:zlib','node:timers/promises','node:crypto'],
   },
   {
     id:'pure-foundation',
@@ -132,7 +133,7 @@ export const logicalBoundaries = [
       "src/backend/core/connectors/github-feedback.ts",
       "src/backend/core/connectors/repository-connection.ts",
       "src/backend/core/connectors/repository-tools.ts",
-      "src/backend/core/connectors/web-tools.ts",
+      "src/bridge/contracts/web.ts",
       "src/backend/core/governance/module-governance.ts",
       "src/backend/core/knowledge/object-contract.ts",
       "src/backend/core/tools/policy/types.ts",

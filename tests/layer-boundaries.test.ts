@@ -28,7 +28,10 @@ it('所有跨层依赖（含重导出和 import 类型）遵循单向边界',()=
           // 单独核对迁移期的具名入口，不让旧目录获得整个 Logic 的访问权。
           const modelCompatibility=to==='logic/models'&&(/^backend\/(core|engines|scheduler-engine|main)\//.test(from)||from==='bridge/contracts/models.ts');
           const modelService=to==='logic/models/service'&&(from.startsWith('backend/main/')||from.startsWith('bridge/server/'));
-          if(!asset&&allowed[layer]&&!modelCompatibility&&!modelService)expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
+          const webCompatibility=to==='logic/web'&&(/^backend\/(core|main|scheduler-engine)\//.test(from)||from==='bridge/contracts/web.ts');
+          const webService=to==='logic/web/service'&&(from.startsWith('backend/main/')||from.startsWith('bridge/server/'));
+          const webDesktop=from==='backend/main/main.ts'&&to==='core/platform/electron/web-reader';
+          if(!asset&&allowed[layer]&&!modelCompatibility&&!modelService&&!webCompatibility&&!webService&&!webDesktop)expect(allowed[layer],`${path.relative(root,file)} → ${node.text}`).toContain(targetLayer);
         }
       }
       ts.forEachChild(node,visit);

@@ -672,24 +672,11 @@
       ],
       "tests": {
         "unit": [
-          "tests/budget-settings.test.ts",
-          "tests/web-settings.test.ts"
+          "tests/budget-settings.test.ts"
         ],
         "contract": [
           "tests/admission-settings.test.ts"
         ],
-        "integration": []
-      }
-    },
-    "backend/main/web": {
-      "roots": [
-        "src/backend/main/web/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/web-service.test.ts"
-        ],
-        "contract": [],
         "integration": []
       }
     },
@@ -884,21 +871,6 @@
           "tests/ipc-preload.test.ts"
         ],
         "contract": [],
-        "integration": []
-      }
-    },
-    "foundations/web": {
-      "roots": [
-        "src/backend/core/foundation/web/"
-      ],
-      "tests": {
-        "unit": [
-          "tests/web-browser-proxy.test.ts",
-          "tests/web-foundations.test.ts"
-        ],
-        "contract": [
-          "tests/web-browser-fallback.test.ts"
-        ],
         "integration": []
       }
     },
@@ -1357,6 +1329,61 @@
         ],
         "contract": [],
         "integration": []
+      }
+    },
+    "logic/web": {
+      "roots": [
+        "src/logic/web/index.ts",
+        "src/logic/web/contracts.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/web/service": {
+      "roots": [
+        "src/logic/web/service/",
+        "src/logic/web/index.ts"
+      ],
+      "tests": {
+        "unit": [
+          "tests/web-service.test.ts",
+          "tests/web-settings.test.ts"
+        ],
+        "contract": [
+          "tests/web-browser-fallback.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "core/web": {
+      "roots": [
+        "src/core/web/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/web-content.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "core/platform/node/web": {
+      "roots": [
+        "src/core/platform/node/web/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/web-foundations.test.ts",
+          "tests/web-page-reader.test.ts"
+        ],
+        "contract": [],
+        "integration": [
+          "tests/web-http-transport.test.ts",
+          "tests/web-browser-proxy.test.ts"
+        ]
       }
     }
   }

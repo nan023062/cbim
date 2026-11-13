@@ -14,7 +14,7 @@
 
 ## 日常验证范围
 
-架构采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](design/four-layer-architecture.md)。共享 Core 位于 src/core，旧 backend/core 是待迁移业务。模型首批已迁入 src/logic/models，纯 index.ts 与 service/index.ts 宿主入口分开；桥接 models.ts 的具名纯规则兼容出口受精确限制，后续 DTO/预览迁移后退出。前后端可共享相同技术契约，业务/交互策略保持各自归属；Core 不依赖三层业务，平台实现独立入口，前端与桥接客户端不得导入 Node/Electron。迁移中保留旧目录的既有限制，不把目标结构写成已全部实现。
+架构采用 Core、Logic、Bridge、View 四层，目标与分片见 [四层设计](design/four-layer-architecture.md)。共享 Core 位于 src/core，旧 backend/core 是待迁移业务。模型首批已迁入 src/logic/models，Web 已迁入 src/logic/web，纯 index.ts 与 service/index.ts 宿主入口分开；桥接 models.ts 的具名纯规则兼容出口受精确限制，后续 DTO/预览迁移后退出。前后端可共享相同技术契约，业务/交互策略保持各自归属；Core 不依赖三层业务，平台实现独立入口，前端与桥接客户端不得导入 Node/Electron。迁移中保留旧目录的既有限制，不把目标结构写成已全部实现。
 
 通用算法、数据结构及实例级串行执行统一归 `src/core/utility`，按具体能力分别实现；只依赖语言、标准库及必要第三方，不反向依赖业务或其他解决方案模块。通用入口与 Node 专用入口分开。文件、网页、权限、事务和领域状态继续按各自职责维护；不创建万能 Utility 类，不为目录完整预建未使用的算法。
 

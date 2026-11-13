@@ -82,3 +82,8 @@ Bridge 是通信边界，不是业务服务定位器。Logic 定义自己的服�
 按用户要求，Logic 模型首批先于其余基础方案迁移。模型规则归 logic/models/index.ts，配置存储和凭据解析归 logic/models/service/index.ts。后者是明确登记的宿主入口，旧 Main 可以装配，旧引擎/调度不能加载；规则不得反向引用 service。随本批迁移 Node files 和通用 Fault，以避免 Logic 依赖旧 backend。主 Agent 设置和请求预算暂留原位。
 
 迁移期仅 bridge/contracts/models.ts 可具名重导出模型纯入口，其他 Bridge 文件通过该契约访问；不放宽成整个 Bridge 可引用 Logic，也不将业务规则塞进 Core。这个兼容出口保留现有同步草稿预览，后续 Bridge DTO/预览迁移需同时处理其真实消费者后退出。它是过渡事实，不是四层目标已经实现。
+
+
+## Web 迁移切片
+
+WebService、WebSettings 和工具协议归 logic/web；基础网页机制分为 Core 纯契约/正文算法、Node 抓取和 Electron 适配。SecretCipher 提升为 Core 技术端口，系统加密实现仍由宿主注入。只有旧桌面 main.ts 可引用 Electron 读取入口；旧调度器只使用 Logic 纯工具契约。bridge/contracts/web.ts 仅保留 webConfigureInput/WebSettingsView 的具名兼容导出，未来 DTO 迁移后退出。保留现有 robots、缓存、错误、取消和凭据语义；反馈与资源服务不在本片范围。

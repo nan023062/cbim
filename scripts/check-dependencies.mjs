@@ -58,6 +58,13 @@ export function allowsModelMigration(from,to){
   return to===modelService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'));
 }
 const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','connectionForEngine','providerSupportsEngine','DiscoveredModel','engineSupportsApi','engineLabel','engineApi','loopEngineSchema','agentModelSelectionSchema','LoopEngine','AgentModelSelection']);
+// Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
+const webPublic='src/logic/web/index.ts';
+const webService='src/logic/web/service/index.ts';
+const allowsWebMigration=(from,to)=>
+  to===webPublic&&(/^src\/backend\/(core|main|scheduler-engine)\//.test(from)||from==='src/bridge/contracts/web.ts')||
+  to===webService&&(from.startsWith('src/backend/main/')||from.startsWith('src/bridge/server/'))||
+  from==='src/backend/main/main.ts'&&to==='src/core/platform/electron/web-reader.ts';
 const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/frontend/foundations/'],allow:['src/frontend/foundations/','src/core/utility/index.ts']},
@@ -85,7 +92,7 @@ const moduleBoundaries=[
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/backend/core/knowledge/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic]},
+  {sources:['src/backend/scheduler-engine/'],allow:['src/backend/scheduler-engine/','src/backend/engines/','src/backend/core/','src/core/utility/index.ts',modelPublic,webPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(file===entry)return true;
@@ -207,6 +214,10 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if (actual && known.has(key(actual)) && (!target || key(target) !== key(actual))) edges.push({from:info.file,to:known.get(key(actual)),line:info.line,kind,spec});
     }
     function visit(node) {
+      if(relative(file)==='src/bridge/contracts/web.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/web(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
+        const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
+        if(!names||!(ts.isNamedExports(names)||ts.isNamedImports(names))||names.elements.some(item=>!['webConfigureInput','WebSettingsView'].includes((item.propertyName??item.name).text)))modelFacadeViolations.push({file:relative(file),rule:'web-bridge-export',boundary:'web-bridge-compatibility'});
+      }
       if(relative(file)==='src/bridge/contracts/models.ts'&&(ts.isImportDeclaration(node)||ts.isExportDeclaration(node))&&node.moduleSpecifier&&ts.isStringLiteral(node.moduleSpecifier)&&/logic\/models(?:\/index)?(?:\.ts)?$/.test(node.moduleSpecifier.text)){
         const names=ts.isExportDeclaration(node)?node.exportClause:node.importClause?.namedBindings;
         const named=names&&(ts.isNamedExports(names)||ts.isNamedImports(names));
@@ -227,7 +238,7 @@ export function auditDependencies(root = process.cwd(), options = {}) {
   const violations = edges.filter(e => {
     if(e.from.startsWith('src/')&&e.to.startsWith('src/')){
       const a=layerOf(e.from),b=layerOf(e.to);
-      const modelMigration=allowsModelMigration(e.from,e.to);
+      const modelMigration=allowsModelMigration(e.from,e.to)||allowsWebMigration(e.from,e.to);
       if((!layers[a]||!layers[a].includes(b))&&!modelMigration)return true;
       // 新逻辑业务模块只通过各自 index.ts 对外；桥服务不得穿透存储和规则实现。
       if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!modelMigration)return true;

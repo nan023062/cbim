@@ -380,7 +380,7 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 ### 公开网页与搜索
 
-网页正文转换已迁移至独立 [backend/core/foundation/web](../../core/foundation/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../web/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
+网页正文转换已迁移至独立 [core/platform/node/web](../../../core/platform/node/web/CONTRACT.md)，本目录不再持有 `web-content.ts`。基础读取器管理静态抓取、robots、限速、缓存和可注入浏览器兜底；业务适配见 [Main/web](../../../logic/web/service/CONTRACT.md)。桌面可在静态失败、正文为空或动态外壳时匿名渲染一次，不把失败直接解释为需要登录。
 
 搜索仅固定 Brave API GET，密钥用 X-Subscription-Token；不自动跳转、不把密钥或服务原错误正文放入返回。每次读取当前已保存设置，关闭阻止下一次请求，已经发出的请求仍由运行取消管理。搜索结果不自动抓正文。既有聊天材料导入仍使用原协议，本工具不改写来源证据。
 

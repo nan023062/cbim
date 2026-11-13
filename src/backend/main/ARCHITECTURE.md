@@ -92,9 +92,6 @@ N_src_backend_main_resources ..> N_src_backend_main_platform : 导入依赖
 
 ```mermaid
 classDiagram
-class N_src_backend_main_web["web/"] {
-  <<directory>>
-}
 class N_src_backend_main_workspace["workspace/"] {
   <<directory>>
 }
@@ -105,13 +102,12 @@ class N_src_backend_main_main_ts["main.ts"] {
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
-- `assembly` → `settings`：导入。
-- `assembly` → `web`：导入。
 - `assembly` → `automation`：导入。
 - `assembly` → `platform`：导入。
 - `assembly` → `file-operations`：导入。
 - `assembly` → `ipc`：导入。
 - `assembly` → `models`：导入。
+- `assembly` → `settings`：导入。
 - `assembly` → `feedback`：导入。
 - `assembly` → `dispatch-storage`：导入。
 - `assembly` → `materials`：导入。
@@ -135,13 +131,13 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `history` → `run-storage`：导入。
 - `ipc` → `materials`：导入。
 - `ipc` → `resources`：导入。
-- `ipc` → `settings`：导入。
 - `ipc` → `automation`：导入。
 - `ipc` → `workspace`：导入。
 - `ipc` → `platform`：导入。
 - `ipc` → `models`：导入。
 - `ipc` → `feedback`：导入。
 - `ipc` → `governance`：导入。
+- `ipc` → `settings`：导入。
 - `ipc` → `registry`：导入。
 - `ipc` → `file-operations`：导入。
 - `main.ts` → `platform`：导入。
@@ -150,7 +146,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - `materials` → `resources`：导入。
 - `registry` → `knowledge`：导入。
 - `resources` → `platform`：导入。
-- `web` → `settings`：导入。
 - `workspace` → `platform`：导入。
 - `workspace` → `knowledge`：导入。
 - `workspace` → `governance`：导入。
@@ -188,7 +183,6 @@ class N_src_backend_main_main_ts["main.ts"] {
 - [resources/](resources/ARCHITECTURE.md)：链接器、人才和完整业务模板共用的本地/远端资源仓库。静态资料单次HTTP捕获前后核授权与共享代际，正文快照不安装执行。静态发布与导入同时核对源仓库和目标知识版本，显式提交复用知识事务；资源定义不等于可执行工具。 GitHub 反馈采用独立直连服务，设备授权和原提交账本由本机管理；固定目标、跨会话去重、未知只核实，成功不回传 Issue 链接或开发进度。 本地资源库不能指向签名程序缓存，避免数据编辑入口改变受管代码。
 - [run-storage/](run-storage/ARCHITECTURE.md)：运行日志、运行内输入和游标文件实现；按 RunStorage 等 Core 端口提供持久化，保留追加、未知和恢复语义。
 - [settings/](settings/ARCHITECTURE.md)：应用设置及命名文件存储；与模型配置、派发、运行及知识持久化分开定位。
-- [web/](web/ARCHITECTURE.md)：CBIM 网页工具的业务适配，组合 backend/core/foundation/web 并添加来源不可信标记；独立处理 Brave 搜索配置与节流，不持有浏览器或 HTTP 实现。
 - [workspace/](workspace/ARCHITECTURE.md)：本机工作区、静态编辑与受控来源协调。获取工作区锁后在唯一DispatchStore核身份、恢复知识和来源，再发布服务。岗位和负责人以同知识快照明确采纳；首次真实观察与消费者同事务保存。来源、能力、模型分别展示，不以登记回执启动实例或改写旧任务。 负责岗位和模块责任只读发现供实际主工具调用；当前配置观察与历史执行事实分开。 原知识事务适配复用现有串行 journal 核验，固定计划与旧实例只读；不提交、刷新、恢复或修剪目录。 ControlledFiles 连接原成员授权、唯一 Store、文件平台与私有备份；原not_applied与真实退出才解除运行屏障，显式补偿重新核文件身份/摘要/关闭周期，未知不重试。
 
 [返回上层](../ARCHITECTURE.md)。
@@ -203,7 +197,7 @@ class N_src_backend_main_main_ts["main.ts"] {
 
 Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置；createExecutionManager 仅对桌面主会话绑定公开网页端口。缓存与每域限速为应用级，搜索每次读取当前配置；密钥不传入调度引擎。配置操作与网络执行分开。
 
-网页方案位于独立 `backend/core/foundation/web`，不依赖本模块或 Core。WebService 组合其公开入口；Main 在 Electron ready 后通过平台参数注入 ElectronBrowserReader。Node/CLI 不加载 Electron；后台网页窗口使用独立匿名会话，运行取消负责释放，不共享主界面登录态。详见 [基础网页契约](../core/foundation/web/CONTRACT.md)。
+网页方案位于独立 `core/platform/node/web`，不依赖本模块或 Core。WebService 组合其公开入口；Main 在 Electron ready 后通过平台参数注入 ElectronBrowserReader。Node/CLI 不加载 Electron；后台网页窗口使用独立匿名会话，运行取消负责释放，不共享主界面登录态。详见 [基础网页契约](../../core/platform/node/web/CONTRACT.md)。
 
 关闭主窗口主动走现有 before-quit 取消与排空，不等待隐藏网页窗口自然完成才触发 window-all-closed；排空失败保留主窗口供用户重试。基础浏览器适配不自行决定应用退出。
 

@@ -5,10 +5,10 @@ import os from 'node:os';
 import http from 'node:http';
 import {connect} from 'node:net';
 import assert from 'node:assert/strict';
-import {ElectronBrowserReader} from '../src/backend/core/foundation/web/electron-browser-reader';
-import {WebPageReader} from '../src/backend/core/foundation/web';
-import {WebService} from '../src/backend/main/web/web-service';
-import {WebSettings} from '../src/backend/main/settings/web-settings';
+import {ElectronBrowserReader} from '../src/core/platform/electron/web-reader';
+import {WebPageReader} from '../src/core/platform/node/web';
+import {WebService} from '../src/logic/web/service';
+import {WebSettings} from '../src/logic/web/service';
 
 // 真实 Electron 与生产代理加载可控公开域名；仅测试 TCP 装配指向夹具，不暴露模型/IPC 绕过入口。
 async function main(){

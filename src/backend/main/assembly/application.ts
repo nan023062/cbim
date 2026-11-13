@@ -19,9 +19,9 @@
  */
 import type {IpcAction,IpcResponse} from '../../../bridge/contracts/ipc-call';
 import path from 'node:path';
-import {WebSettings} from '../settings/web-settings';
-import {WebService} from '../web/web-service';
-import type {BrowserReader} from '../../core/foundation/web';
+import {WebSettings} from '../../../logic/web/service';
+import {WebService} from '../../../logic/web/service';
+import type {BrowserReader} from '../../../core/platform/node/web';
 import {WorkspaceAutomations} from '../automation/service';
 import type {ControlledFileTransport} from '../platform/files/controlled-file-protocol';
 import type {ModelRequestBudgetService} from '../../scheduler-engine/budget/model-request-budget-service';

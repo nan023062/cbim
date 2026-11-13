@@ -1,9 +1,11 @@
 /**
+ * 候选节点显示主调度审阅阶段及后续验收说明，不凭活动周期虚构正在审阅。
  * 作用定位：把当前主会话的已提交派发图绘制为可选择的任务节点流程图。
  * 设计原因：HTML 节点保留可读文字和键盘操作，SVG 仅负责有向连线；布局缓存按图身份隔离，状态增量不让节点反复跳位。
  * 职责边界：主 Agent 根只负责调度；检查点续执行保持同一节点，交接放弃只改变原节点标签，新负责人另有节点。求助、撤销和放弃只展示已提交记录，不从模型正文猜测执行事实。
  */
 import {useId,useMemo,useRef} from 'react';
+import {memberReviewStage} from './member-review-state';
 import type {GraphSnapshot,TaskNode} from '../../bridge/contracts/dispatch';
 import {Icon} from '../components/Icon';
 import {layoutDispatchGraph,type DispatchGraphLayout} from './graph-layout';
@@ -45,8 +47,8 @@ export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlighte
           {layout.edges.map(({edge,path})=><path key={edge.edgeId} d={path} className={'dispatch-graph-edge '+edge.kind} markerEnd={`url(#dispatch-arrow-${marker})`} data-testid="dispatch-graph-edge" data-kind={edge.kind} data-from={edge.fromNodeId} data-to={edge.toNodeId}/>)}
         </svg>
         {layout.nodes.map(node=>{
-          const task=node.taskId?tasks.get(node.taskId):undefined,help=task?committedMemberHelp(task):undefined,cancellation=task?committedMemberCancellation(task):undefined,checkpoint=task?memberCheckpointView(task):undefined,id=task?.taskId??root.nodeId,status=task?(cancellation?memberCancellationLabel:help?'需要主调度协助':checkpoint?.phase==='abandoned'?checkpointPhaseLabels.abandoned:checkpoint?.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':taskStatusLabels[task.status]):root.status;
-          const reason=cancellation?.reason??help?.input.reason??task?.waitReason??checkpoint?.record?.input.reason;
+          const task=node.taskId?tasks.get(node.taskId):undefined,help=task?committedMemberHelp(task):undefined,cancellation=task?committedMemberCancellation(task):undefined,checkpoint=task?memberCheckpointView(task):undefined,id=task?.taskId??root.nodeId,status=task?(cancellation?memberCancellationLabel:help?'需要主调度协助':checkpoint?.phase==='abandoned'?checkpointPhaseLabels.abandoned:checkpoint?.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':memberReviewStage(task)?.label??taskStatusLabels[task.status]):root.status;
+          const reason=(task?memberReviewStage(task,graph?.tasks)?.description:undefined)??cancellation?.reason??help?.input.reason??task?.waitReason??checkpoint?.record?.input.reason;
           const outsideScope=Boolean(task&&highlightedScopeId&&task.scopeId!==highlightedScopeId);
           return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')+(cancellation?' has-cancellation':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-help-id={help?.helpId} data-cancel-id={cancellation?.commandId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
             <span className="dispatch-node-top"><span className="dispatch-node-avatar"><Icon name={task?'team':'sparkles'} size={17}/></span><span className="dispatch-node-agent">{task?.assignee.name??root.name}<small>{task?'执行 Agent':'主会话 · 调度根'}</small></span><Icon name="chevron" size={13}/></span>

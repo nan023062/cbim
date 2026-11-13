@@ -1,4 +1,5 @@
 /**
+ * 替换后的新边保留精确候选并要求主 Agent 审阅通过，不能仅以换边成功启动。
  * 目录归属：backend/scheduler-engine/goals；目标状态与核证恢复服务。
  * 替换失败前置仍核原任务的自动兜底及模型，候选替代不改变任务执行来源。
  * 作用定位：主调度在同一事务核实旧前置、安全替代候选与未启动后继，并原子提交单条依赖替换。
@@ -50,7 +51,7 @@ export class QueuedDependencyReplacementService {
       const now=new Date().toISOString(),newEdgeId=randomUUID(),trackedTaskIds=tasks.map(task=>task.taskId);
       const record:DependencyReplacement={commandId:fixed.commandId,scopeId,mainRunId:runId,replacedAt:now,reason:input.reason,graphCursor:{...input.expectedGraphCursor},goalRevision:scope.goal!.revision,goalPlanRevision:scope.goal!.plan!.revision,knowledgeRevision,previousTaskRevision:target.revision,targetPlanRevision:target.planRevision,retired:{edgeId:edge.edgeId,revision:edge.revision,sourceTaskId:source.taskId,sourcePlanRevision:source.planRevision,...(edge.condition.resultId?{resultId:edge.condition.resultId}:{})},replacement:{edgeId:newEdgeId,sourceTaskId:replacement.taskId,sourceTaskRevision:replacement.revision,sourcePlanRevision:replacement.planRevision,runId:replacement.result!.runId,resultId:replacement.result!.resultId},trackedTaskIds};
       const updated:TaskNode={...target,revision:target.revision+1,status,updatedAt:now,waitReason:status==='waiting'?'等待其余前置任务的有效结果':undefined,dependencyReplacements:[...(target.dependencyReplacements??[]),record]};
-      const nextEdge:GraphEdge={edgeId:newEdgeId,identity:graph.identity,kind:'dependency',fromNodeId:replacement.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:replacement.planRevision,resultId:replacement.result!.resultId}};
+      const nextEdge:GraphEdge={edgeId:newEdgeId,identity:graph.identity,kind:'dependency',fromNodeId:replacement.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',reviewRequired:true,planRevision:replacement.planRevision,resultId:replacement.result!.resultId}};
       const member=members.find(value=>value.agentInstanceId===target.assignee.agentInstanceId)!,nextMember={...member,activity:status==='waiting'?'waiting' as const:'idle' as const,waitingTaskIds:status==='waiting'?[target.taskId]:[]};
       const batch={...memberBatch(graph,commandId,'dependency.changed',[{type:'edge.upserted',edge:{...edge,revision:edge.revision+1,enabled:false}},{type:'edge.upserted',edge:nextEdge},{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,nextMember,updated)}]),committedAt:now};
       return {members:[nextMember],batch,receipt:{workspaceId:fixed.workspaceId,rootSessionId:fixed.rootSessionId,scopeId,mainRunId:runId,commandId,taskId:target.taskId,status,trackedTaskIds,replacement:record,graphCursor:{streamId:batch.streamId,seq:batch.seq}}};

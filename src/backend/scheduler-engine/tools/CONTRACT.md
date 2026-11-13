@@ -220,3 +220,8 @@ WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/rec
 cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
 
 调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。
+
+
+## 主 Agent 候选审阅工具
+
+CandidateReviewTools 由 AutoCollaboration 向主运行装配 cbim_dispatch_review，输入精确 taskId/expectedRevision/resultId、accept|reject 和理由。回执须通过 TaskNodeSchema 并匹配冻结的工作区、主会话、周期、主 run 以及原请求；坏回包只报告未知，不重试。结果不明确时以 cbim_dispatch_inspect 只读核实原任务 candidateReview。成员工具目录不装配此入口，成功只代表审阅已保存，不表示后继已执行。

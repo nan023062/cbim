@@ -53,6 +53,7 @@
 | [member-dependency.css](member-dependency.css) | 排版成员前置追加和替换的只读历史，供主对话摘要与任务详情共用。 |
 | [member-event-state.ts](member-event-state.ts) | 把成员公开事件分页归并为稳定的运行视图，供卡片与任务详情共用。 |
 | [member-help-state.ts](member-help-state.ts) | 为成员动态、任务节点和详情提供同一份求助交接投影与中文分类。 |
+| [member-review-state.ts](member-review-state.ts) | 展示成员候选从交付、主调度审阅到最终验收的阶段说明。 |
 | [member-validation-state.ts](member-validation-state.ts) | 从当前成员公开事件推导结构验证展示状态，保留当时不符合与后续通过的各次事实。 |
 | [member-validation.css](member-validation.css) | 对应界面的布局与视觉样式。 |
 | [MemberActivity.tsx](MemberActivity.tsx) | 展示成员任务与公开执行动态，并提供派发工具旁的紧凑内联形式及原任务详情入口。 |
@@ -744,7 +745,7 @@ class N_src_frontend_tasks_DispatchGraph_tsx_DispatchGraphProps["DispatchGraphPr
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx_DispatchGraphProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[graph-layout.ts](graph-layout.ts)、[member-help-state.ts](member-help-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[task-graph.css](task-graph.css)。
+直接依赖：[member-review-state.ts](member-review-state.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[graph-layout.ts](graph-layout.ts)、[member-help-state.ts](member-help-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[task-graph.css](task-graph.css)。
 
 ### effect-observation-state.ts
 
@@ -1547,6 +1548,18 @@ N_src_frontend_tasks_member_help_state_ts ..> N_src_frontend_tasks_member_help_s
 
 直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
 
+### member-review-state.ts
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_member_review_state_ts["member-review-state.ts"] {
+  <<module>>
+  +memberReviewStage()
+}
+```
+
+直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)。
+
 ### member-validation-state.ts
 
 ```mermaid
@@ -1593,7 +1606,7 @@ class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
+直接依赖：[member-review-state.ts](member-review-state.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
 
 ### MemberArtifactReport.tsx
 
@@ -1772,7 +1785,7 @@ class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[member-review-state.ts](member-review-state.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
 
 ### MemberValidationPanel.tsx
 
@@ -3020,25 +3033,28 @@ class N_src_frontend_tasks_controlled_file_css["controlled-file.css"] {
 class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_member_review_state_ts["member-review-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_graph_layout_ts["graph-layout.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
-  <<module>>
-}
 N_src_frontend_tasks_ControlledFilePanel_tsx ..> N_src_frontend_tasks_controlled_file_css : 导入依赖
+N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_member_review_state_ts : 导入依赖
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_graph_layout_ts : 导入依赖
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
-N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
   <<component>>
+}
+class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
+  <<module>>
 }
 class N_src_frontend_tasks_member_checkpoint_state_ts["member-checkpoint-state.ts"] {
   <<module>>
@@ -3052,17 +3068,20 @@ class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] 
 class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_member_checkpoint_state_ts : 导入依赖
 N_src_frontend_tasks_DispatchGraph_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
 N_src_frontend_tasks_effect_recovery_state_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
-N_src_frontend_tasks_effect_recovery_state_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
   <<component>>
 }
@@ -3072,16 +3091,10 @@ class N_src_frontend_tasks_effect_observation_state_ts["effect-observation-state
 class N_src_frontend_tasks_useEffectObservation_ts["useEffectObservation.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_effect_recovery_state_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_effect_observation_state_ts : 导入依赖
 N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_useEffectObservation_ts : 导入依赖
 N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
-N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 ```
 
 ```mermaid
@@ -3089,31 +3102,28 @@ classDiagram
 class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_effect_observation_css["effect-observation.css"] {
   <<stylesheet>>
 }
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_ExecutionRecoveryForm_tsx : 导入依赖
 N_src_frontend_tasks_EffectObservationPanel_tsx ..> N_src_frontend_tasks_effect_observation_css : 导入依赖
 N_src_frontend_tasks_ExecutionRecoveryForm_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
-N_src_frontend_tasks_HumanContinuationForm_tsx ..> N_src_frontend_tasks_useHumanContinuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
   <<component>>
+}
+class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
+  <<module>>
 }
 class N_src_frontend_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
   <<component>>
@@ -3124,18 +3134,18 @@ class N_src_frontend_tasks_human_continuation_css["human-continuation.css"] {
 class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_ArtifactTransitionProofs_tsx["ArtifactTransitionProofs.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_HumanContinuationForm_tsx ..> N_src_frontend_tasks_useHumanContinuation_ts : 导入依赖
 N_src_frontend_tasks_HumanContinuationForm_tsx ..> N_src_frontend_tasks_HumanDecisionPanel_tsx : 导入依赖
 N_src_frontend_tasks_HumanContinuationForm_tsx ..> N_src_frontend_tasks_human_continuation_css : 导入依赖
 N_src_frontend_tasks_HumanDecisionPanel_tsx ..> N_src_frontend_tasks_useHumanDecisions_ts : 导入依赖
-N_src_frontend_tasks_HumanDecisionPanel_tsx ..> N_src_frontend_tasks_ArtifactTransitionProofs_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_ArtifactTransitionProofs_tsx["ArtifactTransitionProofs.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_human_decisions_css["human-decisions.css"] {
@@ -3144,24 +3154,27 @@ class N_src_frontend_tasks_human_decisions_css["human-decisions.css"] {
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_member_review_state_ts["member-review-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_HumanDecisionPanel_tsx ..> N_src_frontend_tasks_ArtifactTransitionProofs_tsx : 导入依赖
 N_src_frontend_tasks_HumanDecisionPanel_tsx ..> N_src_frontend_tasks_human_decisions_css : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_review_state_ts : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberHelpNotice_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
@@ -3170,21 +3183,21 @@ class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberHelpNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
 N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberCancellationNotice_tsx : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberCheckpointNotice_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"] {
@@ -3193,20 +3206,23 @@ class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"
 class N_src_frontend_tasks_member_checkpoint_state_ts["member-checkpoint-state.ts"] {
   <<module>>
 }
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_MemberCheckpointNotice_tsx : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_OwnerExecutionDetails_tsx : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_checkpoint_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
+  <<component>>
+}
 class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_OwnerExecutionDetails_tsx : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_checkpoint_state_ts : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
-N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_MemberArtifactReport_tsx["MemberArtifactReport.tsx"] {
   <<component>>
 }
@@ -3216,6 +3232,14 @@ class N_src_frontend_tasks_artifact_report_state_ts["artifact-report-state.ts"] 
 class N_src_frontend_tasks_artifact_report_css["artifact-report.css"] {
   <<stylesheet>>
 }
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
+N_src_frontend_tasks_MemberActivity_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+N_src_frontend_tasks_MemberArtifactReport_tsx ..> N_src_frontend_tasks_artifact_report_state_ts : 导入依赖
+N_src_frontend_tasks_MemberArtifactReport_tsx ..> N_src_frontend_tasks_artifact_report_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
@@ -3225,14 +3249,6 @@ class N_src_frontend_tasks_member_cancellation_state_ts["member-cancellation-sta
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberArtifactReport_tsx ..> N_src_frontend_tasks_artifact_report_state_ts : 导入依赖
-N_src_frontend_tasks_MemberArtifactReport_tsx ..> N_src_frontend_tasks_artifact_report_css : 导入依赖
-N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
-N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
   <<component>>
 }
@@ -3242,6 +3258,14 @@ class N_src_frontend_tasks_member_checkpoint_state_ts["member-checkpoint-state.t
 class N_src_frontend_tasks_member_checkpoint_css["member-checkpoint.css"] {
   <<stylesheet>>
 }
+N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_cancellation_state_ts : 导入依赖
+N_src_frontend_tasks_MemberCancellationNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+N_src_frontend_tasks_MemberCheckpointNotice_tsx ..> N_src_frontend_tasks_member_checkpoint_state_ts : 导入依赖
+N_src_frontend_tasks_MemberCheckpointNotice_tsx ..> N_src_frontend_tasks_member_checkpoint_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
   <<component>>
 }
@@ -3251,14 +3275,6 @@ class N_src_frontend_tasks_member_dependency_state_ts["member-dependency-state.t
 class N_src_frontend_tasks_member_dependency_css["member-dependency.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberCheckpointNotice_tsx ..> N_src_frontend_tasks_member_checkpoint_state_ts : 导入依赖
-N_src_frontend_tasks_MemberCheckpointNotice_tsx ..> N_src_frontend_tasks_member_checkpoint_css : 导入依赖
-N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_state_ts : 导入依赖
-N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
 }
@@ -3268,21 +3284,21 @@ class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_state_ts : 导入依赖
+N_src_frontend_tasks_MemberDependencyNotice_tsx ..> N_src_frontend_tasks_member_dependency_css : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionReport_ts : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ExecutionRecoveryForm_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberArtifactReport_tsx["MemberArtifactReport.tsx"] {
@@ -3291,16 +3307,10 @@ class N_src_frontend_tasks_MemberArtifactReport_tsx["MemberArtifactReport.tsx"] 
 class N_src_frontend_tasks_MemberOutputManifest_tsx["MemberOutputManifest.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_ControlledFilePanel_tsx["ControlledFilePanel.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ExecutionRecoveryForm_tsx : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_MemberArtifactReport_tsx : 导入依赖
 N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_MemberOutputManifest_tsx : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_EffectObservationPanel_tsx : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ControlledFilePanel_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -3308,11 +3318,28 @@ classDiagram
 class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_ControlledFilePanel_tsx["ControlledFilePanel.tsx"] {
+  <<component>>
+}
 class N_src_frontend_tasks_IsolatedExecutionPanel_tsx["IsolatedExecutionPanel.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
   <<module>>
+}
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_EffectObservationPanel_tsx : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_ControlledFilePanel_tsx : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_IsolatedExecutionPanel_tsx : 导入依赖
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
+  <<component>>
 }
 class N_src_frontend_tasks_execution_report_css["execution-report.css"] {
   <<stylesheet>>
@@ -3323,17 +3350,6 @@ class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
 class N_src_frontend_tasks_member_help_state_ts["member-help-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_IsolatedExecutionPanel_tsx : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
-N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_css : 导入依赖
-N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
-  <<component>>
-}
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
   <<stylesheet>>
 }
@@ -3343,20 +3359,23 @@ class N_src_frontend_tasks_MemberOutputManifest_tsx["MemberOutputManifest.tsx"] 
 class N_src_frontend_tasks_output_manifest_state_ts["output-manifest-state.ts"] {
   <<module>>
 }
+N_src_frontend_tasks_MemberExecutionReport_tsx ..> N_src_frontend_tasks_execution_report_css : 导入依赖
+N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_help_state_ts : 导入依赖
+N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
+N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_output_manifest_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberOutputManifest_tsx["MemberOutputManifest.tsx"] {
+  <<component>>
+}
 class N_src_frontend_tasks_ArtifactTransitionProofs_tsx["ArtifactTransitionProofs.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_artifact_report_css["artifact-report.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberHelpNotice_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
-N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_output_manifest_state_ts : 导入依赖
-N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_ArtifactTransitionProofs_tsx : 导入依赖
-N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_artifact_report_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
   <<component>>
 }
@@ -3369,18 +3388,21 @@ class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
   <<module>>
 }
-class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_ArtifactTransitionProofs_tsx : 导入依赖
+N_src_frontend_tasks_MemberOutputManifest_tsx ..> N_src_frontend_tasks_artifact_report_css : 导入依赖
 N_src_frontend_tasks_MemberRunTranscript_tsx ..> N_src_frontend_tasks_MemberProgressSummary_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useMemberRun_ts : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberExecutionReport_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberExecutionReport_tsx["MemberExecutionReport.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
@@ -3389,21 +3411,21 @@ class N_src_frontend_tasks_MemberHelpNotice_tsx["MemberHelpNotice.tsx"] {
 class N_src_frontend_tasks_MemberCancellationNotice_tsx["MemberCancellationNotice.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
-  <<component>>
-}
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberRunTranscript_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberExecutionReport_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberHelpNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberCancellationNotice_tsx : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberCheckpointNotice_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberDependencyNotice_tsx["MemberDependencyNotice.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_MemberCheckpointNotice_tsx["MemberCheckpointNotice.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_MemberValidationPanel_tsx["MemberValidationPanel.tsx"] {
@@ -3412,16 +3434,10 @@ class N_src_frontend_tasks_MemberValidationPanel_tsx["MemberValidationPanel.tsx"
 class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_OwnerExecutionInspection_tsx["OwnerExecutionInspection.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
-  <<module>>
-}
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberDependencyNotice_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberCheckpointNotice_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberValidationPanel_tsx : 导入依赖
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_OwnerExecutionDetails_tsx : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_OwnerExecutionInspection_tsx : 导入依赖
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 ```
 
 ```mermaid
@@ -3429,7 +3445,27 @@ classDiagram
 class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
   <<component>>
 }
+class N_src_frontend_tasks_OwnerExecutionInspection_tsx["OwnerExecutionInspection.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_member_review_state_ts["member-review-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
+  <<component>>
+}
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_OwnerExecutionInspection_tsx : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_member_review_state_ts : 导入依赖
+N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberActivity_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_member_activity_css["member-activity.css"] {
@@ -3444,10 +3480,16 @@ class N_src_frontend_tasks_member_validation_state_ts["member-validation-state.t
 class N_src_frontend_tasks_member_validation_css["member-validation.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_MemberActivity_tsx : 导入依赖
+class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_owner_execution_state_ts["owner-execution-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_MemberTaskDetail_tsx ..> N_src_frontend_tasks_member_activity_css : 导入依赖
 N_src_frontend_tasks_MemberValidationPanel_tsx ..> N_src_frontend_tasks_member_validation_state_ts : 导入依赖
 N_src_frontend_tasks_MemberValidationPanel_tsx ..> N_src_frontend_tasks_member_validation_css : 导入依赖
+N_src_frontend_tasks_OwnerExecutionDetails_tsx ..> N_src_frontend_tasks_owner_execution_state_ts : 导入依赖
 ```
 
 ```mermaid
@@ -3455,29 +3497,29 @@ classDiagram
 class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"] {
   <<component>>
 }
-class N_src_frontend_tasks_owner_execution_state_ts["owner-execution-state.ts"] {
-  <<module>>
-}
 class N_src_frontend_tasks_owner_execution_css["owner-execution.css"] {
   <<stylesheet>>
 }
 class N_src_frontend_tasks_OwnerExecutionInspection_tsx["OwnerExecutionInspection.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_OwnerExecutionDetails_tsx ..> N_src_frontend_tasks_owner_execution_state_ts : 导入依赖
-N_src_frontend_tasks_OwnerExecutionDetails_tsx ..> N_src_frontend_tasks_owner_execution_css : 导入依赖
-N_src_frontend_tasks_OwnerExecutionInspection_tsx ..> N_src_frontend_tasks_owner_execution_state_ts : 导入依赖
-N_src_frontend_tasks_OwnerExecutionInspection_tsx ..> N_src_frontend_tasks_owner_execution_css : 导入依赖
-```
-
-```mermaid
-classDiagram
+class N_src_frontend_tasks_owner_execution_state_ts["owner-execution-state.ts"] {
+  <<module>>
+}
 class N_src_frontend_tasks_RequestBudgetPanel_tsx["RequestBudgetPanel.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_request_budget_state_ts["request-budget-state.ts"] {
   <<module>>
 }
+N_src_frontend_tasks_OwnerExecutionDetails_tsx ..> N_src_frontend_tasks_owner_execution_css : 导入依赖
+N_src_frontend_tasks_OwnerExecutionInspection_tsx ..> N_src_frontend_tasks_owner_execution_state_ts : 导入依赖
+N_src_frontend_tasks_OwnerExecutionInspection_tsx ..> N_src_frontend_tasks_owner_execution_css : 导入依赖
+N_src_frontend_tasks_RequestBudgetPanel_tsx ..> N_src_frontend_tasks_request_budget_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
@@ -3487,19 +3529,28 @@ class N_src_frontend_tasks_graph_state_ts["graph-state.ts"] {
 class N_src_frontend_tasks_ScopeBudgetPanel_tsx["ScopeBudgetPanel.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_RequestBudgetPanel_tsx ..> N_src_frontend_tasks_request_budget_state_ts : 导入依赖
+class N_src_frontend_tasks_RequestBudgetPanel_tsx["RequestBudgetPanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_request_budget_state_ts["request-budget-state.ts"] {
+  <<module>>
+}
+class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_scope_state_ts ..> N_src_frontend_tasks_graph_state_ts : 导入依赖
 N_src_frontend_tasks_ScopeBudgetPanel_tsx ..> N_src_frontend_tasks_RequestBudgetPanel_tsx : 导入依赖
 N_src_frontend_tasks_ScopeBudgetPanel_tsx ..> N_src_frontend_tasks_request_budget_state_ts : 导入依赖
+N_src_frontend_tasks_ScopeContinuationForm_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_ContinuationSourceMenu_tsx["ContinuationSourceMenu.tsx"] {
   <<component>>
@@ -3510,18 +3561,18 @@ class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_ScopeContinuationForm_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+class N_src_frontend_tasks_ContinuationAttachmentHistory_tsx["ContinuationAttachmentHistory.tsx"] {
+  <<component>>
+}
 N_src_frontend_tasks_ScopeContinuationForm_tsx ..> N_src_frontend_tasks_ContinuationSourceMenu_tsx : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeContinuationForm_tsx : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ContinuationAttachmentHistory_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_ContinuationAttachmentHistory_tsx["ContinuationAttachmentHistory.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
@@ -3533,18 +3584,18 @@ class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
 class N_src_frontend_tasks_ScopeBudgetPanel_tsx["ScopeBudgetPanel.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ContinuationAttachmentHistory_tsx : 导入依赖
+class N_src_frontend_tasks_ScopeActiveInputs_tsx["ScopeActiveInputs.tsx"] {
+  <<component>>
+}
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeReplanForm_tsx : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeBudgetPanel_tsx : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeActiveInputs_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_ScopeActiveInputs_tsx["ScopeActiveInputs.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
@@ -3556,18 +3607,18 @@ class N_src_frontend_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
 class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_ScopeActiveInputs_tsx : 导入依赖
+class N_src_frontend_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
+  <<component>>
+}
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_HumanDecisionPanel_tsx : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useHumanDecisions_ts : 导入依赖
+N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_HumanContinuationForm_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
@@ -3579,19 +3630,22 @@ class N_src_frontend_tasks_OwnerExecutionDetails_tsx["OwnerExecutionDetails.tsx"
 class N_src_frontend_tasks_scope_goal_css["scope-goal.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_HumanContinuationForm_tsx : 导入依赖
+class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_useHumanContinuation_ts : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_OwnerExecutionDetails_tsx : 导入依赖
 N_src_frontend_tasks_ScopeGoalPanel_tsx ..> N_src_frontend_tasks_scope_goal_css : 导入依赖
+N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
   <<component>>
@@ -3602,19 +3656,22 @@ class N_src_frontend_tasks_effect_observation_state_ts["effect-observation-state
 class N_src_frontend_tasks_scope_replan_css["scope-replan.css"] {
   <<stylesheet>>
 }
-N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
+class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
+  <<component>>
+}
+class N_src_frontend_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_EffectObservationPanel_tsx : 导入依赖
 N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_effect_observation_state_ts : 导入依赖
 N_src_frontend_tasks_ScopeReplanForm_tsx ..> N_src_frontend_tasks_scope_replan_css : 导入依赖
+N_src_frontend_tasks_ScopeUsagePanel_tsx ..> N_src_frontend_tasks_scope_usage_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_scope_usage_state_ts["scope-usage-state.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_scope_usage_css["scope-usage.css"] {
   <<stylesheet>>
@@ -3628,18 +3685,18 @@ class N_src_frontend_tasks_ToolActivity_tsx["ToolActivity.tsx"] {
 class N_src_frontend_tasks_DispatchGraph_tsx["DispatchGraph.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_ScopeUsagePanel_tsx ..> N_src_frontend_tasks_scope_usage_state_ts : 导入依赖
+class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
+  <<component>>
+}
 N_src_frontend_tasks_ScopeUsagePanel_tsx ..> N_src_frontend_tasks_scope_usage_css : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ToolActivity_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_DispatchGraph_tsx : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_MemberTaskDetail_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
-  <<component>>
-}
-class N_src_frontend_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
   <<component>>
 }
 class N_src_frontend_tasks_ScopeGoalPanel_tsx["ScopeGoalPanel.tsx"] {
@@ -3651,19 +3708,19 @@ class N_src_frontend_tasks_ScopeUsagePanel_tsx["ScopeUsagePanel.tsx"] {
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_MemberTaskDetail_tsx : 导入依赖
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeGoalPanel_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_ScopeUsagePanel_tsx : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
   <<module>>
@@ -3674,19 +3731,19 @@ class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
 class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useScopeReplan_ts : 导入依赖
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useHumanDecisions_ts : 导入依赖
+N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useHumanContinuation_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_task_graph_css["task-graph.css"] {
   <<stylesheet>>
@@ -3700,19 +3757,19 @@ class N_src_frontend_tasks_command_verification_state_ts["command-verification-s
 class N_src_frontend_tasks_CommandVerificationPanel_tsx["CommandVerificationPanel.tsx"] {
   <<component>>
 }
-N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_useHumanContinuation_ts : 导入依赖
+class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_SessionTaskView_tsx ..> N_src_frontend_tasks_task_graph_css : 导入依赖
 N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_command_verification_state_ts : 导入依赖
 N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_CommandVerificationPanel_tsx : 导入依赖
+N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_ToolActivity_tsx["ToolActivity.tsx"] {
   <<component>>
-}
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
-  <<module>>
 }
 class N_src_frontend_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] {
   <<component>>
@@ -3726,20 +3783,20 @@ class N_src_frontend_tasks_useAdmission_ts["useAdmission.ts"] {
 class N_src_frontend_tasks_admission_state_ts["admission-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_useExecutionRecovery_ts : 导入依赖
-N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_EffectObservationPanel_tsx : 导入依赖
-N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
-N_src_frontend_tasks_useAdmission_ts ..> N_src_frontend_tasks_admission_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_frontend_tasks_useControlledFiles_ts["useControlledFiles.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_controlled_file_state_ts["controlled-file-state.ts"] {
   <<module>>
 }
+N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_EffectObservationPanel_tsx : 导入依赖
+N_src_frontend_tasks_ToolActivity_tsx ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
+N_src_frontend_tasks_useAdmission_ts ..> N_src_frontend_tasks_admission_state_ts : 导入依赖
+N_src_frontend_tasks_useControlledFiles_ts ..> N_src_frontend_tasks_controlled_file_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_frontend_tasks_useEffectObservation_ts["useEffectObservation.ts"] {
   <<module>>
 }
@@ -3755,21 +3812,21 @@ class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
 class N_src_frontend_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useControlledFiles_ts ..> N_src_frontend_tasks_controlled_file_state_ts : 导入依赖
+class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useEffectObservation_ts ..> N_src_frontend_tasks_effect_observation_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_recovery_state_ts : 导入依赖
+N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_frontend_tasks_useExecutionRecovery_ts["useExecutionRecovery.ts"] {
+class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_execution_report_state_ts["execution-report-state.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_useExecutionReport_ts["useExecutionReport.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
@@ -3781,20 +3838,17 @@ class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useExecutionRecovery_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
+class N_src_frontend_tasks_human_continuation_state_ts["human-continuation-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useExecutionReport_ts ..> N_src_frontend_tasks_execution_report_state_ts : 导入依赖
 N_src_frontend_tasks_useHumanContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useHumanContinuation_ts ..> N_src_frontend_tasks_useScopeContinuation_ts : 导入依赖
+N_src_frontend_tasks_useHumanContinuation_ts ..> N_src_frontend_tasks_human_continuation_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_frontend_tasks_useHumanContinuation_ts["useHumanContinuation.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_human_continuation_state_ts["human-continuation-state.ts"] {
-  <<module>>
-}
 class N_src_frontend_tasks_useHumanDecisions_ts["useHumanDecisions.ts"] {
   <<module>>
 }
@@ -3810,18 +3864,18 @@ class N_src_frontend_tasks_useMemberRun_ts["useMemberRun.ts"] {
 class N_src_frontend_tasks_member_event_state_ts["member-event-state.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useHumanContinuation_ts ..> N_src_frontend_tasks_human_continuation_state_ts : 导入依赖
+class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useHumanDecisions_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useHumanDecisions_ts ..> N_src_frontend_tasks_human_decision_state_ts : 导入依赖
 N_src_frontend_tasks_useMemberRun_ts ..> N_src_frontend_tasks_member_event_state_ts : 导入依赖
+N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_useScopeContinuation_ts["useScopeContinuation.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_continuation_state_ts["continuation-state.ts"] {
@@ -3836,18 +3890,18 @@ class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
 class N_src_frontend_tasks_useEffectObservation_ts["useEffectObservation.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
+class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
+  <<module>>
+}
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeContinuation_ts ..> N_src_frontend_tasks_continuation_source_io_ts : 导入依赖
 N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_useEffectObservation_ts : 导入依赖
+N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_frontend_tasks_useScopeReplan_ts["useScopeReplan.ts"] {
-  <<module>>
-}
-class N_src_frontend_tasks_effect_recovery_state_ts["effect-recovery-state.ts"] {
   <<module>>
 }
 class N_src_frontend_tasks_scope_state_ts["scope-state.ts"] {
@@ -3859,7 +3913,6 @@ class N_src_frontend_tasks_replan_state_ts["replan-state.ts"] {
 class N_src_frontend_tasks_useSessionGraph_ts["useSessionGraph.ts"] {
   <<module>>
 }
-N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_effect_recovery_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
 N_src_frontend_tasks_useScopeReplan_ts ..> N_src_frontend_tasks_replan_state_ts : 导入依赖
 N_src_frontend_tasks_useSessionGraph_ts ..> N_src_frontend_tasks_scope_state_ts : 导入依赖
@@ -4312,3 +4365,8 @@ MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和�
 ### 运行展示的公共边界
 
 MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。
+
+
+## 交付审阅阶段展示
+
+member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待、接受、拒绝三类说明。任务图可结合当前同周期活动成员解释等待原因；内联卡和任务详情常驻完整阶段及理由：成员交付 → 主 Agent 核对并接受/拒绝 → 放行需审阅的后继 → 整体集成 → 按目标要求用户验收。没有可靠主运行事实时不显示“正在审阅”。已批准仍不是最终目标或用户验收；旧依赖保留原规则。

@@ -1,3 +1,17 @@
+## 2026-11-13：候选审阅阶段说明与依赖批准关口
+
+- 来源：用户直接要求“交付待审阅时展示完整阶段说明，并加审阅通过后才放行的依赖关口”；基线 `4bfc2b39`，开始时工作区干净。2026-11-13 拉取开放 Issues，只有 #65；本次为直接新增要求，不虚构关联工单，不关闭 #65，不修改安装版或用户正在执行的任务。
+- 语义与边界（C3 / L2）：候选交付、主调度接受、最终目标审阅、人工验收是不同事实。新增 `TaskNode.candidateReview`，当前主运行以 `cbim_dispatch_review` 显式接受/拒绝精确任务版本、结果、原运行与计划，事务追加一次不可改判的审阅及理由。接受只放行后继；拒绝不能被目标审阅当成完成证据。拒绝后撤销相关未启动后继并新建返工链，不扩展现有失败来源替换语义。
+- 真实调用链：主运行工具 → ScopeGoalService 核实目标/主身份/原成员证据 → DispatchStore 原子追加 → Core 校验绑定、命令指纹和不可变性 → AutoCollaboration / MemberExecution 共用 dependenciesReady → 领取事务再次检查。保护原候选、执行租约、权限、文件/知识与人工验收机制；只将批准策略放在新依赖和候选审阅协议中。此策略变化频率尚无统计，不增加通用审批框架。
+- 调度变化：前置交付而后继仍在等待审阅时，先回主轮；member-results 轮次继承同周期尚未启动的任务。主 Agent 审阅并结束主轮后沿原身份继续，避免“主等所有成员、后继等主”的互等。任务图、内联卡、详情复用阶段说明，显示待审阅、接受、拒绝及理由，不把 scope 活动伪装成“主 Agent 正在审阅”。完整路径说明包括集成与按目标要求用户验收。
+- 兼容：派发、追加、替换、修订产生的新边带 `reviewRequired:true`；旧边保持原义，不能补写或清除审阅标志。三个依赖事务验证器兼容旧日志与新要求；原运行数据不迁移。自动重启回传仍沿原有“全部成员可靠交付”限制，含未启动后继时不自动恢复模型。Pi 超大结束事件中断是先前诊断的另一问题，本提交未处理。
+- 验证选择：成员执行与真实存储覆盖批准/拒绝/精确结果/重复命令/重开持久记录/错误主运行/拒绝证据；协调器覆盖回主审阅和原后继跨轮保留；图规则覆盖旧边、新关口及错结果；目标审阅覆盖消费者；依赖增删换边覆盖持久校验和历史兼容；视图静态渲染与主工具/指引覆盖 UI 和入口。不以模拟模型结果声称真实供应商验收。
+- 实际验证：初次 `pnpm exec vitest run tests/auto-collaboration.test.ts tests/dispatch-graph.test.ts tests/member-execution.test.ts --reporter=dot` 为 68 通过、1 失败（旧测试假定候选直接放行）。更新回归后，定向执行 `tests/member-execution.test.ts -t '依赖任务等待精确'` 发现 canonical 日志未结算时 status 不是 running，改为实时调用闭包加可靠事件终态核验后通过。
+- 联合验证：`pnpm exec vitest run tests/member-execution.test.ts tests/auto-collaboration.test.ts tests/dispatch-graph.test.ts tests/scope-goal.test.ts tests/queued-dependency-addition-service.test.ts tests/queued-dependency-replacement-service.test.ts tests/queued-dependency-revision-service.test.ts --reporter=dot` 为 99 通过、13 失败；失败均为原子边校验尚未接受新标志。修正兼容校验后，`pnpm exec vitest run tests/queued-dependency-addition-service.test.ts tests/queued-dependency-replacement-service.test.ts tests/queued-dependency-revision-service.test.ts tests/queued-dependency-addition-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-dependency-revision-core.test.ts --reporter=dot`：50 通过。
+- UI/工具验证：`pnpm exec vitest run tests/candidate-review.test.ts tests/dispatch-tools.test.ts tests/agent-role-instructions.test.ts tests/member-help-view.test.ts --reporter=dot`：34 通过。补充存储重开、错误主身份、拒绝候选最终证据保护后，`pnpm exec vitest run tests/member-execution.test.ts -t '依赖任务等待精确' --reporter=dot`：2 通过、14 未选中。所有已选受影响用例最终通过，不累计重跑次数。
+- 静态与维护：类型检查首次发现新协调器测试的模拟回执缺 workspaceId/taskId，补齐后 `pnpm typecheck` 通过；`node scripts/source-architecture.mjs` 同步 7 份目录类图，`pnpm check:architecture` 通过（1364 文件、6936 依赖、0 循环/违规）。同步 Core tasks、调度 dispatch/goals/members/tools/conversation、前端 tasks 的注释与 CONTRACT/ARCHITECTURE。
+- Review 入口：完整差异从上述基线到本独立提交；建议依次读 candidate-review.ts → graph/dispatch-invariants → ScopeGoalService.reviewCandidate → AutoCollaboration → member-review-state/MemberTaskDetail。后续改批准策略从 Core 协议及主审阅服务进入，阶段文案留在前端只读投影。未运行全量回归、桌面打包、安装升级、真实模型或人工代码 review；本步未发布，后续 PR/发布沿既有门禁。
+
 ## 2026-11-13：Issue #65 剩余路径修复与长写入中断验证
 
 - 来源：用户要求继续修 [#65](https://github.com/nan023062/cbim/issues/65)，基线 `e5989abd`，开发前工作区干净，已读取工单正文及两条现有进度。复核原 Codex 运行事件及对应原生目录，原事件仅保存“请求未完整完成”，没有供应商具体原因，不能追溯断言为输出上限。

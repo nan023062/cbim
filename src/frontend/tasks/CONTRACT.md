@@ -432,3 +432,8 @@ MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和�
 ### 运行展示的公共边界
 
 MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。
+
+
+## 交付审阅阶段展示
+
+member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待、接受、拒绝三类说明。任务图可结合当前同周期活动成员解释等待原因；内联卡和任务详情常驻完整阶段及理由：成员交付 → 主 Agent 核对并接受/拒绝 → 放行需审阅的后继 → 整体集成 → 按目标要求用户验收。没有可靠主运行事实时不显示“正在审阅”。已批准仍不是最终目标或用户验收；旧依赖保留原规则。

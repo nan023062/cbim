@@ -1,4 +1,5 @@
 /**
+ * 领取前重核依赖的精确候选及主调度批准；未审阅或拒绝不会占用模型执行。
  * 目录归属：backend/scheduler-engine/members；主运行与成员执行管理。
 
  * 引擎从岗位采纳快照准备执行，供应商不决定执行引擎；旧自动兜底记录仅保留读取；领取与续段重新核模块、配置及是否已有负责人，权限仍来自原运行策略。
@@ -191,7 +192,7 @@ export class MemberExecutionManager {
         if(task.activeRunId||!['queued','waiting'].includes(task.status)||(!resuming&&task.runIds.length))fail('TASK_NOT_STARTABLE','当前任务不能重新执行，请核实已有运行后重新派发');
         const resumeRequest=currentMemberResumeRequest(task);
         if(resuming&&(!resumeRequest||!validMemberCheckpointChain(task)||task.runIds.length!==task.checkpoints?.length||task.help||task.result))fail('MEMBER_RESUME_NOT_ALLOWED','当前任务没有唯一尚未消费的续执行预约');
-        if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未提供当前版本的交付候选');
+        if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未交付当前候选，或尚未通过主 Agent 审阅');
         if(member.activeRunId)fail('MEMBER_BUSY','该成员正在处理另一项任务');
         const assignment=state.outbox.find(m=>m.kind==='assignment'&&m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&m.delivery==='pending'&&!!m.resumeFrom===resuming);
         if(!assignment)fail('ASSIGNMENT_UNAVAILABLE','任务缺少可领取的派发信封');

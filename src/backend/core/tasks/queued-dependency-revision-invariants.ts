@@ -1,4 +1,5 @@
 /**
+ * 前置修订保留新增边审阅要求，同时兼容历史未带要求的原子记录。
  * 作用定位：验证多边前置修订的原审计、精确节点/成员/边变更，返回本批新增与退役许可。
  * 设计原因：通用Store不能只信服务或事件名称；从旧快照重新计算完整闭包，历史审计不可修改或借用。
  * 职责边界：纯状态校验不执行 IO；许可仅在同一提交校验内传递，不来自模型或持久回执。
@@ -32,7 +33,9 @@ export function validateQueuedDependencyRevision(previous:DispatchState,next:Dis
  const member=members.find(m=>m.agentInstanceId===target.assignee.agentInstanceId)!,view=graph.agents.find(v=>v.agentInstanceId===member.agentInstanceId);valid(view,'修订缺少原成员投影');
  const activity=status==='waiting'?'waiting' as const:'idle' as const,waitingTaskIds=status==='waiting'?[target.taskId]:[];
  valid(!mutation.scopes?.length&&!mutation.sessions?.length&&!mutation.runs?.length&&!mutation.messages?.length&&!mutation.workspaceMemberChanges?.length&&!mutation.ownershipChanges?.length&&!mutation.knowledgeSourceChanges?.length&&!mutation.effectDispositions?.length&&!mutation.controlledFileChanges?.length&&equal(mutation.members,[{...member,activity,waitingTaskIds}]),'修订不能夹带其它领域或成员状态');
- const expected:GraphChange[]=[...removed.map(e=>({type:'edge.upserted' as const,edge:{...e,revision:e.revision+1,enabled:false}})),...r.added.map(e=>({type:'edge.upserted' as const,edge:{edgeId:e.edgeId,identity:graph.identity,kind:'dependency' as const,fromNodeId:'task:'+e.sourceTaskId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,planRevision:e.sourcePlanRevision}}})),{type:'task.upserted',task:updated},{type:'agent.upserted',agent:{...view,revision:view.revision+1,state:activity,runningTaskId:undefined,waitingTaskIds}}];
+ // 历史日志可能没有审阅标志；新边保留提交中的要求，后续不可清除。
+ const reviewRequired=(edgeId:string)=>batch.changes.some(c=>c.type==='edge.upserted'&&c.edge.edgeId===edgeId&&c.edge.kind==='dependency'&&c.edge.condition.reviewRequired);
+ const expected:GraphChange[]=[...removed.map(e=>({type:'edge.upserted' as const,edge:{...e,revision:e.revision+1,enabled:false}})),...r.added.map(e=>({type:'edge.upserted' as const,edge:{edgeId:e.edgeId,identity:graph.identity,kind:'dependency' as const,fromNodeId:'task:'+e.sourceTaskId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,planRevision:e.sourcePlanRevision,...(reviewRequired(e.edgeId)?{reviewRequired:true as const}:{})}}})),{type:'task.upserted',task:updated},{type:'agent.upserted',agent:{...view,revision:view.revision+1,state:activity,runningTaskId:undefined,waitingTaskIds}}];
  valid(batch.changes.length===expected.length&&expected.every(e=>batch.changes.some(c=>equal(c,e))),'修订须精确包含所有增删边、目标和成员投影');
  const receipt={workspaceId:task.identity.workspaceId,rootSessionId:task.identity.rootSessionId,scopeId:r.scopeId,mainRunId:r.mainRunId,commandId:command.commandId,taskId:task.taskId,status,trackedTaskIds:r.trackedTaskIds,revision:r,graphCursor:{streamId:batch.streamId,seq:batch.seq}};
  valid(reviseQueuedDependenciesReceiptSchema.safeParse(mutation.receipt).success&&equal(mutation.receipt,receipt),'修订回执不匹配实际变更');

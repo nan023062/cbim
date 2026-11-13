@@ -8,6 +8,7 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
@@ -29,8 +30,12 @@ async function setup(useBuiltin=false){
   // 登记、责任、派发与领取共用真实工作区账本；受控引擎只隔离执行，不补造岗位许可。
   const agentId=team.input.agentId,{model}=await registerServiceOwner(f.app,workspace,agentId,[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease();
-  const dispatch=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
+  let mainJournal:RunJournal;
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(mainJournal.directory),inspectMember:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
   await dispatch.openScope(identity,scopeId,{message:'核实派发产物'},'main-one');
+  const mainTask={mode:'chat' as const,taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'核实派发产物',moduleIds:[],agentId:'cbim:main',acceptance:[]};
+  mainJournal=new RunJournal(path.join(f.user,'review-main'),mainTask,'main-one');await mainJournal.init();
+  await mainJournal.append({type:'run.started',data:{task:mainTask,conversationBinding:await dispatch.conversationBinding(mainTask)}});
   const ownerSelection=(await dispatch.owners.discover([moduleId])).groups[0].selection!;
   await dispatch.goals.plan(identity,scopeId,'main-one','goal-plan',{expectedRevision:1,objective:'核实派发产物',constraints:[],criteria:[{id:'verified',text:'提供真实工具证据',kind:'evidence'}],assignments:[{agentId,moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'负责岗位'}],reason:'明确业务分配'});
   let behavior:'candidate'|'text'|'hold'|'rewrite'='candidate',release=()=>{},count=0;
@@ -192,11 +197,28 @@ it('主实例不创建独立成员，已登记自定义执行岗位按任务独�
   }finally{await f.cleanup()}
 });
 
-it('依赖任务等待候选而非回合结束，启动时固定实际消费的 resultId',async()=>{
+it.each(['accept','reject'] as const)('依赖任务等待精确候选审阅通过：%s，并固定实际消费的 resultId',async decision=>{
   const f=await setup();try{
     const first=await f.assign(),second=await f.assign(f.agentId,[{taskId:first.taskId,expectedPlanRevision:1}]);
     await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
     await f.start(first.taskId);const done=await f.settled(first.taskId);
+    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+    const input={taskId:first.taskId,expectedRevision:done.task.revision,resultId:done.task.result!.resultId,decision,reason:'已核对原运行工具证据与限制'};
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-wrong',{...input,resultId:'wrong'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'other-main','candidate-review-other',input,()=>{})).rejects.toMatchObject({code:'GOAL_EVIDENCE_IDENTITY'});
+    const reviewed=await f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{});
+    expect(reviewed.candidateReview).toMatchObject({decision,resultId:input.resultId,mainRunId:'main-one'});
+    expect(await f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{})).toEqual(reviewed);
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-rewrite',{...input,expectedRevision:reviewed.revision,decision:'reject'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
+    const backup=path.join(f.temp,'review-snapshot');await fs.mkdir(backup);await fs.copyFile(path.join(f.directory,'dispatch.jsonl'),path.join(backup,'dispatch.jsonl'));
+    const reopened=new FileDispatchStore(backup,f.entry.id);
+    try{expect((await reopened.read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)?.candidateReview).toEqual(reviewed.candidateReview)}finally{await reopened.close()}
+    if(decision==='reject'){
+      await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+      await expect(f.dispatch.goals.review(f.identity,f.scopeId,'main-one','reject-final',{expectedRevision:2,decision:'complete',checks:[{criterionId:'verified',outcome:'satisfied',reason:'企图引用被拒候选',evidence:[{kind:'member-result',taskId:first.taskId,runId:done.task.result!.runId,resultId:input.resultId,planRevision:1,toolCallIds:done.task.result!.evidenceRefs}]}],superseded:[],gaps:[],reason:'不得成功'})).rejects.toMatchObject({code:'GOAL_EVIDENCE_INVALID'});
+      const saved=(await f.store.read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)!;
+      expect(saved.candidateReview).toEqual(reviewed.candidateReview);expect(f.prepare).toHaveBeenCalledTimes(1);return;
+    }
     await f.start(second.taskId);await f.settled(second.taskId);
     const graph=await f.dispatch.snapshot(f.identity),edge=graph.edges.find(e=>e.kind==='dependency');
     expect(edge).toMatchObject({condition:{resultId:done.task.result!.resultId}});

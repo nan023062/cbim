@@ -81,6 +81,28 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
 }
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
+
+it('有未启动后继时先回主 Agent 审阅；下一主轮保留原待办并在批准后启动',async()=>{
+  const f=await setup();try{
+    await f.assign();const first=f.graph.tasks[0],second={...structuredClone(first),taskId:'assigned-2',nodeId:'task:assigned-2'};
+    f.dispatch.dispatchTask.mockImplementationOnce(async input=>{f.graph.tasks.push(second);return {commandId:input.commandId,taskId:second.taskId,messageId:'assignment-2',cursor:f.graph.cursor,disposition:'queued'}});
+    await f.tools.call('cbim_dispatch_task',{agentId:'member',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'使用前置产物',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'second-call');
+    f.graph.edges.push({edgeId:'review-edge',identity:f.graph.identity,revision:1,enabled:true,kind:'dependency',fromNodeId:first.nodeId,toNodeId:second.nodeId,condition:{kind:'result_ready',planRevision:1,reviewRequired:true}});
+    f.execution.continueFromResults.mockImplementationOnce(async(...args)=>{
+      await f.hooks().starting!(f.task,f.options,args[3] as any,args[1] as string,'review-run');f.coordinator.tools(f.task,'review-run',f.options);
+      return {workspaceId:f.task.workspaceId,taskId:f.task.taskId,runId:'review-run'};
+    });
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));f.finishMember();
+    await vi.waitFor(()=>expect(f.execution.continueFromResults).toHaveBeenCalledTimes(1));
+    expect(f.members.start).toHaveBeenCalledTimes(1);expect(f.execution.continueFromResults.mock.calls[0][1]).toContain('cbim_dispatch_review');
+    first.candidateReview={resultId:first.result!.resultId,runId:first.result!.runId,planRevision:1,mainRunId:'review-run',decision:'accept',reason:'证据符合要求',recordedAt:new Date().toISOString()};
+    f.members.start.mockImplementationOnce(async input=>{second.activeRunId='second-run';second.runIds=['second-run'];second.status='running';return {taskId:input.taskId,runId:'second-run',cursor:f.graph.cursor}});
+    f.hooks().settled(f.task,f.options,{task:f.task,runId:'review-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]});
+    await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(2));
+    expect(f.members.start.mock.calls[1][0].taskId).toBe(second.taskId);expect(f.dispatch.dispatchTask).toHaveBeenCalledTimes(2);
+    second.activeRunId=undefined;second.status='cancelled';
+  }finally{await f.coordinator.close()}
+});
 const additionInput:AddQueuedDependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,source:{taskId:'source-A',expectedRevision:1,expectedPlanRevision:1},target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},reason:'原待办等待后来创建的来源'};
 const abandonmentInput:AbandonCheckpointInput={expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:4,expectedPlanRevision:1,checkpointId:'checkpoint-one',expectedResumeRequestId:null,reason:'按当前岗位重新规划，保留旧检查点'};
 function abandoned(binding:MainToolOutputBinding,commandId:string):AbandonCheckpointReceipt{

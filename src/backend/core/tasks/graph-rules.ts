@@ -1,4 +1,5 @@
 /**
+ * 候选审阅绑定同任务的原运行、结果与计划；可选审阅门禁兼容旧持久图。
  * 全项目隐式模块只允许与匹配的 no_modules 兜底绑定并存；真实模块仍须核实岗位责任与流程。
  * 作用定位：任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。
  * 设计原因：存储重放与新提交共用局部结构规则；多段检查点和预约按原运行顺序核对，依赖增删保留原版本与退役边，不以创建顺序代替防环。
@@ -7,6 +8,7 @@
  */
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../team/automatic-execution';
 import {z} from 'zod';
+import {candidateReviewSchema} from './candidate-review';
 import {queuedTaskCancellationSchema} from './queued-task-cancel';
 import {fail} from '../foundation/errors';
 import type {AgentRef,GraphEventBatch,GraphIdentity,GraphSnapshot,TaskNode} from './graph-types';
@@ -40,6 +42,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
   awaitedChildren:z.array(z.object({taskId:id,planRevision:revision}).strict()),waitReason:text.optional(),runIds:z.array(id),activeRunId:id.optional(),
   result:z.object({resultId:id,runId:id,planRevision:revision,summary:text,evidenceRefs:z.array(id),limitations:z.array(text),acceptance:z.literal('not_evaluated')}).strict().optional(),
   help:memberHelpRecordSchema.optional(),
+  candidateReview:candidateReviewSchema.optional(),
   checkpoints:z.array(memberCheckpointRecordSchema).min(1).max(memberCheckpointLimit).optional(),resumeRequest:memberResumeRequestSchema.optional(),resumeHistory:z.array(memberResumeRequestSchema).min(1).max(memberCheckpointLimit-1).optional(),
   checkpointAbandonment:checkpointAbandonmentSchema.optional(),
   cancelledBeforeStart:queuedTaskCancellationSchema.optional(),
@@ -50,7 +53,7 @@ const task=z.object({kind:z.literal('task'),nodeId:id,taskId:id,identity,scopeId
 const edgeBase={edgeId:id,identity,fromNodeId:id,toNodeId:id,revision,enabled:z.boolean()};
 const edge=z.discriminatedUnion('kind',[
   z.object({...edgeBase,kind:z.literal('dispatch')}).strict(),
-  z.object({...edgeBase,kind:z.literal('dependency'),condition:z.object({kind:z.literal('result_ready'),planRevision:revision,resultId:id.optional()}).strict()}).strict(),
+  z.object({...edgeBase,kind:z.literal('dependency'),condition:z.object({kind:z.literal('result_ready'),planRevision:revision,resultId:id.optional(),reviewRequired:z.literal(true).optional()}).strict()}).strict(),
 ]);
 const agentView=z.object({agentInstanceId:id,agentId:id,name:text,revision,state:z.enum(['idle','working','waiting','communicating']),runningTaskId:id.optional(),waitingTaskIds:z.array(id)}).strict();
 const cursor=z.object({workspaceId:id,rootSessionId:id,streamId:id,seq:sequence}).strict();
@@ -108,6 +111,7 @@ export function validateTaskNode(t:TaskNode):void {
   if(t.fallbackBinding&&(t.ownerBinding||!automaticExecutionBindingMatches(t.fallbackBinding,t.identity.workspaceId,t.scopeId,t.assignee.agentId,t.modules.map(m=>m.moduleId))))fail('GRAPH_INPUT_INVALID','自动执行任务身份或模块不一致');
   if(t.activeRunId&&!t.runIds.includes(t.activeRunId))fail('GRAPH_INPUT_INVALID','活动轮次不属于该任务');
   if(t.result&&(t.result.planRevision!==t.planRevision||!t.runIds.includes(t.result.runId)||t.status!=='result_ready'))fail('GRAPH_INPUT_INVALID','任务候选结果已失效或不属于该执行');
+  if(t.candidateReview&&(!t.result||t.activeRunId||t.candidateReview.resultId!==t.result.resultId||t.candidateReview.runId!==t.result.runId||t.candidateReview.planRevision!==t.planRevision||Date.parse(t.candidateReview.recordedAt)>Date.parse(t.updatedAt)))fail('GRAPH_INPUT_INVALID','审阅必须绑定当前已结束的原交付候选');
   if(t.status==='result_ready'&&!t.result)fail('GRAPH_INPUT_INVALID','可交接任务缺少真实候选结果');
   if(t.help){const binding=t.help.binding;if(t.result||t.status!=='blocked'||t.activeRunId||!t.scopeId||binding.workspaceId!==t.identity.workspaceId||binding.rootSessionId!==t.identity.rootSessionId||binding.taskId!==t.taskId||binding.planRevision!==t.planRevision||!t.runIds.includes(binding.runId)||binding.agentId!==t.assignee.agentId||binding.agentInstanceId!==t.assignee.agentInstanceId||binding.agentSessionId!==t.assignee.agentSessionId)fail('GRAPH_INPUT_INVALID','成员求助必须绑定本周期已结束的执行任务，且不能作为成功候选')}
   if(!validMemberCheckpointChain(t))fail('GRAPH_INPUT_INVALID','检查点与预约必须形成有界、无重复且连续的原运行链');

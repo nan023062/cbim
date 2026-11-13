@@ -1,4 +1,5 @@
 /**
+ * 修订中新增的边启用审阅关口；已有和退役边保留原字段，不重写历史。
  * 目录归属：backend/scheduler-engine/goals；目标状态与核证恢复服务。
  * 原子修订依赖复核原自动任务范围和兜底模型，不把图调整当作重新选型。
  * 作用定位：在同一可靠事务中退役和新增未领取目标的多条前置，保存原请求与完整闭包审计。
@@ -46,7 +47,7 @@ export class QueuedDependencyRevisionService {
       const revision:DependencyRevision={commandId,scopeId,mainRunId:runId,revisedAt:now,request:structuredClone(input),goalPlanRevision:scope.goal!.plan!.revision,knowledgeRevision,removed:removed.map(e=>{const source=graph.tasks.find(t=>t.nodeId===e.fromNodeId)!;return {edgeId:e.edgeId,edgeRevision:e.revision,sourceTaskId:source.taskId,sourceTaskRevision:source.revision,sourcePlanRevision:source.planRevision}}),added:added.map(t=>({edgeId:randomUUID(),sourceTaskId:t.taskId,sourceTaskRevision:t.revision,sourcePlanRevision:t.planRevision})),trackedTaskIds};
       const updated:TaskNode={...target,revision:target.revision+1,status,updatedAt:now,waitReason:status==='waiting'?'等待修订后的前置任务有效结果':undefined,dependencyRevisions:[...(target.dependencyRevisions??[]),revision]};
       const member=members.find(m=>m.agentInstanceId===target.assignee.agentInstanceId)!,nextMember={...member,activity:status==='waiting'?'waiting' as const:'idle' as const,waitingTaskIds:status==='waiting'?[target.taskId]:[]};
-      const changes:GraphChange[]=[...removed.map(e=>({type:'edge.upserted' as const,edge:{...e,revision:e.revision+1,enabled:false}})),...revision.added.map(e=>({type:'edge.upserted' as const,edge:{edgeId:e.edgeId,identity:graph.identity,kind:'dependency' as const,fromNodeId:'task:'+e.sourceTaskId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,planRevision:e.sourcePlanRevision}}})),{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,nextMember,updated)}];
+      const changes:GraphChange[]=[...removed.map(e=>({type:'edge.upserted' as const,edge:{...e,revision:e.revision+1,enabled:false}})),...revision.added.map(e=>({type:'edge.upserted' as const,edge:{edgeId:e.edgeId,identity:graph.identity,kind:'dependency' as const,fromNodeId:'task:'+e.sourceTaskId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,reviewRequired:true as const,planRevision:e.sourcePlanRevision}}})),{type:'task.upserted',task:updated},{type:'agent.upserted',agent:memberView(graph,nextMember,updated)}];
       const batch={...memberBatch(graph,commandId,'dependency.changed',changes),committedAt:now};
       return {members:[nextMember],batch,receipt:{workspaceId:fixed.workspaceId,rootSessionId:fixed.rootSessionId,scopeId,mainRunId:runId,commandId,taskId:target.taskId,status,trackedTaskIds,revision,graphCursor:{streamId:batch.streamId,seq:batch.seq}}};
     }),alive);

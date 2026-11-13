@@ -132,7 +132,7 @@ export class WorkspaceExecutionManager {
   queued(taskId:string){return this.serial(async()=>{safeId(taskId);return (await this.queue()).list(taskId)})}
   /** 队列游标与变更共享串行边界，只发布已提交快照；保留 queued 供兼容和诊断使用。 */
   queueDelta(taskId:string,cursor?:unknown){return this.serial(async()=>{safeId(taskId);return (await this.queue()).delta(taskId,cursor)})}
-  enqueue(taskId:string,message:string,options:Options){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options));if(this.collaboration?.waiting?.(taskId))await q.pause(taskId,'当前目标等待用户补充，后续消息保留在队列');await this.pump(taskId);return entry})}
+  enqueue(taskId:string,message:string,options:Options){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options));await this.pump(taskId);return entry})}
   changeQueued(taskId:string,id:string,action:unknown){return this.serial(async()=>{await (await this.queue()).change(taskId,id,z.enum(['first','up','down','remove']).parse(action))})}
   editQueued(taskId:string,id:string,message:string,expected:string){return this.serial(async()=>{await (await this.queue()).edit(taskId,id,message,expected)})}
   moveQueued(taskId:string,id:string,beforeId?:string){return this.serial(async()=>{await (await this.queue()).move(taskId,id,beforeId)})}
@@ -336,14 +336,13 @@ export class WorkspaceExecutionManager {
         if(human){
           controller.signal.throwIfAborted();if(!this.collaboration?.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工决定接续');
           await this.collaboration.acceptHumanContinuation(human,task,runId,controller.signal);accepted=true;controller.signal.throwIfAborted();
-          await (await this.queue()).pause(task.taskId,'已按保存的人工决定继续原目标；原排队消息保持暂停');controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
+          controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
         }
         if(continuation){
         controller.signal.throwIfAborted();
         if(!this.collaboration?.acceptContinuation)fail('GOAL_CONTINUATION_UNAVAILABLE','当前工作区未装配目标恢复');
         await this.collaboration.acceptContinuation(continuation,task,runId,{signal:controller.signal,...(preparedInput?{attachmentManifest:structuredClone(preparedInput.manifest)}:{})});accepted=true;
         controller.signal.throwIfAborted();
-        await (await this.queue()).pause(task.taskId,'原目标已接收补充，后续消息仍暂停；目标结束后可继续队列');
         controller.signal.throwIfAborted();
         this.resultContinuationStopped.delete(task.taskId);
         }
@@ -509,7 +508,6 @@ export class WorkspaceExecutionManager {
     if(prior.task.mode==='chat'&&this.collaboration?.busy(taskId)){
       if(reconciledToolIds.length)fail('COLLABORATION_BUSY','协作期间不能排队未决工具核实，请先停止并核实当前任务');
       const queue=await this.queue(),entry=await queue.add(taskId,message,parsed);
-      if(this.collaboration?.waiting?.(taskId))await queue.pause(taskId,'当前目标等待用户补充，后续消息保留在队列');
       return {workspaceId:prior.task.workspaceId,taskId,runId,queued:true as const,queueId:entry.id};
     }
     if(prior.task.mode!=='chat'){
@@ -542,6 +540,8 @@ export class WorkspaceExecutionManager {
   })}
   /** 协作批次结束后尝试原用户队列；不会解除用户停止或重启留下的暂停状态。 */
   collaborationReady(taskId:string){return this.serial(async()=>{safeId(taskId);await this.pump(taskId)})}
+  /** 活动话题安全等待只阻止自动推进，不改写普通排队项；用户停止/重启/未知结果的持久暂停不受影响。 */
+  holdCollaboration(taskId:string){safeId(taskId);this.resultContinuationStopped.add(taskId);this.cancelInsertions(taskId)}
   /** 协作事实无法核实时立即建立停止屏障，再持久化队列暂停；拦住已进入串行事务但尚未启动的旧消息。 */
   pauseCollaboration(taskId:string,reason:string){safeId(taskId);this.resultContinuationStopped.add(taskId);this.cancelInsertions(taskId);return this.serial(async()=>{await (await this.queue()).pause(taskId,reason)})}
   async stop(taskId:string){

@@ -608,7 +608,7 @@ export class AutoCollaboration {
             this.waitingSlots.set(cycle.task.taskId,waiting);
             for(const batch of this.batches.values())if(batch.cycle===cycle)this.retireBatch(batch);
             if(this.cycles.get(cycle.task.taskId)===cycle)this.cycles.delete(cycle.task.taskId);
-            await this.execution.pauseCollaboration(cycle.task.taskId,'当前目标等待用户补充，后续消息保留在队列');
+            this.execution.holdCollaboration(cycle.task.taskId);
             return;
           }else await this.dispatch.closeScope(this.identity(cycle),cycle.scopeId,'completed',cycle.completionSummary);
         }catch(error){

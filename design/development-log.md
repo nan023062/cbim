@@ -1,3 +1,10 @@
+## 2026-11-14：办公室改版第 8 步——安全等待后继续普通话题队列
+
+- 基线 `7154236d`。安全话题等待现在只保留办公室占位，不把普通排队项批量改成持久暂停；文本/人工接续不再改写队列。原话题完成后启动队首 pending，并沿原队列 ID 创建新话题。用户停止、未知结果、重启和既有 paused 队首仍需明确继续，不被自动放行。补充表单同步纠正旧提示，明确普通发送创建新任务。
+- Q1 保护队列顺序、持久暂停与重启屏障；Q2 运行管理器控制推进，协调器区分正常等待和异常暂停，View 只说明入口；Q3 覆盖文本与人工接续、协调器和原插入/取消消费者；Q4 `holdCollaboration` → 接续 beforeRun → `collaborationReady/pump`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/scope-continuation-pi.test.ts tests/human-continuation-pi.test.ts tests/auto-collaboration.test.ts tests/queue-insertion-boundary.test.ts`：96/96 通过。新增 live-queue 实际 Pi 用例验证等待不抢跑、当前完成后自动启动下一话题及稳定 ID；原重启、再次等待、取消竞争和人工决定用例保留并核验 paused 语义。`pnpm typecheck`、`pnpm check:architecture`（0 文档差异/循环/违规）通过；本片没有测试归属或导入变化，不重复测试归属检查。
+- 同步 conversation/runtime、dispatch/runtime、view/tasks 的源码说明、CONTRACT 和类图。仅本地确定性供应商集成与相关单元/契约验证，未跑全仓、桌面、构建、安装升级或发布。话题内打断表单、关联后续话题与办公室可视化仍继续实施。
+
 ## 2026-11-14：办公室改版第 7 步——指定话题补充的持久意图与整组排空
 
 - 基线 `4522455b`。新增 `loop.topicInterrupt`：按原办公室/话题/输入版本保存原文、附件和选型，冻结旧调度，停止主轮及原话题全部成员，等待在途工具、领取、引擎退出和结算，再建立带 interruptionId 的可靠等待。复用原接续事务提升输入版本、清除旧审阅并迫使重规划。普通发送和原生 steer 不成为此入口；本片是后端闭环，界面按钮与队列自动衔接另片接入。

@@ -10,7 +10,7 @@ import {ContinuationSourceMenu} from './ContinuationSourceMenu';
 export function ScopeContinuationForm({state}:{state:ScopeContinuationView}){
   const attempt=state.record?.attempt,phase=attempt?.phase;
   return <div className="scope-continuation" data-testid="scope-continuation" data-continuation-phase={state.pending?'pending':phase??'draft'}>
-    <h4>补充原目标</h4><p className="scope-goal-muted">等待补充时，聊天发送与本入口均继续原目标，不代表人工验收。已提交的内容在此查询或修正。</p>
+    <h4>补充原目标</h4><p className="scope-goal-muted">本入口把补充交给主 Agent 并继续当前话题；普通聊天发送作为新任务排队。补充不代表人工验收。</p>
     <textarea aria-label="目标补充说明" data-testid="scope-continuation-input" value={state.text} readOnly={!state.editable} maxLength={64000} placeholder="补充缺少的信息，继续原目标…" onChange={event=>state.edit(event.target.value)}/>
     <div data-testid="scope-continuation-attachments"><ComposerAttachments key={state.sourceSelectionKey} items={state.attachments} workspaceId={state.workspaceId} disabled={!state.editable||state.importing} onRemove={state.removeFile}/></div>
     {state.editable&&<button data-testid="scope-continuation-pick" disabled={state.importing||state.attachments.length>=12} onClick={()=>void state.pickFiles()}>{state.importing?'正在准备附件…':'添加文件或图片'}</button>}

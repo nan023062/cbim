@@ -105,3 +105,5 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 ## 指定话题补充与排空
 
 `interruptTopic` 是显式整话题补充入口，同一主根的相同在途请求共享 Promise，改变请求则冲突。主轮停止等待 runtime 和管理器真实清理后才交回检查点；原队列不被用作补充正文。随后复用 continueGoal 接续原 scope，来源带 interruptionId；一般等待接续仍要求 completed，只有可靠整话题暂停可接安全 cancelled，未知/失败不能续接。持久意图已存在时查询原回执，成功后不重复启动；主动 stop 的代次在暂停与重启前均检查。
+
+活动话题的安全等待通过 `holdCollaboration` 占位，不把普通 pending 队列改写为 paused；文本和人工接续只解除本次话题的内存推进屏障，不批量恢复或暂停已有条目。原话题可靠完成后自动处理队首 pending。用户停止、未知结果、应用重启和既有 paused 队首仍要求明确继续，不能因话题完成而越过。

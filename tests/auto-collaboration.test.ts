@@ -91,7 +91,7 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
     messages:vi.fn(async()=>graph.tasks[0].result?[{kind:'result',taskId:'assigned-1',messageId:'message-1',resultId:'result-1'}]:[]),
     acknowledge:vi.fn(async()=>({delivery:'processed'})),
   };
-  const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
+  const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),holdCollaboration:vi.fn(),cancelPendingLaunches:vi.fn()};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
   await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run',queuedTopicId);

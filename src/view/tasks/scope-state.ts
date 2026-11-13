@@ -120,6 +120,7 @@ export class SessionReadProjection {
       const cached=cache.get(summary.scopeId);if(!cached||!sameStamp(cached.stamp,summary.stamp))continue;
       const scope=cached.scope;
       if(scope.status!==summary.status||scope.outcome!==summary.outcome||scope.createdAt!==summary.createdAt||scope.closedAt!==summary.closedAt||Boolean(scope.goal)!==summary.hasGoal||scope.goal?.revision!==summary.goalRevision||Boolean(scope.goal?.plan)!==summary.hasPlan||scope.goal?.review?.decision!==summary.reviewDecision)throw Error('目标摘要与同版本详情不一致');
+      if(scope.followupOf!==summary.followupOf)throw Error('话题历史来源与同版本摘要不一致');
       if(summary.inputRevision!==undefined&&(scope.goal?.inputRevision??1)!==summary.inputRevision)throw Error('目标补充版本与同版本摘要不一致');
       if(scope.topicInterruptions?.some(item=>!topicInterruptionSchema.safeParse(item).success||item.request.workspaceId!==this.identity.workspaceId||item.request.rootSessionId!==this.identity.rootSessionId||item.request.scopeId!==scope.scopeId))throw Error('话题补充详情身份无效');
       const interruption=pendingTopicInterruption(scope);

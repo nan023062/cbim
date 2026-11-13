@@ -50,6 +50,8 @@ type Options=z.infer<typeof executionOptions>;
 export interface MainStartup {signal:AbortSignal;prepare(input:{task:TaskSpec;runId:string;signal:AbortSignal}):Promise<void>}
 /** 由可信工作区装配一次；回调只登记或唤醒协调器，不在 settled 内等待成员执行。 */
 export interface ExecutionCollaboration {
+  /** 新任务入队前核对原话题同办公室且已关闭；不恢复或改变原话题。 */
+  validateFollowup?(rootSessionId:string,scopeId:string):Promise<void>;
   /** 保存话题补充并冻结调度，可信 stopMain 必须等待原主轮真实收尾。 */
   interruptTopic?(request:TopicInterruptionRequest,stopMain:()=>Promise<RunSummary>):Promise<DispatchScope>;
   /** 原插入结果先查，不依赖队列仍存在；未知结果不得再次获取发送权。 */
@@ -84,7 +86,7 @@ export interface ExecutionCollaboration {
   acceptContinuation?(request:GoalContinuationRequest,task:TaskSpec,runId:string,trusted?:TrustedContinuationInput):Promise<void>;
   /** 工厂准备完成、启动模型之前打开或续接周期；message 是本轮原文而非首次 goal，source 表示可信结果回注，不创建新目标。 */
   /** Runtime 在日志/引擎之前给出真实 runId；queuedTopicId 只来自管理器持久队列，前端不能指定旧话题来绕过准入。 */
-  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string,queuedTopicId?:string):Promise<void>;
+  starting?(task:TaskSpec,options:Options,source:RunInputSource|undefined,message:string,runId?:string,queuedTopicId?:string,followupOf?:string):Promise<void>;
   /** 覆盖持久登记至日志/引擎关闭的真实主运行窗口；仅可信装配使用，不从历史推测在途。 */
   holdMain?(runId:string):()=>void;
   /** 启动未成功时清理已经打开的周期；成员结果遇到暂时占用可保留原周期等待。 */
@@ -132,7 +134,7 @@ export class WorkspaceExecutionManager {
   queued(taskId:string){return this.serial(async()=>{safeId(taskId);return (await this.queue()).list(taskId)})}
   /** 队列游标与变更共享串行边界，只发布已提交快照；保留 queued 供兼容和诊断使用。 */
   queueDelta(taskId:string,cursor?:unknown){return this.serial(async()=>{safeId(taskId);return (await this.queue()).delta(taskId,cursor)})}
-  enqueue(taskId:string,message:string,options:Options){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options));await this.pump(taskId);return entry})}
+  enqueue(taskId:string,message:string,options:Options,followupOf?:string){return this.serial(async()=>{safeId(taskId);if(!message.trim())throw Error('消息不能为空');await this.thread(taskId);if(followupOf!==undefined){safeId(followupOf);if(!this.collaboration?.validateFollowup)fail('TOPIC_FOLLOWUP_UNAVAILABLE','当前工作区未提供话题关联');await this.collaboration.validateFollowup(taskId,followupOf)}const q=await this.queue();const entry=await q.add(taskId,message,executionOptions.parse(options),followupOf);await this.pump(taskId);return entry})}
   changeQueued(taskId:string,id:string,action:unknown){return this.serial(async()=>{await (await this.queue()).change(taskId,id,z.enum(['first','up','down','remove']).parse(action))})}
   editQueued(taskId:string,id:string,message:string,expected:string){return this.serial(async()=>{await (await this.queue()).edit(taskId,id,message,expected)})}
   moveQueued(taskId:string,id:string,beforeId?:string){return this.serial(async()=>{await (await this.queue()).move(taskId,id,beforeId)})}
@@ -158,6 +160,7 @@ export class WorkspaceExecutionManager {
         if(!active?.isMain||active.runId!==expectedRunId||this.active.get(taskId)!==active||this.collaboration?.waiting?.(taskId))fail('QUEUE_INSERT_STALE','原主运行已结束或变化，原消息仍保留在队列');
       };
       assertCurrent();const q=await this.queue();assertCurrent();
+      if(q.list(taskId).find(item=>item.id===id)?.followupOf)fail('TOPIC_FOLLOWUP_SEPARATE','历史后续必须作为独立话题，不能插入原运行');
       let claimed=false,enteredRuntime=false;
       try{
         const entry=await q.claim(taskId,id);claimed=true;assertCurrent();
@@ -331,7 +334,7 @@ export class WorkspaceExecutionManager {
         controller.signal.throwIfAborted();
         releaseBudget=this.collaboration?.holdMain?.(runId);
         preparingScope=true;
-        await this.collaboration?.starting?.(task,options,source,message,runId,automaticQueue||undefined);
+        await this.collaboration?.starting?.(task,options,source,message,runId,automaticQueue||undefined,automaticQueue?(await this.queue()).list(task.taskId).find(item=>item.id===automaticQueue)?.followupOf:undefined);
         if(startup){controller.signal.throwIfAborted();await startup.prepare({task:structuredClone(task),runId,signal:controller.signal});controller.signal.throwIfAborted()}
         if(human){
           controller.signal.throwIfAborted();if(!this.collaboration?.acceptHumanContinuation)fail('HUMAN_CONTINUATION_UNAVAILABLE','当前工作区未装配人工决定接续');

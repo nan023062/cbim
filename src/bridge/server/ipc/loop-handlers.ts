@@ -18,7 +18,7 @@ export function loopIpcHandlers(app:ApplicationServices):IpcHandlers<keyof LoopI
     'loop.start':async args=>{fail('OWNER_DISPATCH_REQUIRED','业务执行必须通过当前目标计划和负责岗位派发；旧任务历史仍可读取');},
     'loop.queue':async args=>{return app.execution(args.id).queued(args.taskId);},
     'loop.queueDelta':async args=>{return app.execution(args.id).queueDelta(args.taskId,args.cursor);},
-    'loop.enqueue':async args=>{return app.execution(args.id).enqueue(args.taskId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments));},
+    'loop.enqueue':async args=>{return app.execution(args.id).enqueue(args.taskId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.followupOf);},
     'loop.queueChange':async args=>{return app.execution(args.id).changeQueued(args.taskId,args.queueId,args.action);},
     'loop.queueEdit':async args=>{return app.execution(args.id).editQueued(args.taskId,args.queueId,args.message,args.expected);},
     'loop.queueMove':async args=>{return app.execution(args.id).moveQueued(args.taskId,args.queueId,args.beforeId);},

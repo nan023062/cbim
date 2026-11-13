@@ -47,3 +47,9 @@ it('排队任务以将来的话题身份展示，读取已出现同身份话题�
   expect(render([])).toContain('排队话题 1');expect(render([])).toContain('data-topic-id="queued-topic"');
   expect(render([scope('queued-topic')])).not.toContain('排队话题 1');
 });
+
+it('历史后续话题保留可导航来源，不把旧正文自动混入新话题',()=>{
+ const result=conversationTopics(identity,[{...scope('new',['new-run']),followupOf:'old'},{...scope('old',['old-run']),status:'closed',outcome:'completed'}],[run('new-run'),run('old-run')]);
+ const html=renderToStaticMarkup(createElement(ConversationTopics,{...result,selectedId:'new',onSelect:()=>{},onSelectTask:()=>{},renderRun:r=>createElement('p',{key:r.runId},r.runId)}));
+ expect(html).toContain('查看原话题');expect(html).toContain('new-run');expect(html).not.toContain('old-run');
+});

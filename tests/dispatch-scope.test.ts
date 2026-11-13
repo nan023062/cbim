@@ -213,3 +213,17 @@ it('提交和完整校验和的日志重放都拒绝改写/移除goal或input，
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect((await reader.read()).scopes!.find(value=>value.scopeId==='legacy')).not.toHaveProperty('goal')}finally{await reader.close()}
   }finally{await f.cleanup()}
 });
+
+it('关联新话题只引用同办公室已结束记录，原话题不重开且来源不可改绑',async()=>{
+ const f=await setup();try{
+  await f.service.openScope(f.identity,'old-topic',{message:'原始任务'},'old-run');
+  await expect(f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run',undefined,'old-topic')).rejects.toBeDefined();
+  await f.service.closeScope(f.identity,'old-topic','cancelled');
+  const next=await f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run',undefined,'old-topic');
+  expect(next.followupOf).toBe('old-topic');expect(next.goal?.input.message).toBe('新要求');
+  expect((await f.service.goals.inspect(f.identity,'old-topic')).status).toBe('closed');
+  await expect(f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run')).rejects.toBeDefined();
+  await expect(f.service.openScope({...f.identity,rootSessionId:'another-office'},'foreign-new',{message:'跨办公室'},'foreign-run',undefined,'old-topic')).rejects.toBeDefined();
+  const prior=await f.service.goals.inspect(f.identity,'next-topic');await expect(f.store.transact({commandId:'rewrite-link',fingerprint:'rewrite-link'},async()=>({scopes:[{...prior,followupOf:undefined}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+ }finally{await f.cleanup()}
+});

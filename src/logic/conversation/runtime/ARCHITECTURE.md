@@ -60,6 +60,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_MainStartup["MainSta
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_MainStartup : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
   <<interface>>
+  +validateFollowup()
   +interruptTopic()
   +activeInputReceipt()
   +insertActiveInput()
@@ -75,7 +76,6 @@ class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaborati
   +recoveryContext()
   +recoveryRunIds()
   +continuationReceipt()
-  +continuationCheckpoint()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
@@ -108,6 +108,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
   <<interface>>
+  +continuationCheckpoint()
   +acceptContinuation()
   +starting()
   +holdMain()
@@ -454,3 +455,5 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 `interruptTopic` 是显式整话题补充入口，同一主根的相同在途请求共享 Promise，改变请求则冲突。主轮停止等待 runtime 和管理器真实清理后才交回检查点；原队列不被用作补充正文。随后复用 continueGoal 接续原 scope，来源带 interruptionId；一般等待接续仍要求 completed，只有可靠整话题暂停可接安全 cancelled，未知/失败不能续接。持久意图已存在时查询原回执，成功后不重复启动；主动 stop 的代次在暂停与重启前均检查。
 
 活动话题的安全等待通过 `holdCollaboration` 占位，不把普通 pending 队列改写为 paused；文本和人工接续只解除本次话题的内存推进屏障，不批量恢复或暂停已有条目。原话题可靠完成后自动处理队首 pending。用户停止、未知结果、应用重启和既有 paused 队首仍要求明确继续，不能因话题完成而越过。
+
+历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。

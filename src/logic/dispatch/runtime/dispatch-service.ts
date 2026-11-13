@@ -150,9 +150,10 @@ export class WorkspaceDispatchService {
 
   /**
    * 主用户任务开始时冻结本轮正文与附件身份；跨模型回合复用同一周期，不从旧 TaskSpec 推断本轮输入。
+   * followupOf 来自明确新任务入队，创建时核实同根且关闭；原话题永不重开，关联不可改变。
    * 第三/四参数缺省仅兼容旧调用；有真实runId时原子创建完整清单。同 scope 重发须保持输入及首轮身份，不能通过幂等回执绕过校验。
    */
-  async openScope(identity:GraphIdentity,scopeId:string,rawInput?:DispatchScopeInput,trustedRunId?:string,options?:{collaborationMode?:'auto'|'team';profileId?:string;model:string}):Promise<DispatchScope>{
+  async openScope(identity:GraphIdentity,scopeId:string,rawInput?:DispatchScopeInput,trustedRunId?:string,options?:{collaborationMode?:'auto'|'team';profileId?:string;model:string},followupOf?:string):Promise<DispatchScope>{
     const input=this.parse(scopeIdentityInput,{...identity,scopeId});this.check(input.workspaceId);
     // 在第一次 await 前校验并复制，调用者之后修改原对象不能改变正在保存的输入。
     const parsed=rawInput===undefined?undefined:this.parse(dispatchScopeInputSchema,rawInput);
@@ -160,19 +161,21 @@ export class WorkspaceDispatchService {
     const executionPolicy=options?await this.owners.policy(options):undefined;
     const runTracking=trustedRunId===undefined?undefined:createScopeRunTracking(trustedRunId);
     const verifyGoal=(scope:DispatchScope)=>{
+      if(scope.followupOf!==followupOf)fail('TOPIC_FOLLOWUP_CONFLICT','新话题不能改绑历史来源');
       if(json(scope.executionPolicy)!==json(executionPolicy))fail('DISPATCH_SCOPE_MODE_CONFLICT','当前目标不能更换协作模式或兜底模型');
       if((scope.goal===undefined)!==(goal===undefined)||scope.goal?.input.message!==goal?.input.message||JSON.stringify(scope.goal?.input.attachmentIds)!==JSON.stringify(goal?.input.attachmentIds))fail('DISPATCH_SCOPE_INPUT_CONFLICT','同一调度周期不能重新绑定用户正文或附件');
       if((scope.runTracking===undefined)!==(runTracking===undefined)||scope.runTracking?.mainRunIds[0]!==runTracking?.mainRunIds[0])fail('DISPATCH_SCOPE_RUN_CONFLICT','同一周期不能重新绑定首个主运行');
     };
     await this.openGraph({...identity,commandId:'scope-root-'+hash(json(input))});
     // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
-    const command={...input,commandId:'scope-open-'+hash(json(input)),...(goal?{goal}:{}),...(runTracking?{runTracking}:{}),...(executionPolicy?{executionPolicy}:{})};
+    const command={...input,...(followupOf?{followupOf}:{}),commandId:'scope-open-'+hash(json(input)),...(goal?{goal}:{}),...(runTracking?{runTracking}:{}),...(executionPolicy?{executionPolicy}:{})};
     await this.store.transact(this.command('scope.open',command),async state=>{
       this.check(input.workspaceId);this.graph(state,input.rootSessionId);
       const previous=state.scopes?.find(scope=>scope.scopeId===scopeId);
       if(previous){if(previous.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','调度周期属于其他主会话');verifyGoal(previous);if(previous.status==='waiting')fail('DISPATCH_SCOPE_WAITING','调度周期正在安全等待，必须通过显式补充入口继续');if(previous.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束');return {receipt:previous}}
       if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status!=='closed'))fail('DISPATCH_SCOPE_BUSY','当前主会话还有未结束或等待中的用户任务周期');
-      let scope:DispatchScope={...input,status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{}),...(runTracking?{runTracking}:{}),...(executionPolicy?{executionPolicy}:{})};
+      if(followupOf!==undefined){const origin=state.scopes?.find(value=>value.scopeId===followupOf);if(!origin||origin.rootSessionId!==input.rootSessionId||origin.workspaceId!==input.workspaceId||origin.status!=='closed'||origin.scopeId===scopeId)fail('TOPIC_FOLLOWUP_INVALID','后续任务必须关联同一办公室已结束的话题')}
+      let scope:DispatchScope={...input,...(followupOf?{followupOf}:{}),status:'active',createdAt:new Date().toISOString(),...(goal?{goal}:{}),...(runTracking?{runTracking}:{}),...(executionPolicy?{executionPolicy}:{})};
       if(trustedRunId)scope=this.budgets.initialize(scope,{kind:'main',taskId:input.rootSessionId,runId:trustedRunId});
       return {scopes:[scope],receipt:scope};
     });

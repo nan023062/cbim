@@ -76,6 +76,8 @@ export function Conversation({selectedChild,onTeamConversations,conversations,ru
   const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
   const [selectedTopicId,setSelectedTopicId]=useState<string>();
+  // 只有历史话题按钮可设置关联；普通浏览和 Skill 调用不借用此目标。
+  const [followupOf,setFollowupOf]=useState<string>();
   const [navigationError,setNavigationError]=useState('');
   const handledNavigation=useRef<number|undefined>(undefined);
   function consumeNavigation(){if(navigation){handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId)}}
@@ -192,14 +194,14 @@ export function Conversation({selectedChild,onTeamConversations,conversations,ru
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
       const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
-      if(tab.taskId&&!shouldQueue&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
+      if(tab.taskId&&!shouldQueue&&(!followupOf||!!skill)&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
-      const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([])}};
+      const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([]);setFollowupOf(undefined)}};
       const taskId=tab.taskId,runId=resumeRunId;
-      const queued=!!taskId&&shouldQueue;
+      const queued=!!taskId&&(shouldQueue||!skill&&!!followupOf);
       if(taskId&&!queued&&!runId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       let result:{taskId:string};
-      if(taskId&&shouldQueue){result=await api.call('loop.enqueue',{id:workspace.id,taskId,message,attachments:sentAttachments.map(a=>a.id),options});accepted(result)}
+      if(taskId&&(shouldQueue||!skill&&followupOf)){result=await api.call('loop.enqueue',{id:workspace.id,taskId,...(!skill&&followupOf?{followupOf}:{}),message,attachments:sentAttachments.map(a=>a.id),options});accepted(result)}
       else if(taskId&&runId)result=await api.call('loop.resume',{id:workspace.id,taskId,runId,message,attachments:sentAttachments.map(a=>a.id),options});
       else result=await api.call('loop.chat',{id:workspace.id,message,attachments:sentAttachments.map(a=>a.id),options});
       if(!queued)accepted(result);
@@ -269,6 +271,8 @@ export function Conversation({selectedChild,onTeamConversations,conversations,ru
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
     </div>
     <div className="chat-composer">
+      {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&graph.selectedScope.status==='closed'&&!graph.detailLoading&&!graph.error&&<button disabled={!active||busy} onClick={()=>{setFollowupOf(selectedTopicId);input.current?.focus()}}>基于此历史话题新建任务</button>}
+      {followupOf&&<p className="composer-next-tip" role="status">新任务关联：{graph.scopes.find(value=>value.scopeId===followupOf)?.objective??graph.scopes.find(value=>value.scopeId===followupOf)?.inputPreview??followupOf}。发送后独立排队，原话题保持结束。<button disabled={busy} onClick={()=>setFollowupOf(undefined)}>取消关联</button></p>}
       {loaded&&!pollError&&!graph.loading&&recoveryReason&&<ThreadRecoveryNotice reason={recoveryReason} disabled={!active||busy||stopping||attachmentBusy} onInspect={()=>{graph.selectScope(undefined);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}} onNewConversation={()=>onBind(undefined)}/>}
       {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。</p>}
       {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前话题等待补充；普通发送会排队为新任务。需要补充时，请打开该话题的“补充并继续”。

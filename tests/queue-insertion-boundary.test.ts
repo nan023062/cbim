@@ -195,3 +195,15 @@ it.each(['queued','lost-reply'] as const)('Pi 发出 steer 后的 %s 不按迟�
   const insertion=engine.steer('原输入',[],controller.signal),assertion=outcome==='queued'?expect(insertion).resolves.toBeUndefined():expect(insertion).rejects.toMatchObject({code:'QUEUE_INSERT_UNKNOWN'});
   await entered.promise;controller.abort();release.resolve();await assertion;expect(rpc.request.mock.calls.filter(([type])=>type==='steer')).toHaveLength(1);
 });
+
+it('历史后续先核对来源再入队，启动沿队列固定身份传递来源，不改原正文',async()=>{
+ const validate=vi.fn(async(_root:string,scope:string)=>{if(scope!=='closed-topic')throw Error('无效来源')});
+ const f=await fixture(undefined,{validateFollowup:validate});try{
+  await expect(f.manager.enqueue(f.start.taskId,'不允许',options,'foreign-topic')).rejects.toThrow('无效来源');
+  const item=await f.manager.enqueue(f.start.taskId,'新要求',options,'closed-topic');expect(validate).toHaveBeenLastCalledWith(f.start.taskId,'closed-topic');
+  expect((await f.manager.queued(f.start.taskId)).find(value=>value.id===item.id)?.followupOf).toBe('closed-topic');
+  await expect(f.manager.insertQueued(f.start.taskId,item.id,f.start.runId)).rejects.toMatchObject({code:'TOPIC_FOLLOWUP_SEPARATE'});
+  await f.manager.changeQueued(f.start.taskId,f.item.id,'remove');await f.finish();
+  await vi.waitFor(()=>expect(f.starting).toHaveBeenCalledTimes(2));expect(f.starting.mock.calls[1]).toMatchObject({3:'新要求',5:item.id,6:'closed-topic'});
+ }finally{await f.cleanup()}
+});

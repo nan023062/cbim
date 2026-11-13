@@ -1,6 +1,7 @@
 /**
  * 作用定位：保存工作区各对话的待执行消息与发送时的模型/权限快照。
  * 设计原因：已提交快照按条目版本发布增量和全局负载计数，空轮询不回读磁盘或再次通知；保存失败回滚内存，重启后暂停而不重复执行。
+ * 话题关联：已核实的 followupOf 与原排队身份一起保存，编辑正文不会改绑来源。
  * 调用约束：所有修改由执行管理器串行调用；文件只包含用户消息和模型标识，不保存密钥。
  */
 import fs from 'node:fs/promises';
@@ -44,7 +45,7 @@ export class MessageQueue {
  }
  /** 临时文件与原文件位于同目录，提交完成后才允许启动下一轮。 */
  private async save(){try{await fs.mkdir(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp';await fs.writeFile(temp,JSON.stringify(this.items),{mode:0o600});await fs.rename(temp,this.file)}catch(error){this.items=[...this.published.values()].map(entry=>structuredClone(entry.item));this.reportFailure(error);throw error}this.publish()}
- async add(taskId:string,message:string,config:QueuedMessage['options']){if(this.list(taskId).length>=30)throw Error('最多排队 30 条消息');const entry:QueuedMessage={id:randomUUID(),taskId,message,options:config,status:'pending'};this.items.push(entry);await this.save();return entry}
+ async add(taskId:string,message:string,config:QueuedMessage['options'],followupOf?:string){if(this.list(taskId).length>=30)throw Error('最多排队 30 条消息');const entry:QueuedMessage={id:randomUUID(),taskId,message,options:config,status:'pending',...(followupOf?{followupOf}:{})};this.items.push(entry);await this.save();return entry}
  async change(taskId:string,id:string,action:'first'|'up'|'down'|'remove'){
   const i=this.items.findIndex(x=>x.id===id&&x.taskId===taskId);if(i<0||this.items[i].status==='starting')throw Error('队列项已开始或不存在');
   const siblings=this.items.map((x,n)=>x.taskId===taskId?n:-1).filter(n=>n>=0),position=siblings.indexOf(i);

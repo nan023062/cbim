@@ -1,3 +1,10 @@
+## 2026-11-14：办公室改版第 10 步——历史话题的关联新任务
+
+- 基线 `7c2db3b8`。历史话题按钮只设置明确可撤销的来源，用户发送后建立独立排队身份。followupOf 随编辑/重启及新周期保存；入队和建周期均核同办公室、已关闭来源，提交/重放拒绝改绑；旧单轮插入不能消费该任务。原话题保持结束，后续不继承旧验收，话题内可返回查看原话题。
+- Q1 保护旧话题关闭事实、正文与队列安全暂停；Q2 队列携带来源、派发事务核验、View 选择关联，公开投影保留真实引用；Q3 选择队列/真实管理器、协调器、持久事务、话题展示与联合读取；Q4 enqueue → MessageQueue → starting/openScope → followupOf → ConversationTopics；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/message-queue.test.ts tests/dispatch-scope.test.ts tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/conversation-topics.test.ts tests/dispatch-session-read.test.ts tests/scope-goal-view.test.ts`：132/132 通过。类型检查发现测试事务命令夹带未定义字段，修正并增强原生插入拒绝覆盖；精确重跑 `tests/queue-insertion-boundary.test.ts tests/dispatch-scope.test.ts -t '历史后续|关联新话题'`：2 通过、35 未选择。最终 `pnpm typecheck` 和 `pnpm check:architecture`（0 文档差异/循环/违规）通过。
+- 同步七个目录契约、注释与类图。没有测试归属/导入变化，不重跑模块归属检查；未运行全仓、桌面、在线模型、构建或发布。主 Agent 归档读取核查及办公室场景继续实施。
+
 ## 2026-11-14：办公室改版第 9 步——主子对话的明确话题补充入口
 
 - 基线 `1608019f`。主/子对话选择同一话题后可明确暂停并补充，独立于普通聊天草稿。原请求先本地保存再发送；重开只查回执，未知结果冻结正文、权限和命令，只有明确点击才重试。普通等待保留原表单，已有 interruptionId 的等待只能沿原请求。话题摘要区分正在排空和可靠暂停，联合投影拒绝不一致详情。

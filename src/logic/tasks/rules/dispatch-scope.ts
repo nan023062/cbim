@@ -28,6 +28,8 @@ export interface DispatchScope {
   rootSessionId:string;
   status:'active'|'waiting'|'closed';
   createdAt:string;
+  /** 用户明确关联的同办公室已结束话题；新周期独立执行，旧话题及验收不可复用或重开。 */
+  followupOf?:string;
   /** 原始输入冻结，计划/审阅逐版追加；缺省仅表示旧记录，不从首轮任务或历史正文猜测补造。 */
   goal?:DispatchScopeGoal;
   /** 首轮真实用户选择，整个周期不可改写；缺省沿历史团队模式。 */

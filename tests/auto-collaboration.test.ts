@@ -19,7 +19,7 @@ import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/logic
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
 it('排队用户任务沿已保存身份建立新话题，主运行登记仍使用真实 runId',async()=>{
   const f=await setup(undefined,undefined,'queued-topic');try{
-    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,'queued-topic',{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,'queued-topic',{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options,undefined);
   }finally{await f.coordinator.close()}
 });
 it('指定话题补充冻结原工具并等待该话题全部成员，不停止其它话题成员',async()=>{
@@ -485,7 +485,7 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
     // 目标周期冻结主入口选项；下方仍核对成员执行不继承主模型，使用独立岗位配置。
-    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options,undefined);
     expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask'});
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('model');
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('profileId');

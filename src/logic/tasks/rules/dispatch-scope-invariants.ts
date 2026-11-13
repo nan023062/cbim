@@ -35,7 +35,7 @@ import {memberPauseSelection,assertMemberPausePermission} from './member-pause-r
 import {topicInterruptionSchema,pendingTopicInterruption} from './topic-interruption';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
-const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),goal:dispatchScopeGoalSchema.optional(),executionPolicy:collaborationPolicySchema.optional(),runTracking:scopeRunTrackingSchema.optional(),automaticReturns:z.array(automaticReturnSchema).max(32).optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),topicInterruptions:z.array(topicInterruptionSchema).min(1).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
+const shape=z.object({scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),followupOf:id.optional(),goal:dispatchScopeGoalSchema.optional(),executionPolicy:collaborationPolicySchema.optional(),runTracking:scopeRunTrackingSchema.optional(),automaticReturns:z.array(automaticReturnSchema).max(32).optional(),budget:scopeBudgetSchema.optional(),humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),topicInterruptions:z.array(topicInterruptionSchema).min(1).max(31).optional(),recovery:scopeRecoverySchema.optional(),replan:scopeReplanSchema.optional(),closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional()}).strict();
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
@@ -53,6 +53,8 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     valid(graph,'调度周期缺少对应主会话根');
     valid(graph.tasks.filter(task=>task.scopeId===scope.scopeId).length<=500,'调度周期超过原子关闭可容纳的 500 个任务');
     const old=previous.scopes?.find(item=>item.scopeId===scope.scopeId);
+    valid(!old||old.followupOf===scope.followupOf,'后续话题的来源不能改变');
+    if(scope.followupOf){const origin=scopes.find(value=>value.scopeId===scope.followupOf);valid(origin&&origin!==scope&&origin.workspaceId===scope.workspaceId&&origin.rootSessionId===scope.rootSessionId&&origin.status==='closed','后续话题必须属于同办公室已结束话题');if(!old)valid(previous.scopes?.some(value=>value.scopeId===scope.followupOf&&value.status==='closed'),'不能在同一提交中关闭原话题并伪造新要求')}
     const interrupts=scope.topicInterruptions??[],beforeInterrupts=old?.topicInterruptions??[];
     valid(interrupts.length>=beforeInterrupts.length&&interrupts.length<=beforeInterrupts.length+1&&beforeInterrupts.every((item,index)=>equal(item,interrupts[index])),'话题补充意图只能原样保留并追加');
     valid(!old?.topicInterruptions||!!scope.topicInterruptions,'话题补充意图不能删除');

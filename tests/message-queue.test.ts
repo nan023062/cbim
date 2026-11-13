@@ -24,3 +24,12 @@ test('editing preserves attachment context, detects stale edits, and drag orderi
  await q.claim('t',first.id);await expect(q.edit('t',first.id,'blocked',first.message)).rejects.toThrow();await expect(q.move('t',second.id,first.id)).rejects.toThrow();
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 });
+
+test('关联历史话题在编辑排序与重启后保留，新排队身份独立',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-followup-'));try{
+  const file=path.join(dir,'queue.json'),queue=new MessageQueue(file);await queue.load();
+  const item=await queue.add('root','后续要求',{provider:'p',model:'m'},'closed-topic');expect(item.id).not.toBe('closed-topic');
+  await queue.edit('root',item.id,'修正要求','后续要求');const restored=new MessageQueue(file);await restored.load();
+  expect(restored.list('root')).toMatchObject([{id:item.id,message:'修正要求',followupOf:'closed-topic',status:'paused'}]);
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+});

@@ -99,6 +99,7 @@ it('只有当前waiting详情同身份同版本可写，历史选择/换根/同�
   expect(continuationTarget('workspace','root',{...state,selectedScopeId:'history'})).toBeUndefined();expect(continuationTarget('workspace','root',{...state,detailLoading:true})).toBeUndefined();expect(continuationTarget('workspace','other',state)).toBeUndefined();expect(continuationTarget('workspace','root',{...state,error:'同步失败'})).toBeUndefined();
   expect(continuationTarget('workspace','root',{...state,selectedScope:{...state.selectedScope!,wait:{...state.selectedScope!.wait!,waitId:'obsolete'}}})).toBeUndefined();
   expect(continuationTarget('workspace','root',{...state,waitingScope:{...state.waitingScope!,inputRevision:2}})).toBeUndefined();
+  expect(continuationTarget('workspace','root',{...state,selectedScope:{...state.selectedScope!,wait:{...state.selectedScope!.wait!,interruptionId:command}}})).toBeUndefined();
 });
 
 it('历史表单不提供提交或重试按钮，未知与受理不冒充执行或人工验收',()=>{

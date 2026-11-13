@@ -468,3 +468,5 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 layoutDispatchGraph 组合前端 rankDirectedGraph。重复节点在原位置检查，拓扑错误映射为原任务文案；enabled 边选择、上一帧同层顺序、卡片坐标与跨层侧绕路径不下沉。新增卡片样式只改布局，拓扑层级不认识 GraphSnapshot。
 
 等待目标的补充表单明确提示：只有该入口继续当前话题，普通聊天发送仍创建排队的新任务；补充原文不代表人工验收。队列是否继续由后端真实状态决定，界面不自动调用 queueContinue 越过暂停。
+
+整话题补充状态由 `SessionReadProjection` 联合核对摘要与详情的命令、办公室、话题和 interruptionId。正在排空和可靠暂停分别显示，关闭中断不会被覆盖成仍在暂停；普通等待的 `continuationTarget` 排除已有冻结 interruption 请求，只能沿原请求继续。

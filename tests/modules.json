@@ -877,6 +877,7 @@
           "tests/brain-status.test.ts",
           "tests/conversation-activity.test.ts",
           "tests/conversation-topics.test.ts",
+          "tests/topic-interruption-view.test.ts",
           "tests/team-conversations.test.ts",
           "tests/thread-recovery-notice.test.ts",
           "tests/usage.test.ts"

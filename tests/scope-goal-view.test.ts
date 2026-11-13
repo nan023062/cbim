@@ -25,6 +25,18 @@ it('未建立业务计划的结束状态不把独立知识写入显示成目标�
  const business=planned();business.status='closed';business.outcome='failed';
  expect(scopeGoalView(summarizeScope(business,streamId,1)).label).toBe('目标未完成');
 });
+
+it('整话题暂停只显示已提交阶段，摘要详情不一致时保持旧投影',()=>{
+  const value=scope(),command='22222222-2222-4222-8222-222222222222';
+  value.topicInterruptions=[{requestedAt:time,request:{...identity,scopeId:value.scopeId,expectedInputRevision:1,commandId:command,input:{message:'调整当前话题'},options:{provider:'cbim-11111111-1111-4111-8111-111111111111',profileId:'11111111-1111-4111-8111-111111111111',model:'model',permission:'ask'}}}];
+  expect(scopeGoalView(summarizeScope(value,streamId,1)).phase).toBe('topic_pausing');
+  const projection=new SessionReadProjection(identity);projection.apply(reset(value));const prior=projection.detail();
+  const broken=reset(value,2);if(broken.scopes.mode==='reset')delete broken.scopes.snapshot.scopes[0].interruption;
+  expect(()=>projection.apply(broken)).toThrow('话题暂停');expect(projection.detail()).toBe(prior);
+  value.status='waiting';value.wait={waitId:command,interruptionId:command,reason:'全部参与者可靠退出',createdAt:time,runId:'main-run',goalRevision:1,graphCursor:{streamId:'graph',seq:1},knowledgeRevision:'knowledge',mainRunIds:['main-run']};
+  projection.apply(reset(value,2));expect(scopeGoalView(summarizeScope(value,streamId,2)).phase).toBe('topic_paused');
+  value.status='closed';value.outcome='interrupted';value.closedAt=time;expect(scopeGoalView(summarizeScope(value,streamId,3)).phase).toBe('interrupted');
+});
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
 
 it('替代审阅只导航已同步的本周期节点，旧节点与新成果各自保留原身份',()=>{

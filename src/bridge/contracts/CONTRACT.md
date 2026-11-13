@@ -377,3 +377,5 @@ execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的
 ## 指定话题补充与排空
 
 `loop.topicInterrupt` 接收 `TopicInterruptionRequest`，返回原 `GoalContinuationReceipt`。命令绑定工作区、主 Session、具体话题与输入版本；不接受原生路径、成员直接发送或人工批准。未知回执保留原命令，可从同话题详情读取 topicInterruptions/wait，并复用原请求查询/继续，不换 ID 自动重发。
+
+公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。

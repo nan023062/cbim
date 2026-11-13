@@ -4,7 +4,7 @@
  * 职责边界：只投影后端事实；运行内补充优先展示接收中/待核实，已接收也不是完成。摘要与详情须核对同一补充状态，不能用旧审阅盖过未知输入。
  * 详情契约：只持有 PublicDispatchScope 的安全来源和新处置引用，不能将公共投影当作含原生上下文的完整持久周期。
  */
-import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema,teamSessionSchema} from '../../bridge/contracts/dispatch';
+import {applyScopeBatch,validateScopeSnapshot,scopeActiveInputStatus,scopeActiveInputSchema,teamSessionSchema,topicInterruptionSchema,pendingTopicInterruption} from '../../bridge/contracts/dispatch';
 import type {TeamSession} from '../../bridge/contracts/dispatch';
 import type {PublicDispatchScope,DispatchSessionRead,GraphIdentity,GraphSnapshot,ScopeCursor,ScopeDelta,ScopeSnapshot,ScopeSummary,ScopeDetailStamp} from '../../bridge/contracts/dispatch';
 import {SessionGraphProjection} from './graph-state';
@@ -54,6 +54,7 @@ export function scopeGoalView(scope:ScopeSummary|undefined,graph?:GraphSnapshot)
   }
   if(scope.activeInputStatus==='unknown')return {phase:'input_unknown',label:'补充接收结果待核实',tone:'warning'};
   if(scope.activeInputStatus==='pending')return {phase:'input_pending',label:'正在确认补充接收',tone:'running'};
+  if(scope.interruption)return scope.interruption.phase==='paused'?{phase:'topic_paused',label:'话题已暂停 · 等待主 Agent 重新分析',tone:'warning'}:{phase:'topic_pausing',label:'正在暂停话题 · 等待退出确认',tone:'warning'};
   if(scope.status==='waiting')return {phase:'waiting',label:'等待补充 · 执行已暂停',tone:'warning'};
   if(scope.needsReplan)return {phase:'replanning',label:'补充已受理 · 等待更新计划',tone:'running'};
   if(scope.blockedReason||scope.reviewDecision==='blocked')return {phase:'blocked',label:'目标受阻',tone:'warning'};
@@ -120,6 +121,9 @@ export class SessionReadProjection {
       const scope=cached.scope;
       if(scope.status!==summary.status||scope.outcome!==summary.outcome||scope.createdAt!==summary.createdAt||scope.closedAt!==summary.closedAt||Boolean(scope.goal)!==summary.hasGoal||scope.goal?.revision!==summary.goalRevision||Boolean(scope.goal?.plan)!==summary.hasPlan||scope.goal?.review?.decision!==summary.reviewDecision)throw Error('目标摘要与同版本详情不一致');
       if(summary.inputRevision!==undefined&&(scope.goal?.inputRevision??1)!==summary.inputRevision)throw Error('目标补充版本与同版本摘要不一致');
+      if(scope.topicInterruptions?.some(item=>!topicInterruptionSchema.safeParse(item).success||item.request.workspaceId!==this.identity.workspaceId||item.request.rootSessionId!==this.identity.rootSessionId||item.request.scopeId!==scope.scopeId))throw Error('话题补充详情身份无效');
+      const interruption=pendingTopicInterruption(scope);
+      if(interruption?.request.commandId!==summary.interruption?.commandId||interruption&&(scope.wait?.interruptionId===interruption.request.commandId?'paused':'requested')!==summary.interruption?.phase||scope.wait?.interruptionId!==summary.wait?.interruptionId)throw Error('话题暂停与同版本摘要不一致');
       if(scope.activeInputs!==undefined&&(!Array.isArray(scope.activeInputs)||!scope.activeInputs.length||scope.activeInputs.length>64||scope.activeInputs.some(item=>!scopeActiveInputSchema.safeParse(item).success)||new Set(scope.activeInputs.map(item=>item.insertionId)).size!==scope.activeInputs.length)||summary.activeInputStatus!==scopeActiveInputStatus(scope)||summary.activeInputCount!==(scope.activeInputs?.length||undefined))throw Error('运行内补充与同版本摘要不一致');
       if(summary.needsReplan!==undefined&&summary.needsReplan!==(!!scope.goal?.plan&&(scope.goal.plan.inputRevision??1)!==(scope.goal.inputRevision??1)))throw Error('目标计划输入版本与同版本摘要不一致');
       if(Boolean(scope.wait)!==Boolean(summary.wait)||scope.wait?.waitId!==summary.wait?.waitId||scope.wait?.goalRevision!==summary.wait?.goalRevision||scope.wait?.createdAt!==summary.wait?.createdAt)throw Error('目标等待记录与同版本摘要不一致');

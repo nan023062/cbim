@@ -1,3 +1,10 @@
+## 2026-11-14：办公室改版第 9 步——主子对话的明确话题补充入口
+
+- 基线 `1608019f`。主/子对话选择同一话题后可明确暂停并补充，独立于普通聊天草稿。原请求先本地保存再发送；重开只查回执，未知结果冻结正文、权限和命令，只有明确点击才重试。普通等待保留原表单，已有 interruptionId 的等待只能沿原请求。话题摘要区分正在排空和可靠暂停，联合投影拒绝不一致详情。
+- Q1 保护发送幂等、话题身份和用户原文；Q2 View 控制本地请求和选择，暂停事实仍归后端；Q3 覆盖控制器、联合投影、普通等待和主子话题展示；Q4 `TopicInterruptionController` → `TopicInterruptionForm` → `Conversation`；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/topic-interruption-view.test.ts tests/scope-continuation-view.test.ts tests/scope-goal-view.test.ts tests/team-conversation-view.test.ts tests/conversation-topics.test.ts`：59/59 通过。首轮类型检查发现测试直接 map(JSON.parse) 的签名不符，改为显式回调；最终 `pnpm typecheck`、`pnpm check:architecture`（745 代码/样式、1497 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（490 文件）和 `git diff --check` 通过。
+- 同步 conversation、tasks、bridge/contracts 的注释/契约和类图，以及 View 上层实际依赖。未跑全仓、真实桌面/在线模型、构建或发布；后续继续关联话题、完整归档核查及办公室场景。
+
 ## 2026-11-14：办公室改版第 8 步——安全等待后继续普通话题队列
 
 - 基线 `7154236d`。安全话题等待现在只保留办公室占位，不把普通排队项批量改成持久暂停；文本/人工接续不再改写队列。原话题完成后启动队首 pending，并沿原队列 ID 创建新话题。用户停止、未知结果、重启和既有 paused 队首仍需明确继续，不被自动放行。补充表单同步纠正旧提示，明确普通发送创建新任务。

@@ -40,6 +40,8 @@ export interface ScopeContinuationView {
 /** 仅当前 waiting 且详情已与摘要核对时产生写入目标，模型等待申请和历史选择均不能构造恢复身份。 */
 export function continuationTarget(workspaceId:string,rootSessionId:string|undefined,state:ScopeGoalState):ContinuationTarget|undefined{
   const scope=state.selectedScope,waiting=state.waitingScope;
+  // 用户主动打断已有冻结原文，只能沿其原请求继续，不能在普通等待表单另建命令。
+  if(scope?.wait?.interruptionId)return;
   if(!rootSessionId||state.loading||state.detailLoading||state.error||!waiting||waiting.status!=='waiting'||waiting.scopeId!==state.selectedScopeId||scope?.scopeId!==waiting.scopeId||scope.status!=='waiting'||!scope.goal||!scope.wait||scope.wait.waitId!==waiting.wait?.waitId||scope.goal.revision!==waiting.goalRevision||scope.goal.revision!==scope.wait.goalRevision||(scope.goal.inputRevision??1)!==(waiting.inputRevision??1))return;
   if(scope.workspaceId!==workspaceId||scope.rootSessionId!==rootSessionId)return;
   return {workspaceId,rootSessionId,scopeId:scope.scopeId,waitId:scope.wait.waitId,expectedGoalRevision:scope.goal.revision,expectedInputRevision:scope.goal.inputRevision??1};

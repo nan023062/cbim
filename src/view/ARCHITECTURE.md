@@ -37,6 +37,7 @@ class N_src_view_foundations["foundations/"] {
 N_src_view_conversation ..> N_src_view_components : 导入依赖
 N_src_view_conversation ..> N_src_view_automation : 导入依赖
 N_src_view_conversation ..> N_src_view_execution_view : 导入依赖
+N_src_view_conversation ..> N_src_view_foundations : 导入依赖
 N_src_view_execution_view ..> N_src_view_components : 导入依赖
 ```
 
@@ -96,6 +97,7 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `conversation` → `tasks`：导入。
 - `conversation` → `execution-view`：导入。
 - `conversation` → `team`：导入。
+- `conversation` → `foundations`：导入。
 - `execution-view` → `components`：导入。
 - `knowledge` → `components`：导入。
 - `knowledge` → `execution-view`：导入。

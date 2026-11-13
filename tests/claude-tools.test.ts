@@ -9,6 +9,7 @@ import type {EngineEvent,ToolCall} from '../src/backend/core/execution/types';
 import type {EngineToolsPort} from '../src/backend/core/execution/engine-tools';
 import type {ResolvedLlm} from '../src/backend/core/models/ports';
 import {requestBudgetFixture} from './model-request-budget-fixture';
+import Ajv from 'ajv';
 
 function reply(res:http.ServerResponse,call?:{id:string;name:string;input:unknown}){
   res.writeHead(200,{'content-type':'text/event-stream'});const send=(value:any)=>res.write('event: '+value.type+'\ndata: '+JSON.stringify(value)+'\n\n');
@@ -25,7 +26,7 @@ async function fixture(kind:'internal'|'read'|'write'|'bash',allow:boolean|'thro
   const server=http.createServer(async(req,res)=>{let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{};if(req.url?.includes('count_tokens')){res.setHeader('content-type','application/json');res.end('{"input_tokens":100}');return}requests.push(body);reply(res,requests.length===1?{id,name,input}:undefined)});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const llm:ResolvedLlm={apiKey:'private-test-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl:'http://127.0.0.1:'+(server.address() as any).port,auth:'api-key',model:'claude-test',contextWindow:200000,maxTokens:4096,reasoning:false}};
-  const knowledge:EngineToolsPort={list:async()=>[{name:'cbim_test_read',description:'Read test data',inputSchema:{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false}}],call:async(name,args,signal,toolCallId)=>{signal.throwIfAborted();invocations.push({name,args,id:toolCallId});return {content:[{type:'text',text:'tool-result'}]}}};
+  const knowledge:EngineToolsPort={list:async()=>[{name:'cbim_test_read',description:'Read test data',inputSchema:{anyOf:[{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false},{type:'object',properties:{value:{$ref:'#/anyOf/0/properties/value'},preview:{type:'boolean'}},required:['value','preview'],additionalProperties:false}]}}],call:async(name,args,signal,toolCallId)=>{signal.throwIfAborted();invocations.push({name,args,id:toolCallId});return {content:[{type:'text',text:'tool-result'}]}}};
   const budget=settlement?await requestBudgetFixture({tokens:1000000},llm):undefined;let callsBeforeSettlement:number|undefined;
   const engine=new ClaudeCodeEngine({agentHome:path.join(root,'claude'),llm,prompt:'Use the provided tool.',knowledge,allowNativeExecution:true,turnTimeoutMs:20000,
     requestBudget:async()=>budget?{model:budget.port.model,reserve:async input=>{const ticket=await budget.port.reserve(input);return {...ticket,report:async(usage:Parameters<typeof ticket.report>[0])=>{await new Promise(resolve=>setTimeout(resolve,300));callsBeforeSettlement??=calls.length;if(settlement==='fail')throw Error('test settlement unavailable');await ticket.report(usage)}}}}:undefined});
@@ -39,6 +40,11 @@ test('real Claude internal tool receives its original ID only after CBIM authori
   const f=await fixture('internal',true);expect(f.result).toEqual({status:'completed'});expect(f.calls).toEqual([{id:f.id,name:'cbim_test_read',input:f.input}]);
   expect(f.invocations).toEqual([{id:f.id,name:'cbim_test_read',args:f.input}]);expect(f.events.filter(e=>e.type==='tool.finished')).toHaveLength(1);expect(f.events.find(e=>e.type==='tool.finished')?.data).toMatchObject({id:f.id,isError:false});
   expect(f.requests.every(r=>r.model==='claude-test'&&r.max_tokens<=4096)).toBe(true);
+  const wire=f.requests[0].tools.find((tool:any)=>tool.name==='mcp__cbim__cbim_test_read');
+  expect(wire).toBeDefined();
+  const validate=new Ajv({strict:false}).compile(wire.input_schema);
+  expect(validate({value:'exact-input'})).toBe(true);
+  expect(validate({value:42})).toBe(false);
 },45000);
 test('real Claude internal denied tool does not reach the port',async()=>{const f=await fixture('internal',false);expect(f.calls).toHaveLength(1);expect(f.invocations).toEqual([]);expect(f.events.some(e=>e.type==='tool.started')).toBe(false)},45000);
 test('real Claude Read records canonical read input and one finished receipt',async()=>{const f=await fixture('read',true);expect(f.result).toEqual({status:'completed'});expect(f.calls[0]).toMatchObject({id:f.id,name:'read',input:{path:(f.input as any).file_path}});expect(f.events.filter(e=>e.type==='tool.finished')).toHaveLength(1)},45000);

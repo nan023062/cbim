@@ -8,6 +8,7 @@ import {seedTeam} from './team-fixture';
 import {json} from '../src/backend/core/foundation/serialization';
 import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
 import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
 import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
@@ -18,6 +19,7 @@ import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-
 import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
 import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
 import {registerServiceOwner} from './owner-service-fixture';
+import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
 
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}
 async function setup(useBuiltin=false){
@@ -29,11 +31,15 @@ async function setup(useBuiltin=false){
   // 登记、责任、派发与领取共用真实工作区账本；受控引擎只隔离执行，不补造岗位许可。
   const agentId=team.input.agentId,{model}=await registerServiceOwner(f.app,workspace,agentId,[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease();
-  const dispatch=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
+  let mainJournal:RunJournal;
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(mainJournal.directory),inspectMember:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
   await dispatch.openScope(identity,scopeId,{message:'核实派发产物'},'main-one');
+  const mainTask={mode:'chat' as const,taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'核实派发产物',moduleIds:[],agentId:'cbim:main',acceptance:[]};
+  mainJournal=new RunJournal(path.join(f.user,'review-main'),mainTask,'main-one');await mainJournal.init();
+  await mainJournal.append({type:'run.started',data:{task:mainTask,conversationBinding:await dispatch.conversationBinding(mainTask)}});
   const ownerSelection=(await dispatch.owners.discover([moduleId])).groups[0].selection!;
   await dispatch.goals.plan(identity,scopeId,'main-one','goal-plan',{expectedRevision:1,objective:'核实派发产物',constraints:[],criteria:[{id:'verified',text:'提供真实工具证据',kind:'evidence'}],assignments:[{agentId,moduleIds:[moduleId],ownerSelection,criterionIds:['verified'],reason:'负责岗位'}],reason:'明确业务分配'});
-  let behavior:'candidate'|'text'|'hold'|'rewrite'='candidate',release=()=>{},count=0;
+  let behavior:'candidate'|'text'|'hold'|'rewrite'|'interrupted'|'failed'='candidate',release=()=>{},count=0;
   let beforeRuntimeLease:()=>Promise<void>=async()=>{};
   const contexts:EngineContext[]=[];
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(run,_task,hooks)=>{
@@ -43,6 +49,8 @@ async function setup(useBuiltin=false){
         expect((await store.read()).runs!.find(r=>r.binding.runId===run.binding.runId)?.status).toBe('running');
         if(behavior==='hold')return new Promise(resolve=>{release=()=>resolve({status:'cancelled'})});
         if(behavior==='text')return {status:'completed'};
+        if(behavior==='interrupted')throw Error('Pi 连续 30 分钟无执行进展，已中断；请核实未确认的操作与产物。');
+        if(behavior==='failed')return {status:'failed',error:'Pi 事件超过大小限制'};
         const invoke=async(name:string,input:Record<string,unknown>)=>{
           const id='tool-'+(++count),decision=await context.beforeTool({id,name,input});
           if(!decision.allow)throw Error('unexpected denial');
@@ -88,6 +96,35 @@ it('模型只有正文或改写了派发目标时，完成回合保留 completed
     for(const behavior of ['text','rewrite'] as const){f.setBehavior(behavior);const task=await f.assign();await f.start(task.taskId);const view=await f.settled(task.taskId);expect(view.runs[0].status).toBe('completed');expect(view.task.status).toBe('blocked');expect(view.task.result).toBeUndefined()}
     expect((await f.store.read()).outbox.filter(m=>m.kind==='result')).toEqual([]);
   }finally{await f.cleanup()}
+});
+it.each(['interrupted','failed'] as const)('成员%s从真实运行终态保存具体原因，任务图和详情一致且不生成交付',async status=>{
+  const f=await setup();try{
+    f.setBehavior(status);const assigned=await f.assign();await f.start(assigned.taskId);const view=await f.settled(assigned.taskId);
+    expect(view.task.status).toBe(status);expect(view.task.result).toBeUndefined();
+    expect(view.task.waitReason).toContain(status==='interrupted'?'30 分钟无执行进展':'Pi 事件超过大小限制');
+    expect(view.runs[0].error).toBe(view.task.waitReason);
+    const graph=await f.dispatch.snapshot(f.identity);expect(graph.tasks.find(task=>task.taskId===assigned.taskId)?.waitReason).toBe(view.task.waitReason);
+    expect((await f.store.read()).outbox.filter(message=>message.kind==='result')).toEqual([]);
+  }finally{await f.cleanup()}
+});
+it('三次真实成员异常落盘后额度与目标阻塞在重开存储中保留，恢复不再次执行',async()=>{
+  const f=await setup();let restoredStore:FileDispatchStore|undefined,restored:WorkspaceDispatchService|undefined;
+  try{
+    for(const behavior of ['interrupted','failed','interrupted'] as const){
+      f.setBehavior(behavior);const assigned=await f.assign();await f.start(assigned.taskId);await f.members.waitForSettlement(f.input(assigned.taskId));
+    }
+    const reason=memberFailureStopReason(await f.dispatch.snapshot(f.identity),f.scopeId)!;
+    expect(reason).toContain('累计 3 次');
+    await f.dispatch.goals.block(f.identity,f.scopeId,reason);
+    const backup=path.join(f.user,'failure-limit-reopen');await fs.cp(f.directory,backup,{recursive:true});
+    restoredStore=new FileDispatchStore(backup,f.entry.id);restored=new WorkspaceDispatchService(f.workspace,restoredStore);
+    expect(memberFailureStopReason(await restored.snapshot(f.identity),f.scopeId)).toBe(reason);
+    await restored.recoverScopes();await restored.recoverScopes();
+    const view=await restoredStore.sessionRead({identity:f.identity,selectedScopeId:f.scopeId});
+    expect(view.detail).toMatchObject({mode:'updated',scope:{status:'closed',goal:{blocked:{reason}}}});
+    expect(f.prepare).toHaveBeenCalledTimes(3);
+    expect((await restored.snapshot(f.identity)).tasks.every(task=>['failed','interrupted'].includes(task.status))).toBe(true);
+  }finally{await restored?.close();await restoredStore?.close();await f.cleanup()}
 });
 it('隔离资源未确认收尾时成员保留工作区占用，再次close只封存原运行',async()=>{
  const f=await setup();let blocked=true;const close=LoopRuntime.prototype.close,mock=vi.spyOn(LoopRuntime.prototype,'close').mockImplementation(async function(this:LoopRuntime){if(blocked)throw Object.assign(Error('original isolation pending'),{code:'EXECUTION_SCOPE_DRAIN_PENDING'});return close.call(this)});
@@ -192,11 +229,28 @@ it('主实例不创建独立成员，已登记自定义执行岗位按任务独�
   }finally{await f.cleanup()}
 });
 
-it('依赖任务等待候选而非回合结束，启动时固定实际消费的 resultId',async()=>{
+it.each(['accept','reject'] as const)('依赖任务等待精确候选审阅通过：%s，并固定实际消费的 resultId',async decision=>{
   const f=await setup();try{
     const first=await f.assign(),second=await f.assign(f.agentId,[{taskId:first.taskId,expectedPlanRevision:1}]);
     await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
     await f.start(first.taskId);const done=await f.settled(first.taskId);
+    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+    const input={taskId:first.taskId,expectedRevision:done.task.revision,resultId:done.task.result!.resultId,decision,reason:'已核对原运行工具证据与限制'};
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-wrong',{...input,resultId:'wrong'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'other-main','candidate-review-other',input,()=>{})).rejects.toMatchObject({code:'GOAL_EVIDENCE_IDENTITY'});
+    const reviewed=await f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{});
+    expect(reviewed.candidateReview).toMatchObject({decision,resultId:input.resultId,mainRunId:'main-one'});
+    expect(await f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-accept',input,()=>{})).toEqual(reviewed);
+    await expect(f.dispatch.goals.reviewCandidate(f.identity,f.scopeId,'main-one','candidate-review-rewrite',{...input,expectedRevision:reviewed.revision,decision:'reject'},()=>{})).rejects.toMatchObject({code:'CANDIDATE_REVIEW_STALE'});
+    const backup=path.join(f.temp,'review-snapshot');await fs.mkdir(backup);await fs.copyFile(path.join(f.directory,'dispatch.jsonl'),path.join(backup,'dispatch.jsonl'));
+    const reopened=new FileDispatchStore(backup,f.entry.id);
+    try{expect((await reopened.read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)?.candidateReview).toEqual(reviewed.candidateReview)}finally{await reopened.close()}
+    if(decision==='reject'){
+      await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TASK_DEPENDENCY_PENDING'});
+      await expect(f.dispatch.goals.review(f.identity,f.scopeId,'main-one','reject-final',{expectedRevision:2,decision:'complete',checks:[{criterionId:'verified',outcome:'satisfied',reason:'企图引用被拒候选',evidence:[{kind:'member-result',taskId:first.taskId,runId:done.task.result!.runId,resultId:input.resultId,planRevision:1,toolCallIds:done.task.result!.evidenceRefs}]}],superseded:[],gaps:[],reason:'不得成功'})).rejects.toMatchObject({code:'GOAL_EVIDENCE_INVALID'});
+      const saved=(await f.store.read()).graphs[0].tasks.find(t=>t.taskId===first.taskId)!;
+      expect(saved.candidateReview).toEqual(reviewed.candidateReview);expect(f.prepare).toHaveBeenCalledTimes(1);return;
+    }
     await f.start(second.taskId);await f.settled(second.taskId);
     const graph=await f.dispatch.snapshot(f.identity),edge=graph.edges.find(e=>e.kind==='dependency');
     expect(edge).toMatchObject({condition:{resultId:done.task.result!.resultId}});

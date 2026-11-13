@@ -7,17 +7,18 @@ import {CodexEngine} from '../src/backend/engines/codex/engine';
 import type {EngineContext,EngineEvent,ToolCall} from '../src/backend/core/execution/types';
 import type {ResolvedLlm} from '../src/backend/core/models/ports';
 
-export function codexResponse(res:http.ServerResponse,call?:{id:string;name:string;input:unknown}){
+export function codexResponse(res:http.ServerResponse,call?:{id:string;name:string;input:unknown},incomplete=false){
   res.writeHead(200,{'content-type':'text/event-stream'});let sequence_number=0;const send=(value:any)=>res.write('event: '+value.type+'\ndata: '+JSON.stringify({...value,sequence_number:sequence_number++})+'\n\n');
   const responseId='resp_'+randomUUID(),item=call?{type:'function_call',id:'fc_'+randomUUID(),call_id:call.id,name:call.name,arguments:JSON.stringify(call.input),status:'completed'}:{type:'message',id:'msg_'+randomUUID(),role:'assistant',status:'completed',content:[{type:'output_text',text:'CBIM Codex OK',annotations:[]}]};
   send({type:'response.created',response:{id:responseId,status:'in_progress',output:[]}});
   send({type:'response.output_item.added',output_index:0,item:call?{...item,arguments:'',status:'in_progress'}:{...item,content:[],status:'in_progress'}});
-  if(call)send({type:'response.function_call_arguments.delta',item_id:item.id,output_index:0,delta:JSON.stringify(call.input)});
+  if(call)send({type:'response.function_call_arguments.delta',item_id:item.id,output_index:0,delta:incomplete?JSON.stringify(call.input).slice(0,Math.floor(JSON.stringify(call.input).length/2)):JSON.stringify(call.input)});
   else{send({type:'response.content_part.added',item_id:item.id,output_index:0,content_index:0,part:{type:'output_text',text:'',annotations:[]}});send({type:'response.output_text.delta',item_id:item.id,output_index:0,content_index:0,delta:'CBIM Codex OK'});send({type:'response.output_text.done',item_id:item.id,output_index:0,content_index:0,text:'CBIM Codex OK'})}
+  if(incomplete){send({type:'response.incomplete',response:{id:responseId,status:'incomplete',output:[],incomplete_details:{reason:'max_output_tokens'}}});res.end();return}
   send({type:'response.output_item.done',output_index:0,item});
   send({type:'response.completed',response:{id:responseId,status:'completed',output:[item],usage:{input_tokens:100,output_tokens:20,total_tokens:120,input_tokens_details:{cached_tokens:0},output_tokens_details:{reasoning_tokens:0}}}});res.end();
 }
-export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bash';allow?:boolean|'throw';hold?:boolean;failFirst?:boolean;afterTool?:'incomplete'|'hold'}={}){
+export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bash';allow?:boolean|'throw';hold?:boolean;failFirst?:boolean;afterTool?:'incomplete'|'hold';incompleteTool?:boolean}={}){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-codex-')),cwd=path.join(root,'project'),home=path.join(root,'engine');await fs.mkdir(cwd);await fs.writeFile(path.join(cwd,'sample.txt'),'sample content');
   const calls:ToolCall[]=[],events:EngineEvent[]=[],invocations:unknown[]=[],requests:any[]=[],errors:string[]=[];
   const callId='tool_'+randomUUID(),tool=options.tool,input=tool==='write'?{path:path.join(cwd,'written.txt'),content:'Codex wrote this'}:tool==='read'?{path:path.join(cwd,'sample.txt')}:tool==='bash'?{command:'echo cbim-codex-command'}:{value:'test'},name=tool==='internal'?'cbim_test_read':'cbim_native_'+tool;
@@ -28,7 +29,7 @@ export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bas
       res.writeHead(200,{'content-type':'text/event-stream'});
       res.end('event: response.incomplete\ndata: '+JSON.stringify({type:'response.incomplete',response:{id:'resp_incomplete',status:'incomplete',output:[],incomplete_details:{reason:'max_output_tokens'}}})+'\n\n');return;
     }
-    codexResponse(res,tool&&requests.length===1?{id:callId,name,input}:undefined)
+    codexResponse(res,tool&&requests.length===1?{id:callId,name,input}:undefined,options.incompleteTool&&requests.length===1)
   }catch(error){errors.push(String(error));res.destroy()}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const llm:ResolvedLlm={apiKey:'test-codex-key',profile:{engine:'codex',id:randomUUID(),name:'Codex test',api:'openai-responses',auth:'api-key',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',model:'codex-test-model',contextWindow:200000,maxTokens:4096,reasoning:false}};

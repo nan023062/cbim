@@ -1,4 +1,5 @@
 /**
+ * 知识参数在 proposed 前由当前绑定实例规范化，日志与授权保留生效身份；其它工具不补身份。
  * 目录归属：backend/scheduler-engine/assembly；Loop 与业务能力装配。
 
  * 主会话可读取公开网页和配置的 Brave 搜索；来源正文只作不可信资料，不扩展工具权限。
@@ -246,6 +247,8 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
     assertMemberResumeInputs:services.member?services.assertMemberResumeInputs:undefined,
     workflowContracts:services.member?.workflowContracts,
     describeTool,
+    // 只解析本实例知识工具；其它工具维持各自身份与缺省语义，不注入目标/成员/命令 ID。
+    normalizeToolInput:call=>service.has(call.name)?service.normalizeInput(call.name,call.input):call.input,
     storage:services.storage,
     directory:path.join(directory,'tasks'),
     acquireLease:async task=>{

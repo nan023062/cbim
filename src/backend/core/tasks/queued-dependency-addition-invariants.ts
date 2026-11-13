@@ -1,4 +1,5 @@
 /**
+ * 新增边允许持久审阅要求；历史未带标志的追加仍按原事实重放，不伪造结果。
  * 作用定位：核实追加依赖的不可变审计与精确原子变更，并向统一边门禁返回本批已验证的新边许可。
  * 设计原因：事件名称或审计字段存在都不能授权改边；必须从原快照重新选取闭包并逐项比较任务、成员和边的实际变化。
  * 职责边界：许可只在 Core 提交校验调用链内使用，不持久化、不来自模型，也不替代服务的知识/停止复核。
@@ -40,6 +41,6 @@ export function validateQueuedDependencyAddition(previous:DispatchState,next:Dis
   valid(sameGoalValue(mutation.members[0],{...member,activity:'waiting',waitingTaskIds:[target.taskId]}),'追加只能把目标成员标为等待本任务');
   valid(batch.changes.some(value=>value.type==='task.upserted'&&sameGoalValue(value.task,task)),'追加缺少原子目标节点');
   valid(batch.changes.some(value=>value.type==='agent.upserted'&&sameGoalValue(value.agent,{...view,revision:view.revision+1,state:'waiting',runningTaskId:undefined,waitingTaskIds:[target.taskId]})),'追加缺少原子目标成员投影');
-  valid(batch.changes.some(value=>value.type==='edge.upserted'&&sameGoalValue(value.edge,{edgeId:record.dependency.edgeId,identity:graph.identity,kind:'dependency',fromNodeId:source.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:source.planRevision}})),'新增边必须只固定来源计划，不得提前伪造结果');
+  valid(batch.changes.some(value=>value.type==='edge.upserted'&&sameGoalValue(value.edge,{edgeId:record.dependency.edgeId,identity:graph.identity,kind:'dependency',fromNodeId:source.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:source.planRevision,...(value.edge.kind==='dependency'&&value.edge.condition.reviewRequired?{reviewRequired:true}:{})}})),'新增边必须只固定来源计划，不得提前伪造结果');
   return new Set([record.dependency.edgeId]);
 }

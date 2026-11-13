@@ -1,3 +1,100 @@
+## 2026-11-13：R4 完整 CI 暴露的显式停止与消费者回归修正
+
+- 来源：用户已授权 PR/发布，[#66](https://github.com/nan023062/cbim/pull/66) 首轮完整 CI [43382151440](https://github.com/nan023062/cbim/actions/runs/43382151440) 在四片中失败 37 用例；关联开放 #65。首轮冻结候选留在草稿，未投放。本步修复发版阻塞，不纳入原任务历史折叠未提交改动。
+- C1/L2：协调层 AutoCollaboration.advance 在当前主轮结束后先读取正式目标审阅；只有同 runId 的 blocked/awaiting_user 才退役批次并走原 finishCycle/parkScope 门禁。未启动待办不再重试或再回注，旧审阅不拦截明确恢复的新主轮；异步读取后重新检查取消。状态仍由目标和任务图持有，未新增重试存储或改变执行层终态。
+- 消费者同步：真实 Pi 的九类依赖测试显式调用 cbim_dispatch_review 并核对精确候选回执，每个前置经过 inspect/review/end 后才启动原后继；保留全部 HTTP 请求、原任务/实例/信封及重启不重放断言。服务测试使用真实主运行日志和合法审阅命令；条件断言同步 reviewRequired。Workflow 错误断言读取结构化 code 与人类可读 message，waiting 普通输入按续接语义验证。长对话模型 fixture 单独接收 Pi 原生摘要请求，不再把摘要误报为成员重放，保留独立摘要日志。
+- 验证选择：先运行 auto-collaboration、workflow-condition-pi、owner-execution-pi、active-goal-input-pi、queue-insertion-view，覆盖实际调度及新显式停止边界；85/86 通过，唯一剩余为摘要 fixture。补齐后定向运行 CI 涉及的 12 个消费者文件（abandoned-checkpoint-dependency-pi/service、active-goal-input-pi、checkpoint-handoff-pi、member-checkpoint-chain-pi、member-checkpoint-pi、member-pause-pi/service、queued-dependency-addition/replacement/revision-pi、queued-task-cancel-pi），10 个文件通过；两个服务文件因测试命令未使用 candidate-review- 前缀被持久化不变量正确拒绝，改正原调用身份后单独复验 2 文件 / 16 用例通过。本步共 135 个不同用例最终通过，不累计重复运行。完整命令与 JSON 结果保存在 test-results/release-r4/affected-fixtures.json、service-fixtures-fixed.json；不放宽生产保护、不跳过失败场景。
+- 实际命令：
+  - `pnpm exec vitest run tests/auto-collaboration.test.ts tests/workflow-condition-pi.test.ts tests/owner-execution-pi.test.ts tests/active-goal-input-pi.test.ts tests/queue-insertion-view.test.ts --reporter=dot`
+  - `pnpm exec vitest run tests/queued-dependency-addition-pi.test.ts tests/queued-dependency-replacement-pi.test.ts tests/queued-dependency-revision-pi.test.ts tests/abandoned-checkpoint-dependency-pi.test.ts tests/member-checkpoint-pi.test.ts tests/member-checkpoint-chain-pi.test.ts tests/member-pause-pi.test.ts tests/checkpoint-handoff-pi.test.ts tests/queued-task-cancel-pi.test.ts tests/abandoned-checkpoint-dependency-service.test.ts tests/member-pause-service.test.ts tests/active-goal-input-pi.test.ts --reporter=dot --reporter=json --outputFile=test-results/release-r4/affected-fixtures.json`
+  - `pnpm exec vitest run tests/abandoned-checkpoint-dependency-service.test.ts tests/member-pause-service.test.ts --reporter=dot --reporter=json --outputFile=test-results/release-r4/service-fixtures-fixed.json`
+- 静态：pnpm typecheck、pnpm check:architecture 通过（1377 文件、6996 依赖、0 循环/违规，含保留的前端工作）。同步协调器文件头、分支说明、dispatch/CONTRACT.md 及 ARCHITECTURE.md。类型初检指出 ES 目标不支持 findLast，改为复制后反向查找；未为测试扩大产品编译目标。
+- 发布边界：新源码须重新冻结并构建第二候选；隔离升级验收器增加受约束的数字候选后缀，保持原草稿与附件不覆盖。当前未合并/公开，完整四片及候选/在线升级仍由后续流水线验证。下一次修改从 advance 当前轮审阅与 finishCycle 统一收尾入手，复用已有门禁；未引入治理规则或未验证的稳定性承诺。
+
+## 2026-11-13：C 0.1.15 / R4 发布准备
+
+- 用户明确要求提交 PR 并发布。以已提交 `10d1f0f9` 为功能基线，纳入 #65 七项独立修复；原任务图折叠未提交改动保留，使用独立干净检出构建。
+- 沿已有 C/R/E 通道发布 R4：C 0.1.15 与三个 E 保持不变，原资源签名身份已核实匹配。版本说明见 [R4 日志](releases/runtime-c0.1.15-r4.md)，阶段证据见 [R4 发布记录](verification/runtime-c0.1.15-r4-20261113.md)。此时尚未创建候选或公开，完整 PR 四片和隔离升级由本轮发布执行，已有定向单元不冒充全量验证。
+
+## 2026-11-13：阻止成员异常后反复终止与重新派发
+
+- 来源与基线：用户在超时策略修复后要求“避免无限死循环的任务终止、重启”；关联开放 [#65](https://github.com/nan023062/cbim/issues/65)。基线 `4a87768c`；开始时已有任务历史折叠相关前端修改，本步未改动或纳入提交。现有每目标 32 次主调度、最多 3 次验收返工及单轮重复工具失败保护已有总界限，但成员中断后换新任务继续派发可以长时间消耗这些额度。
+- 方案与状态归属：C1 / L2 范围为协调层。新增纯策略 `memberFailureStopReason`，读取同 scope 已启动且结算为 failed/interrupted 的任务，累计达到 3 次停止自动接续。选择累计而非按名称/错误/连续次数计量，防止换任务、运行、负责人或穿插其它成功任务清零；代价是三项独立异常也会触发人工核实。取消、求助、检查点和未启动任务不扣额度。使用已有持久终态，不新增计数状态或迁移日志。
+- 调用与交付：AutoCollaboration 在成员启动/结果回注、验收返工及无待回传成员的最终收尾前核实；触发后退役批次、撤销容量等待，持久保存 goal.blocked 并暂停用户队列，现有在途按原停止/排空/结算流程收尾。任务卡保留原具体 waitReason，目标卡收到明确的自动接续停止原因。AutomaticReturnService 使用同一策略覆盖异常已落盘而 blocked 尚未保存的退出窗口。用户明确发起新目标才形成新的目标额度；原有 32 轮主调度和验收返工上限继续保留。已并发启动的成员仍须收尾，不宣称所有并发场景总共只会启动 3 个成员。
+- 受影响验证与依据：`pnpm exec vitest run tests/member-failure-limit.test.ts tests/auto-collaboration.test.ts tests/member-execution.test.ts tests/goal-repair.test.ts tests/automatic-return.test.ts --reporter=dot`：5 文件 / 77 用例通过。覆盖纯策略、受控主调度每轮换新任务的连续 interrupted/failed/混合异常（均只启动 3 次、回注 2 次）、迟到通知不复活、未启动后继不领取、最终返工不绕过、既有正常协作，以及真实 MemberExecutionManager/LoopRuntime/FileDispatchStore 三次异常落盘后复制到隔离目录重开、保留公开阻塞且不再执行。
+- 重启窗口补测：新增“第三次异常已保存但尚无 blocked”的 AutomaticReturnService 用例；`pnpm exec vitest run tests/automatic-return.test.ts --reporter=dot`：3 用例通过。首次补测后的类型检查发现 fixture 缺必需的 withConfigurations 模型端口；补齐为禁止意外调用的测试实现，再跑该文件 3 用例通过。自查增加最终收尾读取期间取消优先的保护；`pnpm exec vitest run tests/auto-collaboration.test.ts -t '读取异常历史期间用户取消' --reporter=dot`：选定 1 用例通过。共 79 个不同相关用例，不累计重跑。
+- 静态与资料：最终 `pnpm typecheck` 通过；`pnpm check:architecture` 通过（1376 文件 / 6982 依赖，0 循环/违规；含原有前端未提交文件）。同步新策略及两个消费者的文件头/接口说明、dispatch/CONTRACT 和生成的 ARCHITECTURE，新增模块、方法和依赖方向已核对。完整变更以本步独立提交为 review 入口，未声称人工 review 已接受。
+- Review 导航与四问：先读 dispatch/CONTRACT 的异常接续上限 → member-failure-limit → AutoCollaboration.advance/finishCycle → AutomaticReturnService.inspect，再读受控循环与真实日志重开测试。Q1 保护原任务终态、权限、未知操作和租约排空；Q2 可调异常策略与稳定执行机制分开，两个实际消费者共用一个纯规则；Q3 不用模型文案或全局计数猜测目标，测试只覆盖变更消费者；Q4 后续阈值/分类修改从策略入口进入，存储及引擎无需连带变更；Q5 无新增治理规则候选，变化频率未作无依据承诺。
+- 验证边界：未运行全仓、完整桌面、打包安装或在线模型验收，后续由 PR/发布流程覆盖；未发布、未重启本机安装版、未改用户运行数据，现有运行仍使用旧版本。#65 其余问题保持开放。
+
+## 2026-11-13：有进展续期与成员任务具体中断原因
+
+- 来源及基线：用户明确要求“只要有进展就续期，并把具体中断原因传到任务卡”；关联开放 [#65](https://github.com/nan023062/cbim/issues/65)，已读取正文及最近讨论。基线 `30d264dc`；开始时任务历史折叠相关前端改动未提交，本步原样保留且不纳入提交。只读核实本机 webfps：E2 在 13:00:24–13:30:24、E2b 在 13:30:44–14:00:44 均触发整轮 30 分钟超时，终止前仍在浏览器验证。另有事件过大及输出限额错误，本步只补公开原因，不修改这两种限制。
+- 边界及方案：C1 变更检查、L2 交付；三种引擎各自的整轮定时器是同一技术机制，改为组合 `engines/run-inactivity.ts`。`turnTimeoutMs` 名称与原持久化结构保留，解释为连续无可观察进展的毫秒数（缺省 30 分钟）。新模型文本/推理/参数增量、工具开始/完成及变化的非空工具输出续期；空输出、重复工具快照、状态刷新、重试通知不续期。Codex 排除旧 thread/turn；推理不存正文。无输出的长命令仍可能静默超时；单次 RPC、工具自身及资源排空期限不被替代。
+- 失败与状态：正常结束、异常、停止及 close 释放计时器，到期后迟到事件不复活。超时继续走原关闭/排空/未决副作用记录，不重放工具。成员结算从本轮原日志末条 `run.interrupted/run.settled(failed)` 取得错误，通过 Core `publicRunFailure` 重建已识别的具体诊断，同事务写入 `task.waitReason/run.error`；公开运行事件也用同一转换。未知原文、凭据、路径不进入任务图，原 canonical 保留；历史任务节点不批量重写，历史详情按读取时投影。候选、租约、权限及用户取消规则不改。
+- 受影响验证：`pnpm exec vitest run tests/engine-inactivity.test.ts tests/run-failure.test.ts tests/member-execution.test.ts tests/member-events.test.ts tests/pi-cancellation.test.ts --reporter=dot` 首次 48 通过、1 失败；失败为新增 Codex 协议夹具漏提供 `proxy.error`，补齐后对应文件随下一组通过。覆盖默认 30 分钟、长时进展、重复/空输出、并发独立、噪声/旧轮、停止释放、终态诊断脱敏、真实派发存储到任务图及原事件分页消费者。
+- 原生验证：`pnpm exec vitest run tests/engine-inactivity.test.ts tests/engine-inactivity-pi.test.ts tests/claude-engine.test.ts tests/codex-engine.test.ts tests/codex-lifecycle.test.ts --reporter=dot`：5 文件 / 24 用例通过。新增真实 Pi 进程 + 本地 HTTP 流跨过 1.5 秒窗口持续约 3 秒后正常完成，静默场景按窗口中断且两种情况各仅发一次请求；保留真实 Claude SDK、Codex EXE 的启动/停止/恢复及预算门禁回归。两组共 61 个不同相关用例最终通过，不累计重跑；没有使用用户模型账号。
+- 静态与资料：首次类型检查指出新增诊断测试夹具缺 `moduleIds/acceptance`，补齐后 `pnpm typecheck` 通过。`pnpm check:architecture` 通过（1374 文件 / 6967 依赖，0 循环/违规；统计包含原有前端未提交文件）。同步 5 个既有源码文件头、2 个新模块说明，以及 Core execution、engines 根/三个适配器、scheduler members/runtime 共 7 处 CONTRACT 和 ARCHITECTURE；无前端生产代码变更。
+- Review 导航及四问：先读 engines/CONTRACT → RunInactivityTimer → 三引擎原生事件映射，再读 publicRunFailure → MemberExecutionManager.settle → projectRunEvent → 既有任务卡 waitReason 显示。Q1 保护原权限、原生身份、未知结果及关闭结算规则；Q2 计时机制独立于原生协议识别，公开错误分类独立于运行状态修改；Q3 验证仅选择这两个变更的真实消费者，未扩展全仓；Q4 新进展类型从对应引擎映射修改，新的公开故障分类从 run-failure 修改；Q5 无新增治理规则候选。共用计时器仍属稳定候选，没有虚构频率统计；完整变更以本步独立提交为 review 入口，未声称人工 review 已接受。
+- 交付边界：未运行全量回归、全套桌面/安装升级或在线供应商验收，留待 PR/发布自动化。未发布、未重启安装版、未修改用户运行数据；当前已在运行的旧进程保持原规则。#65 其它问题保持开放。
+
+## 2026-11-13：等待用户补充时普通发送续接原目标
+
+- 来源：用户截图反馈“准备好后回复继续”，输入却进入暂停队列且不能插入，形成原目标等待输入、队列等待原目标结束的互等。基线 `465f94a9`，开始时 develop 干净；开放清单仅 [#65](https://github.com/nan023062/cbim/issues/65)，本步补充其对话恢复相关进展，不关闭其它未完成项。
+- 根因与边界：Conversation 原先把所有开放目标的发送统一当队列消息，已有安全补充入口藏在目标卡。仅修前端发送策略和显式草稿转交，后端继续持有等待身份、两个预期版本、权限、受理回执和队列准入；不放开暂停队列、不插入已结束运行、不以文本“继续”冒充人工验收。所有补充正文均按等待状态路由，不靠关键词识别。
+- 实现：conversationExecutionState 在 waiting 时关闭 shouldQueue；Conversation 的 Enter/发送调用 useScopeContinuation.submitInput，先持久化正文及有序附件，再使用原控制器冻结和发送。与目标表单已有不同草稿冲突时保留双方并提示核对；本地保存失败不清输入。结果未知或明确拒绝时在输入区显示原补充表单，查询/修正/重试沿用原机制；未知请求禁止再次普通发送。历史选择必须先返回当前等待详情，不能向历史周期补写。按钮显示“补充并继续”，按下/释放间动作改变不误发。
+- 已误排队消息：不自动删除或重放；等待提示说明删除误排队的补充后重新发送，其它未来任务保留。等待期间 Skill 新任务入口禁用。当前安装版和用户运行数据未改动。
+- 受影响验证：状态投影与发送标签、补充控制器、共享附件入口三组单元覆盖正文/附件保存、身份隔离、冲突草稿、未知回执、重复请求以及原功能消费者。`pnpm exec vitest run tests/conversation-waiting.test.ts tests/scope-continuation-view.test.ts tests/continuation-source-view.test.ts --reporter=dot`：3 文件 / 35 用例通过。首次类型检查发现新增测试回执夹具缺 async，补齐后 `pnpm typecheck` 通过。
+- 界面专项：`node scripts/waiting-chat-ui-smoke.mjs` 使用真实 App/Conversation + 隔离确定性 IPC，Edge 无头验证两组：已有暂停队列时 Enter 只发送一次 loop.goalContinue 且身份/正文/引擎正确；发送按钮遇到 IPC_TIMEOUT 后保留原记录、显示查询入口且禁止重复普通发送。0 page errors，0 意外 IPC；报告 `test-results/waiting-chat-ui-report.json`、截图 `test-results/waiting-chat-recovery.png`。这是界面接线测试，不是在线模型或真实运行验收。
+- 维护：同步 conversation/tasks 注释、CONTRACT 与 2 份 ARCHITECTURE；`pnpm check:architecture` 通过（1367 文件 / 6944 依赖，0 循环/违规）。完整 review 范围为上述基线至本提交；阅读顺序 conversation-state → Conversation.send → useScopeContinuation.submitInput → ScopeContinuationController.submitInput → ScopeContinuationForm/SendButton。保护原有受理协议，变化局限于前端输入意图和可靠草稿转交。
+- 验证边界：未运行全仓回归、打包、安装升级、真实供应商续接；未发布，也不将单元或界面夹具等同人工代码审阅。后续集成/发布仍沿既有门禁。
+
+## 2026-11-13：Issue #65 缺参提示、当前身份缺省与执行前拒绝展示
+
+- 来源：用户要求缺参明确字段、自动取得当前工作区身份，不展示原始校验 JSON 和副作用核实入口，并保留可选/default 语义。基线 `8061ae74`，本步开始工作区干净。读取开放清单只有 [#65](https://github.com/nan023062/cbim/issues/65)，本步对应正文第 6 项及身份获取体验，不关闭整单、不修改当前安装或历史日志。
+- 状态与边界：KnowledgeTools 身份查询和缺省身份共用当前绑定实例读取；仅 undefined 使用 Schema 默认，显式其它工作区/旧实例/null/空值仍拒绝。注册表保留实际 optional/default 解析，不自动补 revision/requestId/planId、目标或权限。其它派发/岗位等工具身份不借此被改写。预检只取得当前实例，不启动业务、切换工作区或重试未知写入。
+- 审计链：只在工具服务内部补身份会导致原 proposed 缺少知识事务身份，因此 loop-engine 将本实例知识工具的 normalizeInput 注入 Runtime。可信同步预解析在 proposed 前冻结生效 input；只有有差异时追加 originalInput 保存模型原值。授权、回执与原事务观察继续使用同一生效 input，执行端仍断言绑定实例。实际 Pi 回归验证缺身份的请求在 read 下拒绝，ask 下需批准，execute 下成功，并可由 originalKnowledgeWrite 从 canonical 参数重建原引用。
+- 错误与 UI：Core input-validation 复用无原值的字段说明；Runtime 在执行前将 ZodError 转为 TOOL_INPUT_INVALID 并保留 Fault 码，普通执行异常仍为 unknown。Bridge 仅公开纯字段格式化；ToolTimeline 只有真实 tool.denied 且没有 allowed/started/updated 才隐藏核实插槽。旧嵌套校验 JSON 以只读投影显示字段，不改日志；已放行或仅正文声称 rejected 的错误不隐藏核实能力。
+- 维护者阅读：input-validation/registry → KnowledgeTools 注册及 normalizeInput → assembly/loop-engine → Runtime.beforeTool → tool-failure-view/ToolTimeline。变化限于输入准备与拒绝展示；原领域 Schema、权限、事务、旧事件不迁移，批准或执行后失败不进入“尚未执行”说明。没有增加自动重试策略。
+- 验证选择及结果：`pnpm exec vitest run tests/tool-registry.test.ts tests/knowledge-tool-contracts.test.ts tests/knowledge-tool-view.test.ts tests/loop-engine.test.ts --reporter=dot`：22 通过，覆盖默认/可选/null、缺字段、错误身份、权限及历史提示。`pnpm exec vitest run tests/knowledge-tool-output.test.ts tests/unified-tool-policy.test.ts tests/workflow-runtime.test.ts --reporter=dot`：23 通过，覆盖原输出/权限/Workflow 消费者。
+- 审计补充验证：加入规范化后，`pnpm exec vitest run tests/unified-tool-policy.test.ts tests/loop-engine.test.ts --reporter=dot`：16 通过，其中真实 Pi 配本地 HTTP fixture，非在线供应商；将执行前失败细分为 describe/normalize 后，`pnpm exec vitest run tests/loop-engine.test.ts -t '执行前' --reporter=dot`：2 通过、8 未选中。共 46 个不同相关用例通过，不累计重复。
+- 静态与资料：首次 `pnpm typecheck` 暴露前端 JSON parse 后 unknown 失去字符串收窄，改用保留的字符串变量后通过；规范化接口增加后的类型检查发现返回 unknown 不能赋给工具对象输入，收紧为 ToolCall['input'] 后复核。`node scripts/source-architecture.mjs` 同步受影响类图；`pnpm check:architecture`：1366 文件、6943 依赖、0 循环/违规。同步 Core tools/runtime、assembly/tools、Bridge、execution-view 的注释与契约及 7 份架构文档。
+- 边界：未运行全量回归、桌面打包、安装升级、真实供应商请求或人工代码 review；截图网页抓取的空正文/搜索配置错误分类是另一项问题，本次未处理。尚未发布，后续集成和发布沿现有门禁；#65 其余事项保持开放。
+
+## 2026-11-13：候选审阅阶段说明与依赖批准关口
+
+- 来源：用户直接要求“交付待审阅时展示完整阶段说明，并加审阅通过后才放行的依赖关口”；基线 `4bfc2b39`，开始时工作区干净。2026-11-13 拉取开放 Issues，只有 #65；本次为直接新增要求，不虚构关联工单，不关闭 #65，不修改安装版或用户正在执行的任务。
+- 语义与边界（C3 / L2）：候选交付、主调度接受、最终目标审阅、人工验收是不同事实。新增 `TaskNode.candidateReview`，当前主运行以 `cbim_dispatch_review` 显式接受/拒绝精确任务版本、结果、原运行与计划，事务追加一次不可改判的审阅及理由。接受只放行后继；拒绝不能被目标审阅当成完成证据。拒绝后撤销相关未启动后继并新建返工链，不扩展现有失败来源替换语义。
+- 真实调用链：主运行工具 → ScopeGoalService 核实目标/主身份/原成员证据 → DispatchStore 原子追加 → Core 校验绑定、命令指纹和不可变性 → AutoCollaboration / MemberExecution 共用 dependenciesReady → 领取事务再次检查。保护原候选、执行租约、权限、文件/知识与人工验收机制；只将批准策略放在新依赖和候选审阅协议中。此策略变化频率尚无统计，不增加通用审批框架。
+- 调度变化：前置交付而后继仍在等待审阅时，先回主轮；member-results 轮次继承同周期尚未启动的任务。主 Agent 审阅并结束主轮后沿原身份继续，避免“主等所有成员、后继等主”的互等。任务图、内联卡、详情复用阶段说明，显示待审阅、接受、拒绝及理由，不把 scope 活动伪装成“主 Agent 正在审阅”。完整路径说明包括集成与按目标要求用户验收。
+- 兼容：派发、追加、替换、修订产生的新边带 `reviewRequired:true`；旧边保持原义，不能补写或清除审阅标志。三个依赖事务验证器兼容旧日志与新要求；原运行数据不迁移。自动重启回传仍沿原有“全部成员可靠交付”限制，含未启动后继时不自动恢复模型。Pi 超大结束事件中断是先前诊断的另一问题，本提交未处理。
+- 验证选择：成员执行与真实存储覆盖批准/拒绝/精确结果/重复命令/重开持久记录/错误主运行/拒绝证据；协调器覆盖回主审阅和原后继跨轮保留；图规则覆盖旧边、新关口及错结果；目标审阅覆盖消费者；依赖增删换边覆盖持久校验和历史兼容；视图静态渲染与主工具/指引覆盖 UI 和入口。不以模拟模型结果声称真实供应商验收。
+- 实际验证：初次 `pnpm exec vitest run tests/auto-collaboration.test.ts tests/dispatch-graph.test.ts tests/member-execution.test.ts --reporter=dot` 为 68 通过、1 失败（旧测试假定候选直接放行）。更新回归后，定向执行 `tests/member-execution.test.ts -t '依赖任务等待精确'` 发现 canonical 日志未结算时 status 不是 running，改为实时调用闭包加可靠事件终态核验后通过。
+- 联合验证：`pnpm exec vitest run tests/member-execution.test.ts tests/auto-collaboration.test.ts tests/dispatch-graph.test.ts tests/scope-goal.test.ts tests/queued-dependency-addition-service.test.ts tests/queued-dependency-replacement-service.test.ts tests/queued-dependency-revision-service.test.ts --reporter=dot` 为 99 通过、13 失败；失败均为原子边校验尚未接受新标志。修正兼容校验后，`pnpm exec vitest run tests/queued-dependency-addition-service.test.ts tests/queued-dependency-replacement-service.test.ts tests/queued-dependency-revision-service.test.ts tests/queued-dependency-addition-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-dependency-revision-core.test.ts --reporter=dot`：50 通过。
+- UI/工具验证：`pnpm exec vitest run tests/candidate-review.test.ts tests/dispatch-tools.test.ts tests/agent-role-instructions.test.ts tests/member-help-view.test.ts --reporter=dot`：34 通过。补充存储重开、错误主身份、拒绝候选最终证据保护后，`pnpm exec vitest run tests/member-execution.test.ts -t '依赖任务等待精确' --reporter=dot`：2 通过、14 未选中。所有已选受影响用例最终通过，不累计重跑次数。
+- 静态与维护：类型检查首次发现新协调器测试的模拟回执缺 workspaceId/taskId，补齐后 `pnpm typecheck` 通过；`node scripts/source-architecture.mjs` 同步 7 份目录类图，`pnpm check:architecture` 通过（1364 文件、6936 依赖、0 循环/违规）。同步 Core tasks、调度 dispatch/goals/members/tools/conversation、前端 tasks 的注释与 CONTRACT/ARCHITECTURE。
+- Review 入口：完整差异从上述基线到本独立提交；建议依次读 candidate-review.ts → graph/dispatch-invariants → ScopeGoalService.reviewCandidate → AutoCollaboration → member-review-state/MemberTaskDetail。后续改批准策略从 Core 协议及主审阅服务进入，阶段文案留在前端只读投影。未运行全量回归、桌面打包、安装升级、真实模型或人工代码 review；本步未发布，后续 PR/发布沿既有门禁。
+
+## 2026-11-13：Issue #65 剩余路径修复与长写入中断验证
+
+- 来源：用户要求继续修 [#65](https://github.com/nan023062/cbim/issues/65)，基线 `e5989abd`，开发前工作区干净，已读取工单正文及两条现有进度。复核原 Codex 运行事件及对应原生目录，原事件仅保存“请求未完整完成”，没有供应商具体原因，不能追溯断言为输出上限。
+- Windows 确定性缺陷：授权侧用工作区根解析 `/tmp/...`，Pi 独立工具 SDK 却用进程当前盘符解析。`engines/native-tools.ts` 在受管文件工具边界将单根分隔符路径按工作区补成完整路径；保留原输入、UNC、显式盘符及其它平台语义，不猜 Bash/MSYS 挂载表。纯 Windows 解析测试覆盖 D 盘与六种文件工具，实际 SDK 覆盖写/读/编辑。该变化仅用于 Codex 受管工具，不修改其它引擎自带文件工具。
+- 中断诊断：`transport/request-budget-usage.ts` 区分 Responses 的输出上限、内容过滤、原因未知、供应商失败；只输出本地固定文本，以 Fault 穿过预算代理已有可信错误通道。已发出但不完整的请求仍保留未知用量、阻断后续请求，不放宽结算屏障，不重试或补全参数。
+- 长写入验证：真实 Codex EXE 对本地确定性 HTTP 服务，26 万字符（UTF-8 34 万字节）写入完整成功；content 类型错误保留原文件，返回工具失败并可完成下一模型轮；长参数生成中途收到 incomplete 时不执行工具、不覆盖原文件，关闭前登记真实会话，随后显式续接原线程成功且不重放。已有“工具执行后中断”及真实应用恢复测试继续通过。这里只验证模型生成中断和错误参数，不声称文件系统写入过程中断电具有原子保障。
+- 验证依据：路径工具直接变化、流解析/预算传输为诊断消费者，Codex 中断与写入测试覆盖执行屏障及会话恢复。首轮 `pnpm exec vitest run tests/native-tool-paths.test.ts tests/model-request-budget-usage.test.ts tests/codex-write-recovery.test.ts tests/codex-interruption.test.ts --reporter=dot`：26 通过、1 失败（新增测试误用 SDK 旧 edit 参数）；按真实 edits[] 协议修正夹具后，`pnpm exec vitest run tests/native-tool-paths.test.ts tests/model-request-budget-transport.test.ts --reporter=dot`：17 通过。新增预算通道回归、将可信诊断改为 Fault 后，`pnpm exec vitest run tests/model-request-budget-usage.test.ts tests/model-request-budget-transport.test.ts tests/codex-write-recovery.test.ts tests/codex-interruption.test.ts --reporter=dot`：29 通过。最终共 37 个不同相关用例通过，不累计重跑。
+- 同步维护：两处源码文件头/接口说明，engines 与 transport 的 CONTRACT/ARCHITECTURE；生成器更新两份类图。`pnpm check:architecture`：1360 文件、6908 条依赖、0 循环及违规；`pnpm typecheck` 通过。未运行全量回归、打包、发布、真实供应商调用或人工 review，未改用户安装及历史数据。
+- 剩余边界：Windows 已证实缺陷已修；长写入没有复现额外执行层缺陷，诊断和恢复得到验证。旧日志已丢失的具体供应商原因不能补造，Issue 保持开放等待使用新版时的原始复现证据，不把本地 HTTP 测试等同真实 DeepSeek 验收。
+
+## 2026-11-13：Issue #65 多轮失败的日志核实与确定性修复
+
+- 来源：[Issue #65](https://github.com/nan023062/cbim/issues/65)，开放清单只有此项，基线 `bf63b3a9`。用户确认 Codex 和 Claude Code 均出现问题，并授权只读本地 CBIM 对话日志；读取 webfps 对应运行事件及 dispatch 记录，未修改已安装应用、工作区或会话数据，原始日志与私有诊断未提交仓库。
+- Claude 根因：本地 `9ed3dad6` 运行的 assistant 原文记录 API 400，`cbim_dispatch_cancel` 的 `#/anyOf/0/properties/expectedGraphCursor` 指针失效。`engines/claude/tools.ts` 顶层联合投影前保存原定义图并重定位引用，保留递归与转义指针，不改原领域校验。真实取消工具目录和实际 Claude SDK 发出的本地 HTTP 请求均验证可编译。
+- 原生误拦截：`.cbim_write_probe` 被子串规则误判；两条管道 grep 仅过滤 ls/curl 输出也被当作递归搜索。`main/platform/tool-guard.ts` 按完整路径段判断，已知文件工具仅检查定位字段；仅允许可确认的标准输入 grep，文件参数、递归、重定向及展开仍拒绝。现存链接与显式知识路径保护保留；该规则不是 OS 沙箱。
+- 参数与目标：反馈 Skill 缺身份曾产生原始 Zod 错误；`core/tools/registry.ts` 现返回字段和身份获取入口，不回显正文、不自动填身份。`conversation/main-agent.ts` 指引每轮核实例、继续正式业务先核当前目标。日志证明普通发送开启新 scope，原 plan 未删除；旧版本审阅失败后 goal-repair 已重新规划。此次未改调度状态机，也未降低计划覆盖全部验收条件或人工验收要求。
+- 验证选择：门禁、注册表、角色指引是直接变化单元；知识工具与统一策略覆盖调用方；Claude Schema 与真实 SDK 请求覆盖本次 400 的实际目录路径。`pnpm exec vitest run tests/native-tool-guard.test.ts tests/tool-registry.test.ts tests/agent-role-instructions.test.ts --reporter=dot`：18 通过；`pnpm exec vitest run tests/knowledge-tool-contracts.test.ts tests/unified-tool-policy.test.ts --reporter=dot`：9 通过；`pnpm exec vitest run tests/claude-schema.test.ts --reporter=dot`：2 通过；`pnpm exec vitest run tests/claude-tools.test.ts -t 'real Claude internal tool receives' --reporter=dot`：1 通过、8 未选中。补充 shell 分隔符保护后仅重跑 `tests/native-tool-guard.test.ts`：5 通过。共 30 个不同用例通过，不把重跑计成新增。
+- 同步维护：上述四处源码文件头/关键行为说明、各目录 CONTRACT 与 ARCHITECTURE；`node scripts/source-architecture.mjs` 更新四份，`pnpm check:architecture` 通过，1358 文件、6904 依赖、0 循环/违规。`pnpm typecheck` 首次发现新测试夹具含多余身份字段，按真实 MainToolOutputBinding 修正后复跑通过；对应两个 Schema 用例复跑通过。
+- 验证边界与剩余：未运行全量回归、打包、安装升级、真实供应商请求或人工代码 review。Codex `3c2256e2` 的请求未完整完成没有对应长写入失败证据；后续 3202–12495 字符写入实际成功，不能据此虚构长度阈值。Windows `/tmp` 在 Bash 与原生工具解析到不同盘符，明确 D 盘绝对路径已在原记录成功，本次未改路径适配。Issue 保持开放追踪这些剩余项，不把局部修复报告为整单完成。
+
 ## 2026-11-13：C 0.1.15 / R3 公开与真实升级通过
 
 - 用户追加授权自动提交 PR 并发布。[PR #63](https://github.com/nan023062/cbim/pull/63) 正常合并，冻结源码 `98b7caf9`，merge `e85a81f0`；准确 head 完整 Windows 四片通过：427 文件、2886 通过、0 失败、2 个因缺专用历史 EXE 的既有跳过。

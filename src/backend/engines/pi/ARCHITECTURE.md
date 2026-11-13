@@ -71,9 +71,9 @@ class N_src_backend_engines_pi_engine_ts_PiEngine["PiEngine"] {
   -budgetTransport
   -events
   -settlement
+  -inactivity
   -assistantError
   -generationStarted
-  -activity
 }
 N_src_backend_engines_pi_engine_ts ..> N_src_backend_engines_pi_engine_ts_PiEngine : 声明
 class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -90,6 +90,7 @@ class N_src_backend_engines_pi_engine_ts["engine.ts"] {
   <<module>>
 }
 class N_src_backend_engines_pi_engine_ts_PiEngine["PiEngine"] {
+  -activity
   -requestLimit
   -usageBaseline
   -closing
@@ -105,7 +106,7 @@ class N_src_backend_engines_pi_engine_ts_external_AgentEngine["AgentEngine (外�
 N_src_backend_engines_pi_engine_ts_external_AgentEngine <|.. N_src_backend_engines_pi_engine_ts_PiEngine
 ```
 
-直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)。
+直接依赖：[../../core/execution/engine-runtime.ts](../../core/execution/engine-runtime.ts)、[../../core/execution/engine-tools.ts](../../core/execution/engine-tools.ts)、[../../core/execution/engine-instructions.ts](../../core/execution/engine-instructions.ts)、[../../core/execution/types.ts](../../core/execution/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../core/models/ports.ts](../../core/models/ports.ts)、[../../core/execution/model-errors.ts](../../core/execution/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../core/tools/native-tools.ts](../../core/tools/native-tools.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/models/request-budget.ts](../../core/models/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### request-budget-bootstrap.ts
 
@@ -201,6 +202,10 @@ N_src_backend_engines_pi_engine_ts ..> N_src_backend_engines_pi_request_budget_b
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 无进展超时
+
+`PiEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。`message_update` 的非空 text/thinking/toolcall 增量、统一消息和工具事件续期；推理内容不入日志，自动重试、摘要重试和普通状态通知不续期。只有连续静默超过原 `turnTimeoutMs` 才报明确的 Pi 无进展错误，运行总时长可以跨过原 30 分钟上限。
 
 ### 第三方来源与许可
 

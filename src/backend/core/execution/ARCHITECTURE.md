@@ -20,6 +20,7 @@
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |
 | [model-errors.ts](model-errors.ts) | 把模型结束原因转换为用户可理解的执行错误，供实时引擎和历史回放共用。 |
 | [repeated-tool-failures.ts](repeated-tool-failures.ts) | 按本轮真实调用顺序识别同工具同参数的连续三次失败。 |
+| [run-failure.ts](run-failure.ts) | 将运行终态错误投影为任务卡、执行详情共用的公开诊断。 |
 | [scope-usage.ts](scope-usage.ts) | 从单轮 canonical 摘要提取保守的已报告消耗，并汇总指定周期的主/成员计量。 |
 | [storage.ts](storage.ts) | 执行循环使用的日志和任务目录存储端口。 |
 | [types.ts](types.ts) | 大脑 执行层：与具体引擎无关的任务、事件、工具策略和执行摘要契约。 |
@@ -78,6 +79,9 @@ N_src_backend_core_execution_index_ts ..> N_src_backend_core_execution_input_sou
 
 ```mermaid
 classDiagram
+class N_src_backend_core_execution_run_failure_ts["run-failure.ts"] {
+  <<module>>
+}
 class N_src_backend_core_execution_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
@@ -204,6 +208,17 @@ class N_src_backend_core_execution_model_errors_ts["model-errors.ts"] {
 ```
 
 
+### run-failure.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_execution_run_failure_ts["run-failure.ts"] {
+  <<module>>
+  +publicRunFailure()
+}
+```
+
+
 ### scope-usage.ts 公开入口
 
 ```mermaid
@@ -246,6 +261,10 @@ class N_src_backend_core_execution_usage_ts["usage.ts"] {
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # 引擎无关执行契约
+
+## 公开运行失败原因
+
+`publicRunFailure` 为成员任务卡和执行详情提供同一套无副作用诊断转换。已知无进展超时、旧整轮超时、事件过大、进程退出、输出长度限制、认证/限流/网络错误重建具体说明；任意供应商错误、原生路径、凭据和工具正文不直接公开，无法识别的原始原因保留在 canonical 日志。数值仅从有限的错误形态提取，转换不修改历史、不认定副作用已撤销、不触发重试。
 
 当前实现位于本目录的公开契约、`runtime/` 与 `capabilities/`；具体引擎位于 [backend/engines](../../engines/ARCHITECTURE.md)，由 [调度装配](../../scheduler-engine/assembly/ARCHITECTURE.md) 选择。下文标明“设计”“待实现”的历史端口草案仍非已实现保证；当前结构以本目录类图和源码为准。
 

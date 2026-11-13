@@ -1,4 +1,5 @@
 /**
+ * 详情常驻完整审阅阶段与决定理由；成员候选、依赖批准及最终用户验收分别说明。
  * 作用定位：展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。
  * 文件补偿：独立报告只接当前实例与原调用，旧 native 没有 before 时不显示恢复入口。
  * 设计原因：按工作区/主会话/任务/轮次隔离观察；岗位与模型展示原冻结绑定，旧记录不猜负责人。流程、求助、检查点、撤销与结构验证独立展示，不把旧候选或通过结论借给新轮次。
@@ -22,6 +23,7 @@ import {MemberValidationPanel} from './MemberValidationPanel';
 import {MemberOwnerNotice} from './OwnerExecutionDetails';
 import {OwnerExecutionInspection} from './OwnerExecutionInspection';
 import type {ExecutionRecoveryContext} from './useExecutionRecovery';
+import {memberReviewStage} from './member-review-state';
 import {memberTaskLabel} from './MemberActivity';
 import './member-activity.css';
 
@@ -31,11 +33,13 @@ export function MemberTaskDetail({workspaceId,workspaceInstanceId,rootSessionId,
   const runId=task.runIds.includes(selected)?selected:task.runIds.at(-1);
   // 任务最新候选可能来自另一轮执行，旧轮次不能借用该候选证明自己的结果。
   const candidate=task.result?.runId===runId?task.result:undefined;
+  const reviewStage=memberReviewStage(task);
   const valid=task.identity.workspaceId===workspaceId&&task.identity.rootSessionId===rootSessionId;
   return <section className="member-task-detail" aria-label={'成员任务详情 · '+task.assignee.name}>
     <header className="member-detail-heading"><div><span className="member-role-caption">执行 Agent</span><h3>{task.assignee.name}</h3></div>{onBack&&<button onClick={onBack}>返回任务图</button>}</header>
     {!valid?<p className="member-error" role="alert">所选任务不属于当前会话，请返回任务图重新选择。</p>:<>
       <span className={'member-state '+task.status}>{memberTaskLabel(task)}</span><h4>任务目标</h4><p className="member-detail-goal">{task.goal}</p>
+      {reviewStage&&<section className="member-result" aria-label="交付审阅阶段"><h4>{reviewStage.label}</h4><p>{reviewStage.description}</p></section>}
       <MemberOwnerNotice task={task}/>
       <OwnerExecutionInspection key={'owner:'+JSON.stringify([workspaceId,rootSessionId,task.taskId])} task={task}/>
       <details className="member-scope"><summary>实例与执行通道</summary><p>执行实例 <code>{task.assignee.agentInstanceId}</code></p><p>业务任务通道 <code>{task.assignee.agentSessionId}</code></p></details>

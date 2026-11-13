@@ -19,3 +19,8 @@ knowledge-tool-view 仅接受原 finished 调用的完整、同工作区知识�
 ### 失败与熔断显示
 
 ToolTimeline 在失败或未确认调用旁展示运行记录中的 nextStep；engine.status 的 label 缺省时使用 message/state，显示真实熔断原因。仅展示文本，不生成自动重试/核实动作，不改变原运行或业务验收状态。
+
+
+## 明确拒绝与旧参数错误
+
+ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/started/updated 时，只读渲染拒绝原因，并不调用核实控制插槽。tool-failure-view 兼容旧 message 内嵌的校验数组及当前 TOOL_INPUT_INVALID，展示缺失字段、格式说明与默认参数语义，不展示原始校验 JSON；原日志未修改。已放行或仅正文自称 rejected 的失败保持原核实入口，不能通过伪造正文隐藏可能发生的副作用。

@@ -1,6 +1,9 @@
 import {expect,test} from 'vitest';
 import {applyGraphBatch,readGraphDelta} from '../src/backend/core/tasks/graph-reducer';
 import {validateGraph} from '../src/backend/core/tasks/graph-rules';
+import {validateTaskNode} from '../src/backend/core/tasks/graph-rules';
+import {memberReviewStage} from '../src/frontend/tasks/member-review-state';
+import {dependenciesReady} from '../src/backend/scheduler-engine/members/member-state';
 import type {AgentRef,GraphChange,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
 
 const identity={workspaceId:'workspace-1',rootSessionId:'conversation-1'};
@@ -19,6 +22,23 @@ function dispatch(id:string,parentTaskId?:string):GraphChange[]{return [
   {type:'edge.upserted',edge:{kind:'dispatch',edgeId:`dispatch-${id}`,identity,fromNodeId:parentTaskId?`task:${parentTaskId}`:'session:conversation-1',toNodeId:`task:${id}`,revision:1,enabled:true}},
 ]}
 function errorCode(action:()=>unknown){try{action();return undefined}catch(e){return (e as {code:string}).code}}
+
+test('审阅展示完整阶段且门禁只接受同版本同结果；旧依赖保持既有语义',()=>{
+  const source=task('source'),target=task('target');source.status='result_ready';source.runIds=['run'];
+  source.result={resultId:'result',runId:'run',planRevision:1,summary:'候选',evidenceRefs:['tool'],limitations:[],acceptance:'not_evaluated'};
+  const graph={...initial(),tasks:[source,target],edges:[{kind:'dependency' as const,edgeId:'edge',identity,fromNodeId:source.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,planRevision:1,reviewRequired:true as const}}]};
+  expect(dependenciesReady(graph,target)).toBe(false);
+  expect(memberReviewStage(source)?.description).toContain('整体集成审阅');expect(memberReviewStage(source)?.description).toContain('用户验收');
+  expect(memberReviewStage(source,[{...target,activeRunId:'active'}])?.description).toContain('等待当前成员运行结束');
+  source.candidateReview={resultId:'result',runId:'run',planRevision:1,mainRunId:'main',decision:'accept',reason:'逐项核对',recordedAt:stamp};
+  expect(dependenciesReady(graph,target)).toBe(true);expect(memberReviewStage(source)?.label).toBe('主 Agent 已审阅通过');validateTaskNode(source);
+  source.candidateReview.resultId='old';expect(dependenciesReady(graph,target)).toBe(false);expect(errorCode(()=>validateTaskNode(source))).toBe('GRAPH_INPUT_INVALID');
+  expect(memberReviewStage(source)?.label).toBe('交付待主 Agent 审阅');
+  source.candidateReview.resultId='result';source.candidateReview.decision='reject';
+  expect(memberReviewStage(source)?.description).toContain('逐项核对');expect(dependenciesReady(graph,target)).toBe(false);
+  delete source.candidateReview;const legacy=structuredClone(graph);delete (legacy.edges[0].condition as {reviewRequired?:true}).reviewRequired;
+  expect(dependenciesReady(legacy,legacy.tasks[1])).toBe(true);
+});
 
 test('a committed dispatch applies its task and edge together without mutating previous state',()=>{
   const first=initial(),event=batch(2,dispatch('a'));

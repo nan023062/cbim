@@ -1,10 +1,12 @@
 /**
+ * 依赖就绪共享精确候选接受谓词；仅新边要求审阅，正文或回合结束均不签发批准。
  * 目录归属：backend/scheduler-engine/members；主运行与成员执行管理。
  * 问答边界：结算复用当前业务证据谓词，旧记录或合成进度不能借成功的答案/取消回执产生候选；不禁止未引用的提问。
  * 作用定位：成员执行事务的图增量、占用和交付候选投影，并提供独立求助验证入口。
  * 设计原因：纯状态计算与进程生命周期分开；已请求求助的运行不能同时产出交付候选，模型正文不签发完成或验收事实。
  */
 import {randomUUID} from 'node:crypto';
+import {candidateAccepted} from '../../core/tasks/candidate-review';
 import {fail} from '../../core/foundation/errors';
 import type {RunSummary} from '../../core/execution/types';
 import type {DispatchState} from '../../core/dispatch/dispatch-storage';
@@ -41,7 +43,7 @@ export function dependenciesReady(graph:GraphSnapshot,task:TaskNode){
   return graph.edges.filter(e=>e.enabled&&e.kind==='dependency'&&e.toNodeId===task.nodeId).every(edge=>{
     if(edge.kind!=='dependency')return false;
     const source=graph.tasks.find(t=>t.nodeId===edge.fromNodeId);
-    return source?.status==='result_ready'&&source.planRevision===edge.condition.planRevision&&source.result?.planRevision===edge.condition.planRevision&&(!edge.condition.resultId||edge.condition.resultId===source.result.resultId);
+    return source?.status==='result_ready'&&source.planRevision===edge.condition.planRevision&&source.result?.planRevision===edge.condition.planRevision&&(!edge.condition.resultId||edge.condition.resultId===source.result.resultId)&&(!edge.condition.reviewRequired||candidateAccepted(source));
   });
 }
 /** 交付候选仍需人工或治理验收；只认同一 run 的结构化计划及成功工具证据。 */

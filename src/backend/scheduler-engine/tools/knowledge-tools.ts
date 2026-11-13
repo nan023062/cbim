@@ -1,4 +1,5 @@
 /**
+ * 知识身份允许缺省：先核实绑定实例并读取当前身份；显式身份不覆盖，业务版本/命令与写权限不自动补齐。
  * 对象维护优先 object_preview/commit；底层 knowledge 文件事务标为兼容，保留无法由对象操作表达的维护场景。
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
  * 设计原因：查询只注入快照读取，刷新单独装配事务端口；先声明实际能力和契约版本再消费运行授权。领域执行一次，业务输出按唯一 JSON 快照校验，不因返回异常重放事务。
@@ -14,20 +15,26 @@ import {ObjectCrud,objectOperation} from '../../core/knowledge/object-crud';
 import type {ToolEffect} from '../../core/tools/types';
 import {knowledgeToolContract} from './knowledge-contracts';
 import {knowledgeCommitInputSchema,knowledgeObjectCommitInputSchema,knowledgeRefreshInputSchema} from '../../core/knowledge/knowledge-write-input';
-const identity={workspaceId:z.string(),instanceId:z.string()};
 export class KnowledgeTools {
   private readonly registry=new ToolRegistry<boolean>();
   readonly queries:KnowledgeQueries;
   constructor(readonly workspace:KnowledgeWorkspace){
+    // 与 identity 查询共用当前已绑定实例；仅 undefined 使用默认值，显式旧值仍由 assert 拒绝。
+    const currentIdentity=()=>{workspace.assert();return {workspaceId:workspace.entry.id,instanceId:workspace.instanceId}};
+    const identity={workspaceId:z.string().default(()=>currentIdentity().workspaceId),instanceId:z.string().default(()=>currentIdentity().instanceId)};
     const builtins=new Builtins(workspace.rules.designRoot);
     const queries=this.queries=new KnowledgeQueries({snapshot:()=>workspace.snapshot()});
     const refresh=new KnowledgeRefresh({snapshot:()=>workspace.snapshot(),assert:identity=>workspace.assert(identity),committedReceipt:request=>workspace.committedReceipt(request),commit:request=>workspace.commit(request)});
     const objects=new ObjectCrud(workspace);
-    const register=(name:string,config:{version?:number;description?:string;inputSchema:z.ZodRawShape;effects?:readonly ToolEffect[]},execute:ToolDefinition<boolean>['execute'])=>{this.registry.register({name,version:1,effects:['read'],...config,...knowledgeToolContract(name),execute})};
+    const register=(name:string,config:{version?:number;description?:string;inputSchema:z.ZodRawShape;effects?:readonly ToolEffect[]},execute:ToolDefinition<boolean>['execute'])=>{
+      const inputSchema={...config.inputSchema};
+      for(const key of ['workspaceId','instanceId'] as const)if(Object.hasOwn(inputSchema,key))inputSchema[key]=identity[key];
+      this.registry.register({name,version:1,effects:['read'],...config,inputSchema,...knowledgeToolContract(name),execute});
+    };
     const wrap=(fn:(args:any,write:boolean)=>Promise<unknown>|unknown)=>async(args:any,write:boolean)=>{
       return await fn(args,write);
     };
-    register('cbim_workspace_identity',{description:'核验工程与运行实例。不能启动工作区。',inputSchema:{}},async(_args,write)=>({workspaceId:workspace.entry.id,root:workspace.entry.path,instanceId:workspace.instanceId,state:workspace.state,writeEnabled:write}));
+    register('cbim_workspace_identity',{description:'核验工程与运行实例。不能启动工作区；知识工具省略身份时自动读取此当前实例身份，显式传入的身份仍须匹配。',inputSchema:{}},async(_args,write)=>({...currentIdentity(),root:workspace.entry.path,state:workspace.state,writeEnabled:write}));
     register('cbim_knowledge_tool_catalog',{description:'按需列出本知识服务实际注册的工具摘要。family为knowledge，不含原生、派发或外部插件；定义不代表本次调用已获授权。',inputSchema:identity},()=>this.registry.catalog());
     register('cbim_knowledge_tool_describe',{description:'按工具名称读取本知识注册表的完整输入/输出Schema、版本、副作用和取消/恢复说明；只描述实际条目，不执行工具或授予权限。',inputSchema:{...identity,name:z.string().min(1).max(128)}},args=>this.registry.describe(args.name));
     register('cbim_knowledge_snapshot',{description:'读取正式知识、版本、模块树与校验结果；不包含本地记忆。',inputSchema:identity},wrap(()=>workspace.snapshot()));
@@ -55,6 +62,14 @@ export class KnowledgeTools {
   }
   /** 返回实际工具 Schema，供内部引擎注册可调用能力。 */
   list(){return this.registry.list()}
+  /** 只识别当前注册条目，不生成 Schema 或读取默认值。 */
+  has(name:string){return this.registry.tools.some(tool=>tool.name===name)}
+  /** 可信运行在 proposed 之前冻结实际参数，使审计、授权与知识事务使用相同身份/default。 */
+  normalizeInput(name:string,input:unknown){
+    const {args}=this.registry.resolve(name,input);
+    this.workspace.assert(name==='cbim_workspace_identity'?undefined:args as {workspaceId:string;instanceId:string});
+    return args;
+  }
   /** 授权前解析参数和实例身份；只检查，不执行或创建预览。 */
   describe(name:string,input:unknown){
     const {tool,args}=this.registry.resolve(name,input);

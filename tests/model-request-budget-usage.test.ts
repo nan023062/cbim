@@ -4,6 +4,13 @@ const frame=(value:unknown,event?:string)=>(event?'event: '+event+'\n':'')+'data
 const completion=(usage:unknown)=>frame({choices:[{index:0,delta:{},finish_reason:'stop'}],usage});
 const parse=(api:ConstructorParameters<typeof RequestBudgetUsageStream>[0],text:string)=>{const parser=new RequestBudgetUsageStream(api);const forward=parser.push(Buffer.from(text));return {...parser.finish(),forward}};
 
+it.each([['max_output_tokens','模型输出达到本轮上限'],['content_filter','供应商内容过滤'],['private arbitrary message','未提供可识别原因']])('未完成响应区分 %s 且不回显供应商正文', (reason,message)=>{
+  const parser=new RequestBudgetUsageStream('openai-responses');
+  expect(()=>parser.push(Buffer.from(frame({type:'response.incomplete',response:{incomplete_details:{reason},message:'private-secret',usage:{input_tokens:1,output_tokens:2,total_tokens:3}}})))).toThrow(message);
+  expect(()=>parser.finish()).toThrow('请求缺少完整终态或可信用量');
+  try{parse('openai-responses',frame({type:'response.incomplete',response:{incomplete_details:{reason}}}))}catch(error){expect(String(error)).not.toContain('private')}
+});
+
 it('completions缓存和推理只计一次，终态在结算前被扣留，UTF8跨块完整',()=>{
   const parser=new RequestBudgetUsageStream('openai-completions'),body=Buffer.from(frame({choices:[{index:0,delta:{content:'中文'},finish_reason:null}]})+completion({prompt_tokens:100,completion_tokens:30,total_tokens:130,prompt_tokens_details:{cached_tokens:20,cache_write_tokens:10},completion_tokens_details:{reasoning_tokens:25}})+frame('[DONE]'));
   let output='';for(const byte of body)output+=parser.push(new Uint8Array([byte])).join('');expect(output).toContain('中文');expect(output).not.toContain('[DONE]');expect(parser.finish()).toMatchObject({usage:{input:70,output:30,cacheRead:20,cacheWrite:10,totalTokens:130},terminal:frame('[DONE]')});

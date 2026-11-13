@@ -1,4 +1,5 @@
 /**
+ * 候选审阅不可改写，依赖的审阅要求不可撤除；旧边缺省值保留原义。
  * 既有任务的自动兜底身份与岗位绑定同样不可补造、更换或删除；换模式只产生后续新目标。
  * 作用定位：把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。
  * 设计原因：节点、边和成员状态必须一起可见；检查点及预约按不可变前缀逐段追加，依赖审计保留原计划与负责人，终止记录不可复活。
@@ -34,6 +35,8 @@ function taskRevision(previous:TaskNode,next:TaskNode){
   if(next.planRevision!==previous.planRevision+(changed?1:0))fail('GRAPH_REVISION_CONFLICT','任务计划版本与范围修订不一致');
   if(previous.runIds.some((id,index)=>next.runIds[index]!==id))fail('GRAPH_INPUT_INVALID','历史执行轮次不能删除或改写');
   if(previous.help&&stable(previous.help)!==stable(next.help))fail('GRAPH_INPUT_INVALID','已经交接的成员求助不能删除或改写');
+  if(previous.candidateReview&&stable(previous.candidateReview)!==stable(next.candidateReview))fail('GRAPH_INPUT_INVALID','已保存的候选审阅不能删除或改写');
+  if(next.candidateReview&&(!next.result||next.status!=='result_ready'||next.candidateReview.resultId!==next.result.resultId||next.candidateReview.runId!==next.result.runId||next.candidateReview.planRevision!==next.planRevision))fail('GRAPH_INPUT_INVALID','审阅必须绑定原交付候选');
   const beforeCheckpoints=previous.checkpoints??[],checkpoints=next.checkpoints??[],beforeRequests=memberResumeRequests(previous),requests=memberResumeRequests(next);
   if(checkpoints.length<beforeCheckpoints.length||checkpoints.length>beforeCheckpoints.length+1||beforeCheckpoints.some((value,index)=>stable(value)!==stable(checkpoints[index])))fail('GRAPH_INPUT_INVALID','检查点只能逐段追加，已交接历史不能删除或改写');
   if(requests.length<beforeRequests.length||requests.length>beforeRequests.length+1||beforeRequests.some((value,index)=>stable(value)!==stable(requests[index])))fail('GRAPH_INPUT_INVALID','续执行预约只能逐段追加，原历史不能删除或改写');
@@ -88,6 +91,7 @@ export function applyGraphBatch(previous:GraphSnapshot|undefined,event:GraphEven
       case 'edge.upserted':{
         const old=edges.get(change.edge.edgeId);nextRevision(old,change.edge);
         if(old&&(old.kind!==change.edge.kind||old.fromNodeId!==change.edge.fromNodeId||old.toNodeId!==change.edge.toNodeId))fail('GRAPH_INPUT_INVALID','已有连线的类型和端点不能改写');
+        if(old?.kind==='dependency'&&change.edge.kind==='dependency'&&old.condition.reviewRequired!==change.edge.condition.reviewRequired)fail('GRAPH_INPUT_INVALID','已有依赖的审阅要求不能改写');
         if(old?.kind==='dependency'&&!old.enabled)fail('GRAPH_INPUT_INVALID','退役依赖不可重新启用或改写');
         edges.set(change.edge.edgeId,structuredClone(change.edge));break;
       }

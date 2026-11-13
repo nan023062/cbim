@@ -1,10 +1,13 @@
 /**
+ * 字段提示只根据实际解析 issues 生成；可选/default 仍交原 Schema，不从声明字段清单猜测必填。
  * 作用定位：实际内部工具的输入/业务输出协议、版本、副作用及取消/恢复说明，支持摘要与按需完整描述。
+ * 输入失败仅返回字段和修正入口，不回显参数正文，不执行工具或自动补齐实例身份。
  * 设计原因：领域只执行一次，再核唯一 JSON 快照；发现协议不执行工具，Schema 成功和恢复说明都不授予权限或证明事务回滚。
  */
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {fail} from '../foundation/errors';
+import {inputIssueMessage} from './input-validation';
 import type {ToolEffect} from './types';
 import {checkedJsonToolResult} from './results';
 import {toolMetadataSchema,type ToolCancellation,type ToolRecovery} from './contracts';
@@ -44,10 +47,16 @@ export class ToolRegistry<Context> {
   /** 按需导出有限 JSON Schema 和说明；不执行领域调用，不把函数、凭据或其它工具清单嵌入结果。 */
   describe(name:string){const tool=this.entry(name);return {family:'knowledge' as const,tool:{...this.summary(tool),inputSchema:zodToJsonSchema(z.object(tool.inputSchema)),outputSchema:zodToJsonSchema(tool.outputSchema),cancellation:structuredClone(tool.cancellation),recovery:structuredClone(tool.recovery)}}}
   private entry(name:string){const tool=this.entries.find(t=>t.name===name);if(!tool)fail('TOOL','未知知识工具');return tool}
-  /** 只解析，不执行；调用方在返回后校验身份与授权再调用 execute。 */
+  /** 只解析，不执行；错误只列字段和修正方式，不回显输入正文。调用方随后校验身份与授权。 */
   resolve(name:string,input:unknown){
     const tool=this.entry(name);
-    return {tool,args:z.object(tool.inputSchema).parse(input)};
+    const parsed=z.object(tool.inputSchema).safeParse(input);
+    if(!parsed.success){
+      const fields=inputIssueMessage(parsed.error.issues);
+      const identity=parsed.error.issues.some(issue=>issue.path[0]==='workspaceId'||issue.path[0]==='instanceId');
+      fail('TOOL_INPUT_INVALID',`${name} 参数无效；${fields}。${identity?'请先调用 cbim_workspace_identity 获取当前 workspaceId/instanceId，再按工具声明补齐参数。':'请补齐必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。'}本次尚未执行。`);
+    }
+    return {tool,args:parsed.data};
   }
   /** 已由调用边界核对身份与授权后使用；只执行一次，不因业务输出损坏重放或补造字段。 */
   async invokeResolved(tool:ToolDefinition<Context>,args:unknown,context:Context){

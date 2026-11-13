@@ -1,4 +1,5 @@
 /**
+ * 候选与主调度审阅分别建模；新依赖要求批准，旧记录不补造审阅。
  * fallbackBinding 与 ownerBinding 表达不同执行来源；前者不产生长期岗位、模块责任或维护人。
  * 任务检查点按段只追加，旧预约进入独立历史，当前预约仍保留原字段以兼容单段记录。
  * 作用定位：任务派发图的可序列化领域契约，供调度、持久化和 Bridge 共同引用。
@@ -6,6 +7,7 @@
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import {type AutomaticExecutionBinding} from '../team/automatic-execution';
+import type {CandidateReview} from './candidate-review';
 import type {MemberHelpRecord} from './member-help';
 import type {QueuedTaskCancellation} from './queued-task-cancel';
 import type {DependencyReplacement} from './queued-dependency-replacement';
@@ -53,6 +55,8 @@ export type TaskNode = {
   revision:number;planRevision:number;status:TaskStatus;
   awaitedChildren:{taskId:string;planRevision:number}[];
   waitReason?:string;runIds:string[];activeRunId?:string;
+  /** 主 Agent 对精确交付候选的审阅；不等于用户最终验收。 */
+  candidateReview?:CandidateReview;
   result?:{
     resultId:string;runId:string;planRevision:number;summary:string;
     evidenceRefs:string[];limitations:string[];acceptance:'not_evaluated';
@@ -85,6 +89,8 @@ export type GraphEdge = {
   kind:'result_ready';planRevision:number;
   /** 依赖放行时固定实际消费结果；尚未满足时可缺省。 */
   resultId?:string;
+  /** 新依赖必须先经主 Agent 接受；旧日志缺省保持原历史语义，不补造批准。 */
+  reviewRequired?:true;
 }});
 export type GraphCursor = GraphIdentity & {streamId:string;seq:number};
 /** 当前图内的成员活动投影，不代表该成员在所有会话中的全局状态。 */

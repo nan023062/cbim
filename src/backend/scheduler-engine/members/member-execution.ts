@@ -1,4 +1,5 @@
 /**
+ * 领取前重核依赖的精确候选及主调度批准；未审阅或拒绝不会占用模型执行。
  * 目录归属：backend/scheduler-engine/members；主运行与成员执行管理。
 
  * 引擎从岗位采纳快照准备执行，供应商不决定执行引擎；旧自动兜底记录仅保留读取；领取与续段重新核模块、配置及是否已有负责人，权限仍来自原运行策略。
@@ -13,6 +14,7 @@
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
  * Claude/Codex 首轮允许延迟绑定真实原生文件；Codex 仅在 starting→running 时采纳 App Server 分配的线程 ID，之后身份与文件冻结。
+ * 失败或中断的任务卡原因取自本轮 canonical 终态，经公开诊断转换后同事务保存到 task.waitReason 与 run.error。
  */
 import {workspaceMemberEngine,type WorkspaceMemberModelRef} from '../../core/team/workspace-member';
 import {sameAutomaticExecutionForModules} from '../../core/team/automatic-execution';
@@ -25,6 +27,7 @@ import type {KnowledgeWorkspace} from '../../core/knowledge/ports';
 import type {LoopRuntime} from '../../core/execution/runtime/runtime';
 import type {ResolvedLlm} from '../../core/models/ports';
 import type {RunSummary,StoredEvent,ToolCall,ToolDecision,ChatPermission} from '../../core/execution/types';
+import {publicRunFailure} from '../../core/execution/run-failure';
 import type {DispatchRun} from '../../core/tasks/dispatch-execution';
 import type {DispatchStore,DispatchState,DispatchMessage} from '../../core/dispatch/dispatch-storage';
 import type {TaskNode} from '../../core/tasks/graph-types';
@@ -191,7 +194,7 @@ export class MemberExecutionManager {
         if(task.activeRunId||!['queued','waiting'].includes(task.status)||(!resuming&&task.runIds.length))fail('TASK_NOT_STARTABLE','当前任务不能重新执行，请核实已有运行后重新派发');
         const resumeRequest=currentMemberResumeRequest(task);
         if(resuming&&(!resumeRequest||!validMemberCheckpointChain(task)||task.runIds.length!==task.checkpoints?.length||task.help||task.result))fail('MEMBER_RESUME_NOT_ALLOWED','当前任务没有唯一尚未消费的续执行预约');
-        if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未提供当前版本的交付候选');
+        if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未交付当前候选，或尚未通过主 Agent 审阅');
         if(member.activeRunId)fail('MEMBER_BUSY','该成员正在处理另一项任务');
         const assignment=state.outbox.find(m=>m.kind==='assignment'&&m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&m.delivery==='pending'&&!!m.resumeFrom===resuming);
         if(!assignment)fail('ASSIGNMENT_UNAVAILABLE','任务缺少可领取的派发信封');
@@ -334,12 +337,16 @@ export class MemberExecutionManager {
     if(!run||!activeRun(run)||member?.activeRunId!==run.binding.runId||member.leaseEpoch!==run.binding.leaseEpoch)fail('STALE_MEMBER_RUN','成员执行租约已失效');
     return run;
   }
-  /** 同一事务结算运行、任务、成员占用和信封；求助/检查点重读 canonical，检查点还核文件与已关闭原生历史，重启只登记中断。 */
+  /** 同一事务结算运行与任务；失败/中断从本轮真实终态提取公开原因，不把工具错误当整轮失败。 */
   private async settle(original:DispatchRun,summary:RunSummary|undefined,status:Exclude<DispatchRun['status'],'starting'|'running'>,error?:string,recovery=false){
     const command={commandId:(recovery?'recover-':'settle-')+original.binding.runId,fingerprint:hash(json({binding:original.binding,status,recovery}))};
     await this.store.transact(command,async state=>{
       let run=this.currentRun(state,original);const {graph,task,member,session}=memberTask(state,run.binding.rootSessionId,run.binding.taskId);
       if(summary&&(json(summary.memberBinding)!==json(run.binding)||summary.task.taskId!==task.taskId||summary.runId!==run.binding.runId))fail('MEMBER_RUN_MISMATCH','执行摘要身份不一致');
+      if(!error&&summary&&(status==='failed'||status==='interrupted')){
+        const terminal=summary.events.at(-1);
+        if(terminal?.type==='run.interrupted'||terminal?.type==='run.settled'&&terminal.data.status==='failed')error=publicRunFailure(terminal.data.error);
+      }
       // Claude/Codex 首轮的文件由真实引擎终态发现，先核实同一原生身份，再参与交付及检查点验证。
       if(['claude-code','codex'].includes(run.model.engine??'pi')&&!run.session.sessionFile&&summary?.sessionFile){
         const bindings=summary.events.filter(event=>event.type==='session.bound');

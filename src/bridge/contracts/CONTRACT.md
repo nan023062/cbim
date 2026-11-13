@@ -364,3 +364,8 @@ Main 的 161 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操�
 `workspace-view.ts` 只定义数据；workspace.ts 组合 Bridge 和重导出，避免响应类型反向引用调用桥形成类型循环。对象编辑 Schema 直接来自纯 `object-contract.ts`，不经由包含 Node.js 事务实现的 `object-crud.ts`；浏览器构建测试禁止 IPC Schema 的传递依赖加载 Node.js 或 Electron。服务已有公开 DTO 继续作为数据契约；任意日志数据/知识 JSON 的内容仍按其领域协议表达，本次不是递归重写所有 JSON。治理命令进一步核实实际回执种类，附件列表/预览与会话选择器在 JSON 投影处校验公开形状。
 
 预加载层保留 cbim:call 和 ok/value、error.code/message 信封，不自动重试、补齐原运行身份或将缺失回执解释为未受理。请求/响应映射与真实 Main 入口的集合测试防止漂移；并未增加所有响应的运行时 Schema 或改动持久化格式。
+
+
+## 工具缺参说明
+
+execution.ts 导出 Core 的 inputIssueMessage，只有无原值的字段说明，无日志读取或副作用；前端据真实事件决定是否为执行前拒绝，不能单凭文本决定恢复能力。

@@ -57,7 +57,7 @@ export function assertDependencyAddition(graph:GraphSnapshot,before:GraphSnapsho
   assert.equal(receipt.addition.dependency.sourceTaskId,a.taskId);assert.equal(receipt.addition.dependency.sourcePlanRevision,a.planRevision);assert.equal('resultId'in receipt.addition.dependency,false);
   const added=graph.edges.find(edge=>edge.edgeId===receipt.addition.dependency.edgeId),following=graph.edges.find(edge=>edge.kind==='dependency'&&edge.enabled&&edge.fromNodeId===b.nodeId&&edge.toNodeId===c.nodeId);assert.ok(added&&following);assert.equal(added.kind,'dependency');assert.equal(added.enabled,true);assert.equal(added.fromNodeId,a.nodeId);assert.equal(added.toNodeId,b.nodeId);
   assert.equal(graph.edges.filter(edge=>edge.kind==='dependency'&&edge.enabled&&edge.fromNodeId===a.nodeId&&edge.toNodeId===b.nodeId).length,1);
-  if(added.kind==='dependency')assert.deepEqual(added.condition,{kind:'result_ready',planRevision:a.planRevision,...(executed?{resultId:a.result!.resultId}:{})});
+  if(added.kind==='dependency')assert.deepEqual(added.condition,{kind:'result_ready',reviewRequired:true,planRevision:a.planRevision,...(executed?{resultId:a.result!.resultId}:{})});
   if(executed){assert.ok([a,b,c].every(task=>task.status==='result_ready'&&task.result));if(following.kind==='dependency')assert.equal(following.condition.resultId,b.result!.resultId)}
   return {a,b,c};
 }

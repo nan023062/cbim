@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [candidate-review-tools.ts](candidate-review-tools.ts) | 仅向主运行提供精确成员候选审阅入口。 |
 | [command-report-contract.ts](command-report-contract.ts) | 声明主调度原命令核实工具的只读元数据及唯一 wire 归属校验。 |
 | [coordination-contracts.ts](coordination-contracts.ts) | 校验只读闭包预览的原运行归属和提交依据。 |
 | [coordination-tools.ts](coordination-tools.ts) | 主运行的统一状态与原回执读取入口，保留各领域实际校验和恢复语义。 |
@@ -28,6 +29,26 @@
 | [workspace-member-tools.ts](workspace-member-tools.ts) | 将主运行岗位端口注册为查询、预览、提交与原回执四项工具。 |
 
 ## 架构类图
+
+### candidate-review-tools.ts
+
+```mermaid
+classDiagram
+class N_src_backend_scheduler_engine_tools_candidate_review_tools_ts["candidate-review-tools.ts"] {
+  <<module>>
+}
+class N_src_backend_scheduler_engine_tools_candidate_review_tools_ts_CandidateReviewTools["CandidateReviewTools"] {
+  +has()
+  +list()
+  +describe()
+  +call()
+  -binding
+  -save
+}
+N_src_backend_scheduler_engine_tools_candidate_review_tools_ts ..> N_src_backend_scheduler_engine_tools_candidate_review_tools_ts_CandidateReviewTools : 声明
+```
+
+直接依赖：[../../core/tasks/candidate-review.ts](../../core/tasks/candidate-review.ts)、[../../core/tasks/graph-rules.ts](../../core/tasks/graph-rules.ts)、[../../core/tools/results.ts](../../core/tools/results.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/graph-types.ts](../../core/tasks/graph-types.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)。
 
 ### command-report-contract.ts
 
@@ -131,6 +152,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
   +call()
   -port
   -goals
+  -reviews
   -binding
   -definition()
   -available()
@@ -139,7 +161,7 @@ class N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools["Disp
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_dispatch_tools_ts_DispatchTools : 声明
 ```
 
-直接依赖：[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
+直接依赖：[candidate-review-tools.ts](candidate-review-tools.ts)、[../../core/tools/outcome.ts](../../core/tools/outcome.ts)、[coordination-contracts.ts](coordination-contracts.ts)、[../../core/tasks/coordination-preview.ts](../../core/tasks/coordination-preview.ts)、[../../core/foundation/errors.ts](../../core/foundation/errors.ts)、[../../core/tasks/dispatch-commands.ts](../../core/tasks/dispatch-commands.ts)、[../../core/tasks/workflow-selection.ts](../../core/tasks/workflow-selection.ts)、[../../core/tasks/queued-task-cancel.ts](../../core/tasks/queued-task-cancel.ts)、[../../core/tasks/queued-dependency-replacement.ts](../../core/tasks/queued-dependency-replacement.ts)、[../../core/tasks/queued-dependency-addition.ts](../../core/tasks/queued-dependency-addition.ts)、[../../core/tasks/queued-dependency-revision.ts](../../core/tasks/queued-dependency-revision.ts)、[../../core/tasks/main-tool-output.ts](../../core/tasks/main-tool-output.ts)、[main-tool-contracts.ts](main-tool-contracts.ts)、[command-report-contract.ts](command-report-contract.ts)、[../../core/tasks/command-verification.ts](../../core/tasks/command-verification.ts)、[goal-tools.ts](goal-tools.ts)、[../../core/tasks/queued-member-resume.ts](../../core/tasks/queued-member-resume.ts)、[../../core/tasks/checkpoint-handoff.ts](../../core/tasks/checkpoint-handoff.ts)。
 
 ### feedback-status-tool.ts
 
@@ -290,6 +312,8 @@ class N_src_backend_scheduler_engine_tools_knowledge_tools_ts_KnowledgeTools["Kn
   +workspace
   +queries
   +list()
+  +has()
+  +normalizeInput()
   +describe()
   +callFromRun()
   -registry
@@ -425,6 +449,9 @@ classDiagram
 class N_src_backend_scheduler_engine_tools_dispatch_tools_ts["dispatch-tools.ts"] {
   <<module>>
 }
+class N_src_backend_scheduler_engine_tools_candidate_review_tools_ts["candidate-review-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_tools_coordination_contracts_ts["coordination-contracts.ts"] {
   <<module>>
 }
@@ -434,17 +461,17 @@ class N_src_backend_scheduler_engine_tools_main_tool_contracts_ts["main-tool-con
 class N_src_backend_scheduler_engine_tools_command_report_contract_ts["command-report-contract.ts"] {
   <<module>>
 }
-class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
-  <<module>>
-}
+N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_candidate_review_tools_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_main_tool_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_command_report_contract_ts : 导入依赖
-N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_scheduler_engine_tools_dispatch_tools_ts["dispatch-tools.ts"] {
+  <<module>>
+}
 class N_src_backend_scheduler_engine_tools_goal_tools_ts["goal-tools.ts"] {
   <<module>>
 }
@@ -460,6 +487,7 @@ class N_src_backend_scheduler_engine_tools_knowledge_tools_ts["knowledge-tools.t
 class N_src_backend_scheduler_engine_tools_knowledge_contracts_ts["knowledge-contracts.ts"] {
   <<module>>
 }
+N_src_backend_scheduler_engine_tools_dispatch_tools_ts ..> N_src_backend_scheduler_engine_tools_goal_tools_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_coordination_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_goal_tools_ts ..> N_src_backend_scheduler_engine_tools_main_tool_contracts_ts : 导入依赖
 N_src_backend_scheduler_engine_tools_knowledge_tools_ts ..> N_src_backend_scheduler_engine_tools_knowledge_contracts_ts : 导入依赖
@@ -700,3 +728,13 @@ WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/rec
 cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
 
 调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。
+
+
+## 主 Agent 候选审阅工具
+
+CandidateReviewTools 由 AutoCollaboration 向主运行装配 cbim_dispatch_review，输入精确 taskId/expectedRevision/resultId、accept|reject 和理由。回执须通过 TaskNodeSchema 并匹配冻结的工作区、主会话、周期、主 run 以及原请求；坏回包只报告未知，不重试。结果不明确时以 cbim_dispatch_inspect 只读核实原任务 candidateReview。成员工具目录不装配此入口，成功只代表审阅已保存，不表示后继已执行。
+
+
+## 当前工作区身份的缺省语义
+
+KnowledgeTools 的身份查询与身份默认值共用 currentIdentity：先 workspace.assert 核实本服务绑定实例，再取得 workspaceId/instanceId。知识工具 Schema 中这两个字段允许省略，解析时自动使用当前绑定；不会创建第二次模型工具调用或伪造查询事件，运行适配在 proposed 前冻结解析后的生效参数；有差异时另存 originalInput，原模型输入仍保留。显式旧 ID、其它工作区、null、空值仍校验并拒绝，不换绑也不自动重试。查询列表不要求可选 query；revision/requestId/planId 等业务字段按原 Schema 保持必填或可选，写入仍需原运行授权。其它有独立身份语义的成员、派发和治理工具不借此补业务身份。

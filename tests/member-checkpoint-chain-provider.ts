@@ -1,3 +1,4 @@
+import {DependencyReviewRounds} from './dependency-review-provider-fixture';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import {memberCheckpointProvider,memberCheckpointFixture} from './member-checkpoint-provider';
@@ -10,6 +11,7 @@ function value(request:Request,id:string):any{const message=request.messages.fin
 export async function memberCheckpointChainProvider(abandon=false){
   const members=await memberCheckpointProvider('complete',true),main:Request[]=[],compactions:Request[]=[],errors:string[]=[],sequence:string[]=[],data=memberChainData,state={waits:[] as unknown[],resumes:[] as unknown[],abandonment:undefined as unknown};
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
+  const reviews=new DependencyReviewRounds();
   const server=http.createServer(async(req,res)=>{try{
     let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request,isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task')===true;
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));assert.equal(body.model,data.model);
@@ -20,10 +22,11 @@ export async function memberCheckpointChainProvider(abandon=false){
       for(const [delta,finish_reason]of [[{role:'assistant',content:summary},null],[{},'stop']])res.write('data: '+JSON.stringify({id:'chain-compaction-'+compactions.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');res.end('data: [DONE]\n\n');return;
     }
     if(!isMain){sequence.push('member:'+members.member.length);const response=await fetch(members.url+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:raw});res.writeHead(response.status,{'Content-Type':'text/event-stream'});assert.ok(response.body);for await(const chunk of response.body)res.write(chunk);res.end();return}
-    const turn=main.length;main.push(body);sequence.push('main:'+turn);res.writeHead(200,{'Content-Type':'text/event-stream'});
+    const turn=main.length-(true?reviews.offset:0);main.push(body);sequence.push('main:'+turn);res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'chain-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const plan={objective:data.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:data.acceptance};
+    if((true)&&reviews.handle(body,'chain-final-inspect',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(turn===0)tool('chain-plan','cbim_goal_plan',goalPlanArguments(plan));
     else if(turn>=1&&turn<=3)tool('chain-dispatch-'+turn,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:data.goals[turn-1],acceptance:data.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:turn===1?[]:[{taskId:value(body,'chain-dispatch-'+(turn-1)).taskId,expectedPlanRevision:1}]});
     else if(turn===4)reply('按原依赖执行A，并逐段保存可靠检查点。');
@@ -50,5 +53,5 @@ export async function memberCheckpointChainProvider(abandon=false){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member chain fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,compactions,member:members.member,get errors(){return [...errors,...members.errors]},sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection);members.bind(agent,module,selection)},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await members.close()}};
+  return {reviews,url:`http://127.0.0.1:${address.port}/v1`,main,compactions,member:members.member,get errors(){return [...errors,...members.errors]},sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection);members.bind(agent,module,selection)},close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await members.close()}};
 }

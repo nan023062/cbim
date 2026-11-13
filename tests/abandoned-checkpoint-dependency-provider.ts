@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -24,14 +25,17 @@ export async function abandonedDependencyProvider(options:{badOutput?:boolean}={
   const d=abandonedDependencyData,main:Request[]=[],member:Request[]=[],sequence:string[]=[],errors:string[]=[];
   const state:{initialGraph?:GraphSnapshot;beforeReplacement?:GraphSnapshot;receipt?:ReplaceQueuedDependencyReceipt;input?:ReplaceQueuedDependencyInput;abandonment?:AbandonCheckpointReceipt}={};
   let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection,release!:()=>void;const held=new Promise<void>(r=>release=r),heldTurn=options.badOutput?15:14;
+  const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request,isMain=!!body.tools?.some(t=>t.function.name==='cbim_dispatch_task'),requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const body=JSON.parse(raw) as Request,isMain=!!body.tools?.some(t=>t.function.name==='cbim_dispatch_task'),requests=isMain?main:member,turn=requests.length-(isMain?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'abandoned-dependency-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     const dispatch=(id:string,index:number,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.goals[index],acceptance:d.acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    if((isMain)&&reviews.handle(body,'abandoned-final',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(isMain){
       if(turn===0)tool('abandoned-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
       else if(turn===1)dispatch('abandoned-a',0);
@@ -75,5 +79,5 @@ export async function abandonedDependencyProvider(options:{badOutput?:boolean}={
     res.end('data: [DONE]\n\n');
   }catch(e){errors.push(e instanceof Error?e.stack??String(e):String(e));if(!res.headersSent)res.writeHead(500);res.end('Abandoned checkpoint fixture failed')}});
   await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,sequence,errors,state,heldTurn,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},releaseMain:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()))}};
+  return {compactions,reviews,url:`http://127.0.0.1:${address.port}/v1`,main,member,sequence,errors,state,heldTurn,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},releaseMain:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()))}};
 }

@@ -1,4 +1,5 @@
 /**
+ * 替换边保留可选审阅要求；旧日志按原字段核验，实际领取仍核精确候选批准。
  * 作用定位：校验前置替换的原子审计，以及所有依赖边变更的持久化边界。
  * 设计原因：服务核实证据后仍须防止通用事务绕过换边协议；追加边只能消费先前完整不变量核实的本批许可，退役边与历史审计不可复活。
  * 职责边界：纯状态约束不读取模型日志；canonical 证据与当前知识由提交服务在同一存储屏障内核实。
@@ -46,7 +47,7 @@ export function validateQueuedDependencyReplacement(previous:DispatchState,next:
     valid(changes.some(value=>value.type==='task.upserted'&&equal(value.task,task)),'换边缺少同批目标节点');
     valid(changes.some(value=>value.type==='agent.upserted'&&equal(value.agent,{...view,revision:view.revision+1,state:status==='waiting'?'waiting':'idle',runningTaskId:undefined,waitingTaskIds:status==='waiting'?[target.taskId]:[]})),'换边缺少同批目标成员投影');
     valid(changes.some(value=>value.type==='edge.upserted'&&equal(value.edge,{...edge,revision:edge.revision+1,enabled:false})),'原边必须原样退役，不能删除或改写门禁');
-    valid(changes.some(value=>value.type==='edge.upserted'&&equal(value.edge,{edgeId:record.replacement.edgeId,identity:graph.identity,kind:'dependency',fromNodeId:replacement.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:replacement.planRevision,resultId:replacement.result!.resultId}})),'新边必须锁定真实候选的计划与结果身份');
+    valid(changes.some(value=>value.type==='edge.upserted'&&equal(value.edge,{edgeId:record.replacement.edgeId,identity:graph.identity,kind:'dependency',fromNodeId:replacement.nodeId,toNodeId:target.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:replacement.planRevision,resultId:replacement.result!.resultId,...(value.edge.kind==='dependency'&&value.edge.condition.reviewRequired?{reviewRequired:true}:{})}})),'新边必须锁定真实候选的计划与结果身份');
   }
   // 所有普通图事务也经过此门禁。创建新任务可设初始依赖；已有依赖仅允许正式换边或真实首次领取固定候选。
   const batch=mutation.batch;if(!batch)return;

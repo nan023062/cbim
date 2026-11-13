@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
@@ -33,13 +34,16 @@ export async function checkpointHandoffProvider(mode:CheckpointHandoffMode='comp
   let agentId='',moduleId='',releaseHandoff!:()=>void,releaseAfterAbandon!:()=>void;
   const handoffGate=new Promise<void>(resolve=>releaseHandoff=resolve),afterGate=new Promise<void>(resolve=>releaseAfterAbandon=resolve),reserved=mode==='reserved',shift=reserved?1:0;
   const discovery=(body:HandoffRequest,id:string):OwnerExecutionSelection=>{const result=ownerExecutionDiscoverySchema.parse(handoffToolValue(body,id).execution);assert.equal(result.groups.length,1);assert.equal(result.groups[0].agentId,agentId);assert.ok(result.groups[0].selection);return result.groups[0].selection};
+  const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as HandoffRequest;
     const role=req.url==='/main/v1/chat/completions'?'main':req.url==='/a/v1/chat/completions'?'a':req.url==='/b/v1/chat/completions'?'b':undefined;assert.ok(role);assert.equal(body.model,d.models[role]);
-    const requests=role==='main'?main:role==='a'?a:b,turn=requests.length;requests.push(body);sequence.push(role+':'+turn);
+    const requests=role==='main'?main:role==='a'?a:b,turn=requests.length-(role==='main'?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);sequence.push(role+':'+turn);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'checkpoint-handoff-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,input:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(input)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
     const assign=(prefix:string,index:number,selection:OwnerExecutionSelection,prior?:string)=>tool(prefix,'cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection:selection,goal:(prefix.startsWith('handoff-old-')?d.oldGoals:d.newGoals)[index],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    if((role==='main')&&reviews.handle(body,'handoff-final',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(role==='main'){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_dispatch_abandon_checkpoint'));assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)));
       if(turn===0)tool('handoff-discover-a','cbim_module_owner_inspect',{moduleIds:[moduleId]});
@@ -99,5 +103,5 @@ export async function checkpointHandoffProvider(mode:CheckpointHandoffMode='comp
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Checkpoint handoff fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const base=`http://127.0.0.1:${address.port}`;
-  return {mode,urls:{main:base+'/main/v1',a:base+'/a/v1',b:base+'/b/v1'},main,a,b,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseHandoff,releaseAfterAbandon,close:async()=>{releaseHandoff();releaseAfterAbandon();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {compactions,reviews,mode,urls:{main:base+'/main/v1',a:base+'/a/v1',b:base+'/b/v1'},main,a,b,errors,sequence,state,bind:(agent:string,module:string)=>{agentId=agent;moduleId=module},releaseHandoff,releaseAfterAbandon,close:async()=>{releaseHandoff();releaseAfterAbandon();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

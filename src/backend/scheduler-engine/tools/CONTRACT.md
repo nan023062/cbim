@@ -220,3 +220,13 @@ WorkspaceMemberTools 注册 cbim_member_inspect/change_preview/change_commit/rec
 cbim_dispatch_cancel 增加 includeClosure:true；cbim_goal_review 的 {decision:awaiting_user,memberPause:{includeClosure:true}} 只读预览。两者返回需确认的完整清单和 issues，不提交/启动；去掉预览参数后按原完整写协议提交，版本竞争继续拒绝。只有真实端口装配才公开该 Schema 分支；预览输出核对本轮归属。
 
 调度/目标、岗位、责任、治理的未知写错误附统一回执地址与原命令/调用，供只读核实，不自动重做。普通对象维护规范入口为 object_preview/commit，底层 knowledge_preview/commit 标为文件事务兼容；goal_plan/review 是主周期目标，task_plan/step 是运行内步骤，不能互代。
+
+
+## 主 Agent 候选审阅工具
+
+CandidateReviewTools 由 AutoCollaboration 向主运行装配 cbim_dispatch_review，输入精确 taskId/expectedRevision/resultId、accept|reject 和理由。回执须通过 TaskNodeSchema 并匹配冻结的工作区、主会话、周期、主 run 以及原请求；坏回包只报告未知，不重试。结果不明确时以 cbim_dispatch_inspect 只读核实原任务 candidateReview。成员工具目录不装配此入口，成功只代表审阅已保存，不表示后继已执行。
+
+
+## 当前工作区身份的缺省语义
+
+KnowledgeTools 的身份查询与身份默认值共用 currentIdentity：先 workspace.assert 核实本服务绑定实例，再取得 workspaceId/instanceId。知识工具 Schema 中这两个字段允许省略，解析时自动使用当前绑定；不会创建第二次模型工具调用或伪造查询事件，运行适配在 proposed 前冻结解析后的生效参数；有差异时另存 originalInput，原模型输入仍保留。显式旧 ID、其它工作区、null、空值仍校验并拒绝，不换绑也不自动重试。查询列表不要求可选 query；revision/requestId/planId 等业务字段按原 Schema 保持必填或可选，写入仍需原运行授权。其它有独立身份语义的成员、派发和治理工具不借此补业务身份。

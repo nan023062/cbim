@@ -81,6 +81,121 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
 }
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
+
+it.each(['blocked','awaiting_user'] as const)('当前主轮明确%s后不再尝试继承的待办',async decision=>{
+  const f=await setup();try{
+    await f.assign();
+    f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{runId:'parent-run',decision}}} as never);
+    if(decision==='blocked')f.dispatch.closeScope.mockImplementation(async(_identity,scopeId,outcome)=>{if(outcome==='completed')throw Object.assign(Error('缺少运行能力'),{code:'GOAL_BLOCKED'});return {...f.graph.identity,scopeId,status:'closed',outcome}});
+    f.settleParent();
+    await vi.waitFor(()=>expect(decision==='blocked'?f.dispatch.closeScope:f.dispatch.parkScope).toHaveBeenCalled());
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.dispatch.automaticReturns.record).not.toHaveBeenCalled();
+    if(decision==='blocked'){await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');expect(f.execution.continueGoalRepair).not.toHaveBeenCalled()}
+    else expect(f.coordinator.busy(f.task.taskId)).toBe(true);
+  }finally{await f.coordinator.close()}
+});
+
+it('旧主轮的等待审阅不能拦截明确恢复后的新派发',async()=>{
+  const f=await setup();try{
+    await f.assign();f.dispatch.goals.inspect.mockResolvedValue({goal:{plan:{},review:{runId:'old-run',decision:'awaiting_user'}}} as never);
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));expect(f.dispatch.parkScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it.each(['interrupted','failed','mixed'] as const)('成员反复%s后另派新任务，第三次异常停止整条自动接续链',async mode=>{
+  const f=await setup();try{
+    const original=f.dispatch.dispatchTask.getMockImplementation()!;let assignments=0,returns=0;
+    f.dispatch.dispatchTask.mockImplementation(async(input,scopeId)=>{
+      const receipt=await original(input,scopeId),task=f.graph.tasks.at(-1)!;
+      task.taskId='replacement-'+(++assignments);task.nodeId='task:'+task.taskId;
+      return {...receipt,taskId:task.taskId};
+    });
+    f.members.start.mockImplementation(async input=>{
+      const task=f.graph.tasks.find(task=>task.taskId===input.taskId)!,runId='native-'+task.taskId;
+      Object.assign(task,{runIds:[runId],status:mode==='mixed'?(assignments%2?'interrupted':'failed'):mode,waitReason:'Pi 连续 30 分钟无执行进展，已中断'});
+      return {taskId:task.taskId,runId,cursor:f.graph.cursor};
+    });
+    f.execution.continueFromResults.mockImplementation(async(...args)=>{
+      const runId='main-replacement-'+(++returns);
+      await f.hooks().starting!(f.task,f.options,args[3] as any,args[1] as string,runId);
+      const tools=f.coordinator.tools(f.task,runId,f.options)!;
+      await tools.call('cbim_dispatch_task',{agentId:'member',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'换一个任务编号继续验证 '+returns,acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'replacement-call-'+returns);
+      queueMicrotask(()=>f.hooks().settled(f.task,f.options,{task:f.task,runId,status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]}));
+      return {workspaceId:f.task.workspaceId,taskId:f.task.taskId,runId};
+    });
+    await f.assign();f.settleParent();
+    await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));
+    expect(f.members.start).toHaveBeenCalledTimes(3);expect(f.execution.continueFromResults).toHaveBeenCalledTimes(2);
+    expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.graph.tasks).toHaveLength(3);
+    expect(f.dispatch.goals.block).toHaveBeenCalledExactlyOnceWith(f.graph.identity,expect.any(String),expect.stringContaining('累计 3 次'));
+    expect(f.execution.pauseCollaboration).toHaveBeenCalledWith(f.task.taskId,expect.stringContaining('自动接续上限'));
+    expect(f.dispatch.closeScope).toHaveBeenLastCalledWith(f.graph.identity,expect.any(String),'failed');
+    expect(f.execution.continueGoalRepair).not.toHaveBeenCalled();expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+    // 退役批次的重复结束通知不能复活原目标或替换任务。
+    f.settleParent();const release=f.lease.acquire('late-notification','read');release();
+    await new Promise(resolve=>setTimeout(resolve,20));
+    expect(f.members.start).toHaveBeenCalledTimes(3);expect(f.execution.continueFromResults).toHaveBeenCalledTimes(2);
+  }finally{await f.coordinator.close()}
+});
+
+it('已有三次异常时不启动下一批待办，也不回注模型或通知队列继续',async()=>{
+  const f=await setup();try{
+    await f.assign();const current=f.graph.tasks[0];
+    for(let i=0;i<3;i++)f.graph.tasks.push({...structuredClone(current),taskId:'old-'+i,nodeId:'task:old-'+i,status:'interrupted',runIds:['old-run-'+i]});
+    f.settleParent();await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));
+    expect(f.members.start).not.toHaveBeenCalled();expect(f.execution.continueFromResults).not.toHaveBeenCalled();
+    expect(f.execution.continueGoalRepair).not.toHaveBeenCalled();expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+    expect(f.dispatch.goals.block).toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+
+it('无待回传任务的主轮也不能通过验收返工绕过三次异常限制',async()=>{
+  const f=await setup();try{
+    await f.assign();
+    await f.tools.call('cbim_dispatch_cancel',{expectedGraphCursor:{streamId:'stream',seq:1},targets:[{taskId:'assigned-1',expectedRevision:1}],reason:'先收回未启动待办'},new AbortController().signal,'cancel-for-repair');
+    const template=f.graph.tasks[0];
+    for(let i=0;i<3;i++)f.graph.tasks.push({...structuredClone(template),taskId:'failed-'+i,nodeId:'task:failed-'+i,status:'failed',runIds:['run-'+i]});
+    f.settleParent();await vi.waitFor(()=>expect(f.coordinator.busy(f.task.taskId)).toBe(false));
+    expect(f.dispatch.goals.block).toHaveBeenCalledWith(f.graph.identity,expect.any(String),expect.stringContaining('累计 3 次'));
+    expect(f.execution.continueGoalRepair).not.toHaveBeenCalled();expect(f.execution.collaborationReady).not.toHaveBeenCalled();
+    expect(f.dispatch.closeScope).toHaveBeenCalledExactlyOnceWith(f.graph.identity,expect.any(String),'failed');
+  }finally{await f.coordinator.close()}
+});
+
+it('读取异常历史期间用户取消，保留取消终态且不触发自动返工',async()=>{
+  const f=await setup(),reading=deferred<GraphSnapshot>();try{
+    await f.assign();
+    await f.tools.call('cbim_dispatch_cancel',{expectedGraphCursor:{streamId:'stream',seq:1},targets:[{taskId:'assigned-1',expectedRevision:1}],reason:'撤回待办'},new AbortController().signal,'cancel-before-check');
+    for(let i=0;i<3;i++)f.graph.tasks.push({...structuredClone(f.graph.tasks[0]),taskId:'failed-'+i,nodeId:'task:failed-'+i,status:'failed',runIds:['run-'+i]});
+    f.dispatch.snapshot.mockImplementationOnce(()=>reading.promise);
+    f.settleParent();await vi.waitFor(()=>expect(f.dispatch.snapshot).toHaveBeenCalledTimes(2));
+    const stopping=f.coordinator.stop(f.task.taskId);reading.resolve(structuredClone(f.graph));await stopping;
+    expect(f.dispatch.closeScope).toHaveBeenCalledExactlyOnceWith(f.graph.identity,expect.any(String),'cancelled');
+    expect(f.dispatch.goals.block).not.toHaveBeenCalled();expect(f.execution.continueGoalRepair).not.toHaveBeenCalled();
+  }finally{reading.resolve(structuredClone(f.graph));await f.coordinator.close()}
+});
+
+it('有未启动后继时先回主 Agent 审阅；下一主轮保留原待办并在批准后启动',async()=>{
+  const f=await setup();try{
+    await f.assign();const first=f.graph.tasks[0],second={...structuredClone(first),taskId:'assigned-2',nodeId:'task:assigned-2'};
+    f.dispatch.dispatchTask.mockImplementationOnce(async input=>{f.graph.tasks.push(second);return {commandId:input.commandId,taskId:second.taskId,messageId:'assignment-2',cursor:f.graph.cursor,disposition:'queued'}});
+    await f.tools.call('cbim_dispatch_task',{agentId:'member',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'使用前置产物',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'second-call');
+    f.graph.edges.push({edgeId:'review-edge',identity:f.graph.identity,revision:1,enabled:true,kind:'dependency',fromNodeId:first.nodeId,toNodeId:second.nodeId,condition:{kind:'result_ready',planRevision:1,reviewRequired:true}});
+    f.execution.continueFromResults.mockImplementationOnce(async(...args)=>{
+      await f.hooks().starting!(f.task,f.options,args[3] as any,args[1] as string,'review-run');f.coordinator.tools(f.task,'review-run',f.options);
+      return {workspaceId:f.task.workspaceId,taskId:f.task.taskId,runId:'review-run'};
+    });
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));f.finishMember();
+    await vi.waitFor(()=>expect(f.execution.continueFromResults).toHaveBeenCalledTimes(1));
+    expect(f.members.start).toHaveBeenCalledTimes(1);expect(f.execution.continueFromResults.mock.calls[0][1]).toContain('cbim_dispatch_review');
+    first.candidateReview={resultId:first.result!.resultId,runId:first.result!.runId,planRevision:1,mainRunId:'review-run',decision:'accept',reason:'证据符合要求',recordedAt:new Date().toISOString()};
+    f.members.start.mockImplementationOnce(async input=>{second.activeRunId='second-run';second.runIds=['second-run'];second.status='running';return {taskId:input.taskId,runId:'second-run',cursor:f.graph.cursor}});
+    f.hooks().settled(f.task,f.options,{task:f.task,runId:'review-run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[]});
+    await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(2));
+    expect(f.members.start.mock.calls[1][0].taskId).toBe(second.taskId);expect(f.dispatch.dispatchTask).toHaveBeenCalledTimes(2);
+    second.activeRunId=undefined;second.status='cancelled';
+  }finally{await f.coordinator.close()}
+});
 const additionInput:AddQueuedDependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,source:{taskId:'source-A',expectedRevision:1,expectedPlanRevision:1},target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},reason:'原待办等待后来创建的来源'};
 const abandonmentInput:AbandonCheckpointInput={expectedGraphCursor:{streamId:'stream',seq:1},expectedGoalRevision:2,taskId:'assigned-1',expectedRevision:4,expectedPlanRevision:1,checkpointId:'checkpoint-one',expectedResumeRequestId:null,reason:'按当前岗位重新规划，保留旧检查点'};
 function abandoned(binding:MainToolOutputBinding,commandId:string):AbandonCheckpointReceipt{

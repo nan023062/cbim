@@ -1,3 +1,7 @@
+### 终态原因的公开投影
+
+`projectRunEvent` 的 `run.interrupted/run.settled` 与任务卡共用 Core `publicRunFailure`，保留可识别的超时、事件限制、模型输出上限等诊断，不再全部变成统一“执行中断”。任意私密错误正文仍不透传，未决调用 ID 与回执保持原字段。历史详情按读取时投影展示，不迁移原日志或授权任何恢复操作。
+
 ### 静态 Agent 的 Session 历史（已实现）
 
 `AgentHistoryService` 按 `workspaceId + agentId → sessionId → taskId/runId` 建立独立只读归档。它接收已经持久化的两套运行事件和派发领取意图；不启动模型、不领取任务、不确认信封，不持有审批能力。静态定义删除与实例 released 不删归档，也不把历史记录计为当前人员活动。

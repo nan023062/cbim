@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
@@ -18,12 +19,15 @@ export async function dependencyRevisionProvider(options:{lostReply?:boolean}={}
  const d=dependencyRevisionData,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];
  const state:{before?:GraphSnapshot;recovered?:GraphSnapshot;input?:ReviseQueuedDependenciesInput;receipt?:ReviseQueuedDependenciesReceipt;scopeId?:string}={};
  let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection,release=()=>{};const gate=new Promise<void>(r=>release=r),heldTurn=options.lostReply?8:7;
- const server=http.createServer(async(req,res)=>{try{
+ const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
+  const server=http.createServer(async(req,res)=>{try{
   assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const c of req)raw+=c;const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);
-  const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task'),requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
+  const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task'),requests=isMain?main:member,turn=requests.length-(isMain?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
   res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'revision-'+sequence.length,object:'chat.completion.chunk',created:1,model:d.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
   const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
   const dispatch=(id:string,i:number,prior?:string)=>tool(id,'cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.goals[i],acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:prior?[{taskId:prior,expectedPlanRevision:1}]:[]});
+    if((isMain)&&reviews.handle(body,'revision-final',tool,reply)){res.end('data: [DONE]\n\n');return}
   if(isMain){
    assert.ok(body.tools?.some(t=>t.function.name==='cbim_dispatch_revise_dependencies'));assert.ok(body.tools?.every(t=>!['write','edit','bash'].includes(t.function.name)));
    if(turn===0)tool('revision-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
@@ -56,5 +60,5 @@ export async function dependencyRevisionProvider(options:{lostReply?:boolean}={}
   res.end('data: [DONE]\n\n');
  }catch(e){errors.push(String(e));if(!res.headersSent)res.writeHead(500);res.end('Dependency revision fixture failed')}});
  await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();assert.ok(address&&typeof address!=='string');
- return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,heldTurn,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()))}};
+ return {compactions,reviews,url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,heldTurn,releaseMain:()=>release(),bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection},close:async()=>{release();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()))}};
 }

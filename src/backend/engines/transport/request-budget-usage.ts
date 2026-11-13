@@ -2,8 +2,10 @@
  * 目录归属：backend/engines/transport；模型请求代理与用量解析。
  * 作用定位：严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。
  * 设计原因：引擎展示统计可能为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
+ * 中断诊断只取已知协议原因，不回显供应商任意错误正文；仍阻断终态和工具，不重试或补造可靠用量。
  */
 import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../core/budget/model-request-budget';
+import {fail} from '../../core/foundation/errors';
 
 const integer=(v:unknown):number=>{if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0)throw Error('请求用量缺失或不是安全非负整数');return v};
 const optional=(v:unknown)=>v===undefined?0:integer(v);
@@ -54,7 +56,13 @@ export class RequestBudgetUsageStream {
       for(const candidate of candidates){if(this.result)throw Error('请求重复报告 usage');this.result=openai(candidate,false)}return false;
     }
     if(this.api==='openai-responses'){
-      if(['response.failed','response.incomplete','error'].includes(value.type))throw Error('请求未完整完成');
+      if(value.type==='response.incomplete'){
+        const reason=value.response?.incomplete_details?.reason;
+        if(reason==='max_output_tokens')fail('MODEL_OUTPUT_LIMIT','模型输出达到本轮上限（max_output_tokens），请求未完整完成。请核实已有工具回执后继续；长文件可分段生成，或调整模型输出上限。未完整生成的工具参数不会执行，已完成操作不要重复。');
+        if(reason==='content_filter')fail('MODEL_CONTENT_FILTER','供应商内容过滤导致请求未完整完成（content_filter）。请调整请求后继续；先核实已有工具回执，不重复已完成操作。');
+        fail('MODEL_RESPONSE_INCOMPLETE','供应商返回未完成响应（response.incomplete），未提供可识别原因。请核实已有工具回执后继续，不自动重试。');
+      }
+      if(['response.failed','error'].includes(value.type))fail('MODEL_RESPONSE_FAILED','供应商返回失败响应，请求未完整完成。请核实已有工具回执后再决定是否继续，不自动重试。');
       if(value.type==='response.completed'){
         if(this.result||value.response?.status!=='completed')throw Error('请求完成状态冲突');this.result=openai(value.response?.usage,true);this.ended=true;this.terminal=frame;return true;
       }return false;

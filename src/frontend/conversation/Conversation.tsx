@@ -17,6 +17,7 @@
  * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
  * 中断恢复：空闲会话缺少原生文件或执行事实待核实时，在输入区解释阻断并导航恢复选项，保留旧草稿和附件。
  * 模型切换沿供应商兼容接口解析；同一型号可跨引擎保留选择，限制型号的接口不会放行目录中其他模型。
+ * 等待补充时普通发送转交可靠补充控制器，草稿落盘后才清空；未知回执在输入区查询，不再排入等待原目标结束的队列。
  */
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -52,6 +53,7 @@ import {conversationExecutionState} from './conversation-state';
 import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from './queue-insertion';
 import {ConversationStopGate} from './conversation-stop';
 import {useScopeContinuation} from '../tasks/useScopeContinuation';
+import {ScopeContinuationForm} from '../tasks/ScopeContinuationForm';
 import type {ExecutionRecoveryContext} from '../tasks/useExecutionRecovery';
 import {useScopeReplan} from '../tasks/useScopeReplan';
 import {useHumanDecisions} from '../tasks/useHumanDecisions';
@@ -176,11 +178,17 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   /** Skill 点击只发送明确的流程调用；正文和附件留在草稿中，由用户随后自愿描述，不强制补齐格式。 */
   async function send(insert=false,skill?:FeedbackSkillTitle){const message=skill?`请调用「${skill}」Skill，提示我用一句话描述问题或愿望即可，其余信息自愿补充，不强制追问。`:(tab.draft||'').trim()||(attachments.length?'请查看附加的资料。':'');if(!message)return;
     const sentAttachments=skill?[]:attachments;
+    if(waiting&&skill)return;
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     const insertion=insert?captureQueueInsertTarget(workspace.id,tab.taskId,currentRun,canInsert):undefined;
     if(insert&&!insertion)return;
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
+      if(waiting&&!skill){
+        await continuation.submitInput(message,sentAttachments);
+        onDraft('');onAttachments([]);
+        return;
+      }
       const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
       if(tab.taskId&&!shouldQueue&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
@@ -231,7 +239,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const recoveryReason=tab.taskId&&!taskOpen?threadRecoveryReason(currentRun):undefined;
-  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
+  const continuationUncertain=continuation.pending||['unknown','submitting'].includes(continuation.record?.attempt?.phase??'');
+  const canSendRequest=(!waiting||continuation.editable&&!continuation.importing)&&!continuationUncertain&&active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
   const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
@@ -260,7 +269,12 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
     <div className="chat-composer">
       {loaded&&!pollError&&!graph.loading&&recoveryReason&&<ThreadRecoveryNotice reason={recoveryReason} disabled={!active||busy||stopping||attachmentBusy} onInspect={()=>{graph.selectScope(undefined);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}} onNewConversation={()=>onBind(undefined)}/>}
       {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。{canInsert?'插入当前任务仍沿用当前运行设置。':''}</p>}
-      {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；新消息会排队为下个任务。</p>}
+      {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前目标等待补充；发送将补充并继续原目标，不会排队为新任务。
+        {graph.selectedScopeId!==graph.waitingScope?.scopeId&&<button disabled={busy} onClick={()=>graph.selectScope(undefined)}>返回当前等待目标</button>}
+        {graph.detailLoading&&'正在读取等待目标…'}
+        {!!queued.length&&' 已误排队的补充消息可先删除，再在此重新发送；其他任务继续保留在队列。'}
+      </p>}
+      {(continuation.error||continuation.record&&(waiting||['unknown','submitting','rejected'].includes(continuation.record.attempt?.phase??'')))&&<ScopeContinuationForm state={continuation}/>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true})})}>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true,allowAll:true})})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:false})})}>拒绝</button></div>)}
 
       <UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={admissionState.waitingOnly?{label:'正在等待执行资格',active:false,tone:'neutral',waitingSince:admissionState.waitingSince}:graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
@@ -280,8 +294,8 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
         {dragActive&&<div className="composer-drop-target"><Icon name="folder" size={24}/><b>松开以添加到对话</b><small>文件和文件夹会保存在本机附件快照中</small></div>}
         {attachmentBusy&&<div className="composer-upload-state" role="status"><span className="work-spinner"/>正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
-        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="继续聊一聊…" title="Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(canInsert&&(e.ctrlKey||e.metaKey))}else if(canInsert&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
-        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(false,skill)}}/><ComposerPicker label="协作模式" value={collaborationMode} onChange={v=>setCollaborationMode(v as 'auto'|'team')} disabled={busy||taskOpen} options={[
+        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder={waiting?"补充信息或回复继续，恢复原目标…":"继续聊一聊…"} title={waiting?"Enter 补充并继续原目标，Shift+Enter 换行":"Enter 发送或排队，Shift+Enter 换行；Ctrl+Enter 插入正在运行的主 Agent，沿用当前模型与权限"} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){if(canSend){e.preventDefault();void send(canInsert&&(e.ctrlKey||e.metaKey))}else if(canInsert&&!busy&&(e.ctrlKey||e.metaKey)&&queued[0]){e.preventDefault();void queueOperation('loop.queueInsert',{queueId:queued[0].id})}}}}/>
+        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest||waiting} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(false,skill)}}/><ComposerPicker label="协作模式" value={collaborationMode} onChange={v=>setCollaborationMode(v as 'auto'|'team')} disabled={busy||taskOpen} options={[
           {value:'auto',label:'自动模式',icon:'sparkles',description:'主 Agent 按目标直接执行，必要时交给已登记的负责岗位；权限和人工验收保持原要求'},
           {value:'team',label:'团队模式',icon:'team',description:'优先按自定义负责岗位分工；未配置负责 Agent 的模块由主 Agent 在原会话执行'},
         ]}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
@@ -292,7 +306,7 @@ export function Conversation({conversations,runningTaskIds,onSelectConversation,
         <div className="chat-controls-right"><ComposerPicker label="Loop 引擎" value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel="选择引擎" onChange={value=>void chooseEngine(value)} options={loopEngineSchema.options.map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           ...(defaultModel?[{value:'',label:defaultModel.name||defaultModel.id,description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
           ...(compatibleProfiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
-        ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>
+        ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue&&!waiting} continuing={waiting} onClick={()=>void send()}/>}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13}/>{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="footer" capacity={selectedModel?.contextWindow}/></div>
     </div>

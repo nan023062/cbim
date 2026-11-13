@@ -3,6 +3,7 @@
 
  * 原生失败以统一结果协议进入日志和失败 hook 的 additionalContext，不暗示未执行或可重试。
  * 作用定位：Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。
+ * 目录边界：顶层联合投影保存原 Schema 引用图，避免供应商在模型执行前因悬空引用拒绝整个目录。
  * 能力边界：是否关闭原生工具由可信能力策略决定，不依赖具体业务工具名称。
  * 设计原因：PreToolUse 先等模型请求结算再持久化授权；内部调用用一次性原调用 ID 绑定精确参数，禁止依名称放行。
  * 职责边界：SDK MCP 仅为当前进程内传输，不监听端口或提供对外 MCP 服务。未注册工具一律拒绝。
@@ -18,8 +19,16 @@ import type {EngineToolsPort} from '../../core/execution/engine-tools';
 
 const nativeNames:Record<string,string>={Read:'read',Write:'write',Edit:'edit',Bash:'bash',Glob:'find',Grep:'grep'};
 const prefix='mcp__cbim__',identityField='__cbim_call_id';
-/** Anthropic 不收顶层联合：目录投影字段并只保留共同必填项，实际调用仍由 CBIM 原联合 schema 严格校验。 */
+/** Anthropic 不收顶层联合：投影字段，引用则保留在独立原定义下，避免移除分支后悬空；实际调用仍按原协议严格校验。 */
 export function claudeInputSchema(schema:Record<string,unknown>){
+  if(Array.isArray(schema.anyOf)||Array.isArray(schema.oneOf)){
+    const definitions=(schema.definitions??{}) as Record<string,unknown>;
+    let key='cbimOriginalInput';
+    while(Object.hasOwn(definitions,key))key+='_';
+    // 保留完整引用图而非递归展开：递归 Schema、转义指针和重复引用仍指向同一原节点。
+    const original=JSON.parse(JSON.stringify(schema,(name,value)=>name==='$ref'&&typeof value==='string'&&(value==='#'||value.startsWith('#/'))?`#/definitions/${key}${value.slice(1)}`:value));
+    schema={...original,definitions:{...original.definitions,[key]:original}};
+  }
   const variants=Array.isArray(schema.anyOf)?schema.anyOf:Array.isArray(schema.oneOf)?schema.oneOf:[];
   const {anyOf:_anyOf,oneOf:_oneOf,...object}=schema;
   const properties:Record<string,unknown>={};

@@ -1,3 +1,7 @@
+### 无进展超时
+
+`PiEngine.run` 使用共享 [无进展计时器](../CONTRACT.md#按执行进展续期)。`message_update` 的非空 text/thinking/toolcall 增量、统一消息和工具事件续期；推理内容不入日志，自动重试、摘要重试和普通状态通知不续期。只有连续静默超过原 `turnTimeoutMs` 才报明确的 Pi 无进展错误，运行总时长可以跨过原 30 分钟上限。
+
 ### 第三方来源与许可
 
 `runtime-config.ts` 保留 Cindy 来源说明；Apache-2.0 许可位于根目录 [legal/cindy-LICENSE](../../../../legal/cindy-LICENSE)，由 Forge 的 `legal` 资源目录随包分发。迁移许可位置不改变 Pi 启动配置或运行权限。

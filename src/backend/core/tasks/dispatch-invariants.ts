@@ -1,4 +1,5 @@
 /**
+ * 候选审阅只允许当前主运行按原版本追加；领取新依赖时必须匹配同结果的接受决定。
  * 每个私有检查点证明和交接信封都绑定自己的原运行，逐段记录不能借用第一段证明。
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
  * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
@@ -6,6 +7,8 @@
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  */
 import {z} from 'zod';
+import {candidateAccepted} from './candidate-review';
+import {hash,json} from '../foundation/serialization';
 import {fail} from '../foundation/errors';
 import {connectionSchema,modelSchema} from '../models/config';
 import {loopEngineSchema} from '../models/engine';
@@ -102,6 +105,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
       if(edge.kind!=='dependency')continue;
       const source=graph.tasks.find(item=>item.nodeId===edge.fromNodeId),frozen=prerequisites.find(item=>item.taskId===source?.taskId);
       valid(source?.status==='result_ready'&&frozen&&frozen.planRevision===source.planRevision&&frozen.planRevision===edge.condition.planRevision&&frozen.result.resultId===edge.condition.resultId&&equal(frozen.result,source.result),'领取时须锁定当前计划下的前置候选及结果内容');
+      if(edge.condition.reviewRequired)valid(candidateAccepted(source),'领取时前置候选尚未通过主 Agent 审阅');
     }
   }
   for(const prerequisite of run.prerequisites??[])valid(prerequisite.result.planRevision===prerequisite.planRevision,'冻结前置候选的计划版本不一致');
@@ -169,6 +173,17 @@ function validateMessage(previous:DispatchMessage|undefined,message:DispatchMess
  * 旧日志没有 runs 时等同空集合；恢复只验证事实，不自动重发任务或启动执行。
  */
 export function validateDispatchExecution(previous:DispatchState,next:DispatchState,mutation:DispatchMutation,command:DispatchCommand):void{
+  for(const change of mutation.batch?.changes??[]){
+    if(change.type!=='task.upserted')continue;
+    const task=change.task,old=lookupTask(previous,task.identity,task.taskId),review=task.candidateReview;
+    if(!review||equal(old?.candidateReview,review))continue;
+    const scope=previous.scopes?.find(s=>s.scopeId===task.scopeId&&s.rootSessionId===task.identity.rootSessionId&&s.workspaceId===task.identity.workspaceId);
+    valid(old?.status==='result_ready'&&!old.activeRunId&&!old.candidateReview&&equal(old.result,task.result)&&task.revision===old.revision+1&&task.planRevision===old.planRevision,'审阅只能追加到未审阅的可靠原候选');
+    valid(scope?.status==='active'&&scope.runTracking?.mainRunIds.at(-1)===review.mainRunId&&command.commandId.startsWith('candidate-review-')&&mutation.batch?.cause==='task.revised','审阅只能由当前主运行登记');
+    valid(equal({...task,revision:old!.revision,updatedAt:old!.updatedAt,candidateReview:undefined},{...old,candidateReview:undefined})&&review.recordedAt===task.updatedAt,'审阅不能顺带改写任务或候选');
+    const input={taskId:task.taskId,expectedRevision:old!.revision,resultId:review.resultId,decision:review.decision,reason:review.reason};
+    valid(command.fingerprint===hash(json({identity:task.identity,scopeId:task.scopeId,runId:review.mainRunId,input})),'审阅命令必须匹配当前任务与主运行');
+  }
   validateHumanDecisionCommand(previous,mutation,command);
   validateHumanContinuationCommand(previous,mutation,command);
   validateQueuedTaskCancellation(previous,next,mutation,command);

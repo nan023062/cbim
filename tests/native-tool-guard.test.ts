@@ -35,3 +35,20 @@ it('目录别名不能绕过内部知识访问保护，普通业务别名不受�
     expect(guard({name:'ls',input:{path:'business'}},f.a)).toBeUndefined();
   }finally{await f.cleanup()}
 });
+
+it('只保护完整知识目录段，不误伤业务文件名、写入正文或搜索模式',()=>{
+  const root=path.resolve('test-results/guard-root'),check=(name:string,input:unknown)=>guard({name,input},root);
+  expect(check('bash',{command:'touch .cbim_write_probe && rm .cbim_write_probe'})).toBeUndefined();
+  expect(check('write',{path:'src/.cbim-helper.ts',content:'const directory = ".cbim/";'})).toBeUndefined();
+  expect(check('grep',{path:'src',pattern:'.cbim'})).toBeUndefined();
+  for(const target of ['.cbim/file','.CBIM/file','src/.cbim/file','%2ecbim%2ffile'])expect(check('write',{path:target,content:'business'})).toBeTruthy();
+  expect(check('bash',{command:'cat .cbim/file'})).toBeTruthy();
+  for(const command of ['cd .cbim; ls','(ls .cbim)','echo test >.cbim'])expect(check('bash',{command})).toBeTruthy();
+});
+
+it('管道 grep 过滤输出不算递归文件搜索，带文件、递归或输入重定向仍拒绝',()=>{
+  const root=path.resolve('test-results/guard-root'),check=(command:string)=>guard({name:'bash',input:{command}},root);
+  expect(check('ls node_modules | grep -iE "playwright|puppeteer" ; where msedge chrome 2>&1 | head -5')).toBeUndefined();
+  expect(check('curl -s http://127.0.0.1:9223/json | grep -o \'"url": "[^"]*"\' | head -5')).toBeUndefined();
+  for(const command of ['grep secret .','ls | grep secret .','ls | grep -R secret','ls | grep secret < file','false || grep secret .','ls | grep -f patterns','ls | grep "$(cat file)"'])expect(check(command)).toBeTruthy();
+});

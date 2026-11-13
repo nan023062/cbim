@@ -1,4 +1,5 @@
 /**
+ * 候选审阅与最终目标验收分开：当前主运行核实原候选后保存一次决定，拒绝候选不能作为完成证据。
  * 目录归属：backend/scheduler-engine/goals；目标状态与核证恢复服务。
 
  * 只读闭包预览与正式提交共用原规则；预览不验证外部日志/文件，提交与停泊仍独立复核。
@@ -17,6 +18,8 @@
 import {resolveExecutionModules} from '../context/automatic-context';
 import {sameAutomaticExecutionForModules,type AutomaticExecutionBinding} from '../../core/team/automatic-execution';
 import {z} from 'zod';
+import {randomUUID} from 'node:crypto';
+import {candidateReviewInputSchema,type CandidateReviewInput} from '../../core/tasks/candidate-review';
 import {questionToolName} from '../../core/tools/questions';
 import {scopeHasUnresolvedActiveInput} from '../../core/tasks/scope-active-input';
 import {validateScopeActiveInputLog} from './scope-active-input-evidence';
@@ -70,6 +73,23 @@ function lastEffect(summary:RunSummary){return summary.events.reduce((latest,eve
 
 export class ScopeGoalService {
   constructor(private readonly owner:Owner,private readonly store:DispatchStore,private readonly ports?:ScopeGoalPorts,private readonly humanPorts?:HumanDecisionPorts,private readonly owners?:OwnerExecutionService,private readonly memberPauses?:MemberPauseService){}
+  /** 主运行显式接受/拒绝精确候选；决定可靠保存后不可翻转，不代替最终目标审阅或人工签署。 */
+  async reviewCandidate(identity:GraphIdentity,scopeId:string,runId:string,commandId:string,raw:CandidateReviewInput,assertCurrent:()=>void):Promise<TaskNode>{
+    const input=this.parse(candidateReviewInputSchema,raw),command={commandId,fingerprint:hash(json({identity,scopeId,runId,input}))};
+    return this.store.transact(command,async state=>{
+      assertCurrent();const scope=this.scope(state,identity,scopeId),graph=this.graph(state,scope);
+      check(scope.status==='active'&&scope.goal?.plan&&!scope.goal.blocked&&!goalNeedsReplan(scope.goal)&&!scopeHasUnresolvedActiveInput(scope),'CANDIDATE_REVIEW_SCOPE','当前目标未准备好审阅');
+      const task=graph.tasks.find(t=>t.taskId===input.taskId);
+      check(task&&task.scopeId===scopeId&&task.revision===input.expectedRevision&&task.result?.resultId===input.resultId&&!task.candidateReview,'CANDIDATE_REVIEW_STALE','候选或版本已变化，或已有不可改写审阅，请重新读取');
+      const main=await this.logs().inspectMain(scope.rootSessionId,runId);this.main(state,main,scope,graph,runId);
+      // 磁盘读取将尚未结算（包括本次工具仍在途）的日志标为 interrupted；实时闭包负责活性，事件负责排除已结束运行。
+      check(!main.logIntegrity?.partialTail&&!main.events.some(event=>event.type==='run.settled'||event.type==='run.interrupted'),'CANDIDATE_REVIEW_MAIN','当前主运行不具备可靠审阅条件');
+      const knowledge=await this.owner.read();await this.validateMemberCandidate(state,scope,graph,task,knowledge.revision);
+      assertCurrent();check((await this.owner.read()).revision===knowledge.revision,'CANDIDATE_REVIEW_CHANGED','审阅期间知识发生变化');
+      const now=new Date().toISOString(),updated:TaskNode={...task,revision:task.revision+1,updatedAt:now,candidateReview:{resultId:task.result!.resultId,runId:task.result!.runId,planRevision:task.planRevision,mainRunId:runId,decision:input.decision,reason:input.reason,recordedAt:now}};
+      return {batch:{version:1,identity,streamId:graph.cursor.streamId,seq:graph.cursor.seq+1,eventId:randomUUID(),commandId,cause:'task.revised',committedAt:now,changes:[{type:'task.upserted',task:updated}]},receipt:updated};
+    });
+  }
   private parse<S extends z.ZodTypeAny>(schema:S,value:unknown):z.output<S>{const result=schema.safeParse(value);if(!result.success)fail('GOAL_INPUT_INVALID',result.error.issues.map(issue=>issue.message).join('；'));return result.data}
   private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
     this.parse(identitySchema,{...identity,scopeId});this.owner.assert();
@@ -319,7 +339,7 @@ export class ScopeGoalService {
       for(const reference of item.evidence){
         if(reference.kind==='member-result'){
           const task=graph.tasks.find(value=>value.taskId===reference.taskId),result=task?.result;
-          check(task&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id)),'GOAL_EVIDENCE_INVALID','成员证据不是当前结果候选');
+          check(task&&task.candidateReview?.decision!=='reject'&&result&&result.runId===reference.runId&&result.resultId===reference.resultId&&result.planRevision===reference.planRevision&&reference.toolCallIds.every(id=>result.evidenceRefs.includes(id)),'GOAL_EVIDENCE_INVALID','成员证据不是当前可接受的结果候选');
           check(plan.assignments.some(assignment=>assignment.agentId===task.assignee.agentId&&sameSet(assignment.moduleIds,task.modules.map(module=>module.moduleId))&&sameWorkflowSelectionsForModules(assignment.workflowSelections,task.workflowSelections,task.modules.map(module=>module.moduleId))&&sameAutomaticExecutionForModules(assignment.fallbackBinding,task.fallbackBinding,task.modules.map(module=>module.moduleId))&&sameOwnerExecutionForModules(assignment.ownerBinding,task.ownerBinding,task.modules.map(module=>module.moduleId))&&assignment.criterionIds.includes(item.criterionId)),'GOAL_EVIDENCE_IDENTITY','成员结果不属于此验收项的角色、模块或 Workflow 分配');
           if(!members.has(task.taskId))members.set(task.taskId,this.member(state,scope,graph,task,knowledgeRevision));
           const summary=await members.get(task.taskId)!;for(const id of reference.toolCallIds)this.receipt(summary,id);

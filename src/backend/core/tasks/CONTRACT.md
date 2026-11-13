@@ -821,3 +821,10 @@ workspace-member-invariants 在提交与重放当时的前缀上核实主 actor 
 ### 同次版本读取与闭包预览
 
 `coordination-preview.ts` 只从一份 Store 快照生成公开版本/候选和撤销或等待清单。撤销遍历启用依赖（穿过已取消节点），再用 `queuedCancellationSelection` 核领取、成员、信封与范围；等待用 `memberPauseSelection` 核完整检查点和后继。错误返回 issues，不给可提交 draft。预览不写入、不证明外部日志或文件合格，正式 CAS/停泊仍重核；候选证据不等于验收。
+
+
+## 成员候选审阅与依赖关口
+
+TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/run/planRevision，附主 run、理由和时间；不修改 result.acceptance，不代表业务目标或人工验收。decision=reject 不可翻转，后续需新任务交付。图校验、增量归约与事务层分别校验局部绑定、不可改写及当前主身份/命令指纹/任务不被夹带修改。需要审批的依赖在启动事务内再次校验 candidateAccepted，避免只靠协调器视图放行。
+
+新创建、追加、替换、修订产生的依赖携带 condition.reviewRequired=true。无此标志的旧边按原规则重放；标志不能在已有边上移除或补写。追加/替换/修订的原子校验兼容两种历史形状，其余结果、版本和审计要求不变。批准只接受精确候选，旧结果或旧计划不可借用。

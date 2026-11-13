@@ -2,15 +2,16 @@ import {runtimeToolGroup} from './runtime-tool-group';
 import {RunJournal} from '../src/backend/main/run-storage/run-journal';
 import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
 import {it,expect} from 'vitest';
+import {z} from 'zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/backend/core/execution';
 
-async function setup(factory:()=>AgentEngine){
+async function setup(factory:()=>AgentEngine,describeTool?:ConstructorParameters<typeof LoopRuntime>[0]['describeTool'],normalizeToolInput?:ConstructorParameters<typeof LoopRuntime>[0]['normalizeToolInput']){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-loop-unit-'));let locked=false;
   const task:TaskSpec={taskId:'task-a',workspaceId:'workspace-a',root:directory,goal:'Implement a tested feature',moduleIds:[],acceptance:['Tests pass']};
-  const runtime=new LoopRuntime({storage:new FileRunStorage(),directory,createEngine:factory,acquireLease:async()=>{if(locked)throw Error('locked');locked=true;return()=>{locked=false}},toolPolicy:async()=>({allow:true})});
+  const runtime=new LoopRuntime({storage:new FileRunStorage(),directory,createEngine:factory,describeTool,normalizeToolInput,acquireLease:async()=>{if(locked)throw Error('locked');locked=true;return()=>{locked=false}},toolPolicy:async()=>({allow:true})});
   return {runtime,task,directory,cleanup:async()=>{await runtime.close();await fs.rm(directory,{recursive:true,force:true})}};
 }
 class StubEngine implements AgentEngine {
@@ -20,6 +21,18 @@ class StubEngine implements AgentEngine {
   async stop(){}
   async close(){}
 }
+
+it.each(['describe','normalize'] as const)('执行前%s的Schema缺参产生可读拒绝及稳定错误码，不放行工具，也不误报可缺省字段',async stage=>{
+  class Engine extends StubEngine{async run(){
+    const decision=await this.context.beforeTool({id:'invalid',name:'cbim_example',input:{}});
+    expect(decision.allow).toBe(false);const error=JSON.parse(decision.reason!);
+    expect(error).toMatchObject({status:'rejected',code:'TOOL_INPUT_INVALID'});expect(error.message).toContain('name：缺少必填字段');expect(error.message).not.toContain('count：');expect(error.message).not.toContain('invalid_type');
+    return {status:'completed' as const};
+  }}
+  const schema=z.object({name:z.string(),count:z.number().default(5),query:z.string().optional()});
+  const f=await setup(()=>new Engine(),stage==='describe'?call=>{schema.parse(call.input);return {effects:['read'],native:false}}:undefined,stage==='normalize'?call=>schema.parse(call.input):undefined);
+  try{const summary=await(await f.runtime.start(f.task)).done;expect(summary.events.some(e=>e.type==='tool.allowed')).toBe(false);expect(summary.events.find(e=>e.type==='tool.denied')?.data.reason).toContain('TOOL_INPUT_INVALID');expect(summary.unresolvedTools).toEqual([])}finally{await f.cleanup()}
+});
 
 it('同一工具同参数连续失败三次停止本轮，第四次不执行，熔断不能伪装 completed',async()=>{
  let effects=0,stops=0;

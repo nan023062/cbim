@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
+| [input-validation.ts](input-validation.ts) | 将工具输入校验转换为不含原参数值的字段说明，供执行前拒绝与历史展示共用。 |
 | [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
 | [outcome.ts](outcome.ts) | 引擎工具回包的统一结果与下一步说明；独立于具体业务账本。 |
 | [questions.ts](questions.ts) | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
@@ -31,6 +32,9 @@ class N_src_backend_core_tools_policy["policy/"] {
 class N_src_backend_core_tools_contracts_ts["contracts.ts"] {
   <<module>>
 }
+class N_src_backend_core_tools_input_validation_ts["input-validation.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tools_native_tools_ts["native-tools.ts"] {
   <<module>>
 }
@@ -40,14 +44,14 @@ class N_src_backend_core_tools_outcome_ts["outcome.ts"] {
 class N_src_backend_core_tools_questions_ts["questions.ts"] {
   <<module>>
 }
-class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
-  <<module>>
-}
 N_src_backend_core_tools_native_tools_ts ..> N_src_backend_core_tools_policy : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_backend_core_tools_receipt_schema_ts["receipt-schema.ts"] {
+  <<module>>
+}
 class N_src_backend_core_tools_receipts_ts["receipts.ts"] {
   <<module>>
 }
@@ -63,6 +67,7 @@ class N_src_backend_core_tools_scope_schema_ts["scope-schema.ts"] {
 class N_src_backend_core_tools_types_ts["types.ts"] {
   <<module>>
 }
+N_src_backend_core_tools_receipt_schema_ts ..> N_src_backend_core_tools_scope_schema_ts : 导入依赖
 N_src_backend_core_tools_receipts_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_types_ts : 导入依赖
 N_src_backend_core_tools_registry_ts ..> N_src_backend_core_tools_results_ts : 导入依赖
@@ -77,10 +82,23 @@ N_src_backend_core_tools_types_ts ..> N_src_backend_core_tools_scope_schema_ts :
 - `policy` → `scope-schema.ts`：导入。
 - `receipt-schema.ts` → `scope-schema.ts`：导入。
 - `receipts.ts` → `types.ts`：导入。
+- `registry.ts` → `input-validation.ts`：导入。
 - `registry.ts` → `types.ts`：导入。
 - `registry.ts` → `results.ts`：导入。
 - `registry.ts` → `contracts.ts`：导入。
 - `types.ts` → `scope-schema.ts`：导入。
+
+### input-validation.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_backend_core_tools_input_validation_ts["input-validation.ts"] {
+  <<module>>
+  +inputIssueMessage()
+  +toolInputError()
+}
+```
+
 
 ### native-tools.ts 公开入口
 
@@ -203,6 +221,7 @@ PiBridge ..> ResultsModule : 进入会话前校验
 `ToolRegistry` 只登记合法 `cbim_` 名称，并强制声明正整数版本、副作用、输出 Schema、取消语义和恢复说明。解析输入与执行分离；只有本注册表实际解析出的定义可以调用 `invokeResolved`，不能借同名外来对象执行。`list` 保持引擎需要的紧凑输入清单；`catalog/describe` 仅查询该知识注册表，不能执行工具或凭元数据授权。
 
 `contracts.ts` 保存取消/恢复和发现输出的纯协议。知识目录返回 `family:knowledge` 与实际名称、可选描述、版本、副作用；详情按名称返回有限输入/输出 JSON Schema 和取消/恢复说明。自描述通过有限 Schema 引用表达，不递归嵌套整个注册表，不公开 `execute`、凭据、原生工具或派发工具。原始定义/人员诊断允许保留任意 JSON 事实（包括自有 `__proto__` 键），不裁剪成看似合格的业务对象。
+
 ### 原生工具的单一可信分类
 
 `native-tools.ts` 保存当前引擎实际支持的原生工具描述，供 Pi 注册、正式成员能力预检、授权分类和 Workflow canonical 评价共用。`nativeToolDescriptor` 返回独立描述，未知名称及对象继承属性不属于注册工具；`nativeToolNames(false)` 只包含只读工具。
@@ -234,3 +253,12 @@ nativeToolNames 按引擎提供真实规范名：Pi 保持既有清单，Codex �
 ### 统一调用结果
 
 `outcome.ts` 定义 status（returned/rejected/unknown）、retryable=false、terminal=true、reconcileTool/reconcileArgs 和 nextStep。terminal 表示本次请求已返回且不能自动重复，不表示业务目标终态。成功放在 ToolResult.details.outcome，保留原领域正文；异常同时用 JSON 文本交给模型。无可靠只读核实入口时两个 reconcile 字段明确 null，原生文件/命令须查原日志和实际副作用。只有可信适配器可附原命令地址，不从错误正文解析或补造身份。
+
+## 知识工具输入诊断
+
+`ToolRegistry.resolve` 在执行前校验参数。失败只列最多八项字段及类型/缺项提示，不回显输入正文；涉及 workspaceId/instanceId 时要求先调用当前身份工具，不自动补齐或沿用旧实例。领域身份、版本及权限仍由原入口检查；诊断不授权重放先前结果未知的调用。
+
+
+## 输入校验与缺省参数
+
+input-validation.ts 只解释实际 Schema issues，不根据工具字段清单推断缺参；optional/default 由原 Schema 决定，null、空字符串、显式值不转换为缺省。工具注册表使用共享无原值字段说明。toolInputError 仅用于执行前校验，ZodError 转为 TOOL_INPUT_INVALID，outcome 明确 rejected；执行后未知异常不使用此转换。字段说明经 Bridge 供旧 UI 投影共用，不赋予执行或重试许可。

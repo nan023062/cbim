@@ -103,7 +103,7 @@ it('只有当前waiting详情同身份同版本可写，历史选择/换根/同�
 
 it('历史表单不提供提交或重试按钮，未知与受理不冒充执行或人工验收',()=>{
   const request={...target,commandId:command,input:{message:'补充'},options};
-  const base:ScopeContinuationView={sourceSelectionKey:JSON.stringify(target),importSource:async()=>{},materialTargets:async()=>undefined,materialList:async()=>undefined,cancelImport:()=>{},workspaceId:'workspace',attachments:[],importing:false,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:false,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},query:async()=>{},retry:async()=>{}};
+  const base:ScopeContinuationView={sourceSelectionKey:JSON.stringify(target),importSource:async()=>{},materialTargets:async()=>undefined,materialList:async()=>undefined,cancelImport:()=>{},workspaceId:'workspace',attachments:[],importing:false,pickFiles:async()=>{},removeFile:()=>{},scopeId:'scope',waitId:'wait',text:'补充',editable:false,canSubmit:false,canRetry:false,pending:false,error:'',modelLabel:'model',edit:()=>{},submit:async()=>{},submitInput:async()=>{},query:async()=>{},retry:async()=>{}};
   const unknown=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'unknown',uncertain:true}}}}));expect(unknown).toMatch(/readonly=""/i);expect(unknown).toContain('查询提交状态');expect(unknown).not.toContain('scope-continuation-submit');expect(unknown).not.toContain('scope-continuation-retry');expect(unknown).toContain('不代表人工验收');
   const accepted=renderToStaticMarkup(createElement(ScopeContinuationForm,{state:{...base,record:{scopeId:'scope',waitId:'wait',text:'补充',attempt:{request,phase:'accepted',uncertain:false,receipt:receipt(request)}}}}));expect(accepted).toContain('补充已受理');expect(accepted).not.toContain('正在运行');
 });
@@ -181,4 +181,40 @@ it('已受理回执只更新周期状态，矛盾运行或附件清单不能覆�
     returned=structuredClone(accepted);mutate(returned);await f.controller.query('scope','wait');const attempt=f.controller.record('scope','wait')!.attempt!;
     expect(attempt.phase).toBe('accepted');expect(attempt.receipt).toEqual(accepted);expect(attempt.error).toContain('不一致');expect(f.send).toHaveBeenCalledTimes(1);
   }
+});
+
+
+it('聊天发送转交同一等待与有序附件，持久化后才发请求，重复发送不另建命令',async()=>{
+  const f=fixture(async request=>attachmentReceipt(request));
+  await f.controller.submitInput(target,options,'继续',files);
+  expect(f.send).toHaveBeenCalledTimes(1);
+  expect(f.send.mock.calls[0][0]).toMatchObject({...target,input:{message:'继续',attachmentIds:files.map(file=>file.id)},options});
+  expect(f.controller.record('scope','wait')?.attempt?.phase).toBe('accepted');
+  await expect(f.controller.submitInput(target,options,'继续',files)).rejects.toThrow('尚不能发送');
+  expect(f.send).toHaveBeenCalledTimes(1);
+});
+
+it('聊天转交不能覆盖目标卡草稿，也不能把附件交给另一会话',async()=>{
+  const f=fixture();f.controller.edit(target,'原补充');
+  await expect(f.controller.submitInput(target,options,'继续',files)).rejects.toThrow('已有补充草稿');
+  expect(f.controller.record('scope','wait')?.text).toBe('原补充');
+  await expect(f.controller.submitInput({...target,rootSessionId:'other'},options,'继续',files)).rejects.toThrow('尚不能发送');
+  expect(f.send).not.toHaveBeenCalled();
+});
+
+it.each(['IPC_TIMEOUT','GOAL_WAIT_CONFLICT: 等待已变更'])('聊天转交遇到 %s 仍可找回草稿，不改身份重发',async code=>{
+  const f=fixture(async()=>{throw Error(code)});
+  await f.controller.submitInput(target,options,'继续',files);
+  const record=f.controller.record('scope','wait');
+  expect(record).toMatchObject({text:'继续',attachments:files,attempt:{phase:code==='IPC_TIMEOUT'?'unknown':'rejected'}});
+  const reopened=new ScopeContinuationController('workspace','root',f.ports);
+  expect(reopened.record('scope','wait')).toEqual(record);
+  expect(f.send).toHaveBeenCalledTimes(1);
+});
+
+it('聊天转交保存失败时拒绝转移所有权，且不发送请求',async()=>{
+  const f=fixture();f.ports.storage.setItem=()=>{throw Error('磁盘不可写')};
+  await expect(f.controller.submitInput(target,options,'继续',files)).rejects.toThrow('未能保存');
+  expect(f.send).not.toHaveBeenCalled();
+  expect(f.controller.record('scope','wait')).toMatchObject({text:'继续',attachments:files});
 });

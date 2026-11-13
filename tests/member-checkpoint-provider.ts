@@ -1,3 +1,4 @@
+import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -32,13 +33,16 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
   const checkpointGate=new Promise<void>(resolve=>{releaseCheckpoint=resolve}),resumeGate=new Promise<void>(resolve=>{releaseResume=resolve});
   const state:{baseline?:any;checkpoint?:unknown;checkpointRejected?:unknown;parked?:GraphSnapshot;resume?:any;resumeProgressVersion?:number;initialProgressVersion?:number;thirdContext?:Request}={};
   let ownerSelection:OwnerExecutionSelection|undefined;
+  const reviews=new DependencyReviewRounds();
+  const compactions:GoalFixtureRequest[]=[];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length-(isMain?reviews.offset:0);if(serveFixtureCompaction(body,res,compactions))return;list.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'member-checkpoint-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
+    if((isMain)&&reviews.handle(body,'checkpoint-final-inspect',tool,reply)){res.end('data: [DONE]\n\n');return}
     if(isMain){
       assert.ok(body.tools?.every(tool=>!['cbim_task_checkpoint'].includes(tool.function.name)));
       if(turn===0)tool('checkpoint-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance}));
@@ -97,5 +101,5 @@ export async function memberCheckpointProvider(mode:CheckpointFixtureMode='compl
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Member checkpoint fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseCheckpoint:()=>releaseCheckpoint(),releaseResume:()=>releaseResume(),close:async()=>{releaseCheckpoint();releaseResume();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {compactions,reviews,url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releaseCheckpoint:()=>releaseCheckpoint(),releaseResume:()=>releaseResume(),close:async()=>{releaseCheckpoint();releaseResume();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

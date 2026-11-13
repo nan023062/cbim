@@ -1,4 +1,4 @@
-import {expect,it} from 'vitest';
+import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {ToolTimeline} from '../src/frontend/execution-view/ToolTimeline';
@@ -10,6 +10,27 @@ const result=(data:unknown)=>({content:[{type:'text',text:JSON.stringify(data)}]
 const preview={request:{...identity,requestId:'request',changes:[]},changes:[],validation:{structural:false,architecture:'review-required',business:'not-run',indexes:{},tree:{nodes:{},roots:[]},issues:[{severity:'error',code:'summary',path:'module.json',message:'摘要须为 100–250 个非空白字符'},{severity:'error',code:'sections',path:'module.md',message:'五个标题需要逐字匹配'}]},affected:[],diff:'',fingerprint:'b'.repeat(64),planId:'plan',objects:[],notice:'预览不写入'};
 const receipt={...identity,state:'committed',requestId:'request',changed:['module.json'],cleanupWarnings:[]};
 function run(name:string,data:unknown,isError=false):RunSummary{return {task:{taskId:'task',workspaceId:'workspace',root:'.',goal:'治理知识',moduleIds:[],acceptance:[]},runId:'run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[{version:1,seq:1,taskId:'task',runId:'run',workspaceId:'workspace',time:'2026-11-11T00:00:00Z',type:'tool.finished',data:{id:'call',name,result:data,isError}}]}}
+
+it.each(['legacy','current'] as const)('执行前缺参用可读字段提示替代原始JSON，不显示副作用入口：%s',mode=>{
+ const message=mode==='legacy'?JSON.stringify([{code:'invalid_type',path:['workspaceId'],received:'undefined',expected:'string',message:'Required'},{code:'invalid_type',path:['instanceId'],received:'undefined',expected:'string',message:'Required'}]):'cbim_agent_registry 参数无效；id：缺少必填字段。可选参数可省略。本次尚未执行。';
+ const reason=JSON.stringify({status:'rejected',code:mode==='legacy'?'TOOL_ERROR':'TOOL_INPUT_INVALID',message});
+ const value=run('cbim_agent_registry',undefined,true);value.events[0].type='tool.denied';value.events[0].data={id:'call',name:'cbim_agent_registry',input:{},reason,receipt:{reason}};
+ const controls=vi.fn(()=>createElement('div',null,'核实原调用影响'));
+ const html=renderToStaticMarkup(createElement(ToolTimeline,{run:value,renderControls:controls}));
+ expect(html).toContain('参数待补充或修正');expect(html).toContain('缺少必填字段');expect(html).toContain('本次尚未执行');expect(html).not.toContain('invalid_type');expect(html).not.toContain('TOOL_ERROR');expect(html).not.toContain('核实原调用影响');expect(controls).not.toHaveBeenCalled();
+ if(mode==='legacy'){expect(html).toContain('workspaceId');expect(html).toContain('instanceId')}
+});
+
+it('曾经放行或只在正文自称rejected的失败不隐藏原核实入口',()=>{
+ const controls=vi.fn(()=>createElement('div',null,'核实原调用影响'));
+ for(const allowed of [true,false]){
+  const value=run('cbim_example',result({status:'rejected',code:'TOOL_INPUT_INVALID',message:'字段无效'}),true);
+  if(allowed)value.events.unshift({...value.events[0],seq:0,type:'tool.allowed',data:{id:'call',name:'cbim_example',input:{}}});
+  if(allowed)value.events[1]={...value.events[1],type:'tool.denied',data:{id:'call',name:'cbim_example',reason:'后来拒绝'}};
+  expect(renderToStaticMarkup(createElement(ToolTimeline,{run:value,renderControls:controls}))).toContain('核实原调用影响');
+ }
+ expect(controls).toHaveBeenCalledTimes(2);
+});
 
 it('所有预览诊断显示为校验警告，执行异常仍保留失败',()=>{
  const view=renderToStaticMarkup(createElement(ToolTimeline,{run:run('cbim_object_preview',result(preview))}));

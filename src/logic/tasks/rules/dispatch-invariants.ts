@@ -30,6 +30,7 @@ import {validateMemberCheckpoints} from './member-checkpoint-invariants';
 import {validateCheckpointAbandonment} from './checkpoint-handoff-invariants';
 import {validateHumanDecisionCommand} from './human-decision-invariants';
 import {validateHumanContinuationCommand} from './human-continuation-invariants';
+import {pendingTopicInterruption} from './topic-interruption';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
 const time=z.string().datetime();
@@ -104,6 +105,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
     else valid(run.status!=='completed','尚无真实启动事实的执行不能直接完成');
   }else{
     valid(run.status==='starting'&&!run.startedAt&&!run.settledAt,'新运行必须从未启动的领取意图开始');
+    valid(!state.scopes?.some(scope=>scope.scopeId===task.scopeId&&pendingTopicInterruption(scope)),'话题正在排空，不能绕过协调器领取成员运行');
     valid(!teamSessionBusy(state.teamSessions??[],state.runs??[],binding,binding.runId),'同一办公室的同一 Agent 不能同时领取多个任务');
     valid(member.leaseEpoch===binding.leaseEpoch&&member.configurationRevision===run.prepared.knowledgeRevision,'领取时的成员代际或知识基线已过期');
     const graph=state.graphs.find(item=>sameGraph(item.identity,binding))!;

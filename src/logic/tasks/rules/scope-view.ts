@@ -12,6 +12,7 @@ import type {TeamSession} from '../../team/rules/team-session';
 import {scopeRunTrackingSchema} from './scope-run-tracking';
 import {assertGraphIdentity} from './graph-rules';
 import {sameGoalValue,goalInputRevision,goalNeedsReplan} from './scope-goal';
+import {pendingTopicInterruption} from './topic-interruption';
 import {scopeActiveInputStatus} from './scope-active-input';
 import {scopeBudgetSummarySchema} from '../../budget/rules/scope-budget';
 import {publicDispatchScopeSchema,projectMainScope,type PublicDispatchScope} from './scope-public';
@@ -22,9 +23,9 @@ const graphCursor=graphIdentityInput.extend({streamId:id,seq}).strict();
 const scopeCursor=graphCursor.extend({kind:z.literal('scopes')}).strict();
 const detailStamp=z.object({scopeId:id,streamId:id,seq:seq.min(1)}).strict();
 const outcome=z.enum(['completed','failed','cancelled','interrupted']);
-const waitSummary=z.object({waitId:id,reason:z.string().max(240),goalRevision:seq.min(1),createdAt:z.string()}).strict();
+const waitSummary=z.object({interruptionId:z.string().uuid().optional(),waitId:id,reason:z.string().max(240),goalRevision:seq.min(1),createdAt:z.string()}).strict();
 const humanSummary=z.object({revision:seq.min(1).max(64),count:seq.min(1).max(64),lastDecisionAt:z.string().datetime()}).strict().refine(value=>value.revision===value.count);
-const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputRevision:seq.min(1).optional(),needsReplan:z.boolean().optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),budget:scopeBudgetSummarySchema.optional(),humanDecisions:humanSummary.optional(),wait:waitSummary.optional(),readOnly:z.literal(true).optional(),origin:z.enum(['inspection','business_replan']).optional(),activeInputStatus:z.enum(['pending','unknown']).optional(),activeInputCount:seq.min(1).max(64).optional(),mainRunIds:scopeRunTrackingSchema.shape.mainRunIds.optional(),stamp:detailStamp}).strict();
+const summary=z.object({scopeId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string(),closedAt:z.string().optional(),outcome:outcome.optional(),hasGoal:z.boolean(),goalRevision:seq.min(1).optional(),inputRevision:seq.min(1).optional(),needsReplan:z.boolean().optional(),inputPreview:z.string().max(240).optional(),objective:z.string().max(240).optional(),hasPlan:z.boolean(),reviewDecision:z.enum(['complete','replan','blocked','awaiting_user']).optional(),blockedReason:z.string().max(240).optional(),budget:scopeBudgetSummarySchema.optional(),humanDecisions:humanSummary.optional(),wait:waitSummary.optional(),readOnly:z.literal(true).optional(),origin:z.enum(['inspection','business_replan']).optional(),interruption:z.object({commandId:z.string().uuid(),phase:z.enum(['requested','paused'])}).strict().optional(),activeInputStatus:z.enum(['pending','unknown']).optional(),activeInputCount:seq.min(1).max(64).optional(),mainRunIds:scopeRunTrackingSchema.shape.mainRunIds.optional(),stamp:detailStamp}).strict();
 
 /** 只读请求的身份及选择均显式传入；游标和 stamp 是缓存证明，不授予跨会话读取权。 */
 export const dispatchSessionReadInput=z.object({identity:graphIdentityInput,graphCursor:graphCursor.optional(),scopeCursor:scopeCursor.optional(),selectedScopeId:id.optional(),detailStamp:detailStamp.optional(),limit:seq.min(1).max(500).optional()}).strict();
@@ -62,13 +63,14 @@ export function emptyScopeSnapshot(identity:GraphIdentity,graphStreamId:string):
 }
 /** 白名单摘要不含完整输入、附件、证据正文、运行私有路径或邮箱；文本预览最多 240 字符。 */
 export function summarizeScope(scope:DispatchScope,streamId:string,seq:number):ScopeSummary{
-  const goal=scope.goal;
+  const goal=scope.goal,interruption=pendingTopicInterruption(scope);
   return {scopeId:scope.scopeId,status:scope.status,createdAt:scope.createdAt,...(scope.closedAt?{closedAt:scope.closedAt}:{}),...(scope.outcome?{outcome:scope.outcome}:{}),hasGoal:!!goal,hasPlan:!!goal?.plan,
+    ...(interruption?{interruption:{commandId:interruption.request.commandId,phase:scope.wait?.interruptionId===interruption.request.commandId?'paused' as const:'requested' as const}}:{}),
     ...(scope.runTracking?{mainRunIds:[...scope.runTracking.mainRunIds]}:{}),
     ...(scope.activeInputs?.length?{activeInputCount:scope.activeInputs.length}:{}),...(scopeActiveInputStatus(scope)?{activeInputStatus:scopeActiveInputStatus(scope)}:{}),
     ...(goal?{goalRevision:goal.revision,inputRevision:goalInputRevision(goal),needsReplan:goalNeedsReplan(goal),inputPreview:preview(goal.input.message)}:{}),
     ...(goal?.plan?{objective:preview(goal.plan.objective)}:{}),...(goal?.review?{reviewDecision:goal.review.decision}:{}),...(scope.recovery?{readOnly:true as const,origin:'inspection' as const}:scope.replan?{origin:'business_replan' as const}:{}),
-    ...(goal?.blocked?{blockedReason:preview(goal.blocked.reason)}:{}),...(scope.budget?{budget:{policy:structuredClone(scope.budget.policy),...(scope.budget.blocked?{blocked:structuredClone(scope.budget.blocked)}:{})}}:{}),...(scope.humanDecisions?{humanDecisions:{revision:scope.humanDecisions.revision,count:scope.humanDecisions.records.length,lastDecisionAt:scope.humanDecisions.records.at(-1)!.recordedAt}}:{}),...(scope.wait?{wait:{waitId:scope.wait.waitId,reason:preview(scope.wait.reason),goalRevision:scope.wait.goalRevision,createdAt:scope.wait.createdAt}}:{}),stamp:{scopeId:scope.scopeId,streamId,seq}};
+    ...(goal?.blocked?{blockedReason:preview(goal.blocked.reason)}:{}),...(scope.budget?{budget:{policy:structuredClone(scope.budget.policy),...(scope.budget.blocked?{blocked:structuredClone(scope.budget.blocked)}:{})}}:{}),...(scope.humanDecisions?{humanDecisions:{revision:scope.humanDecisions.revision,count:scope.humanDecisions.records.length,lastDecisionAt:scope.humanDecisions.records.at(-1)!.recordedAt}}:{}),...(scope.wait?{wait:{...(scope.wait.interruptionId?{interruptionId:scope.wait.interruptionId}:{}),waitId:scope.wait.waitId,reason:preview(scope.wait.reason),goalRevision:scope.wait.goalRevision,createdAt:scope.wait.createdAt}}:{}),stamp:{scopeId:scope.scopeId,streamId,seq}};
 }
 function validateSummaries(scopes:ScopeSummary[],cursor:Pick<ScopeCursor,'streamId'|'seq'>,batch=false){
   valid(Array.isArray(scopes)&&new Set(scopes.map(item=>item?.scopeId)).size===scopes.length,'周期摘要标识重复或集合无效');
@@ -76,7 +78,7 @@ function validateSummaries(scopes:ScopeSummary[],cursor:Pick<ScopeCursor,'stream
     valid(summary.safeParse(item).success,'周期摘要字段无效');
     valid(item.stamp.scopeId===item.scopeId&&item.stamp.streamId===cursor.streamId&&item.stamp.seq<=cursor.seq&&(!batch||item.stamp.seq===cursor.seq),'周期摘要与增量序号不一致');
     valid(item.hasGoal===(item.goalRevision!==undefined)&&(!item.hasPlan||item.hasGoal),'周期摘要目标版本不一致');
-    valid(item.status!=='waiting'||item.wait&&item.hasGoal&&item.goalRevision===item.wait.goalRevision&&item.reviewDecision==='awaiting_user','等待周期缺少对应检查点');
+    valid(item.status!=='waiting'||item.wait&&item.hasGoal&&item.goalRevision===item.wait.goalRevision&&(item.wait.interruptionId||item.reviewDecision==='awaiting_user'),'等待周期缺少对应检查点');
     valid(!item.activeInputStatus||!!item.activeInputCount&&item.hasGoal&&item.status!=='waiting'&&!(item.status==='closed'&&item.outcome==='completed'),'未核实插入摘要不能冒充安全等待或完成');
     valid(!item.budget?.blocked||item.budget.policy.enabled&&item.budget.blocked.policyRevision===item.budget.policy.revision,'预算拒绝与冻结策略不一致');
   }

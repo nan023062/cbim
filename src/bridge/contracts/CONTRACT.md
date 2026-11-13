@@ -373,3 +373,7 @@ Main 的 161 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操�
 ## 工具缺参说明
 
 execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的字段说明，无日志读取或副作用；前端据真实事件决定是否为执行前拒绝，不能单凭文本决定恢复能力。
+
+## 指定话题补充与排空
+
+`loop.topicInterrupt` 接收 `TopicInterruptionRequest`，返回原 `GoalContinuationReceipt`。命令绑定工作区、主 Session、具体话题与输入版本；不接受原生路径、成员直接发送或人工批准。未知回执保留原命令，可从同话题详情读取 topicInterruptions/wait，并复用原请求查询/继续，不换 ID 自动重发。

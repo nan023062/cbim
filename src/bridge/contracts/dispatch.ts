@@ -35,6 +35,8 @@ export type {DispatchSessionReadInput,DispatchSessionRead,ScopeCursor,ScopeDetai
 export {applyScopeBatch,validateScopeSnapshot} from '../../logic/tasks/rules/scope-view';
 export type {GoalContinuationRequest,GoalContinuationReceipt} from '../../logic/tasks/rules/scope-continuation';
 export {goalContinuationRequestSchema,goalContinuationReceiptSchema} from '../../logic/tasks/rules/scope-continuation';
+export {topicInterruptionRequestSchema,pendingTopicInterruption} from '../../logic/tasks/rules/topic-interruption';
+export type {TopicInterruptionRequest,TopicInterruption} from '../../logic/tasks/rules/topic-interruption';
 export type {ExecutionReportInput,ExecutionReport} from '../../logic/tasks/rules/execution-report';
 export {executionReportInputSchema,executionReportSchema} from '../../logic/tasks/rules/execution-report';
 export type {ArtifactReportInput,ArtifactReport,ArtifactBaselineRef,ArtifactFileCheck} from '../../logic/evidence/rules/artifact-baseline';

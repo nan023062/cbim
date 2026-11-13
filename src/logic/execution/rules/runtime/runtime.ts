@@ -206,7 +206,8 @@ export class LoopRuntime {
       }else if(resume){
         previous=await this.inspect(task.taskId,resume.runId);
         if(previous.logIntegrity?.partialTail)throw Error('原运行日志尾行不完整，先核实执行记录；不能直接续接或重放');
-        if(source&&(previous.status!=='completed'||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
+        // 整话题补充在 beforeRun 再核原等待并原子消费；只额外接受已完整取消的主轮，失败/未知不获得续接权。
+        if(source&&((previous.status!=='completed'&&!(source.kind==='user-continuation'&&source.interruptionId&&previous.status==='cancelled'))||previous.unresolvedTools.length))throw Error('主对话上轮未安全完成，不能接续目标或成员结果');
         if(previous.memberBinding)throw Error('成员任务不能通过普通对话恢复；请先由调度核实上次执行');
         // 已绑定历史不得改换或丢失登记身份；旧未绑定历史可在明确续聊时首次绑定，不重写旧记录。
         if(previous.conversationBinding&&(!conversationBinding||Object.entries(previous.conversationBinding).some(([key,value])=>conversationBinding[key as keyof ConversationAgentBinding]!==value)))throw Error('恢复必须使用原主对话实例与通道身份');

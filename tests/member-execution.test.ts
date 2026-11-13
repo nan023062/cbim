@@ -75,6 +75,17 @@ async function setup(useBuiltin=false){
   return {...f,workspace,entry,team,agentId,scopeId,directory,store,storage,dispatch,members,ports,prepare,identity,assign,input,start,settled,contexts,lease,setRuntimeGate:(gate:()=>Promise<void>)=>{beforeRuntimeLease=gate},setBehavior:(value:typeof behavior)=>{behavior=value},cleanup:async()=>{release();await members.close();await dispatch.close();await f.cleanup()}};
 }
 
+it('整话题补充保存后拒绝新领取和派发，原成员任务不被删除',async()=>{
+  const f=await setup();try{
+    const assigned=await f.assign();
+    await f.dispatch.interruptions.prepare({...f.identity,scopeId:f.scopeId,expectedInputRevision:1,commandId:crypto.randomUUID(),input:{message:'等待重新分析'},options:{provider:'fixture',model:'fixture',profileId:crypto.randomUUID(),permission:'read'}});
+    await expect(f.start(assigned.taskId)).rejects.toMatchObject({code:'TOPIC_PAUSING'});
+    await expect(f.assign()).rejects.toMatchObject({code:'TOPIC_PAUSING'});
+    expect(f.prepare).not.toHaveBeenCalled();expect((await f.store.read()).runs??[]).toEqual([]);
+    expect((await f.dispatch.snapshot(f.identity)).tasks).toHaveLength(1);
+  }finally{await f.cleanup()}
+});
+
 it('成员领取后执行、返回带证据的候选、原请求人确认收件；重复启动不重复调用模型',async()=>{
   const f=await setup();try{
     const assigned=await f.assign(),receipt=await f.start(assigned.taskId),view=await f.settled(assigned.taskId);

@@ -55,6 +55,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_Cycle["Cycle"] {
   +mainRuns
   +workRequested
   +stopped
+  +interrupting
   +readOnly
   +cancelRequested
   +ending
@@ -132,10 +133,10 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
   -acceptReplan()
   -recoveryPreflight()
   -acceptRecovery()
+  -interruptTopic()
   -continuationCheckpoint()
   -acceptContinuation()
   -starting()
-  -startFailed()
 }
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
 ```
@@ -148,6 +149,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts["auto-collaboration.ts"
   <<module>>
 }
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["AutoCollaboration"] {
+  -startFailed()
   -track()
   -identity()
   -toolBinding()
@@ -167,7 +169,7 @@ class N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration["Auto
 N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runtime_auto_collaboration_ts_AutoCollaboration : 声明
 ```
 
-直接依赖：[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/goal-tools.ts](../../tools/runtime/goal-tools.ts)、[../../tools/runtime/candidate-review-tools.ts](../../tools/runtime/candidate-review-tools.ts)、[../../team/runtime/member-state.ts](../../team/runtime/member-state.ts)、[../../tools/runtime/main-tool-contracts.ts](../../tools/runtime/main-tool-contracts.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../../team/runtime/member-execution.ts](../../team/runtime/member-execution.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/member-checkpoint-chain.ts](../../tasks/rules/member-checkpoint-chain.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tools/runtime/dispatch-tools.ts](../../tools/runtime/dispatch-tools.ts)、[../../tools/runtime/goal-tools.ts](../../tools/runtime/goal-tools.ts)、[../../tools/runtime/candidate-review-tools.ts](../../tools/runtime/candidate-review-tools.ts)、[../../team/runtime/member-state.ts](../../team/runtime/member-state.ts)、[../../tools/runtime/main-tool-contracts.ts](../../tools/runtime/main-tool-contracts.ts)、[../../tasks/rules/main-tool-output.ts](../../tasks/rules/main-tool-output.ts)、[dispatch-service.ts](dispatch-service.ts)、[../../team/runtime/member-execution.ts](../../team/runtime/member-execution.ts)、[../../conversation/runtime/execution-manager.ts](../../conversation/runtime/execution-manager.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/admission/workspace-lease.ts](../../execution/admission/workspace-lease.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[goal-repair.ts](goal-repair.ts)、[member-failure-limit.ts](member-failure-limit.ts)、[../../models/index.ts](../../models/index.ts)。
 
 ### automatic-return-service.ts
 
@@ -211,6 +213,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   +automaticReturns
   +owners
   +continuations
+  +interruptions
   +activeInputs
   +recoveries
   +replans
@@ -222,7 +225,6 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   +memberPauses
   +ownerInspect()
   +commandReport()
-  +cancelQueued()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -235,6 +237,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +cancelQueued()
   +replaceQueuedDependency()
   +addQueuedDependency()
   +reviseQueuedDependencies()
@@ -250,7 +253,6 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   +openGraph()
   +conversationBinding()
   +createMember()
-  +dispatchTask()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -263,6 +265,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  +dispatchTask()
   +snapshot()
   +delta()
   +sessionRead()
@@ -278,7 +281,6 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
   -commandVerification
   -check()
   -parse()
-  -graph()
 }
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
@@ -291,6 +293,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts["dispatch-service.ts"] {
   <<module>>
 }
 class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService["WorkspaceDispatchService"] {
+  -graph()
   -command()
   -batch()
   -cursor()
@@ -299,7 +302,7 @@ class N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService[
 N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtime_dispatch_service_ts_WorkspaceDispatchService : 声明
 ```
 
-直接依赖：[../../execution/context/automatic-context.ts](../../execution/context/automatic-context.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[../../evidence/runtime/command-verification-service.ts](../../evidence/runtime/command-verification-service.ts)、[../../evidence/runtime/effect-observation-service.ts](../../evidence/runtime/effect-observation-service.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/runtime/scope-goal-service.ts](../../tasks/runtime/scope-goal-service.ts)、[../../tasks/runtime/scope-continuation-service.ts](../../tasks/runtime/scope-continuation-service.ts)、[../../tasks/runtime/scope-active-input-service.ts](../../tasks/runtime/scope-active-input-service.ts)、[../../tasks/runtime/scope-recovery-service.ts](../../tasks/runtime/scope-recovery-service.ts)、[../../tasks/runtime/scope-replan-service.ts](../../tasks/runtime/scope-replan-service.ts)、[../../tasks/runtime/scope-human-decision-service.ts](../../tasks/runtime/scope-human-decision-service.ts)、[../../tasks/runtime/scope-human-continuation-service.ts](../../tasks/runtime/scope-human-continuation-service.ts)、[../../tasks/runtime/queued-task-cancel-service.ts](../../tasks/runtime/queued-task-cancel-service.ts)、[../../tasks/runtime/queued-dependency-replacement-service.ts](../../tasks/runtime/queued-dependency-replacement-service.ts)、[../../tasks/runtime/queued-dependency-addition-service.ts](../../tasks/runtime/queued-dependency-addition-service.ts)、[../../tasks/runtime/queued-dependency-revision-service.ts](../../tasks/runtime/queued-dependency-revision-service.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../team/runtime/checkpoint-abandonment-service.ts](../../team/runtime/checkpoint-abandonment-service.ts)、[../../team/runtime/member-checkpoint-verifier.ts](../../team/runtime/member-checkpoint-verifier.ts)、[../../team/runtime/member-pause-service.ts](../../team/runtime/member-pause-service.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../budget/runtime/scope-usage-service.ts](../../budget/runtime/scope-usage-service.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../team/runtime/agent-manager.ts](../../team/runtime/agent-manager.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/scope-run-tracking.ts](../../tasks/rules/scope-run-tracking.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[automatic-return-service.ts](automatic-return-service.ts)。
+直接依赖：[../../execution/context/automatic-context.ts](../../execution/context/automatic-context.ts)、[../../tasks/rules/candidate-review.ts](../../tasks/rules/candidate-review.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/runtime/main-command-request.ts](../../tasks/runtime/main-command-request.ts)、[../../evidence/runtime/command-verification-service.ts](../../evidence/runtime/command-verification-service.ts)、[../../evidence/runtime/effect-observation-service.ts](../../evidence/runtime/effect-observation-service.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/runtime/scope-goal-service.ts](../../tasks/runtime/scope-goal-service.ts)、[../../tasks/runtime/topic-interruption-service.ts](../../tasks/runtime/topic-interruption-service.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/runtime/scope-continuation-service.ts](../../tasks/runtime/scope-continuation-service.ts)、[../../tasks/runtime/scope-active-input-service.ts](../../tasks/runtime/scope-active-input-service.ts)、[../../tasks/runtime/scope-recovery-service.ts](../../tasks/runtime/scope-recovery-service.ts)、[../../tasks/runtime/scope-replan-service.ts](../../tasks/runtime/scope-replan-service.ts)、[../../tasks/runtime/scope-human-decision-service.ts](../../tasks/runtime/scope-human-decision-service.ts)、[../../tasks/runtime/scope-human-continuation-service.ts](../../tasks/runtime/scope-human-continuation-service.ts)、[../../tasks/runtime/queued-task-cancel-service.ts](../../tasks/runtime/queued-task-cancel-service.ts)、[../../tasks/runtime/queued-dependency-replacement-service.ts](../../tasks/runtime/queued-dependency-replacement-service.ts)、[../../tasks/runtime/queued-dependency-addition-service.ts](../../tasks/runtime/queued-dependency-addition-service.ts)、[../../tasks/runtime/queued-dependency-revision-service.ts](../../tasks/runtime/queued-dependency-revision-service.ts)、[../../tasks/rules/queued-dependency-revision.ts](../../tasks/rules/queued-dependency-revision.ts)、[../../team/runtime/checkpoint-abandonment-service.ts](../../team/runtime/checkpoint-abandonment-service.ts)、[../../team/runtime/member-checkpoint-verifier.ts](../../team/runtime/member-checkpoint-verifier.ts)、[../../team/runtime/member-pause-service.ts](../../team/runtime/member-pause-service.ts)、[../../tasks/rules/checkpoint-handoff.ts](../../tasks/rules/checkpoint-handoff.ts)、[../../tasks/rules/queued-dependency-addition.ts](../../tasks/rules/queued-dependency-addition.ts)、[../../tasks/rules/queued-dependency-replacement.ts](../../tasks/rules/queued-dependency-replacement.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../budget/runtime/scope-usage-service.ts](../../budget/runtime/scope-usage-service.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[../../tasks/rules/queued-task-cancel.ts](../../tasks/rules/queued-task-cancel.ts)、[../../tasks/rules/dispatch-commands.ts](../../tasks/rules/dispatch-commands.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../team/runtime/agent-manager.ts](../../team/runtime/agent-manager.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/scope-run-tracking.ts](../../tasks/rules/scope-run-tracking.ts)、[owner-execution-service.ts](owner-execution-service.ts)、[automatic-return-service.ts](automatic-return-service.ts)。
 
 ### goal-repair.ts
 
@@ -470,3 +473,7 @@ N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtim
 AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异常已经落盘但尚未写入 blocked 的退出窗口。已持久 blocked 或关闭的周期本来就不能自动恢复；等待与重规划仍须用户显式操作。旧任务历史不迁移，失败计数不会跨到用户明确创建的新目标。原有每目标 32 次主调度上限、最终验收最多 3 次返工/同指纹最多 2 次以及逐工具重复失败保护继续生效。
 
 变化仅在协调层组合纯策略；运行计时、引擎适配、任务终态和存储协议保持。无进展计时器只在当前运行内续期，到期后的迟到事件不能重新激活；它不负责跨任务重试额度。未来调整异常分类或次数从 member-failure-limit 修改，实时与重启两个消费者共同验证；变化频率尚无统计依据，不预设通用重试框架。
+
+## 指定话题补充与排空
+
+`AutoCollaboration.interruptTopic` 冻结指定办公室原 Cycle 及全部 Batch，先持久保存补充，调用可信主轮停止端口，等待在途调度/领取退出，再按已提交图停止原话题的全部成员并等真实结算。暂停占位仍由同一个主会话持有；不调用 closeScope 伪装暂停，不停止其它话题成员。迟到结果继续归原任务；旧 Batch 在排空期间不能派工或自动结束。取消和关闭仍可封存原周期；未确认排空保留意图，不重放未知结果。

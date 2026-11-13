@@ -1,3 +1,12 @@
+## 2026-11-14：办公室改版第 7 步——指定话题补充的持久意图与整组排空
+
+- 基线 `4522455b`。新增 `loop.topicInterrupt`：按原办公室/话题/输入版本保存原文、附件和选型，冻结旧调度，停止主轮及原话题全部成员，等待在途工具、领取、引擎退出和结算，再建立带 interruptionId 的可靠等待。复用原接续事务提升输入版本、清除旧审阅并迫使重规划。普通发送和原生 steer 不成为此入口；本片是后端闭环，界面按钮与队列自动衔接另片接入。
+- Q1 保护原话题归属、执行租约、未知结果、人工审批和额度；Q2 Tasks 保存请求/检查点，Dispatch 协调排空，Conversation 管理原主轮和幂等启动，Runtime 仅额外允许可靠 cancelled 主轮的专用接续；Q3 选取持久化/重放、真实协调器、主运行管理器、成员领取、IPC 和 Pi 集成；Q4 `topic-interruption` → `TopicInterruptionService` → `AutoCollaboration.interruptTopic` → `WorkspaceExecutionManager.interruptTopic/continueGoal`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/topic-interruption-service.test.ts tests/scope-continuation.test.ts tests/scope-active-input.test.ts tests/dispatch-session-read.test.ts tests/queue-insertion-boundary.test.ts`：实际选中 4 文件/40 项通过；其中 scope-active-input.test.ts 路径不存在，随后用正确的 scope-active-input-core.test.ts 验证，未将空选择算作通过。`pnpm exec vitest run tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/scope-active-input-core.test.ts tests/ipc-requests.test.ts`：113/113 通过。
+- `pnpm exec vitest run tests/topic-interruption-pi.test.ts`：1/1，通过真实 Pi/IPC/事务链取消旧主轮、同话题新输入重新规划及审阅，成员候选未重放；使用本地确定性供应商，不代表在线模型验收。`pnpm exec vitest run tests/member-execution.test.ts tests/dispatch-execution-store.test.ts tests/topic-interruption-service.test.ts tests/ipc-requests.test.ts`：50/50 通过。新增取消竞争、未知退出重启封存、已消费补充重查不能冻结新轮，分别选择 queue-insertion-boundary 的“整话题”2 项、topic-interruption-service 的“未知主轮”1 项、auto-collaboration 的“话题补充”2 项通过。
+- 类型检查初次发现两个事务回调未返回 Promise 和两个测试类型问题，修复后 `pnpm typecheck` 通过。架构检查指出新增服务和 IPC 契约未登记，补充精确入口而未放宽目录规则；`tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`：12 通过/139 未选择。最终 `pnpm check:architecture`（743 代码/样式、1494 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（489 文件）通过。后续幂等分支补充已过专用测试；类图再次生成无差异。
+- 同步九个目录源码说明、CONTRACT 和类图。可靠等待重启保留；未能确认排空的意图按现有恢复规则封存为 interrupted，保留原补充供核实，不自动重放。界面入口、已结束话题的关联后续、普通排队的自动衔接和办公室场景仍未在本片完成。未运行全仓回归、桌面冒烟、构建、安装升级或发布；仅独立本地保存。
+
 ## 2026-11-14：办公室改版第 6 步——成员当前话题上下文隔离
 
 - 基线 `99356503`。成员每轮冻结办公室、逻辑 Session、话题和输入版本，以及同角色同话题的历史候选引用；提示词只解析原引用，拒绝身份或版本漂移。新补充优先进入有界上下文，明确遗漏数量，原归档不截断。跨话题前置任务在派发和运行事务两处拒绝；不同任务保留独立原生通道，长期逻辑会话不会带入其它话题的原生历史。

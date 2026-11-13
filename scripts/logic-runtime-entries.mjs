@@ -62,6 +62,7 @@ export const runtimePublicEntries=new Set([
   "src/logic/tasks/runtime/queued-task-cancel-service.ts",
   "src/logic/tasks/runtime/scope-active-input-service.ts",
   "src/logic/tasks/runtime/scope-continuation-service.ts",
+  "src/logic/tasks/runtime/topic-interruption-service.ts",
   "src/logic/tasks/runtime/scope-goal-service.ts",
   "src/logic/tasks/runtime/scope-human-continuation-service.ts",
   "src/logic/tasks/runtime/scope-human-decision-service.ts",

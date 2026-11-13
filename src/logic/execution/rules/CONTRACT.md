@@ -410,3 +410,7 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 `RepeatedToolFailures` 以工具名及递归键排序的参数哈希判断连续失败，按 proposed 顺序收束并发结果，重复 finished/denied 只计一次，成功或不同参数重置计数。第三次失败持久保存 engine.status state=blocked，立即停止并排空；第四次调用不执行。安全收尾的 RunStatus 保持既有 failed，并带 TOOL_REPEAT_BLOCKED；未决副作用仍优先 interrupted。没有自动恢复或自动重试，不能把引擎 completed 覆盖为业务成功。
 
 内部能力目录仅注册和路由；各引擎传输适配层只调用原端口一次，输出/异常用统一 ToolOutcome 包装，原领域正文不改写；各引擎收到相同失败含义。门禁拒绝以 rejected 返回，结果异常保守为 unknown。界面展示原记录和下一步，不直接执行核实工具。
+
+## 指定话题补充与排空
+
+`UserContinuationSource.interruptionId` 只由可信话题接续生成，必须等于 continuationId/waitId；普通聊天不能提交此来源。它表示已有用户补充在整话题排空后受理，允许引用完整 cancelled 主轮；不放宽未知工具、损坏日志、原生身份或其它系统回注的 completed 要求。

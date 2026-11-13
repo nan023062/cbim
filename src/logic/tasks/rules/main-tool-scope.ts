@@ -10,6 +10,7 @@ import {hash,json} from '../../../core/platform/node/serialization';
 import {goalNeedsReplan,sameGoalValue} from './scope-goal';
 import {scopeHasUnresolvedActiveInput,validateScopeInputHistory} from './scope-active-input';
 import {ownerExecutionBindingMatches} from '../../team/rules/member-execution-binding';
+import {pendingTopicInterruption} from './topic-interruption';
 import {publicDispatchScopeSchema} from './scope-public';
 export {projectMainScope} from './scope-public';
 
@@ -19,7 +20,8 @@ export const mainToolScopeSchema=publicDispatchScopeSchema.superRefine((scope,co
   for(const assignment of scope.goal?.plan?.assignments??[])if(assignment.ownerBinding&&!ownerExecutionBindingMatches(assignment.ownerBinding,scope.workspaceId,assignment.agentId,assignment.moduleIds))issue('目标负责岗位不属于返回周期的工作区、角色或模块');
   for(const a of scope.goal?.plan?.assignments??[])if(a.fallbackBinding&&(!automaticExecutionBindingMatches(a.fallbackBinding,scope.workspaceId,scope.scopeId,a.agentId,a.moduleIds)||scope.executionPolicy?.mode!=='auto'))issue('自动兜底不属于本周期或模式');
   if(scope.status==='closed'?(!scope.closedAt||!scope.outcome):(scope.closedAt!==undefined||scope.outcome!==undefined))issue('周期状态与关闭事实不一致');
-  if(scope.status==='waiting'&&(!scope.wait||!scope.goal||scope.goal.blocked||scope.goal.review?.decision!=='awaiting_user'||scope.wait.goalRevision!==scope.goal.revision||scope.wait.runId!==scope.goal.review.runId||scope.wait.knowledgeRevision!==scope.goal.review.knowledgeRevision||!sameGoalValue(scope.wait.graphCursor,scope.goal.review.graphCursor)))issue('等待必须有当前审阅的真实检查点');
+  if(scope.wait?.interruptionId){const intent=pendingTopicInterruption(scope);if(!intent||scope.wait.waitId!==intent.request.commandId||scope.wait.interruptionId!==intent.request.commandId||scope.wait.goalRevision!==scope.goal?.revision||(scope.goal?.inputRevision??1)!==intent.request.expectedInputRevision)issue('整话题暂停必须保留原补充及输入版本')}
+  if(scope.status==='waiting'&&!scope.wait?.interruptionId&&(!scope.wait||!scope.goal||scope.goal.blocked||scope.goal.review?.decision!=='awaiting_user'||scope.wait.goalRevision!==scope.goal.revision||scope.wait.runId!==scope.goal.review.runId||scope.wait.knowledgeRevision!==scope.goal.review.knowledgeRevision||!sameGoalValue(scope.wait.graphCursor,scope.goal.review.graphCursor)))issue('等待必须有当前审阅的真实检查点');
   if(scope.status==='active'&&scope.wait)issue('活动周期不能仍持有未消费等待');
   if(scope.status==='closed'&&scope.wait&&scope.outcome==='completed')issue('等待周期不能绕过审阅直接成为已完成');
   if(scope.recovery&&scope.replan)issue('只读核实与业务重规划不能共用一个周期');

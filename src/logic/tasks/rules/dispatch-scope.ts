@@ -3,6 +3,7 @@
  * 作用定位：定义一次用户任务的调度周期及不可变待回传批次，与长期主会话和单次模型运行区分。
  * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与软限额。运行中补充先记录发送尝试，仅真实接收后与 waiting 续接共用输入版本；人工决定保存不自动续接，旧损坏链不复活。
  */
+import type {TopicInterruption} from './topic-interruption';
 import {type CollaborationPolicy} from '../../team/rules/automatic-execution';
 import type {DispatchScopeGoal} from './scope-goal';
 import type {DispatchScopeWait} from './scope-continuation';
@@ -45,6 +46,8 @@ export interface DispatchScope {
   continuations?:ScopeContinuationRecord[];
   /** 同一主运行的插入尝试；只有 accepted 推进输入版本，pending/unknown 不授予继续或完成许可。 */
   activeInputs?:ScopeActiveInput[];
+  /** 用户指定话题的原始补充先保存；是否排空/消费分别由 wait 和 continuations 证明。 */
+  topicInterruptions?:TopicInterruption[];
   /** 仅新只读核实周期有值；来源、用户观察和全新原生上下文边界创建后永不改写，旧周期不复活。 */
   recovery?:ScopeRecovery;
   /** 独立的业务重规划意图，须有已完成只读核实证明；与 recovery 互斥且永不改写。 */

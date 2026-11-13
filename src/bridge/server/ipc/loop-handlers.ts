@@ -27,6 +27,7 @@ export function loopIpcHandlers(app:ApplicationServices):IpcHandlers<keyof LoopI
     'loop.chat':async args=>{return app.execution(args.id).chat(await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments));},
     'loop.resume':async args=>{return app.execution(args.id).resume(args.taskId,args.runId,await new ChatInputs(app.workspace(args.id)).message(args.message,args.attachments),await app.chatOptions(args.id,args.options,args.attachments),args.reconciledToolIds);},
     'loop.goalContinue':async args=>{return app.execution(args.workspaceId).continueGoal(args);},
+    'loop.topicInterrupt':async args=>{return app.execution(args.workspaceId).interruptTopic(args);},
     'loop.goalContinuation':async args=>{return app.memberDispatch(args.workspaceId).continuations.inspect(args);},
     'loop.humanContinue':async args=>{return app.execution(args.workspaceId).continueFromHumanDecisions(args);},
     'loop.humanContinuation':async args=>{return app.memberDispatch(args.workspaceId).humanContinuations.inspect(args);},

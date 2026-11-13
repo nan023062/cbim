@@ -30,6 +30,8 @@ import type {AgentInstance} from '../../team/rules/agent-types';
 import type {TaskSpec} from '../../tasks/rules/types';
 import type {RunSummary} from '../../execution/rules/types';
 import {ScopeGoalService,type ScopeGoalPorts} from '../../tasks/runtime/scope-goal-service';
+import {TopicInterruptionService} from '../../tasks/runtime/topic-interruption-service';
+import {pendingTopicInterruption} from '../../tasks/rules/topic-interruption';
 import {ScopeContinuationService} from '../../tasks/runtime/scope-continuation-service';
 import {ScopeActiveInputService} from '../../tasks/runtime/scope-active-input-service';
 import {ScopeRecoveryService} from '../../tasks/runtime/scope-recovery-service';
@@ -76,6 +78,8 @@ export class WorkspaceDispatchService {
   readonly owners:OwnerExecutionService;
   /** 可信用户补充的消费与只读回执；启动和停止屏障仍由运行管理器掌管。 */
   readonly continuations:ScopeContinuationService;
+  /** 指定话题补充的持久意图；进程停止仍归协调器，不能把保存当成退出。 */
+  readonly interruptions:TopicInterruptionService;
   /** 原运行插入的准备与接收，不创建新运行或修改原始输入。 */
   readonly activeInputs:ScopeActiveInputService;
   /** 已关闭周期的显式只读核实；创建新周期与原生上下文意图，不复活或重放来源。 */
@@ -108,6 +112,7 @@ export class WorkspaceDispatchService {
     this.usage=new ScopeUsageService(owner,store,goalPorts);
     this.budgets=new ScopeBudgetService(this.usage,budgetPolicy);
     this.continuations=new ScopeContinuationService(owner,store,this.budgets,this.memberPauses);
+    this.interruptions=new TopicInterruptionService(owner,store);
     this.activeInputs=new ScopeActiveInputService(owner,store);
     this.commandVerification=new CommandVerificationService(owner,store,goalPorts?.inspectMain?{inspectMain:goalPorts.inspectMain}:undefined);
     this.effects=new EffectObservationService(owner,store,this.commandVerification,effectPorts);
@@ -379,6 +384,7 @@ export class WorkspaceDispatchService {
         const scope=state.scopes?.find(value=>value.scopeId===trustedScopeId);
         if(!scope||scope.rootSessionId!==input.rootSessionId)fail('DISPATCH_SCOPE_IDENTITY','任务调度周期不属于当前主会话');
         if(scope.status!=='active')fail('DISPATCH_SCOPE_CLOSED','调度周期已结束，不能继续派发');
+        if(pendingTopicInterruption(scope))fail('TOPIC_PAUSING','话题正在等待补充排空，不能继续派发');
         // 关闭需在一个不超过 1000 变更的图批次里取消任务并释放实例；每任务最多两条关闭变更。
         if(graph.tasks.filter(task=>task.scopeId===trustedScopeId).length>=500)fail('DISPATCH_SCOPE_LIMIT','本次用户任务已达到 500 个派发节点，请结束本周期后继续');
       }

@@ -18,6 +18,7 @@
  */
 import {workspaceMemberEngine,type WorkspaceMemberModelRef} from '../rules/workspace-member';
 import {teamSessionBusy} from '../rules/team-session';
+import {pendingTopicInterruption} from '../../tasks/rules/topic-interruption';
 import {createMemberTopicContext} from '../../tasks/rules/member-topic-context-rules';
 import {sameAutomaticExecutionForModules} from '../rules/automatic-execution';
 import {randomUUID} from 'node:crypto';
@@ -187,6 +188,7 @@ export class MemberExecutionManager {
         this.check(input.workspaceId);
         const {graph,task,member,session}=memberTask(state,input.rootSessionId,input.taskId);
         if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='waiting'))fail('GOAL_WAITING','当前主会话目标处于安全等待，不能从历史任务启动执行');
+        if(state.scopes?.some(scope=>scope.rootSessionId===input.rootSessionId&&scope.status==='active'&&pendingTopicInterruption(scope)))fail('TOPIC_PAUSING','当前话题正在等待补充排空，不能启动新成员运行');
         // 主 Agent 通过原主会话工作；旧 self 任务不能绕过主会话身份另建执行通道。
         if(member.agentId==='cbim:main')fail('AGENT_NOT_EXECUTABLE','主 Agent 应在原主会话执行，不能创建独立成员通道');
         if(member.lifecycle==='released')fail('MEMBER_RELEASED','执行实例已随调度周期释放，不能再次启动');

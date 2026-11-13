@@ -7,7 +7,7 @@ it.each([
   ['workspace.members.commit','MEMBER_INPUT_INVALID'],['workspace.ownerships.commit','OWNERSHIP_INPUT'],
   ['governance.apply','GOVERNANCE_INPUT'],['resources.connection.grant','REPOSITORY_CONNECTION_INPUT'],
   ['dispatch.fileCompensate','FILE_COMPENSATION_PRE_ACCEPT_INPUT'],['dispatch.effectDisposition','EFFECT_PREACCEPT_INPUT_INVALID'],
-  ['dispatch.humanDecide','HUMAN_INPUT_INVALID'],['loop.goalContinue','GOAL_CONTINUATION_INPUT'],
+  ['dispatch.humanDecide','HUMAN_INPUT_INVALID'],['loop.goalContinue','GOAL_CONTINUATION_INPUT'],['loop.topicInterrupt','TOPIC_INPUT_INVALID'],
   ['loop.humanContinue','HUMAN_CONTINUATION_INPUT'],['loop.recoveryStart','RECOVERY_INPUT_INVALID'],['loop.replanStart','REPLAN_INPUT_INVALID'],
   ['github.feedback.begin','GITHUB_CONFIG'],['chat.import','ATTACHMENT_IMPORT_INPUT'],
 ])('畸形 %s 保留受理前错误码 %s 且不取得服务',async(action,code)=>{

@@ -13,7 +13,7 @@ const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-
 const revision=z.number().int().min(1).max(65);
 const unique=(values:string[])=>new Set(values).size===values.length;
 /** 可信协调器冻结已观察主轮；跨等待累计，不因显式补充或重启重置。 */
-export const dispatchScopeWaitSchema=z.object({waitId:id,reason:z.string().trim().min(1).max(16000),createdAt:z.string().datetime(),runId:id,goalRevision:revision,graphCursor:z.object({streamId:id,seq:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict(),knowledgeRevision:id,mainRunIds:z.array(id).min(1).max(32).refine(unique),memberPause:memberPauseSchema.optional()}).strict().refine(value=>value.mainRunIds.includes(value.runId),'等待检查点必须包含当前主运行');
+export const dispatchScopeWaitSchema=z.object({waitId:id,reason:z.string().trim().min(1).max(16000),createdAt:z.string().datetime(),runId:id,goalRevision:revision,graphCursor:z.object({streamId:id,seq:z.number().int().min(1).max(Number.MAX_SAFE_INTEGER)}).strict(),knowledgeRevision:id,mainRunIds:z.array(id).min(1).max(32).refine(unique),memberPause:memberPauseSchema.optional(),interruptionId:z.string().uuid().optional()}).strict().refine(value=>value.mainRunIds.includes(value.runId),'等待检查点必须包含当前主运行');
 export type DispatchScopeWait=z.infer<typeof dispatchScopeWaitSchema>;
 /** 同一事务会保存完整周期快照；限制补充总量，避免反复追加放大日志，超限拒绝而非截断原文。 */
 export const scopeContinuationTextLimit=64_000;

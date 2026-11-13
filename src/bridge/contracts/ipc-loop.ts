@@ -9,6 +9,7 @@ import {type ChatApproval} from '../../logic/tools/rules/policy/types';
 import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../logic/tasks/rules/human-continue';
 import {type QueueDelta,type QueuedMessage} from '../../logic/tasks/rules/queue';
 import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../logic/tasks/rules/scope-continuation';
+import {topicInterruptionRequestSchema} from '../../logic/tasks/rules/topic-interruption';
 import {type RecoveryReceipt,recoveryLookupSchema,recoveryRequestSchema} from '../../logic/tasks/rules/scope-recovery';
 import {type ReplanReceipt,replanLookupSchema,replanRequestSchema} from '../../logic/tasks/rules/scope-replan';
 import {type TaskSpec} from '../../logic/tasks/rules/types';
@@ -31,6 +32,7 @@ export const loopIpcRequests={
   'loop.queueInsert':taskIdArgs.extend({queueId:ipcId,expectedRunId:ipcId}).strict(),
   'loop.queueContinue':taskIdArgs,
   'loop.goalContinue':goalContinuationRequestSchema,
+  'loop.topicInterrupt':topicInterruptionRequestSchema,
   'loop.goalContinuation':scopeContinuationLookupSchema,
   'loop.humanContinue':humanContinuationRequestSchema,
   'loop.humanContinuation':humanContinuationLookupSchema,
@@ -63,6 +65,7 @@ export interface LoopIpcResponses {
   'loop.queueInsert':void;
   'loop.queueContinue':void;
   'loop.goalContinue':GoalContinuationReceipt;
+  'loop.topicInterrupt':GoalContinuationReceipt;
   'loop.goalContinuation':GoalContinuationReceipt|undefined;
   'loop.humanContinue':HumanContinuationReceipt;
   'loop.humanContinuation':HumanContinuationReceipt|undefined;

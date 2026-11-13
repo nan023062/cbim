@@ -36,6 +36,7 @@ const inputCodes:Partial<Record<ApplicationIpcAction,string>>={
   'dispatch.replans.preview':'REPLAN_INPUT_INVALID',
   'dispatch.effectDisposition':'EFFECT_PREACCEPT_INPUT_INVALID',
   'loop.goalContinue':'GOAL_CONTINUATION_INPUT','loop.goalContinuation':'GOAL_CONTINUATION_INPUT',
+  'loop.topicInterrupt':'TOPIC_INPUT_INVALID',
   'loop.humanContinue':'HUMAN_CONTINUATION_INPUT','loop.humanContinuation':'HUMAN_CONTINUATION_INPUT',
   'loop.recoveryStart':'RECOVERY_INPUT_INVALID','loop.recoveryReceipt':'RECOVERY_INPUT_INVALID',
   'loop.replanStart':'REPLAN_INPUT_INVALID','loop.replanReceipt':'REPLAN_INPUT_INVALID',

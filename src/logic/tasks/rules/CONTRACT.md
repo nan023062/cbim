@@ -860,3 +860,7 @@ TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/
 ### 图结构算法边界
 
 graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。
+
+## 指定话题补充与排空
+
+整话题补充：`TopicInterruptionRequest` 固定工作区、主根、scope、输入版本、命令、原文/附件与选型。`topicInterruptions` 只追加，尚未消费的意图拒绝新派发和成员领取；请求保存不代表暂停成功。`wait.interruptionId` 只在主轮已可靠完成/取消、成员全部结算且无未知结果后建立，保留原任务图和目标版本。接续必须原样消费该请求，复用 continuations 推进输入版本和主运行清单；旧计划过期须重规划。公开摘要保留 requested/paused，详情保留原请求；未知退出没有 wait。重启未完成排空的 active 仍沿原恢复流程封存为 interrupted，不自动重发补充。

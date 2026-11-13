@@ -23,6 +23,7 @@
 | [scope-human-decision-service.ts](scope-human-decision-service.ts) | 核实安全等待中的人工验收项和明确选定文件，保存本机显式决定及不可变依据。 |
 | [scope-recovery-service.ts](scope-recovery-service.ts) | 为已关闭周期的异常执行创建独立只读核实周期，持久化用户观察和一次性全新上下文意图。 |
 | [scope-replan-service.ts](scope-replan-service.ts) | 在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。 |
+| [topic-interruption-service.ts](topic-interruption-service.ts) | 保存整话题补充意图，并在可信协调器排空全部参与者后建立等待检查点。 |
 
 ## 架构类图
 
@@ -499,6 +500,25 @@ N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_
 
 直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/fresh-context.ts](../rules/fresh-context.ts)、[../rules/scope-replan.ts](../rules/scope-replan.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[scope-goal-service.ts](scope-goal-service.ts)、[../rules/scope-run-tracking.ts](../rules/scope-run-tracking.ts)、[../../evidence/runtime/execution-report-service.ts](../../evidence/runtime/execution-report-service.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../evidence/runtime/effect-observation-service.ts](../../evidence/runtime/effect-observation-service.ts)、[../../evidence/runtime/effect-source.ts](../../evidence/runtime/effect-source.ts)、[../rules/effect-observation.ts](../rules/effect-observation.ts)、[../../budget/runtime/scope-budget-service.ts](../../budget/runtime/scope-budget-service.ts)。
 
+### topic-interruption-service.ts
+
+```mermaid
+classDiagram
+class N_src_logic_tasks_runtime_topic_interruption_service_ts["topic-interruption-service.ts"] {
+  <<module>>
+}
+class N_src_logic_tasks_runtime_topic_interruption_service_ts_TopicInterruptionService["TopicInterruptionService"] {
+  +prepare()
+  +park()
+  -owner
+  -store
+  -scope()
+}
+N_src_logic_tasks_runtime_topic_interruption_service_ts ..> N_src_logic_tasks_runtime_topic_interruption_service_ts_TopicInterruptionService : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../rules/scope-continuation.ts](../rules/scope-continuation.ts)、[../rules/scope-active-input.ts](../rules/scope-active-input.ts)、[../rules/topic-interruption.ts](../rules/topic-interruption.ts)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -596,3 +616,7 @@ N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_
 ScopeGoalService.reviewCandidate 由当前主运行调用，要求活动且已规划目标、无未核实插入、精确任务版本及未审阅候选。复用原运行、工具证据、岗位、知识与产物核实，在同一 DispatchStore 事务内追加 candidateReview；相同命令返回原回执，不重新审阅，不允许改判。磁盘 RunSummary 对尚未结算日志也标 interrupted，所以活性使用调用闭包与当前主身份，可靠事件用于排除已有终态，不能以磁盘 status=running 判断。
 
 accept 仅允许后继使用此结果；reject 的候选不能作为最终目标证据。最终 cbim_goal_review 及 human 决定仍独立。拒绝后应撤销相关未启动后继并新建返工链；不把 rejected/result_ready 当作已有 replace_dependency 所允许的失败来源。追加、替换和修订依赖的新边统一启用 reviewRequired。
+
+## 指定话题补充与排空
+
+`TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。

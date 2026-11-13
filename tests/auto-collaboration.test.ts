@@ -22,6 +22,34 @@ it('排队用户任务沿已保存身份建立新话题，主运行登记仍使�
     expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,'queued-topic',{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
   }finally{await f.coordinator.close()}
 });
+it('指定话题补充冻结原工具并等待该话题全部成员，不停止其它话题成员',async()=>{
+  const f=await setup();try{
+    await f.assign();const first=f.graph.tasks[0],scopeId=first.scopeId!;
+    f.graph.tasks.push({...structuredClone(first),taskId:'assigned-2',nodeId:'task:assigned-2',activeRunId:'member-2'},{...structuredClone(first),taskId:'other',nodeId:'task:other',scopeId:'another-office-topic',activeRunId:'other-run'});
+    first.activeRunId='member-1';const released=deferred<void>(),stopping=deferred<void>();
+    f.members.stop.mockImplementation(async(input?:any)=>{const task=f.graph.tasks.find(value=>value.taskId===input.taskId)!;delete task.activeRunId;task.status='cancelled';return {requested:true}});
+    f.members.waitForSettlement.mockImplementation(async()=>{stopping.resolve();await released.promise});
+    const request={...f.graph.identity,scopeId,expectedInputRevision:1,commandId:crypto.randomUUID(),input:{message:'更改目标'},options:{provider:f.options.provider,model:f.options.model,profileId:f.options.profileId,permission:'read' as const}};
+    const scope={...f.graph.identity,scopeId,status:'active' as const,createdAt:new Date().toISOString()};
+    const park=vi.fn(async()=>({...scope,status:'waiting' as const}));
+    Object.assign(f.dispatch,{interruptions:{prepare:vi.fn(async()=>scope),park}});
+    const main=vi.fn(async()=>({task:f.task,runId:'parent-run',status:'cancelled' as const,acceptance:'not_evaluated' as const,unresolvedTools:[],events:[]}));
+    const pending=f.hooks().interruptTopic!(request,main);await stopping.promise;
+    expect(park).not.toHaveBeenCalled();expect((f.members.stop.mock.calls as unknown[][]).map(call=>(call[0] as {taskId:string}).taskId)).toEqual(['assigned-1','assigned-2']);
+    expect(f.graph.tasks.find(value=>value.taskId==='other')?.activeRunId).toBe('other-run');
+    await expect(f.assign()).rejects.toThrow();released.resolve();expect((await pending).status).toBe('waiting');expect(park).toHaveBeenCalledTimes(1);expect(main).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+it('重查已消费的整话题补充不冻结正在执行的新主轮',async()=>{
+  const f=await setup();try{
+    const scopeId=f.dispatch.openScope.mock.calls[0][1],commandId=crypto.randomUUID();
+    Object.assign(f.dispatch,{interruptions:{prepare:async()=>({...f.graph.identity,scopeId,status:'active',continuations:[{continuationId:commandId}]})}});
+    const main=vi.fn();await f.hooks().interruptTopic!({...f.graph.identity,scopeId,commandId,expectedInputRevision:1,input:{message:'原补充'},options:{provider:'test',model:'test',profileId:crypto.randomUUID(),permission:'read'}},main);
+    expect(main).not.toHaveBeenCalled();await f.assign();f.settleParent();
+    await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));
+  }finally{await f.coordinator.close()}
+});
+
 async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex',queuedTopicId?:string){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};

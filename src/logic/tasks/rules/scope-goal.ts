@@ -97,14 +97,14 @@ const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>
 export const sameGoalValue=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition{if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 /** 提交与重放共用；supplement 来自已核实等待消费，activeSupplement 仅在 validateScopeActiveInputs 匹配真实 pending→accepted 时传入，二者互斥，不能作为普通决策提升输入版本的豁免。 */
-export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean,supplement=false,activeSupplement=false):void{
+export function validateScopeGoalTransition(previous:DispatchScopeGoal|undefined,next:DispatchScopeGoal|undefined,isNew:boolean,supplement=false,activeSupplement=false,interruptedSupplement=false):void{
   if(isNew){valid(!next||(next.revision===1&&!next.plan&&!next.review&&!next.blocked),'新目标必须从未规划的第 1 版开始');return}
   if(sameGoalValue(previous,next))return;
   valid(previous&&next,'周期输入创建后不能改写、移除或给旧记录补造');
   valid(sameGoalValue(previous.input,next.input),'原始用户输入不可改写');
   valid(!previous.blocked,'已冻结阻塞的目标不可继续改写');
   if(supplement||activeSupplement){
-    valid(!(supplement&&activeSupplement)&&(activeSupplement||previous.review?.decision==='awaiting_user')&&!next.blocked&&next.revision===previous.revision+1&&goalInputRevision(next)===goalInputRevision(previous)+1&&sameGoalValue(previous.plan,next.plan)&&!next.review,'补充必须提升输入及目标版本、保留旧计划并清除审阅');return;
+    valid(!(supplement&&activeSupplement)&&(activeSupplement||interruptedSupplement||previous.review?.decision==='awaiting_user')&&!next.blocked&&next.revision===previous.revision+1&&goalInputRevision(next)===goalInputRevision(previous)+1&&sameGoalValue(previous.plan,next.plan)&&!next.review,'补充必须提升输入及目标版本、保留旧计划并清除审阅');return;
   }
   valid(sameGoalValue(previous.inputRevision,next.inputRevision),'只有已核实的等待接续或运行中接受可以提升输入版本');
   if(next.blocked){valid(next.revision===previous.revision&&sameGoalValue(previous.plan,next.plan)&&sameGoalValue(previous.review,next.review),'阻塞记录不能顺带修改计划或审阅');return}

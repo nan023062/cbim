@@ -15,6 +15,7 @@ import {scopeBudgetSchema} from '../../budget/rules/scope-budget';
 import {scopeHumanDecisionsSchema} from './human-decisions';
 import {scopeRecoverySchema} from './scope-recovery';
 import {scopeReplanSchema} from './scope-replan';
+import {topicInterruptionSchema} from './topic-interruption';
 import {scopeActiveInputSchema} from './scope-active-input';
 
 const id=z.string().min(1).max(512).refine(value=>value.trim()===value&&!/[\x00-\x1f]/.test(value));
@@ -23,6 +24,7 @@ export const publicDispatchScopeSchema=z.object({
   scopeId:id,workspaceId:id,rootSessionId:id,status:z.enum(['active','waiting','closed']),createdAt:z.string().datetime(),
   goal:dispatchScopeGoalSchema.optional(),executionPolicy:collaborationPolicySchema.optional(),runTracking:scopeRunTrackingSchema.optional(),budget:scopeBudgetSchema.optional(),
   humanDecisions:scopeHumanDecisionsSchema.optional(),wait:dispatchScopeWaitSchema.optional(),
+  topicInterruptions:z.array(topicInterruptionSchema).min(1).max(31).optional(),
   continuations:z.array(scopeContinuationRecordSchema).max(31).optional(),activeInputs:z.array(scopeActiveInputSchema).min(1).max(64).optional(),
   recovery:scopeRecoverySchema.omit({context:true}).strict().optional(),replan:scopeReplanSchema.omit({context:true}).strict().optional(),
   closedAt:z.string().datetime().optional(),outcome:z.enum(['completed','failed','cancelled','interrupted']).optional(),
@@ -33,7 +35,7 @@ export type PublicDispatchScope=z.infer<typeof publicDispatchScopeSchema>;
 export function projectMainScope(scope:DispatchScope):PublicDispatchScope {
   if(!scope||typeof scope!=='object'||Array.isArray(scope))return scope as unknown as PublicDispatchScope;
   const result:PublicDispatchScope={scopeId:scope.scopeId,workspaceId:scope.workspaceId,rootSessionId:scope.rootSessionId,status:scope.status,createdAt:scope.createdAt};
-  for(const key of ['executionPolicy','goal','runTracking','budget','humanDecisions','wait','continuations','activeInputs','closedAt','outcome'] as const)if(scope[key]!==undefined)Object.assign(result,{[key]:scope[key]});
+  for(const key of ['executionPolicy','goal','runTracking','budget','humanDecisions','wait','continuations','activeInputs','topicInterruptions','closedAt','outcome'] as const)if(scope[key]!==undefined)Object.assign(result,{[key]:scope[key]});
   if(scope.recovery!==undefined){
     if(!scope.recovery||typeof scope.recovery!=='object'||Array.isArray(scope.recovery))result.recovery=scope.recovery;
     else{const {recoveryId,acceptedAt,source,operation,observation,input,options,dispositionId}=scope.recovery;result.recovery={recoveryId,acceptedAt,source,operation,observation,input,options,...(dispositionId!==undefined?{dispositionId}:{})}}

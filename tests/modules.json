@@ -165,6 +165,8 @@
           "tests/scope-continuation-attachments.test.ts",
           "tests/scope-continuation-pi.test.ts",
           "tests/scope-continuation.test.ts",
+          "tests/topic-interruption-service.test.ts",
+          "tests/topic-interruption-pi.test.ts",
           "tests/scope-goal.test.ts",
           "tests/scope-recovery.test.ts",
           "tests/scope-replan.test.ts",

@@ -170,6 +170,7 @@ export const logicalBoundaries = [
       "src/logic/tasks/rules/queue.ts",
       "src/logic/budget/rules/scope-budget.ts",
       "src/logic/tasks/rules/scope-continuation.ts",
+      "src/logic/tasks/rules/topic-interruption.ts",
       "src/logic/tasks/rules/scope-recovery.ts",
       "src/logic/tasks/rules/scope-replan.ts",
       "src/logic/budget/rules/scope-usage.ts",

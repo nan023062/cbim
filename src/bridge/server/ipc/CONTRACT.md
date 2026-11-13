@@ -134,3 +134,7 @@ dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecuti
 ### 0.1.7 功能接入完整映射
 
 自动化六项请求先由共享严格 Schema 解析，再只投影 workspaceId/instanceId 交给原服务核实代际；定义、修订和命令仍由同一调度器校验。agent.mainSettings/configureMain 使用 model-actions.ts 的唯一协议；修改主配置沿既有关闭门禁，不增加旁路路由。
+
+## 指定话题补充与排空
+
+`loop.topicInterrupt` 仅转交工作区执行管理器的整话题补充入口；错误参数映射 TOPIC_INPUT_INVALID。后端检查原话题并等待真实停止，IPC 返回不是自行签发运行权限；普通 loop.chat/enqueue/resume 保持普通新任务语义。

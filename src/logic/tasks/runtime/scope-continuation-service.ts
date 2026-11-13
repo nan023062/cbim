@@ -63,7 +63,11 @@ export class ScopeContinuationService {
       alive();
       const scope=this.scope(state,input),goal=scope.goal,wait=scope.wait;
       check(scope.status==='waiting'&&wait,'GOAL_NOT_WAITING','目标不处于安全等待，不能继续或重复消费等待');
-      check(goal&&!goal.blocked&&goal.plan&&goal.review?.decision==='awaiting_user','GOAL_CONTINUATION_UNAVAILABLE','目标没有可继续的安全等待记录');
+      check(goal&&!goal.blocked&&(wait.interruptionId||goal.plan&&goal.review?.decision==='awaiting_user'),'GOAL_CONTINUATION_UNAVAILABLE','目标没有可继续的安全等待记录');
+      if(wait.interruptionId){
+        const request=scope.topicInterruptions?.find(value=>value.request.commandId===wait.interruptionId)?.request;
+        check(request&&input.commandId===request.commandId&&sameGoalValue(input.input,request.input)&&sameGoalValue(input.options,request.options),'TOPIC_INPUT_CONFLICT','整话题暂停只能接收原已保存补充，不能换正文或权限');
+      }
       check(!scope.recovery||input.options.permission==='read','RECOVERY_READONLY','只读核实周期不能通过补充输入提升执行权限');
       check(wait.waitId===input.waitId,'GOAL_WAIT_CONFLICT','等待检查点已变化，请刷新目标');
       check(goal.revision===input.expectedGoalRevision&&goalInputRevision(goal)===input.expectedInputRevision,'GOAL_REVISION_CONFLICT','目标或补充版本已变化，请刷新后重试');

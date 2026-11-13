@@ -1,3 +1,12 @@
+## 2026-11-14：办公室改版第 2 步——同一 Agent 串行、不同 Agent 继续调度
+
+- 延续同一用户授权，基线 `5a77d57c`。先将 [设计第 2 片](task/team-office-topics.md) 的执行槽独立交付，话题队列身份和上下文组装仍是后续切片，未冒充一起完成。
+- `teamSessionBusy` 以真实 starting/running 及办公室/角色判定占用。`MemberExecutionManager` 在领取前返回 `TEAM_SESSION_BUSY`，不创建运行或引擎；`dispatch-invariants` 再核验新领取事务，不能换执行实例绕过串行。同角色不同办公室不互相占槽；已结算与旧无逻辑登记历史沿原规则。
+- `AutoCollaboration` 遇同角色占用继续寻找其它角色的可执行任务；本批尚有此等待时不提前汇总回传。等待释放仍来自原运行真实结算，停止请求不能自行释放名额。
+- 选取规则单元、实际运行入口、持久事务及自动调度消费者：`pnpm exec vitest run tests/team-session.test.ts tests/dispatch-execution-store.test.ts tests/member-execution.test.ts tests/auto-collaboration.test.ts`，89/89 通过。覆盖 starting 阻塞、直接事务绕过被拒、结算后启动下一项、重放和其他角色不被队首等待阻塞。`pnpm typecheck` 通过。四个相关目录的 CONTRACT、类图与重要源码说明同步。
+- Q1 保留执行占用、原生历史、检查点和真实结算；Q2 逻辑对话串行归 Team 规则，领取与调度分别消费；Q3 验证只覆盖上述变化链；Q4 从 `teamSessionBusy` → 成员领取 → 持久不变量 → 自动调度异常分支阅读；Q5 无新增通用规则。未运行全仓回归、真实桌面/引擎联调、构建或发布；本片本地保存，不代表整套办公室设计完成。
+- `pnpm check:architecture` 通过：128 目录、734 代码/样式、0 文档差异、0 循环/违规；`pnpm check:test-modules` 通过：483 文件，139 unit / 154 contract / 190 integration；`git diff --check` 通过。
+
 ## 2026-11-14：办公室改版第 1 步——长期团队对话身份
 
 - 来源：用户直接授权按办公室/话题设计分步实施、测试和保存；基线 `8f743f51`，初始干净。开放 Issue 仅 #65，与此次改版无关，不修改无关工单。方案及 C3/L3 影响边界见 [办公室设计](task/team-office-topics.md)，本文记录已实施切片，不是另建待办。

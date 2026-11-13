@@ -140,6 +140,30 @@ test('member execution slots and running plans cannot be changed through unrelat
   }finally{await f.cleanup()}
 });
 
+test('长期对话的串行槽由存储核验，不能用另一个执行实例绕过',async()=>{
+  const f=await setup();try{
+    await f.store.transact(command('logical'),async()=>({teamSessions:[{...identity,sessionId:'logical-dev',agentId:dev.agentId,teamId:'.cbim/team',createdAt}],receipt:true}));
+    await f.store.transact(command('claim'),async state=>claimMutation(state));
+    const second={...dev,agentInstanceId:'second-instance',agentSessionId:'second-session'};
+    await f.store.transact(command('dispatch-2'),async state=>{
+      const node={...task(state),taskId:'task-2',nodeId:'task:task-2',assignee:second},graph=state.graphs[0];
+      return {members:[{...member(second),executionScopeId:'owner-scope',executionTaskId:node.taskId,lifecycle:'active'}],sessions:[session(second)],batch:batch('dispatch-2',graph.cursor.seq+1,[{type:'task.upserted',task:node},{type:'agent.upserted',agent:{agentInstanceId:second.agentInstanceId,agentId:second.agentId,name:second.name,revision:1,state:'idle',waitingTaskIds:[]}},{type:'edge.upserted',edge:{edgeId:'edge-2',identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:node.nodeId,revision:1,enabled:true}}]),messages:[{kind:'assignment',messageId:'message-2',commandId:'dispatch-2',identity,from:main,to:second,taskId:node.taskId,planRevision:1,createdAt,delivery:'pending'}],receipt:true};
+    });
+    const claimSecond=(state:DispatchState):DispatchMutation=>{
+      const current=state.graphs[0].tasks[1],m=state.members.find(item=>item.agentInstanceId===second.agentInstanceId)!,record=run(state,current);
+      return {...update(state,'claim-2',{...current,revision:2,runIds:['run-2'],activeRunId:'run-2'},{...m,activity:'communicating',activeTaskId:current.taskId,activeRunId:'run-2'},'message.accepted'),runs:[{...record,binding:{...record.binding,runId:'run-2'},assignmentMessageId:'message-2',session:{nativeSessionId:'native-2'}}],messages:[{...state.outbox.find(item=>item.messageId==='message-2')!,delivery:'claimed',claim:{runId:'run-2',leaseEpoch:0}}]};
+    };
+    const before=await f.store.read();
+    await expect(f.store.transact(command('claim-2'),async state=>claimSecond(state))).rejects.toThrow('同一办公室');
+    expect(await f.store.read()).toEqual(before);
+    await f.store.transact(command('settle'),async state=>settleMutation(state,'cancelled'));
+    await f.store.transact(command('claim-2'),async state=>claimSecond(state));
+    const accepted=await f.store.read();expect(accepted.runs!.filter(item=>item.status==='starting')).toHaveLength(1);
+    await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
+    try{expect(await reopened.read()).toEqual(accepted)}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
+
 test('pending cancellation consumes only the assignment without creating a fake run',async()=>{
   const f=await setup();try{
     await f.store.transact(command('cancel-pending'),async state=>({...update(state,'cancel-pending',{...state.graphs[0].tasks[0],revision:2,status:'cancelled'},state.members[1],'task.cancelled'),messages:[{...state.outbox[0],delivery:'processed'}]}));

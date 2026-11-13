@@ -4,6 +4,8 @@
 
 逻辑对话不等于任务执行通道。`AgentInstance` / `AgentSessionBinding` 继续保存原任务的运行与租约身份；逻辑对话不会据此获得恢复、执行或业务验收许可。正文仍在原运行日志，登记表不保存副本。旧日志没有登记时保留缺省，不把原生线程追认为长期子会话。
 
+`teamSessionBusy` 用已登记的办公室/角色及真实 starting/running 判断执行占用。不同执行实例仍共享该角色槽；不同办公室、角色或工作区不互相占用。只在可靠结算后放行；历史未登记逻辑会话的重放保留原语义。它不分配租约、取消任务或判断业务验收。
+
 ### 静态知识视图的单向边界
 
 `logic/knowledge/rules/read-models/team.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和共享 Core，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `logic/knowledge/rules/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。

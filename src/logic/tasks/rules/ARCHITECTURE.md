@@ -433,7 +433,7 @@ class N_src_logic_tasks_rules_dispatch_invariants_ts["dispatch-invariants.ts"] {
 }
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[execution-context.ts](execution-context.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[execution-context.ts](execution-context.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)。
 
 ### dispatch-receipt.ts
 
@@ -4274,6 +4274,10 @@ N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rul
 ### 同屏办公室身份查询
 
 `DispatchSessionRead.teamSessions` 可选返回当前主会话的已提交长期对话登记，与图和话题周期使用同一读取屏障。该列表不含正文或原生路径，不授予执行许可；旧响应缺省保留兼容。逻辑对话身份来自 Team 纯规则，任务周期仍拥有执行归属与输入版本。
+
+### 长期对话的执行串行
+
+新领取意图在 `dispatch-invariants` 内再次核对已登记逻辑对话的角色占用，不能通过新的 `agentInstanceId` 绕过同办公室串行。starting 与 running 同样占槽，关闭请求不等于结算；同任务幂等与旧无逻辑登记的历史回放沿原规则。
 
 ### 对象排序与历史指纹
 

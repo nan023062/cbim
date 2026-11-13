@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {appendTeamSessions,type TeamSession} from '../src/logic/team/rules/team-session';
+import {appendTeamSessions,teamSessionBusy,type TeamSession} from '../src/logic/team/rules/team-session';
 
 const main:TeamSession={workspaceId:'workspace',rootSessionId:'office-a',sessionId:'main-a',teamId:'team',agentId:'cbim:main',createdAt:'2026-11-14T00:00:00.000Z'};
 const child:TeamSession={...main,sessionId:'child-a',agentId:'developer'};
@@ -25,4 +25,13 @@ it('拒绝私有路径、未知字段和同批重复；输出不共享输入对�
   expect(()=>appendTeamSessions([],[child,child],'workspace')).toThrow();
   const next=appendTeamSessions([main],[child],'workspace');next[0].teamId='changed';next[1].agentId='changed';
   expect(main.teamId).toBe('team');expect(child.agentId).toBe('developer');
+});
+
+it('同一逻辑对话从领取到运行均占槽，其他角色、办公室和已结算运行不互相阻塞',()=>{
+  const binding={workspaceId:child.workspaceId,rootSessionId:child.rootSessionId,agentId:child.agentId,runId:'run-a'};
+  for(const status of ['starting','running'])expect(teamSessionBusy([child],[{binding,status}],child)).toBe(true);
+  expect(teamSessionBusy([child],[{binding,status:'running'}],child,'run-a')).toBe(false);
+  expect(teamSessionBusy([],[{binding,status:'running'}],child)).toBe(false);
+  for(const change of [{rootSessionId:'office-b'},{agentId:'designer'},{workspaceId:'other'}])expect(teamSessionBusy([child],[{binding:{...binding,...change},status:'running'}],child)).toBe(false);
+  for(const status of ['completed','cancelled','failed','interrupted'])expect(teamSessionBusy([child],[{binding,status}],child)).toBe(false);
 });

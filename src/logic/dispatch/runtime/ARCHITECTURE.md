@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [auto-collaboration.ts](auto-collaboration.ts) | 管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；未知事实或额度耗尽停止，可靠关闭后释放实例。 |
+| [auto-collaboration.ts](auto-collaboration.ts) | 管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；同角色等待不阻断其它角色，未知事实或额度耗尽停止，可靠关闭后释放执行实例。 |
 | [automatic-return-service.ts](automatic-return-service.ts) | 持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。 |
 | [dispatch-service.ts](dispatch-service.ts) | 工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；主/子逻辑对话随登记可靠保存且跨周期保留，重启仅保留通过完整核实的待回传周期，其余中断封存。 |
 | [goal-repair.ts](goal-repair.ts) | 调度层最终验收返工的分类、限次与系统反馈，复用原目标及主运行入口。 |
@@ -446,6 +446,8 @@ N_src_logic_dispatch_runtime_dispatch_service_ts ..> N_src_logic_dispatch_runtim
 ## 主会话办公室登记
 
 `openGraph`、`conversationBinding`、`createMember` 和 `dispatchTask` 把 `prepareMember` 给出的长期 `teamSession` 与原登记事务一同提交。每个办公室的同一 Agent 跨任务和周期复用逻辑对话，任务执行实例与原生通道仍按原任务保存；周期关闭只处理执行事实，不删除逻辑对话。原命令重放返回原回执，不创建第二个逻辑身份。
+
+自动协调器遇 `TEAM_SESSION_BUSY` 保留该任务并继续尝试其它角色；本批仍有此类等待时不提前汇总为执行结果。完成/停止仍依赖原成员的可靠结算与占用释放事件。
 
 ## 分阶段候选审阅
 

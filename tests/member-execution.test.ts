@@ -91,6 +91,20 @@ it('成员领取后执行、返回带证据的候选、原请求人确认收件�
   }finally{await f.cleanup()}
 });
 
+it('同办公室同角色的两个任务串行，等待不创建运行，前项可靠结算后可继续',async()=>{
+  const f=await setup();try{
+    f.setBehavior('hold');const first=await f.assign(),second=await f.assign();
+    await f.start(first.taskId);
+    await until(()=>f.members.inspect(f.input(first.taskId)),view=>view.runs[0]?.status==='running');
+    const before=(await f.store.read()).runs!.length;
+    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TEAM_SESSION_BUSY'});
+    expect((await f.store.read()).runs).toHaveLength(before);expect(f.prepare).toHaveBeenCalledTimes(1);
+    await f.members.stop(f.input(first.taskId));await f.members.waitForSettlement(f.input(first.taskId));
+    f.setBehavior('candidate');await f.start(second.taskId);expect((await f.settled(second.taskId)).task.status).toBe('result_ready');
+    expect((await f.store.read()).teamSessions!.filter(session=>session.agentId===f.agentId)).toHaveLength(1);
+  }finally{await f.cleanup()}
+});
+
 it('模型只有正文或改写了派发目标时，完成回合保留 completed 但任务 blocked',async()=>{
   const f=await setup();try{
     for(const behavior of ['text','rewrite'] as const){f.setBehavior(behavior);const task=await f.assign();await f.start(task.taskId);const view=await f.settled(task.taskId);expect(view.runs[0].status).toBe('completed');expect(view.task.status).toBe('blocked');expect(view.task.result).toBeUndefined()}

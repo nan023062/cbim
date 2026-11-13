@@ -9,7 +9,7 @@
  * 成员续段结算追加检查点并核累计文件，领取只消费最新段；历史完整前缀不能替代本轮真实证据。
  * 逐请求模式在领取前按原岗位模型预检保守容量，拒绝不消费检查点；每个实际请求仍独立预留并可靠结算。
  * 文件退出边界：child 未确认退出时保留原成员占用；再次关闭只排空原进程及结算原日志，不重发工具或创建新运行。
- * 作用定位：让已派发任务在独立成员会话中执行，提交领取、启动、结果、中断及一次安全停泊/续执行事实。
+ * 作用定位：让已派发任务在独立成员执行通道中运行，已登记办公室同角色串行领取，提交启动、结果、中断及一次安全停泊/续执行事实。
  * 设计原因：全局准入及本地租约先同步领取，容量等待不创建 run 或 claim；按任务原 Workflow 选择核实际能力，续执行不得借新计划改选。候选结算重读 canonical 并复核当前文件，占用持续到终态事务完成。
  * 职责边界：本成员 Loop 不递归派发或继承批准；求助在关闭后单向交接。检查点须完整关闭及复核后释放占用；主调度预约一次原任务新轮，失败、停止和重启不复活旧实例。只读报告不触发续执行，候选及匹配哈希不等于验收。
  * 领取边界：运行中用户补充未确认或旧计划尚未按新输入重规划时，保留原待办而不创建成员运行；已在执行的成员仍可结算真实事实。
@@ -17,6 +17,7 @@
  * 失败或中断的任务卡原因取自本轮 canonical 终态，经公开诊断转换后同事务保存到 task.waitReason 与 run.error。
  */
 import {workspaceMemberEngine,type WorkspaceMemberModelRef} from '../rules/workspace-member';
+import {teamSessionBusy} from '../rules/team-session';
 import {sameAutomaticExecutionForModules} from '../rules/automatic-execution';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
@@ -196,6 +197,7 @@ export class MemberExecutionManager {
         if(resuming&&(!resumeRequest||!validMemberCheckpointChain(task)||task.runIds.length!==task.checkpoints?.length||task.help||task.result))fail('MEMBER_RESUME_NOT_ALLOWED','当前任务没有唯一尚未消费的续执行预约');
         if(!dependenciesReady(graph,task))fail('TASK_DEPENDENCY_PENDING','前置任务尚未交付当前候选，或尚未通过主 Agent 审阅');
         if(member.activeRunId)fail('MEMBER_BUSY','该成员正在处理另一项任务');
+        if(teamSessionBusy(state.teamSessions??[],state.runs??[],{workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,agentId:member.agentId}))fail('TEAM_SESSION_BUSY','该办公室的 Agent 正在处理另一项任务，本项等待其完成');
         const assignment=state.outbox.find(m=>m.kind==='assignment'&&m.taskId===task.taskId&&m.identity.rootSessionId===input.rootSessionId&&m.delivery==='pending'&&!!m.resumeFrom===resuming);
         if(!assignment)fail('ASSIGNMENT_UNAVAILABLE','任务缺少可领取的派发信封');
         const context={snapshot,profiles:[locked.model]};await this.ports.owners!.verifyTask(state,context,task);assertCurrent();

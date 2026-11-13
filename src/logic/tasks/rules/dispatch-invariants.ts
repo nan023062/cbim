@@ -2,7 +2,7 @@
  * 候选审阅只允许当前主运行按原版本追加；领取新依赖时必须匹配同结果的接受决定。
  * 每个私有检查点证明和交接信封都绑定自己的原运行，逐段记录不能借用第一段证明。
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
- * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；把跨对象约束集中在 Core，磁盘适配器只负责可靠提交。
+ * 设计原因：仅验证每条记录形状不能防止半次领取、重复占用或旧 run 回调；跨对象约束归 Logic 纯规则，磁盘适配器负责可靠提交。长期团队对话还限制同办公室同角色的并行领取，不能换执行实例绕过。
  * 职责边界：不启动模型、不访问文件、不签发权限；依赖追加与检查点放弃须完整核验后才给通用门禁精确许可，人工保存与显式接续不能冒充完成或自行消费等待。
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
@@ -13,6 +13,7 @@ import {candidateAccepted} from './candidate-review';
 import {hash,json} from '../../../core/platform/node/serialization';
 import {fail} from '../../../core/errors';
 import {connectionSchema,modelSchema} from '../../models';
+import {teamSessionBusy} from '../../team/rules/team-session';
 import {loopEngineSchema} from '../../models';
 import {validatePreparedDispatchKnowledge} from './execution-context';
 import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from '../../dispatch/rules/dispatch-storage';
@@ -100,6 +101,7 @@ function validateRun(previous:DispatchRun|undefined,run:DispatchRun,state:Dispat
     else valid(run.status!=='completed','尚无真实启动事实的执行不能直接完成');
   }else{
     valid(run.status==='starting'&&!run.startedAt&&!run.settledAt,'新运行必须从未启动的领取意图开始');
+    valid(!teamSessionBusy(state.teamSessions??[],state.runs??[],binding,binding.runId),'同一办公室的同一 Agent 不能同时领取多个任务');
     valid(member.leaseEpoch===binding.leaseEpoch&&member.configurationRevision===run.prepared.knowledgeRevision,'领取时的成员代际或知识基线已过期');
     const graph=state.graphs.find(item=>sameGraph(item.identity,binding))!;
     const dependencies=graph.edges.filter(edge=>edge.enabled&&edge.kind==='dependency'&&edge.toNodeId===task.nodeId),prerequisites=run.prerequisites??[];

@@ -11,7 +11,7 @@
  * 已持久保留的原成员只在用户明确继续并通过预检后接回 Cycle，仍须新计划和显式预约，不扫描历史信封自动执行。
  * 附件边界：显式补充的可信清单和停止信号仅转交受理事务，不进入后续成员回注选项；提交后错误保留原意图。
  * 活动输入：准备、原生发送和结果确认立即纳入周期在途集合；停止先撤销引擎，再等输入记录收口后封存，不重入管理器串行锁或回滚已接受事实。
- * 作用定位：管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；未知事实或额度耗尽停止，可靠关闭后释放实例。
+ * 作用定位：管理用户任务周期，串接主调度、成员回传、重启后可靠成果接收及最多三轮验收返工；同角色等待不阻断其它角色，未知事实或额度耗尽停止，可靠关闭后释放执行实例。
  * 设计原因：周期冻结输入、主运行归属及软限额；主工具由本轮身份和原调用生成命令，公开回包去除私有上下文并严格核验。回注先核额度和登记再启模型，容量等待或预算拒绝不重放未知运行。
  * 职责边界：两种模式均可直接实现并渐进治理，不为单独知识更新强造团队目标；已有显式规划/派发仍遵守审阅。成员待办须等主轮结算才领取，迟到回执不启动已停周期。
  * 责任控制面：提交绑定当前主周期并纳入在途屏障；精确负责人回执不单独发起业务验收，已有目标和派发仍保留原审阅门禁。
@@ -510,6 +510,7 @@ export class AutoCollaboration {
     // 对整个目标累计，而非只看本批新编号；达到上限后不再启动待办或回注模型制造替代任务。
     if(this.closed||batch.stopped||batch.cycle.ending||await this.memberFailuresBlocked(batch,graph))return;
     const tasks=batch.tasks.map(id=>{const task=graph.tasks.find(t=>t.taskId===id);if(!task)fail('TASK_NOT_FOUND','自动委派任务记录缺失');return task});
+    let waitingForMember=false;
     for(const task of tasks){
       if(this.closed||batch.stopped)return;
       const resume=!!currentMemberResumeRequest(task)&&isMemberCheckpointPending(task);
@@ -530,12 +531,14 @@ export class AutoCollaboration {
         if(batch.stopped||this.closed)await this.members.stop({...identity,taskId:task.taskId});
         return;
       }catch(error:any){
+        // 同一人物的后续任务等待，但继续考察其他 Agent，避免队首角色占用阻断全办公室。
+        if(error.code==='TEAM_SESSION_BUSY'){waitingForMember=true;continue}
         if(error.code==='WORKSPACE_EXECUTION_BUSY'||error.code==='MEMBER_BUSY'||error.code==='CAPACITY_WAITING'||error.code==='SCOPE_BUDGET_WAITING')return;
         if(error.code==='SCOPE_BUDGET_EXCEEDED'||error.code==='SCOPE_BUDGET_UNVERIFIABLE'){await this.budgetBlocked(batch,error);return}
         batch.failures.set(task.taskId,error.message??'成员未能启动');
       }
     }
-    if(tasks.some(t=>t.activeRunId))return;
+    if(waitingForMember||tasks.some(t=>t.activeRunId))return;
     // 未满足的外部前置不无限等待：向主会话报告仍等待的真实状态，由其判断后续工作。
     const root=graph.root.agent,inbox=await this.members.messages({...identity,agentSessionId:root.agentSessionId});
     const results=inbox.filter(m=>batch.tasks.includes(m.taskId)&&tasks.some(t=>t.taskId===m.taskId&&(m.kind==='result'?t.result?.resultId===m.resultId:m.kind==='help'?t.status==='blocked'&&!t.activeRunId&&t.help?.helpId===m.helpId&&t.help.binding.runId===m.runId:m.kind==='checkpoint'?t.status==='checkpointed'&&!t.activeRunId&&t.checkpoints?.some(cp=>cp.checkpointId===m.checkpointId&&cp.binding.runId===m.runId):false)));

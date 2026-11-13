@@ -82,6 +82,24 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
 
+it('同角色对话占用只等待该角色，仍启动其他角色且不提前回传未执行任务',async()=>{
+  const f=await setup();try{
+    await f.assign();
+    f.dispatch.dispatchTask.mockImplementation(async(input:any,scopeId?:string)=>{
+      const node={...structuredClone(f.graph.tasks[0]),scopeId,taskId:'assigned-2',nodeId:'task:assigned-2',assignee:{...f.graph.tasks[0].assignee,agentId:'other',agentInstanceId:'other-instance',agentSessionId:'other-channel'}};
+      f.graph.tasks.push(node);return {commandId:input.commandId,taskId:node.taskId,messageId:'assignment-2',cursor:f.graph.cursor,disposition:'queued' as const};
+    });
+    await f.tools.call('cbim_dispatch_task',{agentId:'other',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'另一角色处理独立工作',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'dispatch-other');
+    f.members.start.mockImplementation(async input=>{
+      if(input.taskId==='assigned-1')throw Object.assign(Error('同角色正在工作'),{code:'TEAM_SESSION_BUSY'});
+      Object.assign(f.graph.tasks[1],{activeRunId:'other-run',runIds:['other-run'],status:'running'});
+      return {taskId:input.taskId,runId:'other-run',cursor:f.graph.cursor};
+    });
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start.mock.calls.some(call=>call[0].taskId==='assigned-2')).toBe(true));
+    expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.issues).not.toHaveBeenCalled();
+  }finally{for(const task of f.graph.tasks)Object.assign(task,{activeRunId:undefined,status:'cancelled'});await f.coordinator.close()}
+});
+
 it.each(['blocked','awaiting_user'] as const)('当前主轮明确%s后不再尝试继承的待办',async decision=>{
   const f=await setup();try{
     await f.assign();

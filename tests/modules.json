@@ -1257,6 +1257,7 @@
           "tests/unit/foundations/utility/json-order.test.ts",
           "tests/unit/foundations/utility/json-text.test.ts",
           "tests/unit/foundations/utility/line-framer.test.ts",
+          "tests/unit/foundations/utility/pending-requests.test.ts",
           "tests/unit/foundations/utility/redaction.test.ts",
           "tests/unit/foundations/utility/serial-queue.test.ts",
           "tests/unit/foundations/utility/strict-json.test.ts"

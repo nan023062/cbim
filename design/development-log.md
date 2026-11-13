@@ -1,3 +1,11 @@
+## 2026-11-13：候选清单收尾五／后端 RPC 请求关联
+
+- 用户批量授权内，基线 0fbd20af，C3/L2。沿 Pi/Codex 的 register、回包、超时、fail、close 精读实际协议；共同 ID/回调/定时器下沉 async.ts 的 PendingRequests，实例独立，重复 ID 拒绝覆盖，take 清计时器并移除，rejectAll 支持固定错误或逐项错误工厂。
+- Pi 保留单请求超时后可继续、发送异常仍经原 Promise 构造器传播；Codex 保留整体失败/杀进程，close 仍等待进程与处理排空。自查发现关闭原本每请求独立 Error，已用工厂保留身份并补测试。集合不发请求、不重试、不宣称物理退出。
+- 初轮命令：pnpm exec vitest run tests/unit/foundations/utility/pending-requests.test.ts tests/utility-rpc-framing-contract.test.ts tests/pi-rpc.test.ts tests/codex-lifecycle.test.ts --reporter=dot，4 文件/16 项通过。错误工厂变更后，仅重跑前三者中的 pending-requests、utility-rpc-framing-contract 及 codex-lifecycle（3 文件/15 项通过）；加上未受影响且已通过的 Pi 两项，共 17 项。覆盖独立关联、重复/乱序回包、单项/整体超时、关闭及实际 Pi 子进程。
+- pnpm typecheck（工厂变更后复核）、pnpm check:architecture、pnpm check:test-modules 通过，0 环/违规；最终仅注释与契约汇总变更重新生成类图。utility、上层 foundations 及两个引擎四份类图、源码注释、契约与三宿主工作流同步。
+- Q1 原协议/时限/失败及错误身份；Q2 进程与业务策略在适配器；Q3 独立数据结构和真实协议契约；Q4 async.ts→两份 rpc.ts；Q5 无新规则。历史变化频率未知。未运行全量、供应商在线或发布验收；独立本地提交未推送，保留人工 review。
+
 ## 2026-11-13：候选清单收尾四／后端字符串脱敏
 
 - 用户批量授权内，基线 7711dead，C3/L2。strings.ts 增加 redactLiteral，Pi/Claude/Codex 的原精确 split/join 替换共用实现；空凭据、非重叠、大小写和 JSON 编码顺序保持。Pi 仍只对 api-key 认证替换，Claude 无凭据保留事件引用。凭据发现与事件失败屏障不下沉。

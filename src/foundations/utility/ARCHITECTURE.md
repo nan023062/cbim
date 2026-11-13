@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列及在途集合；strings.ts 提供文本分帧；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
+通用工具函数与数据结构按类别内聚组织：json.ts 提供 JSON 格式化、严格解析和键排序；async.ts 提供独立实例的串行队列、在途集合及请求关联表；strings.ts 提供文本分帧与精确脱敏；bytes.ts 提供有界字节流收集。index.ts 是通用公开入口，node.ts 独立承载 SHA-256。不按函数数量拆文件，不发起文件/网络访问，不拥有业务身份、事务或权限。排序比较器与字段规则由消费者指定；Promise 快照不代表物理退出，文本帧不代表协议校验，生命周期和业务策略留在适配器。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [async.ts](async.ts) | 异步执行工具，提供实例内串行队列和在途 Promise 集合。 |
+| [async.ts](async.ts) | 异步执行工具，提供实例内串行队列、在途 Promise 集合与有时限的请求关联表。 |
 | [bytes.ts](bytes.ts) | 字节处理工具，当前提供传入 Web ReadableStream 的有界收集。 |
 | [index.ts](index.ts) | 通用数据处理算法与实例内数据结构的公开入口，无 Node 或业务依赖。 |
 | [json.ts](json.ts) | JSON 数据处理工具，集中提供格式化、严格解析和递归键排序。 |
@@ -32,6 +32,19 @@ class N_src_foundations_utility_async_ts_SerialQueue["SerialQueue"] {
   -tail
 }
 N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_SerialQueue : 声明
+class N_src_foundations_utility_async_ts_PendingReply["PendingReply"] {
+  <<interface>>
+  +resolve
+  +reject
+}
+N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_PendingReply : 声明
+class N_src_foundations_utility_async_ts_PendingRequests["PendingRequests"] {
+  +register()
+  +take()
+  +rejectAll()
+  -entries
+}
+N_src_foundations_utility_async_ts ..> N_src_foundations_utility_async_ts_PendingRequests : 声明
 class N_src_foundations_utility_async_ts_InFlightOperations["InFlightOperations"] {
   +track()
   +size
@@ -267,3 +280,8 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 ### 精确文本脱敏
 
 strings.ts 的 redactLiteral 使用非重叠 split/join，将非空精确凭据替换为 [REDACTED]，空或 undefined 不改输入；不解释正则、大小写或 JSON 转义。Pi/Claude/Codex 为真实消费者，凭据选择、认证判断和事件编码顺序属于各引擎；不保证识别编码/变形后的凭据。
+
+
+### 有时限的请求关联表
+
+async.ts 的 PendingRequests 保存实例 ID→结算回调/定时器。register 拒绝覆盖重复 ID，take 移除并清计时器，未知 ID 无副作用；rejectAll 按登记顺序拒绝并清理，可传错误工厂保留每请求独立错误身份，表不封闭。调用方使用不抛错的 Promise resolve/reject。超时回调仍决定单项或整体失败；计时器触发不自动删除项，须由适配器 take/rejectAll。表不创建协议 ID、发送、重试、杀进程或确认退出。

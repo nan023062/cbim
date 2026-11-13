@@ -3,6 +3,6 @@
  * 设计原因：按能力导出具名函数和类，避免万能 Utility 类及隐式共享状态；Node 算法由独立入口提供。
  */
 export {formatJson,StrictJsonError,parseStrictJson,orderJsonValue,type JsonKeyOrder} from './json';
-export {SerialQueue,InFlightOperations} from './async';
+export {SerialQueue,InFlightOperations,PendingRequests,type PendingReply} from './async';
 export {ByteLimitError,readBoundedBytes} from './bytes';
 export {LineFramer,redactLiteral,type LineFramePolicy} from './strings';

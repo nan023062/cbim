@@ -121,3 +121,5 @@ utility 的类图按实际类别文件表达 JSON、字符串、字节、异步�
 后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 foundations/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
 
 后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
+
+Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/take/rejectAll 仅管理 ID、回调与计时器。协议决定超时处置：Pi 单项未知、Codex 整体失败及杀进程必须保留；发送异常、重试与物理退出不下沉，分别验证乱序/重复回包、超时及关闭。

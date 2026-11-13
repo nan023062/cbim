@@ -184,6 +184,7 @@ export const domainPublicEntries=new Set([
   "src/logic/team/rules/owner-execution-discovery.ts",
   "src/logic/team/rules/session-history-storage.ts",
   "src/logic/team/rules/session-history.ts",
+  "src/logic/team/rules/team-session.ts",
   "src/logic/team/rules/workspace-member-rules.ts",
   "src/logic/team/rules/workspace-member-tools.ts",
   "src/logic/team/rules/workspace-member.ts",

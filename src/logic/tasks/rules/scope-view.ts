@@ -8,6 +8,7 @@ import {fail} from '../../../core/errors';
 import {graphIdentityInput} from './dispatch-commands';
 import type {DispatchScope} from './dispatch-scope';
 import type {GraphIdentity,GraphDelta} from './graph-types';
+import type {TeamSession} from '../../team/rules/team-session';
 import {assertGraphIdentity} from './graph-rules';
 import {sameGoalValue,goalInputRevision,goalNeedsReplan} from './scope-goal';
 import {scopeActiveInputStatus} from './scope-active-input';
@@ -44,7 +45,11 @@ export type ScopeDetailRead=
   |{mode:'noop';stamp:ScopeDetailStamp}
   |{mode:'empty'};
 /** 两条增量和详情来自同一已提交屏障；分页增量可尚未追到头部，详情始终反映该屏障的最新状态。 */
-export interface DispatchSessionRead {graph:GraphDelta;scopes:ScopeDelta;detail:ScopeDetailRead}
+export interface DispatchSessionRead {
+  graph:GraphDelta;scopes:ScopeDelta;detail:ScopeDetailRead;
+  /** 本办公室已可靠登记的逻辑对话，无正文、原生路径或其它办公室身份；旧响应可缺省。 */
+  teamSessions?:TeamSession[];
+}
 /** 摘要增量与重复批次证明最多保留 256 批；更旧游标读取当前快照，原事务日志仍完整保留。 */
 export const scopeViewHistoryLimit=256;
 

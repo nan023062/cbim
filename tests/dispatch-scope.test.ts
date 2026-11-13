@@ -70,12 +70,16 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     const second=await f.service.dispatchTask(f.input('dispatch-two'),'scope-one');
     const graph=await f.service.snapshot(f.identity);
     expect(graph.tasks).toHaveLength(2);
+    const logical=(await f.store.read()).teamSessions!;
+    expect(logical.filter(session=>session.rootSessionId===f.identity.rootSessionId)).toHaveLength(2);
+    const child=logical.find(session=>session.agentId==='.cbim/team/dev')!;
     expect(new Set(graph.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(2);
     expect(graph.tasks.every(task=>task.assignee.agentInstanceId!==root.agent.agentInstanceId&&task.scopeId==='scope-one')).toBe(true);
     await expect(f.service.dispatchTask({...f.input('untrusted-scope'),scopeId:'scope-one'})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await expect(f.service.dispatchTask(f.input('main-forbidden','cbim:main'),'scope-one')).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
     await f.service.closeScope(f.identity,'scope-one','cancelled');
     const state=await f.store.read(),closed=await f.service.snapshot(f.identity);
+    expect(state.teamSessions).toEqual(logical);
     expect(closed.tasks.map(task=>task.taskId)).toEqual([first.taskId,second.taskId]);
     expect(closed.tasks.every(task=>task.status==='cancelled')).toBe(true);
     expect(closed.root).toEqual(root);
@@ -88,6 +92,7 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     await expect(f.service.dispatchTask(f.input('late-task'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
     await f.openPlanned('scope-next');
     const next=await f.service.dispatchTask(f.input('new-cycle'),'scope-next');
+    expect((await f.store.read()).teamSessions!.find(session=>session.agentId==='.cbim/team/dev')).toEqual(child);
     expect((await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===next.taskId)?.assignee.agentInstanceId).not.toBe(graph.tasks[0].assignee.agentInstanceId);
   }finally{await f.cleanup()}
 });

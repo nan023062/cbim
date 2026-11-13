@@ -89,6 +89,7 @@ N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_di
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchState"] {
   <<interface>>
   +workspaceId
+  +teamSessions
   +members
   +sessions
   +graphs
@@ -103,7 +104,6 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchStat
   +ownershipCursor
   +knowledgeSourceGenerations
   +knowledgeSourceTransitions
-  +knowledgeSourceChanges
 }
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommand["DispatchCommand"] {
@@ -123,6 +123,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts["dispatch-storage.ts"] {
 }
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchState"] {
   <<interface>>
+  +knowledgeSourceChanges
   +sourceCursor
   +effectDispositions
   +controlledFileChanges
@@ -146,6 +147,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommandEvidence["Di
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommandEvidence : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMutation["DispatchMutation"] {
   <<interface>>
+  +teamSessions
   +modelRequestBudgetChanges
   +controlledFileChanges
   +effectDispositions
@@ -182,7 +184,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore["DispatchStor
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore : 声明
 ```
 
-直接依赖：[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../tasks/rules/effect-observation.ts](../../tasks/rules/effect-observation.ts)、[../../file-operations/rules/controlled-file-event.ts](../../file-operations/rules/controlled-file-event.ts)、[../../budget/rules/model-request-budget.ts](../../budget/rules/model-request-budget.ts)。
+直接依赖：[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../tasks/rules/effect-observation.ts](../../tasks/rules/effect-observation.ts)、[../../file-operations/rules/controlled-file-event.ts](../../file-operations/rules/controlled-file-event.ts)、[../../budget/rules/model-request-budget.ts](../../budget/rules/model-request-budget.ts)。
 
 
 ## 子目录导航
@@ -192,3 +194,11 @@ N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_di
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 团队逻辑对话登记
+
+`DispatchState.teamSessions` 和 `DispatchMutation.teamSessions` 保存办公室内的长期对话身份。与主根、成员登记和任务派发共用原子提交；独立控制面已有的严格 mutation 白名单不放宽。旧状态缺省保持缺省，关闭周期不删除登记；消息正文、原生路径和执行授权不进入此表。

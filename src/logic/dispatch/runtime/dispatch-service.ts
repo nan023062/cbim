@@ -4,7 +4,7 @@
 
  * 新周期可冻结用户 auto 选择；缺 ownerSelection 时由统一执行身份解析核兜底，计划和派发回执保留原因。
  * 持久成员等待沿原 wait 冻结清单；重启不恢复执行，用户继续须通过 memberPauses 的当前资格核验。
- * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；重启仅保留通过完整核实的待回传周期，其余中断封存。
+ * 作用定位：工作区的成员注册、主对话实例绑定、主会话派发及任务图查询；主/子逻辑对话随登记可靠保存且跨周期保留，重启仅保留通过完整核实的待回传周期，其余中断封存。
  * 设计原因：新派发按知识→模型→Store 锁序核当前岗位、能力及责任，保存原 Workflow 选择与不可变执行绑定，同命令不能改选。周期冻结输入及软限额，关闭封存待办；旧回执不能重开周期。
  * 职责边界：负责可靠入队、未启动撤销及受审计的前置追加/替换/多边修订，由独立 MemberExecutionManager 执行；调度维护不停止活动运行或复活旧实例。
  * 关闭边界：Auto 无计划的直接工作与知识治理、普通聊天和纯负责人控制面不强造团队计划；仍核活动输入和真实工具终态。已有计划或派发必须审阅，未知输入只可失败或取消封存。
@@ -320,7 +320,7 @@ export class WorkspaceDispatchService {
         {type:'agent.upserted',agent:{agentInstanceId:prepared.agent.agentInstanceId,agentId:prepared.agent.agentId,name:prepared.agent.name,revision:1,state:'idle',waitingTaskIds:[]}},
       ]);
       await this.recheck(snapshot);
-      return {members:[prepared.member],sessions:[prepared.session],batch,receipt:{agent:prepared.agent,cursor:this.cursor(batch)}};
+      return {teamSessions:[prepared.teamSession],members:[prepared.member],sessions:[prepared.session],batch,receipt:{agent:prepared.agent,cursor:this.cursor(batch)}};
     });
   }
 
@@ -342,7 +342,7 @@ export class WorkspaceDispatchService {
       if(graph.root.agent.agentId!==prepared.agent.agentId||graph.root.agent.agentInstanceId!==prepared.agent.agentInstanceId)fail('CONVERSATION_IDENTITY','主对话实例与任务图根不一致');
       await this.recheck(snapshot);
       const binding:ConversationAgentBinding={...identity,teamId:prepared.member.teamId,agentId:prepared.member.agentId,agentInstanceId:prepared.member.agentInstanceId,agentSessionId:prepared.session.agentSessionId};
-      return {members:[prepared.member],sessions:[prepared.session],receipt:binding};
+      return {teamSessions:[prepared.teamSession],members:[prepared.member],sessions:[prepared.session],receipt:binding};
     });
   }
 
@@ -359,7 +359,7 @@ export class WorkspaceDispatchService {
       await this.recheck(snapshot);
       // 注册回执仅公开本图 Session；全局成员状态仍留在后端。
       const member={...prepared.member,agentSessionIds:[prepared.session.agentSessionId],activity:view.state,activeTaskId:view.runningTaskId,activeRunId:undefined,waitingTaskIds:[...view.waitingTaskIds],communicatingMessageIds:[]};
-      return {members:[prepared.member],sessions:[prepared.session],batch,receipt:{member,session:prepared.session,agent:prepared.agent,cursor:batch?this.cursor(batch):graph.cursor}};
+      return {teamSessions:[prepared.teamSession],members:[prepared.member],sessions:[prepared.session],batch,receipt:{member,session:prepared.session,agent:prepared.agent,cursor:batch?this.cursor(batch):graph.cursor}};
     });
   }
 
@@ -415,7 +415,7 @@ export class WorkspaceDispatchService {
       const messageId=randomUUID();
       await this.recheck(snapshot);
       alive();
-      return {members:[prepared.member],sessions:[prepared.session],batch,messages:[{kind:'assignment',messageId,commandId:input.commandId,identity:graph.identity,from:graph.root.agent,to:prepared.agent,taskId,planRevision:1,createdAt:now,delivery:'pending'}],receipt:{commandId:input.commandId,taskId,messageId,cursor:this.cursor(batch),disposition:waiting?'waiting':'queued',...(fallbackBinding?{fallbackBinding}:{})}};
+      return {teamSessions:[prepared.teamSession],members:[prepared.member],sessions:[prepared.session],batch,messages:[{kind:'assignment',messageId,commandId:input.commandId,identity:graph.identity,from:graph.root.agent,to:prepared.agent,taskId,planRevision:1,createdAt:now,delivery:'pending'}],receipt:{commandId:input.commandId,taskId,messageId,cursor:this.cursor(batch),disposition:waiting?'waiting':'queued',...(fallbackBinding?{fallbackBinding}:{})}};
     }),alive);
   }
 

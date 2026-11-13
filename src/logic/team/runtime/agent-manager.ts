@@ -1,7 +1,7 @@
 /**
  * 目录归属：logic/team/runtime；主运行与成员执行管理。
  * 作用定位：根据已核实角色配置注册持久化成员，按主会话分配独立逻辑 Session。
- * 设计原因：主实例随主会话保留；周期执行者按任务隔离实例，旧无周期登记仍按原规则恢复。返回待提交对象，由调度事务统一保存。
+ * 设计原因：主/子逻辑对话按办公室与角色唯一保留；任务执行租约和原生通道继续隔离，旧无周期登记仍按原规则恢复。返回待提交对象，由调度事务统一保存。
  * 职责边界：目前只管理身份与注册，不分配 Pi 进程、执行槽或宣布 working。
  */
 import {randomUUID} from 'node:crypto';
@@ -9,6 +9,7 @@ import {fail} from '../../../core/errors';
 import type {AgentConfigurationSnapshot,AgentSessionBinding} from '../rules/agent-types';
 import type {DispatchState} from '../../dispatch/rules/dispatch-storage';
 import type {AgentRef} from '../../tasks/rules/graph-types';
+import type {TeamSession} from '../rules/team-session';
 
 /** 先尊重既有图根身份；新主会话创建独立主实例。同实例按根会话和用途复用通道，缺省用途兼容旧 task 记录。 */
 export function prepareMember(state:DispatchState,configuration:AgentConfigurationSnapshot,rootSessionId:string,purpose:NonNullable<AgentSessionBinding['purpose']>='task',execution?:{scopeId:string;taskId:string}){
@@ -37,5 +38,10 @@ export function prepareMember(state:DispatchState,configuration:AgentConfigurati
   };
   if(!member.agentSessionIds.includes(session.agentSessionId))member.agentSessionIds.push(session.agentSessionId);
   const agent:AgentRef={agentId:member.agentId,agentInstanceId:member.agentInstanceId,agentSessionId:session.agentSessionId,name:configuration.name};
-  return {member,session:structuredClone(session),agent};
+  // 长期逻辑对话与任务执行租约分别登记：后者结束不会让用户失去子会话入口。
+  const teamSession:TeamSession=state.teamSessions?.find(item=>item.rootSessionId===rootSessionId&&item.agentId===configuration.agentId)??{
+    workspaceId:configuration.workspaceId,rootSessionId,agentId:configuration.agentId,teamId:configuration.teamId,sessionId:randomUUID(),createdAt:new Date().toISOString(),
+  };
+  if(teamSession.teamId!==configuration.teamId)fail('TEAM_SESSION_CONFLICT','团队对话的角色归属已经变化');
+  return {member,session:structuredClone(session),agent,teamSession:structuredClone(teamSession)};
 }

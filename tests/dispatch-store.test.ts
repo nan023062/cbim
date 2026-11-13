@@ -36,6 +36,20 @@ function taskMutation(state:DispatchState):DispatchMutation<{taskId:string}>{
 }
 async function setup(){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-dispatch-store-'));const store=new FileDispatchStore(dir,identity.workspaceId);return {dir,store,cleanup:async()=>{await store.close().catch(()=>{});await fs.rm(dir,{recursive:true,force:true})}}}
 const commitRoot=(store:FileDispatchStore)=>store.transact({commandId:'create-root',fingerprint:'root-input'},async()=>rootMutation());
+
+test('长期团队对话随原事务保存并重放，拒绝未登记角色与身份改绑',async()=>{
+  const f=await setup();try{
+    const logical={...identity,sessionId:'logical-main',agentId:main.agentId,teamId:'.cbim/team',createdAt};
+    await f.store.transact({commandId:'create-root',fingerprint:'root-input'},async()=>({...rootMutation(),teamSessions:[logical]}));
+    expect((await f.store.sessionRead({identity})).teamSessions).toEqual([logical]);
+    const before=await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8');
+    await expect(f.store.transact({commandId:'foreign-role',fingerprint:'foreign-role'},async()=>({teamSessions:[{...logical,sessionId:'unknown',agentId:'unknown'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await expect(f.store.transact({commandId:'rebind-logical',fingerprint:'rebind-logical'},async()=>({teamSessions:[{...logical,rootSessionId:'other'}],receipt:true}))).rejects.toMatchObject({code:'TEAM_SESSION_CONFLICT'});
+    expect(await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8')).toBe(before);
+    await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
+    try{expect((await reopened.read()).teamSessions).toEqual([logical]);expect((await reopened.sessionRead({identity})).teamSessions).toEqual([logical])}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
 afterEach(()=>vi.restoreAllMocks());
 
 test('dispatch commit restores members, independent channels, graph and one pending assignment atomically',async()=>{

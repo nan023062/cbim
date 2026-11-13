@@ -32,7 +32,7 @@ class N_src_logic_team_runtime_agent_manager_ts["agent-manager.ts"] {
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/agent-types.ts](../rules/agent-types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../rules/team-session.ts](../rules/team-session.ts)。
 
 ### checkpoint-abandonment-service.ts
 
@@ -388,6 +388,10 @@ N_src_logic_team_runtime_member_state_ts ..> N_src_logic_team_runtime_member_hel
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## 长期对话与执行登记
+
+`prepareMember` 返回 `teamSession`，按当前工作区、主会话和角色查找已有长期身份，首次登记才生成新 ID。返回隔离副本、不直接保存；派发服务将它与主根/成员/任务一同提交。任务租约仍按原规则冻结和结算，关闭任务不删除长期逻辑对话。不同主会话不会复用同一角色的逻辑对话。
 
 ## 失败原因与任务卡
 

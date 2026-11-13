@@ -1,3 +1,7 @@
+### 同屏办公室身份查询
+
+`DispatchSessionRead.teamSessions` 可选返回当前主会话的已提交长期对话登记，与图和话题周期使用同一读取屏障。该列表不含正文或原生路径，不授予执行许可；旧响应缺省保留兼容。逻辑对话身份来自 Team 纯规则，任务周期仍拥有执行归属与输入版本。
+
 ### 对象排序与历史指纹
 
 任务、周期、检查点与依赖规则的 9 处对象递归排序组合 utility.orderJsonValue，本地适配继续指定历史比较器和 undefined 规则。execution-context 使用字符序并保留属性，scope-goal 使用字符序并省略；dispatch-invariants 使用 localeCompare 并保留，其余已迁移适配使用 localeCompare 并省略。序列化、根 fingerprint 排除、不可变前缀与原事务核验仍在任务规则中；不迁移旧记录、不重算授权或替换原指纹。graph-reducer 的手写字符串重放算法保留独立边界。

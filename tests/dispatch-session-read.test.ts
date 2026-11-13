@@ -36,7 +36,8 @@ it('主会话联合读取不创建图或周期；IPC严格传递身份且重复�
     const snapshot=vi.spyOn(f.workspace,'snapshot');
     const args={identity:f.identity,graphCursor:first.graph.cursor,scopeCursor:first.scopes.cursor,detailStamp:stamp};
     const unchanged=await dispatchApplication(app,'dispatch.sessionRead',args) as DispatchSessionRead;
-    expect(unchanged).toEqual({graph:{mode:'noop',cursor:first.graph.cursor},scopes:{mode:'noop',cursor:first.scopes.cursor},detail:{mode:'noop',stamp}});
+    expect(unchanged).toEqual({graph:{mode:'noop',cursor:first.graph.cursor},scopes:{mode:'noop',cursor:first.scopes.cursor},detail:{mode:'noop',stamp},teamSessions:first.teamSessions});
+    expect(first.teamSessions).toHaveLength(1);expect(first.teamSessions![0]).toMatchObject({...f.identity,agentId:'cbim:main'});
     expect(snapshot).not.toHaveBeenCalled();snapshot.mockRestore();expect(await fs.readFile(file,'utf8')).toBe(before);
     expect(app.memberDispatch).toHaveBeenLastCalledWith(f.identity.workspaceId);
     scope.goal!.input.message='UI修改';expect(full(await f.service.sessionRead({identity:f.identity})).scope.goal!.input.message).toBe(message);

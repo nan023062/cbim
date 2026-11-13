@@ -1,3 +1,13 @@
+## 2026-11-14：办公室改版第 1 步——长期团队对话身份
+
+- 来源：用户直接授权按办公室/话题设计分步实施、测试和保存；基线 `8f743f51`，初始干净。开放 Issue 仅 #65，与此次改版无关，不修改无关工单。方案及 C3/L3 影响边界见 [办公室设计](task/team-office-topics.md)，本文记录已实施切片，不是另建待办。
+- `TeamSession` 作为主/子 Agent 共用的长期逻辑身份，以工作区、主 Session、Agent 唯一登记。主根、主对话绑定、成员登记与派发在原事务保存/复用它；任务/周期关闭不删除。执行租约、原生通道、权限、检查点与验收仍沿原任务保存，不批量合并或改写旧历史。
+- `FileDispatchStore` 在原 fsync/重放屏障校验登记；拒绝重复、改绑、跨工作区及未登记角色。联合读取只返回所选办公室的身份；旧日志缺省保留。新增纯规则细粒度公开入口，Logic 状态归属不变，不新增 Bridge/View 业务状态源。
+- 验证选择：纯规则覆盖唯一性、幂等与隔离；真实 Store 覆盖原子失败及重放；已有派发/关闭/主绑定与联合读取覆盖直接消费者。执行 `pnpm exec vitest run tests/team-session.test.ts tests/dispatch-store.test.ts tests/dispatch-scope.test.ts tests/dispatch-session-read.test.ts tests/conversation-identity.test.ts`，首次 34 通过、1 个旧响应形状断言失败；补充新增字段的明确断言后只重跑 `pnpm exec vitest run tests/dispatch-session-read.test.ts`，7/7 通过，所选 35 个行为用例最终通过。
+- `pnpm typecheck` 通过。首次依赖检查发现新细粒度入口未登记；登记 `team-session.ts` 后 `pnpm check:architecture` 通过：128 目录、734 代码/样式、0 文档差异、0 循环/违规。`pnpm check:test-modules` 通过：483 文件，139 unit / 154 contract / 190 integration。公开入口变更额外执行 `pnpm exec vitest run tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`，7/7 通过，其他 139 用例未选取。
+- 同步 6 个受影响目录的 CONTRACT/ARCHITECTURE、源码定位/字段说明；`node scripts/source-architecture.mjs` 生成资料，`git diff --check` 通过。未运行全仓回归、桌面场景验收、构建、安装或发布；尚未宣称侧栏、话题插入、上下文组装或办公室画面完成。
+- Q1 保护原任务执行与恢复不变量；Q2 将长期对话身份限制在 Team 规则与原调度事务；Q3 验证选择依据及失败修复如上；Q4 从 `team-session.ts` → `prepareMember` → `WorkspaceDispatchService` → `FileDispatchStore.sessionRead` 阅读，测试按同一顺序；Q5 无新增通用规则。切片独立本地提交，未人工 review、未 push/合并/发布。
+
 ## 2026-11-14：四层迁移后的全仓文档校正
 
 - 来源：用户明确要求修正所有文档；基线 `af218b19`，开始时工作区干净。查询开放 Issues 仅有 #65，与本轮文档校正无直接对应，不修改工单。覆盖全仓已维护 Markdown、源码契约/类图、README、概念/运行/发布说明、测试说明和三宿主开发 Skill；历史报告保留原日期、统计和范围，旧源码链接更新为当前导航并注明不等于历史证据，未留存的临时源码或本机制品不伪造归档。

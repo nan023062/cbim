@@ -1,3 +1,9 @@
+### 办公室逻辑对话身份
+
+`team-session.ts` 定义主/子 Agent 共用的 `TeamSession`。`workspaceId + rootSessionId + agentId` 唯一对应一个长期 `sessionId`，不同办公室中的同角色互相独立。登记只追加，已登记身份不能换办公室、角色、团队或创建时间；同批重复、未知字段及私有路径拒绝。
+
+逻辑对话不等于任务执行通道。`AgentInstance` / `AgentSessionBinding` 继续保存原任务的运行与租约身份；逻辑对话不会据此获得恢复、执行或业务验收许可。正文仍在原运行日志，登记表不保存副本。旧日志没有登记时保留缺省，不把原生线程追认为长期子会话。
+
 ### 静态知识视图的单向边界
 
 `logic/knowledge/rules/read-models/team.ts` 中的 Team 只依赖知识快照公开类型、只读解析辅助和共享 Core，不依赖 BusinessWorkspace、知识写入端口或调度编排。跨域查询由 `logic/knowledge/rules/knowledge-queries.ts` 组合；每个 Team 绑定一个固定快照，刷新后创建新视图。依赖检查器覆盖类型和重导出，具体矩阵见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。此约束不把其他岗位、成员和执行绑定文件误称为同一只读模型。

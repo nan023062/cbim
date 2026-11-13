@@ -396,7 +396,9 @@
         "src/logic/team/rules/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/team-session.test.ts"
+        ],
         "contract": [
           "tests/owner-execution-core.test.ts",
           "tests/owner-execution-view.test.ts",

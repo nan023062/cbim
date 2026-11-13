@@ -2630,11 +2630,12 @@ class N_src_logic_tasks_rules_scope_view_ts_DispatchSessionRead["DispatchSession
   +graph
   +scopes
   +detail
+  +teamSessions
 }
 N_src_logic_tasks_rules_scope_view_ts ..> N_src_logic_tasks_rules_scope_view_ts_DispatchSessionRead : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[scope-public.ts](scope-public.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[dispatch-commands.ts](dispatch-commands.ts)、[dispatch-scope.ts](dispatch-scope.ts)、[graph-types.ts](graph-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[graph-rules.ts](graph-rules.ts)、[scope-goal.ts](scope-goal.ts)、[scope-active-input.ts](scope-active-input.ts)、[../../budget/rules/scope-budget.ts](../../budget/rules/scope-budget.ts)、[scope-public.ts](scope-public.ts)。
 
 ### types.ts
 
@@ -4269,6 +4270,10 @@ N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rul
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 同屏办公室身份查询
+
+`DispatchSessionRead.teamSessions` 可选返回当前主会话的已提交长期对话登记，与图和话题周期使用同一读取屏障。该列表不含正文或原生路径，不授予执行许可；旧响应缺省保留兼容。逻辑对话身份来自 Team 纯规则，任务周期仍拥有执行归属与输入版本。
 
 ### 对象排序与历史指纹
 

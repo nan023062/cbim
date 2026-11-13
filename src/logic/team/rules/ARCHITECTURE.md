@@ -19,6 +19,7 @@ Team、小组、Agent 和父链 Skill 视图、实例及静态角色 Session 履
 | [owner-execution-discovery.ts](owner-execution-discovery.ts) | 岗位执行选择的有界只读发现协议，供主工具和任务详情共用。 |
 | [session-history-storage.ts](session-history-storage.ts) | 静态 Agent 会话历史的持久化索引契约，连接调度查询服务与本机磁盘适配。 |
 | [session-history.ts](session-history.ts) | 定义按静态 Agent 归档的独立 Session、任务轮次及公开事件查询协议。 |
+| [team-session.ts](team-session.ts) | 定义办公室内长期存在的 Agent 逻辑对话身份，供调度登记、持久化和对话导航共用。 |
 | [workspace-member-rules.ts](workspace-member-rules.ts) | 岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。 |
 | [workspace-member-tools.ts](workspace-member-tools.ts) | 主 Agent 岗位治理的窄输入、回执和装配端口，独立于 UI 与存储。 |
 | [workspace-member.ts](workspace-member.ts) | 定义工作区长期岗位、采纳快照、版本化登记命令与公开查询协议，供 Main、Store 和桌面共用。 |
@@ -435,6 +436,30 @@ N_src_logic_team_rules_session_history_ts ..> N_src_logic_team_rules_session_his
 
 直接依赖：[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)。
 
+### team-session.ts
+
+```mermaid
+classDiagram
+class N_src_logic_team_rules_team_session_ts["team-session.ts"] {
+  <<module>>
+  +appendTeamSessions()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_logic_team_rules_team_session_ts["team-session.ts"] {
+  <<module>>
+}
+class N_src_logic_team_rules_team_session_ts_TeamSession["TeamSession"] {
+  <<type>>
+
+}
+N_src_logic_team_rules_team_session_ts ..> N_src_logic_team_rules_team_session_ts_TeamSession : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)。
+
 ### workspace-member-rules.ts
 
 ```mermaid
@@ -776,6 +801,12 @@ N_src_logic_team_rules_workspace_member_tools_ts ..> N_src_logic_team_rules_work
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 办公室逻辑对话身份
+
+`team-session.ts` 定义主/子 Agent 共用的 `TeamSession`。`workspaceId + rootSessionId + agentId` 唯一对应一个长期 `sessionId`，不同办公室中的同角色互相独立。登记只追加，已登记身份不能换办公室、角色、团队或创建时间；同批重复、未知字段及私有路径拒绝。
+
+逻辑对话不等于任务执行通道。`AgentInstance` / `AgentSessionBinding` 继续保存原任务的运行与租约身份；逻辑对话不会据此获得恢复、执行或业务验收许可。正文仍在原运行日志，登记表不保存副本。旧日志没有登记时保留缺省，不把原生线程追认为长期子会话。
 
 ### 静态知识视图的单向边界
 

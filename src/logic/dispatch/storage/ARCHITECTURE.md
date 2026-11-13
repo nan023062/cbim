@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。 |
+| [dispatch-store.ts](dispatch-store.ts) | 将岗位、模块责任、来源代次和受控文件阶段，以及办公室逻辑对话、执行实例、原生通道、任务图和信封可靠保存到同一工作区日志。 |
 | [request-budget-store.ts](request-budget-store.ts) | 将工作区唯一 DispatchStore 适配为请求预算专用的两项读写能力。 |
 
 ## 架构类图
@@ -116,7 +116,7 @@ class N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore["Dis
 N_src_logic_dispatch_storage_dispatch_store_ts_external_DispatchStore <|.. N_src_logic_dispatch_storage_dispatch_store_ts_FileDispatchStore
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/graph-reducer.ts](../../tasks/rules/graph-reducer.ts)、[../../tasks/rules/dispatch-invariants.ts](../../tasks/rules/dispatch-invariants.ts)、[../../tasks/rules/dispatch-scope-invariants.ts](../../tasks/rules/dispatch-scope-invariants.ts)、[../../tasks/rules/workspace-member-invariants.ts](../../tasks/rules/workspace-member-invariants.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../tasks/rules/effect-observation-invariants.ts](../../tasks/rules/effect-observation-invariants.ts)、[../../file-operations/rules/controlled-file-invariants.ts](../../file-operations/rules/controlled-file-invariants.ts)、[../../budget/rules/model-request-budget-invariants.ts](../../budget/rules/model-request-budget-invariants.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/knowledge-source-invariants.ts](../../tasks/rules/knowledge-source-invariants.ts)、[../../tasks/rules/owner-execution-invariants.ts](../../tasks/rules/owner-execution-invariants.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/graph-reducer.ts](../../tasks/rules/graph-reducer.ts)、[../../tasks/rules/dispatch-invariants.ts](../../tasks/rules/dispatch-invariants.ts)、[../../tasks/rules/dispatch-scope-invariants.ts](../../tasks/rules/dispatch-scope-invariants.ts)、[../../tasks/rules/workspace-member-invariants.ts](../../tasks/rules/workspace-member-invariants.ts)、[../../tasks/rules/module-ownership-invariants.ts](../../tasks/rules/module-ownership-invariants.ts)、[../../tasks/rules/effect-observation-invariants.ts](../../tasks/rules/effect-observation-invariants.ts)、[../../file-operations/rules/controlled-file-invariants.ts](../../file-operations/rules/controlled-file-invariants.ts)、[../../budget/rules/model-request-budget-invariants.ts](../../budget/rules/model-request-budget-invariants.ts)、[../rules/dispatch-storage.ts](../rules/dispatch-storage.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/knowledge-source-invariants.ts](../../tasks/rules/knowledge-source-invariants.ts)、[../../tasks/rules/owner-execution-invariants.ts](../../tasks/rules/owner-execution-invariants.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)。
 
 ### request-budget-store.ts
 
@@ -144,6 +144,10 @@ class N_src_logic_dispatch_storage_request_budget_store_ts["request-budget-store
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 # dispatch-storage 持久化契约
+
+### 办公室逻辑对话
+
+`teamSessions` 和原派发记录共用追加日志与 fsync 屏障；不另建会话正文文件。Store 核验工作区、主会话图、已登记角色和团队，一办公室同一 Agent 不可重复登记，已存在身份不可改绑。关闭任务/周期不移除登记，旧日志没有登记仍按原样恢复。`sessionRead` 只返回所请求办公室的登记，未登记的旧响应保持缺省；读取不补造新身份。
 
 ### 新旧负责人执行协议
 

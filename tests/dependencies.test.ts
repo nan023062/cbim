@@ -29,6 +29,8 @@ test.each([
   ['src/core/json.ts','src/logic/knowledge/rules/types.ts',false],
   ['src/logic/application/application.ts','src/logic/tasks/rules/unregistered.ts',false],
   ['src/logic/tasks/rules/graph.ts','src/logic/models/index.ts',true],
+  ['src/logic/tasks/rules/scope-view.ts','src/logic/team/rules/team-session.ts',true],
+  ['src/logic/team/rules/team-session.ts','src/logic/team/runtime/agent-manager.ts',false],
 ] as const)('domain migration preserves rule/service boundaries: %s -> %s',(from,to,allowed)=>{
   const spec=path.posix.relative(path.posix.dirname(from),to);
   expect(audit({[from]:`import type {Value} from '${spec.startsWith('.')?spec:'./'+spec}';`,[to]:'export type Value=string;'}).ok).toBe(allowed);

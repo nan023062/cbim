@@ -1,6 +1,6 @@
 /**
  * 目录归属：logic/dispatch/storage；唯一调度日志及预算适配。
- * 作用定位：将岗位、模块责任、来源代次和受控文件阶段，以及执行实例、会话、任务图和信封可靠保存到同一工作区日志。
+ * 作用定位：将岗位、模块责任、来源代次和受控文件阶段，以及办公室逻辑对话、执行实例、原生通道、任务图和信封可靠保存到同一工作区日志。
  * 设计原因：追加日志是唯一权威记录，fsync 后才发布；原命令前态与回执由同次 publish/load 派生，旧前缀只回放不重写，控制面不得夹带执行，旧在途按原事实结算。
  * 职责边界：应用须先持有工作区唯一写入锁；本类不打开业务文件或执行补偿，文件阶段通过同一严格投影重放，原记录不自动推进。
  * 请求预算复用同一 fsync 屏障，阶段单独追加且重放复核；旧缺省保留，未知或未决请求不因加载而释放。
@@ -23,6 +23,7 @@ import {applyScopeBatch,dispatchSessionReadInput,emptyScopeSnapshot,readScopeDel
 import type {DispatchScope} from '../../tasks/rules/dispatch-scope';
 import {projectKnowledgeSourceMutation} from '../../tasks/rules/knowledge-source-invariants';
 import {validateOwnerExecutionMutation,type DispatchExecutionProtocol} from '../../tasks/rules/owner-execution-invariants';
+import {appendTeamSessions} from '../../team/rules/team-session';
 
 /** transactionSeq 是工作区日志序号，与单张图的 batch.seq 分开。 */
 interface TransactionBody {
@@ -123,7 +124,7 @@ export class FileDispatchStore implements DispatchStore {
     const input=parsed.data;this.available();await this.init();await this.tail;if(this.storageFailure)throw this.storageFailure;
     const graph=this.graph(input.identity),root=input.identity.rootSessionId;
     const scopes=this.scopeViews.get(root)??emptyScopeSnapshot(graph.identity,graph.cursor.streamId);
-    return clone({graph:readGraphDelta(graph,this.events.get(root)??[],input.graphCursor,input.limit),scopes:readScopeDelta(scopes,this.scopeEvents.get(root)??[],input.scopeCursor,input.limit),detail:readScopeDetail(scopes,this.state.scopes??[],input.selectedScopeId,input.detailStamp)});
+    return clone({graph:readGraphDelta(graph,this.events.get(root)??[],input.graphCursor,input.limit),scopes:readScopeDelta(scopes,this.scopeEvents.get(root)??[],input.scopeCursor,input.limit),detail:readScopeDetail(scopes,this.state.scopes??[],input.selectedScopeId,input.detailStamp),...(this.state.teamSessions?{teamSessions:this.state.teamSessions.filter(session=>session.rootSessionId===root)}:{})});
   }
 
   /**
@@ -236,6 +237,14 @@ export class FileDispatchStore implements DispatchStore {
       const old=this.state.graphs.find(g=>sameGraph(g.identity,batch.identity));
       const graph=applyGraphBatch(old,batch);
       next.graphs=upsert(next.graphs,[graph],g=>g.identity.rootSessionId);
+    }
+    if(mutation.teamSessions!==undefined||this.state.teamSessions!==undefined){
+      valid(mutation.teamSessions===undefined||Array.isArray(mutation.teamSessions),'团队对话登记必须是数组');
+      next.teamSessions=appendTeamSessions(this.state.teamSessions??[],mutation.teamSessions??[],this.workspaceId);
+      for(const session of next.teamSessions){
+        const graph=next.graphs.find(item=>item.identity.rootSessionId===session.rootSessionId);
+        valid(graph?.agents.some(agent=>agent.agentId===session.agentId&&next.members.some(member=>member.agentInstanceId===agent.agentInstanceId&&member.teamId===session.teamId)),'团队对话必须属于已有主会话和已登记角色');
+      }
     }
     const checkAgent=(agent:AgentRef,identity:GraphIdentity)=>{
       const session=next.sessions.find(s=>s.agentSessionId===agent.agentSessionId);

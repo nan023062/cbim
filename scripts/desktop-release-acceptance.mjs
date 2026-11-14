@@ -149,7 +149,8 @@ async function attachResourceRestart(restarted) {
         // 使用与 ElectronApplication.close 相同的正常退出入口；先释放调试连接，避免 Node 等待调试器断开。
         await inspector.evaluate("((app)=>{setImmediate(()=>app.quit())})(require('electron').app);undefined");
         inspector.close();await browser.close();
-        ps(`$p=Get-Process -Id ${restarted.ProcessId} -ErrorAction SilentlyContinue; if ($p -and -not $p.WaitForExit(30000)) { throw 'Attached desktop normal close timed out' }`);
+        // 已退出 PID 不是 PowerShell 错误；按正常枚举结果筛选，避免 Get-Process -Id 的退出码 1 误判。
+        assert.equal(ps(`$p=Get-Process -ErrorAction Stop | Where-Object Id -eq ${restarted.ProcessId}; if ($p -and -not $p.WaitForExit(30000)) { throw 'Attached desktop normal close timed out' }; Write-Output closed`),'closed');
       },
     };
     const page=await app.firstWindow();

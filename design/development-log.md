@@ -1,3 +1,11 @@
+## 2026-11-14 引擎架构分支推送与安装验收准备
+
+按用户明确要求推送 refactor/engine-model-catalog，远端 ab54c81ed08609906d3c0ec6b4f242e36983a39c；完整 Windows 四片 CI 43567438913 已派发，待真实结果。公开桌面当前为 0.1.16；准备新 C 0.1.17 草稿，沿用已确认的 Windows unsigned 模式和原 Ed25519 身份（只核公钥摘要），不更新公开桌面/资源索引。
+
+核对 desktop-v0.1.16 的更新交互与现源无差异后，验收输入补充实际上一版；带 adapter 声明的 E 从真实共享缓存核对，旧格式保持原 C 目录。pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default 通过 59 项；同步三个发布入口及候选说明。仅版本、验收和资料变更，产品源码不变；完整 CI 将在最终验证提交另核。
+
+用户明确本轮只验现有生成模型，向量模型后续另验。安装验收用无用户客户端的独立 Windows runner；不会安装到开发者机器或改生产配置。
+
 ## 2026-11-14 记忆引擎 1.1.0 实际候选回执
 
 干净源码 94cccf9239abcc6b676274ee71d3fc9490ad08ba 执行 pnpm make:engines memory 成功。候选位于 build/runtime/engines-qXjCbm，适配器/原生版本均为 1.1.0，协议 1；ZIP 47650 字节，SHA-256 d5240bd340f98a592aa9e8496a8d9131e89422d3d9df77f69297d87c98246c5b，与实际文件重新读取的大小和摘要一致。包含 adapter.cjs 与 adapter.json，完整清单由 engines.json 保存。

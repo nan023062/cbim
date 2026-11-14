@@ -223,7 +223,7 @@ async function verifyFreshEngine(page, profileRoot) {
   const appData=await app.evaluate(({app})=>app.getPath('appData'));
   const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(profileRoot).toLowerCase()).digest('hex').slice(0,24);
   const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor);
-  const directory=path.join(appData,'CBIM-runtime',identity,version,'packages',descriptor.package.sha256);
+  const directory=path.join(appData,'CBIM-runtime',identity,descriptor.adapter?'engines':version,'packages',descriptor.package.sha256);
   for(const file of descriptor.package.files){const target=path.join(directory,file.path);assert.equal((await fs.stat(target)).size,file.bytes);assert.equal(await sha(target),file.sha256)}
   const result={engine:'pi',version:descriptor.version,packageSha256:descriptor.package.sha256,filesVerified:descriptor.package.files.length,modelRequests:requests-before,taskId:run.taskId,runId:run.runId};
   await save('fresh-engine',result);return result;

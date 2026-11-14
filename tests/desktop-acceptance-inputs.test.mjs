@@ -33,7 +33,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.18',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.17'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -89,4 +89,9 @@ it.each(['candidate','online'])('accepts 0.1.9 to A with the original automatic 
 });
 it.each(['candidate','online'])('accepts A to B as background prefetch with explicit installation in %s mode', mode => {
   expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.11', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.10', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousUpdateFlow:'prefetch', mode});
+});
+
+it.each(['candidate','online'])('pins the released 0.1.16 prefetch client for the generic engine host in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.17',previousVersion:'0.1.16',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
 });

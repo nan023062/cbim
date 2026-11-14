@@ -38,7 +38,7 @@
 | [ipc-resources.ts](ipc-resources.ts) | 资源仓库、共享连接与架构包的公开 IPC 请求与响应。 |
 | [ipc-settings.ts](ipc-settings.ts) | 模型、准入、预算与反馈账号设置的公开 IPC 请求与响应。 |
 | [ipc-shapes.ts](ipc-shapes.ts) | IPC 外层信封的少量公共输入形状；业务字段继续使用各领域公开协议。 |
-| [ipc-workspace.ts](ipc-workspace.ts) | 工作区生命周期与知识编辑的公开 IPC 请求与响应。 |
+| [ipc-workspace.ts](ipc-workspace.ts) | 工作区生命周期、模块源码只读浏览与知识编辑的公开 IPC 请求与响应。 |
 | [isolated-executions.ts](isolated-executions.ts) | 向桌面导出原隔离执行核实与清理的公开 DTO。 |
 | [knowledge-source.ts](knowledge-source.ts) | 向桌面公开知识来源身份、采纳预览和当前核实状态的纯数据协议。 |
 | [knowledge-transactions.ts](knowledge-transactions.ts) | 向只读执行视图公开知识预览和提交的严格返回协议。 |
@@ -857,6 +857,8 @@ class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
 
 ### ipc-workspace.ts
 
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
@@ -864,6 +866,8 @@ class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
 }
 class N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses["WorkspaceIpcResponses"] {
   <<interface>>
+  +'source.list'
+  +'source.read'
   +'list'
   +'add'
   +'relocate'
@@ -878,12 +882,25 @@ class N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses["WorkspaceIp
   +'cancelTask'
   +'local'
   +'architecture.preview'
+}
+N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses : 声明
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses["WorkspaceIpcResponses"] {
+  <<interface>>
   +'architecture.commit'
 }
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/knowledge/rules/object-contract.ts](../../logic/knowledge/rules/object-contract.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[workspace-view.ts](workspace-view.ts)。
+直接依赖：[../../logic/workspace/rules/source-browser.ts](../../logic/workspace/rules/source-browser.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/knowledge/rules/object-contract.ts](../../logic/knowledge/rules/object-contract.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[workspace-view.ts](workspace-view.ts)。
 
 ### isolated-executions.ts
 
@@ -1359,6 +1376,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 模块源码读取
+
+ipc-workspace 注册 source.list/source.read，重用 Logic 的严格纯请求及数据类型。必须提供 workspaceId、instanceId、revision、moduleId 和 source；path 相对已声明来源，默认目录根。协议不接受写入选项或绝对路径授权，服务重复核实真实绑定。
 
 ### 长期对话公共身份
 

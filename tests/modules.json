@@ -1087,7 +1087,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/module-ownership-view.test.ts"
+          "tests/module-ownership-view.test.ts",
+          "tests/module-source-tree.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1587,6 +1588,18 @@
         "unit": [
           "tests/unit/logic/execution/memory-engine.test.ts",
           "tests/unit/logic/execution/memory-protocol.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/workspace/service": {
+      "roots": [
+        "src/logic/workspace/service/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/module-source-browser.test.ts"
         ],
         "contract": [],
         "integration": []

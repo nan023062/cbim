@@ -90,7 +90,7 @@
 | [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
 | [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，并在选择根或任务后显示对应执行详情。 |
-| [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
+| [task-graph.css](task-graph.css) | 主会话办公室与按需任务详情的自适应布局。 |
 | [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
 | [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实与影响处置入口，供主对话及任务页使用。 |
 | [useAdmission.ts](useAdmission.ts) | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |

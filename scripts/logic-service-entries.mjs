@@ -89,6 +89,7 @@ export const servicePublicEntries=new Set([
   "src/logic/updates/service/runtime-store.ts",
   "src/logic/updates/service/runtime-updates.ts",
   "src/logic/workspace/service/architecture-service.ts",
+  "src/logic/workspace/service/source-browser.ts",
   "src/logic/workspace/service/catalog.ts",
   "src/logic/workspace/service/main-module-ownership-tools.ts",
   "src/logic/workspace/service/module-ownerships.ts",

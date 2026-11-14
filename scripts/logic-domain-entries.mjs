@@ -221,6 +221,7 @@ export const domainPublicEntries=new Set([
   "src/logic/workspace/rules/module-ownership-tool-policy.ts",
   "src/logic/workspace/rules/module-ownership-tools.ts",
   "src/logic/workspace/rules/module-ownership.ts",
+  "src/logic/workspace/rules/source-browser.ts",
   "src/logic/workspace/rules/png-validation-schema.ts",
   "src/logic/workspace/rules/project-root.ts",
   "src/logic/workspace/rules/workflow-contract.ts"

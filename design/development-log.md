@@ -1,3 +1,17 @@
+## 2026-11-15 模块源码浏览与四项界面调整收尾
+
+用户直接授权第 3 步：业务架构只显示模块及 sources 绑定的真实目录/文件，图标区分模块/目录/文件；大标题说明移除，治理入口在根菜单。ModuleSourceTree 按需展开和分页，SourceFilePreview 只读文本；模块配置和 Workflow 保留在详情，损坏的 module.json 仍有根详情修复入口。既有编辑、负责人登记和事务冻结语义继续保留。
+
+架构决策：Logic/workspace 拥有源绑定、路径和读取限制；source-browser 纯契约经 Bridge 配对，ModuleSourceBrowser 只依赖 entry/assert/read 最小端口，无 Application、执行或写入能力。读取前后核知识版本/运行实例，拒绝越界、链接/联接、.cbim/.git 和忽略项；一页最多 200 项、一次检查最多 2000 项、文本最多 256 KiB。View 保存展开/选择状态，迟到结果与旧实例隔离；不是源内容不可变证据。登记了精确的纯契约/服务公开入口，没有放宽分层算法或增加泛文件读写入口。
+
+验证选择与结果：
+- `pnpm exec vitest run tests/module-source-browser.test.ts tests/module-source-tree.test.ts --reporter=dot`：源码服务与树 8 项最终通过；服务原先同步抛校验异常，改为一致的异步拒绝后补跑服务。覆盖分页、只读范围、旧身份/版本、目录联接、二进制/大文件、缺失路径和树循环。
+- `pnpm exec vitest run tests/module-source-browser.test.ts tests/ipc-requests.test.ts --reporter=dot`：当时 25 项通过；随后新增源浏览请求/关闭门禁回归。
+- `pnpm exec vitest run tests/team-model.test.ts tests/ipc-requests.test.ts tests/layer-boundaries.test.ts --reporter=dot`：最终 31 项通过，覆盖团队资料迁移、受理前拒绝与公开入口边界。`pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过，依赖无环。
+- `pnpm exec tsx scripts/architecture-tree-smoke.mts`：5 组实际 Electron 界面 + 真实 ModuleSourceBrowser/隔离目录验收通过，含配置详情、损坏模块修复入口、治理未知回执门禁、逐层源码与文本预览、迟到响应、1440/320px 与双主题。岗位/治理使用明确替身，不调用真实模型；截图切换为离屏原生渲染，已核实主题颜色和实际截图。最终本地证据 `test-results/architecture-tree-nRe0kG/result.json`。前一步交互区独立草稿/附件/滚动等 9 组验收保持通过。
+
+同步 Logic/workspace、Bridge/contracts/IPC、View/workspace 的注释、契约与类图，以及相关组件/交互样式说明。完整变更范围为 d1964428 起的本分支提交；阅读顺序：source-browser 纯契约 → ModuleSourceBrowser → workspaceIpcHandlers → ModuleSourceTree/SourceFilePreview → WorkspaceView。下一次文件展示变化留在 View，新增源读取规则修改工作区服务，不更改稳定调度或知识事务。已完成代码自查，人工 review 在 PR；全仓回归交给 PR CI，本步未打包、安装、合并或发布。
+
 ## 2026-11-15 团队组织树精简与配置详情
 
 用户直接授权第 2 步：TeamTree 仅显示团队、小组、自定义 Agent，真实 Skill/agent.json/principles.md 及其他资料继续在详情中预览编辑。根大标题说明删除，一键治理进入根菜单，未知回执门禁和结果留在页面，关闭菜单不重发。TreeActions 复用原菜单的键盘和显式回调行为；配置路径仍由所属节点确定，损坏的 Agent 定义有根详情检查入口。

@@ -66,7 +66,7 @@ test('同静态Agent的岗位分组不合并，原任务只读对照保持原绑
 test('原计划和派发命令先查回执，来源模型删除后仍不重做，新命令明确拒绝',async()=>{
   const f=await setup();try{
     const planned=await f.service.goals.plan(f.identity,f.scopeId,f.runId,'plan',f.input),receipt=await f.service.dispatchTask(f.request,f.scopeId);await f.app.models.remove(f.seed.profiles[1].id);
-    const before=await f.store.read(),reading=vi.spyOn(f.app.models,'withConfigurations');
+    const before=await f.store.read(),reading=vi.spyOn(f.app.engineModels,'withConfigurations');
     expect(await f.service.goals.plan(f.identity,f.scopeId,f.runId,'plan',f.input)).toEqual(planned);expect(await f.service.dispatchTask(f.request,f.scopeId)).toEqual(receipt);expect(reading).not.toHaveBeenCalled();
     await expect(f.service.dispatchTask({...f.request,commandId:'new-command'},f.scopeId)).rejects.toMatchObject({code:'LLM_REQUIRED'});expect(await f.store.read()).toEqual(before);
     await expect(f.app.dispatch('dispatch.task',{...f.request,commandId:'no-scope'})).rejects.toMatchObject({code:'DISPATCH_SCOPE_REQUIRED'});
@@ -78,7 +78,7 @@ test('计划等待模型短锁时停止，不写计划或创建运行，后来�
   const f=await setup(),entered=latch(),release=latch();let stopped=false;
   try{
     const before=await f.store.read(),profile=f.seed.profiles[1];
-    const holding=f.app.models.withConfigurations([{profileId:profile.id,modelId:profile.modelId}],async()=>{entered.resolve();await release.promise});await entered.promise;
+    const holding=f.app.engineModels.withConfigurations([{profileId:profile.id,modelId:profile.modelId}],async()=>{entered.resolve();await release.promise});await entered.promise;
     const planning=f.service.goals.plan(f.identity,f.scopeId,f.runId,'stopped-plan',f.input,()=>{if(stopped)throw Object.assign(Error('stopped'),{code:'COLLABORATION_STOPPED'})});void planning.catch(()=>{});
     await new Promise<void>(resolve=>setImmediate(resolve));stopped=true;release.resolve();await holding;await expect(planning).rejects.toMatchObject({code:'COLLABORATION_STOPPED'});
     expect(await f.store.read()).toEqual(before);await f.app.models.save({id:profile.id,profile:{...profile.definition,name:'锁已释放'}});

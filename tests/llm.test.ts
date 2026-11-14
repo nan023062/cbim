@@ -4,7 +4,10 @@ import os from 'node:os';
 import http from 'node:http';
 import {afterEach,expect,test} from 'vitest';
 import {LlmProfiles,type SecretCipher} from '../src/logic/models/service';
-import type {LlmDefinition} from '../src/logic/models';
+import type {LlmDefinition,ModelConnectionRequirement} from '../src/logic/models';
+const messages:ModelConnectionRequirement={supportedApis:['anthropic-messages'],fallbackApi:'anthropic-messages'};
+const responses:ModelConnectionRequirement={supportedApis:['openai-responses'],fallbackApi:'openai-responses'};
+const chat:ModelConnectionRequirement={supportedApis:['openai-completions']};
 const roots:string[]=[];
 afterEach(async()=>{for(const root of roots.splice(0))await fs.rm(root,{recursive:true,force:true})});
 const cipher:SecretCipher={available:()=>true,encrypt:s=>Buffer.from(s).toString('base64'),decrypt:s=>Buffer.from(s,'base64').toString()};
@@ -48,12 +51,12 @@ test('一份加密 Key 解析三种官方接口，岗位与运行快照一致且
   const p={...profile('https://api.deepseek.com/v1'),auth:'api-key' as const};
   const saved=await service.save({profile:p,apiKey:'one-key-only'}),id=saved.selectedId!,bytes=await fs.readFile(filename,'utf8');
   const pi=await service.configuration(id,'model-a');
-  const claude=await service.configuration(id,'model-a','claude-code');
-  const codex=await service.resolve(id,'model-a','codex');
-  expect(pi.api).toBe('openai-completions');expect(pi.engine).toBeUndefined();
-  expect(claude).toMatchObject({api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic',model:'model-a',engine:'claude-code'});
+  const claude=await service.configuration(id,'model-a',messages);
+  const codex=await service.resolve(id,'model-a',responses);
+  expect(pi.api).toBe('openai-completions');expect(pi).not.toHaveProperty('engine');
+  expect(claude).toMatchObject({api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic',model:'model-a'});
   expect(codex).toMatchObject({apiKey:'one-key-only',profile:{api:'openai-responses',baseUrl:'https://api.deepseek.com',model:'model-a'}});
-  await service.withRuntimeConfiguration({profileId:id,modelId:'model-a',engine:'claude-code'},async locked=>{
+  await service.withRuntimeConfiguration({profileId:id,modelId:'model-a',connection:messages},async locked=>{
     expect(locked.profile).toEqual(claude);expect(locked.resolve()).toEqual({profile:claude,apiKey:'one-key-only'});
   });
   expect(JSON.stringify(claude)).not.toMatch(/autoDetect|alternateConnections|apiKey|encryptedKey/);
@@ -70,13 +73,13 @@ test('新增自定义凭据目标必须重输 Key；重命名、模型范围和�
   await service.save({id,profile:extended,apiKey:'shared-key'});
   const scoped:LlmDefinition={...extended,name:'Renamed',alternateConnections:[{...extended.alternateConnections![0],modelIds:['model-a']}]};
   await service.save({id,profile:scoped});
-  expect((await service.resolve(id,'model-a','claude-code')).apiKey).toBe('shared-key');
+  expect((await service.resolve(id,'model-a',messages)).apiKey).toBe('shared-key');
   expect(JSON.parse(await fs.readFile(filename,'utf8')).profiles[0].alternateConnections[0]).not.toHaveProperty('encryptedKey');
   await service.save({id,profile:p});
-  await expect(service.resolve(id,'model-a','claude-code')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+  await expect(service.resolve(id,'model-a',messages)).rejects.toMatchObject({code:'LLM_CONNECTION_API'});
 });
 
-test('按引擎测试走各自真实 HTTP 端点与鉴权；失败不改目录、不改引擎、不尝试其他端点',async()=>{
+test('按协议需求测试真实 HTTP 端点与鉴权；失败不改目录、不尝试其他端点',async()=>{
   const requests:{url:string;headers:http.IncomingHttpHeaders;body:any}[]=[];
   let rejectClaude=false;
   const server=http.createServer(async(req,res)=>{
@@ -91,11 +94,11 @@ test('按引擎测试走各自真实 HTTP 端点与鉴权；失败不改目录�
     const {service,filename}=await fixture(),url=`http://127.0.0.1:${(server.address() as any).port}`;
     const p:LlmDefinition={...profile(url+'/v1'),auth:'api-key',alternateConnections:[{api:'anthropic-messages',baseUrl:url+'/anthropic'},{api:'openai-responses',baseUrl:url}]};
     const saved=await service.save({profile:p,apiKey:'shared-key'}),id=saved.selectedId!,bytes=await fs.readFile(filename,'utf8');
-    for(const engine of ['pi','claude-code','codex'] as const)expect(await service.test(id,'model-a',engine)).toMatchObject({ok:true,engine,model:'model-a'});
+    for(const connection of [chat,messages,responses]){const result=await service.test(id,'model-a',connection);expect(result).toMatchObject({ok:true,model:'model-a'});expect(result).not.toHaveProperty('engine')}
     expect(requests.map(request=>request.url)).toEqual(['/v1/chat/completions','/anthropic/v1/messages','/responses']);
     expect(requests[0].headers.authorization).toBe('Bearer shared-key');expect(requests[1].headers['x-api-key']).toBe('shared-key');expect(requests[1].headers.authorization).toBeUndefined();expect(requests[2].headers.authorization).toBe('Bearer shared-key');
     expect(requests.every(request=>request.body.model==='model-a')).toBe(true);
-    rejectClaude=true;await expect(service.test(id,'model-a','claude-code')).rejects.toThrow('HTTP 401');
+    rejectClaude=true;await expect(service.test(id,'model-a',messages)).rejects.toThrow('HTTP 401');
     expect(requests).toHaveLength(4);expect(await fs.readFile(filename,'utf8')).toBe(bytes);expect(await service.list()).toEqual(saved);
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });

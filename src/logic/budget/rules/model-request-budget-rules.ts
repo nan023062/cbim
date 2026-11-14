@@ -5,24 +5,36 @@
  */
 import {hash,json} from '../../../core/platform/node/serialization';
 import type {ScopeBudgetPolicy} from './scope-budget';
-import {modelRequestBudgetLimits,type ModelRequestBudgetChange,type RequestBudgetRecord,type RequestBudgetIntent,type RequestBudgetModel,type RequestBudgetUsage,type RequestBudgetReport,type RequestBudgetDenial} from './model-request-budget';
+import {modelRequestBudgetLimits,type ModelRequestBudgetChange,type RequestBudgetRecord,type RequestBudgetIntent,type RequestBudgetModel,type RequestBudgetCapacity,type RequestBudgetUsage,type RequestBudgetReport,type RequestBudgetDenial} from './model-request-budget';
 
-/** 保守以完整输入容量加本次明确输出上限预留；不以字符数声称精确 tokenizer 计数。 */
-export function requestBudgetReservation(model:Pick<RequestBudgetModel,'contextWindow'|'maxTokens'|'pricing'>,maxOutputTokens:number):{tokens:number;estimatedCostUsd?:number}{
+/** 生成按输入容量和输出上限预留，向量只按其输入容量预留；不猜 tokenizer。 */
+export function requestBudgetReservation(model:RequestBudgetCapacity,maxOutputTokens:number):{tokens:number;estimatedCostUsd?:number}{
+  if('inputTokens' in model){
+    if(maxOutputTokens!==0)throw Error('向量请求不能声明生成输出容量');
+    const cost=priced(model.inputPrice===undefined?undefined:model.inputTokens*model.inputPrice);
+    return {tokens:model.inputTokens,...(cost===undefined?{}:{estimatedCostUsd:cost})};
+  }
   if(!Number.isSafeInteger(maxOutputTokens)||maxOutputTokens<1||maxOutputTokens>model.maxTokens)throw Error('模型请求缺少有效的冻结输出上限');
   const tokens=model.contextWindow+maxOutputTokens,p=model.pricing;
-  const weighted=p?model.contextWindow*Math.max(p.input,p.cacheRead,p.cacheWrite)+maxOutputTokens*p.output:undefined;
-  const cost=weighted===undefined?undefined:weighted>0?Math.max(Number.MIN_VALUE,weighted/1000000):0;
-  if(cost!==undefined&&(!Number.isFinite(cost)||cost>Number.MAX_SAFE_INTEGER))throw Error('模型请求价格超出可核实范围');
+  const cost=priced(p?model.contextWindow*Math.max(p.input,p.cacheRead,p.cacheWrite)+maxOutputTokens*p.output:undefined);
   return {tokens,...(cost===undefined?{}:{estimatedCostUsd:cost})};
 }
-/** 价格由原模型快照给出；没有价格保留 undefined，明确全零价格才表示估算为零。 */
-export function requestBudgetCost(model:RequestBudgetModel,usage:RequestBudgetUsage):number|undefined{
-  const p=model.pricing;if(!p)return;const weighted=usage.input*p.input+usage.output*p.output+usage.cacheRead*p.cacheRead+usage.cacheWrite*p.cacheWrite;
-  // 极小的正价格仍不是免费；单位换算下溢时取最小正表示，不能据浮点零放行下一请求。
+/** 极小正价格不能因单位换算变成免费；未知价格保持缺省。 */
+function priced(weighted:number|undefined):number|undefined{
+  if(weighted===undefined)return;
   const cost=weighted>0?Math.max(Number.MIN_VALUE,weighted/1000000):0;
   if(!Number.isFinite(cost)||cost>Number.MAX_SAFE_INTEGER)throw Error('模型请求用量计价超出范围');return cost;
 }
+/** 向量协议不得把输出、缓存或推理分量混进已核实的输入用量。 */
+export function requestBudgetCost(model:RequestBudgetModel,usage:RequestBudgetUsage):number|undefined{
+  if(model.api==='openai-embeddings'){
+    if(usage.output||usage.cacheRead||usage.cacheWrite)throw Error('向量请求用量包含非输入分量');
+    return priced(model.inputPrice===undefined?undefined:usage.input*model.inputPrice);
+  }
+  const p=model.pricing;return priced(p?usage.input*p.input+usage.output*p.output+usage.cacheRead*p.cacheRead+usage.cacheWrite*p.cacheWrite:undefined);
+}
+/** 只读容量投影，不为向量假造 contextWindow 或 maxTokens。 */
+export const requestBudgetInputCapacity=(model:RequestBudgetModel)=>model.api==='openai-embeddings'?model.inputTokens:model.contextWindow;
 export function requestBudgetRecords(changes:readonly ModelRequestBudgetChange[]):RequestBudgetRecord[]{
   const records=new Map<string,RequestBudgetRecord>();for(const change of changes){if(change.phase==='reserved'||change.phase==='denied')records.set(change.requestId,{intent:change.intent,change});else{const old=records.get(change.requestId);if(!old)throw Error('请求预算阶段没有原预留');records.set(change.requestId,{intent:old.intent,change})}}return [...records.values()];
 }
@@ -34,7 +46,7 @@ export function requestBudgetReport(records:readonly RequestBudgetRecord[],scope
     if(change.phase==='not_sent'){report.notSent++;continue}
     if(change.phase==='reported'){
       report.reported++;report.tokens+=change.usage.totalTokens;if(change.estimatedCostUsd===undefined)report.costComplete=false;else report.estimatedCostUsd+=change.estimatedCostUsd;
-      if(change.usage.input+change.usage.cacheRead+change.usage.cacheWrite>intent.model.contextWindow||change.usage.output>intent.maxOutputTokens||change.estimatedCostUsd!==undefined&&intent.estimatedCostUsd!==undefined&&exceeds(change.estimatedCostUsd,intent.estimatedCostUsd))report.overrun++;continue;
+      if(change.usage.input+change.usage.cacheRead+change.usage.cacheWrite>requestBudgetInputCapacity(intent.model)||change.usage.output>intent.maxOutputTokens||change.estimatedCostUsd!==undefined&&intent.estimatedCostUsd!==undefined&&exceeds(change.estimatedCostUsd,intent.estimatedCostUsd))report.overrun++;continue;
     }
     report.reservedTokens+=intent.tokens;report.reservedCostUsd+=intent.estimatedCostUsd??0;
     if(change.phase==='unknown'||intent.binding.ownerInstanceId!==ownerInstanceId)report.unknown++;else report.inFlight++;

@@ -21,3 +21,12 @@ it('rejects Windows aliases, traversal, duplicate files, native R payloads and u
     expect(()=>verifyRuntimeManifest(f.envelope({...f.manifest,engines:[f.manifest.engines[0],f.manifest.engines[0],f.manifest.engines[2]]}),f.cold)).toThrow(/重复/);
   }finally{await f.cleanup()}
 });
+
+it('冷宿主接受通用已签名引擎身份，入口与协议继续校验，支持名单由 R 决定',async()=>{
+  const f=await runtimeFixture();try{
+    const source=f.manifest.engines[0],engine={...source,kind:'memory-engine'};
+    expect(verifyRuntimeManifest(f.envelope({...f.manifest,engines:[engine]}),f.cold).manifest.engines[0].kind).toBe('memory-engine');
+    expect(()=>verifyRuntimeManifest(f.envelope({...f.manifest,engines:[{...engine,adapter:{protocol:1,version:'1.0.0',entry:'missing.cjs'}}]}),f.cold)).toThrow(/入口/);
+    expect(()=>verifyRuntimeManifest(f.envelope({...f.manifest,engines:[{...engine,dependencies:[{kind:engine.kind,identity:engine.package.sha256}]}]}),f.cold)).toThrow(/依赖/);
+  }finally{await f.cleanup()}
+});

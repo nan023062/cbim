@@ -1,6 +1,6 @@
 /**
- * 作用定位：在本工作区受管 Pi/Claude Code/Codex 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。
- * 设计原因：相同 sessionId 不证明历史字节未改变；独立有界指纹绑定真实文件和完整 JSONL，不把私有正文或路径暴露到图谱。
+ * 作用定位：在本工作区受管会话目录内按官方声明的原生格式核实已关闭上下文，供成员检查点与续执行使用。
+ * 设计原因：相同 sessionId 不证明历史字节未改变；独立有界指纹绑定真实文件和完整 JSONL，自定义 Loop 使用 CBIM 格式，不默认当成 Codex。
  * 职责边界：只读、不修复尾行；拒绝链接、越界、未知身份和读取竞争，不提供任意文件哈希入口。
  */
 import fs from 'node:fs/promises';
@@ -8,7 +8,7 @@ import {constants} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fail} from '../../../core/errors';
-import type {LoopEngine} from '../../models';
+import {engineDescriptor,type LoopEngine} from '../../engines';
 
 /** 原生历史含模型消息和图片，采用独立 64 MiB 上限；超限明确拒绝续执行，不能截断作证。 */
 export const nativeSessionByteLimit=64*1024*1024;
@@ -37,9 +37,12 @@ export class NativeSessionFiles {
       const bytes=Buffer.concat(chunks),text=bytes.toString('utf8');if(!bytes.equals(Buffer.from(text))||!text.endsWith('\n'))fail('MEMBER_CHECKPOINT_NATIVE','原生上下文编码或尾行不完整');
       const lines=text.trimEnd().split('\n');if(lines.length>100000)fail('MEMBER_CHECKPOINT_NATIVE','原生上下文记录数量超过核实上限');
       let header:Record<string,unknown>;try{header=JSON.parse(lines[0]);if(!header||typeof header!=='object'||Array.isArray(header))throw Error('invalid header');for(const line of lines.slice(1)){const item=JSON.parse(line);if(!item||typeof item!=='object'||Array.isArray(item)||typeof item.type!=='string')throw Error('invalid entry')}}catch{fail('MEMBER_CHECKPOINT_NATIVE','原生上下文存在损坏记录，不能续执行')}
-      if(this.engine==='pi'){if(header.type!=='session'||header.id!==session.nativeSessionId)fail('MEMBER_CHECKPOINT_NATIVE','原生上下文身份与成员通道不一致')}
-      else if(this.engine==='claude-code'){const entries=lines.map(line=>JSON.parse(line)),identified=entries.filter(entry=>typeof entry.sessionId==='string');if(path.basename(file)!==session.nativeSessionId+'.jsonl'||!identified.length||identified.some(entry=>entry.sessionId!==session.nativeSessionId))fail('MEMBER_CHECKPOINT_NATIVE','Claude Code 上下文身份与成员通道不一致')}
-      else {const payload=header.payload as Record<string,unknown>|undefined;if(header.type!=='session_meta'||payload?.id!==session.nativeSessionId||!path.basename(file).endsWith('-'+session.nativeSessionId+'.jsonl')||lines.slice(1).some(line=>JSON.parse(line).type==='session_meta'))fail('MEMBER_CHECKPOINT_NATIVE','Codex 上下文身份与成员通道不一致')}
+      const format=engineDescriptor(this.engine).nativeHistoryFormat;
+      if(format==='pi'){if(header.type!=='session'||header.id!==session.nativeSessionId)fail('MEMBER_CHECKPOINT_NATIVE','原生上下文身份与成员通道不一致')}
+      else if(format==='claude'){const entries=lines.map(line=>JSON.parse(line)),identified=entries.filter(entry=>typeof entry.sessionId==='string');if(path.basename(file)!==session.nativeSessionId+'.jsonl'||!identified.length||identified.some(entry=>entry.sessionId!==session.nativeSessionId))fail('MEMBER_CHECKPOINT_NATIVE','Claude Code 上下文身份与成员通道不一致')}
+      else if(format==='codex'){const payload=header.payload as Record<string,unknown>|undefined;if(header.type!=='session_meta'||payload?.id!==session.nativeSessionId||!path.basename(file).endsWith('-'+session.nativeSessionId+'.jsonl')||lines.slice(1).some(line=>JSON.parse(line).type==='session_meta'))fail('MEMBER_CHECKPOINT_NATIVE','Codex 上下文身份与成员通道不一致')}
+      else if(format==='cbim'){if(header.type!=='cbim_session'||header.version!==1||header.engine!==this.engine||header.id!==session.nativeSessionId||path.basename(file)!==session.nativeSessionId+'.jsonl'||lines.slice(1).some(line=>JSON.parse(line).type==='cbim_session'))fail('MEMBER_CHECKPOINT_NATIVE','领域引擎上下文身份与成员通道不一致')}
+      else fail('MEMBER_CHECKPOINT_NATIVE','未声明可验证的原生会话格式');
       return {byteLength:length,sha256:createHash('sha256').update(bytes).digest('hex')};
     }finally{await handle.close()}
   }

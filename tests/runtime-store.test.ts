@@ -40,3 +40,14 @@ it('rejects symlinks and ZIP path traversal; a failed download removes only its 
     expect(await fs.readFile(path.join(f.source,'.vite/build/main.js'),'utf8')).toContain('startDesktop');
   }finally{await f.cleanup()}
 });
+
+it('同一 E 从旧 C 缓存迁入共享目录，后续不同 C 离线复用；损坏缓存不触发下载循环',async()=>{
+  const f=await runtimeFixture();try{
+    const download=vi.fn(f.download),oldRoot=path.join(f.root,'0.1.1'),sharedRoot=path.join(f.root,'engines'),pkg=f.manifest.engines[0].package,signal=new AbortController().signal;
+    const old=new RuntimeStore(oldRoot,f.cold,download),oldPath=await old.prepare(pkg,signal);expect(download).toHaveBeenCalledOnce();
+    const migrated=new RuntimeStore(sharedRoot,{...f.cold,codeVersion:'0.1.2'},download,[oldRoot]);
+    const shared=await migrated.prepare(pkg,signal);expect(shared).not.toBe(oldPath);expect(download).toHaveBeenCalledOnce();
+    const next=new RuntimeStore(sharedRoot,{...f.cold,codeVersion:'0.1.3'},download);expect(await next.prepare(pkg,signal)).toBe(shared);expect(download).toHaveBeenCalledOnce();
+    await fs.writeFile(path.join(shared,pkg.files[0].path),'broken');await expect(next.prepare(pkg,signal)).rejects.toThrow();expect(download).toHaveBeenCalledOnce();
+  }finally{await f.cleanup()}
+});

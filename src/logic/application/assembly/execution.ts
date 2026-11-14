@@ -1,4 +1,5 @@
 /**
+ * 主模型和附加角色交由同一次引擎配置解析，不重新选择单独角色。
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
  * 公开网页端口仅装配主会话，网络前后核实同一工作区实例；搜索每次使用当前已保存设置。
@@ -18,7 +19,7 @@ import path from 'node:path';
 import type {WebToolsPort} from '../../web';
 import {FileRunStorage} from '../../execution/storage/run-storage';
 import {ChatInputs} from '../../materials/service/chat-inputs';
-import type {LlmProfiles} from '../../models/service';
+import type {EngineModelProfiles} from '../../engines/service';
 import type {Workspace} from '../../workspace/service/workspace';
 import {KernelLock} from '../../../core/platform/node/locking';
 import {guard} from '../../execution/platform/tool-guard';
@@ -46,10 +47,10 @@ import type {ModelRequestBudgetService} from '../../budget/runtime/model-request
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
+export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
-    const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;
+    const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine,options.modelRoles):undefined;
 
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();
@@ -64,7 +65,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
-    requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
+    requestBudget:requestBudgets?({task,runId},role)=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm,role):undefined,
     conversationBinding,
     repositoryTools,
     // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。

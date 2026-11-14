@@ -95,7 +95,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 ## 长期岗位登记的独立装配
 
-`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
+`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `EngineModelProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
 
 岗位登记保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置，不直接创建运行。新业务执行从真实模块责任解析该岗位，核来源、能力和配置后冻结到计划、任务与运行；active 单独不代表可执行。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
 
@@ -265,3 +265,9 @@ canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符�
 ## 主岗位控制面
 
 execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新增主工具只复用本机岗位服务和同一 Store，不管理第二份登记。静态 Agent 的模型引用由用户预先配置，主工具无凭据端口、无批准或安装能力。
+
+### 主 Agent 模型角色
+
+聊天未显式选择模型时，从同一主 Agent revision 捕获 engine、primary 和 modelRoles；显式请求完整校验选型，不从新配置偷偷补其他角色。执行准备将角色交给 EngineModelProfiles，公开运行选项保留引用而不保存凭据。
+
+Application 接收可选冷宿主 engineArtifacts 并持有唯一 EnginePackages；正式主/成员执行共用此解析器，源码运行继续使用原源工厂。初始化先校验本机安装清单，模型凭据与包管理状态独立。

@@ -6,7 +6,7 @@ import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {ClaudeCodeEngine,claudeEnvironment} from '../src/logic/execution/engines/claude/engine';
 import type {EngineContext,EngineEvent} from '../src/logic/execution/rules/types';
-import type {ResolvedLlm} from '../src/logic/models';
+import type {ResolvedEngineModel} from '../src/logic/engines';
 
 const roots:string[]=[];
 test('real Claude stop cancels an in-flight provider request and does not claim completion',async()=>{
@@ -20,7 +20,7 @@ test('real Claude stop cancels an in-flight provider request and does not claim 
   }finally{await engine.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },30000);
 afterEach(async()=>{for(const root of roots.splice(0)){if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-cc-'))throw Error('unexpected test directory');await fs.rm(root,{recursive:true,force:true})}});
-function model(baseUrl:string):ResolvedLlm{return {apiKey:'test-only-api-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl,auth:'api-key',model:'vendor/qwen-custom-2026',contextWindow:200000,maxTokens:4096,reasoning:false}}}
+function model(baseUrl:string):ResolvedEngineModel{return {apiKey:'test-only-api-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl,auth:'api-key',model:'vendor/qwen-custom-2026',contextWindow:200000,maxTokens:4096,reasoning:false}}}
 test('Claude environment freezes the selected endpoint/model and removes inherited auth',()=>{
   const old=process.env.CLAUDE_CODE_OAUTH_TOKEN;process.env.CLAUDE_CODE_OAUTH_TOKEN='must-not-inherit';
   try{const env=claudeEnvironment('home',model('https://example.com/v1'));expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();expect(env.ANTHROPIC_BASE_URL).toBe('https://example.com');expect(env.ANTHROPIC_MODEL).toBe('vendor/qwen-custom-2026');expect(env.ANTHROPIC_API_KEY).toBe('test-only-api-key')}finally{if(old===undefined)delete process.env.CLAUDE_CODE_OAUTH_TOKEN;else process.env.CLAUDE_CODE_OAUTH_TOKEN=old}

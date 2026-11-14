@@ -1,3 +1,161 @@
+## 2026-11-14 0.1.17 正式发布前分支汇合
+
+用户要求公开通道自动升级与正式发布，并明确同意必须先公开版本、随后立即验收真实公开升级。合入已发布主线 15d27f4b 的验收进程/CI 调度改进，保留本分支的共享 E 缓存、0.1.16 输入及主 Agent/自动化保留检查；文档与三个 Skill 入口的独立追加均保留。未吸收产品变化，候选 0ae674ac 的源码、依赖、品牌、版本日志与构建入口相同。后补设计/验证记录保持为冻结副本外的维护文档。
+
+冲突涉及验收导入、输入测试和资料，明确运行进程、真实 Electron、Windows 退出、调试连接、输入、网络及 CI 分流 7 套测试，共 129 项通过；pnpm check:test-modules 518 文件通过，脚本语法与多入口一致性核对通过。原 0.1.17 未签名 Windows 候选 pnpm verify:desktop ... --unsigned 重新核验成功。完整发布 PR 检查、正式公开及在线升级结果按本轮新回执记录。
+
+## 2026-11-14 引擎架构最终完整 CI、真实模型与安装验收通过
+
+用户要求的分支推送与三类验收已完成，向量模型按后续明确选择另验。最终验证提交 a53171c3c92b3b384741bbacfb67d43191cb0982 的完整 CI 43568765411 成功：515 文件、3469 通过、0 失败、2 个因固定旧 EXE 缺失而跳过的既有条件测试；四片、静态及完整覆盖汇总均通过。
+
+同一冻结候选 0ae674acf5b0582234f5f1ae1b1ad5358198a8bf：真实 DeepSeek/Pi 双话题主成员协作及自然重开无重放通过；六项 EXE 隔离、四 E 公开下载字节核验通过；补齐能力保留后的隔离安装 43568768368 成功，全新安装与 0.1.16→0.1.17 覆盖升级保留主 Agent、自动化及其余数据，0 页面错误、无重放。详情、源码差异、首次失败及完整制品回执见 [验收记录](verification/engine-architecture-acceptance-20261114.md)。
+
+0.1.17 保持草稿 445084616；只追加了候选依赖的不可变 E 附件，未启用独立 E 索引，未公开桌面版、合并 master 或修改官网/更新通道。公开自动升级和差分下载未验，不把候选覆盖升级算作在线通道验收。本次收尾仅文档，不运行产品测试或重建候选。
+
+## 2026-11-14 安装验收的旧版本能力覆盖修正
+
+回读 43568253630 报告发现：0.1.16 虽通过升级输入校验，但验收器另两处旧版本清单止于 0.1.15，导致主 Agent/自动化显示 not-applicable，且未断言旧安装缓存。该首次成功仅覆盖报告中明确列出的项目，不能视为上述两项通过。
+
+将已核实旧版本作为共同前提，acceptanceRetentionChecks 对其已有能力统一选择旧缓存、主 Agent 配置和自动化保留检查，未核实未来版本仍拒绝。pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default 通过 68 项，包括能力引入边界、0.1.16 完整覆盖及未知版本拒绝。产品与冻结候选不变；重跑同一草稿的隔离安装与完整 CI，旧证据保留。
+
+## 2026-11-14 官方引擎架构完整 CI 契约校准
+
+首次完整四片运行 43567438913（ab54c81e）覆盖 515 文件：3456 通过、2 失败、2 条件跳过。两处失败均核实为迁移后的旧断言：core-layer-contracts 未允许仅含静态描述与选型规则的 logic/engines 便携入口，具体适配器仍只允许 execution/assembly；engine-configuration 的 Chat 协议表遗漏已登记 memory。只调整精确入口和预期表，保留向量必填及停用模型拒绝。
+
+明确选择 pnpm exec vitest run tests/core-layer-contracts.test.ts --reporter=default（2 项）及 pnpm exec vitest run tests/engine-configuration.test.ts tests/unit/logic/engines/model-choices.test.ts --reporter=default（17 项），全部通过。未改产品、依赖或构建配置；本次修改为两套测试与本记录，原 0ae674ac 冻结候选保持不变，下一完整 CI 使用此验证提交。候选内 design 副本保持冻结版本，后补开发记录不在旧制品内，不声称所有资源字节与后续仓库完全相同。
+
+同一候选真实 DeepSeek/Pi 主成员双话题验收、只读重开无重放、六项 EXE 隔离和公开 E 下载摘要已通过；隔离安装运行 43568253630 成功，详细报告另存本轮验证记录。候选 Release 445084616 保持 draft，未切换桌面通道或独立 E 索引。
+
+## 2026-11-14 引擎架构分支推送与安装验收准备
+
+按用户明确要求推送 refactor/engine-model-catalog，远端 ab54c81ed08609906d3c0ec6b4f242e36983a39c；完整 Windows 四片 CI 43567438913 已派发，待真实结果。公开桌面当前为 0.1.16；准备新 C 0.1.17 草稿，沿用已确认的 Windows unsigned 模式和原 Ed25519 身份（只核公钥摘要），不更新公开桌面/资源索引。
+
+核对 desktop-v0.1.16 的更新交互与现源无差异后，验收输入补充实际上一版；带 adapter 声明的 E 从真实共享缓存核对，旧格式保持原 C 目录。pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default 通过 59 项；同步三个发布入口及候选说明。仅版本、验收和资料变更，产品源码不变；完整 CI 将在最终验证提交另核。
+
+用户明确本轮只验现有生成模型，向量模型后续另验。安装验收用无用户客户端的独立 Windows runner；不会安装到开发者机器或改生产配置。
+
+## 2026-11-14 记忆引擎 1.1.0 实际候选回执
+
+干净源码 94cccf9239abcc6b676274ee71d3fc9490ad08ba 执行 pnpm make:engines memory 成功。候选位于 build/runtime/engines-qXjCbm，适配器/原生版本均为 1.1.0，协议 1；ZIP 47650 字节，SHA-256 d5240bd340f98a592aa9e8496a8d9131e89422d3d9df77f69297d87c98246c5b，与实际文件重新读取的大小和摘要一致。包含 adapter.cjs 与 adapter.json，完整清单由 engines.json 保存。
+
+本条只追加已完成构建的证据，不改变冻结源码或该候选身份。候选未签名、未上传、未发布，也未替换桌面安装；外部模型、完整 CI、首次新 C 安装及公开升级仍未执行。
+
+## 2026-11-14 引擎包声明与资源选型的一致性收尾
+
+四个官方适配器版本提高到 1.1.0，将代码静态能力声明同时编译进 adapter.cjs 并写入 adapter.json，纳入完整归档校验。正式加载在 create 前核对 R/E 的模型协议、额外角色、原生格式与依赖语义；旧包缺声明或不匹配时明确拒绝，不自动下载、回退或启动。显示名称/业务介绍不参与执行语义比较。兼容实现升级可以单独发布 E；模型策略变更需配套 R/E，不改变通用冷壳。这些首次包版本尚未公开发布。
+
+本次变更影响包构建/加载与冷壳隔离，选取 pnpm exec vitest run tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts tests/engine-build-cli.test.ts --reporter=default：3 个套件通过，实际构建四包并加载、构造/关闭；拒绝缺失或不匹配声明，接受纯展示变化；memory 真实 ZIP、tsx 命令入口及新增登记前后冷壳实际构建摘要均覆盖。pnpm typecheck、pnpm check:architecture（1578 文件/7569 依赖，0 环/违规）、pnpm check:test-modules（515 文件）通过。
+
+源码注释、执行契约和受影响类图同步，设计方案的实施状态及独立包发布说明已校准。3c6e311a 上的真实 make:engines memory 已成功生成 1.0.0 本地候选；该候选未发布，因声明变更不再作为最新候选。下一次实际命令须使用本次提交后的干净源码生成 1.1.0 并单独记录回执。本次未运行全量回归、GitHub CI、外部模型或桌面公开升级验收。
+
+
+## 2026-11-14 独立引擎构建命令的真实入口修正
+
+在已冻结 41b4da1e 上执行 pnpm make:engines memory，发现直接构建函数测试未覆盖 tsx 的 CommonJS/ESM 装载：被导入的 build-engine-adapters.mjs 顶层 await 导致 ERR_REQUIRE_ASYNC_MODULE。改为主入口的显式 Promise 收口，仍保留失败 exitCode，不改变构建或签名语义。再次调用已走到预期 RUNTIME_SOURCE_CHANGED 冻结检查，证明装载恢复；必须先提交当前修正，之后再做成功候选验证。
+
+pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：实际 tsx 子进程可装载，并在写入前拒绝未登记引擎；pnpm check:test-modules 通过（515 文件）。同步清理 packages/CONTRACT 中已过时的后续入口描述并生成对应架构文档。仅入口装载及资料变动，未重复产品测试或类型检查。
+
+## 2026-11-14 引擎架构第 6 步（b）：独立记忆 Loop 与完整应用验证
+
+按继续实施授权，新增 memory 官方包，必填生成/embedding 双模型，真实受控知识读取、带出处语义检索和模型工具决定。知识提交后更新独立向量代际；失败保留已提交事实和调用 ID，不重放。八次模型决定、重复工具阻断、无进展超时及 30 分钟总上限共同限制运行；未知或未结束原生历史拒绝自动续跑。无 SDK 自研运行库与适配器同版，支持独立 ZIP。Forge 改为稳定统一构建入口，后续新增 E 不再修改被冷指纹覆盖的 Forge 清单。
+
+接通时发现 IPC 三个聊天入口残留固定三引擎枚举且缺 modelRoles，现全部从静态清单/角色 Schema 派生。主 Agent 完整草稿固定打开时 revision，冲突保留草稿；记忆角色与可用模型在能力列表显示，窄屏表单纵向排列。原生会话指纹根据静态 nativeHistoryFormat 验证 CBIM 格式，不默认套用 Codex。
+
+验证选择及实际命令：
+- pnpm exec vitest run tests/unit/logic/execution/memory-engine.test.ts tests/unit/logic/execution/memory-protocol.test.ts tests/unit/logic/engines/catalog.test.ts tests/unit/logic/engines/model-choices.test.ts：分别验证本包生命周期/双模型/索引复用/权限/写后索引失败/重复调用/八次上限/静默取消，以及协议、目录与角色筛选（17 个相关用例通过，分批显式执行）。
+- pnpm exec vitest run tests/memory-engine-application.test.ts：2 个隔离完整应用场景通过，实际 HTTP、知识事务、工具回执与真实预算账本；供应商为本地受控测试服务。成功场景角色分别结算；写后 embedding 缺 usage 场景记录 interrupted 和 unknown，正式知识保留，原提交只执行一次。初轮期望误写为 failed，按现有未知语义改为 interrupted，未改产品逻辑掩盖失败。
+- pnpm exec vitest run tests/model-json-requests.test.ts tests/native-session-files.test.ts tests/ipc-requests.test.ts：5/11/19 个通过，覆盖新增输入界限、原生格式、发送/排队/续聊完整角色参数。
+- pnpm exec vitest run tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts：四包真实独立构建/加载，memory 无厂商依赖 ZIP；R 不含实现，C 不含目录或 SDK，增加 memory 静态声明前后 C 构建字节摘要一致。
+- pnpm exec vitest run tests/dependencies.test.ts -t "concrete engines depend|记忆包仅|引擎目录、模型"：23 个通过。仅 memory/storage 可调用公开原子文件机制，其它适配器不能借此获得平台访问边界。
+- node scripts/memory-engine-ui-smoke.mjs：5 项真实 React/Edge 检查、零 pageErrors；375px 截图已人工查看。第一次夹具缺合法主实例身份，已修正夹具后通过。
+- pnpm typecheck、pnpm check:test-modules（514 文件）、pnpm check:architecture（1577 文件/7562 边，零循环/违规）通过；源码注释、相关契约和受影响架构资料同步。
+
+首版限制：纯文本；最多 128 个 768 字符知识片段；缓存 16 MiB、会话 1 MiB；保留旧索引，不自动清理或迁移未完成原生上下文。未调用外部真实模型、未运行全仓回归、未签名发布/安装生产版本。上述本地证据不等同真实供应商质量或桌面升级验收。
+
+## 2026-11-14 引擎架构第 6 步（a）：双模型请求与派生索引
+
+按用户继续实施授权，加入非流式生成/向量请求门禁与纯知识索引规则。正式知识不变，完整来源/embedding 配置/维度固定索引代际；失败不改旧代。请求共用单轮停止屏障，预算启用时精确比对角色快照并先结算后交付，无重试。
+
+验证选择：传输与预算快照为跨模块契约（tests/model-json-requests.test.ts，5 个），索引为 knowledge/rules 单元（3 个），复用的 SSE 用量解析消费者（12 个）；对应显式 vitest run 通过。初轮测试重复消费同一 Response 已修为每次创建响应；未修改产品规则绕过失败。pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过（1568 文件/7528 边，零循环）；细粒度预算入口登记后运行 dependencies.test.ts -t "concrete engines depend" 通过。代码注释、models/knowledge/transport 架构及相关 CONTRACT 同步。
+
+本步未运行完整应用、外部模型、桌面发布或全量回归；下一切片消费这些能力实现记忆 Loop，不把纯规则验证称为真实供应商验收。
+## 2026-11-14：切片 5b——模型能力表单与多角色选择
+
+- 基线 a575e26a。模型设置提供独立向量接口、输入容量/维度/输入价；既有供应商编辑保留 embedding，纯向量供应商可保存。连接预览与测试改为按模型操作及接口，不要求选择引擎，旧 models.test 契约继续兼容。
+- modelRoleChoices / engineSelectionAvailable 统一模型角色预览；Agent 选择器按能力、协议、型号白名单及启用状态筛选。主对话新增完整配置草稿，复用同一主 Agent 设置入口；多角色一次提交，旧缺省选型继续沿原 Pi/默认模型规则。当前三引擎没有额外必填角色，记忆引擎切片将消费该入口。
+- 精确验证：pnpm exec vitest run tests/provider-connections.test.ts tests/unit/logic/engines/model-choices.test.ts tests/unit/logic/models/embedding-test.test.ts --reporter=dot，6/6。模型服务用隔离 fetch 回执验证真实保存/解析与向量请求、维度错误，不访问外部端点。models-actions、main-agent-settings、owner-model-configuration 三文件 11/11；补充 action schema 后单跑 model-actions -t 请求目录 1/1；dependencies -t 模型 43/43。
+- node scripts/model-capabilities-ui-smoke.mjs：真实 React/Edge 隔离界面 4 项通过，编辑保留向量、容量维度分离、纯向量保存、按操作测试；pageErrors=[]。pnpm typecheck、pnpm check:test-modules（509 文件，156/157/196）和 pnpm check:architecture（1564 文件，7515 边，无环/违规）通过。首次类型检查发现对话选型 null 与旧测试回执字段，均已修正。
+- 同步模型服务、引擎规则、桥契约/IPC、设置、组件及对话的注释/契约/类图。没有调用生产模型、生成正式包或安装发布；多角色真实引擎链路与预算继续在记忆纵向切片验收。
+
+## 2026-11-14：切片 5a——引擎能力支持列表
+
+- 基线 acd94516。设置新增官方引擎列表，显示业务专长、支持模型范围、已配置可用模型、活动/候选版本、引用与依赖；显式检查、添加/更新、启停和移除。无自定义 URL/路径入口，源码模式明确不管理正式包。
+- 公开修改带 revision，安装同时带显示的准确候选摘要；过时设置/版本在下载前拒绝。操作失败刷新真实状态并保留原因，不自动重试；原模型草稿独立。状态投影无加载地址或密钥。
+- 精确验证：pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/engine-settings-ipc.test.ts --reporter=dot，8/8；node scripts/engine-settings-ui-smoke.mjs 用真实 React/Edge 无头页面及隔离 IPC，4 项（模型显示、准确候选提交、启停、依赖移除失败）通过、pageErrors=[]。pnpm exec vitest run tests/dependencies.test.ts -t 引擎 --reporter=dot 通过。
+- pnpm typecheck、pnpm check:test-modules（507 文件，154/157/196）、pnpm check:architecture（1558 文件，7498 边，无环/违规）通过。首次边界检查发现纯状态类型未登记跨模块入口，补充精确端口边与正反例，未开放服务访问。同步引擎、包服务、桥契约、IPC 与设置目录注释、契约和类图。
+- 本步未执行真实官方包下载、用户安装、外部模型或全仓回归；向量模型编辑与多角色选择是下一切片。
+
+## 2026-11-14：切片 4c——独立引擎发布候选
+
+- 基线 53e28bdc。make:engines 接受可选官方引擎 ID，只构建目标与声明依赖；输出区分包版本、上游版本、摘要。新增 sign:engines：源码冻结、归档摘要/完整展开文件核实后，以现有冷基础公钥对应私钥签名独立 E 索引；不上传或修改公开通道。
+- 索引合并保留其它引擎与历史准确依赖，同版覆盖、回退序号、错误信任根、未登记引擎和缺依赖拒绝。开发者流程归档在 design/task/engine-package-release.md，先不可变包后公开索引，生产发布仍需实际安装及同 C/R 的 E 更新验收。
+- 选取签名构建与原归档消费者：pnpm exec vitest run tests/engine-release.test.ts tests/runtime-packaging.test.ts --reporter=dot，5/5。pnpm typecheck、pnpm check:test-modules（506 文件，154/156/196）、pnpm check:dependencies（1554 文件，7486 边，无环/违规）通过。仅 scripts、配置、测试和设计记录变更，不修改产品源码类图。
+- 本轮未调用生产私钥、未构建完整 SDK 归档、未上传或发布 E。真实公开发布验证留在发布阶段。
+
+## 2026-11-14：切片 4b——独立 E 索引与官方包生命周期
+
+- 基线 8d35b7d3。按“继续依次实施后面的步骤”推进。EngineArtifacts 冷服务只验签、保存发布来源与准确摘要准备；独立 E 索引绑定公钥/平台、单调序号、唯一版本和完整无环依赖，不绑定 C/R。保留旧 C/R 签名仅用于证明历史 E，跨 C 可离线定位原包；清缓存不重置版本序号。
+- Application 持有 EnginePackages，本机安装清单与模型设置分离。先准备完整依赖再原子激活，失败保留旧版和原因；首次使用失败跨重开不自动重下。Codex 固定制品声明的 Pi 摘要，不跟随 Pi 活动版。运行引用直到 close 成功才释放，运行引用/启用依赖阻止移除；移除保留历史缓存。尚未启动的任务遇到已停用引擎明确失败，不换引擎或重新安装。
+- 验证按管理状态、签名来源、恢复包装器、实际构建和边界选择：pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/unit/logic/updates/engine-index.test.ts tests/unit/logic/updates/engine-artifacts.test.ts tests/engine-runtime-binding.test.ts tests/unit/logic/engines/catalog.test.ts --reporter=dot，5 文件 16/16。补充运行 tests/unit/logic/updates/engine-index.test.ts tests/engine-runtime-binding.test.ts tests/runtime-journal.test.ts tests/codex-engine.test.ts tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts tests/dependencies.test.ts，功能 12/12，检查器首次 172/173；发现 Node 文件入口放行过宽后收窄为单个索引存储入口，单独重跑 dependencies 173/173。C/R 真实构建仍无具体引擎或 SDK，C 无静态目录。
+- pnpm typecheck、pnpm check:test-modules（505 文件，154/155/196）及 pnpm check:architecture 通过。同步 Application、bootstrap、engines/packages、目录声明、装配、运行契约与 updates 的注释、契约和类图。类型首次发现新目录相对导入层数错误，已修正。
+- 本切片没有完整安装包、公开签名发布、生产安装、外部模型或全仓回归。独立开发者发布命令和设置界面继续按后续切片接通；未更新无关 Issue。
+
+## 2026-11-14：切片 3b/4a——正式包加载与跨 C 缓存
+
+- 基线 2cd2a595。正式 R 构建用拒绝回退的模块替代源码兼容表，运行只从可信冷宿主返回的 E 根加载 adapter.cjs，核身份/协议/适配器版本；各 SDK 入口和版本仍分别保留。引擎归档流程包含独立适配器，签名清单校验通用 ID 和声明入口，不再硬编码三种引擎。
+- E 缓存迁出 codeVersion 目录；相同内容在安装/用户身份下共享。旧 C 缓存按精确摘要和完整文件校验迁移，目标再次验证；损坏时明确失败而不自动删除或重下。资源预下载不再隐式更新 E。旧 R 恢复日志仍按 C 隔离，新冷宿主协议需要后续正式冷更，当前用户安装版未动。独立 E 版本通道与添加/移除管理还在下一切片。
+- 精确验证：engine-adapter-package、runtime-manifest、runtime-store、runtime-updates、runtime-packaging 共 5 文件 13/13；engine-production-boundary 1/1 实际构建 R 装配和 C，核产物模块清单没有具体适配器/厂商 SDK，C 也没有支持清单；dependencies 169/169。缓存回归覆盖旧 C 迁移、后续 C 离线命中、坏缓存无重下载。pnpm typecheck、pnpm check:test-modules（502 文件，151/155/196）、pnpm check:architecture（1543 文件，7449 依赖，无环/无违规）通过。
+- 同步 execution/assembly、rules、engines、updates 及 bootstrap 的注释、契约、目录类图和源码加载边；构建测试使用临时目录，无完整安装包、签名发布、外部模型、全仓回归或生产安装验收。
+
+## 2026-11-14：切片 3a——统一引擎包工厂与独立构建
+
+- 基线 8c302ecf；按用户授权继续运行协议切片。新增 engine-adapter.ts 版本 1 契约，三引擎各自 package.ts 拥有工厂和适配器版本。loop-engine 不直接选择具体构造器，Pi 启动脚本/SDK 校验移入 Pi 包；保留受管版本、开发 override、工具权限、取消与历史规则。主/成员装配传播可选预算角色，primary 缺省不变。
+- build-engine-adapters.mjs 按开发者入口单独生成 adapter.cjs/adapter.json；集成测试真实构建并加载三份产物，构造和关闭不发模型请求。动态构建产物加载登记为源码边，不使用外部豁免隐藏依赖。此步仍保留源码/旧宿主兼容表；生产归档、签名包加载和通用冷壳在后续切片接通。
+- 按工厂和生命周期受影响路径执行 pnpm exec vitest run tests/engine-adapter-package.test.ts tests/loop-engine.test.ts tests/claude-engine.test.ts tests/codex-engine.test.ts tests/engine-inactivity.test.ts tests/engine-runtime-binding.test.ts --reporter=dot：6 文件 30/30；pnpm exec vitest run tests/application-member-pi.test.ts tests/dependencies.test.ts --reporter=dot：170/170，包括真实 Pi 子进程和确定性本地供应商的审批、结果候选、收件回收与重开。无外部模型请求。
+- pnpm typecheck、pnpm check:test-modules（501 文件，151/155/195）、pnpm check:architecture（1538 文件，7438 依赖，无环/无违规）及 diff 检查通过。同步 execution 的 rules/assembly/engines 各相关目录、Application 装配注释及契约类图。未跑全仓、公开 CI、完整桌面安装/升级；继续生产包与生命周期迁移。
+
+## 2026-11-14：切片 2c——生成/向量逐角色预算
+
+- 基线 59366dc7。预算角色从完整冻结执行快照派生；primary 保留旧形状，额外角色同时保存角色配置 hash 与完整绑定 hash，成员 Store 审计逐字段核容量、身份、价格。向量只有输入容量、维度与输入价格，不假造输出上限；请求 maxOutputTokens=0 仅对向量合法。旧生成账本不补字段、不重算历史。
+- 同周期全部角色共享原准入、可靠阶段和未知停止屏障；向量不得报告输出/缓存用量。请求结果未知或结算不可验证时保留预留，重开不释放或重试。生成 SSE 传输明确拒绝向量操作；向量 HTTP 的实际消费留在记忆引擎切片，预算服务不联网。
+- 按受影响规则、服务、传输和原周期消费者运行 pnpm exec vitest run tests/unit/logic/budget/model-role-rules.test.ts tests/unit/logic/budget/model-role-service.test.ts tests/model-request-budget.test.ts tests/model-request-budget-transport.test.ts tests/model-request-budget-usage.test.ts tests/request-budget-ports.test.ts tests/scope-usage-service.test.ts --reporter=dot：7 文件 43/43。覆盖角色价格伪造、完整绑定切换、向量计量、跨角色未知屏障与重开未决。
+- 新公开规则只加入预算服务原精确依赖白名单；服务改为消费无凭据公开预算配置，不依赖引擎服务。检查器 168 个用例先通过，仓库审计发现残留类型 import 后修正并单跑该用例通过（总 169）。最终 pnpm typecheck、pnpm check:test-modules（500 文件，151/155/194）、pnpm check:architecture（1530 文件，7418 依赖，0 循环/违规）通过。同步 budget/rules、budget/runtime、transport 的注释、契约和类图；未跑全仓、SDK、桌面或发布验收。
+
+## 2026-11-14：切片 2b——Agent V2 角色引用与完整执行快照
+
+- 延续用户“依次实施后面的步骤”授权，基线 8cb0d5f7；本步仍在独立工作树开发，未动原 develop 发布资料。primary 保持原字段唯一事实，V2 modelRoles 只保存额外角色；官方声明控制必填、操作类型和型号范围，不允许用户注册角色或覆盖 primary。
+- EngineModelProfiles 用同一模型短锁捕获全部角色，公开预览修改不能污染实际解密结果；回调结束缓存失效。Agent 设置、岗位采纳、自动兜底、队列、续接、恢复与主对话完整传递角色，公开快照不含凭据。历史字段和指纹不回填。当前代码引擎无额外角色，编辑 UI/向量 IO/逐角色预算留在后续切片。
+- 验证选择依据为新增纯角色规则、配置锁、主设置、岗位及直接消息/执行消费者。执行 pnpm exec vitest run tests/unit/logic/engines/model-roles.test.ts tests/engine-configuration.test.ts tests/main-agent-settings.test.ts tests/workspace-member-service.test.ts tests/workspace-member-core.test.ts tests/owner-execution-service.test.ts tests/member-execution.test.ts tests/message-queue.test.ts tests/scope-continuation.test.ts --reporter=dot：83/83。新增岗位 V2 真事务回归发现 Store 仍把角色变化当同一引用，补齐注册、修改、刷新审计中的角色核对；重跑 workspace-member-service/core 两套 27/27（合计 84 个不同用例）。
+- pnpm typecheck、pnpm check:test-modules（498 文件，149/155/194）、pnpm check:architecture（1527 文件、7404 依赖、0 违规/循环）及 diff 空白检查通过。首次架构检查的服务私有入口已改为公开导出。同步所有受影响源码注释、目录类图和契约；模型快照归模型模块，角色政策归引擎，岗位状态归 Team。未跑全仓、真实模型、桌面安装或公开 CI；继续第 2 步预算与后续包边界。
+
+## 2026-11-14：切片 2a——向量模型能力与跨角色原子准备
+
+- 用户明确授权依次实施后续步骤；复核独立工作树 1891ce1a 与开放 Issues（仍只有无关 #65），继续在 refactor/engine-model-catalog 推进，未改原 develop 的发布/官网收尾资料。为使第 2 步可逐段 review，先交付模型操作边界，再接 Agent V2 与预算。
+- 生成配置与向量配置分开：embedding 显式保存端点、输入容量、维度与输入价格，纯向量供应商无需假造生成型号/defaultModel。端点共用同一校验；新增向量凭据目标必须重新输入 Key，旧配置缺省和生成快照不补 embedding。
+- LlmProfiles.withModelOperations 在原 SerialQueue 中一次读取并捕获全部角色；公开 profiles 不解密，按角色索引延迟解密，原回调结束后缓存同样失效。未知操作、缺失/禁用型号不回退，不联网或自动重试。此步未接入向量请求、Agent 多角色 UI 或任务调度。
+- 依据模型配置及原引擎快照消费者选择验证：`pnpm exec vitest run tests/unit/logic/models/model-operations.test.ts tests/llm.test.ts tests/owner-model-configuration.test.ts tests/engine-configuration.test.ts --reporter=default`：4 文件 38/38；补充未知操作断言后仅重跑新套件 4/4。首次类型检查发现异构 profile 容器的联合类型定义不匹配，改为模型模块拥有的 ResolvedModelOperation 契约后通过。
+- 最终 `pnpm typecheck`、`pnpm check:test-modules`（497 文件，148/155/194）、`pnpm check:architecture`（1523 文件、7392 依赖、0 循环/违规）及 diff 空白检查通过。同步 models、models/service 文件头、接口语义、契约和类图；新增 endpoint.ts/embedding.ts 及责任单元登记。未跑全仓 CI、SDK 联网或桌面发布验收，继续实施第 2 步剩余绑定与预算。
+
+## 2026-11-14：切片 1——引擎与模型解耦、官方静态清单
+
+- 来源为用户明确授权“先做引擎与模型解耦和静态清单”；实施前读取开放 Issues，只有无关 #65，未新建或回填无关工单。本步在独立分支 refactor/engine-model-catalog、基线 74019e20 开发，保留原工作树的 0.1.16 发布收尾资料。[完整目标方案](task/domain-agent-loop-engine-architecture.md) 保留后续切片边界，本次不自动实施其余阶段。
+- Logic 新增 engines：catalog/supported-engines.ts 用只读 TypeScript 静态声明统一 Pi、Claude Code、Codex 的身份、显示名、业务类型和支持协议；枚举和兼容投影从清单派生。模型模块只保留供应商、模型、通用 ModelConnectionRequirement 和凭据服务，AgentModelSelection 归 Team。旧 definition.engine 使用冻结读取 schema，不参与选型、不随未来引擎扩展。
+- EngineModelProfiles 组合原 LlmProfiles，复用唯一配置队列与锁内延迟解密；ResolvedEngineModel 组合可选 engine，旧缺省快照不补字段、不改哈希。Application、主 Agent 设置、岗位/领取、执行装配和 Bridge/View 迁移到对应入口。models.test 的公开请求/回执保持兼容，内部由引擎服务投影。模型模块禁止反向依赖引擎，静态清单禁止加载 SDK/平台，冷启动及更新模块禁止导入新清单。
+- 行为与验证选择：静态目录及通用连接为责任单元；引擎/模型、SSR 选型和历史快照为契约；主 Agent、IPC、岗位与领取为受影响的应用集成。先运行 `pnpm exec vitest run tests/unit/logic/engines/catalog.test.ts tests/unit/logic/models/provider-connections.test.ts tests/engine-configuration.test.ts tests/provider-connections.test.ts tests/llm.test.ts tests/owner-model-configuration.test.ts tests/model-actions.test.ts tests/main-agent-settings.test.ts tests/workspace-member-service.test.ts tests/dependencies.test.ts --reporter=dot`：10 文件、238/238。再核执行装配直接消费者 `pnpm exec vitest run tests/owner-execution-service.test.ts tests/member-execution.test.ts --reporter=default`：2 文件、27/27。共 265/265，保留重复启动、失败上限、停止屏障、原回执复用及恢复不重放断言。
+- 静态验证：`pnpm typecheck` 通过；`pnpm check:test-modules` 通过（496 文件，unit=147 / contract=155 / integration=194）；`pnpm check:architecture` 通过（1520 文件、7381 条依赖、0 循环、0 违规）。首次类型检查用于定位尚未迁移的调用方和测试夹具，迁移后通过；首次依赖检查发现 model-actions 缺少新 engines 桥入口许可，按实际公开契约补齐后通过。
+- 注释与资料同步：新增 engines 四个目录的文件头、接口语义和类图；更新 models/service、Team 选型、Application/assembly、Bridge、执行及 View 消费目录的类图和对应契约。维护入口为 [引擎契约](../src/logic/engines/CONTRACT.md)、[通用模型连接](../src/logic/models/provider-connections.ts)、[引擎模型服务](../src/logic/engines/service/model-profiles.ts)。状态、凭据和恢复仍由原服务拥有，不增重试、调度器或数据迁移。
+- 验证边界：未运行全仓 CI、真实厂商 SDK 联网、桌面安装/升级或打包；现有界面只迁移契约来源，新增引擎管理页面、多模型角色、已下载包清单、通用冷壳及独立引擎发布属于后续切片。本步不等于整套包架构或发布已完成，不改当前安装版本。
+
 ## 2026-11-14：发布复盘改进——真实升级通过，固定最终完整检查输入
 
 - [PR #76](https://github.com/nan023062/cbim/pull/76) 的隔离在线运行 `43561143963` 通过：六套工具前置 83/83，全新安装/真实 Pi 下载，0.1.15/R1 → R4 → 0.1.16/R1，10 Range/4683509 字节/0 回退，缓存复用、普通退出不安装、十项数据保留/无重放与七个实际 PID 完整关闭。

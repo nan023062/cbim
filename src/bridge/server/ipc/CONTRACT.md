@@ -4,7 +4,7 @@ chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明
 
 ### 模型兼容接口测试
 
-settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 LlmProfiles。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
+settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 EngineModelProfiles，由其向 LlmProfiles 传入协议要求。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
 
 ### 网页设置 IPC
 
@@ -140,3 +140,7 @@ dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecuti
 `loop.topicInterrupt` 仅转交工作区执行管理器的整话题补充入口；错误参数映射 TOPIC_INPUT_INVALID。后端检查原话题并等待真实停止，IPC 返回不是自行签发运行权限；普通 loop.chat/enqueue/resume 保持普通新任务语义。
 
 loop.enqueue 转交明确的 followupOf；IPC 不恢复原话题，执行管理器与派发事务独立核实来源。
+
+settings-handlers 将引擎设置动作交给 Application 的唯一 EnginePackages；开发模式只显示 managed:false，安装动作明确拒绝，不伪造成功。
+
+模型设置的 testConnection 调用模型服务独立接口测试，向量与生成分别派发；旧按引擎诊断继续兼容，设置界面不再依赖它。

@@ -10,15 +10,22 @@ const version=z.string().regex(/^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{
 const asset=z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,180}$/);
 const fileSchema=z.object({path:z.string().min(1).max(600),bytes:z.number().int().min(0).max(2**31),sha256:hash}).strict();
 const packageSchema=z.object({tag:asset,name:asset,bytes:z.number().int().positive().max(2**31),sha256:hash,files:z.array(fileSchema).min(1).max(50000)}).strict();
-const engineSchema=z.object({kind:z.enum(['pi','claude-code','codex']),version,entry:z.string(),package:packageSchema}).strict();
+export const enginePackageSchema=z.object({kind:z.string().regex(/^[a-z][a-z0-9-]{0,47}$/),version,entry:z.string(),adapter:z.object({entry:z.string(),version,protocol:z.literal(1)}).strict().optional(),dependencies:z.array(z.object({kind:z.string().regex(/^[a-z][a-z0-9-]{0,47}$/),identity:hash}).strict()).max(16).optional(),package:packageSchema}).strict();
 const manifestSchema=z.object({schema:z.literal(1),codeVersion:version,resourceVersion:z.number().int().positive(),coldFingerprint:hash,
   platform:z.literal('win32-x64'),createdAt:z.string().datetime(),expiresAt:z.string().datetime(),sourceCommit:z.string().regex(/^[a-f0-9]{40}$/),
-  notes:z.string().max(30000),resource:packageSchema,engines:z.array(engineSchema).length(3)}).strict();
+  notes:z.string().max(30000),resource:packageSchema,engines:z.array(enginePackageSchema).min(1).max(64)}).strict();
 
 export type RuntimeManifest=z.infer<typeof manifestSchema>;
 export type RuntimePackage=z.infer<typeof packageSchema>;
 export type RuntimeFile=z.infer<typeof fileSchema>;
-export type EnginePackage=z.infer<typeof engineSchema>;
+export type EnginePackage=z.infer<typeof enginePackageSchema>;
+/** 通用制品校验不持有支持名单；R 静态清单决定哪些 ID 可被 Agent 选择。 */
+export function validateEnginePackage(engine:EnginePackage){
+  runtimeRelativePath(engine.entry);if(!engine.package.files.some(file=>file.path===engine.entry))throw Error('引擎入口不在清单中');
+  if(engine.adapter){runtimeRelativePath(engine.adapter.entry);if(!engine.adapter.entry.endsWith('.cjs')||!engine.package.files.some(file=>file.path===engine.adapter!.entry))throw Error('适配器入口不在清单中');}
+  const dependencies=engine.dependencies??[];if(dependencies.some(d=>d.kind===engine.kind)||new Set(dependencies.map(d=>d.kind)).size!==dependencies.length)throw Error('引擎依赖无效或重复');
+  validateRuntimeFiles(engine.package.files);
+}
 /** 由安装基础包携带；只有冷更可更换公钥与基础能力指纹。 */
 export interface ColdRuntime {schema:1;codeVersion:string;coldFingerprint:string;platform:'win32-x64';publicKey:string}
 /** payload 保留发布者签名时的准确 UTF-8 字节，避免不同 JSON 序列化产生歧义。 */
@@ -54,7 +61,7 @@ export function verifyRuntimeManifest(raw:unknown,cold:ColdRuntime,options:{now?
   const now=options.now??Date.now();
   if(Date.parse(manifest.createdAt)>now+5*60_000||Date.parse(manifest.expiresAt)<=Date.parse(manifest.createdAt)||(!options.installed&&Date.parse(manifest.expiresAt)<=now))throw Error('更新清单时间无效或已过期');
   const kinds=new Set<string>();
-  for(const engine of manifest.engines){if(kinds.has(engine.kind))throw Error('引擎清单重复');kinds.add(engine.kind);runtimeRelativePath(engine.entry);if(!engine.package.files.some(file=>file.path===engine.entry))throw Error('引擎入口不在清单中');validateRuntimeFiles(engine.package.files);}
+  for(const engine of manifest.engines){if(kinds.has(engine.kind))throw Error('引擎清单重复');kinds.add(engine.kind);runtimeRelativePath(engine.entry);if(!engine.package.files.some(file=>file.path===engine.entry))throw Error('引擎入口不在清单中');validateEnginePackage(engine);}
   validateRuntimeFiles(manifest.resource.files);
   for(const file of manifest.resource.files)if(/\.(exe|dll|node|sys|dylib|so)$/i.test(file.path))throw Error('资源包不能更换冷基础原生文件');
   for(const entry of ['.vite/build/main.js','.vite/build/preload.js','.vite/renderer/main_window/index.html'])if(!manifest.resource.files.some(file=>file.path===entry))throw Error('资源包缺少应用入口');

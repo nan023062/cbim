@@ -51,7 +51,7 @@ app.whenReady().then(async()=>{
   if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
   const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
   updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineRuntimes:runtime,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
   window.on('close',event=>{if(!quitting){event.preventDefault();app.quit()}});

@@ -26,12 +26,15 @@ test('请求目录只承认精确 action，列表与身份读取不接额外私�
   expect(modelActionSchemas['models.test'].parse({id,engine:'claude-code'})).toEqual({id,engine:'claude-code'});
   expect(modelActionSchemas['models.test'].safeParse({id,engine:'other'}).success).toBe(false);
   expect(modelActionSchemas['models.test'].safeParse({id,baseUrl:'https://unexpected.example'}).success).toBe(false);
+  expect(modelActionSchemas['models.testConnection'].parse({id,kind:'embedding',modelId:'vector'})).toEqual({id,kind:'embedding',modelId:'vector'});
+  expect(modelActionSchemas['models.testConnection'].safeParse({id,kind:'generation',modelId:'chat'}).success).toBe(false);
+  expect(modelActionSchemas['models.testConnection'].safeParse({id,kind:'embedding',modelId:'vector',engine:'pi'}).success).toBe(false);
 });
 
 test('实际 IPC 将测试引擎和型号交给同一配置服务',async()=>{
   const f=await fixture(),id='11111111-1111-4111-8111-111111111111';
   const receipt={ok:true,model:'test',engine:'claude-code' as const,api:'anthropic-messages' as const,baseUrl:'https://example.com',latencyMs:1};
-  const probe=vi.spyOn(f.app.models,'test').mockResolvedValue(receipt);
+  const probe=vi.spyOn(f.app.engineModels,'test').mockResolvedValue(receipt);
   try{
     expect(await f.app.dispatch('models.test',{id,modelId:'test',engine:'claude-code'})).toEqual(receipt);
     expect(probe).toHaveBeenCalledExactlyOnceWith(id,'test','claude-code');

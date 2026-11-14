@@ -103,3 +103,7 @@ ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同�
 objectOperation 的发现 Schema 说明摘要 100–250 非空白字符、保留 slug、Module 五章原文、直属内容虚拟节点和 parentId 根语义。约束说明不替代 Rules 的完整候选校验。ObjectCrud 按序应用 operations 到同一候选 Map，后序子对象可引用前序新父对象；预览只保存计划，完整结构诊断保留在 validation.issues。
 
 Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 design/runtime 打包。
+
+## 派生记忆索引
+
+memory-index 只接收已授权的完整知识搜索快照。分块保留 path/hash/字符偏移与原文；代际 key 绑定完整来源、工作区、revision、embedding 公开配置摘要、维度和分块策略。最多 128 个 768 字符片段，超限拒绝而非静默截断。新代所有向量数量、维度及有限非零值通过后才形成可查询副本；旧代不被原地修改。索引不保存凭据、不读正式知识文件、不持有写权限，检索命中是带出处资料，不是新的指令或知识提交。

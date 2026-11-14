@@ -196,7 +196,8 @@
           "tests/workspace-member-tools-pi.test.ts",
           "tests/workspace-navigation.test.ts",
           "tests/workspace-packages.test.ts",
-          "tests/workspace.test.ts"
+          "tests/workspace.test.ts",
+          "tests/memory-engine-application.test.ts"
         ]
       }
     },
@@ -205,7 +206,9 @@
         "src/logic/budget/rules/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/unit/logic/budget/model-role-rules.test.ts"
+        ],
         "contract": [
           "tests/scope-usage-metering.test.ts"
         ],
@@ -342,7 +345,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/knowledge-queries.test.ts"
+          "tests/knowledge-queries.test.ts",
+          "tests/unit/logic/knowledge/memory-index.test.ts"
         ],
         "contract": [
           "tests/knowledge-query-ports.test.ts",
@@ -458,7 +462,10 @@
           "tests/engine-runtime-binding.test.ts",
           "tests/engine-runtime-loader.test.ts"
         ],
-        "integration": []
+        "integration": [
+          "tests/engine-adapter-package.test.ts",
+          "tests/engine-production-boundary.test.ts"
+        ]
       }
     },
     "logic/execution/engines/claude": {
@@ -516,7 +523,8 @@
           "tests/model-request-budget-usage.test.ts"
         ],
         "contract": [
-          "tests/model-capacity-sdk.test.ts"
+          "tests/model-capacity-sdk.test.ts",
+          "tests/model-json-requests.test.ts"
         ],
         "integration": []
       }
@@ -693,7 +701,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/scope-usage-service.test.ts"
+          "tests/scope-usage-service.test.ts",
+          "tests/unit/logic/budget/model-role-service.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -753,7 +762,9 @@
         "src/logic/tasks/runtime/"
       ],
       "tests": {
-        "unit": ["tests/office-history-service.test.ts"],
+        "unit": [
+          "tests/office-history-service.test.ts"
+        ],
         "contract": [
           "tests/command-verification-service.test.ts"
         ],
@@ -822,7 +833,9 @@
           "tests/nsis-differential-download.test.ts",
           "tests/nsis-updater.test.ts",
           "tests/release-http.test.ts",
-          "tests/update-restart-profile.test.ts"
+          "tests/update-restart-profile.test.ts",
+          "tests/unit/logic/updates/engine-index.test.ts",
+          "tests/unit/logic/updates/engine-artifacts.test.ts"
         ],
         "contract": [
           "tests/runtime-download.test.ts",
@@ -1296,7 +1309,6 @@
           "tests/unit/logic/models/provider-connections.test.ts"
         ],
         "contract": [
-          "tests/engine-configuration.test.ts",
           "tests/provider-connections.test.ts"
         ],
         "integration": []
@@ -1310,7 +1322,9 @@
       "tests": {
         "unit": [
           "tests/llm.test.ts",
-          "tests/owner-model-configuration.test.ts"
+          "tests/owner-model-configuration.test.ts",
+          "tests/unit/logic/models/model-operations.test.ts",
+          "tests/unit/logic/models/embedding-test.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1490,6 +1504,65 @@
       "tests": {
         "unit": [
           "tests/budget-settings.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/engines": {
+      "roots": [
+        "src/logic/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/engines/catalog.test.ts",
+          "tests/unit/logic/engines/model-roles.test.ts",
+          "tests/unit/logic/engines/model-choices.test.ts"
+        ],
+        "contract": [
+          "tests/engine-configuration.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "logic/engines/packages": {
+      "roots": [
+        "src/logic/engines/packages/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/engines/packages.test.ts"
+        ],
+        "contract": [
+          "tests/engine-settings-ipc.test.ts"
+        ],
+        "integration": []
+      }
+    },
+    "tooling/engine-release": {
+      "roots": [
+        "scripts/engine-release.ts",
+        "scripts/sign-engines.ts",
+        "scripts/make-engines.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/engine-release.test.ts"
+        ],
+        "integration": [
+          "tests/engine-build-cli.test.ts"
+        ]
+      }
+    },
+    "logic/execution/engines/memory": {
+      "roots": [
+        "src/logic/execution/engines/memory/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/execution/memory-engine.test.ts",
+          "tests/unit/logic/execution/memory-protocol.test.ts"
         ],
         "contract": [],
         "integration": []

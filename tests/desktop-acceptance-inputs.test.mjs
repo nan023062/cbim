@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const retryCheck={currentVersion:'0.1.15',enabled:true,phase:'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};
 it.each(['idle','available'])('observes the real automatic check retry from %s without treating it as ready',phase=>{
@@ -43,7 +43,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.18',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.17'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -100,3 +100,13 @@ it.each(['candidate','online'])('accepts 0.1.9 to A with the original automatic 
 it.each(['candidate','online'])('accepts A to B as background prefetch with explicit installation in %s mode', mode => {
   expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.11', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.10', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousUpdateFlow:'prefetch', mode});
 });
+
+it.each(['candidate','online'])('pins the released 0.1.16 prefetch client for the generic engine host in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.17',previousVersion:'0.1.16',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
+});
+
+it.each([['0.1.0',false,false],['0.1.6',false,false],['0.1.7',false,true],['0.1.11',false,true],['0.1.12',true,true],['0.1.15',true,true],['0.1.16',true,true]])('retains every existing capability of %s', (version,installerCache,mainAgentAndAutomation)=>{
+  expect(acceptanceRetentionChecks(version)).toEqual({installerCache,mainAgentAndAutomation});
+});
+it.each(['0.1.17','0.2.0'])('rejects an unverified retention source %s', version=>{expect(()=>acceptanceRetentionChecks(version)).toThrow()});

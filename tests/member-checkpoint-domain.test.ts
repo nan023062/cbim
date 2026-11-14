@@ -27,7 +27,7 @@ async function setup(){
   const definition=JSON.parse(snapshot.files.find(item=>item.path===moduleId+'/module.json')!.text);definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await owner.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
   const {registered,model}=await registerServiceOwner(f.app,owner,'.cbim/team/dev',[moduleId]);
-  const store=owner.dispatchStore,service=new WorkspaceDispatchService(owner,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'root'},scopeId='scope',mainRunId='main-run';
+  const store=owner.dispatchStore,service=new WorkspaceDispatchService(owner,store,undefined,undefined,undefined,f.app.engineModels),identity={workspaceId:entry.id,rootSessionId:'root'},scopeId='scope',mainRunId='main-run';
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   await service.openScope(identity,scopeId,{message:'保留同任务续执行'},mainRunId);await service.goals.plan(identity,scopeId,mainRunId,'plan',{expectedRevision:1,objective:'保留同任务续执行',constraints:[],criteria:[{id:'done',text:'验证文件',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',ownerSelection,moduleIds:[moduleId],criterionIds:['done'],reason:'原责任人'}],reason:'原计划'});
   await service.dispatchTask({...identity,commandId:'assign',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',ownerSelection,moduleIds:[moduleId],goal:'原目标',acceptance:[{id:'done',text:'验证文件'}],prerequisites:[]}},scopeId);

@@ -1,37 +1,51 @@
 /**
  * 目录归属：logic/models/service；模型配置与运行快照。
- * 作用定位：本机供应商配置持久化、默认模型选择和连接检测。
+ * 作用定位：本机供应商配置持久化、生成模型选择、跨模型操作原子捕获和连接检测。
  * 设计原因：运行与岗位登记共用实际模型选型；岗位领取在同一配置队列中固定公开参数并延迟解密，与设置修改形成明确先后，凭据不进入登记或任务日志。
- * 运行引擎由调用方独立传入；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
+ * 模型服务只接受协议需求，不读取引擎身份；连接错误保留安全端点与状态诊断，不泄露密钥、查询参数或供应商响应正文，不清空已保存模型目录。
  * 运行、岗位和显式测试在解密前共用接口选择；候选地址不进入运行快照，列表读取不会探测网络。
  */
 import fs from 'node:fs/promises';
 import {SerialQueue} from '../../../core/utility';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
-import {engineLabel,loopEngineSchema,connectionForEngine,parseModelCatalog,connectionSchema,definition,type LoopEngine,type LlmDefinition,type LlmSettings,type SecretCipher,type ResolvedLlm} from '../index';
+import {selectProviderConnection,parseModelCatalog,connectionSchema,definition,type ModelConnectionRequirement,type LlmDefinition,type LlmSettings,type SecretCipher,type ResolvedLlm} from '../index';
 import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../../core/errors';
+import type {ResolvedModelOperation} from '../index';
+export type {ResolvedModelOperation} from '../index';
 export type {LlmDefinition,LlmProfile,LlmSettings,SecretCipher,ResolvedLlm} from '../index';
 interface DiskProfile extends LlmDefinition {id:string;encryptedKey?:string}
 interface ModelFile {version:1;selectedId?:string;profiles:DiskProfile[]}
 /** 明确岗位选型，不允许默认模型或主会话设置参与解析。 */
-export interface ExplicitModelReference {profileId:string;modelId:string;engine?:LoopEngine}
+export interface ExplicitModelReference {profileId:string;modelId:string;connection?:ModelConnectionRequirement}
 /** 只在持锁回调存活期间解析捕获定义；调用方必须先通过预算与占用，返回后不得重新解析。 */
 export interface LockedModelConfiguration {profile:ResolvedLlm['profile'];resolve():ResolvedLlm}
+/** 操作类型由可信角色选型指定，向量模型不按默认生成型号解析。 */
+export type ModelOperationReference=ExplicitModelReference|{kind:'embedding';profileId:string;modelId:string};
+/** 同一读取与配置短锁捕获全部操作；resolve(index) 在回调结束后失效。 */
+export interface LockedModelOperations {profiles:readonly ResolvedModelOperation['profile'][];resolve(index:number):ResolvedModelOperation}
 const fileSchema=z.object({version:z.literal(1),selectedId:z.string().uuid().optional(),profiles:z.array(z.object({id:z.string().uuid(),encryptedKey:z.string().optional()}).passthrough()).max(100)});
 /** 单一纯选型投影；只有运行 resolve 可在选定之后解密，登记调用必须显式给出两个 ID。 */
-function selectConfiguration(data:ModelFile,id?:string,modelId?:string,engine?:LoopEngine){
+function selectConfiguration(data:ModelFile,id?:string,modelId?:string,connection?:ModelConnectionRequirement){
   const definition=data.profiles.find(profile=>profile.id===(id??data.selectedId));if(!definition)fail('LLM_REQUIRED','请先在设置中配置默认大模型');
   const model=definition.models.find(item=>item.id===(modelId??definition.defaultModel)&&item.enabled);if(!model)fail('LLM_MODEL','模型不存在或已禁用');
-  if(engine!==undefined)loopEngineSchema.parse(engine);
-  const connection=connectionForEngine(definition,engine??'pi',model.id);
-  if(!connection)fail('LLM_ENGINE_API',engineLabel(engine??'pi')+' 没有可用的兼容接口，请在模型设置中配置该供应商的兼容接口');
-  const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:connection.api,baseUrl:connection.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
+
+  const selectedConnection=connection?selectProviderConnection(definition,connection,model.id):{api:definition.api,baseUrl:definition.baseUrl};
+  if(!selectedConnection)fail('LLM_CONNECTION_API','没有满足所选协议要求的兼容接口，请在模型设置中配置该供应商的兼容接口');
+  const profile:ResolvedLlm['profile']={id:definition.id,name:definition.name,api:selectedConnection.api,baseUrl:selectedConnection.baseUrl,auth:definition.auth,model:model.id,contextWindow:model.contextWindow,maxTokens:model.maxTokens,reasoning:model.reasoning,
     ...(model.vision===undefined?{}:{vision:model.vision}),...(model.outputLimit===undefined?{}:{outputLimit:model.outputLimit}),...(model.thinkingLevel===undefined?{}:{thinkingLevel:model.thinkingLevel}),...(model.workingContextWindow===undefined?{}:{workingContextWindow:model.workingContextWindow}),...(model.compactionPercent===undefined?{}:{compactionPercent:model.compactionPercent}),...(model.pricing===undefined?{}:{pricing:structuredClone(model.pricing)})};
   // 单次运行只冻结实际接口；不改写供应商主接口或历史快照。
-  if(engine!==undefined)profile.engine=engine;
+
   return {definition,profile};
+}
+/** 向量操作必须具有显式接口、启用型号和真实维度；不从生成模型补造向量能力。 */
+function selectOperation(data:ModelFile,ref:ModelOperationReference):{definition:DiskProfile;profile:ResolvedModelOperation['profile']}{
+  if(!('kind' in ref))return selectConfiguration(data,ref.profileId,ref.modelId,ref.connection);
+  if(ref.kind!=='embedding')fail('LLM_MODEL_ROLE','模型操作类型无效');
+  const definition=data.profiles.find(profile=>profile.id===ref.profileId);if(!definition)fail('LLM_REQUIRED','向量模型供应商不存在');
+  const connection=definition.embedding,model=connection?.models.find(model=>model.id===ref.modelId&&model.enabled);if(!connection||!model)fail('LLM_MODEL','向量模型不存在或已禁用，请明确配置向量接口和型号');
+  return {definition,profile:{kind:'embedding',id:definition.id,name:definition.name,api:connection.api,baseUrl:connection.baseUrl,auth:definition.auth,model:model.id,inputTokens:model.inputTokens,dimensions:model.dimensions,...(model.inputPrice===undefined?{}:{inputPrice:model.inputPrice})}};
 }
 export class LlmProfiles {
   /** 保存与受控选型回调共用本实例队列；失败只拒绝本次调用，不自动重试。 */
@@ -54,7 +68,7 @@ export class LlmProfiles {
     if(r.profile.auth==='api-key'){
       if(r.apiKey){if(!this.cipher?.available())fail('SECRET_STORAGE','系统加密不可用，无法保存 API Key');encryptedKey=this.cipher.encrypt(r.apiKey)}
       else {
-        const addedTarget=r.profile.alternateConnections?.some(connection=>!previous?.alternateConnections?.some(old=>old.api===connection.api&&old.baseUrl===connection.baseUrl));
+        const addedTarget=r.profile.alternateConnections?.some(connection=>!previous?.alternateConnections?.some(old=>old.api===connection.api&&old.baseUrl===connection.baseUrl))||r.profile.embedding&&r.profile.embedding.baseUrl!==previous?.embedding?.baseUrl;
         if(previous&&(previous.baseUrl!==r.profile.baseUrl||previous.api!==r.profile.api||addedTarget))fail('KEY_REQUIRED','更换接口地址、协议或新增兼容接口后请重新输入 API Key');
         encryptedKey=previous?.encryptedKey;
       }
@@ -72,19 +86,19 @@ export class LlmProfiles {
     try{return this.cipher.decrypt(p.encryptedKey)}catch{fail('SECRET_STORAGE','模型密钥无法解密，请重新保存 API Key')}
   }
   /** 将公开供应商配置展开为选定模型；禁用模型不得用于新运行。 */
-  async resolve(id?:string,modelId?:string,engine?:LoopEngine):Promise<ResolvedLlm>{
-    const selected=selectConfiguration(await this.read(),id,modelId,engine);return {profile:selected.profile,apiKey:this.decrypt(selected.definition)};
+  async resolve(id?:string,modelId?:string,connection?:ModelConnectionRequirement):Promise<ResolvedLlm>{
+    const selected=selectConfiguration(await this.read(),id,modelId,connection);return {profile:selected.profile,apiKey:this.decrypt(selected.definition)};
   }
   /** 供岗位登记与当前差异读取；不使用默认选择、不解密、不探测接口，也不保证凭据可用或模型能运行。 */
-  async configuration(profileId:string,modelId:string,engine?:LoopEngine):Promise<ResolvedLlm['profile']>{
+  async configuration(profileId:string,modelId:string,connection?:ModelConnectionRequirement):Promise<ResolvedLlm['profile']>{
     if(!z.string().uuid().safeParse(profileId).success||typeof modelId!=='string'||!modelId.trim())fail('LLM_REQUIRED','岗位配置必须明确选择供应商与模型');
-    return selectConfiguration(await this.read(),profileId,modelId,engine).profile;
+    return selectConfiguration(await this.read(),profileId,modelId,connection).profile;
   }
   /** 多岗位一次读取并持有设置队列，直到短事务结束；公开快照无凭据，不联网，不在回调中再次进入本队列。 */
   withConfigurations<T>(refs:readonly ExplicitModelReference[],use:(profiles:readonly ResolvedLlm['profile'][])=>Promise<T>):Promise<T>{
     const fixed=structuredClone(refs);return this.change(async()=>{
       const data=await this.read();
-      const profiles=fixed.map(ref=>{this.explicit(ref);return selectConfiguration(data,ref.profileId,ref.modelId,ref.engine).profile});
+      const profiles=fixed.map(ref=>{this.explicit(ref);return selectConfiguration(data,ref.profileId,ref.modelId,ref.connection).profile});
       return use(profiles);
     });
   }
@@ -94,7 +108,7 @@ export class LlmProfiles {
    */
   withRuntimeConfiguration<T>(ref:ExplicitModelReference,use:(configuration:LockedModelConfiguration)=>Promise<T>):Promise<T>{
     const fixed=structuredClone(ref);return this.change(async()=>{
-      this.explicit(fixed);const selected=selectConfiguration(await this.read(),fixed.profileId,fixed.modelId,fixed.engine);
+      this.explicit(fixed);const selected=selectConfiguration(await this.read(),fixed.profileId,fixed.modelId,fixed.connection);
       let active=true,resolved:ResolvedLlm|undefined;
       try{return await use({profile:structuredClone(selected.profile),resolve:()=>{
         if(!active)fail('LLM_CONFIGURATION_EXPIRED','模型配置准备已结束，不能重新解析凭据');
@@ -103,6 +117,25 @@ export class LlmProfiles {
     });
   }
   private explicit(ref:ExplicitModelReference){if(!z.string().uuid().safeParse(ref.profileId).success||typeof ref.modelId!=='string'||!ref.modelId.trim())fail('LLM_REQUIRED','岗位配置必须明确选择供应商与模型')}
+  /**
+   * 在唯一配置队列中原子捕获生成与向量角色，不联网、不修改设置。
+   * 准入前只读 profiles；准入后按索引延迟解密，未使用的角色不会解析凭据。
+   * 回调中不得再次进入本队列，锁外启动执行；失败仅释放本次锁，不重试。
+   */
+  withModelOperations<T>(refs:readonly ModelOperationReference[],use:(locked:LockedModelOperations)=>Promise<T>):Promise<T>{
+    const fixed=structuredClone(refs);
+    return this.change(async()=>{
+      const data=await this.read(),selected=fixed.map(ref=>{this.explicit(ref);return selectOperation(data,ref)});
+      let active=true;const resolved=new Map<number,ResolvedModelOperation>();
+      try{return await use({profiles:selected.map(value=>structuredClone(value.profile)),resolve:index=>{
+        if(!active)fail('LLM_CONFIGURATION_EXPIRED','模型配置准备已结束，不能重新解析凭据');
+        if(!Number.isInteger(index)||index<0||index>=selected.length)fail('LLM_MODEL_ROLE','模型角色索引不存在');
+        const cached=resolved.get(index);if(cached)return cached;
+        const value={profile:structuredClone(selected[index].profile),apiKey:this.decrypt(selected[index].definition)};
+        resolved.set(index,value);return value;
+      }})}finally{active=false}
+    });
+  }
   /** 获取草稿接口的模型 ID；失败不阻止手动添加。保存凭据只在同地址、同协议时复用。 */
   async discover(input:unknown){return (await this.discoverDetails(input)).map(m=>m.id)}
   /** 读取供应商能力元数据；缺失字段不以固定 32k/200k 替代，不自动写回配置。 */
@@ -131,14 +164,23 @@ export class LlmProfiles {
       return JSON.parse(text);
     }catch(e:any){if(['LLM_HTTP','LLM_RESPONSE'].includes(e.code))throw e;fail('LLM_CONNECTION',`模型端点 ${endpoint.href} 连接失败或超时，请检查网络与接口配置`)}
   }
-  /** 按明确引擎测试已保存模型的实际接口；不写兼容状态或改目录，短文本成功不代表工具/流式完整验收。 */
-  async test(id:string,modelId?:string,engine?:LoopEngine){
-    const {profile:p,apiKey}=await this.resolve(id,modelId,engine),started=Date.now(),anthropic=p.api==='anthropic-messages',responses=p.api==='openai-responses';
+  /** 按协议需求测试已保存模型的实际接口；不写兼容状态或改目录，短文本成功不代表工具/流式完整验收。 */
+  async test(id:string,modelId?:string,connection?:ModelConnectionRequirement){
+    const {profile:p,apiKey}=await this.resolve(id,modelId,connection),started=Date.now(),anthropic=p.api==='anthropic-messages',responses=p.api==='openai-responses';
     const base=p.baseUrl.replace(/\/$/,''),url=base+(anthropic?(base.endsWith('/v1')?'/messages':'/v1/messages'):responses?'/responses':'/chat/completions');
     const payload=responses?{model:p.model,max_output_tokens:64,stream:false,input:'Reply with OK.'}:{model:p.model,max_tokens:64,stream:false,messages:[{role:'user',content:'Reply with OK.'}]};
     const body=await this.request(url,{method:'POST',headers:this.headers(p.api,p.auth,apiKey),body:JSON.stringify(payload)});
     const valid=anthropic?body.content?.some((x:any)=>x.type==='text'&&typeof x.text==='string'):responses?body.output?.some((x:any)=>x.type==='message'&&x.content?.some((c:any)=>c.type==='output_text'&&typeof c.text==='string')):typeof body.choices?.[0]?.message?.content==='string';
     if(!valid)fail('LLM_RESPONSE','接口没有返回有效文本，请核对接口协议');
-    return {ok:true,model:p.model,latencyMs:Date.now()-started,engine:engine??'pi',api:p.api,baseUrl:p.baseUrl};
+    return {ok:true,model:p.model,latencyMs:Date.now()-started,api:p.api,baseUrl:p.baseUrl};
+  }
+  /** 用户显式的小样本向量探测；短锁内冻结配置，网络在锁外，不写索引或宣称模型业务验收。 */
+  async testEmbedding(id:string,modelId:string){
+    const operation=await this.withModelOperations([{kind:'embedding',profileId:id,modelId}],async locked=>locked.resolve(0));
+    const p=operation.profile;if(!('kind' in p)||p.kind!=='embedding')fail('LLM_OPERATION','所选模型没有向量能力');
+    const started=Date.now(),body=await this.request(p.baseUrl.replace(/\/$/,'')+'/embeddings',{method:'POST',headers:this.headers(p.api,p.auth,operation.apiKey),body:JSON.stringify({model:p.model,input:['connection test'],encoding_format:'float'})});
+    const vector=body.data?.[0]?.embedding;
+    if(!Array.isArray(body.data)||body.data.length!==1||body.data[0].index!==0||!Array.isArray(vector)||vector.length!==p.dimensions||vector.some((value:unknown)=>typeof value!=='number'||!Number.isFinite(value)))fail('LLM_RESPONSE','接口未返回配置维度的有效向量，请核对模型与维度');
+    return {ok:true,model:p.model,latencyMs:Date.now()-started,api:p.api,baseUrl:p.baseUrl,dimensions:p.dimensions};
   }
 }

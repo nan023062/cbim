@@ -11,6 +11,7 @@ import {createRequire} from 'node:module';
 import {selectBootResources} from './selection';
 import {RuntimeJournal} from '../../../logic/updates/service/runtime-journal';
 import {verifyRuntimeManifest,type ColdRuntime} from '../../../logic/updates/service/runtime-manifest';
+import {EngineArtifacts} from '../../../logic/updates/service/engine-artifacts';
 import {RuntimeStore} from '../../../logic/updates/service/runtime-store';
 import {RuntimeUpdates} from '../../../logic/updates/service/runtime-updates';
 import {DesktopUpdates} from '../../../logic/updates/service/desktop-updates';
@@ -53,20 +54,15 @@ function boot(){
   }
   if(selection.pending)selection.journal.accessData(selection.digest);
   app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('sessionData',path.join(userRoot,'desktop'));
-  const store=new RuntimeStore(cacheRoot,cold),controller=new AbortController();
-  const engines=new Map<string,Promise<{root:string;version:string;entry:string;identity:string}>>();
-  const preparation=new Map<string,{engine:'pi'|'claude-code'|'codex';version:string;progress?:number;error?:string}>();
+  const reuseRoots=fs.existsSync(cacheIdentityRoot)?fs.readdirSync(cacheIdentityRoot,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&/^\d+\.\d+\.\d+$/.test(entry.name)).map(entry=>path.join(cacheIdentityRoot,entry.name)):[];
+  const store=new RuntimeStore(cacheRoot,cold),engineStore=new RuntimeStore(path.join(cacheIdentityRoot,'engines'),cold,undefined,reuseRoots),controller=new AbortController();
+  const preparation=new Map<string,{engine:string;version:string;progress?:number;error?:string}>();
+  const engineArtifacts=new EngineArtifacts(path.join(userRoot,'desktop-runtime',identity,'engine-index.json'),engineStore,selection.envelope,controller.signal,undefined,(engine,version,progress,error)=>{if(progress===undefined&&!error)preparation.delete(engine);else preparation.set(engine,{engine,version,progress,error})});
   const host:DesktopRuntimeHost={assetsRoot:selection.root,cacheRoot:cacheIdentityRoot,codeVersion:cold.codeVersion,resourceVersion:selection.manifest.resourceVersion,
-    resolveEngine(kind){
-      let existing=engines.get(kind);if(existing)return existing;
-      const descriptor=selection.manifest.engines.find(engine=>engine.kind===kind);if(!descriptor)return Promise.reject(Error('此资源版本没有兼容的引擎包'));
-      preparation.set(kind,{engine:kind,version:descriptor.version,progress:0});
-      existing=store.prepare(descriptor.package,controller.signal,progress=>preparation.set(kind,{engine:kind,version:descriptor.version,progress})).then(root=>{preparation.delete(kind);return {root,version:descriptor.version,entry:path.join(root,descriptor.entry),identity:descriptor.package.sha256}}).catch(error=>{engines.delete(kind);const message='准备 '+kind+' '+descriptor.version+' 运行包失败：'+String(error)+'。请检查网络和磁盘后重试，原会话数据已保留。';preparation.set(kind,{engine:kind,version:descriptor.version,error:message});throw Error(message)});
-      engines.set(kind,existing);return existing;
-    },
+    engineArtifacts,
     stopPreparingEngines(){controller.abort()},
     updates(beforeInstall,enabled){
-      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>[...engines.keys()]);
+      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>[]);
       return new DesktopUpdates(cold.codeVersion,selection.manifest.notes,enabled,signal=>installer.latest(signal),installer,beforeInstall,selection.manifest.resourceVersion,()=>[...preparation.values()]);
     },
     confirm(){selection.journal.confirm(selection.digest)},

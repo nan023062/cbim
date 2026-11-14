@@ -10,6 +10,8 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-model-form.css](agent-model-form.css) | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
+| [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
 | [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
 | [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
@@ -19,6 +21,27 @@
 | [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
 
 ## 架构类图
+
+### agent-model-form.css
+
+```mermaid
+classDiagram
+class N_src_view_components_agent_model_form_css["agent-model-form.css"] {
+  <<stylesheet>>
+}
+```
+
+### AgentModelForm.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
+  <<component>>
+  +AgentModelForm()
+}
+```
+
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[EngineModelPicker.tsx](EngineModelPicker.tsx)、[agent-model-form.css](agent-model-form.css)。
 
 ### BrandMark.tsx
 
@@ -53,7 +76,7 @@ class N_src_view_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
 ### Icon.tsx
 
@@ -112,6 +135,15 @@ class N_src_view_components_state_labels_ts["state-labels.ts"] {
 
 ```mermaid
 classDiagram
+class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
+  <<component>>
+}
+class N_src_view_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
+  <<component>>
+}
+class N_src_view_components_agent_model_form_css["agent-model-form.css"] {
+  <<stylesheet>>
+}
 class N_src_view_components_Empty_tsx["Empty.tsx"] {
   <<component>>
 }
@@ -124,6 +156,8 @@ class N_src_view_components_RepositoryScopeDetails_tsx["RepositoryScopeDetails.t
 class N_src_view_components_repository_scope_css["repository-scope.css"] {
   <<stylesheet>>
 }
+N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_EngineModelPicker_tsx : 导入依赖
+N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_agent_model_form_css : 导入依赖
 N_src_view_components_Empty_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
 N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repository_scope_css : 导入依赖
 ```
@@ -159,3 +193,9 @@ EngineModelPicker 供主 Agent、自定义 Agent 编辑及岗位登记复用。�
 ### 共享状态标签
 
 state-labels.ts 只提供工作区与工具任务的展示词汇，由外壳和任务视图共同消费；标签不作为服务状态机，不从外壳控制器读取状态。
+
+### 模型选型保留附加角色
+
+EngineModelPicker 同引擎切换 primary 时保留 value.modelRoles；引擎变化清空整个旧选型。此组件当前仍只显示主模型下拉，额外角色的完整编辑在后续界面切片接通。
+
+EngineModelPicker 按官方角色展示额外必填模型，切换引擎清旧角色，同引擎换主模型保留角色。AgentModelForm 将完整草稿一次保存；保存前用共享纯规则验证，取消不提交。

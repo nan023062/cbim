@@ -4,6 +4,38 @@ import path from 'node:path';
 import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
+test.each([
+  ['src/logic/engines/package-status.ts','src/logic/updates/engine-artifacts.ts',true],
+  ['src/logic/engines/package-status.ts','src/logic/updates/service/engine-artifacts.ts',false],
+  ['src/logic/application/application.ts','src/logic/engines/packages/index.ts',true],
+  ['src/logic/engines/packages/engine-packages.ts','src/logic/updates/engine-artifacts.ts',true],
+  ['src/logic/engines/packages/engine-packages.ts','src/logic/updates/service/engine-artifacts.ts',false],
+  ['src/bridge/server/bootstrap/desktop.ts','src/logic/engines/packages/index.ts',false],
+  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/budget/rules/model-request-configuration.ts',true],
+  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/engines/service/index.ts',false],
+  ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/index.ts',true],
+  ['src/logic/application/application.ts','src/logic/engines/service/index.ts',true],
+  ['src/logic/engines/service/model-profiles.ts','src/logic/models/service/index.ts',true],
+  ['src/bridge/contracts/engines.ts','src/logic/engines/index.ts',true],
+  ['src/bridge/contracts/models.ts','src/logic/engines/index.ts',false],
+  ['src/logic/models/config.ts','src/logic/engines/index.ts',false],
+  ['src/logic/models/service/llm-profiles.ts','src/logic/engines/service/index.ts',false],
+  ['src/logic/engines/index.ts','src/logic/engines/service/index.ts',false],
+  ['src/logic/engines/catalog/supported-engines.ts','src/logic/execution/engines/pi/engine.ts',false],
+  ['src/bridge/server/bootstrap/desktop.ts','src/logic/engines/index.ts',false],
+  ['src/logic/updates/service/runtime-manifest.ts','src/logic/engines/index.ts',false],
+  ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/service/index.ts',false],
+  ['src/view/team/picker.ts','src/logic/engines/index.ts',false],
+] as const)('引擎目录、模型与冷启动边界 %s → %s = %s',(from,to,allowed)=>{
+  const relative=path.posix.relative(path.posix.dirname(from),to),spec=relative.startsWith('.')?relative:'./'+relative;
+  const result=audit({[from]:`import type {Value} from '${spec}';`,[to]:'export type Value=string;'});
+  expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
+});
+
+test.each(['node:fs','electron','@anthropic-ai/claude-agent-sdk'])('静态引擎清单不得直接加载平台或 SDK：%s',spec=>{
+  expect(audit({'src/logic/engines/catalog/supported-engines.ts':`import '${spec}';`}).ok).toBe(false);
+});
+
 test.each(['src/backend/core/unused.ts','src/frontend/unused.ts','src/foundations/unused.ts'])('retired source layer is rejected even without imports: %s',file=>{
   const result=audit({[file]:'export const value=1;'});
   expect(result.ok).toBe(false);
@@ -135,7 +167,7 @@ test.each([
   ['src/logic/models/service/llm-profiles.ts','src/bridge/contracts/models.ts',false],
 ] as const)('模型迁移入口 %s → %s 许可为 %s',(from,to,allowed)=>{
   const relative=path.posix.relative(path.posix.dirname(from),to);
-  const name=from==='src/bridge/contracts/models.ts'?'LoopEngine':'Value';
+  const name=from==='src/bridge/contracts/models.ts'?'LlmApi':'Value';
   const result=audit({[from]:`import type {${name}} from '${relative.startsWith('.')?relative:'./'+relative}';`,[to]:`export type ${name}=string;`});
   expect(result.unresolved).toEqual([]);expect(result.ok).toBe(allowed);
 });
@@ -511,5 +543,12 @@ test('concrete engines depend on domain contracts; only execution assembly may s
     const from='src/logic/'+directory+'/entry.ts',spec=path.posix.relative(path.posix.dirname(from),engine);
     const result=audit({[from]:`import type {T} from '${spec}';`,[engine]:'export interface T {}'});
     expect(result.ok).toBe(directory==='execution/assembly');
+  }
+});
+test('记忆包仅私有存储实现可用原子文件机制，不能扩散到其它适配器',()=>{
+  const target='src/core/platform/node/files/index.ts';
+  for(const from of ['src/logic/execution/engines/memory/storage.ts','src/logic/execution/engines/memory/engine.ts','src/logic/execution/engines/pi/engine.ts']){
+    const spec=path.posix.relative(path.posix.dirname(from),target),result=audit({[from]:`import {atomic} from '${spec}';`,[target]:'export const atomic=()=>{};'});
+    expect(result.ok).toBe(from.endsWith('/memory/storage.ts'));
   }
 });

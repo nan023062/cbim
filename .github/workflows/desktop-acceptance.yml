@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       previous_version:
-        description: Explicit source version (0.1.0 settings/two-step, 0.1.1-2 dialog/two-step, 0.1.3-9 automatic, 0.1.10-15 prefetch)
+        description: Explicit source version (0.1.0 settings/two-step, 0.1.1-2 dialog/two-step, 0.1.3-9 automatic, 0.1.10-16 prefetch)
         required: true
         type: string
       source_commit:

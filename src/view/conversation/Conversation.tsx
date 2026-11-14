@@ -1,10 +1,11 @@
 /**
+ * 所有主会话发送和恢复入口携带同源模型角色，切换主模型保留同引擎附加角色。
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
  * 主对话按持久归属分话题展示文字与工具，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
- * 作用定位：会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
+ * 作用定位：持有主 Agent 多角色草稿版本的会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 导航边界：子会话只切换成员记录，发送仍持有所属主 taskId；成员登记向外壳发布只读投影，不以执行实例创建额外会话。全局运行页与目标审阅仍定位原节点。
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
@@ -12,7 +13,7 @@
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
- * 三个引擎始终存在，对话栏读写工作区主 Agent 配置，模型菜单按协议筛选统一启用目录；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。协作提示与主 Agent 默认执行规则保持一致。
+ * 官方引擎始终存在，对话栏读写工作区主 Agent 配置，模型菜单按协议筛选统一启用目录；修改只影响下一轮，Claude Code/Codex 运行期间只支持排队而不承诺原轮插入。协作提示与主 Agent 默认执行规则保持一致。
  * 队列 IPC 入口只接收实际支持的操作名，状态、停止和回执仍由原控制器管理。
  * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
  * 中断恢复：空闲会话缺少原生文件或执行事实待核实时，在输入区解释阻断并导航恢复选项，保留旧草稿和附件。
@@ -23,8 +24,11 @@ import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
-import {providerSupportsEngine,engineLabel,loopEngineSchema} from '../../bridge/contracts/models';
-import type {LlmSettings,LoopEngine} from '../../bridge/contracts/models';
+import {engineDescriptor,engineSelectionAvailable,providerSupportsEngine,engineLabel,loopEngineSchema} from '../../bridge/contracts/engines';
+import type {LlmSettings} from '../../bridge/contracts/models';
+import {AgentModelForm} from '../components/AgentModelForm';
+import type {AgentModelSelection} from '../../bridge/contracts/agent-settings';
+import type {LoopEngine} from '../../bridge/contracts/engines';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
 import {ConversationTurn} from './ConversationTurn';
@@ -117,6 +121,8 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const mainAgent=useMainAgentSettings(workspace.id,workspace.instanceId,active);
   // 无兼容模型时只保留尚未完成的表单输入，不另存一份会话配置。
   const [pendingEngine,setPendingEngine]=useState<LoopEngine>();
+  // 完整角色草稿固定打开时的 revision，后台刷新不能把旧草稿伪装成最新修改。
+  const [modelEditor,setModelEditor]=useState<{initial?:AgentModelSelection;engine?:LoopEngine;revision:number}>();
   const selectedRuntime=mainAgent.value?.selection;
   const selection=selectedRuntime?JSON.stringify([selectedRuntime.profileId,selectedRuntime.modelId]):'';
   // 模式只用于新目标，进行中与持久等待冻结原模式，避免给已派发任务换规则。
@@ -194,7 +200,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
-      const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
+      const options={engine:chosenEngine,...roleOptions,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
       if(tab.taskId&&!shouldQueue&&(!followupOf||!!skill)&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([]);setFollowupOf(undefined)}};
@@ -213,6 +219,9 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const selectedProfile=models?.profiles.find(p=>p.id===(selectedPair[0]||models?.selectedId));
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const chosenEngine=pendingEngine??selectedRuntime?.engine??'pi';
+  // 同引擎更换主模型保留其他角色；切换引擎时不能带入旧引擎的额外角色。
+  const modelRoles=chosenEngine===selectedRuntime?.engine?selectedRuntime.modelRoles:undefined;
+  const roleOptions=modelRoles===undefined?{}:{modelRoles};
   const compatibleProfiles=models?.profiles.map(p=>({...p,models:p.models.filter(m=>providerSupportsEngine(chosenEngine,p,m.id))})).filter(p=>p.models.length)??[];
   const defaultProfile=compatibleProfiles.find(p=>p.id===models?.selectedId);
   const defaultModel=defaultProfile?.models.find(m=>m.id===defaultProfile.defaultModel&&m.enabled);
@@ -223,23 +232,24 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     const profile=selectedProfile&&selectedModel?.enabled&&providerSupportsEngine(next,selectedProfile,selectedModel.id)?selectedProfile:profiles.find(p=>p.id===models?.selectedId)??profiles[0];
     const candidates=profile?.models.filter(m=>m.enabled&&providerSupportsEngine(next,profile,m.id));
     const model=profile===selectedProfile&&selectedModel?.enabled&&candidates?.includes(selectedModel)?selectedModel:candidates?.find(m=>m.id===profile?.defaultModel)??candidates?.[0];
+    if((engineDescriptor(next).additionalModelRoles??[]).length){setModelEditor({revision:mainAgent.value!.revision,engine:next,initial:profile&&model?{engine:next,profileId:profile.id,modelId:model.id,...(next===chosenEngine?roleOptions:{})}:undefined});return}
     if(!profile||!model){setPendingEngine(next);return}
-    if(await mainAgent.save({engine:next,profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(await mainAgent.save({engine:next,...(next===chosenEngine?roleOptions:{}),profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
   async function chooseModel(value:string){
     const [profileId,modelId]=value?JSON.parse(value):[defaultProfile?.id,defaultModel?.id];
-    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,...roleOptions,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
-  const modelAvailable=!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
+  const modelAvailable=!modelEditor&&engineSelectionAvailable(selectedRuntime??(selectedProfile&&selectedModel?{engine:chosenEngine,profileId:selectedProfile.id,modelId:selectedModel.id}:undefined),models)&&!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。
-  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
+  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
   const continuation=useScopeContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh,active);
   const humanContinuation=useHumanContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh);
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
-  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
+  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
   // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
   // 保留全部恢复依赖；当前模型、图或历史选择一旦变化，旧工具卡也必须获得新上下文。
-  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine]);
+  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine,modelRoles]);
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
@@ -272,6 +282,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
     </div>
     <div className="chat-composer">
+      {modelEditor&&models&&<AgentModelForm models={models} initial={modelEditor.initial} engine={modelEditor.engine} busy={busy||mainAgent.busy} onCancel={()=>setModelEditor(undefined)} onSave={async value=>{if(await mainAgent.save(value,modelEditor.revision)){setPendingEngine(undefined);setModelEditor(undefined);if(taskOpen)setNextTip(Date.now())}}}/>}
       {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&graph.selectedScope.status==='closed'&&!graph.detailLoading&&!graph.error&&<button disabled={!active||busy} onClick={()=>{setFollowupOf(selectedTopicId);input.current?.focus()}}>基于此历史话题新建任务</button>}
       {followupOf&&<p className="composer-next-tip" role="status">新任务关联：{graph.scopes.find(value=>value.scopeId===followupOf)?.objective??graph.scopes.find(value=>value.scopeId===followupOf)?.inputPreview??followupOf}。发送后独立排队，原话题保持结束。<button disabled={busy} onClick={()=>setFollowupOf(undefined)}>取消关联</button></p>}
       {loaded&&!pollError&&!graph.loading&&recoveryReason&&<ThreadRecoveryNotice reason={recoveryReason} disabled={!active||busy||stopping||attachmentBusy} onInspect={()=>{graph.selectScope(undefined);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}} onNewConversation={()=>onBind(undefined)}/>}
@@ -310,7 +321,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
-        <div className="chat-controls-right"><ComposerPicker label="Loop 引擎" value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel="选择引擎" onChange={value=>void chooseEngine(value)} options={loopEngineSchema.options.map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
+        <div className="chat-controls-right"><button disabled={busy||mainAgent.busy||!models||!mainAgent.value} onClick={()=>setModelEditor({revision:mainAgent.value!.revision,initial:selectedRuntime??undefined,engine:chosenEngine})}>引擎与模型配置</button><ComposerPicker label="Loop 引擎" value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel="选择引擎" onChange={value=>void chooseEngine(value)} options={loopEngineSchema.options.map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           ...(defaultModel?[{value:'',label:defaultModel.name||defaultModel.id,description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
           ...(compatibleProfiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
         ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>

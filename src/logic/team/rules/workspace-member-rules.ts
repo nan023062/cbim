@@ -1,4 +1,5 @@
 /**
+ * 岗位审计核实额外角色的明确选择，刷新模型配置不能偷换角色引用。
  * 作用定位：岗位登记的规范指纹、预览依据、不可变审计与单条事件投影；由可信服务与 Store 重放共同调用。
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：正文只保存在审计 next 中，当前岗位由原日志派生；哈希函数留在后端模块，公开 schema 不把 crypto 带入前端。
@@ -69,7 +70,7 @@ function validateTransition(previous:WorkspaceMember|undefined,event:WorkspaceMe
   if(input.kind==='register'){
     valid(!previous&&event.previousRevision===0&&event.previousMemberHash===null,'首次登记不能覆盖已有岗位');
     valid(next.state==='active'&&next.revision===1&&next.createdAt===event.committedAt,'首次登记必须是本次创建的启用岗位');
-    valid(next.adoption.configuration.agentId===input.agentId&&next.name===input.name&&next.position===input.position&&equal(next.adaptation,input.adaptation)&&next.runtimePolicy.profileId===input.runtimePolicy.profileId&&next.runtimePolicy.modelId===input.runtimePolicy.modelId&&next.runtimePolicy.engine===input.runtimePolicy.engine,'首次登记与明确选择不一致');
+    valid(next.adoption.configuration.agentId===input.agentId&&next.name===input.name&&next.position===input.position&&equal(next.adaptation,input.adaptation)&&next.runtimePolicy.profileId===input.runtimePolicy.profileId&&next.runtimePolicy.modelId===input.runtimePolicy.modelId&&next.runtimePolicy.engine===input.runtimePolicy.engine&&equal(next.runtimePolicy.modelRoles,input.runtimePolicy.modelRoles),'首次登记与明确选择不一致');
     freshCapture();return;
   }
   valid(previous,'变更引用的岗位不存在');
@@ -82,8 +83,8 @@ function validateTransition(previous:WorkspaceMember|undefined,event:WorkspaceMe
   if(input.kind==='update'){
     const {runtimePolicy,...patch}=input.patch;Object.assign(expected,patch);
     if(runtimePolicy){
-      valid(next.runtimePolicy.profileId===runtimePolicy.profileId&&next.runtimePolicy.modelId===runtimePolicy.modelId&&next.runtimePolicy.engine===runtimePolicy.engine,'编辑模型引用与明确选择不一致');
-      valid(runtimePolicy.profileId!==previous.runtimePolicy.profileId||runtimePolicy.modelId!==previous.runtimePolicy.modelId||(workspaceMemberEngine(next.runtimePolicy)??'pi')!==(workspaceMemberEngine(previous.runtimePolicy)??'pi')||equal(next.runtimePolicy,previous.runtimePolicy),'同一模型配置变化须显式采纳','MEMBER_NO_CHANGE');
+      valid(next.runtimePolicy.profileId===runtimePolicy.profileId&&next.runtimePolicy.modelId===runtimePolicy.modelId&&next.runtimePolicy.engine===runtimePolicy.engine&&equal(next.runtimePolicy.modelRoles,runtimePolicy.modelRoles),'编辑模型引用与明确选择不一致');
+      valid(runtimePolicy.profileId!==previous.runtimePolicy.profileId||runtimePolicy.modelId!==previous.runtimePolicy.modelId||(workspaceMemberEngine(next.runtimePolicy)??'pi')!==(workspaceMemberEngine(previous.runtimePolicy)??'pi')||!equal(runtimePolicy.modelRoles,previous.runtimePolicy.modelRoles)||equal(next.runtimePolicy,previous.runtimePolicy),'同一模型配置变化须显式采纳','MEMBER_NO_CHANGE');
       expected.runtimePolicy=next.runtimePolicy;
     }
     valid(equal(next.adoption,previous.adoption),'编辑元信息不得顺带采纳能力');
@@ -94,7 +95,7 @@ function validateTransition(previous:WorkspaceMember|undefined,event:WorkspaceMe
     expected.capability=proposed.capability;freshCapture();
     valid(next.adoption.capabilityHash!==previous.adoption.capabilityHash||!equal(next.adoption.sourceRef,previous.adoption.sourceRef),'能力内容及来源没有变化','MEMBER_NO_CHANGE');
   }else{
-    valid(equal(next.adoption,previous.adoption)&&next.runtimePolicy.profileId===previous.runtimePolicy.profileId&&next.runtimePolicy.modelId===previous.runtimePolicy.modelId&&next.runtimePolicy.engine===previous.runtimePolicy.engine,'模型采纳只能更新原模型引用');
+    valid(equal(next.adoption,previous.adoption)&&next.runtimePolicy.profileId===previous.runtimePolicy.profileId&&next.runtimePolicy.modelId===previous.runtimePolicy.modelId&&next.runtimePolicy.engine===previous.runtimePolicy.engine&&equal(next.runtimePolicy.modelRoles,previous.runtimePolicy.modelRoles),'模型采纳只能更新原模型引用');
     expected.runtimePolicy=next.runtimePolicy;
   }
   valid(equal(expected,proposed),'审计修改了未被本次操作选定的字段');

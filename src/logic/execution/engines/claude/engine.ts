@@ -13,7 +13,7 @@ import {RunInactivityTimer} from '../run-inactivity';
 import path from 'node:path';
 import type {Query,SDKUserMessage,SDKMessage} from '@anthropic-ai/claude-agent-sdk';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../rules/types';
-import type {ResolvedLlm} from '../../../models';
+import type {ResolvedEngineModel} from '../../../engines';
 import type {RequestBudgetPort} from '../../../budget/rules/request-budget';
 import {runtimeEngineTools,type EngineToolsPort} from '../../rules/engine-tools';
 import {engineInstructions} from '../../rules/engine-instructions';
@@ -26,13 +26,13 @@ export interface ClaudeOptions {
   /** 冷壳已验证的固定 SDK 包；不含用户账号目录。 */
   runtime?:EngineRuntimePackage;nativeToolsRuntime?:EngineRuntimePackage;
   agentHome:string;prompt:string;knowledge:EngineToolsPort;allowNativeExecution?:boolean;
-  llm?:ResolvedLlm;images?:import('../../rules/types').InputImage[];turnTimeoutMs?:number;
+  llm?:ResolvedEngineModel;images?:import('../../rules/types').InputImage[];turnTimeoutMs?:number;
   requestBudget?():Promise<RequestBudgetPort|undefined>;
   /** 可信测试注入；生产始终使用 CBIM 自带 SDK，不接受公开运行参数指定可执行文件。 */
   loadSdk?:typeof loadClaudeSdk;
 }
 /** 清除外部 Claude 账号、宿主注入和 Node 启动脚本；本轮凭据只由实际模型快照提供。 */
-export function claudeEnvironment(home:string,llm:ResolvedLlm,proxy?:{url:string;token:string}):NodeJS.ProcessEnv{
+export function claudeEnvironment(home:string,llm:ResolvedEngineModel,proxy?:{url:string;token:string}):NodeJS.ProcessEnv{
   const env={...process.env};for(const key of Object.keys(env))if(/^(ANTHROPIC_|CLAUDE|CBIM_|NODE_OPTIONS$|NODE_PATH$|ELECTRON_RUN_AS_NODE$)/i.test(key))delete env[key];
   return {...env,CLAUDE_CONFIG_DIR:home,ANTHROPIC_BASE_URL:proxy?.url??llm.profile.baseUrl.replace(/\/v1\/?$/,''),ANTHROPIC_API_KEY:proxy?.token??llm.apiKey,
     ANTHROPIC_MODEL:llm.profile.model,ANTHROPIC_DEFAULT_SONNET_MODEL:llm.profile.model,ANTHROPIC_DEFAULT_HAIKU_MODEL:llm.profile.model,ANTHROPIC_DEFAULT_OPUS_MODEL:llm.profile.model,

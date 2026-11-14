@@ -28,7 +28,8 @@ it('编排仅在 execution/assembly 选择具体引擎，不直接取得应用�
       expect(match[1]).not.toMatch(/^electron(?:\/|$)/);
       if(!match[1].startsWith('.'))continue;
       const target=path.resolve(path.dirname(file),match[1]).replaceAll('\\','/');
-      const pure=['core/utility','core/errors','core/json','core/platform/node/serialization','logic/models','logic/web','logic/feedback'].some(p=>target===root+'/'+p);
+      // engines 的便携公开入口仅含静态描述与选型规则；具体适配器仍限制在 execution/assembly。
+      const pure=['core/utility','core/errors','core/json','core/platform/node/serialization','logic/models','logic/engines','logic/web','logic/feedback'].some(p=>target===root+'/'+p);
       expect(pure||/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(target)||orchestration(target)||(assembly&&target.startsWith(root+'/logic/execution/engines/')),`${file}: ${match[1]}`).toBe(true);
     }
   }

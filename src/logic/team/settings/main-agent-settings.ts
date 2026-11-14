@@ -8,9 +8,9 @@ import {SerialQueue} from '../../../core/utility';
 import {z} from 'zod';
 import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../../core/errors';
-import {agentModelSelectionSchema} from '../../models';
+import {agentModelSelectionSchema} from '../rules/agent-runtime';
 import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../rules/agent-runtime';
-import type {LlmProfiles} from '../../models/service';
+import type {EngineModelProfiles} from '../../engines/service';
 
 const stored=z.object({version:z.literal(1),revision:z.number().int().nonnegative().safe(),selection:agentModelSelectionSchema.nullable()}).strict();
 type Identity=Pick<MainAgentSettingsView,'workspaceId'|'instanceId'>;
@@ -18,7 +18,7 @@ type Identity=Pick<MainAgentSettingsView,'workspaceId'|'instanceId'>;
 export class MainAgentSettings {
   /** 顺序化主 Agent 配置；工作区身份、revision 与模型锁仍由 configure 核实。 */
   private readonly queue=new SerialQueue();
-  constructor(private filename:(workspaceId:string)=>string,private assertCurrent:(identity:Identity)=>void,private models:LlmProfiles){}
+  constructor(private filename:(workspaceId:string)=>string,private assertCurrent:(identity:Identity)=>void,private models:EngineModelProfiles){}
   private async readStored(workspaceId:string){
     try{return stored.parse(JSON.parse(await fs.readFile(this.filename(workspaceId),'utf8')))}
     catch(error){if((error as {code?:string}).code==='ENOENT')return {version:1 as const,revision:0,selection:null};fail('AGENT_SETTINGS_READ','主 Agent 配置读取失败，请检查配置文件后重试')}

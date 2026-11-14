@@ -29,7 +29,7 @@ async function setup(){
     });
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},...changes]));
     const {registered}=await registerServiceOwner(f.app,workspace,'.cbim/team/dev',moduleIds);
-    const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'workflow-root'},scopeId='workflow-scope',runId='workflow-main';
+    const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.engineModels),identity={workspaceId:entry.id,rootSessionId:'workflow-root'},scopeId='workflow-scope',runId='workflow-main';
     await service.openScope(identity,scopeId,{message:'选择正确流程核实模块'},runId);
     const ownerSelection=(await service.owners.discover(moduleIds)).groups[0].selection!;
     const selections:WorkflowSelection[]=[{moduleId:team.input.moduleId,workflowId:secondId}];

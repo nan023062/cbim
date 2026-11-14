@@ -6,6 +6,12 @@ import {createHash} from 'node:crypto';
 import {NativeSessionFiles,nativeSessionByteLimit} from '../src/logic/execution/platform/native-session-files';
 
 const temporary:string[]=[];
+it('自定义领域引擎使用声明的 CBIM 会话格式，拒绝借用其它引擎身份',async()=>{
+  const f=await fixture(),port=new NativeSessionFiles(f.root,()=>{},'memory');
+  const header={type:'cbim_session',version:1,engine:'memory',id:'native',workspaceId:'workspace',taskId:'task',root:f.directory};
+  await fs.writeFile(f.file,JSON.stringify(header)+'\n');expect((await port.read(f.session,f.controller.signal)).byteLength).toBeGreaterThan(0);
+  await fs.writeFile(f.file,JSON.stringify({...header,engine:'pi'})+'\n');await expect(port.read(f.session,f.controller.signal)).rejects.toThrow();
+});
 it('Codex 原生历史核对 metadata、文件名及单一线程身份',async()=>{
   const f=await fixture(),port=new NativeSessionFiles(f.root,()=>{},'codex'),file=path.join(f.root,'rollout-native.jsonl'),session={...f.session,sessionFile:file};
   const text=JSON.stringify({type:'session_meta',payload:{id:'native',cwd:f.directory}})+'\n'+JSON.stringify({type:'response_item',payload:{type:'message'}})+'\n';

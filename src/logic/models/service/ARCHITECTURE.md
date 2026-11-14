@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-LlmProfiles 配置持久化、公开快照、受控锁内选型与延迟解密；index.ts 仅向宿主提供服务，平台加密由端口注入。
+LlmProfiles 配置持久化、生成/向量操作公开快照、受控锁内原子选型与延迟解密；index.ts 仅向宿主提供服务，平台加密由端口注入。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -11,7 +11,7 @@ LlmProfiles 配置持久化、公开快照、受控锁内选型与延迟解密�
 | 文件 | 当前职责 |
 | --- | --- |
 | [index.ts](index.ts) | 模型配置服务的宿主公共入口，供应用装配及主 Agent 设置使用。 |
-| [llm-profiles.ts](llm-profiles.ts) | 本机供应商配置持久化、默认模型选择和连接检测。 |
+| [llm-profiles.ts](llm-profiles.ts) | 本机供应商配置持久化、生成模型选择、跨模型操作原子捕获和连接检测。 |
 
 ## 架构类图
 
@@ -53,7 +53,7 @@ class N_src_logic_models_service_llm_profiles_ts_ExplicitModelReference["Explici
   <<interface>>
   +profileId
   +modelId
-  +engine
+  +connection
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_ExplicitModelReference : 声明
 class N_src_logic_models_service_llm_profiles_ts_LockedModelConfiguration["LockedModelConfiguration"] {
@@ -71,6 +71,17 @@ classDiagram
 class N_src_logic_models_service_llm_profiles_ts["llm-profiles.ts"] {
   <<module>>
 }
+class N_src_logic_models_service_llm_profiles_ts_ModelOperationReference["ModelOperationReference"] {
+  <<type>>
+
+}
+N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_ModelOperationReference : 声明
+class N_src_logic_models_service_llm_profiles_ts_LockedModelOperations["LockedModelOperations"] {
+  <<interface>>
+  +profiles
+  +resolve()
+}
+N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LockedModelOperations : 声明
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   +list()
   +save()
@@ -80,14 +91,14 @@ class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   +configuration()
   +withConfigurations()
   +withRuntimeConfiguration()
+  +withModelOperations()
   +discover()
   +discoverDetails()
   +test()
+  +testEmbedding()
   -filename
   -cipher
   -queue
-  -read()
-  -view()
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LlmProfiles : 声明
 ```
@@ -100,6 +111,8 @@ class N_src_logic_models_service_llm_profiles_ts["llm-profiles.ts"] {
   <<module>>
 }
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
+  -read()
+  -view()
   -change()
   -decrypt()
   -explicit()
@@ -143,8 +156,12 @@ N_src_logic_models_service_index_ts ..> N_src_logic_models_service_llm_profiles_
 
 save/select/remove 串行写入配置；withConfigurations 与 withRuntimeConfiguration 在同一队列固定配置，回调内不得再次进入队列。后者仅在回调有效期内允许解析已捕获凭据，退出后 resolve 拒绝。预算和占用检查仍由调用方负责，锁释放后才启动引擎。
 
-configuration 与公开目录不解密、不联网；resolve 及受控锁内 resolve 才解析凭据。公开列表仅返回 hasKey。运行快照不携带备用地址或预设来源，设置变化不热替换已捕获快照。
+configuration/resolve/test 接受可选 ModelConnectionRequirement，缺省使用供应商主接口，不识别引擎 ID；不兼容返回 LLM_CONNECTION_API。EngineModelProfiles 在外层生成需求、组合引擎快照并保留执行侧 LLM_ENGINE_API 诊断。configuration 与公开目录不解密、不联网；resolve 及受控锁内 resolve 才解析凭据。公开列表仅返回 hasKey。运行快照不携带备用地址或预设来源，设置变化不热替换已捕获快照。
 
 主接口变更或新增自定义凭据目标必须重新提供 Key，改名/型号范围/删除兼容接口保持原规则。探测固定选中的接口，失败不切换协议、不重发或清空目录。错误仅返回安全端点和状态，不返回上游正文、密钥或查询参数。
 
 现有文件格式、默认选择、原子写入与失败语义保持；迁移不重写用户文件。测试使用独立临时目录和加密替身，不加载完整 Application。下一次修改配置并发、保存或探测从 llm-profiles.ts 入手。
+
+withModelOperations 在同一次配置读取和原 SerialQueue 中捕获生成/向量角色。角色分别显式声明供应商、型号和操作类型；公开 profiles 不含凭据，resolve(index) 只解密对应角色一次，回调结束后即使有缓存也拒绝。准备失败或停止不自动重试，不启动网络。此入口为后续 V2 Agent 绑定提供原子准备机制，本步尚未启用引擎多角色 UI 或发送向量请求。
+
+供应商设置的 testEmbedding 在配置短锁内冻结明确向量操作，网络在锁外；只发送小样本，校验返回的维度和有限数值，不保存通过状态、不写知识或索引。通用生成连接测试按接口需求选择，不依赖引擎 ID。

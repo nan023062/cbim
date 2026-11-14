@@ -1,20 +1,23 @@
 import {expect,test} from 'vitest';
-import {definition,connectionForEngine,identifyProvider,type LlmDefinition,type LlmProfile} from '../../../../src/logic/models';
+import {definition,identifyProvider,type LlmDefinition,type LlmProfile} from '../../../../src/logic/models';
+import {selectProviderConnection,type ModelConnectionRequirement} from '../../../../src/logic/models';
+const messages:ModelConnectionRequirement={supportedApis:['anthropic-messages'],fallbackApi:'anthropic-messages'};
+const chat:ModelConnectionRequirement={supportedApis:['openai-completions']};
 const profile:LlmProfile={id:'11111111-1111-4111-8111-111111111111',name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'api-key',hasKey:true,defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,reasoning:true,contextWindow:1048576,maxTokens:4096}]};
 
 test.each(['https://api.deepseek.com.evil.example/v1','https://proxy.example/deepseek','http://api.deepseek.com','https://user:secret@api.deepseek.com','https://api.deepseek.com/v1?token=secret','https://api.deepseek.com/v1#fragment','https://api.deepseek.com/beta','https://api.deepseek.com:8443/v1','https://api.moonshot.cn/v1'])('不根据模型品牌或近似域名推导凭据目标：%s',baseUrl=>{
   expect(identifyProvider(baseUrl)).toBeUndefined();
-  expect(connectionForEngine({...profile,baseUrl},'claude-code',profile.defaultModel)).toBeUndefined();
+  expect(selectProviderConnection({...profile,baseUrl},messages,profile.defaultModel)).toBeUndefined();
 });
 
 test('官方地址可识别尾斜线，关闭自动识别后保留主接口，显式接口优先且型号限制不会回退预设',()=>{
   expect(identifyProvider('https://API.DEEPSEEK.COM/v1/')).toMatchObject({id:'deepseek'});
-  expect(connectionForEngine({...profile,autoDetect:false},'claude-code',profile.defaultModel)).toBeUndefined();
-  expect(connectionForEngine({...profile,autoDetect:false},'pi',profile.defaultModel)?.baseUrl).toBe(profile.baseUrl);
+  expect(selectProviderConnection({...profile,autoDetect:false},messages,profile.defaultModel)).toBeUndefined();
+  expect(selectProviderConnection({...profile,autoDetect:false},chat,profile.defaultModel)?.baseUrl).toBe(profile.baseUrl);
   const explicit:LlmDefinition={...profile,alternateConnections:[{api:'anthropic-messages',baseUrl:'https://gateway.example/anthropic',modelIds:['deepseek-flash']}]};
-  expect(connectionForEngine(explicit,'claude-code','deepseek-flash')).toMatchObject({source:'explicit',baseUrl:'https://gateway.example/anthropic'});
-  expect(connectionForEngine(explicit,'claude-code','different-model')).toBeUndefined();
-  expect(connectionForEngine({...explicit,autoDetect:false},'claude-code','deepseek-flash')?.source).toBe('explicit');
+  expect(selectProviderConnection(explicit,messages,'deepseek-flash')).toMatchObject({source:'explicit',baseUrl:'https://gateway.example/anthropic'});
+  expect(selectProviderConnection(explicit,messages,'different-model')).toBeUndefined();
+  expect(selectProviderConnection({...explicit,autoDetect:false},messages,'deepseek-flash')?.source).toBe('explicit');
 });
 
 test('接口 schema 拒绝重复协议、未知型号与不安全地址，旧配置不补自动字段',()=>{

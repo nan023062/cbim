@@ -6,7 +6,8 @@
  * 审计兼容：保留旧桌面来源，主工具另保存原根会话、周期、实例和调用身份，不伪装为本机点击。
  */
 import {z} from 'zod';
-import {loopEngineSchema,engineApi,engineLabel} from '../../models';
+import {generationSnapshotFields,checkGenerationSnapshot} from '../../models';
+import {loopEngineSchema,engineSupportsApi,engineLabel,modelRolesSelectionSchema,modelRolesSnapshotSchema,modelRolesMatch} from '../../engines';
 import {capabilitySourceRefSchema,sourceSelectionSchema,knowledgeSourceReadStateSchema,sourceRefMatches,sourceSelectionMatches,sourceReadStateMatches} from '../../workspace/rules/knowledge-source';
 
 /** 累计容量包括退休岗位和全部审计；超限拒绝新写入，不删除历史或截断采纳正文。 */
@@ -16,7 +17,6 @@ const uuid=z.string().uuid(),digest=z.string().regex(/^[a-f0-9]{64}$/),time=z.st
 const revision=z.number().int().positive().safe(),seq=z.number().int().positive().safe();
 const text=(max:number)=>z.string().min(1).max(max).refine(value=>!!value.trim(),'文本不能为空白');
 const byteLength=(value:unknown)=>new TextEncoder().encode(JSON.stringify(value)).length;
-const endpoint=z.string().max(4096).url().refine(value=>{try{const url=new URL(value);return value.trim()===value&&!url.username&&!url.password&&!url.search&&!url.hash&&(url.protocol==='https:'||url.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(url.hostname))}catch{return false}},'模型地址不能包含凭据、查询或片段');
 
 export const workspaceMemberIdentitySchema=z.object({workspaceId:id,instanceId:uuid}).strict();
 export type WorkspaceMemberIdentity=z.infer<typeof workspaceMemberIdentitySchema>;
@@ -26,15 +26,15 @@ export const workspaceMemberStateSchema=z.enum(['active','suspended','retired'])
 export type WorkspaceMemberState=z.infer<typeof workspaceMemberStateSchema>;
 export const workspaceMemberAdaptationSchema=z.object({instructions:z.string().max(8000),references:z.array(id).max(32).refine(values=>new Set(values).size===values.length)}).strict();
 export type WorkspaceMemberAdaptation=z.infer<typeof workspaceMemberAdaptationSchema>;
-export const workspaceMemberModelRefSchema=z.object({profileId:uuid,modelId:text(160),engine:loopEngineSchema.optional()}).strict();
+export const workspaceMemberModelRefSchema=z.object({profileId:uuid,modelId:text(160),engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional()}).strict();
 export type WorkspaceMemberModelRef=z.infer<typeof workspaceMemberModelRefSchema>;
 /** 字段对应实际解析后的公开 profile；仅依赖公开引擎标识，不接受密钥、hasKey、默认选择或 enabled 伪运行事实。 */
-export const workspaceMemberModelSnapshotSchema=z.object({engine:loopEngineSchema.optional(),id:uuid,name:text(80),api:z.enum(['openai-completions','openai-responses','anthropic-messages']),baseUrl:endpoint,auth:z.enum(['api-key','none']),model:text(160),contextWindow:z.number().int().min(1024).max(2000000),maxTokens:z.number().int().min(64).max(2000000),reasoning:z.boolean(),vision:z.boolean().optional(),outputLimit:z.number().int().min(1).max(2000000).optional(),thinkingLevel:z.enum(['off','minimal','low','medium','high','xhigh']).optional(),workingContextWindow:z.number().int().min(1024).max(2000000).optional(),compactionPercent:z.number().int().min(10).max(95).optional(),pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().superRefine((value,context)=>{
-  const api=engineApi(value.engine??'pi');if(api&&value.api!==api)context.addIssue({code:'custom',message:engineLabel(value.engine!)+' 需要 '+api+' 接口'});
-  if(value.maxTokens>value.contextWindow||value.outputLimit!==undefined&&value.maxTokens>value.outputLimit||value.workingContextWindow!==undefined&&value.workingContextWindow>value.contextWindow)context.addIssue({code:'custom',message:'模型预算超过公开能力上限'});
+export const workspaceMemberModelSnapshotSchema=z.object({engine:loopEngineSchema.optional(),...generationSnapshotFields.shape,modelRoles:modelRolesSnapshotSchema.optional()}).strict().superRefine((value,context)=>{
+  checkGenerationSnapshot(value,context);
+  if(!engineSupportsApi(value.engine??'pi',value.api))context.addIssue({code:'custom',message:engineLabel(value.engine??'pi')+' 不支持所选接口'});
 });
 export type WorkspaceMemberModelSnapshot=z.infer<typeof workspaceMemberModelSnapshotSchema>;
-export const workspaceMemberRuntimePolicySchema=workspaceMemberModelRefSchema.extend({configurationHash:digest,snapshot:workspaceMemberModelSnapshotSchema}).strict().refine(value=>value.profileId===value.snapshot.id&&value.modelId===value.snapshot.model&&(value.engine===undefined||value.engine===(value.snapshot.engine??'pi')),'模型引用与快照不一致');
+export const workspaceMemberRuntimePolicySchema=workspaceMemberModelRefSchema.extend({configurationHash:digest,snapshot:workspaceMemberModelSnapshotSchema}).strict().refine(value=>value.profileId===value.snapshot.id&&value.modelId===value.snapshot.model&&(value.engine===undefined||value.engine===(value.snapshot.engine??'pi'))&&modelRolesMatch(value.modelRoles,value.snapshot.modelRoles),'模型引用与快照不一致');
 export type WorkspaceMemberRuntimePolicy=z.infer<typeof workspaceMemberRuntimePolicySchema>;
 /** 新岗位从引用读独立引擎；旧岗位从采纳快照读，缺省 Pi 不补字段，保持历史指纹。 */
 export function workspaceMemberEngine(ref:WorkspaceMemberModelRef & {snapshot?:WorkspaceMemberModelSnapshot}){return ref.engine??ref.snapshot?.engine}

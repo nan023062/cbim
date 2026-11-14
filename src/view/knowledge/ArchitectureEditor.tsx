@@ -7,7 +7,9 @@
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import {EngineModelPicker} from '../components/EngineModelPicker';
-import {providerSupportsEngine,type LlmSettings,type AgentModelSelection} from '../../bridge/contracts/models';
+import {providerSupportsEngine} from '../../bridge/contracts/engines';
+import {type LlmSettings} from '../../bridge/contracts/models';
+import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import {createPortal} from 'react-dom';
 import type {Snapshot,Preview} from '../../bridge/contracts/workspace';
 import {moduleBodyTemplate} from '../../bridge/contracts/architecture';

@@ -25,7 +25,7 @@ class N_src_logic_team_service_main_workspace_member_tools_ts["main-workspace-me
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../models/index.ts](../../models/index.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../rules/workspace-member-rules.ts](../rules/workspace-member-rules.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[../rules/workspace-member-tools.ts](../rules/workspace-member-tools.ts)、[../../dispatch/runtime/auto-collaboration.ts](../../dispatch/runtime/auto-collaboration.ts)、[workspace-members.ts](workspace-members.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../tasks/rules/types.ts](../../tasks/rules/types.ts)、[../rules/workspace-member-rules.ts](../rules/workspace-member-rules.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[../rules/workspace-member-tools.ts](../rules/workspace-member-tools.ts)、[../../dispatch/runtime/auto-collaboration.ts](../../dispatch/runtime/auto-collaboration.ts)、[workspace-members.ts](workspace-members.ts)。
 
 ### workspace-members.ts
 
@@ -89,7 +89,7 @@ class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceM
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_WorkspaceMembers : 声明
 ```
 
-直接依赖：[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../models/index.ts](../../models/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[../rules/workspace-member-rules.ts](../rules/workspace-member-rules.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)。
+直接依赖：[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/workspace-member.ts](../rules/workspace-member.ts)、[../rules/workspace-member-rules.ts](../rules/workspace-member-rules.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../../workspace/rules/knowledge-source-rules.ts](../../workspace/rules/knowledge-source-rules.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../knowledge/service/knowledge-sources.ts](../../knowledge/service/knowledge-sources.ts)。
 
 ### 本目录调用边界
 
@@ -112,3 +112,11 @@ N_src_logic_team_service_main_workspace_member_tools_ts ..> N_src_logic_team_ser
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 多角色模型采纳
+
+岗位预览调用 EngineModelProfiles 一次捕获 primary 与全部附加角色，公开快照和选型一起保存；变化检测包含角色引用，额外角色改变须重新采纳，不能沿用旧配置指纹。

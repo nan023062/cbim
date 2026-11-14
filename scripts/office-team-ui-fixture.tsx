@@ -7,7 +7,7 @@ import {inlineMainRuns} from '../tests/inline-conversation-fixture';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 const id=progressIdentity.workspaceId,profileId='11111111-1111-4111-8111-111111111111',instanceId='33333333-3333-4333-8333-333333333333';
 const entry={id,name:'办公室验收夹具',path:'C:/isolated-office-fixture',state:'running',instanceId,tasks:[],revision:'revision'};
-const fixture=(window as any).fixture={marker:'office-team-v1',phase:3,calls:[],unexpected:[],errors:[],queued:[]};
+const fixture=(window as any).fixture={marker:'office-team-v1',phase:3,calls:[],unexpected:[],errors:[],queued:[],delayPick:false,pendingPicks:[],topicRequests:[],extraText:false};
 window.addEventListener('error',event=>fixture.errors.push(event.message));
 window.addEventListener('unhandledrejection',event=>fixture.errors.push(String(event.reason)));
 function otherOffice<T>(value:T):T{
@@ -15,7 +15,8 @@ function otherOffice<T>(value:T):T{
   return JSON.parse(JSON.stringify(value),(_key,v)=>typeof v==='string'?(ids.has(v)?v+'-two':v.startsWith('task:')||v==='session:root'?v+'-two':v):v);
 }
 function data(root='root'){
-  const phase=fixture.phase,value=progressFixture(Math.min(phase,4)),runs=inlineMainRuns(Math.min(phase,4));
+  const phase=fixture.waitingRoot===root?5:fixture.phase,value=progressFixture(fixture.waitingRoot===root?5:Math.min(phase,4)),runs=inlineMainRuns(Math.min(phase,4));
+  if(fixture.extraText)for(const run of runs)for(const event of run.events)if(event.type==='message')event.data.text=String(event.data.text)+'\n\n'+('用于独立阅读位置验证的段落。\n\n'.repeat(60));
   for(const run of runs)run.sessionFile='C:/isolated-office-fixture/session.jsonl';
   const mainIds=runs.map(run=>run.runId);value.scope.runTracking={version:1,mainRunIds:mainIds};
   value.scope.goal!.inputRevision=1;value.scope.goal!.plan!.inputRevision=1;
@@ -43,7 +44,7 @@ function data(root='root'){
   if(action==='loop.approvals'||action==='loop.questions')return [];
   if(action==='loop.queueDelta')return {epoch:'22222222-2222-4222-8222-222222222222',revision:fixture.queued.length+1,reset:true,order:fixture.queued.filter((v:any)=>v.taskId===args.taskId).map((v:any)=>v.id),upserts:fixture.queued.filter((v:any)=>v.taskId===args.taskId).map((item:any)=>({version:fixture.queued.length+1,item}))};
   if(action==='dispatch.sessionRead'){
-    const seq=fixture.phase+1,cursor={...value.identity,kind:'scopes',streamId:'scopes:graph',seq};
+    const seq=value.graph.cursor.seq,cursor={...value.identity,kind:'scopes',streamId:'scopes:graph',seq};
     const summaries=value.scopes.map((scope:any)=>summarizeScope(scope,cursor.streamId,seq));
     const scope=value.scopes.find((scope:any)=>scope.scopeId===args.selectedScopeId)??value.scope,summary=summaries.find((s:any)=>s.scopeId===scope.scopeId)!;
     return {graph:{mode:'reset',reason:'initial',snapshot:value.graph,cursor:value.graph.cursor},scopes:{mode:'reset',reason:'initial',snapshot:{identity:value.identity,cursor,scopes:summaries},cursor},detail:{mode:'updated',stamp:summary.stamp,scope},teamSessions:value.sessions};
@@ -51,7 +52,14 @@ function data(root='root'){
   if(action==='dispatch.executionEvents'){const record=progressMemberRun(args.taskId.replace(/-two$/,''),Math.min(fixture.phase,4));const {events,...run}=args.rootSessionId==='root-two'?otherOffice(record):record;return {mode:'reset',run,cursor:{runId:run.runId,seq:events.length},events,hasMore:false}}
   if(action==='agent.mainSettings')return {workspaceId:id,instanceId,agentId:'cbim:main',revision:1,selection:{engine:'pi',profileId,modelId:'fixture'}};
   if(action==='models.list')return {profiles:[{id:profileId,name:'隔离模型夹具',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:10000,maxTokens:1000,reasoning:false}],hasKey:false}],secureStorage:true};
-  if(action==='loop.enqueue'){fixture.queued.push({id:crypto.randomUUID(),taskId:args.taskId,message:args.message,options:{...args.options,provider:'cbim-'+profileId},status:'pending'});return fixture.queued.at(-1)}
+  if(action==='loop.enqueue'){fixture.queued.push({id:crypto.randomUUID(),taskId:args.taskId,message:args.message,options:{...args.options,provider:'cbim-'+profileId},status:'pending',followupOf:args.followupOf});return fixture.queued.at(-1)}
+  if(action==='automation.list')return {version:1,jobs:[],runs:[]};
+  if(action==='automation.catalog')return {agents:[],modules:[],workflows:[],skills:[]};
+  if(action==='chat.pick'){if(fixture.failPick){fixture.failPick=false;throw Error('附件读取失败，请重试')}const item={id:crypto.randomUUID(),kind:'file',name:'fixture-'+(fixture.calls.filter((c:any)=>c.action==='chat.pick').length)+'.txt',source:'C:/isolated-office-fixture/input.txt'};if(fixture.delayPick)return new Promise(resolve=>fixture.pendingPicks.push(()=>resolve([item])));return [item]}
+  if(action==='chat.attachmentPreview')return {kind:'text',name:'fixture.txt',text:'隔离附件预览'};
+  if(action==='loop.topicInterrupt'){fixture.topicRequests.push(args);throw Error('IPC_TIMEOUT: simulated reply loss')}
+  if(action==='loop.goalContinue'){throw Error('IPC_TIMEOUT: simulated continuation reply loss')}
+  if(action==='loop.goalContinuation')return undefined;
   if(action==='resources.status')return {source:'local',session:{state:'signedOut'}};
   if(action==='desktop.updates.status')return {currentVersion:'0.1.2',enabled:false,phase:'disabled'};
   if(action==='admission.read')return {kind:'snapshot',snapshot:{cursor:{streamId:'fixture',revision:1},policy:{revision:1,maxConcurrentRuns:4},occupied:[],waiting:[]}};

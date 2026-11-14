@@ -894,7 +894,9 @@
           "tests/conversation-topics.test.ts",
           "tests/topic-interruption-view.test.ts",
           "tests/thread-recovery-notice.test.ts",
-          "tests/usage.test.ts"
+          "tests/usage.test.ts",
+          "tests/chat-messages.test.ts",
+          "tests/channel-draft.test.ts"
         ],
         "contract": [
           "tests/chat-chrome.test.ts",
@@ -1116,9 +1118,13 @@
       }
     },
     "tooling/runtime-acceptance-inputs": {
-      "roots": ["scripts/runtime-acceptance-inputs.mjs"],
+      "roots": [
+        "scripts/runtime-acceptance-inputs.mjs"
+      ],
       "tests": {
-        "unit": ["tests/runtime-acceptance-inputs.test.mjs"],
+        "unit": [
+          "tests/runtime-acceptance-inputs.test.mjs"
+        ],
         "contract": [],
         "integration": []
       }
@@ -1136,11 +1142,19 @@
       }
     },
     "tooling/desktop-acceptance-process": {
-      "roots": ["scripts/desktop-acceptance-process.mjs", "scripts/desktop-acceptance-process.ps1"],
+      "roots": [
+        "scripts/desktop-acceptance-process.mjs",
+        "scripts/desktop-acceptance-process.ps1"
+      ],
       "tests": {
-        "unit": ["tests/desktop-acceptance-process.test.mjs"],
+        "unit": [
+          "tests/desktop-acceptance-process.test.mjs"
+        ],
         "contract": [],
-        "integration": ["tests/desktop-acceptance-process-integration.test.mjs", "tests/desktop-acceptance-windows.test.mjs"]
+        "integration": [
+          "tests/desktop-acceptance-process-integration.test.mjs",
+          "tests/desktop-acceptance-windows.test.mjs"
+        ]
       }
     },
     "tooling/desktop-inspector-connection": {

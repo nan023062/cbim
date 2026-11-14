@@ -324,7 +324,7 @@ N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_workspace_list_css : 导
 
 # 工作区外壳与原会话定位
 
-外壳按工作区实例与主 Session 缓存对话页面发布的已验证成员投影。主条目始终可见，成员在其下折叠；点击成员保留主页签/taskId，仅设置本机查看身份，点击主条目回到主话题列表。子会话无创建、重命名和删除操作；工作区重新打开后的实例不复用旧动态缓存。草稿和发送归属仍由原主页签持有。
+外壳按工作区实例与主 Session 缓存对话页面发布的已验证成员投影。主条目始终可见，成员在其下折叠；点击成员保留主页签/taskId，仅设置本机查看身份，点击主条目恢复主聊天及已选频道。子会话无创建、重命名和删除操作；工作区重新打开后的实例不复用旧动态缓存。主聊天草稿和发送归属仍由原主页签持有，频道草稿由交互区按原 workspace/root/scope 独立保存。
 
 对话列表与会话历史菜单共用 `ConversationEntries` 和本机 `TabLayout`：自定义标题不覆盖原任务目标，移除条目保存工作区隔离的 `hiddenTaskIds`，轮询和重开不复活；删除最后一项创建空对话，不停止后台运行或删除日志。运行总览的显式定位可以恢复被移除条目。红色运行灯取 `runtime.snapshot` 的 ready 工作区及实际主／成员 running 记录，排队、历史状态和持久等待不点亮，读取失败清除观察。工作区菜单使用 portal 以点击坐标锚定左上角，视口边缘避让，支持键盘与焦点返回；折叠按钮紧邻项目名。
 
@@ -364,13 +364,13 @@ note for SoftwareUpdates "../updates/SoftwareUpdates.tsx：只消费更新状态
 
 ## 自动化会话定位
 
-App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。右侧旧自动化条目复用同一工作区视图，不建立第二份配置或调度服务。
+App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。自动化从右侧扩展区的空页签选择打开；收起或切走停止只读轮询，不停止后台计划，不建立第二份配置或调度服务。
 
 
 ### 异步结果失效边界
 
 RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
-主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
+主/子 Agent 入口由 `showAgentChat` 更新逻辑子 Session 选择，保留该主会话当前的对话/办公室模式。首次进入默认对话；办公室人物的显式入口才返回文字页。选择按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
 
 ## 设置中心与本机外观
 

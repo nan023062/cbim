@@ -1,3 +1,35 @@
+## 2026-11-14 交互区 C 0.1.17 / R3 发布准备
+
+用户授权 PR #81 后发布。冻结交互区三步成果，沿原 C 0.1.17 资源通道由 R2 升至 R3，复用原四个 E 与资源签名身份；不更改基础安装器。发布准备仅补版本说明与证据边界，现有开发验证不重复运行。最终 PR CI、实际候选及公开升级另行核验，详见 [R3 发布记录](verification/interaction-r3-20261114.md)。本条不表示已公开或已升级用户安装。
+
+## 交互区改造第 3 步：主窗/频道双窗与独立草稿（用户直接授权）
+
+- Conversation 保留唯一主运行、队列、停止与目标接续控制器；ConversationTopics 展示纯聊天及原 scope 的频道入口，ChannelPane 在交互区内独立打开。主窗、已访问频道、办公室与成员审阅保留挂载/查看状态；没有新增独立并行主运行或浏览触发的执行操作。
+- ChannelDraftStore/useChannelDraft 按 workspace/root/scope 持久保存文本、附件和版本；隐藏/切换取消资料导入的可见代次，迟到选择不能混入新频道。读写使用同一记录上限，损坏原记录拒绝覆盖；临时导入失败保留编辑和显式重试能力。ReadingPane 独立保存滚动/末尾跟随。
+- active 补充沿原 TopicInterruptionController 冻结正文、模型权限和有序附件身份；waiting 使用原 ScopeContinuationController.submitInput；closed 使用原 enqueue 创建 followupOf 关联后续任务。未知请求保留原文与标识，仅查询/明确重试；转交可靠请求或受理后只清空提交时那版频道草稿，不清主输入。
+- 验证选择：新草稿状态、原补充命令/回执、话题归属/聊天投影、原等待消费者受影响。`pnpm exec vitest run tests/channel-draft.test.ts tests/topic-interruption-view.test.ts tests/conversation-topics.test.ts tests/chat-messages.test.ts tests/conversation-waiting.test.ts --reporter=dot`：5 文件 23 用例通过。成员阅读保留与稳定频道回调调整后，`pnpm exec vitest run tests/team-conversation-view.test.ts tests/chat-messages.test.ts --reporter=dot`：4 用例通过。针对导入失败可恢复及容量边界追加草稿回归，最终 `pnpm exec vitest run tests/channel-draft.test.ts --reporter=dot`：5 用例通过。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（0 循环/违规）；`pnpm check:test-modules`：523 文件、unit=165、contract=158、integration=200，新增草稿测试唯一登记 view/conversation unit。最后容量检查仅改类内写入条件与回归，`node scripts/source-architecture.mjs --check` 无文档漂移；`git diff --check` 通过。
+- `node scripts/interaction-area-smoke.mjs`：真实隔离 Electron/React + 内存 IPC 的 9 组检查通过，覆盖自动化迁移、侧栏模式保留、成员只读、主/两个频道文本与附件隔离、迟到选择、独立滚动、办公室/关闭重开、1440/320px 明暗主题、active 与 waiting 未知回执不重发、closed 关联后续任务和导入失败重试。报告 test-results/office-desktop-cr4Jco/report.json。初次 waiting 场景因夹具同一游标改变内容被正确拒绝，修正夹具版本后通过。
+- 原 `node scripts/office-team-desktop-smoke.mjs` 同步新导航与只读成员语义，16 组检查通过，保留人物唯一性、真实事件动画、历史折叠、多办公室、减少动画、原主根发送等覆盖。报告 test-results/office-desktop-HgZGzu/report.html。
+- 源码注释与 conversation/shell 的 CONTRACT、类图及 View 上层依赖同步。Review 入口：Conversation（执行控制与页面装配）、ChannelComposer（状态路由）、channel-draft（草稿/导入代次）、ReadingPane（阅读位置）、MemberConversation（只读真实记录）。没有后端协议或调度变更；没有自动重放/重启。
+- 验证是开发单元/契约及隔离桌面 UI 验收，未运行全量 CI、在线模型、打包或安装升级；未推送、合并、发布，用户已安装版本未变。
+
+## 交互区改造第 2 步：纯聊天与成员只读工作审阅（用户直接授权）
+
+- 新 ChatMessages 仅渲染用户/主 Agent 的公开消息、附件与明确的缺失回复提示；工具、系统派发和运行计量不混入聊天正文。完整工具核实与恢复继续由办公室原运行详情承接。
+- MemberConversation 按原逻辑 Session 读取任务、公开计划/输出、工具及候选汇报；公开执行说明如实展示，无记录时不补造思考。成员页没有输入、审批、模型编辑或停止；显式返回所属主频道后才允许补充。成员浏览不改主频道选择。
+- 针对消息投影、成员审阅及原工具审阅消费者执行 `pnpm exec vitest run tests/chat-messages.test.ts tests/team-conversation-view.test.ts tests/inline-conversation.test.ts --reporter=dot`：14 用例通过。新增消息测试移除跨模块业务夹具，改为纯数据后单独重跑 2 用例通过；`pnpm check:test-modules` 通过，新增测试唯一登记 view/conversation unit。
+- `pnpm typecheck`、`pnpm check:architecture` 通过。`node scripts/interaction-area-smoke.mjs` 通过：只读成员无输入，返回原主频道，聊天无工具控件，主草稿保留；报告 test-results/office-desktop-wdLPYC/report.json。首次桌面执行遇源码热刷新重建 DOM，源码稳定后重跑通过。
+- 同步 Conversation/MemberConversation/ChatMessages 注释与 conversation CONTRACT/架构类图及 View 上层图。未运行全量 CI、打包或安装验收；未推送/发布。
+
+## 交互区改造第 1 步：双态导航与自动化迁移（用户直接授权）
+
+- 需求：默认对话，右上角图标切换办公室；侧栏选中 Agent 保留模式，办公室突出逻辑成员；自动化归右侧扩展区。无对应开放 Issue，不扩大 #65 的旧缺陷范围。
+- 边界：仅 View；App 保留主会话的成员选择，Conversation 保留模式，OfficeScene 只突出身份。自动化继续使用原工作区服务，隐藏停止读取但不停止计划。
+- 验证选择：人物身份/历史投影、任务详情消费者与跨入口定位受影响。`pnpm exec vitest run tests/office-scene.test.ts tests/session-task-view.test.ts tests/runtime-navigation.test.ts --reporter=dot`：3 文件 18 用例通过。`pnpm typecheck`、`pnpm check:architecture` 通过（0 循环/违规）。
+- `node scripts/interaction-area-smoke.mjs`：真实隔离 Electron + App / 内存 IPC，验证初始模式、侧栏保留办公室、成员高亮、主草稿保留、右侧自动化；导航无执行写入、页面异常 0。报告 test-results/office-desktop-1J0IY8/report.json。
+- 同步相关源码注释与 conversation/shell/tasks/automation 的 CONTRACT、架构类图及 View 上层依赖。未运行全量 CI、打包、在线模型或安装升级；未推送/发布。
+
 ## 2026-11-14 C 0.1.17 / R2 设置中心已投放公开通道
 
 [PR #79](https://github.com/nan023062/cbim/pull/79) 已合并 master；准确 head 完整 CI 43582437474 通过（521 文件、3516 通过、0 失败、2 个历史 EXE 前置条件跳过）。候选 43582208639 和公开升级 43584130246 均通过：真实 C 0.1.17 / R1 → R2，普通退出不应用、实际 UI 重启、数据与旧主题保留、新字号保存、无任务重放，0 页面错误。R2 4036781 字节，四个 E 沿用原身份。发布末尾回读短时返回上传前 404，已按远端 ID 核实成功并只读恢复，未重复发布；匿名原地址验签/下载通过。官网、README 和验证记录按真实 C/R 元数据同步，详见 [发布记录](verification/settings-r2-20261114.md)。

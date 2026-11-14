@@ -39,3 +39,11 @@ it('模块原 ID 与主工位/休息区同名时仍有独立工位',()=>{
  const scene=officeScene(officeGraph([task]),[officeSession()],[scope],false);
  expect(scene.desks.map(desk=>desk.id)).toEqual(['main','module:main']);expect(scene.actors.map(actor=>actor.deskId)).toEqual(['main','module:main']);
 });
+
+it('侧栏选择只突出本办公室逻辑成员，不改变任务选择或执行状态',()=>{
+ const props={graph:officeGraph([officeTask('one')]),sessions:[officeSession()],scopes:[scope],mainRunning:false,queued:0,onChat:()=>{},onTask:()=>{}};
+ const html=renderToStaticMarkup(createElement(OfficeScene,{...props,selectedAgentSessionId:'worker-session'}));
+ expect(html).toContain('data-selected="true" data-office-actor="worker-session"');
+ expect(html).toContain('data-selected="false" data-office-actor="main:root"');
+ const foreign=renderToStaticMarkup(createElement(OfficeScene,{...props,selectedAgentSessionId:'foreign-session'}));expect(foreign).not.toContain('data-selected="true"');
+});

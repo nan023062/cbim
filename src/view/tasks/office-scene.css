@@ -17,3 +17,6 @@
 @media(max-width:580px){.office-floor{grid-template-columns:minmax(0,1fr);padding-left:10px;padding-right:10px}}
 @media(prefers-reduced-motion:reduce){.office-person.walking,.office-person-drawing.working{animation:none}}
 .office-usage{margin:0 0 12px;font-size:12px;color:var(--muted)}.office-usage>summary{cursor:pointer;padding:4px 0}
+
+/* 选择只表示当前查看身份，不与正在执行的动画或任务状态混用。 */
+.office-worker[data-selected=true] .office-name{outline:2px solid var(--text);outline-offset:3px;border-radius:3px}

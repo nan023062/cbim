@@ -1911,6 +1911,7 @@ class N_src_view_tasks_OfficeScene_tsx_OfficeSceneProps["OfficeSceneProps"] {
   +queued
   +active
   +selectedTaskId
+  +selectedAgentSessionId
   +onChat
   +onTask
 }
@@ -2632,6 +2633,7 @@ class N_src_view_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +selectedAgentSessionId
   +workspaceId
   +workspaceInstanceId
   +taskId
@@ -2647,7 +2649,6 @@ class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskView
   +onChat
   +onStop
   +graph
-  +graphLoading
 }
 N_src_view_tasks_SessionTaskView_tsx ..> N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -2661,6 +2662,7 @@ class N_src_view_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +graphLoading
   +graphError
   +onRefreshGraph
   +scopeState
@@ -4604,3 +4606,7 @@ layoutDispatchGraph 组合前端 rankDirectedGraph。重复节点在原位置检
 `OfficeEventTracker` 首次快照只建立基线；当前可见期间新增 task/result/help/checkpoint 身份产生派发或汇报动画。跨办公室、旧/重复序号、切出期间的事实不回放；单人按序播放，队列有界。人物测量工位间位置，往返后回原位，动画没有业务副作用。文字状态取可靠任务事实；正在退出不称已暂停，等待不冒充正在工作。减少动画/关闭动态仍保留全部内容和导航。
 
 头顶对话入口携带原逻辑子 Session 和原话题；主人物省略子 Session。父层负责切回文字页，始终保留所属主根。办公室不向成员创建用户任务，不因动画或浏览触发停止、恢复或派发。
+
+## 交互区 Agent 选择
+
+SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人物用边框突出，缺省为主 Agent。只匹配当前主会话的真实人物，不改变任务选择、状态或动画事件。

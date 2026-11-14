@@ -1,45 +1,62 @@
 /**
- * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
- * 作用定位：模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。
- * 设计原因：模型、并发、周期软限额在固定位置独立加载和保存；仓库读取不重挂载表单或丢失草稿，新额度不改写正在执行的目标。
- * IPC 边界：预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
+ * 作用定位：设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。
+ * 设计原因：首次访问才挂载表单，访问后隐藏保留草稿与授权轮询；仓库失败不阻塞模型、外观等其它设置。
+ * 生命周期：离开设置中心才卸载全部表单；搜索只筛选入口，不提交或清空当前页面。
  */
-import {useEffect,useState} from 'react';
-import type {RepositoryStatus} from '../../bridge/contracts/resources';
-import {WebSettings} from './WebSettings';
+import {useEffect,useRef,useState} from 'react';
+import {Icon} from '../components/Icon';
 import {ModelSettings} from './ModelSettings';
 import {EngineSettings} from './EngineSettings';
 import {AdmissionSettings} from './AdmissionSettings';
 import {BudgetSettings} from './BudgetSettings';
-import {GitHubFeedbackSettings} from './GitHubFeedbackSettings';
-const api=window.cbim;
-export function SettingsView(){
-  const [status,setStatus]=useState<RepositoryStatus>(),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(true);
-  const [localPath,setLocalPath]=useState('');
-  const [lan,setLan]=useState(false),[port,setPort]=useState(0),[connection,setConnection]=useState<{url:string;host:string;port:number;token:string}>();
-
-  useEffect(()=>{void (async()=>{try{const s:RepositoryStatus=await api.call('resources.status');setStatus(s);setError(s.error||'');if(s.config?.mode==='local')setLocalPath(s.config.location)}catch(e:any){setError(e.message)}finally{setBusy(false)}})()},[]);
-  async function configure(){setBusy(true);setError('');setNotice('');try{const s=await api.call('resources.configure',{mode:'local',location:localPath});setStatus(s);setConnection(undefined);setNotice('已更新：链接器、人才市场、业务模板统一使用此仓库。')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
-  async function sharing(start:boolean){setBusy(true);setError('');try{setStatus(start?await api.call('resources.share',{lan,port}):await api.call('resources.stopSharing'));setConnection(undefined)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
-  async function showConnection(){setError('');try{setConnection(await api.call('resources.connection'))}catch(e:any){setError(e.message)}}
-
-  return <div className="view-page resource-library"><div className="view-heading"><div><p className="overline">CBIM / 设置</p><h1>设置</h1><p>仓库来源跟随登录状态：未登录使用本地目录，登录后自动连接服务器仓库。</p></div></div>
-    {status&&<div className="repository-bar"><div><b>当前资源来源 · {status.source==='server'?'服务器仓库':'本地仓库（未登录）'}</b><small>{status.config?.location||(status.source==='server'?'等待账号服务提供仓库':'请选择本地仓库目录')}</small></div></div>}
-    <p className="inline-note">链接器、人才市场、业务模板共用当前身份对应的仓库。登录后自动切换，不搬迁或合并本地资源。</p>
-    {error&&<div className="shell-alert" role="alert">{error}</div>}
-    {notice&&<p role="status">{notice}</p>}
-    <ModelSettings/>
-    <EngineSettings/>
-    <AdmissionSettings/>
-    <BudgetSettings/>
-    <GitHubFeedbackSettings/>
-    <WebSettings/>
-    {!status?(!error&&<p role="status">正在读取仓库设置…</p>):<><section className="repository-settings"><h2>本地仓库</h2>
-      {status.session.state==='signedOut'?<><p>当前未登录。选择这台电脑上的目录保存三类资源。</p><label>本地仓库文件夹<div className="repository-path"><input aria-label="本地仓库文件夹" placeholder="选择已有文件夹，或输入完整路径" value={localPath} disabled={busy} onChange={e=>setLocalPath(e.target.value)}/><button disabled={busy} onClick={async()=>{try{const p=await api.call('chooseFolder');if(p)setLocalPath(p)}catch(e:any){setError(e.message)}}}>选择文件夹</button></div></label><p>首次使用会在所选目录创建 cbim-resources.json。</p><button className="solid-button" disabled={busy||!localPath.trim()} onClick={()=>void configure()}>{busy?'正在验证…':'保存本地目录'}</button><p>更换目录不会搬迁、合并或删除原仓库的数据。</p></>:<p>已登录，当前使用账号服务器仓库。本地目录已保留，退出登录后恢复使用。</p>}
-      {status?.config?.mode==='local'&&<div className="repository-sharing"><h3>让这台电脑提供仓库服务</h3>{status.sharing?<><p>服务已启动 · 端口 {status.sharing.port} · {status.sharing.host==='0.0.0.0'?'允许局域网连接':'仅本机访问'}</p><button disabled={busy} onClick={()=>void sharing(false)}>停止共享</button><button disabled={busy} onClick={()=>void showConnection()}>显示连接信息</button></>:<><label><input type="checkbox" checked={lan} disabled={busy} onChange={e=>setLan(e.target.checked)}/>允许其他电脑通过局域网连接</label><label>监听端口（0 为自动分配）<input type="number" min={0} max={65535} aria-label="监听端口" value={port} disabled={busy} onChange={e=>setPort(Number(e.target.value))}/></label><button disabled={busy||!Number.isInteger(port)||port<0||port>65535} onClick={()=>void sharing(true)}>启动仓库共享</button></>}
-      {connection&&<div className="repository-connection"><label>本机服务地址<input readOnly aria-label="本机服务地址" value={connection.url}/></label><label>共享令牌<input readOnly type="password" aria-label="共享令牌" value={connection.token} onFocus={e=>e.target.select()}/></label>{connection.host==='0.0.0.0'&&<p>其他电脑请将地址中的 127.0.0.1 替换为本机局域网 IP。此令牌允许读取和修改仓库，仅交给可信成员。</p>}</div>}<p>退出应用会停止共享；重新开启时生成新令牌，不自动开放网络服务。</p></div>}
-    </section>
-    <section className="repository-settings"><h2>服务器仓库</h2><p>{status.session.state==='signedIn'?'已登录：由账号服务自动提供服务器仓库，无需手动选择。':'登录后自动连接账号所属的服务器仓库。'}</p><p>账号登录尚未接入，此处为服务器仓库占位；不提供手动地址或令牌配置。</p><button disabled>账号登录待接入</button></section></>}
-
-  </div>
+import {WebSettings} from './WebSettings';
+import {ResourceSettings} from './ResourceSettings';
+import {AccountSettings} from './AccountSettings';
+import {AppearanceSettings} from './AppearanceSettings';
+import {AboutSettings} from './AboutSettings';
+import {findSettingsSections,settingsSections,type SettingsSectionId} from './settings-sections';
+import type {AppearanceController} from './useAppearance';
+import type {SoftwareUpdateController} from '../updates/useSoftwareUpdates';
+import './settings.css';
+export interface SettingsViewProps {
+  section:SettingsSectionId;
+  onSectionChange:(section:SettingsSectionId)=>void;
+  onBack:()=>void;
+  appearance:AppearanceController;
+  updates:SoftwareUpdateController;
+  onOpenUpdates:()=>void;
+}
+/** 导航状态由外壳持有，支持账号菜单和资源页面直达；不重新创建更新或外观控制器。 */
+export function SettingsView({section,onSectionChange,onBack,appearance,updates,onOpenUpdates}:SettingsViewProps){
+  const [query,setQuery]=useState(''),[visited,setVisited]=useState<SettingsSectionId[]>([section]);
+  const content=useRef<HTMLDivElement>(null);
+  const found=findSettingsSections(query),active=settingsSections.find(item=>item.id===section)!;
+  useEffect(()=>{setVisited(old=>old.includes(section)?old:[...old,section]);content.current?.scrollTo(0,0)},[section]);
+  function open(id:SettingsSectionId){onSectionChange(id);setQuery('')}
+  function panel(id:SettingsSectionId){switch(id){
+    case 'models':return <ModelSettings/>;
+    case 'engines':return <EngineSettings active={section==='engines'}/>;
+    case 'accounts':return <AccountSettings/>;
+    case 'appearance':return <AppearanceSettings appearance={appearance}/>;
+    case 'runtime':return <AdmissionSettings active={section==='runtime'}/>;
+    case 'budget':return <BudgetSettings/>;
+    case 'web':return <WebSettings/>;
+    case 'resources':return <ResourceSettings/>;
+    case 'about':return <AboutSettings updates={updates} onOpenUpdates={onOpenUpdates}/>;
+  }}
+  return <div className="settings-center"><div className="settings-layout">
+    <aside className="settings-navigation" aria-label="设置导航">
+      <div className="settings-nav-heading"><button className="icon-button" aria-label="返回工作空间" onClick={onBack}><Icon name="chevron"/></button><span>设置</span></div>
+      <div className="settings-search"><Icon name="search" size={16}/><input type="search" aria-label="搜索设置" placeholder="搜索设置…" value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button className="icon-button" aria-label="清除设置搜索" onClick={()=>setQuery('')}><Icon name="close" size={14}/></button>}</div>
+      <label className="settings-mobile-picker">设置分类<select value={section} onChange={e=>open(e.target.value as SettingsSectionId)}>{settingsSections.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+      <nav className={'settings-nav-list'+(query?' is-searching':'')} aria-label="设置分类">
+        {[...new Set(found.map(item=>item.group))].map(group=><div className="settings-nav-group" key={group}><p>{group}</p>{found.filter(item=>item.group===group).map(item=><button key={item.id} aria-current={section===item.id?'page':undefined} aria-controls={'settings-panel-'+item.id} onClick={()=>open(item.id)}><Icon name={item.icon} size={17}/><span>{item.label}</span></button>)}</div>)}
+        {query&&<p className="settings-search-count" role="status">{found.length?`找到 ${found.length} 项设置`:'没有匹配的设置，试试“模型”“主题”或“共享”。'}</p>}
+      </nav>
+      <p className="settings-nav-footnote">CBIM Assistant</p>
+    </aside>
+    <div className="settings-content" ref={content}><div className="settings-content-inner"><header className="settings-page-heading"><p>{active.group}</p><h1>{active.label}</h1><span>{active.description}</span></header>
+      {settingsSections.filter(item=>visited.includes(item.id)||section===item.id).map(item=><section key={item.id} id={'settings-panel-'+item.id} hidden={item.id!==section} aria-label={item.label} className="settings-panel">{panel(item.id)}</section>)}
+    </div></div>
+  </div></div>;
 }

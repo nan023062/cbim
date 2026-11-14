@@ -33,7 +33,7 @@ class N_src_view_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../settings/useAppearance.ts](../settings/useAppearance.ts)、[../settings/settings-sections.ts](../settings/settings-sections.ts)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -209,7 +209,7 @@ class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../updates/SoftwareUpdateButton.tsx](../updates/SoftwareUpdateButton.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../settings/settings-sections.ts](../settings/settings-sections.ts)、[../updates/SoftwareUpdateButton.tsx](../updates/SoftwareUpdateButton.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
 
 ### useSidebarWidth.ts
 
@@ -334,7 +334,7 @@ N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_workspace_list_css : 导
 
 展开侧栏仅显示“团队空间”文字及收起按钮，不重复展示 CBIM/BrandMark；窄侧栏也保留文字。欢迎页仍展示完整名称 CBIM Assistant 与 BrandMark。标题变化不改变账号、工作区、侧栏伸缩或品牌资源。
 
-用户栏右侧原主题按钮改为常驻更新图标；账号菜单只保留设置、主题和账号项，不重复更新入口或绿点。`App` 持有唯一 `useSoftwareUpdates`，把同一个 controller 交给 `UserMenu` 内的 `SoftwareUpdateButton`、新版提醒和详情。图标悬停或聚焦只读版本和进度；仅 ready 时点击安装，未就绪不打开弹窗、不下载、不排队安装。具体进度环、呼吸与错误语义归 updates。主题切换仍由 UserMenu 的菜单项调用原回调。详情从新版提醒打开，不切换 screen 或卸载原会话和设置草稿。
+用户栏右侧原主题按钮改为常驻更新图标；账号菜单提供设置、主题快捷切换、账号与外观直达，不重复更新入口或绿点。`App` 持有唯一 `useSoftwareUpdates`，把同一个 controller 交给 `UserMenu` 内的 `SoftwareUpdateButton`、新版提醒和详情。图标悬停或聚焦只读版本和进度；仅 ready 时点击安装，未就绪不打开弹窗、不下载、不排队安装。具体进度环、呼吸与错误语义归 updates。主题切换仍由 UserMenu 的菜单项调用原回调。详情从新版提醒或设置的关于页打开，不切换 screen 或卸载原会话和设置草稿。
 
 更新呈现独立归入 [updates](../updates/ARCHITECTURE.md)，通过固定 IPC 依赖公开更新契约，不将账号登录、菜单展示或弹窗状态放进 logic/updates/service。菜单位置是本次已确认的变化点；检查、下载与排空安装的规则保持原后端归属，变化频率没有统计结论。
 
@@ -371,3 +371,7 @@ App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会�
 
 RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
 主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
+
+## 设置中心与本机外观
+
+App 持有 SettingsSectionId 与 useAppearance；进入设置时隐藏原工作区侧栏和顶栏，保留原工作区、会话与侧栏展开状态，返回后恢复原显示。模型配置入口直达大模型，资源页面入口直达资源仓库；导航仍经过原未保存知识编辑检查且只检查一次。分类切换由 SettingsView 保留已访问表单；离开中心维持原卸载语义。UserMenu 消费已解析配色，切换回调写入同一个外观控制器，账号入口不触发登录。关于页与原侧栏更新组件共享一份更新 controller。

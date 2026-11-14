@@ -985,7 +985,9 @@
       ],
       "tests": {
         "unit": [
-          "tests/budget-settings-view.test.ts"
+          "tests/appearance-settings.test.ts",
+          "tests/budget-settings-view.test.ts",
+          "tests/settings-navigation.test.ts"
         ],
         "contract": [],
         "integration": []

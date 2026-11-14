@@ -1,15 +1,15 @@
 /**
  * 作用定位：官方引擎能力列表，展示业务专长、主模型与额外角色可用模型和包管理状态。
- * 设计原因：引擎与模型独立设置；主模型和额外角色分别展示已配置可选项；用户显式发现/安装/停用/移除，不开放自定义包来源，操作提交显示的准确候选与 revision。
+ * 设计原因：引擎与模型独立设置；返回分类时重新读取已保存模型和包状态；用户显式发现/安装/停用/移除，不开放自定义包来源，操作提交显示的准确候选与 revision。
  */
 import {useEffect,useState} from 'react';
 import {modelRoleChoices,supportedEngines,providerSupportsEngine,engineDescriptor,type LoopEngine,type EnginePackageSettings} from '../../bridge/contracts/engines';
 import type {LlmSettings} from '../../bridge/contracts/models';
 const api=window.cbim;
-export function EngineSettings(){
+export function EngineSettings({active=true}:{active?:boolean}){
   const [state,setState]=useState<EnginePackageSettings>(),[models,setModels]=useState<LlmSettings>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   async function reload(){const [engines,models]=await Promise.all([api.call('engines.settings'),api.call('models.list')]);setState(engines);setModels(models)}
-  useEffect(()=>{let alive=true;void Promise.all([api.call('engines.settings'),api.call('models.list')]).then(([engines,models])=>{if(alive){setState(engines);setModels(models)}}).catch(error=>{if(alive)setError(error.message)});return ()=>{alive=false}},[]);
+  useEffect(()=>{if(!active||busy)return;let alive=true;void Promise.all([api.call('engines.settings'),api.call('models.list')]).then(([engines,models])=>{if(alive){setState(engines);setModels(models)}}).catch(error=>{if(alive)setError(error.message)});return ()=>{alive=false}},[active,busy]);
   async function perform(work:()=>Promise<void>,message:string){setBusy(true);setError('');setNotice('');try{await work();setNotice(message)}catch(error:any){setError(error.message);await reload().catch(()=>{})}finally{setBusy(false)}}
   async function install(kind:LoopEngine){const item=state?.items.find(value=>value.kind===kind);if(!state||!item?.candidate)return;setState(await api.call('engines.install',{kind,revision:state.revision,identity:item.candidate.identity}))}
   async function configure(kind:LoopEngine,action:'enable'|'disable'|'remove'){if(!state)return;setState(await api.call('engines.configure',{kind,revision:state.revision,action}))}

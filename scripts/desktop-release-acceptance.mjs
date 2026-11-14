@@ -284,7 +284,7 @@ try {
   const marker = `from-${previousVersion}-to-${version}`;
   await page.evaluate(marker => localStorage.setItem('cbim.release-retention', marker), marker);
   await fs.writeFile(path.join(userRoot, 'acceptance-marker.txt'), marker);
-  let restarted;
+  let restarted,installingPid;
   if (mode === 'candidate') { await close(); await setup(candidate, version); }
   else {
     const cache = path.join(process.env.LOCALAPPDATA, previousCache.configuredDirectory, 'pending', path.basename(candidate));
@@ -324,9 +324,9 @@ try {
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
       // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
       // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
-      const installingPid=await app.evaluate(()=>process.pid),closed=app.waitForEvent('close',{timeout:60000});
+      installingPid=await app.evaluate(()=>process.pid);const closed=app.waitForEvent('close',{timeout:60000});
       await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click();
-      await closed;await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
+      await closed;app=undefined;await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
     } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
@@ -352,7 +352,8 @@ try {
     assert.equal(await sha(cache), expected);
     if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
     }
-    const previousPid=app.process().pid; app = undefined;
+    // Playwright 在进程关闭后释放底层对象；使用点击前记录的原生 PID，不再访问已销毁连接。
+    const previousPid=installingPid??app.process().pid; app = undefined;
     restarted = await observeRestart(previousPid,true,'online-restart');
   }
   page = await launch();

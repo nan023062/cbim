@@ -1,24 +1,14 @@
-/* 设置中心使用应用配色变量；按内容区宽度切换导航，兼容展开侧栏与窄窗口。 */
+/** 作用定位：设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */
 .settings-focused .workspace-sidebar,.settings-focused .workspace-topbar{display:none}
 .settings-center{height:100%;min-height:0;container-type:inline-size;color:var(--text)}
-.settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);height:100%;min-height:0}
-.settings-navigation{min-width:0;display:flex;flex-direction:column;padding:24px 16px 14px;border-right:1px solid var(--line);background:var(--sidebar);overflow:auto}
-.settings-nav-heading{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:600;margin:0 0 22px}
-.settings-nav-heading button{width:28px;height:28px;transform:rotate(180deg)}
-.settings-search{display:flex;align-items:center;gap:7px;min-width:0;border:1px solid var(--line);border-radius:8px;padding:0 9px;background:var(--bg)}
-.settings-search>svg{flex-shrink:0;color:var(--muted)}
-.settings-search input{min-width:0;width:100%;border:0;padding:9px 0;background:transparent;font-size:12px;outline:none}
+.settings-layout{display:grid;grid-template-columns:var(--sidebar-width,260px) minmax(0,1fr);height:100%;min-height:0}
+.settings-navigation{min-height:0}
+.settings-nav-heading button{transform:rotate(180deg)}
 .settings-search:focus-within{outline:2px solid var(--muted);outline-offset:2px}
+.settings-search input{outline:none}
 .settings-search input::-webkit-search-cancel-button{display:none}
 .settings-search button{padding:2px;flex-shrink:0}
-.settings-nav-list{margin-top:20px}
-.settings-nav-group{margin-bottom:19px}
-.settings-nav-group>p{font-size:10px;color:var(--muted);letter-spacing:.08em;margin:0 10px 6px}
-.settings-nav-group>button{display:flex;align-items:center;justify-content:flex-start;width:100%;padding:10px 11px;gap:10px;border:0;border-radius:8px;background:transparent;text-align:left;font-size:13px;margin:2px 0;min-height:38px}
-.settings-nav-group>button>svg{flex-shrink:0;color:var(--muted)}
-.settings-nav-group>button:hover{background:var(--hover)}
-.settings-nav-group>button[aria-current=page]{background:var(--selected);font-weight:600}
-.settings-nav-group>button[aria-current=page]>svg{color:var(--text)}
+.settings-nav-list{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
 .settings-nav-footnote{margin:auto 10px 0;padding-top:20px;font-size:10px;color:var(--muted)}
 .settings-search-count{font-size:12px;line-height:1.7;color:var(--muted);margin:10px}
 .settings-mobile-picker{display:none}
@@ -87,16 +77,16 @@
 .appearance-reading-preview pre{padding:14px;margin:12px 0 0;background:var(--raised);border-radius:6px;font-family:Consolas,monospace;overflow:auto}
 @container(max-width:760px){
   .settings-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
-  .settings-navigation{padding:14px 18px;border-right:0;border-bottom:1px solid var(--line);overflow:visible;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-  .settings-nav-heading{grid-column:1/-1;margin:0;font-size:17px}.settings-nav-heading button{width:24px;height:24px}
+  .settings-navigation{padding:8px 8px 10px;border-right:0;border-bottom:1px solid var(--line);overflow:visible;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+  .settings-nav-heading{grid-column:1/-1;margin:0 4px}.settings-navigation>.sidebar-resize{display:none}
   .settings-mobile-picker{display:block;font-size:0;min-width:0}.settings-mobile-picker select{width:100%;height:36px;font-size:12px;padding:6px 8px}
-  .settings-search input{font-size:12px}.settings-search{padding:0 7px}
+  .settings-search{margin:0;height:32px}
   .settings-nav-list{display:none}.settings-nav-list.is-searching{display:block;grid-column:1/-1;max-height:210px;overflow:auto;margin-top:0}
   .settings-nav-list.is-searching .settings-nav-group{margin:0 0 10px}.settings-nav-footnote{display:none}
   .settings-content-inner{padding:24px 22px 40px}.settings-page-heading h1{font-size:23px}.settings-page-heading{margin-bottom:22px}
 }
 @container(max-width:420px){
-  .settings-navigation{padding:12px;gap:10px}.settings-content-inner{padding:22px 14px 36px}
+  .settings-navigation{gap:10px}.settings-content-inner{padding:22px 14px 36px}
   .settings-panel .repository-settings,.settings-card{padding:16px;border-radius:10px;margin-bottom:16px}
   .settings-row{gap:14px;flex-wrap:wrap;padding:16px 0}.settings-row>div{flex-basis:100%}.settings-row select{width:100%}
   .settings-row:has(input[role=switch])>div{flex-basis:0}

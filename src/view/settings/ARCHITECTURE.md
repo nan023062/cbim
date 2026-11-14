@@ -27,7 +27,7 @@
 | [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
 | [ResourceSettings.tsx](ResourceSettings.tsx) | 设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。 |
 | [settings-sections.ts](settings-sections.ts) | 设置中心的静态导航、分组与搜索词；仅描述已有设置入口。 |
-| [settings.css](settings.css) | 对应界面的布局与视觉样式。 |
+| [settings.css](settings.css) | 设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */ |
 | [SettingsView.tsx](SettingsView.tsx) | 设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。 |
 | [useAppearance.ts](useAppearance.ts) | 由 App 唯一持有的外观控制器，将本机偏好应用到窗口，并响应系统配色变化。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
@@ -338,6 +338,7 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"] {
   <<interface>>
+  +sidebarResize
   +section
   +onSectionChange
   +onBack
@@ -348,7 +349,7 @@ class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[EngineSettings.tsx](EngineSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
+直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[EngineSettings.tsx](EngineSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
 
 ### useAppearance.ts
 
@@ -565,7 +566,7 @@ class GitHubFeedbackSettings { <<component>> }
 note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说明页面轮询及本机已连接的完成条件；不展示 Issue 处理结果。"
 ```
 
-`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；窄内容区使用分类下拉和可搜索入口。
+`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；导航与首页共用 components/sidebar.css 的标题、搜索与菜单几何，宽度沿 App 的唯一 useSidebarWidth（默认 260px，范围 200～420px），设置中的调整返回首页后继续生效。只接收外壳提供的调整手柄，不持久化第二份宽度；窄内容区保留分类下拉和可搜索入口，隐藏不适用的拖动边缘。
 
 每个分类首次访问才挂载，之后使用 hidden 保留表单草稿，离开设置中心才卸载。仓库加载失败只显示于 ResourceSettings，不能阻塞其它分类。隐藏运行页退订共享准入快照；GitHub 授权流程在设置中心内换页时继续原有轮询，离开中心时清理。EngineSettings 返回可见分类或完成操作后刷新包与已保存模型，忙碌时不启动额外读取，旧读取在操作/切页时失效。
 

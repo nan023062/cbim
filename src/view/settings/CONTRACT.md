@@ -18,7 +18,7 @@ class GitHubFeedbackSettings { <<component>> }
 note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说明页面轮询及本机已连接的完成条件；不展示 Issue 处理结果。"
 ```
 
-`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；窄内容区使用分类下拉和可搜索入口。
+`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；导航与首页共用 components/sidebar.css 的标题、搜索与菜单几何，宽度沿 App 的唯一 useSidebarWidth（默认 260px，范围 200～420px），设置中的调整返回首页后继续生效。只接收外壳提供的调整手柄，不持久化第二份宽度；窄内容区保留分类下拉和可搜索入口，隐藏不适用的拖动边缘。
 
 每个分类首次访问才挂载，之后使用 hidden 保留表单草稿，离开设置中心才卸载。仓库加载失败只显示于 ResourceSettings，不能阻塞其它分类。隐藏运行页退订共享准入快照；GitHub 授权流程在设置中心内换页时继续原有轮询，离开中心时清理。EngineSettings 返回可见分类或完成操作后刷新包与已保存模型，忙碌时不启动额外读取，旧读取在操作/切页时失效。
 

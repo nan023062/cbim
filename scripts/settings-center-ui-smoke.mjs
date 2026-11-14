@@ -51,7 +51,36 @@ try{
   await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});
   const context=await browser.newContext({viewport:{width:1440,height:1040}}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
   const url='http://127.0.0.1:'+server.httpServer.address().port+'/test-results/settings-center/index.html';
-  await page.goto(url);await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'设置',exact:true}).click();
+
+  const sidebarMetrics=selector=>page.locator(selector).evaluate(node=>{
+    const style=getComputedStyle(node),part=selector=>node.querySelector(selector),box=e=>e.getBoundingClientRect(),css=e=>getComputedStyle(e);
+    const heading=part('.sidebar-top'),title=part('.sidebar-title'),search=part('.sidebar-search'),menu=part('.primary-nav>button:not(.selected)'),icon=menu.querySelector('svg');
+    return {width:box(node).width,padding:[style.paddingTop,style.paddingRight,style.paddingBottom,style.paddingLeft],background:style.backgroundColor,border:style.borderRightColor,heading:{height:box(heading).height,gap:css(heading).gap,margin:css(heading).margin,font:css(title).fontSize,weight:css(title).fontWeight},search:{height:box(search).height,radius:css(search).borderRadius,padding:css(search).padding,font:css(search.querySelector('input')).fontSize},menu:{height:box(menu).height,radius:css(menu).borderRadius,padding:css(menu).padding,font:css(menu).fontSize,weight:css(menu).fontWeight,gap:css(menu).gap,icon:box(icon).width}};
+  });
+  await page.goto(url);
+  const homeSidebar=page.locator('.workspace-sidebar');
+  await homeSidebar.waitFor({state:'visible'});
+  assert.equal((await homeSidebar.boundingBox()).width,260);
+  const homeResize=homeSidebar.getByRole('separator',{name:'调整侧边栏宽度',exact:true});
+  await homeResize.focus();await homeResize.press('ArrowRight');await homeResize.press('ArrowRight');
+  await page.waitForFunction(()=>document.querySelector('.workspace-sidebar').getBoundingClientRect().width===280);
+  const homeMetrics=await sidebarMetrics('.workspace-sidebar');
+  assert.equal(homeMetrics.heading.height,32);assert.equal(homeMetrics.search.height,30);assert.equal(homeMetrics.menu.height,32);
+  await page.screenshot({path:path.join(out,'home-sidebar-desktop.png')});
+  const openSettings=async()=>{await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'设置',exact:true}).click();await page.locator('.settings-navigation').waitFor({state:'visible'})};
+  await openSettings();
+  assert.deepEqual(await sidebarMetrics('.settings-navigation'),homeMetrics);
+  const settingsResize=page.locator('.settings-navigation').getByRole('separator',{name:'调整侧边栏宽度',exact:true}),handle=await settingsResize.boundingBox();
+  await page.mouse.move(handle.x+handle.width/2,handle.y+100);await page.mouse.down();await page.mouse.move(320,handle.y+100,{steps:5});await page.mouse.up();
+  await page.waitForFunction(()=>document.querySelector('.settings-navigation').getBoundingClientRect().width===320);
+  await page.getByRole('button',{name:'返回工作空间',exact:true}).click();
+  assert.equal((await homeSidebar.boundingBox()).width,320);
+  await homeResize.focus();await homeResize.press('Home');
+  await page.waitForFunction(()=>document.querySelector('.workspace-sidebar').getBoundingClientRect().width===260);
+  await openSettings();assert.equal((await page.locator('.settings-navigation').boundingBox()).width,260);
+  await page.screenshot({path:path.join(out,'settings-sidebar-desktop.png')});
+  checks.push('首页和设置侧栏几何一致，共享拖动/键盘宽度与默认恢复');
+
   const nav=page.getByRole('navigation',{name:'设置分类'});
   async function go(id,label){if(await page.locator('.settings-mobile-picker').isVisible())await page.locator('.settings-mobile-picker select').selectOption(id);else await nav.getByRole('button',{name:label,exact:true}).click();await page.locator('#settings-panel-'+id).waitFor({state:'visible'})}
   await page.getByText('测试供应商',{exact:true}).waitFor();

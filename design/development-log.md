@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 设置侧栏与首页统一
+
+用户要求设置侧栏与首页采用相同风格、尺寸和布局。两处现在共用 components/sidebar.css 的侧栏内边距、32px 标题/菜单行、30px 圆角搜索框、图标、分组及选中样式；App 通过 --sidebar-width 传递唯一 useSidebarWidth 状态（默认 260px，200～420px），设置接收同一调整手柄，拖动或键盘调整在返回首页后继续有效。清除 shell/settings 的重复视觉声明；设置窄屏仍用分类选择器和搜索，表单按需挂载/草稿/更新控制器不变。此处只改变 View 装配和 CSS，未迁移宽度所有权或业务保存规则。
+
+验证以实际布局和交互为主：`node scripts/settings-center-ui-smoke.mjs` 10 组通过，逐项比较两处侧栏的计算尺寸/字体/内边距/背景，验证默认260、键盘280、设置拖动320、返回首页同步及默认恢复；覆盖九类设置的搜索、草稿、失败恢复与 320/390/800px 双主题无溢出。浏览器运行真实 App、隔离 IPC 替身，未访问用户配置或外部服务。证据 `test-results/settings-center/result.json`，桌面/双主题截图已核对。共享样式的首页消费者另运行 `node scripts/interaction-area-smoke.mjs`，11 组 Electron 验收通过，证据 `test-results/office-desktop-8w35gq/report.json`。`pnpm typecheck`、`pnpm check:architecture` 通过；本次无业务规则改动，不新增重复实现断言或无关单元。源码说明、components/settings/shell 的 CONTRACT/ARCHITECTURE 和上层 View 类图已同步。完整 CI 随最终提交重新触发；未安装、合并或发布。
+
 ## 2026-11-15 PR #83 侧栏 Agent 直接选择
 
 用户要求删除 Agent 下的展开和二级“查看对话”按钮。ConversationEntries 现在直接以角色名按钮提交原 onSelectChild 身份，保留原选中状态、运行指示和禁用门禁；名称左对齐并在过长时省略。对话模式直接显示该成员只读工作审阅，办公室模式仍定位所选成员；主对话草稿、任务和执行状态不变。

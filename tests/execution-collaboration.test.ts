@@ -69,10 +69,10 @@ test('初始输入与显式续聊传入本轮原文，原会话 TaskSpec 保持�
   const f=await fixture();try{
     const first='  第一项任务\n保留上下文原文  ',second='\n第二项任务，与首项不同\n';
     const chat=await f.manager.chat(first,options);
-    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,first,chat.runId);
+    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,first,chat.runId,undefined,undefined);
     await f.finish();
     await f.manager.resume(chat.taskId,chat.runId,second,options);
-    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,second,expect.any(String));
+    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId,goal:first.trim()}),expect.anything(),undefined,second,expect.any(String),undefined,undefined);
   }finally{await f.cleanup()}
 });
 
@@ -94,24 +94,24 @@ test('持久等待期间普通同意消息只排队，继续队列不能解除�
     expect(result).toMatchObject({queued:true});
     await expect(f.manager.continueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});
     expect(f.runs).toHaveLength(1);
-    const pending=await f.manager.queued(chat.taskId);expect(pending).toHaveLength(2);expect(pending.every(item=>item.status==='paused')).toBe(true);
+    const pending=await f.manager.queued(chat.taskId);expect(pending).toHaveLength(2);expect(pending.every(item=>item.status==='pending')).toBe(true);
     await f.manager.collaborationReady(chat.taskId);expect(f.runs).toHaveLength(1);
-    await f.reopen();await expect(f.manager.continueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});expect(f.runs).toHaveLength(1);
+    await f.reopen();expect(await f.manager.queued(chat.taskId)).toMatchObject(pending.map(item=>({id:item.id,message:item.message,status:'paused'})));await expect(f.manager.continueQueue(chat.taskId)).rejects.toMatchObject({code:'GOAL_WAITING'});expect(f.runs).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 
-test('collaboration notification follows lease release and keeps user queue paused until the batch is ready',async()=>{
+test('collaboration notification follows lease release and starts the queued topic only when the batch is ready',async()=>{
   const f=await fixture();try{
     const chat=await f.manager.chat('coordinate work',options);
-    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId}),expect.anything(),undefined,'coordinate work',chat.runId);
+    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({taskId:chat.taskId}),expect.anything(),undefined,'coordinate work',chat.runId,undefined,undefined);
     expect(f.factory.mock.calls[0][1]).toMatchObject({taskId:chat.taskId,mode:'chat'});
-    await f.manager.enqueue(chat.taskId,'user followup',{...options,model:'model-two'});
+    const queued=await f.manager.enqueue(chat.taskId,'user followup',{...options,model:'model-two'});
     f.setBusy(true);await f.finish();
     expect(f.settled).toHaveBeenCalledWith(expect.objectContaining({taskId:chat.taskId}),expect.objectContaining({model:'model-one'}),expect.objectContaining({status:'completed'}));
     expect(f.runs).toHaveLength(1);expect(await f.manager.queued(chat.taskId)).toHaveLength(1);
     f.setBusy(false);await f.manager.collaborationReady(chat.taskId);
     expect(f.runs).toHaveLength(2);await vi.waitFor(()=>expect(f.runs[1].message).toBe('user followup'));
-    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({goal:'coordinate work'}),expect.anything(),undefined,'user followup',expect.any(String));
+    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({goal:'coordinate work'}),expect.anything(),undefined,'user followup',expect.any(String),queued.id,undefined);
     expect(f.factory.mock.calls[1][0].model).toBe('model-two');expect(await f.manager.queued(chat.taskId)).toEqual([]);
   }finally{await f.cleanup()}
 });
@@ -120,7 +120,7 @@ test('result continuation has durable source and duplicate receipts never start 
   const f=await fixture();try{
     const chat=await f.manager.chat('coordinate work',options);await f.finish();f.setBusy(true);
     const receipt=await f.manager.continueFromResults(chat.taskId,'member candidate is ready',options,source());
-    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({goal:'coordinate work'}),expect.anything(),source(),'member candidate is ready',receipt.runId);
+    expect(f.starting).toHaveBeenLastCalledWith(expect.objectContaining({goal:'coordinate work'}),expect.anything(),source(),'member candidate is ready',receipt.runId,undefined,undefined);
     const summary=await f.manager.inspect(chat.taskId,receipt.runId);
     expect(summary.source).toEqual(source());expect(summary.events[0].data.source).toEqual(source());
     expect(await f.manager.continueFromResults(chat.taskId,'member candidate is ready',options,source())).toEqual(receipt);

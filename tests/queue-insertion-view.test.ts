@@ -39,9 +39,9 @@ it('已有队列项入口使用同一冻结身份，丢回包只报错不改为�
   await expect(insertQueuedMessage(captured,'existing',insert)).rejects.toThrow('IPC_REPLY_LOST');expect(insert).toHaveBeenCalledExactlyOnceWith({id:'workspace',taskId:'root',queueId:'existing',expectedRunId:'run-before'});
 });
 
-it('成员忙只排队，持久waiting交给原目标续接；两者均不能生成插入请求',async()=>{
+it('成员忙和持久waiting期间普通输入均排队；补充需显式话题入口，不能生成单轮插入请求',async()=>{
   const scope:ScopeSummary={scopeId:'scope',status:'active',createdAt:'2026-11-07T00:00:00.000Z',hasGoal:false,hasPlan:false,stamp:{scopeId:'scope',streamId:'scopes',seq:1}},memberBusy=conversationExecutionState({...run(),status:'completed'},scope),waiting=conversationExecutionState(run(),{...scope,status:'waiting'});
-  expect(memberBusy.shouldQueue).toBe(true);expect(waiting.shouldQueue).toBe(false);
+  expect(memberBusy.shouldQueue).toBe(true);expect(waiting.shouldQueue).toBe(true);expect(waiting.canContinueQueue).toBe(false);
   for(const state of [memberBusy,waiting]){expect(state.canInsert).toBe(false);expect(captureQueueInsertTarget('workspace','root',run(),state.canInsert)).toBeUndefined()}
   for(const [id,taskId,current] of [['other','root',run()],['workspace','other',run()],['workspace','root',undefined]] as const)expect(captureQueueInsertTarget(id,taskId,current,true)).toBeUndefined();
   const insert=vi.fn(),accepted=vi.fn();await enqueueConversationMessage({enqueue:async()=>({taskId:'root',id:'q'}),accepted,insert});expect(accepted).toHaveBeenCalledTimes(1);expect(insert).not.toHaveBeenCalled();

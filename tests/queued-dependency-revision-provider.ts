@@ -49,7 +49,10 @@ export async function dependencyRevisionProvider(options:{lostReply?:boolean}={}
    else if(turn===heldTurn+3)reply(d.final);else throw Error('Unexpected main revision replay '+turn);
   }else{
    assert.ok(body.tools?.every(t=>!t.function.name.startsWith('cbim_dispatch_')));
-   const text=JSON.stringify(body.messages),index=d.goals.findIndex(g=>text.includes(g));assert.ok(index>=0);const prefix='revision-worker-'+index;
+   // 当前派发目标来自用户轮；系统提供的前置证据也含其它目标，不能全文匹配后误认成来源任务。
+   const assignment=body.messages.find(message=>message.role==='user')?.content;
+   const goal=typeof assignment==='string'?assignment:Array.isArray(assignment)?assignment.filter(item=>item.type==='text').map(item=>item.text).join(''):'';
+   const text=JSON.stringify(body.messages),index=d.goals.indexOf(goal);assert.ok(index>=0,'成员派发原文必须对应唯一目标');const prefix='revision-worker-'+index;
    const has=(suffix:string)=>body.messages.some(m=>m.role==='tool'&&m.tool_call_id===prefix+suffix);
    if(!has('-plan'))tool(prefix+'-plan','cbim_task_plan',{expectedVersion:0,goal:d.goals[index],reason:'按原任务实际读取',acceptance:d.acceptance,steps:[{id:'read',title:'核实材料',owner:'开发者'}]});
    else if(!has('-read'))tool(prefix+'-read','read',{path:d.files[index]});

@@ -1,3 +1,11 @@
+## 2026-11-14：候选全量 CI 发现的测试契约与派发夹具修正
+
+- 冻结制品 `b21a77ec23f17089a80ec738bbe365f9c56e71d5` 的完整 CI [43543016620](https://github.com/nan023062/cbim/actions/runs/43543016620) 已结束：静态检查、第 2/4 片通过，第 1/3 片共 9 项失败。本步核对实际 Conversation 管理器、View 输入状态、派发原文及原始 HTTP 记录，未修改产品源码、构建输入、依赖或签名制品。开放 Issue 仍仅 #65；不把本轮候选验收作为其已修复证据。
+- 7 项旧测试断言未跟随办公室设计更新：`starting` 回调明确传递队列话题标识及可选关联话题；普通新任务在在线等待期间为 pending，重启后为 paused；等待期间普通输入仍排队，显式补充沿独立话题入口。修正三个测试文件，增加队列原 ID 传入回调、重启暂停及禁止继续等待队列的断言；租约释放、不可变历史、去重和停止边界保留。
+- 另 2 项真实 Pi 依赖修订测试本地复现。确定性供应商从全部上下文匹配第一个任务名，误将系统提供的前置 A 证据当成当前 D 派发，读取了 A；产品正确拒绝无效候选，随后脚本主轮过早宣称完成。夹具现在从真实用户轮的完整派发原文精确选任务，仍通过真实 read/计划/候选审阅与目标审阅。修复后 A/B/C/D 各自返回对应文件标记；没有绕过依赖审阅、延长超时或改调度状态。
+- 因失败分别属于管理器协作契约、输入状态及真实 Pi 集成，选择 `pnpm exec vitest run tests/queued-task-cancel-pi.test.ts --reporter=json --outputFile=test-results/desktop-016-20261114/queued-task-cancel-local.json`：3/3；`pnpm exec vitest run tests/execution-collaboration.test.ts tests/queue-insertion-view.test.ts tests/queued-dependency-revision-pi.test.ts --reporter=json --outputFile=test-results/desktop-016-20261114/ci-regressions-after.json`：30/30。原失败报告和请求现场另存同目录；`pnpm check:test-modules`：494 文件（146 unit / 155 contract / 193 integration）通过。
+- 此提交只校正验收代码与记录，不影响已通过在线模型和隔离安装的冻结候选。接着对本提交运行完整 CI，结果独立回填；本步不将局部通过写成全仓或公开发布通过。`src/` 没有修改，不涉及产品注释或类图更新。
+
 ## 2026-11-14：修复冷包中空目录与签名文件清单不一致
 
 - 首个候选冻结于 `a2fdce3a7f07083fbe7218ad449f38aec8c4dc4d`，目录 `build/desktop-release/0.1.16/unsigned-20261114-094417-9c19e1db`。R/E 制品验证和 NSIS 生成已完成，最终 `verify-cold-payload` 因“资源目录包含多余内容”失败；此候选不发布，回执与现场保留。

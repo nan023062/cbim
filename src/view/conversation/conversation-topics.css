@@ -15,3 +15,20 @@
 .conversation-topic-tasks>button{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;width:100%;margin-top:8px}
 @media(max-width:520px){.conversation-topic-card{padding:12px}.conversation-topic-title{font-size:14px}}
 .member-conversation{display:grid;gap:14px;min-width:0}.member-conversation header p{color:var(--muted);font-size:12px}.member-conversation label{display:grid;gap:6px;min-width:0}.member-conversation select{width:100%;min-width:0}.member-assignment,.member-result{padding:14px;border:1px solid var(--border);border-radius:10px;overflow-wrap:anywhere}.member-assignment p,.member-result p{white-space:pre-wrap}.member-assignment small{display:block;color:var(--muted);margin-bottom:8px}
+
+/* 主窗与频道都在交互区内；右侧扩展区不参与此分屏。每个消息区拥有独立滚动容器。 */
+.interaction-chat-layout{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.interaction-chat-layout[hidden],.interaction-chat-layout [hidden]{display:none!important}
+.main-chat-pane,.channel-pane,.member-review-pane{display:flex;flex-direction:column;flex:1 1 0;min-width:0;min-height:0;overflow:hidden}
+.channel-pane{border-left:1px solid var(--line)}
+.interaction-chat-layout[data-split=true]{--chat-gutter:16px}
+.channel-input-area{flex-shrink:0;max-height:50%;overflow:auto;padding:8px 16px;border-top:1px solid var(--line);font-size:12px}
+.channel-draft-input textarea{display:block;width:100%;min-height:72px;max-height:180px;resize:vertical;box-sizing:border-box}
+.channel-draft-input button,.channel-composer>button{margin-top:8px}
+.channel-pane .scope-continuation{margin:0}
+.main-channel-entry{margin-bottom:24px}.message-channel-action{display:block;font-size:12px;margin-top:8px}
+.interaction-chat-layout .chat-controls{flex-wrap:wrap}.interaction-chat-layout .chat-controls-left,.interaction-chat-layout .chat-controls-right{flex-wrap:wrap}
+.member-review-pane{--chat-gutter:20px}
+@media(max-width:800px){.interaction-chat-layout[data-split=true]{flex-direction:column;overflow-y:auto}.interaction-chat-layout[data-split=true]>.main-chat-pane,.interaction-chat-layout[data-split=true]>.channel-pane{flex:1 0 50%;min-height:300px}.channel-pane{border-left:0;border-top:1px solid var(--line)}.channel-input-area{padding:8px 12px}}
+
+.conversation-topic-thread>header{position:sticky;top:-16px;z-index:2;background:var(--bg);padding:10px 0}

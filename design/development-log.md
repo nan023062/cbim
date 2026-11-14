@@ -1,3 +1,15 @@
+## 交互区改造第 3 步：主窗/频道双窗与独立草稿（用户直接授权）
+
+- Conversation 保留唯一主运行、队列、停止与目标接续控制器；ConversationTopics 展示纯聊天及原 scope 的频道入口，ChannelPane 在交互区内独立打开。主窗、已访问频道、办公室与成员审阅保留挂载/查看状态；没有新增独立并行主运行或浏览触发的执行操作。
+- ChannelDraftStore/useChannelDraft 按 workspace/root/scope 持久保存文本、附件和版本；隐藏/切换取消资料导入的可见代次，迟到选择不能混入新频道。读写使用同一记录上限，损坏原记录拒绝覆盖；临时导入失败保留编辑和显式重试能力。ReadingPane 独立保存滚动/末尾跟随。
+- active 补充沿原 TopicInterruptionController 冻结正文、模型权限和有序附件身份；waiting 使用原 ScopeContinuationController.submitInput；closed 使用原 enqueue 创建 followupOf 关联后续任务。未知请求保留原文与标识，仅查询/明确重试；转交可靠请求或受理后只清空提交时那版频道草稿，不清主输入。
+- 验证选择：新草稿状态、原补充命令/回执、话题归属/聊天投影、原等待消费者受影响。`pnpm exec vitest run tests/channel-draft.test.ts tests/topic-interruption-view.test.ts tests/conversation-topics.test.ts tests/chat-messages.test.ts tests/conversation-waiting.test.ts --reporter=dot`：5 文件 23 用例通过。成员阅读保留与稳定频道回调调整后，`pnpm exec vitest run tests/team-conversation-view.test.ts tests/chat-messages.test.ts --reporter=dot`：4 用例通过。针对导入失败可恢复及容量边界追加草稿回归，最终 `pnpm exec vitest run tests/channel-draft.test.ts --reporter=dot`：5 用例通过。
+- `pnpm typecheck`、`pnpm check:architecture` 通过（0 循环/违规）；`pnpm check:test-modules`：523 文件、unit=165、contract=158、integration=200，新增草稿测试唯一登记 view/conversation unit。最后容量检查仅改类内写入条件与回归，`node scripts/source-architecture.mjs --check` 无文档漂移；`git diff --check` 通过。
+- `node scripts/interaction-area-smoke.mjs`：真实隔离 Electron/React + 内存 IPC 的 9 组检查通过，覆盖自动化迁移、侧栏模式保留、成员只读、主/两个频道文本与附件隔离、迟到选择、独立滚动、办公室/关闭重开、1440/320px 明暗主题、active 与 waiting 未知回执不重发、closed 关联后续任务和导入失败重试。报告 test-results/office-desktop-cr4Jco/report.json。初次 waiting 场景因夹具同一游标改变内容被正确拒绝，修正夹具版本后通过。
+- 原 `node scripts/office-team-desktop-smoke.mjs` 同步新导航与只读成员语义，16 组检查通过，保留人物唯一性、真实事件动画、历史折叠、多办公室、减少动画、原主根发送等覆盖。报告 test-results/office-desktop-HgZGzu/report.html。
+- 源码注释与 conversation/shell 的 CONTRACT、类图及 View 上层依赖同步。Review 入口：Conversation（执行控制与页面装配）、ChannelComposer（状态路由）、channel-draft（草稿/导入代次）、ReadingPane（阅读位置）、MemberConversation（只读真实记录）。没有后端协议或调度变更；没有自动重放/重启。
+- 验证是开发单元/契约及隔离桌面 UI 验收，未运行全量 CI、在线模型、打包或安装升级；未推送、合并、发布，用户已安装版本未变。
+
 ## 交互区改造第 2 步：纯聊天与成员只读工作审阅（用户直接授权）
 
 - 新 ChatMessages 仅渲染用户/主 Agent 的公开消息、附件与明确的缺失回复提示；工具、系统派发和运行计量不混入聊天正文。完整工具核实与恢复继续由办公室原运行详情承接。

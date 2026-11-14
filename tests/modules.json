@@ -895,7 +895,8 @@
           "tests/topic-interruption-view.test.ts",
           "tests/thread-recovery-notice.test.ts",
           "tests/usage.test.ts",
-          "tests/chat-messages.test.ts"
+          "tests/chat-messages.test.ts",
+          "tests/channel-draft.test.ts"
         ],
         "contract": [
           "tests/chat-chrome.test.ts",

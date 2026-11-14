@@ -344,7 +344,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/knowledge-queries.test.ts"
+          "tests/knowledge-queries.test.ts",
+          "tests/unit/logic/knowledge/memory-index.test.ts"
         ],
         "contract": [
           "tests/knowledge-query-ports.test.ts",
@@ -521,7 +522,8 @@
           "tests/model-request-budget-usage.test.ts"
         ],
         "contract": [
-          "tests/model-capacity-sdk.test.ts"
+          "tests/model-capacity-sdk.test.ts",
+          "tests/model-json-requests.test.ts"
         ],
         "integration": []
       }

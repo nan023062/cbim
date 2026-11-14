@@ -46,6 +46,7 @@ N_src_logic_models_config_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_config_ts ..> N_src_logic_models_embedding_ts : 导入依赖
 N_src_logic_models_embedding_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_catalog_ts : 导入依赖
+N_src_logic_models_index_ts ..> N_src_logic_models_endpoint_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_config_ts : 导入依赖
 N_src_logic_models_index_ts ..> N_src_logic_models_embedding_ts : 导入依赖
 N_src_logic_models_service ..> N_src_logic_models_index_ts : 导入依赖
@@ -74,6 +75,7 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_prese
 - `config.ts` → `embedding.ts`：导入。
 - `embedding.ts` → `endpoint.ts`：导入。
 - `index.ts` → `catalog.ts`：导入。
+- `index.ts` → `endpoint.ts`：导入。
 - `index.ts` → `config.ts`：导入。
 - `index.ts` → `provider-connections.ts`：导入。
 - `index.ts` → `provider-presets.ts`：导入。

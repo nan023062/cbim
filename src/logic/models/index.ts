@@ -4,6 +4,7 @@
  * 职责边界：兼容性只表示规则允许选择，不保证认证、额度或实际调用成功；配置服务使用独立 service 入口。
  */
 export {parseModelCatalog} from './catalog';
+export {modelEndpointSchema} from './endpoint';
 export type {DiscoveredModel} from './catalog';
 export {llmApiSchema,connectionSchema,alternateConnectionSchema,modelSchema,definition} from './config';
 export type {LlmApi,AlternateConnection,LlmModel,LlmDefinition,LlmProfile,LlmSettings} from './config';

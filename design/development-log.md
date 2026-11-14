@@ -1,3 +1,11 @@
+
+## 2026-11-14 引擎架构第 6 步（a）：双模型请求与派生索引
+
+按用户继续实施授权，加入非流式生成/向量请求门禁与纯知识索引规则。正式知识不变，完整来源/embedding 配置/维度固定索引代际；失败不改旧代。请求共用单轮停止屏障，预算启用时精确比对角色快照并先结算后交付，无重试。
+
+验证选择：传输与预算快照为跨模块契约（tests/model-json-requests.test.ts，5 个），索引为 knowledge/rules 单元（3 个），复用的 SSE 用量解析消费者（12 个）；对应显式 vitest run 通过。初轮测试重复消费同一 Response 已修为每次创建响应；未修改产品规则绕过失败。pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过（1568 文件/7528 边，零循环）；细粒度预算入口登记后运行 dependencies.test.ts -t "concrete engines depend" 通过。代码注释、models/knowledge/transport 架构及相关 CONTRACT 同步。
+
+本步未运行完整应用、外部模型、桌面发布或全量回归；下一切片消费这些能力实现记忆 Loop，不把纯规则验证称为真实供应商验收。
 ## 2026-11-14：切片 5b——模型能力表单与多角色选择
 
 - 基线 a575e26a。模型设置提供独立向量接口、输入容量/维度/输入价；既有供应商编辑保留 embedding，纯向量供应商可保存。连接预览与测试改为按模型操作及接口，不要求选择引擎，旧 models.test 契约继续兼容。

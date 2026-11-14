@@ -30,6 +30,7 @@ export const domainPublicEntries=new Set([
   "src/logic/budget/rules/model-request-budget-rules.ts",
   "src/logic/budget/rules/model-request-budget-storage.ts",
   "src/logic/budget/rules/model-request-budget.ts",
+  "src/logic/budget/rules/model-request-configuration.ts",
   "src/logic/budget/rules/request-budget.ts",
   "src/logic/budget/rules/scope-budget-invariants.ts",
   "src/logic/budget/rules/scope-budget.ts",

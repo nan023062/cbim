@@ -10,10 +10,33 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [model-json-requests.ts](model-json-requests.ts) | 自定义领域 Loop 的非流式生成/向量请求，复用逐请求预算与冻结模型快照。 |
 | [request-budget-transport.ts](request-budget-transport.ts) | 每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。 |
 | [request-budget-usage.ts](request-budget-usage.ts) | 严格读取三种受支持 SSE 协议的请求用量，并暂存终态帧供可靠结算后交付。 |
 
 ## 架构类图
+
+### model-json-requests.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_transport_model_json_requests_ts["model-json-requests.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests["ModelJsonRequests"] {
+  +chat()
+  +embed()
+  -budget
+  -signal
+  -blocked
+  -pending
+  -llm
+  -request()
+}
+N_src_logic_execution_engines_transport_model_json_requests_ts ..> N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests : 声明
+```
+
+直接依赖：[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../../budget/rules/model-request-configuration.ts](../../../budget/rules/model-request-configuration.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../models/index.ts](../../../models/index.ts)、[request-budget-usage.ts](request-budget-usage.ts)。
 
 ### request-budget-transport.ts
 
@@ -29,6 +52,14 @@ class N_src_logic_execution_engines_transport_request_budget_transport_ts["reque
 直接依赖：[../../../models/index.ts](../../../models/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[request-budget-usage.ts](request-budget-usage.ts)、[../../../budget/rules/model-request-budget-rules.ts](../../../budget/rules/model-request-budget-rules.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../team/rules/workspace-member-rules.ts](../../../team/rules/workspace-member-rules.ts)。
 
 ### request-budget-usage.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_transport_request_budget_usage_ts["request-budget-usage.ts"] {
+  <<module>>
+  +modelJsonUsage()
+}
+```
 
 ```mermaid
 classDiagram
@@ -60,12 +91,16 @@ N_src_logic_execution_engines_transport_request_budget_usage_ts ..> N_src_logic_
 
 ```mermaid
 classDiagram
-class N_src_logic_execution_engines_transport_request_budget_transport_ts["request-budget-transport.ts"] {
+class N_src_logic_execution_engines_transport_model_json_requests_ts["model-json-requests.ts"] {
   <<module>>
 }
 class N_src_logic_execution_engines_transport_request_budget_usage_ts["request-budget-usage.ts"] {
   <<module>>
 }
+class N_src_logic_execution_engines_transport_request_budget_transport_ts["request-budget-transport.ts"] {
+  <<module>>
+}
+N_src_logic_execution_engines_transport_model_json_requests_ts ..> N_src_logic_execution_engines_transport_request_budget_usage_ts : 导入依赖
 N_src_logic_execution_engines_transport_request_budget_transport_ts ..> N_src_logic_execution_engines_transport_request_budget_usage_ts : 导入依赖
 ```
 
@@ -90,4 +125,6 @@ N_src_logic_execution_engines_transport_request_budget_transport_ts ..> N_src_lo
 
 ### 生成与向量协议边界
 
-现有 SSE 代理只接受生成预算模型，明确拒绝 openai-embeddings，避免将无输出请求交给生成用量解析器。额外生成角色沿同一传输约束，向量请求使用后续独立非流式操作端口；不能省略预留与结算直接联网。
+现有 SSE 代理只接受生成预算模型，明确拒绝 openai-embeddings，避免将无输出请求交给生成用量解析器。ModelJsonRequests 提供独立非流式 Chat/embedding 请求：两个角色共享单轮停止屏障，预算快照精确核对，先预留、issue、同步 assertSend 再发网，完整 JSON 用量结算后才返回正文。发送前取消保存 not_sent；发送后缺失用量保留 unknown，无重试。未启用逐请求预算的运行沿原策略不创建账本，但仍验证协议、容量和用量，不补零。
+
+单轮仅允许一个在途 JSON 请求，正文 4 MiB、响应 8 MiB；HTTP 重定向拒绝，任意供应商错误不透传凭据。取消信号由引擎生命周期提供；此传输不自行续期或调度任务。模型端点复用模型公共校验，不读取引擎或用户网络配置。

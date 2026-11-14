@@ -16,6 +16,7 @@
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
 | [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
 | [knowledge.ts](knowledge.ts) | Logic 知识规则：校验领域结构、专业正文和引用，并派生注册索引。 |
+| [memory-index.ts](memory-index.ts) | 正式知识的派生向量索引规则，固定来源版本、向量模型和分块策略，提供可重建的代际与检索。 |
 | [object-contract.ts](object-contract.ts) | 对象编辑的纯数据契约，定义静态知识操作、预览和提交回执；Agent 执行选型复用 Team 契约。 |
 | [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
 | [object-storage.ts](object-storage.ts) | 对象 CRUD 所需的目录检查、预览计划存储和空目录清理端口。 |
@@ -60,6 +61,9 @@ classDiagram
 class N_src_logic_knowledge_rules_knowledge_ts["knowledge.ts"] {
   <<module>>
 }
+class N_src_logic_knowledge_rules_memory_index_ts["memory-index.ts"] {
+  <<module>>
+}
 class N_src_logic_knowledge_rules_object_contract_ts["object-contract.ts"] {
   <<module>>
 }
@@ -72,18 +76,17 @@ class N_src_logic_knowledge_rules_object_storage_ts["object-storage.ts"] {
 class N_src_logic_knowledge_rules_planned_commit_ts["planned-commit.ts"] {
   <<module>>
 }
-class N_src_logic_knowledge_rules_portable_package_ts["portable-package.ts"] {
-  <<module>>
-}
 N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_object_contract_ts : 导入依赖
 N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_knowledge_ts : 导入依赖
 N_src_logic_knowledge_rules_object_crud_ts ..> N_src_logic_knowledge_rules_planned_commit_ts : 导入依赖
 N_src_logic_knowledge_rules_object_storage_ts ..> N_src_logic_knowledge_rules_planned_commit_ts : 导入依赖
-N_src_logic_knowledge_rules_portable_package_ts ..> N_src_logic_knowledge_rules_knowledge_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_knowledge_rules_portable_package_ts["portable-package.ts"] {
+  <<module>>
+}
 class N_src_logic_knowledge_rules_ports_ts["ports.ts"] {
   <<module>>
 }
@@ -99,13 +102,16 @@ class N_src_logic_knowledge_rules_tool_output_queries_ts["tool-output-queries.ts
 class N_src_logic_knowledge_rules_tool_output_transactions_ts["tool-output-transactions.ts"] {
   <<module>>
 }
-class N_src_logic_knowledge_rules_types_ts["types.ts"] {
-  <<module>>
-}
-N_src_logic_knowledge_rules_ports_ts ..> N_src_logic_knowledge_rules_types_ts : 导入依赖
 N_src_logic_knowledge_rules_tool_output_builtins_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts : 导入依赖
 N_src_logic_knowledge_rules_tool_output_queries_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts : 导入依赖
 N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledge_rules_tool_output_base_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_types_ts["types.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -118,6 +124,7 @@ N_src_logic_knowledge_rules_tool_output_transactions_ts ..> N_src_logic_knowledg
 - `knowledge-write-input.ts` → `planned-commit.ts`：导入。
 - `knowledge-write-input.ts` → `types.ts`：导入。
 - `knowledge.ts` → `types.ts`：导入。
+- `memory-index.ts` → `tool-output-base.ts`：导入。
 - `object-contract.ts` → `types.ts`：导入。
 - `object-crud.ts` → `object-contract.ts`：导入。
 - `object-crud.ts` → `ports.ts`：导入。
@@ -157,6 +164,19 @@ class N_src_logic_knowledge_rules_knowledge_ts["knowledge.ts"] {
   <<module>>
   +revision()
   +isKnowledge()
+}
+```
+
+
+### memory-index.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_logic_knowledge_rules_memory_index_ts["memory-index.ts"] {
+  <<module>>
+  +planMemoryIndex()
+  +finishMemoryIndex()
+  +searchMemoryIndex()
 }
 ```
 
@@ -304,3 +324,7 @@ ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同�
 objectOperation 的发现 Schema 说明摘要 100–250 非空白字符、保留 slug、Module 五章原文、直属内容虚拟节点和 parentId 根语义。约束说明不替代 Rules 的完整候选校验。ObjectCrud 按序应用 operations 到同一候选 Map，后序子对象可引用前序新父对象；预览只保存计划，完整结构诊断保留在 validation.issues。
 
 Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 design/runtime 打包。
+
+## 派生记忆索引
+
+memory-index 只接收已授权的完整知识搜索快照。分块保留 path/hash/字符偏移与原文；代际 key 绑定完整来源、工作区、revision、embedding 公开配置摘要、维度和分块策略。最多 128 个 768 字符片段，超限拒绝而非静默截断。新代所有向量数量、维度及有限非零值通过后才形成可查询副本；旧代不被原地修改。索引不保存凭据、不读正式知识文件、不持有写权限，检索命中是带出处资料，不是新的指令或知识提交。

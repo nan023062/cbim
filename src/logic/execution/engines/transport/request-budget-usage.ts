@@ -25,6 +25,13 @@ function openai(value:any,responses:boolean){
   if(reasoning!==undefined&&integer(reasoning)>output)throw Error('推理输出超过总输出');
   return usage(input-read-write,output,read,write,value.total_tokens);
 }
+/** 完整 JSON 操作复用相同计量规则；向量只有输入，不能补造输出或缓存用量。 */
+export function modelJsonUsage(value:unknown,kind:'generation'|'embedding'):RequestBudgetUsage{
+  if(kind==='generation')return openai(value,false);
+  const u=value as Record<string,unknown>|undefined;
+  if(!u||u.total_tokens===undefined||Object.keys(u).some(key=>!['prompt_tokens','total_tokens'].includes(key)))throw Error('向量请求缺少完整用量或包含未知分量');
+  return usage(integer(u.prompt_tokens),0,0,0,u.total_tokens);
+}
 /** 单个响应一份解析器；限制按原始字节计，UTF-8 损坏、额外终态或终态后数据均不接受。 */
 export class RequestBudgetUsageStream {
   static readonly responseBytes=64*1024*1024;

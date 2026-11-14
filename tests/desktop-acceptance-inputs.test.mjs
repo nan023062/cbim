@@ -1,5 +1,15 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from '../scripts/desktop-acceptance-inputs.mjs';
+
+const retryCheck={currentVersion:'0.1.15',enabled:true,phase:'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};
+it.each(['idle','available'])('observes the real automatic check retry from %s without treating it as ready',phase=>{
+  expect(acceptanceCanAwaitCheckRetry({...retryCheck,phase},'ready')).toBe(true);
+  expect(()=>acceptanceReadyTarget({...retryCheck,phase},'0.1.15','0.1.16')).toThrow();
+});
+it.each([{error:'下载或校验失败，五分钟后自动重试，也可手动重试下载。'},{error:'unknown'},{error:undefined},{phase:'installing'},{phase:'ready'},{enabled:false},{currentVersion:'0.1.16'}])('does not tolerate unknown or non-check failures: %j',change=>{
+  expect(acceptanceCanAwaitCheckRetry({...retryCheck,...change},'ready')).toBe(false);
+});
+it('does not tolerate a check failure while waiting for installation',()=>expect(acceptanceCanAwaitCheckRetry(retryCheck,'installing')).toBe(false));
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
 

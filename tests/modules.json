@@ -1112,6 +1112,18 @@
         "integration": []
       }
     },
+    "tooling/desktop-inspector-connection": {
+      "roots": [
+        "scripts/desktop-inspector-connection.mjs"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [],
+        "integration": [
+          "tests/desktop-inspector-connection.test.mjs"
+        ]
+      }
+    },
     "tooling/desktop-update-network-evidence": {
       "roots": [
         "scripts/desktop-update-network-evidence.mjs"

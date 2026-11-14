@@ -322,8 +322,11 @@ try {
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
+      // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
+      const installingPid=await app.evaluate(()=>process.pid),closed=app.waitForEvent('close',{timeout:60000});
       await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click();
-      await waitPhase(page, 'installing', 100);
+      await closed;await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
     } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {

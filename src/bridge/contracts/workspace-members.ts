@@ -5,10 +5,10 @@
 export {
   workspaceMemberChangeInputSchema,workspaceMemberPreviewInputSchema,workspaceMemberPreviewSchema,
   workspaceMemberCommitInputSchema,workspaceMemberReceiptSchema,workspaceMemberListSchema,workspaceMemberDetailSchema,
-} from '../../backend/core/team/workspace-member';
+} from '../../logic/team/rules/workspace-member';
 export type {
   WorkspaceMember,WorkspaceMemberState,WorkspaceMemberIdentity,WorkspaceRegistryCursor,
   WorkspaceMemberChangeInput,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,
   WorkspaceMemberReceipt,WorkspaceMemberListInput,WorkspaceMemberList,WorkspaceMemberGetInput,WorkspaceMemberDetail,
   WorkspaceMemberLookup,
-} from '../../backend/core/team/workspace-member';
+} from '../../logic/team/rules/workspace-member';

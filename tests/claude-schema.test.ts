@@ -1,7 +1,7 @@
 import {expect,test,vi} from 'vitest';
 import Ajv from 'ajv';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {claudeInputSchema} from '../src/backend/engines/claude/tools';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
+import {claudeInputSchema} from '../src/logic/execution/engines/claude/tools';
 
 function cancellationCatalog(){
   return new DispatchTools({binding:{workspaceId:'w',rootSessionId:'r',scopeId:'s',runId:'run'},dispatch:vi.fn(),inspect:vi.fn(),cancel:vi.fn(),previewCancel:vi.fn()}).list();

@@ -5,7 +5,7 @@
  */
 import {z} from 'zod';
 import {ipcId,workspaceIdArgs} from './ipc-shapes';
-import {type RepositoryListOutput,type RepositoryToolTarget} from '../../backend/core/connectors/repository-tools';
+import {type RepositoryListOutput,type RepositoryToolTarget} from '../../logic/connectors/rules/repository-tools';
 import {type ChatAttachment,type ChatAttachmentPreview} from './chat';
 
 export const chatIpcRequests={

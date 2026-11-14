@@ -4,9 +4,9 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {moduleFiles,request} from './data/knowledge';
-import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage,workspacePackageFingerprint} from '../src/backend/core/knowledge/portable-package';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {parseWorkflowContract} from '../src/backend/core/workspace/workflow-contract';
+import {buildWorkspacePackage,parseWorkspacePackage,planWorkspacePackage,workspacePackageFingerprint} from '../src/logic/knowledge/rules/portable-package';
+import {hash} from '../src/core/platform/node/serialization';
+import {parseWorkflowContract} from '../src/logic/workspace/rules/workflow-contract';
 
 const body='# 实施与验证\n按专业方法执行。\n```cbim-workflow\n{"version":1,"beforeEffects":{"requirePlan":true},"delivery":{"requiredToolEvidence":[{"id":"inspect-result","toolName":"read"}]}}\n```\n成果语义仍由审阅者判断。';
 const bad=body.replace('"version":1','"version":2');

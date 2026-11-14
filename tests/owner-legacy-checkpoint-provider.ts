@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {memberCheckpointResultSchema} from '../src/backend/core/tasks/member-checkpoint';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {memberCheckpointResultSchema} from '../src/logic/tasks/rules/member-checkpoint';
 
 export type CheckpointFixtureMode='complete'|'stop'|'restart'|'command-rejected';
 export const memberCheckpointFixture={

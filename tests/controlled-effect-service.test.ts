@@ -1,15 +1,15 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {baseState,closedState,writeIntent,phases} from './controlled-file-core-fixture';
-import {controlledFileOperation,summarizeControlledFileOperation} from '../src/backend/core/file-operations/controlled-file-rules';
-import {controlledFileReportSchema,type ControlledFileReport,type ControlledFilePhase} from '../src/backend/core/file-operations/controlled-file-operation';
-import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
-import type {RunSummary,EngineEvent} from '../src/backend/core/execution/types';
-import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
-import {CommandVerificationService} from '../src/backend/scheduler-engine/evidence/command-verification-service';
-import {memberPublicTask} from '../src/backend/scheduler-engine/runtime/member-events';
-import {effectObservationReportSchema} from '../src/backend/core/tasks/effect-observation';
-import {effectObservationBasis} from '../src/backend/core/tasks/effect-observation-rules';
+import {controlledFileOperation,summarizeControlledFileOperation} from '../src/logic/file-operations/rules/controlled-file-rules';
+import {controlledFileReportSchema,type ControlledFileReport,type ControlledFilePhase} from '../src/logic/file-operations/rules/controlled-file-operation';
+import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {RunSummary,EngineEvent} from '../src/logic/execution/rules/types';
+import {EffectObservationService} from '../src/logic/evidence/runtime/effect-observation-service';
+import {CommandVerificationService} from '../src/logic/evidence/runtime/command-verification-service';
+import {memberPublicTask} from '../src/logic/runtime/monitoring/member-events';
+import {effectObservationReportSchema} from '../src/logic/tasks/rules/effect-observation';
+import {effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
 import {effectReport} from './effect-core-fixture';
 
 function fixture(phase:ControlledFilePhase='applied'){

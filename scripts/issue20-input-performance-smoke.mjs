@@ -5,7 +5,7 @@ import {createServer} from 'vite';import {chromium} from 'playwright-core';
 const mode=process.argv[2]||'after';assert.ok(['before','after'].includes(mode));const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'issue20.html'),'<div id="root"></div><script type="module" src="/test-results/issue20.tsx"></script>');
 await fs.writeFile(path.join(out,'issue20.tsx'),String.raw`
-import React,{Profiler} from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
+import React,{Profiler} from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
 const id='a'.repeat(64),instanceId='11111111-1111-4111-8111-111111111111',time='2026-11-09T10:00:00.000Z',entry={id,name:'long-conversation',path:'C:/fixture',state:'running',instanceId,tasks:[]};
 const task={taskId:'root',workspaceId:id,root:'C:/fixture',goal:'长对话输入验证',moduleIds:[],acceptance:[],mode:'chat'};
 let runs=Array.from({length:100},(_,n)=>{const runId='run-'+n;return {task,runId,status:'completed',sessionFile:'test-session',acceptance:'not_evaluated',unresolvedTools:[],events:Array.from({length:6},(_,index)=>({version:1,seq:index+1,workspaceId:id,taskId:'root',runId,time,type:index===0?'run.started':index===5?'run.settled':'message',data:index===0?{message:'用户问题 '+n}:index===5?{}:{text:'# 历史回答 '+n+' / '+index+'\n\n说明项目的实际实现与验证。\n\n- 状态与执行分开\n- 保留文件与来源\n\n| 项目 | 状态 |\n| --- | --- |\n| 输入 | 已验证 |\n\n'+String.fromCharCode(96).repeat(3)+'ts\nconst value = '+n+';\n'+String.fromCharCode(96).repeat(3)}}))}});
@@ -22,12 +22,12 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
  if(action==='loop.resume'){if(f.failSend)throw Error('测试发送失败');f.sent.push(args);return {taskId:'root'}};
  f.unexpected.push(action);throw Error('Unexpected IPC '+action);
 }};
-const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(<Profiler id="app" onRender={(_,phase,duration)=>{if(window.fixture.bench&&phase==='update')window.fixture.commits.push(duration)}}><App/></Profiler>);
+const {App}=await import('/src/view/shell/App.tsx');createRoot(document.getElementById('root')).render(<Profiler id="app" onRender={(_,phase,duration)=>{if(window.fixture.bench&&phase==='update')window.fixture.commits.push(duration)}}><App/></Profiler>);
 `);
 const probes={
- '/src/frontend/execution-view/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
- '/src/frontend/execution-view/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
- '/src/frontend/conversation/usage.ts':['  const data=taskUsage','  (window as any).fixture.stats.usage++;\n  const data=taskUsage'],
+ '/src/view/execution-view/MarkdownMessage.tsx': ['  const [error,setError]=useState','  (window as any).fixture.stats.markdown++;\n  const [error,setError]=useState'],
+ '/src/view/execution-view/transcript.ts':['  const source=run.source','  (window as any).fixture.stats.transcript++;\n  const source=run.source'],
+ '/src/view/conversation/usage.ts':['  const data=taskUsage','  (window as any).fixture.stats.usage++;\n  const data=taskUsage'],
 };
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},plugins:[{name:'input-readonly-probes',enforce:'pre',transform(code,id){const probe=Object.entries(probes).find(([file])=>id.replaceAll('\\','/').endsWith(file));if(!probe)return;assert.ok(code.includes(probe[1][0]),'probe source changed');return code.replace(...probe[1])}}],server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser,page;const checks=[],errors=[];
 try{

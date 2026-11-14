@@ -1,8 +1,8 @@
 import {test,expect,vi} from 'vitest';
-import {GoalTools,type GoalToolsPort} from '../src/backend/scheduler-engine/tools/goal-tools';
-import {DispatchTools,type DispatchToolsPort} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
-import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
+import {GoalTools,type GoalToolsPort} from '../src/logic/tools/runtime/goal-tools';
+import {DispatchTools,type DispatchToolsPort} from '../src/logic/tools/runtime/dispatch-tools';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
+import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
 import {mainToolBinding,mainToolGraph,mainToolTask,mainToolScope,mainToolOwnerSelection} from './main-tool-output-fixture';
 
 const taskId='f8878ef0-4c3e-42f2-8afc-0020036a49b0';

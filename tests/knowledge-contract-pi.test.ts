@@ -2,9 +2,9 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 import {knowledgeContractProvider,knowledgeContractFixture as data,type KnowledgeContractMode} from './knowledge-contract-provider';
 import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from './knowledge-contract-fixture';
 

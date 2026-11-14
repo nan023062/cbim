@@ -5,11 +5,11 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {scopeBudgetProvider,scopeBudgetFixture as data,type BudgetFixtureMode} from './scope-budget-provider';
 import {seedScopeBudget,budgetScopes,budgetLimits,budgetDenies,budgetUnpriced} from './scope-budget-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
-import {scopeUsageReportSchema} from '../src/backend/core/budget/scope-usage';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
+import {scopeUsageReportSchema} from '../src/logic/budget/rules/scope-usage';
 
 it.each(['main-limit','member-limit','cost-limit','unknown-price','tokens-unpriced','complete','waiting'] as BudgetFixtureMode[])('enforces frozen soft budget only between actual Pi runs and never replays after restart (%s)',async mode=>{
   const f=await fixture(),provider=await scopeBudgetProvider(mode);let app=f.app,failed=false;

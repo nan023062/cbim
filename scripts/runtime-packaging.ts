@@ -5,7 +5,7 @@ import {createHash,createPrivateKey,createPublicKey,sign} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {pipeline} from 'node:stream/promises';
 import {execFileSync} from 'node:child_process';
-import {validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/backend/updater/runtime-manifest';
+import {validateRuntimeFiles,verifyRuntimeManifest,type ColdRuntime,type RuntimeFile,type RuntimePackage,type RuntimeManifest,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
 const require=createRequire(import.meta.url),{ZipFile}=require('yazl');
 export async function fileHash(file:string){const hash=createHash('sha256');for await(const chunk of createReadStream(file))hash.update(chunk);return hash.digest('hex')}
@@ -49,6 +49,19 @@ export async function collectResources(viteDirectory:string,target:string,repo=p
   await fs.mkdir(target);await fs.cp(viteDirectory,path.join(target,'.vite'),{recursive:true,filter:file=>!['desktop.js','desktop.js.map'].includes(path.basename(file))&&!file.endsWith('.map')});
   for(const name of ['design','docs','legal'])await fs.cp(path.join(repo,name),path.join(target,name),{recursive:true});
   await fs.writeFile(path.join(target,'package.json'),JSON.stringify({private:true,type:'commonjs'}));
+  // Git 删除文件后可能留下空目录；ZIP 只登记文件，冷包必须与同一清单保持一致。
+  // 只清理由本函数新建的制品目录，不改源码，也不放宽启动时的额外内容校验。
+  const boundary=path.resolve(target);
+  async function pruneEmpty(directory:string){
+    const resolved=path.resolve(directory),relative=path.relative(boundary,resolved);
+    if(relative.startsWith('..')||path.isAbsolute(relative))throw Error('资源目录清理越界');
+    for(const entry of await fs.readdir(resolved,{withFileTypes:true})){
+      if(entry.isSymbolicLink())throw Error('构建目录不能包含链接：'+path.join(resolved,entry.name));
+      if(entry.isDirectory())await pruneEmpty(path.join(resolved,entry.name));
+    }
+    if(resolved!==boundary&&(await fs.readdir(resolved)).length===0)await fs.rmdir(resolved);
+  }
+  await pruneEmpty(boundary);
 }
 const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'}} as const;
 export async function collectEngines(buildRoot:string,output:string):Promise<EnginePackage[]>{

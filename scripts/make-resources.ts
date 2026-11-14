@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {buildRuntimeCode} from './runtime-build';
 import {archiveDirectory,assertFrozenSource,coldFingerprint,collectResources,runtimeSigningKey,signRuntimeManifest} from './runtime-packaging';
-import {verifyRuntimeManifest,type ColdRuntime,type EnginePackage} from '../src/backend/updater/runtime-manifest';
+import {verifyRuntimeManifest,type ColdRuntime,type EnginePackage} from '../src/logic/updates/service/runtime-manifest';
 
 async function main(){
   const [baseline,resource,notesFile,engineCandidate,...extra]=process.argv.slice(2),resourceVersion=Number(resource);

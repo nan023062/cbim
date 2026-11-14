@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
-import {KnowledgeQueries} from '../src/backend/core/knowledge/knowledge-queries';
-import {KnowledgeRefresh,type KnowledgeRefreshPort} from '../src/backend/core/knowledge/knowledge-refresh';
-import {Team,BusinessWorkspace} from '../src/backend/core/knowledge/read-models';
+import {KnowledgeQueries} from '../src/logic/knowledge/rules/knowledge-queries';
+import {KnowledgeRefresh,type KnowledgeRefreshPort} from '../src/logic/knowledge/rules/knowledge-refresh';
+import {Team,BusinessWorkspace} from '../src/logic/knowledge/rules/read-models';
 import {domainSnapshot} from './data/domain-snapshot';
 
 it('只提供快照即可查询真实团队及模块，查询不获得任何写入能力',async()=>{

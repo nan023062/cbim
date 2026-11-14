@@ -1,4 +1,4 @@
-import {required} from './helpers';
+import {required} from './support/assertions';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -6,10 +6,10 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {attachmentFixture as data,waitingAttachmentsProvider,requestImages} from './waiting-attachments-provider';
 import {attachmentHash,attachmentWait,seedWaitingAttachments} from './waiting-attachments-fixture';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {GoalContinuationReceipt} from '../src/backend/core/tasks/scope-continuation';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
+import {hash,json} from '../src/core/platform/node/serialization';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 
 for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as const)it('keeps explicit waiting attachments bound to one accepted native user message with real Pi ('+mode+')',async()=>{
   const f=await fixture(),provider=await waitingAttachmentsProvider();let app=f.app,releaseBudget=()=>{};

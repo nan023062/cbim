@@ -1,8 +1,8 @@
 import {runtimeToolGroup} from './runtime-tool-group';
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
-import type {EngineContext,RunSummary} from '../src/backend/core/execution';
-import {verifyMemberCheckpoint} from '../src/backend/core/tasks/member-checkpoint-evidence';
+import type {EngineContext,RunSummary} from '../src/logic/execution/rules';
+import {verifyMemberCheckpoint} from '../src/logic/tasks/rules/member-checkpoint-evidence';
 import {artifactRuntimeFixture,artifactBinding,seedProgress,invoke,captureInput,deferred} from './artifact-runtime-fixture';
 
 async function input(c:EngineContext){await seedProgress(c);const captured=await invoke(c,'cbim_task_artifact_capture','capture',captureInput);return {expectedTaskProgressVersion:1,baselineId:captured.baseline.baselineId,reason:'保存单文件工作位置，交由主调度决定是否继续'}}

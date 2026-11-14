@@ -1,7 +1,6 @@
 import {expect,test} from 'vitest';
-import {transcript,completionFeedback} from '../src/frontend/execution-view/transcript';
-import {readLayouts} from '../src/frontend/shell/tabs';
-import type {RunSummary,EngineEvent} from '../src/backend/core/execution/types';
+import {transcript,completionFeedback} from '../src/view/execution-view/transcript';
+import type {RunSummary,EngineEvent} from '../src/logic/execution/rules/types';
 function run(events:EngineEvent[]):RunSummary{return {task:{taskId:'task',workspaceId:'workspace',root:'root',goal:'目标',moduleIds:[],acceptance:['验证']},runId:'run',status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:events.map((e,i)=>({...e,version:1,seq:i+1,taskId:'task',workspaceId:'workspace',runId:'run',time:'2026-11-06T00:00:00Z'}))}}
 test('text deltas are replaced by final text; follow-up user message and tool evidence remain ordered',()=>{
  const messages=transcript(run([{type:'run.started',data:{message:'继续验证'}},{type:'message.delta',data:{text:'早期'}},{type:'message.delta',data:{text:'草稿'}},{type:'message',data:{text:'最终回复'}},{type:'tool.denied',data:{id:'t',name:'write',reason:'未授权'}}]));
@@ -31,4 +30,3 @@ test('current run delivery summary and limitations remain visible when no final 
  const text=completionFeedback(r,transcript(r));expect(text).toContain('本轮实现完成');expect(text).toContain('未做安装验收');expect(text).toContain('尚未代表验收通过');
  const original=JSON.stringify(r);expect(completionFeedback(JSON.parse(original),transcript(r))).toBe(text);expect(JSON.stringify(r)).toBe(original);
 });
-test('tab binding persists only valid task IDs and remains workspace scoped',()=>{const id='a'.repeat(64),other='b'.repeat(64);const data=readLayouts(JSON.stringify({[id]:{tabs:[{id:'one',kind:'chat',title:'对话',taskId:'task-1',draft:'草稿'}]},[other]:{tabs:[{id:'two',kind:'chat',title:'对话',taskId:'../other'}]}}));expect(data[id].tabs[0].taskId).toBe('task-1');expect(data[other].tabs[0].taskId).toBeUndefined()});

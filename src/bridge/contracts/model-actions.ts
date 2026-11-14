@@ -5,8 +5,8 @@
  * 连接测试显式选择引擎并返回实际协议/地址，不接受临时任意转发目标。
  */
 import {z} from 'zod';
-import {connectionSchema,definition,type LlmSettings} from '../../backend/core/models/config';
-import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../backend/core/team/agent-runtime';
+import {connectionSchema,definition,type LlmSettings} from './models';
+import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../logic/team/rules/agent-runtime';
 import {loopEngineSchema,type LoopEngine,type LlmApi,type DiscoveredModel} from './models';
 
 const identity=z.object({id:z.string().uuid()}).strict();

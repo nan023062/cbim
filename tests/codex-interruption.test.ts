@@ -2,8 +2,8 @@ import {expect,test,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {CodexEngine} from '../src/backend/engines/codex/engine';
-import {readCodexSession} from '../src/backend/engines/codex/session';
+import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
+import {readCodexSession} from '../src/logic/execution/engines/codex/session';
 import {codexFixture} from './codex-fixture';
 import {fixture} from './helpers';
 

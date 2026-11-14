@@ -1,10 +1,10 @@
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
-import {prepareDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
+import {ArchitectureService} from '../src/logic/workspace/service/architecture-service';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
+import {prepareDispatchExecutionContext} from '../src/logic/execution/context/execution-context';
 import type {ObjectOperation} from '../src/bridge/contracts/architecture';
 import {fixture} from './helpers';
 import {summary,moduleFiles} from './data/knowledge';

@@ -4,11 +4,11 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {memberHelpProvider,memberHelpFixture as data} from './member-help-provider';
 import {seedMemberHelp,memberHelpRecords} from './member-help-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {MemberExecutionView} from '../src/backend/core/tasks/member-commands';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
 
 it.each(['complete','waiting','stop','unknown-log'] as const)('hands member help to the coordinator only after safe normal settlement (%s)',async mode=>{
   const f=await fixture(),provider=await memberHelpProvider({waiting:mode==='waiting',holdHelp:true,effectful:mode==='complete',unknownHelp:mode==='unknown-log'});let app=f.app;

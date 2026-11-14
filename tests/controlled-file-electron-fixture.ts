@@ -20,7 +20,7 @@ export async function createControlledHost(options:{root?:string}={}){
   await Promise.all([fs.mkdir(user,{recursive:true}),fs.mkdir(project,{recursive:true})]);
   const childEntry=path.join(root,'controlled-child.cjs'),hostEntry=path.join(root,'electron-host.cjs'),configFile=path.join(root,'host-config.json'),tsx=requireTest.resolve('tsx/cjs');
   const config:ControlledHostConfig={root,user,project,repository,childEntry,koffiPath:requireTest.resolve('koffi'),controlToken:randomUUID()};
-  await fs.writeFile(childEntry,'require('+JSON.stringify(tsx)+');require('+JSON.stringify(path.join(repository,'src/backend/main/platform/files/controlled-file-child.ts'))+');\n');
+  await fs.writeFile(childEntry,'require('+JSON.stringify(tsx)+');require('+JSON.stringify(path.join(repository,'src/bridge/server/platform/controlled-file-child.ts'))+');\n');
   await fs.writeFile(hostEntry,'process.env.CBIM_CONTROLLED_TEST_CONFIG='+JSON.stringify(configFile)+';require('+JSON.stringify(tsx)+');require('+JSON.stringify(path.join(repository,'tests/controlled-file-electron-host.ts'))+');\n');
   await fs.writeFile(configFile,JSON.stringify(config,null,2));
   const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;

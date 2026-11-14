@@ -1,7 +1,7 @@
 {
   "name": "cbim-assistant",
   "productName": "CBIM Assistant",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "private": true,
   "description": "AI Native workflow assistant for teams",
   "author": "CBIM",
@@ -12,7 +12,7 @@
   },
   "scripts": {
     "start": "electron-forge start",
-    "loop": "tsx src/backend/main/commands/loop-cli.ts",
+    "loop": "tsx src/bridge/server/commands/loop-cli.ts",
     "typecheck": "tsc --noEmit",
     "build:brand": "node scripts/build-brand-assets.mjs",
     "check:brand": "node scripts/build-brand-assets.mjs --check",
@@ -21,6 +21,8 @@
     "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:architecture": "node scripts/source-architecture.mjs --check && pnpm check:dependencies",
     "test": "vitest run",
+    "test:module": "node scripts/test-modules.mjs",
+    "check:test-modules": "node scripts/test-modules.mjs --check",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:desktop": "node scripts/make-desktop.mjs",

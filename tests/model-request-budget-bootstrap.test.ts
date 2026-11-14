@@ -1,6 +1,6 @@
 import {expect,it,vi} from 'vitest';
 import vm from 'node:vm';
-import {requestBudgetBootstrap} from '../src/backend/engines/pi/request-budget-bootstrap';
+import {requestBudgetBootstrap} from '../src/logic/execution/engines/pi/request-budget-bootstrap';
 
 it('forwards the authenticated local tool manifest without allowing other origins, routes or query parameters',async()=>{
   const input={bridge:'http://127.0.0.1:2001',endpoint:'https://model.invalid/v1/chat/completions',proxy:'http://127.0.0.1:2002',token:'fixture-budget-token'};

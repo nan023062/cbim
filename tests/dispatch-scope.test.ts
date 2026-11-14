@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 async function setup(){
@@ -42,6 +42,16 @@ it('新周期首轮与回注清单原子登记，重复不增量、旧周期不�
   }finally{await f.cleanup()}
 });
 
+it('新话题拒绝把旧话题任务作为前置，避免跨话题候选进入子 Agent',async()=>{
+  const f=await setup();try{
+    await f.openPlanned('first-topic');const prior=await f.service.dispatchTask(f.input('old-task'),'first-topic');
+    await f.service.closeScope(f.identity,'first-topic','cancelled');await f.openPlanned('next-topic');
+    const next=f.input('new-task');
+    await expect(f.service.dispatchTask({...next,task:{...next.task,prerequisites:[{taskId:prior.taskId,expectedPlanRevision:1}]}},'next-topic')).rejects.toMatchObject({code:'MEMBER_TOPIC_CONTEXT_IDENTITY'});
+    expect((await f.service.snapshot(f.identity)).tasks).toHaveLength(1);
+  }finally{await f.cleanup()}
+});
+
 it('同一用户周期幂等复用，主会话周期互斥；不同主会话隔离且关闭不可重开',async()=>{
   const f=await setup();try{
     const [first,same]=await Promise.all([f.service.openScope(f.identity,'scope-one'),f.service.openScope(f.identity,'scope-one')]);
@@ -70,12 +80,16 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     const second=await f.service.dispatchTask(f.input('dispatch-two'),'scope-one');
     const graph=await f.service.snapshot(f.identity);
     expect(graph.tasks).toHaveLength(2);
+    const logical=(await f.store.read()).teamSessions!;
+    expect(logical.filter(session=>session.rootSessionId===f.identity.rootSessionId)).toHaveLength(2);
+    const child=logical.find(session=>session.agentId==='.cbim/team/dev')!;
     expect(new Set(graph.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(2);
     expect(graph.tasks.every(task=>task.assignee.agentInstanceId!==root.agent.agentInstanceId&&task.scopeId==='scope-one')).toBe(true);
     await expect(f.service.dispatchTask({...f.input('untrusted-scope'),scopeId:'scope-one'})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await expect(f.service.dispatchTask(f.input('main-forbidden','cbim:main'),'scope-one')).rejects.toMatchObject({code:'AGENT_NOT_EXECUTABLE'});
     await f.service.closeScope(f.identity,'scope-one','cancelled');
     const state=await f.store.read(),closed=await f.service.snapshot(f.identity);
+    expect(state.teamSessions).toEqual(logical);
     expect(closed.tasks.map(task=>task.taskId)).toEqual([first.taskId,second.taskId]);
     expect(closed.tasks.every(task=>task.status==='cancelled')).toBe(true);
     expect(closed.root).toEqual(root);
@@ -88,6 +102,7 @@ it('每个派发任务创建独立执行实例，关闭原子取消未执行任�
     await expect(f.service.dispatchTask(f.input('late-task'),'scope-one')).rejects.toMatchObject({code:'DISPATCH_SCOPE_CLOSED'});
     await f.openPlanned('scope-next');
     const next=await f.service.dispatchTask(f.input('new-cycle'),'scope-next');
+    expect((await f.store.read()).teamSessions!.find(session=>session.agentId==='.cbim/team/dev')).toEqual(child);
     expect((await f.service.snapshot(f.identity)).tasks.find(task=>task.taskId===next.taskId)?.assignee.agentInstanceId).not.toBe(graph.tasks[0].assignee.agentInstanceId);
   }finally{await f.cleanup()}
 });
@@ -197,4 +212,18 @@ it('提交和完整校验和的日志重放都拒绝改写/移除goal或input，
     await f.service.closeScope(f.identity,'legacy','interrupted');
     const reader=new FileDispatchStore(f.directory,f.entry.id);try{expect((await reader.read()).scopes!.find(value=>value.scopeId==='legacy')).not.toHaveProperty('goal')}finally{await reader.close()}
   }finally{await f.cleanup()}
+});
+
+it('关联新话题只引用同办公室已结束记录，原话题不重开且来源不可改绑',async()=>{
+ const f=await setup();try{
+  await f.service.openScope(f.identity,'old-topic',{message:'原始任务'},'old-run');
+  await expect(f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run',undefined,'old-topic')).rejects.toBeDefined();
+  await f.service.closeScope(f.identity,'old-topic','cancelled');
+  const next=await f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run',undefined,'old-topic');
+  expect(next.followupOf).toBe('old-topic');expect(next.goal?.input.message).toBe('新要求');
+  expect((await f.service.goals.inspect(f.identity,'old-topic')).status).toBe('closed');
+  await expect(f.service.openScope(f.identity,'next-topic',{message:'新要求'},'next-run')).rejects.toBeDefined();
+  await expect(f.service.openScope({...f.identity,rootSessionId:'another-office'},'foreign-new',{message:'跨办公室'},'foreign-run',undefined,'old-topic')).rejects.toBeDefined();
+  const prior=await f.service.goals.inspect(f.identity,'next-topic');await expect(f.store.transact({commandId:'rewrite-link',fingerprint:'rewrite-link'},async()=>({scopes:[{...prior,followupOf:undefined}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+ }finally{await f.cleanup()}
 });

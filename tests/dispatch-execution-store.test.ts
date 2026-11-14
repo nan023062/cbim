@@ -2,16 +2,17 @@ import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {hash} from '../src/backend/core/foundation/serialization';
-import {dispatchKnowledgeFingerprint} from '../src/backend/core/tasks/execution-context';
-import type {PreparedDispatchKnowledge} from '../src/backend/core/tasks/execution-context';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {DispatchMutation,DispatchState,AssignmentMessage} from '../src/backend/core/dispatch/dispatch-storage';
-import type {AgentInstance,AgentSessionBinding} from '../src/backend/core/team/agent-types';
-import type {AgentRef,GraphEventBatch,GraphIdentity,TaskNode} from '../src/backend/core/tasks/graph-types';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {hash} from '../src/core/platform/node/serialization';
+import {dispatchKnowledgeFingerprint} from '../src/logic/tasks/rules/execution-context';
+import type {PreparedDispatchKnowledge} from '../src/logic/tasks/rules/execution-context';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {DispatchMutation,DispatchState,AssignmentMessage} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {AgentInstance,AgentSessionBinding} from '../src/logic/team/rules/agent-types';
+import type {AgentRef,GraphEventBatch,GraphIdentity,TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {seedExecutionOwner} from './owner-execution-store-support';
 import {bindingFor} from './owner-execution-core-fixture';
+import {createMemberTopicContext} from '../src/logic/tasks/rules/member-topic-context-rules';
 
 const identity:GraphIdentity={workspaceId:'workspace-1',rootSessionId:'root-session-1'};
 const createdAt='2026-11-06T10:00:00.000Z',startedAt='2026-11-06T10:00:01.000Z',settledAt='2026-11-06T10:00:02.000Z';
@@ -56,6 +57,19 @@ async function setup(){
   await store.transact(command('dispatch'),async state=>({members:[{...member(dev),executionScopeId:'owner-scope',executionTaskId:'task-1',lifecycle:'active'}],sessions:[session(dev)],batch:batch('dispatch',2,[{type:'task.upserted',task:task(state)},{type:'edge.upserted',edge:{edgeId:'edge-1',identity,kind:'dispatch',fromNodeId:`session:${identity.rootSessionId}`,toNodeId:'task:task-1',revision:1,enabled:true}},{type:'agent.upserted',agent:{agentInstanceId:dev.agentInstanceId,agentId:dev.agentId,name:dev.name,revision:1,state:'idle',waitingTaskIds:[]}}]),messages:[{kind:'assignment',messageId:'message-1',commandId:'dispatch',identity,from:main,to:dev,taskId:'task-1',planRevision:1,createdAt,delivery:'pending'}],receipt:'dispatch'}));
   return {dir,store,cleanup:async()=>{await store.close();await fs.rm(dir,{recursive:true,force:true})}};
 }
+
+test('话题上下文引用随领取持久保存，跨话题伪造和运行中改绑被事务拒绝',async()=>{
+  const f=await setup();try{
+    const logical={...identity,sessionId:'logical-dev',agentId:dev.agentId,teamId:'.cbim/team',createdAt};
+    await f.store.transact(command('logical'),async()=>({teamSessions:[logical],receipt:true}));
+    const freeze=(state:DispatchState)=>createMemberTopicContext(state.graphs[0].tasks[0],state.scopes!.find(scope=>scope.scopeId==='owner-scope')!,state.graphs[0],logical);
+    await expect(f.store.transact(command('invalid-context'),async state=>{const mutation=claimMutation(state,'invalid-context');mutation.runs![0].topicContext={...freeze(state),scopeId:'foreign'};return mutation})).rejects.toThrow();
+    expect((await f.store.read()).runs).toEqual([]);
+    await f.store.transact(command('valid-context'),async state=>{const mutation=claimMutation(state,'valid-context');mutation.runs![0].topicContext=freeze(state);return mutation});
+    await expect(f.store.transact(command('rebind-context'),async state=>{const mutation=runningMutation(state,'rebind-context');mutation.runs![0].topicContext={...mutation.runs![0].topicContext!,scopeId:'foreign'};return mutation})).rejects.toThrow();
+    const saved=await f.store.read();await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);try{expect((await reopened.read()).runs).toEqual(saved.runs)}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
 
 test('registered owner claim is atomic, idempotent and does not assert execution started',async()=>{
   const f=await setup();try{
@@ -137,6 +151,30 @@ test('member execution slots and running plans cannot be changed through unrelat
     await expect(f.store.transact(command('false-running'),async state=>{const mutation=runningMutation(state,'false-running');delete mutation.runs;return mutation})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
     await f.store.transact(command('running'),async state=>runningMutation(state));
     await expect(f.store.transact(command('new-plan'),async state=>{const current=state.graphs[0].tasks[0];return {...update(state,'new-plan',{...current,revision:current.revision+1,planRevision:2,goal:'替换执行目标'},state.members[1],'task.revised')};})).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+  }finally{await f.cleanup()}
+});
+
+test('长期对话的串行槽由存储核验，不能用另一个执行实例绕过',async()=>{
+  const f=await setup();try{
+    await f.store.transact(command('logical'),async()=>({teamSessions:[{...identity,sessionId:'logical-dev',agentId:dev.agentId,teamId:'.cbim/team',createdAt}],receipt:true}));
+    await f.store.transact(command('claim'),async state=>claimMutation(state));
+    const second={...dev,agentInstanceId:'second-instance',agentSessionId:'second-session'};
+    await f.store.transact(command('dispatch-2'),async state=>{
+      const node={...task(state),taskId:'task-2',nodeId:'task:task-2',assignee:second},graph=state.graphs[0];
+      return {members:[{...member(second),executionScopeId:'owner-scope',executionTaskId:node.taskId,lifecycle:'active'}],sessions:[session(second)],batch:batch('dispatch-2',graph.cursor.seq+1,[{type:'task.upserted',task:node},{type:'agent.upserted',agent:{agentInstanceId:second.agentInstanceId,agentId:second.agentId,name:second.name,revision:1,state:'idle',waitingTaskIds:[]}},{type:'edge.upserted',edge:{edgeId:'edge-2',identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:node.nodeId,revision:1,enabled:true}}]),messages:[{kind:'assignment',messageId:'message-2',commandId:'dispatch-2',identity,from:main,to:second,taskId:node.taskId,planRevision:1,createdAt,delivery:'pending'}],receipt:true};
+    });
+    const claimSecond=(state:DispatchState):DispatchMutation=>{
+      const current=state.graphs[0].tasks[1],m=state.members.find(item=>item.agentInstanceId===second.agentInstanceId)!,record=run(state,current);
+      return {...update(state,'claim-2',{...current,revision:2,runIds:['run-2'],activeRunId:'run-2'},{...m,activity:'communicating',activeTaskId:current.taskId,activeRunId:'run-2'},'message.accepted'),runs:[{...record,binding:{...record.binding,runId:'run-2'},assignmentMessageId:'message-2',session:{nativeSessionId:'native-2'}}],messages:[{...state.outbox.find(item=>item.messageId==='message-2')!,delivery:'claimed',claim:{runId:'run-2',leaseEpoch:0}}]};
+    };
+    const before=await f.store.read();
+    await expect(f.store.transact(command('claim-2'),async state=>claimSecond(state))).rejects.toThrow('同一办公室');
+    expect(await f.store.read()).toEqual(before);
+    await f.store.transact(command('settle'),async state=>settleMutation(state,'cancelled'));
+    await f.store.transact(command('claim-2'),async state=>claimSecond(state));
+    const accepted=await f.store.read();expect(accepted.runs!.filter(item=>item.status==='starting')).toHaveLength(1);
+    await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
+    try{expect(await reopened.read()).toEqual(accepted)}finally{await reopened.close()}
   }finally{await f.cleanup()}
 });
 

@@ -1,5 +1,7 @@
 # C/R/E 桌面更新重构验证（2026-11-12）
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 ## 结论与范围
 
 已在 `95458460` 的侧栏更新入口之后接通固定冷壳、资源包切换和独立引擎包。相关单元、真实 App 浏览器交互、隔离 Electron 的 R1 → R2 路径、类型和依赖/架构检查通过。没有发布新冷包或 R/E 通道，没有替换用户安装，也没有执行完整 CI、正式 NSIS 安装或公开升级验收。
@@ -55,7 +57,7 @@ pnpm exec vitest run tests/engine-runtime-loader.test.ts tests/claude-packaging.
 - 同步 bootstrap、updater、engines、main 及 assembly/file-operations/platform/resources、core/execution/foundation、scheduler-engine/assembly、bridge/contracts、frontend/updates 的文件头、关键端口说明、契约和受影响类图/父层导航。
 - 架构维护与发布入口的 `.agents`、`.claude`、`.codex` 三份内容同步。新 bootstrap → main 计算式依赖显式进入审计，不以动态加载规避层级或循环检查。
 
-阅读顺序：[方案及新旧流程](../task/desktop-hot-update-design.md) → [bootstrap 契约](../../src/backend/bootstrap/CONTRACT.md) → [更新契约](../../src/backend/updater/CONTRACT.md) → [引擎契约](../../src/backend/engines/CONTRACT.md) → [候选构建与发布](../task/desktop-runtime-release.md)。调整业务 JS 改 R；调整兼容引擎及会话边界改 E 装配；固定入口、原生基础或信任根变化改 C。
+阅读顺序：[方案及新旧流程](../task/desktop-hot-update-design.md) → [bootstrap 契约](../../src/bridge/server/bootstrap/CONTRACT.md) → [更新契约](../../src/logic/updates/service/CONTRACT.md) → [引擎契约](../../src/logic/execution/engines/CONTRACT.md) → [候选构建与发布](../task/desktop-runtime-release.md)。调整业务 JS 改 R；调整兼容引擎及会话边界改 E 装配；固定入口、原生基础或信任根变化改 C。
 
 ## 首次投放及未验收部分
 

@@ -1,9 +1,9 @@
-import {RunOutputManifestCapture} from '../src/backend/core/execution/capabilities/output-manifest-capture';
+import {RunOutputManifestCapture} from '../src/logic/execution/rules/capabilities/output-manifest-capture';
 import {runtimeToolGroup} from './runtime-tool-group';
 import {afterEach,it,expect,vi} from 'vitest';
 import {artifactRuntimeFixture,artifactBinding,seedProgress,invoke,deferred} from './artifact-runtime-fixture';
 import {manifestFixture,manifestInput,verifyManifests} from './output-manifest-fixture';
-import {outputManifestToolName as capture,outputManifestInspectToolName as inspect,type OutputManifestStaged} from '../src/backend/core/evidence/output-manifest';
+import {outputManifestToolName as capture,outputManifestInspectToolName as inspect,type OutputManifestStaged} from '../src/logic/evidence/rules/output-manifest';
 
 it('完整采集保存真实集合与授权链，模型只有引用且清单工具不充当业务证据',async()=>{
   const f=await manifestFixture(async c=>{await seedProgress(c);const result=await invoke(c,capture,'capture',manifestInput);expect(result.manifest).toMatchObject({entryCount:4,fileCount:2,progressVersion:1});expect(result.manifest.snapshot).toBeUndefined();const listed=await invoke(c,inspect,'inspect',{});expect(listed.manifests).toHaveLength(1);expect(listed.issues).toEqual([]);const progress=await invoke(c,'cbim_task_inspect','progress',{});expect(progress.evidence.map((v:any)=>v.toolCallId)).not.toContain('capture');});

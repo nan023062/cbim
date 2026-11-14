@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
-import {MemberHelpTools} from '../src/backend/core/tasks/member-help-tools';
-import {ArtifactTools,artifactCaptureToolName} from '../src/backend/core/evidence/artifact-tools';
-import {MemberCheckpointTools,memberCheckpointToolName} from '../src/backend/core/tasks/member-checkpoint-tools';
-import type {MemberHelpStaged} from '../src/backend/core/tasks/member-help';
-import type {ArtifactBaselineStaged} from '../src/backend/core/evidence/artifact-baseline';
-import type {MemberCheckpointStaged} from '../src/backend/core/tasks/member-checkpoint';
+import {MemberHelpTools} from '../src/logic/tasks/rules/member-help-tools';
+import {ArtifactTools,artifactCaptureToolName} from '../src/logic/evidence/rules/artifact-tools';
+import {MemberCheckpointTools,memberCheckpointToolName} from '../src/logic/tasks/rules/member-checkpoint-tools';
+import type {MemberHelpStaged} from '../src/logic/tasks/rules/member-help';
+import type {ArtifactBaselineStaged} from '../src/logic/evidence/rules/artifact-baseline';
+import type {MemberCheckpointStaged} from '../src/logic/tasks/rules/member-checkpoint';
 
 const binding={workspaceId:'workspace',teamId:'team',agentId:'executor',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',taskId:'task',runId:'run',leaseEpoch:1,planRevision:1};
 const stamp='2026-11-07T00:00:00.000Z',digest='a'.repeat(64);

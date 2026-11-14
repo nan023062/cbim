@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {continuationSourceProofSchema,continuationSourceSnapshotSchema,continuationSourceLimits,type ContinuationSourceSnapshot} from '../src/backend/core/tasks/continuation-source-snapshot';
-import {continuationAttachmentManifestSchema,continuationAttachmentManifestV1Schema,continuationAttachmentManifestV2Schema,continuationSourceItemFromSnapshot,continuationSourceItemSchema,assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type ContinuationAttachmentManifestV1,type ContinuationAttachmentManifestV2} from '../src/backend/core/tasks/scope-continuation-attachments';
-import {scopeContinuationSchema,goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest,type ScopeContinuation} from '../src/backend/core/tasks/scope-continuation';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {checkedRunInputSource} from '../src/backend/core/execution/input-source';
-import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {continuationSourceProofSchema,continuationSourceSnapshotSchema,continuationSourceLimits,type ContinuationSourceSnapshot} from '../src/logic/tasks/rules/continuation-source-snapshot';
+import {continuationAttachmentManifestSchema,continuationAttachmentManifestV1Schema,continuationAttachmentManifestV2Schema,continuationSourceItemFromSnapshot,continuationSourceItemSchema,assertContinuationAttachmentManifest,type ContinuationAttachmentManifest,type ContinuationAttachmentManifestV1,type ContinuationAttachmentManifestV2} from '../src/logic/tasks/rules/scope-continuation-attachments';
+import {scopeContinuationSchema,goalContinuationRequestSchema,goalContinuationReceiptSchema,type GoalContinuationRequest,type ScopeContinuation} from '../src/logic/tasks/rules/scope-continuation';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {checkedRunInputSource} from '../src/logic/execution/rules/input-source';
+import {checkedJsonToolResult} from '../src/logic/tools/rules/results';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 
 const at='2026-11-07T10:00:00.000Z',acceptedAt='2026-11-07T10:00:01.000Z',digest=hash('captured');
 const url='http://127.0.0.1:12345/reference';

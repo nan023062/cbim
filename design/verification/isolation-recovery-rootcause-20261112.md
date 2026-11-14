@@ -1,5 +1,7 @@
 # 隔离崩溃恢复测试失败：根因诊断
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-12（Asia/Shanghai）。基线：`c46ea7e7526a053d43e08477b77e201d7aa50e30`。用户要求查清 0.1.9 收尾时的隔离恢复测试失败；本轮只诊断、复现和记录，未修改产品实现、测试断言、发布附件或标签。当前开放 Issues 查询为空，本次关联既有 [PR #50](https://github.com/nan023062/cbim/pull/50)，没有新建或关闭工单。
 
 ## 结论与确定性
@@ -17,7 +19,7 @@
 3. 测试直接调用 `Win32IsolationRecovery.lockTree(resource, true)`，全树锁定成功前不删除文件。`open()` 使用 `0x10081` 访问权限（包括 DELETE）、共享方式 `3`（READ/WRITE），遍历到执行器文件时出现错误 32。
 4. 锁定失败会释放本次已取得的句柄，保留 owner 和原可靠记录。旧 finally 再抛“保留目录”曾掩盖原错误；0.1.9 收尾时补上的 cause 和失败 JSON 使本轮能读到真实错误。
 
-阅读入口：[崩溃测试](../../tests/isolation-recovery-crash.test.ts)、[真实宿主](../../tests/isolation-recovery-crash-host.ts)、[Win32 恢复平台](../../src/backend/main/platform/isolation-recovery-win32.ts)、[正式恢复入口](../../src/backend/main/workspace/isolated-executions.ts)。
+阅读入口：[崩溃测试](../../tests/isolation-recovery-crash.test.ts)、[真实宿主](../../tests/isolation-recovery-crash-host.ts)、[Win32 恢复平台](../../src/logic/file-operations/platform/isolation/isolation-recovery-win32.ts)、[正式恢复入口](../../src/logic/file-operations/service/isolated-executions.ts)。
 
 ## 复现与反证
 

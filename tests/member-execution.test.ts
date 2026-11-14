@@ -5,21 +5,21 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
-import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
-import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
-import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
+import {json} from '../src/core/platform/node/serialization';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
+import type {MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
+import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
+import type {ExecutionAdmissionWait} from '../src/logic/execution/admission/admission-wait';
 import {registerServiceOwner} from './owner-service-fixture';
-import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
+import {memberFailureStopReason} from '../src/logic/dispatch/runtime/member-failure-limit';
 
 async function until<T>(get:()=>Promise<T>,ready:(value:T)=>boolean){for(let i=0;i<500;i++){const value=await get();if(ready(value))return value;await new Promise(r=>setTimeout(r,10))}throw Error('timed out')}
 async function setup(useBuiltin=false){
@@ -75,6 +75,17 @@ async function setup(useBuiltin=false){
   return {...f,workspace,entry,team,agentId,scopeId,directory,store,storage,dispatch,members,ports,prepare,identity,assign,input,start,settled,contexts,lease,setRuntimeGate:(gate:()=>Promise<void>)=>{beforeRuntimeLease=gate},setBehavior:(value:typeof behavior)=>{behavior=value},cleanup:async()=>{release();await members.close();await dispatch.close();await f.cleanup()}};
 }
 
+it('整话题补充保存后拒绝新领取和派发，原成员任务不被删除',async()=>{
+  const f=await setup();try{
+    const assigned=await f.assign();
+    await f.dispatch.interruptions.prepare({...f.identity,scopeId:f.scopeId,expectedInputRevision:1,commandId:crypto.randomUUID(),input:{message:'等待重新分析'},options:{provider:'fixture',model:'fixture',profileId:crypto.randomUUID(),permission:'read'}});
+    await expect(f.start(assigned.taskId)).rejects.toMatchObject({code:'TOPIC_PAUSING'});
+    await expect(f.assign()).rejects.toMatchObject({code:'TOPIC_PAUSING'});
+    expect(f.prepare).not.toHaveBeenCalled();expect((await f.store.read()).runs??[]).toEqual([]);
+    expect((await f.dispatch.snapshot(f.identity)).tasks).toHaveLength(1);
+  }finally{await f.cleanup()}
+});
+
 it('成员领取后执行、返回带证据的候选、原请求人确认收件；重复启动不重复调用模型',async()=>{
   const f=await setup();try{
     const assigned=await f.assign(),receipt=await f.start(assigned.taskId),view=await f.settled(assigned.taskId);
@@ -88,6 +99,23 @@ it('成员领取后执行、返回带证据的候选、原请求人确认收件�
     expect(JSON.stringify(view)).not.toMatch(/sessionFile|agentDefinition|apiKey/);
     const next=await f.assign();await f.start(next.taskId);expect((await f.settled(next.taskId)).task.status).toBe('result_ready');
     expect(f.contexts[1].nativeSessionId).not.toBe(f.contexts[0].nativeSessionId);expect(f.contexts[1].task.ownerBinding).toEqual(f.contexts[0].task.ownerBinding);
+    const state=await f.store.read(),second=state.runs!.find(run=>run.binding.taskId===next.taskId)!;
+    expect(second.topicContext).toMatchObject({scopeId:f.scopeId,rootSessionId:f.identity.rootSessionId,agentId:f.agentId,priorTasks:[{taskId:assigned.taskId,resultId:view.task.result!.resultId}]});
+    expect(JSON.stringify(view)).not.toContain('topicContext');
+  }finally{await f.cleanup()}
+});
+
+it('同办公室同角色的两个任务串行，等待不创建运行，前项可靠结算后可继续',async()=>{
+  const f=await setup();try{
+    f.setBehavior('hold');const first=await f.assign(),second=await f.assign();
+    await f.start(first.taskId);
+    await until(()=>f.members.inspect(f.input(first.taskId)),view=>view.runs[0]?.status==='running');
+    const before=(await f.store.read()).runs!.length;
+    await expect(f.start(second.taskId)).rejects.toMatchObject({code:'TEAM_SESSION_BUSY'});
+    expect((await f.store.read()).runs).toHaveLength(before);expect(f.prepare).toHaveBeenCalledTimes(1);
+    await f.members.stop(f.input(first.taskId));await f.members.waitForSettlement(f.input(first.taskId));
+    f.setBehavior('candidate');await f.start(second.taskId);expect((await f.settled(second.taskId)).task.status).toBe('result_ready');
+    expect((await f.store.read()).teamSessions!.filter(session=>session.agentId===f.agentId)).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 

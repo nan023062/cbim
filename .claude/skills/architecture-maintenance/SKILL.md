@@ -30,16 +30,14 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 当前允许方向以 `scripts/check-dependencies.mjs` 的 layers 和源码为准：
 
-- backend/core → backend/core。
-- backend/engines → 自身、backend/core；具体 SDK 与 HTTP 传输不得被 Core 反向引用。
-- backend/scheduler-engine → 自身、backend/core；assembly 中的引擎装配可以依赖 backend/engines。
-- backend/bootstrap → 自身、backend/updater、backend/main；固定加载器的计算式入口仍纳入真实源码依赖检查，不作为外部加载豁免。
-- backend/main → 自身、backend/scheduler-engine、backend/core、backend/updater、bridge/contracts。
-- backend/updater → 自身、bridge/contracts；更新程序不得反向依赖 Main、调度或业务运行时。
-- bridge/contracts → 自身、backend/core 的公开契约和纯函数。
-- frontend → 自身、bridge/contracts。
-- bridge/preload → 自身、bridge/contracts。
-- frontend 是视图层，backend 是本机后端逻辑层；bridge 是通信边界。禁止前端直接导入后端实现，也禁止后端导入前端。
+四层已经落地，依据 [四层设计](../../../design/four-layer-architecture.md) 和 src 契约维护实际结构，不再保留旧源码层级许可。
+
+- Core → 自身公开技术入口及获准第三方；便携算法不加载 Node/Electron，平台实现独立。
+- Logic 规则 → 明确领域契约与适用 Core；不依赖运行服务或 Application。具体引擎仅由 execution/assembly 选择，编排通过业务端口协作。
+- Logic 服务/存储/平台 → 领域及公开服务入口与 Node Core；Application 装配唯一业务生命周期，普通服务不得反向依赖它。更新子系统只组合自身、更新契约与便携 utility，不依赖普通应用服务。
+- Bridge server → 通信契约、登记的 Logic 入口与适用 Core。冷壳仅依赖固定业务入口与更新服务，计算式入口仍纳入源码图；Electron 网页由 main.ts 注入。
+- Bridge contracts → 纯协议、便携 Core 和具名业务数据契约；不能加载服务、凭据或平台实现。preload 是当前客户端，不向页面暴露任意 Node/Electron。
+- View → 视图、Bridge 契约/客户端与便携 Core。view/foundations 是视图适配，不依赖 React、页面或通信；Bridge 不转发工具。
 
 遇到循环时，先确认职责归属；把双方需要的协议抽到独立契约模块，或用端口注入实现。不要仅改成 `import type`、动态加载或 re-export 隐藏循环。契约不得再引用实现类，否则循环仍然存在。不要为了消环把不相关职责堆到公共文件。
 
@@ -73,6 +71,20 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 
 ## 5. 验证后再报告
 
+utility 的类图按实际类别文件表达 JSON、字符串、字节、异步协调等工具模块，展示各具名算法、独立实例数据结构与通用/Node 公开入口；不按函数数量机械拆文件，也不因合并文件而虚构算法间依赖或共享状态。当前 SerialQueue 归 `src/core/utility`，旧 concurrency 目录已退役；同步消费者导入、测试归属和依赖规则，不能残留两份队列实现。Core platform/node/serialization.ts 保留 hash/json 兼容名称；JSON 算法归 utility，SHA-256 实现归 platform/node/digest.ts。
+
+前端 utility 单独维护类图与契约，当前 `json.ts` 提供 equalJson。迁移同类比较须保留 localeCompare、对象 undefined、数组次序及错误语义；类图展示控制器到前端公开入口的依赖，不画成后端算法复用。单元归属前端基础模块，业务回执与恢复用原消费者测试验证。
+
+前端 `events.ts` 的 SubscriptionSet 展示 subscribe、notify、size、clear 及实例监听集合；消费者组合关系和通知行为同步维护。控制器仍拥有状态、轮询、代次与销毁，类图不将清空监听器画成请求取消或资源退出；同步实时遍历与异常中断的兼容边界写入契约，并分别验证集合机制及消费者生命周期。
+
+前端 async.ts 的 AsyncGeneration 类图展示 capture、advance、isCurrent 和实例标记。消费者拥有何时推进、成功/失败/finally 的判断点及资源清理；标记失效不等于请求取消。同步保留业务身份、版本和冻结命令回执边界，模块单元与消费者迟到结果回归分别维护。
+
+严格解析归 JSON 类别、字节流消费归字节类别，标明 Core 的错误适配和 Logic 应用服务/更新服务的业务策略。reader 释放与网络/进程退出不能画成同一个完成保证；取消、不完整输入和大小限制的回归随实际消费者同步。
+
+键排序、在途集合、LF 分帧分别归 JSON、异步协调、字符串类别，测试仍按各自行为职责独立维护；类图展示消费者组合及本地策略归属。排序策略不画成统一历史指纹，Promise 快照等待不画成物理退出，文本帧不画成已验证协议。同步各引擎实际字符/字节限额与业务排空顺序，保留独立生命周期状态。
+
+测试也按职责维护：所有单元套件归属一个模块，数据/纯断言/临时目录与 Application 集成夹具分离；不导入其他测试套件，不依赖执行顺序。测试归属在 `tests/modules.json`，不是实时待办。涉及测试增删、导入或夹具变化时运行 `pnpm check:test-modules`；模块单元与跨模块契约/集成分别记录，禁止仅改变分类绕过解耦。该检查可证明登记和静态依赖边界，断言责任及共享状态仍需代码 review。
+
 按 [AGENTS.md 的验证范围](../../../AGENTS.md#日常验证范围) 选择与实际变化相关的检查，不设置每次源码修改必跑的固定套餐：
 
 | 本次变化 | 日常验证 |
@@ -97,3 +109,31 @@ description: "维护 CBIM 源码架构、单向依赖、注释和目录类图，
 ## 多宿主同步
 
 本流程同时存放在 .agents/skills/architecture-maintenance/SKILL.md、.claude/skills/architecture-maintenance/SKILL.md 和 .codex/skills/architecture-maintenance/SKILL.md。修改任一份时同步其余入口，保持内容一致。
+
+前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。分层与无环判断是不同契约，暂保留各自实现；共享须核实语义，不开放业务互引；拓扑单元与任务布局消费者分别验证。
+
+前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
+
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 core/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
+
+后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
+
+Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/take/rejectAll 仅管理 ID、回调与计时器。协议决定超时处置：Pi 单项未知、Codex 整体失败及杀进程必须保留；发送异常、重试与物理退出不下沉，分别验证乱序/重复回包、超时及关闭。
+
+后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
+
+模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；主 Agent 设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
+
+Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web、core/platform/node/web、core/platform/electron/web-reader.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/contracts/secrets.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
+
+反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
+
+资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖具体工作区 Paths 实现或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
+
+四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
+
+有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。
+
+## 当前文档与历史证据
+
+目录迁移后同时核对 CONTRACT 的职责归属、实际消费入口、生成器目录说明、README/设计导航及三宿主引用。ARCHITECTURE 的契约附录从同目录 CONTRACT 生成，不直接修改附录；生成结果一致仅证明同步，不代替语义核对。旧层名称不得继续充当当前职责，已退出的兼容入口不能仍写成在用。保留真实存在的具名重导出及尚未实现的保证；历史验证正文保留当时事实，更新导航时注明链接不是历史版本证据。产品 builtin: 引用按知识白名单核实，不能当作本地文件失效后删除。

@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MemberProgressSummary} from '../src/frontend/tasks/MemberProgressSummary';
-import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
+import {MemberProgressSummary} from '../src/view/tasks/MemberProgressSummary';
+import {WorkStatus} from '../src/view/execution-view/WorkStatus';
 import {validateGraph} from '../src/bridge/contracts/dispatch';
-import {publicDispatchScopeSchema} from '../src/backend/core/tasks/scope-public';
+import {publicDispatchScopeSchema} from '../src/logic/tasks/rules/scope-public';
 import {progressFixture,progressMemberRun} from './conversation-progress-fixture';
 
 it('进展夹具仍遵守公开图和目标契约，供内联过程与任务详情共用',()=>{

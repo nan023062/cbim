@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {humanContinuationReceiptSchema} from '../src/backend/core/tasks/human-continue';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {humanContinuationReceiptSchema} from '../src/logic/tasks/rules/human-continue';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {humanContinuationProvider,humanContinuationFixture as data,type HumanContinuationMode} from './human-continuation-provider';
 import {seedHumanContinuation,humanContinuationRecords,decideHumanContinuation,humanContinuationRequest,humanContinuationSourceBytes} from './human-continuation-fixture';
 
@@ -26,7 +26,7 @@ it.each(['accept','reject','request_evidence','subject-changed','review-file-cha
   const c=await ready(mode);let app=c.f.app;
   try{
     const identity={workspaceId:c.entry.id,rootSessionId:c.request.rootSessionId},lookup={...identity,scopeId:c.request.scopeId,commandId:c.request.commandId};
-    await app.dispatch('loop.enqueue',{id:c.entry.id,taskId:c.request.rootSessionId,message:data.queued,options:{permission:'execute'}});const queued=await app.dispatch('loop.queue',{id:c.entry.id,taskId:c.request.rootSessionId});expect(queued).toHaveLength(1);expect(queued[0].status).toBe('paused');
+    await app.dispatch('loop.enqueue',{id:c.entry.id,taskId:c.request.rootSessionId,message:data.queued,options:{permission:'execute'}});const queued=await app.dispatch('loop.queue',{id:c.entry.id,taskId:c.request.rootSessionId});expect(queued).toHaveLength(1);expect(queued[0].status).toBe('pending');
     await app.shutdown();app=new Application(new Paths(c.f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await c.records()).toEqual(c.saved);expect(c.provider.main).toHaveLength(6);
     await expect(app.dispatch('loop.humanContinue',{...c.request,input:{message:'普通文字不能构造人工接续'}})).rejects.toThrow();expect(await app.dispatch('loop.humanContinuation',lookup)).toBeUndefined();
     const receipts=await Promise.all([app.dispatch('loop.humanContinue',c.request),app.dispatch('loop.humanContinue',c.request)]),receipt=humanContinuationReceiptSchema.parse(receipts[0]);expect(humanContinuationReceiptSchema.parse(receipts[1]).continuation).toEqual(receipt.continuation);

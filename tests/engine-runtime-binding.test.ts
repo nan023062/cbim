@@ -1,8 +1,8 @@
 import {it,expect,vi} from 'vitest';
 import path from 'node:path';
 import {runtimeFixture,digest} from './runtime-fixture';
-import {pinRuntimeEngine} from '../src/backend/engines/runtime-binding';
-import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
+import {pinRuntimeEngine} from '../src/logic/execution/engines/runtime-binding';
+import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
 it('pins native sessions before their binding receipt and rejects a different package before SDK startup',async()=>{
   const f=await runtimeFixture();try{
     const runtime={root:f.root,entry:'engine',version:'1.5.0',identity:digest('pi-a')},home=path.join(f.root,'home');

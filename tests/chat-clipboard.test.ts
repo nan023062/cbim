@@ -5,10 +5,10 @@ import {pathToFileURL} from 'node:url';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
 import {pastedLocalPaths} from '../src/bridge/contracts/chat';
-import {pastedImage} from '../src/frontend/conversation/pasted-images';
-import {ComposerAttachments} from '../src/frontend/execution-view/ComposerAttachments';
+import {pastedImage} from '../src/view/conversation/pasted-images';
+import {ComposerAttachments} from '../src/view/execution-view/ComposerAttachments';
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2X8AAAAASUVORK5CYII=','base64');
 it('仅完整绝对路径列表识别为引用，普通文字和混合内容保留原文',()=>{
  expect(pastedLocalPaths('"C:\\工作目录\\a.txt"\r\nC:\\工作目录\\文件夹')).toEqual(['C:\\工作目录\\a.txt','C:\\工作目录\\文件夹']);

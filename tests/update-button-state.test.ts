@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {updateButtonState} from '../src/frontend/updates/update-button-state';
+import {updateButtonState} from '../src/view/updates/update-button-state';
 import type {DesktopUpdateStatus} from '../src/bridge/contracts/desktop-updates';
 const base:DesktopUpdateStatus={currentVersion:'0.1.14',currentNotes:'notes',enabled:true,phase:'idle',release:{version:'0.1.15',tag:'desktop-v0.1.15',notes:'next',publishedAt:'2026-11-12T00:00:00Z'}};
 describe('sidebar update control',()=>{

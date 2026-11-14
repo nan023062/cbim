@@ -1,13 +1,13 @@
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {checkpointServiceFixture} from './member-checkpoint-service-fixture';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
-import type {TaskSpec} from '../src/backend/core/execution/types';
-import type {MemberPause} from '../src/backend/core/tasks/member-pause';
-import type {GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {normalizeArtifactPath} from '../src/logic/file-operations/platform/files/artifact-files';
+import type {TaskSpec} from '../src/logic/execution/rules/types';
+import type {MemberPause} from '../src/logic/tasks/rules/member-pause';
+import type {GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 /** Real Store, runtime, canonical logs and files; only the unit fixture native fingerprint is synthetic. */
 export async function memberPauseServiceFixture(){

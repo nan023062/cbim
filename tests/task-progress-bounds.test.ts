@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
-import {TaskProgressTools,progressTool} from '../src/backend/core/evidence/progress-tools';
-import type {TaskProgress} from '../src/backend/core/evidence/progress';
-import {dispatchTaskInput} from '../src/backend/core/tasks/dispatch-commands';
+import {TaskProgressTools,progressTool} from '../src/logic/evidence/rules/progress-tools';
+import type {TaskProgress} from '../src/logic/evidence/rules/progress';
+import {dispatchTaskInput} from '../src/logic/tasks/rules/dispatch-commands';
 
 it('preserves the full goal and all acceptance criteria allowed by a dispatched task, while short review fields remain bounded',async()=>{
   const goal='目标'.repeat(8000),acceptance=Array.from({length:50},(_,index)=>String(index).padEnd(16000,'验'));

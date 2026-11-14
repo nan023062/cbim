@@ -4,9 +4,9 @@ import path from 'node:path';
 import {checkpointServiceFixture,gate} from './member-checkpoint-service-fixture';
 import {request} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
-import type {AbandonCheckpointInput} from '../src/backend/core/tasks/checkpoint-handoff';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
+import type {AbandonCheckpointInput} from '../src/logic/tasks/rules/checkpoint-handoff';
 
 type Fixture=Awaited<ReturnType<typeof checkpointServiceFixture>>;
 async function input(f:Fixture):Promise<AbandonCheckpointInput>{

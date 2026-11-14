@@ -5,13 +5,13 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {MemberExecutionView,MemberStartReceipt} from '../src/backend/core/tasks/member-commands';
-import type {OpenGraphReceipt,DispatchReceipt} from '../src/backend/core/tasks/dispatch-commands';
-import type {ChatApproval} from '../src/backend/core/tools/policy/types';
-import type {MemberEventsRead,MemberEventCursor} from '../src/backend/core/tasks/member-events';
-import type {StoredEvent} from '../src/backend/core/execution/types';
+import {json} from '../src/core/platform/node/serialization';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import type {MemberExecutionView,MemberStartReceipt} from '../src/logic/tasks/rules/member-commands';
+import type {OpenGraphReceipt,DispatchReceipt} from '../src/logic/tasks/rules/dispatch-commands';
+import type {ChatApproval} from '../src/logic/tools/rules/policy/types';
+import type {MemberEventsRead,MemberEventCursor} from '../src/logic/tasks/rules/member-events';
+import type {StoredEvent} from '../src/logic/execution/rules/types';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 /** Actual Application, dispatch transactions, policy, persistence and pinned Pi; only the model provider is a deterministic localhost fixture. */
@@ -21,7 +21,7 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
   const cancelGoal='LOCAL_MEMBER_CANCEL: 本次任务必须重新批准';
   const plainGoal='LOCAL_MEMBER_PLAIN: 普通结束不能伪造交付';
   const acceptance=['实际文件内容为 member-result'];
-  const requests:{messages:{role:string;content:unknown}[]}[]=[];
+  const requests:{messages:{role:string;content:unknown}[];tools?:{function?:{name?:string}}[]}[]=[];
   const transportErrors:unknown[]=[];
   const turns=new Map<string,number>();
   const server=http.createServer(async(req,res)=>{
@@ -60,7 +60,7 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     const identity={workspaceId:entry.id,rootSessionId:'member-root'};
     const root=await f.app.dispatch('dispatch.open',{...identity,commandId:'open-root'}) as OpenGraphReceipt;
     const scopes=new Map<string,string>(),openPlanned=async(graph:typeof identity,scopeId:string)=>{
-      const service=f.app.memberDispatch(entry.id),runId='main-'+scopeId;await service.openScope(graph,scopeId,{message:'验证原权限、证据与成员实例隔离'},runId);
+      const service=f.app.memberDispatch(entry.id),runId='main-'+scopeId;await service.openScope(graph,scopeId,{message:'TOPIC_USER_'+scopeId+' 验证原权限、证据与成员实例隔离'},runId);
       await service.goals.plan(graph,scopeId,runId,'plan-'+scopeId,{expectedRevision:1,objective:'验证原权限、证据与成员实例隔离',constraints:[],criteria:acceptance.map((text,i)=>({id:'criterion-'+i,text,kind:'evidence'})),assignments:[{agentId:team.input.agentId,moduleIds:[team.input.moduleId],ownerSelection,criterionIds:acceptance.map((_,i)=>'criterion-'+i),reason:'真实模块负责岗位'}],reason:'明确规划再派发'});scopes.set(graph.rootSessionId,scopeId);
     };
     await openPlanned(identity,'member-cycle-one');
@@ -115,6 +115,7 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     expect(await f.app.dispatch('dispatch.messages',inboxIdentity)).toEqual([]);
     expect((await view()).task.result?.acceptance).toBe('not_evaluated');
     const beforeRestart=requests.length;
+    expect(JSON.stringify(requests[0].messages)).toContain('TOPIC_USER_member-cycle-one');
     await f.app.open(entry.id,true);
     expect(await view()).toEqual(completed);expect(requests).toHaveLength(beforeRestart);
     const restoredReads=vi.spyOn(FileRunStorage.prototype,'read');
@@ -131,6 +132,8 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     const next=await f.app.dispatch('dispatch.executionStart',{...secondIdentity,commandId:'start-second',expectedRevision:1,options:{permission:'ask',turnTimeoutMs:15000}}) as MemberStartReceipt;
     await vi.waitFor(async()=>expect(await f.app.dispatch('dispatch.approvals',secondIdentity)).toHaveLength(1),{timeout:15000,interval:30});
     expect(JSON.stringify(requests.at(-1)?.messages)).not.toContain(firstGoal);
+    expect(JSON.stringify(requests.at(-1)?.messages)).toContain('TOPIC_USER_member-cycle-two');
+    expect(JSON.stringify(requests.at(-1)?.messages)).not.toContain('TOPIC_USER_member-cycle-one');
     await f.app.stop(entry.id); // Closing a workspace must drain its member before the shared store closes.
     await f.app.open(entry.id);
     const stopped=await f.app.dispatch('dispatch.executionInspect',secondIdentity) as MemberExecutionView;
@@ -150,5 +153,6 @@ it('runs a dispatched member through approval, verified candidate and inbox ackn
     await vi.waitFor(async()=>expect((await f.app.dispatch('dispatch.executionInspect',plainIdentity) as MemberExecutionView).task.status).toBe('blocked'),{timeout:15000,interval:30});
     expect(JSON.stringify(requests.at(-1)?.messages)).not.toContain(firstGoal);
     expect(transportErrors).toEqual([]);
+    expect(requests.every(body=>!body.tools?.some(tool=>tool.function?.name==='cbim_office_history'))).toBe(true);
   }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },90000);

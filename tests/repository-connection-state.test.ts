@@ -5,7 +5,7 @@ import {
   checkedRepositoryConnectionUnaccepted,
   isRepositoryConnectionPreflightRejection,REPOSITORY_CONNECTION_PENDING_KEY,REPOSITORY_CONNECTION_PENDING_BYTES,
   type RepositoryConnectionPending,type RepositoryConnectionCommitPending,type RepositoryConnectionGrantPending,
-} from '../src/frontend/resources/repository-connection-state';
+} from '../src/view/resources/repository-connection-state';
 
 const repositoryId='34bbf997-055b-4c56-a70d-f7033cc4d3fa',definitionHash='a'.repeat(64),connectorId='.cbim/connectors/resources',instanceId='bd20194b-2e8a-478f-906f-2f44908438bf';
 function storage(){const items=new Map<string,string>();return {items,getItem:vi.fn((key:string)=>items.get(key)??null),setItem:vi.fn((key:string,value:string)=>{items.set(key,value)})}}

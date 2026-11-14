@@ -1,9 +1,9 @@
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {expect,it} from 'vitest';
-import {RepositoryScopeDetails} from '../src/frontend/components/RepositoryScopeDetails';
-import {ToolTimeline as ToolActivity} from '../src/frontend/execution-view/ToolTimeline';
-import {brainStatus} from '../src/frontend/conversation/brain-status';
+import {RepositoryScopeDetails} from '../src/view/components/RepositoryScopeDetails';
+import {ToolTimeline as ToolActivity} from '../src/view/execution-view/ToolTimeline';
+import {brainStatus} from '../src/view/conversation/brain-status';
 import type {RunSummary,StoredEvent} from '../src/bridge/contracts/execution';
 
 const scope={kind:'repository',workspaceId:'workspace-a',connectorId:'.cbim/connectors/repository',repositoryId:'10000000-0000-4000-8000-000000000001',connectionId:'20000000-0000-4000-8000-000000000001',operation:'get'};

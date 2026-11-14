@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {CodexEngine} from '../src/backend/engines/codex/engine';
+import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
 import {codexFixture} from './codex-fixture';
 
 test('真实 Codex 长写入完整落盘，参数错误返回工具失败且原文件保留',async()=>{

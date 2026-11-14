@@ -3,17 +3,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {controlledFileReportSchema,fileCompensationReceiptSchema} from '../src/backend/core/file-operations/controlled-file-operation';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {controlledFileReportSchema,fileCompensationReceiptSchema} from '../src/logic/file-operations/rules/controlled-file-operation';
 import {controlledFileProvider,controlledFileFixture as data} from '../tests/controlled-file-provider';
 import {seedControlledFile} from '../tests/controlled-file-seed';
 import {holdControlledReadonlyMapping} from '../tests/controlled-file-electron-fixture';
 import {additionRecords} from '../tests/queued-dependency-addition-fixture';
 import {effectPersistedRunBytes,effectRunEvidence,archiveEffectRuns} from '../tests/effect-observation-fixture';
 import {latestExecutable} from './build-artifact.mjs';
-import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/backend/core/tasks/effect-observation';
+import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
 
 // 生产 EXE 实际执行工具和 utility child。测试只观察真实 child 协议，并在补偿已完成后丢一次 IPC 回复。
 const partial=process.argv.includes('--partial'),mode=partial?'partial':'complete',artifact='controlled-effect-'+mode,exe=await latestExecutable();

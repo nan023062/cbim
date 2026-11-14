@@ -2,11 +2,11 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {PiRpc} from '../src/backend/engines/pi/rpc';
-import type {InputImage} from '../src/backend/core/execution/types';
-import type {QueuedMessage} from '../src/backend/core/tasks/queue';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {PiRpc} from '../src/logic/execution/engines/pi/rpc';
+import type {InputImage} from '../src/logic/execution/rules/types';
+import type {QueuedMessage} from '../src/logic/tasks/rules/queue';
 import {insertionData as data,insertionProvider} from './queue-insertion-provider';
 import {insertionWait,seedInsertion} from './queue-insertion-fixture';
 

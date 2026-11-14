@@ -1,6 +1,6 @@
 import {it,expect} from 'vitest';
-import {initialLayout,newTab,moveTab,readLayouts,renameConversation,removeConversation,mergeConversations} from '../src/frontend/shell/tabs';
-import {bindRuntimeConversation} from '../src/frontend/shell/runtime-navigation';
+import {initialLayout,newTab,moveTab,readLayouts,renameConversation,removeConversation,mergeConversations} from '../src/view/shell/tabs';
+import {bindRuntimeConversation} from '../src/view/shell/runtime-navigation';
 it('移动页签保持活动页签与草稿，不改变另一工作区',()=>{const first=initialLayout(),second=initialLayout(),flow=newTab('flow');first.tabs[0].draft='未发送草稿';first.tabs.push(flow);const moved=moveTab(first,flow.id,first.tabs[0].id);expect(moved.tabs.map(t=>t.kind)).toEqual(['flow','chat']);expect(moved.active).toBe(first.active);expect(moved.tabs[1].draft).toBe('未发送草稿');expect(second.tabs).toHaveLength(1);expect(first.tabs[0].kind).toBe('chat')});
 it('恢复布局忽略坏记录、重复页签和未知类型，并恢复有效活动页签',()=>{const id='a'.repeat(64),t=newTab('chat');const result=readLayouts(JSON.stringify({[id]:{tabs:[t,t,{id:'unknown',kind:'unsafe',title:'x'}],active:'missing'},bad:{tabs:[]}}));expect(Object.keys(result)).toEqual([id]);expect(result[id].tabs).toHaveLength(1);expect(result[id].active).toBe(t.id);expect(readLayouts('{')).toEqual({})});
 

@@ -5,14 +5,14 @@ import {expect,it} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {WorkflowSelection} from '../src/backend/core/tasks/workflow-selection';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {resolveDispatchModules} from '../src/backend/scheduler-engine/context/dispatch-context';
-import {prepareDispatchExecutionContext,memberExecutionPrompt} from '../src/backend/scheduler-engine/context/execution-context';
-import {DispatchTools} from '../src/backend/scheduler-engine/tools/dispatch-tools';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
+import {hash,json} from '../src/core/platform/node/serialization';
+import type {WorkflowSelection} from '../src/logic/tasks/rules/workflow-selection';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
+import {prepareDispatchExecutionContext,memberExecutionPrompt} from '../src/logic/execution/context/execution-context';
+import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
 
 async function setup(){
   const f=await fixture();

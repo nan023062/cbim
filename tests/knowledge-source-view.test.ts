@@ -2,11 +2,11 @@ import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {KnowledgeSourceDetails,KnowledgeSourceSelection} from '../src/frontend/knowledge/KnowledgeSourceDetails';
+import {KnowledgeSourceDetails,KnowledgeSourceSelection} from '../src/view/knowledge/KnowledgeSourceDetails';
 import type {KnowledgeSourceRef} from '../src/bridge/contracts/knowledge-source';
 import type {ModuleOwnershipCommitInput,ModuleOwnershipPreview,ModuleOwnershipReceipt} from '../src/bridge/contracts/module-ownership';
-import {checkedModuleOwnershipPreview,checkedModuleOwnershipReceipt,ModuleOwnershipCommands,moduleOwnershipPreRejected} from '../src/frontend/workspace/module-ownership-state';
-import {workspaceMemberPreRejected} from '../src/frontend/team/workspace-member-state';
+import {checkedModuleOwnershipPreview,checkedModuleOwnershipReceipt,ModuleOwnershipCommands,moduleOwnershipPreRejected} from '../src/view/workspace/module-ownership-state';
+import {workspaceMemberPreRejected} from '../src/view/team/workspace-member-state';
 
 const workspaceId='workspace',instanceId=randomUUID(),moduleId='.cbim/workspace/game',hash='a'.repeat(64),time='2026-11-07T14:00:00.000Z';
 const source={kind:'module' as const,sourceId:moduleId};

@@ -1,5 +1,7 @@
 # P2 架构整改与复扫记录
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-11。依据：[架构设计规范](../project-architecture-standard.md)、[治理流程](../architecture-governance-process.md)、[原扫描报告](architecture-audit-20261111.md)。
 
 ## 1. 结论、基线与范围（S1–S3）
@@ -20,7 +22,7 @@
 
 [ipc-call.ts](../../src/bridge/contracts/ipc-call.ts) 用联合元组保持操作和参数配对，返回值由操作推导；[agent-history-ipc.ts](../../src/bridge/contracts/agent-history-ipc.ts) 关联 `roles / sessions / runs / events`，运行时请求 Schema 复用 Core 的公开纯协议，不从具体服务推导接口。
 
-[Main 历史处理器](../../src/backend/main/ipc/agent-history.ts) 在查找服务前严格解析输入，四个处理函数分别受响应类型约束，只取得历史查询端口。原总分派器保留其他操作及未知动作 `ACTION` 拒绝，主 Frame 与更新安装门禁不变。预加载桥继续使用原 `cbim:call` 和成功／错误信封，不增加自动重试。
+[Main 历史处理器](../../src/bridge/server/ipc/agent-history.ts) 在查找服务前严格解析输入，四个处理函数分别受响应类型约束，只取得历史查询端口。原总分派器保留其他操作及未知动作 `ACTION` 拒绝，主 Frame 与更新安装门禁不变。预加载桥继续使用原 `cbim:call` 和成功／错误信封，不增加自动重试。
 
 真实消费者已迁移：角色读取、`useHistorySessions`、`useHistoryRuns` 和事件读取直接取得关联响应，移除自行指定响应的断言。其他页面的操作名包装收窄到真实使用的集合；原持久命令、取消与回执流程保持。
 
@@ -31,13 +33,13 @@
 - 预加载层验证原通道、诊断和错误码透传，失败不重试；真实历史集成与前端身份／分页用例通过。
 - 旧操作清单与实际 Main 原生处理及总分派分支做集合核对，防止路由漂移。类型清单不构成授权。
 
-限制：[legacy-ipc-actions.ts](../../src/bridge/contracts/legacy-ipc-actions.ts) 保留另外 160 项既有操作，参数为 `unknown`、响应仍为 `any`；总 dispatcher 剩余 149 个 switch 分支。响应依靠声明类型及原有服务投影，本轮未增加所有 IPC 输出的运行时 Schema。新增业务组应沿同一映射渐进迁移。
+限制：`legacy-ipc-actions.ts`（该阶段临时入口未留存，当前签名见 [ipc-call.ts](../../src/bridge/contracts/ipc-call.ts)） 保留另外 160 项既有操作，参数为 `unknown`、响应仍为 `any`；总 dispatcher 剩余 149 个 switch 分支。响应依靠声明类型及原有服务投影，本轮未增加所有 IPC 输出的运行时 Schema。新增业务组应沿同一映射渐进迁移。
 
 ### A08 / P2：共享展示与业务控制分开
 
-六个实际共享文件从 conversation 迁到 [run-view](../../src/frontend/run-view/ARCHITECTURE.md)：WorkStatus、ToolActivity、MarkdownMessage、transcript、tool-labels、repairStreamingMarkdown。最小展示契约只含原运行、调用 ID 和工具名；共享层不再引用任务恢复 Hook 或其内部类型。
+六个实际共享文件从 conversation 迁到 [run-view](../../src/view/execution-view/ARCHITECTURE.md)：WorkStatus、ToolActivity、MarkdownMessage、transcript、tool-labels、repairStreamingMarkdown。最小展示契约只含原运行、调用 ID 和工具名；共享层不再引用任务恢复 Hook 或其内部类型。
 
-[RunToolDetails](../../src/frontend/conversation/RunToolDetails.tsx) 在外层核实真实主来源并组合原命令核实、影响观察与可选恢复上下文。主对话、任务根、成员正文分别显式传入展示插槽，恢复、选择、刷新和停止仍由原控制者持有。Markdown 的复制／展开保持本地状态，用户点击链接仍走固定 Bridge；不将其宣称为完全无交互的纯函数。
+`RunToolDetails.tsx`（该阶段临时组件未留存，当前组合入口见 [ToolActivity.tsx](../../src/view/tasks/ToolActivity.tsx)） 在外层核实真实主来源并组合原命令核实、影响观察与可选恢复上下文。主对话、任务根、成员正文分别显式传入展示插槽，恢复、选择、刷新和停止仍由原控制者持有。Markdown 的复制／展开保持本地状态，用户点击链接仍走固定 Bridge；不将其宣称为完全无交互的纯函数。
 
 验收证据：
 
@@ -49,7 +51,7 @@
 
 ### A09 / P2：历史索引存储与服务装配分开
 
-[文件历史索引](../../src/backend/main/persistence/tasks/agent-history.ts) 只导出 FileAgentHistoryStore，不依赖具体 Workspace 或实例化调度服务。[Main 装配入口](../../src/backend/main/agent-history.ts) 仅接收工作区身份、project 目录定位和存活断言，组合历史服务、索引和 canonical 日志读取。
+[文件历史索引](../../src/logic/history/service/file-store.ts) 只导出 FileAgentHistoryStore，不依赖具体 Workspace 或实例化调度服务。[Main 装配入口](../../src/logic/history/service/assembly.ts) 仅接收工作区身份、project 目录定位和存活断言，组合历史服务、索引和 canonical 日志读取。
 
 验收证据：
 

@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ScopeUsageController,checkedScopeUsage,scopeUsageGroup} from '../src/frontend/tasks/scope-usage-state';
-import {ScopeUsageSummary,ScopeUsageReadView} from '../src/frontend/tasks/ScopeUsagePanel';
+import {ScopeUsageController,checkedScopeUsage,scopeUsageGroup} from '../src/view/tasks/scope-usage-state';
+import {ScopeUsageSummary,ScopeUsageReadView} from '../src/view/tasks/ScopeUsagePanel';
 import type {ScopeUsageInput,ScopeUsageReport,ScopeUsageRun} from '../src/bridge/contracts/scope-usage';
 
 const identity:ScopeUsageInput={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope'};

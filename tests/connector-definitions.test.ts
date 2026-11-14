@@ -2,14 +2,14 @@ import fs from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import Ajv2020 from 'ajv/dist/2020';
 import {describe,it,expect} from 'vitest';
-import {connectorDefinitionSchema,connectorRegistrySchema,type ConnectorDefinition} from '../src/backend/core/connectors/definition';
-import {ConnectorRegistry} from '../src/backend/core/connectors/registry';
+import {connectorDefinitionSchema,connectorRegistrySchema,type ConnectorDefinition} from '../src/logic/connectors/rules/definition';
+import {ConnectorRegistry} from '../src/logic/connectors/rules/registry';
 import {
   repositoryConnectionPreviewInputSchema,repositoryConnectionPreviewSchema,repositoryConnectionCommitSchema,
   repositoryConnectionGrantInputSchema,repositoryConnectionRevokeInputSchema,repositoryConnectionGrantSchema,
   repositoryConnectionReceiptSchema,repositoryConnectionLookupSchema,repositoryConnectionListSchema,
   repositoryConnectionCheckInputSchema,repositoryConnectionCheckSchema,
-} from '../src/backend/core/connectors/repository-connection';
+} from '../src/logic/connectors/rules/repository-connection';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {seedTeam} from './team-fixture';

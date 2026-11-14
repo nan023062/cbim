@@ -1,17 +1,17 @@
 /**
- * 网页搜索设置只管理 Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
+ * 网页设置管理浏览器 robots 策略、Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
  * 作用定位：模型、准入、预算与反馈账号设置的公开 IPC 请求与响应。
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。类型不替代身份和权限校验。
  */
 import {z} from 'zod';
-import {webConfigureInput,type WebSettingsView} from '../../backend/core/connectors/web-tools';
+import {webConfigureInput,type WebSettingsView} from './web';
 import {ipcId,noIpcArgs} from './ipc-shapes';
-import {type DiscoveredModel} from '../../backend/core/models/catalog';
-import {type LlmSettings,connectionSchema,definition} from '../../backend/core/models/config';
-import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from '../../backend/core/connectors/github-feedback';
-import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../backend/core/runtime/admission';
-import {type RuntimeRead,type RuntimeSnapshot} from '../../backend/core/runtime/types';
-import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../backend/core/budget/scope-budget';
+import {type DiscoveredModel} from './models';
+import {type LlmSettings,connectionSchema,definition} from './models';
+import {type GitHubFeedbackStatus,githubFeedbackConfigSchema} from './github-feedback';
+import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissionCursorSchema} from '../../logic/runtime/rules/admission';
+import {type RuntimeRead,type RuntimeSnapshot} from '../../logic/runtime/rules/types';
+import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../logic/budget/rules/scope-budget';
 import {modelActionSchemas,type ModelActionResults} from './model-actions';
 
 export const settingsIpcRequests={

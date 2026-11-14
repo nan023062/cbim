@@ -4,11 +4,11 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {summary,request} from './data/knowledge';
-import {ObjectCrud,type ObjectOperation} from '../src/backend/core/knowledge/object-crud';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {Workspace} from '../src/backend/main/workspace/workspace';
+import {ObjectCrud,type ObjectOperation} from '../src/logic/knowledge/rules/object-crud';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {Workspace} from '../src/logic/workspace/service/workspace';
 
 const agent='.cbim/team/source_worker',principles='# Source\nPreserve real knowledge facts.';
 const create: ObjectOperation={kind:'agent',action:'create',parentId:'.cbim/team',slug:'source_worker',data:{name:'Source worker',summary,capabilities:['Verify']},body:principles};

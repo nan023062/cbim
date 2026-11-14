@@ -1,5 +1,7 @@
 # CBIM 全项目架构 review 快照
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-12。源码基线：0.1.9 / `c46ea7e7526a053d43e08477b77e201d7aa50e30`。
 
 [交互总览](project-architecture-review-20261112.html)：离线单文件，完整模块树、全部 src 内部引用证据、搜索与 JSON 导出。
@@ -289,8 +291,8 @@ Forge 复制 design/docs/legal 等资源；内置流程以 `src/backend/core/kno
 ## 阅读入口
 
 - [源码总览](../../src/ARCHITECTURE.md) 与各目录 ARCHITECTURE/CONTRACT；旧描述遇到冲突以代码为准。
-- [桌面装配](../../src/backend/main/main.ts)、[Application](../../src/backend/main/application.ts)、[Workspace](../../src/backend/main/workspace/workspace.ts)。
-- [共享 IPC](../../src/bridge/contracts/ipc-call.ts)、[preload](../../src/bridge/preload/preload.ts)、[循环装配](../../src/backend/scheduler-engine/execution/loop-engine.ts)。
+- [桌面装配](../../src/bridge/server/main.ts)、[Application](../../src/logic/application/application.ts)、[Workspace](../../src/logic/workspace/service/workspace.ts)。
+- [共享 IPC](../../src/bridge/contracts/ipc-call.ts)、[preload](../../src/bridge/preload/preload.ts)、[循环装配](../../src/logic/execution/assembly/loop-engine.ts)。
 - [隔离恢复根因](isolation-recovery-rootcause-20261112.md)；本轮没有修复或重跑该专项。
 
 ## 交付验证

@@ -1,8 +1,8 @@
 import {it,expect,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ManifestReportController,checkedManifestReport} from '../src/frontend/tasks/output-manifest-state';
-import {ManifestReportPanel} from '../src/frontend/tasks/MemberOutputManifest';
+import {ManifestReportController,checkedManifestReport} from '../src/view/tasks/output-manifest-state';
+import {ManifestReportPanel} from '../src/view/tasks/MemberOutputManifest';
 import type {OutputManifestReport,OutputManifestQuery} from '../src/bridge/contracts/output-manifest';
 
 const identity={workspaceId:'workspace',rootSessionId:'root',taskId:'task',runId:'run'},stamp='2026-11-08T00:00:00.000Z';

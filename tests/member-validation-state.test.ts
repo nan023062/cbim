@@ -1,11 +1,11 @@
 import {expect,test} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {MemberValidationPanel} from '../src/frontend/tasks/MemberValidationPanel';
-import {memberValidationViews} from '../src/frontend/tasks/member-validation-state';
-import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
-import type {RunSummary,StoredEvent} from '../src/backend/core/execution/types';
-import type {ValidationResult} from '../src/backend/core/evidence/validation';
+import {MemberValidationPanel} from '../src/view/tasks/MemberValidationPanel';
+import {memberValidationViews} from '../src/view/tasks/member-validation-state';
+import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
+import type {RunSummary,StoredEvent} from '../src/logic/execution/rules/types';
+import type {ValidationResult} from '../src/logic/evidence/rules/validation';
 
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},now='2026-11-07T00:00:00.000Z',digest='a'.repeat(64);
 const task={workspaceId:identity.workspaceId,taskId:identity.taskId,root:'/workspace',goal:'核对结构',moduleIds:['module'],agentId:'agent',acceptance:['字段符合要求']};

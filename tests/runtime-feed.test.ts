@@ -1,6 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
-import {RuntimeFeed,reconcileRuntime} from '../src/frontend/runtime/runtime-feed';
-import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
+import {RuntimeFeed,reconcileRuntime} from '../src/view/runtime/runtime-feed';
+import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import type {RuntimeSnapshot} from '../src/bridge/contracts/runtime';
 const response=(snapshot:RuntimeSnapshot)=>({mode:'snapshot',cursor:snapshot.cursor,snapshot});
 function initial(){const manager=new GlobalRuntimeManager(),epoch=manager.begin('workspace','Project');manager.ready('workspace',epoch);return manager.snapshot()}

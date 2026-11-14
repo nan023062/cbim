@@ -2,8 +2,8 @@ import {test,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
-import {QueueProjection} from '../src/frontend/conversation/queue-sync';
+import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
+import {QueueProjection} from '../src/view/conversation/queue-sync';
 test('queue sends only changed entries and preserves unchanged UI identity across polls and sorting',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-sync-'));try{
   const q=new MessageQueue(path.join(dir,'queue.json'));await q.load();const view=new QueueProjection();view.apply(q.delta('t'));

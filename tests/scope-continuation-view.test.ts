@@ -1,12 +1,12 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ScopeContinuationController,ScopeContinuationPool,checkedContinuationReceipt,continuationRejected,type ContinuationTarget,type ContinuationPorts} from '../src/frontend/tasks/continuation-state';
-import {continuationTarget,continuationModel,type ScopeContinuationView} from '../src/frontend/tasks/useScopeContinuation';
-import {ScopeContinuationForm} from '../src/frontend/tasks/ScopeContinuationForm';
+import {ScopeContinuationController,ScopeContinuationPool,checkedContinuationReceipt,continuationRejected,type ContinuationTarget,type ContinuationPorts} from '../src/view/tasks/continuation-state';
+import {continuationTarget,continuationModel,type ScopeContinuationView} from '../src/view/tasks/useScopeContinuation';
+import {ScopeContinuationForm} from '../src/view/tasks/ScopeContinuationForm';
 import type {GoalContinuationRequest,GoalContinuationReceipt,DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {continuationFiles,appendContinuationFiles} from '../src/frontend/tasks/continuation-attachments';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
+import {continuationFiles,appendContinuationFiles} from '../src/view/tasks/continuation-attachments';
 
 const target:ContinuationTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',waitId:'wait',expectedGoalRevision:3,expectedInputRevision:1};
 const options={provider:'cbim-11111111-1111-4111-8111-111111111111',profileId:'11111111-1111-4111-8111-111111111111',model:'model',permission:'ask' as const};
@@ -99,6 +99,7 @@ it('只有当前waiting详情同身份同版本可写，历史选择/换根/同�
   expect(continuationTarget('workspace','root',{...state,selectedScopeId:'history'})).toBeUndefined();expect(continuationTarget('workspace','root',{...state,detailLoading:true})).toBeUndefined();expect(continuationTarget('workspace','other',state)).toBeUndefined();expect(continuationTarget('workspace','root',{...state,error:'同步失败'})).toBeUndefined();
   expect(continuationTarget('workspace','root',{...state,selectedScope:{...state.selectedScope!,wait:{...state.selectedScope!.wait!,waitId:'obsolete'}}})).toBeUndefined();
   expect(continuationTarget('workspace','root',{...state,waitingScope:{...state.waitingScope!,inputRevision:2}})).toBeUndefined();
+  expect(continuationTarget('workspace','root',{...state,selectedScope:{...state.selectedScope!,wait:{...state.selectedScope!.wait!,interruptionId:command}}})).toBeUndefined();
 });
 
 it('历史表单不提供提交或重试按钮，未知与受理不冒充执行或人工验收',()=>{

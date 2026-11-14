@@ -2,10 +2,10 @@ import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Workspace} from '../src/backend/main/workspace/workspace';
-import {KernelLock} from '../src/backend/main/platform/locking';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileAgentHistoryStore} from '../src/backend/main/history/file-store';
+import {Workspace} from '../src/logic/workspace/service/workspace';
+import {KernelLock} from '../src/core/platform/node/locking';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileAgentHistoryStore} from '../src/logic/history/service/file-store';
 
 it('历史索引加载完成之前持有工程锁但不读取派发 Store，后续装配不重复加载索引',async()=>{
   const f=await fixture(),entry=await f.app.catalog.add(f.a);

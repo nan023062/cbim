@@ -62,4 +62,4 @@ $env:CBIM_SIGN_TIMESTAMP_URL = 'http://timestamp.digicert.com'
 | 发布完整性规则 | `artifacts.mjs` | 重新验签真实字节、核对清单，不信任“已签名”布尔标记 |
 | GitHub 发布步骤 | `publication.mjs`、`scripts/publish-desktop.mjs` | 先验签／备份，草稿中替换，逐项核对后公开，未知不重放 |
 
-所有签名能力均在 `scripts/desktop-signing/`；产品的 `src/backend/updater/` 和业务运行时代码本次未修改。Forge 只写公开发布者配置，NSIS 继续每用户安装，不附加无需使用的提权帮助程序。证书轮换但发布者名称不变时主要调整配置；若改变发布主体名称，需单独设计旧安装版的更新兼容，不能为了通过验收关闭发布者校验。
+所有签名能力均在 `scripts/desktop-signing/`；产品的 `src/logic/updates/service/` 和业务运行时代码本次未修改。Forge 只写公开发布者配置，NSIS 继续每用户安装，不附加无需使用的提权帮助程序。证书轮换但发布者名称不变时主要调整配置；若改变发布主体名称，需单独设计旧安装版的更新兼容，不能为了通过验收关闭发布者校验。

@@ -15,6 +15,6 @@
 
 ## 模块与验收
 
-Core/runtime 定义纯周期投影/公开校验，Scheduler/runtime 接收原事务事实，Bridge 只导出契约；Frontend/runtime 独立只读视图，Shell/Conversation 接受可信页面定位请求。
+logic/runtime/rules 定义纯周期投影/公开校验，logic/runtime/monitoring 接收原事务事实，Bridge 只导出契约；view/runtime 独立只读视图，Shell/Conversation 接受可信页面定位请求。
 
 验证 scope-only/noop/同事务一次版本、跨工作区/主会话隔离、退役回调、waiting 与最近运行 completed 的区别、恢复不启动模型及未知用量。最终 EXE 在两个工作区实际运行多个会话，核对人员/任务/准入等待、源会话跳转、增量读取、草稿、停止与重开无重放；使用真实 Pi 和本机确定性供应商，不据此宣称在线模型质量或计费。

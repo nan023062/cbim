@@ -1,5 +1,5 @@
 import {test,expect} from 'vitest';
-import {initialLayout,mergeConversations} from '../src/frontend/shell/tabs';
+import {initialLayout,mergeConversations} from '../src/view/shell/tabs';
 import {fixture} from './helpers';
 import fs from 'node:fs/promises';
 test('sidebar migration preserves drafts and active conversation, restores history without duplicate tasks',()=>{

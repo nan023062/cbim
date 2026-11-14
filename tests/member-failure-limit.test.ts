@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest';
-import {memberFailureStopReason} from '../src/backend/scheduler-engine/dispatch/member-failure-limit';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
-import {appendScopeMainRun,createScopeRunTracking} from '../src/backend/core/tasks/scope-run-tracking';
+import {memberFailureStopReason} from '../src/logic/dispatch/runtime/member-failure-limit';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
+import {appendScopeMainRun,createScopeRunTracking} from '../src/logic/tasks/rules/scope-run-tracking';
 
 function task(id:string,status:TaskNode['status']='interrupted',scopeId='scope'):TaskNode{
   return {taskId:id,scopeId,status,runIds:['run-'+id]} as TaskNode;

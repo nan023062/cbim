@@ -5,9 +5,9 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import type {GraphDelta,GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../src/backend/core/tasks/dispatch-commands';
+import {json} from '../src/core/platform/node/serialization';
+import type {GraphDelta,GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {OpenGraphReceipt,CreateMemberReceipt,DispatchReceipt} from '../src/logic/tasks/rules/dispatch-commands';
 
 async function setup(){
   const f=await fixture();

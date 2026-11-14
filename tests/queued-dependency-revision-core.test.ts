@@ -1,8 +1,8 @@
 import {expect,it} from 'vitest';
-import {queuedDependencyRevisionSelection as select} from '../src/backend/core/tasks/queued-dependency-revision-rules';
-import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput} from '../src/backend/core/tasks/queued-dependency-revision';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {AgentRef,TaskNode,GraphEdge} from '../src/backend/core/tasks/graph-types';
+import {queuedDependencyRevisionSelection as select} from '../src/logic/tasks/rules/queued-dependency-revision-rules';
+import {reviseQueuedDependenciesInputSchema,type ReviseQueuedDependenciesInput} from '../src/logic/tasks/rules/queued-dependency-revision';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {AgentRef,TaskNode,GraphEdge} from '../src/logic/tasks/rules/graph-types';
 const identity={workspaceId:'workspace',rootSessionId:'root'},scopeId='scope',stamp='2026-11-07T00:00:00.000Z',later='2026-11-07T00:00:01.000Z';
 const main:AgentRef={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主调度'};
 const ref=(id:string):AgentRef=>({agentId:'executor',agentInstanceId:'instance-'+id,agentSessionId:'session-'+id,name:'执行者'});

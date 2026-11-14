@@ -1,0 +1,130 @@
+// Isolated Electron renderer acceptance, with real React components and in-memory public IPC.
+// This does not install CBIM, open the user's project, call an online model or validate the packaged backend.
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {createServer} from 'vite';
+import {_electron} from 'playwright-core';
+import electronPath from 'electron';
+
+const root=process.cwd(),parent=path.join(root,'test-results');
+await fs.mkdir(parent,{recursive:true});
+const out=await fs.mkdtemp(path.join(parent,'office-desktop-'));
+const checks=[],screenshots=[],pageErrors=[];
+const baseline=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+const html=path.join(out,'index.html'),main=path.join(out,'main.cjs');
+await fs.writeFile(html,'<meta name="viewport" content="width=device-width, initial-scale=1"><title>CBIM office desktop acceptance</title><div id="root"></div><script type="module" src="/scripts/office-team-ui-fixture.tsx"></script>');
+await fs.writeFile(main,`const {app,BrowserWindow}=require('electron');
+app.setPath('userData',${JSON.stringify(path.join(out,'profile'))});
+app.whenReady().then(()=>{const window=new BrowserWindow({show:false,width:1280,height:1200,useContentSize:true,title:'CBIM isolated office acceptance',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});window.loadURL(process.env.CBIM_OFFICE_PREVIEW_URL)});
+app.on('window-all-closed',()=>app.quit());`);
+const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});
+let desktop,page;
+try{
+ await server.listen();
+ const url='http://127.0.0.1:'+server.httpServer.address().port+'/'+path.relative(root,html).split(path.sep).join('/');
+ const env={...process.env,CBIM_OFFICE_PREVIEW_URL:url};delete env.ELECTRON_RUN_AS_NODE;
+ desktop=await _electron.launch({executablePath:electronPath,args:[main],env,timeout:60000});
+ page=await desktop.firstWindow();page.setDefaultTimeout(15000);page.on('pageerror',error=>pageErrors.push(error.message));
+ await page.waitForFunction(()=>window.fixture?.marker==='office-team-v1');
+ assert.equal(new URL(page.url()).hostname,'127.0.0.1');
+ const active=()=>page.locator('[role="tabpanel"]:not([hidden])');
+ const office=()=>active().locator('.office-scene');
+ const selectOffice=async title=>{await page.locator('.workspace-conversations').getByRole('button',{name:title,exact:true}).click();await active().getByRole('tab',{name:'任务视图',exact:true}).click();await office().waitFor()};
+ await selectOffice('象棋研发办公室');
+ assert.deepEqual(await office().locator('[data-office-actor]').evaluateAll(nodes=>nodes.map(n=>n.dataset.officeActor)),['main:root','executor-logical','designer-logical']);
+ assert.equal(await office().locator('.office-history').evaluate(node=>node.open),false);
+ checks.push('one-person-per-logical-session-and-default-collapsed-history');
+ await page.evaluate(()=>window.fixture.phase=4);
+ await office().getByText('1 项新派发 · 1 项新汇报',{exact:true}).waitFor();
+ await page.waitForFunction(()=>[...document.querySelectorAll('.office-person.walking')].some(n=>!['none','matrix(1, 0, 0, 1, 0, 0)'].includes(getComputedStyle(n).transform)));
+ const moving=await office().locator('.walking').evaluateAll(nodes=>nodes.map(n=>({actor:n.closest('[data-office-actor]').dataset.officeActor,transform:getComputedStyle(n).transform})));
+ assert.equal(moving.length,2);
+ await page.waitForFunction(()=>document.querySelectorAll('.office-person.walking').length===0);
+ assert.equal(await office().locator('[data-office-actor]').count(),3);
+ checks.push('committed-dispatch-and-feedback-move-two-existing-actors-and-return');
+ await office().getByRole('checkbox',{name:'人物动态',exact:true}).uncheck();
+ assert.equal(await office().locator('.walking,.office-person-drawing.working').count(),0);
+ checks.push('motion-toggle-stops-walking-and-working-with-chat-controls-preserved');
+
+ const capture=async(name,theme,width,height,position='top')=>{
+   // Electron's compositor surface follows BrowserWindow, not CDP device emulation.
+   // Resize only this isolated test window before measuring the real CSS viewport.
+   await desktop.evaluate(({BrowserWindow},{width,height})=>{BrowserWindow.getAllWindows()[0].setContentSize(width,height)},{width,height});
+   await page.waitForFunction(({width,height})=>innerWidth===width&&innerHeight===height,{width,height});
+   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme},theme);
+   if(width<600&&await page.getByRole('button',{name:'收起侧栏',exact:true}).count())await page.getByRole('button',{name:'收起侧栏',exact:true}).click();
+   // The task panel owns scrolling; the inner task view only sizes its content.
+   const scroll=await office().evaluate((scene,position)=>{
+     const panel=scene.closest('.session-task-panel');
+     const max=panel.scrollHeight-panel.clientHeight;
+     panel.scrollTop=position==='bottom'?max:position==='middle'?max/2:0;
+     return {top:panel.scrollTop,max,height:panel.clientHeight};
+   },position);
+   if(position!=='top')assert.ok(scroll.top>0,'The lower view must actually scroll');
+   if(width<600)assert.ok(scroll.max/2<=scroll.height,'Three screenshots must cover the full panel');
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   const layout=await office().evaluate(scene=>({viewport:innerWidth,document:[document.documentElement.clientWidth,document.documentElement.scrollWidth],nodes:[scene,...scene.querySelectorAll('.office-floor,.office-station,.office-current-tasks,.office-history')].map(n=>({name:n.className,width:n.clientWidth,scroll:n.scrollWidth})),theme:document.documentElement.dataset.theme}));
+   assert.equal(layout.viewport,width);assert.ok(layout.document[1]<=width+1,JSON.stringify(layout));assert.ok(layout.nodes.every(n=>n.scroll<=n.width+1),JSON.stringify(layout));
+   const file=path.join(out,name+'.png');
+   const capture=await desktop.evaluate(async({BrowserWindow})=>{const image=await BrowserWindow.getAllWindows()[0].webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});return {size:image.getSize(),png:image.toPNG().toString('base64')}});
+   assert.ok(capture.size.width>0&&capture.size.height>0,'Empty native compositor capture');
+   await fs.writeFile(file,Buffer.from(capture.png,'base64'));screenshots.push({name,theme,width,height,file,layout,scroll,pixels:capture.size});
+   checks.push(name+'-no-horizontal-overflow');
+ };
+ await capture('office-light-desktop','light',1280,1200);
+ await capture('office-light-320','light',320,900);
+ await capture('office-light-320-middle','light',320,900,'middle');
+ await capture('office-light-320-lower','light',320,900,'bottom');
+ await capture('office-dark-320','dark',320,900);
+ await capture('office-dark-320-middle','dark',320,900,'middle');
+ await capture('office-dark-320-lower','dark',320,900,'bottom');
+ await office().locator('.office-history>summary').click();
+ await office().getByRole('button',{name:'规则执行员 · 已撤销的探索任务',exact:true}).waitFor();
+ checks.push('narrow-history-expands-with-original-task');
+ await office().getByRole('button',{name:'打开 规则执行员 的对话',exact:true}).click();
+ await active().locator('.member-conversation').waitFor();
+ assert.match(await active().locator('.composer-next-tip').innerText(),/发送给主 Agent/);
+ await active().locator('.member-conversation select').nth(1).selectOption('member-1');
+ await active().getByText('规则已实现，测试回执已记录',{exact:true}).first().waitFor();
+ await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill('桌面验收：成员窗口的新需求');
+ await active().getByRole('textbox',{name:'对话草稿',exact:true}).press('Enter');
+ await page.waitForFunction(()=>window.fixture.calls.some(c=>c.action==='loop.enqueue'));
+ const writes=await page.evaluate(()=>window.fixture.calls.filter(c=>/loop\.(enqueue|stop|chat|resume|topicInterrupt)$/.test(c.action)));
+ assert.equal(writes.length,1);assert.equal(writes[0].action,'loop.enqueue');assert.equal(writes[0].args.taskId,'root');
+ assert.equal(writes[0].args.message,'桌面验收：成员窗口的新需求');
+ checks.push('member-chat-displays-original-result-and-new-input-routes-only-to-main-root');
+ await active().getByRole('tab',{name:'任务视图',exact:true}).click();
+ await office().getByRole('button',{name:'打开 主 Agent 的对话',exact:true}).click();
+ assert.equal(await active().locator('.member-conversation').count(),0);
+ await active().locator('.conversation-topic-thread').waitFor();
+ checks.push('main-head-bubble-returns-to-the-original-topic');
+ await desktop.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1280,1200));
+ if(await page.getByRole('button',{name:'展开侧栏',exact:true}).count())await page.getByRole('button',{name:'展开侧栏',exact:true}).click();
+ await selectOffice('象棋研发办公室');
+ await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
+ assert.equal(await office().count(),0);checks.push('repeated-sidebar-main-selection-opens-chat');
+ await selectOffice('独立办公室二');
+ assert.deepEqual(await office().locator('[data-office-actor]').evaluateAll(nodes=>nodes.map(n=>n.dataset.officeActor)),['main:root-two','executor-logical-two','designer-logical-two']);
+ await office().getByText('3 位 Agent · 0 个排队话题',{exact:true}).waitFor();
+ checks.push('second-office-has-independent-actors-and-does-not-inherit-first-office-queue');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await office().getByText('人物动态（系统减少动画）',{exact:true}).waitFor();
+ assert.equal(await office().getByRole('checkbox').isDisabled(),true);
+ await page.evaluate(()=>window.fixture.phase=5);
+ await office().getByText('1 项新派发 · 0 项新汇报',{exact:true}).waitFor();
+ assert.equal(await office().locator('.walking,.office-person-drawing.working').count(),0);
+ assert.equal(await office().getByRole('button',{name:/打开 .+ 的对话/}).count(),3);
+ checks.push('system-reduced-motion-suppresses-new-animation-with-all-actors-readable');
+ assert.deepEqual(pageErrors,[]);assert.deepEqual(await page.evaluate(()=>window.fixture.errors),[]);assert.deepEqual(await page.evaluate(()=>window.fixture.unexpected),[]);
+ const report={baseline,source:'Electron + real React App; isolated in-memory public IPC; not packaged-backend or online-model acceptance',electron:await desktop.evaluate(()=>process.versions.electron),checks,moving,screenshots,pageErrors,executionWrites:'one in-memory enqueue; no real model or project writes'};
+ await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2)+'\n');
+ const panels=await Promise.all(screenshots.map(async s=>'<figure><figcaption>'+s.name+' · '+s.width+'px</figcaption><img alt="'+s.name+'" src="data:image/png;base64,'+(await fs.readFile(s.file)).toString('base64')+'"></figure>'));
+ await fs.writeFile(path.join(out,'report.html'),'<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CBIM 办公室桌面验收</title><style>body{font:16px/1.65 system-ui,sans-serif;max-width:1000px;margin:auto;padding:16px;color:#222;background:#fff}img{max-width:100%;height:auto;border:1px solid #ddd}figure{margin:24px 0}li{overflow-wrap:anywhere}code{word-break:break-all}</style><h1>CBIM 办公室桌面渲染验收</h1><p>浅色桌面、320px 浅色/深色、导航与减少动画检查通过。真实 Electron/React，IPC 为隔离内存夹具；未调用在线模型或用户项目。</p><p>源码基线 <code>'+baseline+'</code></p><ul>'+checks.map(c=>'<li>'+c+'</li>').join('')+'</ul>'+panels.join('')+'</html>');
+ console.log(JSON.stringify({ok:true,pid:desktop.process().pid,out,checks,report:path.join(out,'report.html')}));
+ if(process.argv.includes('--hold')){const deadline=Date.now()+300000;while(Date.now()<deadline){if(await fs.access(path.join(out,'finish')).then(()=>true,()=>false))break;await new Promise(resolve=>setTimeout(resolve,500))}}
+}catch(error){
+ await fs.writeFile(path.join(out,'failure.json'),JSON.stringify({error:String(error),checks,pageErrors,body:await page?.locator('body').innerText().catch(()=>undefined)},null,2));
+ await page?.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});console.error('OFFICE_DESKTOP_FAILED '+out);throw error;
+}finally{await desktop?.close();await server.close()}

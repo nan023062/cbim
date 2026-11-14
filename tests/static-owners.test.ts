@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {teamGroupIds} from '../src/frontend/knowledge/static-owners';
+import {teamGroupIds} from '../src/view/knowledge/static-owners';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 
 it('编辑与导入可选择没有自身 Skill 清单的祖先组，但 Agent 叶子不可作为组',()=>{

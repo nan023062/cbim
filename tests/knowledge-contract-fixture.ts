@@ -1,4 +1,4 @@
-import type {Application} from '../src/backend/main/assembly/application';
+import type {Application} from '../src/bridge/server/application';
 import {knowledgeContractFixture as data} from './knowledge-contract-provider';
 export {workflowConditionRecords as knowledgeContractRecords,workflowConditionLogBytes as knowledgeContractLogBytes} from './workflow-condition-fixture';
 

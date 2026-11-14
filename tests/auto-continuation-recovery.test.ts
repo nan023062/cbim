@@ -3,15 +3,15 @@ import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {AutoCollaboration} from '../src/backend/scheduler-engine/dispatch/auto-collaboration';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import type {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import type {TaskSpec} from '../src/backend/core/execution/types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import {AutoCollaboration} from '../src/logic/dispatch/runtime/auto-collaboration';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import type {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import type {TaskSpec} from '../src/logic/execution/rules/types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),identity={workspaceId:entry.id,rootSessionId:'root'},directory=path.join(f.user,'recovery-dispatch');

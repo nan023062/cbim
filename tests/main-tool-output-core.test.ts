@@ -1,14 +1,14 @@
 import {expect,test} from 'vitest';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import {mainToolOutputSchema,mainToolOutputSchemas,projectMainScope,type MainToolName,type MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
-import type {GoalPlanInput,GoalReviewInput} from '../src/backend/core/tasks/scope-goal';
-import type {ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import type {ResumeMemberInput} from '../src/backend/core/tasks/queued-member-resume';
-import type {CancelQueuedTasksInput} from '../src/backend/core/tasks/queued-task-cancel';
-import {humanDecisionCoverageLimitation} from '../src/backend/core/tasks/human-decisions';
+import {checkedJsonToolResult} from '../src/logic/tools/rules/results';
+import {mainToolOutputSchema,mainToolOutputSchemas,projectMainScope,type MainToolName,type MainToolOutputBinding} from '../src/logic/tasks/rules/main-tool-output';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
+import type {GoalPlanInput,GoalReviewInput} from '../src/logic/tasks/rules/scope-goal';
+import type {ReplaceQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import type {ResumeMemberInput} from '../src/logic/tasks/rules/queued-member-resume';
+import type {CancelQueuedTasksInput} from '../src/logic/tasks/rules/queued-task-cancel';
+import {humanDecisionCoverageLimitation} from '../src/logic/tasks/rules/human-decisions';
 
 const binding:MainToolOutputBinding={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',runId:'main-run'};
 const identity={workspaceId:binding.workspaceId,rootSessionId:binding.rootSessionId};

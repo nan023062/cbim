@@ -56,9 +56,9 @@ C 保存可复用能力，B 保存业务事实，M 可保存个人临时线索�
 
 ## 第六篇：资产组织与实施顺序
 
-产品加载范围由 [内置知识白名单](../src/backend/core/knowledge/builtins.ts) 决定。`design/runtime/` 正文进入运行上下文，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
+产品加载范围由 [内置知识白名单](../src/logic/knowledge/rules/builtins.ts) 决定。`design/runtime/` 正文进入运行上下文，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
 
-布局和字段以 [模块规范](../design/business/module-spec.md)、[Agent 规范](../design/capability/agent-spec.md)、[Skill／Workflow 规范](../design/runtime/shared-skills-workflows.md) 为准；任务与恢复以 [任务契约](../src/backend/core/tasks/CONTRACT.md) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
+布局和字段以 [模块规范](../design/business/module-spec.md)、[Agent 规范](../design/capability/agent-spec.md)、[Skill／Workflow 规范](../design/runtime/shared-skills-workflows.md) 为准；任务与恢复以 [任务契约](../src/logic/tasks/rules/CONTRACT.md) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
 
 现行入口是桌面应用与内部 TypeScript 服务。旧 Python 工具、旧 `design/skills/` 方法副本和模块预览器已退出维护，原文可从 Git 历史查阅。
 

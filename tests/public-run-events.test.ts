@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
-import {projectRunEvent} from '../src/backend/scheduler-engine/runtime/public-run-events';
-import type {StoredEvent,TaskSpec} from '../src/backend/core/execution/types';
+import {projectRunEvent} from '../src/logic/runtime/monitoring/public-run-events';
+import type {StoredEvent,TaskSpec} from '../src/logic/execution/rules/types';
 
 test('history keeps each main user input but never exposes executor startup prompts or mistakes result injection for user input',()=>{
   const identity={workspaceId:'workspace',taskId:'task',runId:'run'},task:TaskSpec={...identity,root:'/workspace',goal:'最初目标',moduleIds:[],acceptance:[],mode:'chat',agentId:'cbim:main'};

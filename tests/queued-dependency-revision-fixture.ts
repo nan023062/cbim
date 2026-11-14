@@ -1,9 +1,9 @@
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import type {ReviseQueuedDependenciesInput} from '../src/backend/core/tasks/queued-dependency-revision';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {json} from '../src/core/platform/node/serialization';
+import type {ReviseQueuedDependenciesInput} from '../src/logic/tasks/rules/queued-dependency-revision';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 export async function revisionFixture(){

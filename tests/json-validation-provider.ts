@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 import {mainToolValue} from './main-tool-contract-provider';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export type JsonValidationMode='complete'|'changed'|'stop'|'human-negative';
 export const jsonValidationFixture={

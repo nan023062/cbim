@@ -4,11 +4,11 @@ import path from 'node:path';
 import http from 'node:http';
 import {deflateSync} from 'node:zlib';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import {parseModelCatalog} from '../src/backend/core/models/catalog';
-import {modelSchema} from '../src/backend/core/models/config';
-import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
+import {parseModelCatalog} from '../src/logic/models';
+import {modelSchema} from '../src/logic/models';
+import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 // Generate a valid 2x2 RGB PNG with real CRCs, so Pi's decoder is exercised too.
 function chunk(type:string,data:Buffer){const content=Buffer.concat([Buffer.from(type),data]);let crc=0xffffffff;for(const byte of content){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0)}const head=Buffer.alloc(4),tail=Buffer.alloc(4);head.writeUInt32BE(data.length);tail.writeUInt32BE((crc^0xffffffff)>>>0);return Buffer.concat([head,content,tail])}

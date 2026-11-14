@@ -1,15 +1,15 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {HumanContinuationController,HumanContinuationPool,checkedHumanContinuationReceipt,humanContinuationRejected,type HumanContinuationTarget,type HumanContinuationPorts} from '../src/frontend/tasks/human-continuation-state';
-import {currentHumanDecisions,humanContinuationTarget,humanContinuationDraftForView,type HumanContinuationView} from '../src/frontend/tasks/useHumanContinuation';
-import {HumanContinuationForm} from '../src/frontend/tasks/HumanContinuationForm';
+import {HumanContinuationController,HumanContinuationPool,checkedHumanContinuationReceipt,humanContinuationRejected,type HumanContinuationTarget,type HumanContinuationPorts} from '../src/view/tasks/human-continuation-state';
+import {currentHumanDecisions,humanContinuationTarget,humanContinuationDraftForView,type HumanContinuationView} from '../src/view/tasks/useHumanContinuation';
+import {HumanContinuationForm} from '../src/view/tasks/HumanContinuationForm';
 import {humanContinuationReceiptSchema,type HumanContinuationRequest,type HumanContinuationReceipt} from '../src/bridge/contracts/human-continue';
 import {humanDecisionCoverageLimitation,type HumanDecisionRecord} from '../src/bridge/contracts/human-decisions';
 import type {DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {transcript} from '../src/frontend/execution-view/transcript';
-import type {RunSummary,RunInputSource} from '../src/backend/core/execution/types';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
+import {transcript} from '../src/view/execution-view/transcript';
+import type {RunSummary,RunInputSource} from '../src/logic/execution/rules/types';
 
 const id=(value:number)=>`11111111-1111-4111-8111-${String(value).padStart(12,'0')}`,time='2026-11-07T00:00:00.000Z',hash='a'.repeat(64);
 const target:HumanContinuationTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',waitId:'wait',expectedGoalRevision:3,expectedInputRevision:1,expectedDecisionRevision:1,decisionIds:[id(1)]};

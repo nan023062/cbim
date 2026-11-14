@@ -3,9 +3,9 @@ import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {WorkspaceMember,WorkspaceMemberPreviewInput,WorkspaceMemberPreview,WorkspaceMemberCommitInput,WorkspaceMemberReceipt,WorkspaceMemberDetail} from '../src/bridge/contracts/workspace-members';
-import {WorkspaceMemberCommands,WorkspaceMemberCommandPool,checkedWorkspaceMemberPreview,checkedWorkspaceMemberReceipt,checkedWorkspaceMemberList,checkedWorkspaceMemberDetail,workspaceMemberPreRejected,type WorkspaceMemberCommandPorts} from '../src/frontend/team/workspace-member-state';
-import {WorkspaceMemberForm} from '../src/frontend/team/WorkspaceMemberForm';
-import {WorkspaceMemberDetailView} from '../src/frontend/team/WorkspaceMemberDetail';
+import {WorkspaceMemberCommands,WorkspaceMemberCommandPool,checkedWorkspaceMemberPreview,checkedWorkspaceMemberReceipt,checkedWorkspaceMemberList,checkedWorkspaceMemberDetail,workspaceMemberPreRejected,type WorkspaceMemberCommandPorts} from '../src/view/team/workspace-member-state';
+import {WorkspaceMemberForm} from '../src/view/team/WorkspaceMemberForm';
+import {WorkspaceMemberDetailView} from '../src/view/team/WorkspaceMemberDetail';
 
 const hash='a'.repeat(64),modelHash='b'.repeat(64),time='2026-11-07T13:00:00.000Z',profileId=randomUUID();
 const identity={workspaceId:'workspace',instanceId:randomUUID()};

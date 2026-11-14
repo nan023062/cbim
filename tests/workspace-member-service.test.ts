@@ -2,11 +2,11 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Snapshot} from '../src/backend/core/knowledge/types';
+import type {Snapshot} from '../src/logic/knowledge/rules/types';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedWorkspaceMembers,commitWorkspaceMember,changeWorkspaceMemberCapability} from './workspace-member-fixture';
-import type {WorkspaceMemberChangeInput,WorkspaceMemberCommitInput,WorkspaceMemberPreview} from '../src/backend/core/team/workspace-member';
+import type {WorkspaceMemberChangeInput,WorkspaceMemberCommitInput,WorkspaceMemberPreview} from '../src/logic/team/rules/workspace-member';
 
 const cleanups:Array<()=>Promise<void>>=[];
 afterEach(async()=>{vi.restoreAllMocks();for(const cleanup of cleanups.splice(0).reverse())await cleanup()});

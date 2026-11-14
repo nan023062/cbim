@@ -3,7 +3,7 @@ import http from 'node:http';
 import assert from 'node:assert/strict';
 import {memberCheckpointProvider,memberCheckpointFixture} from './member-checkpoint-provider';
 import {goalInspection,goalPlanArguments,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 export const memberChainData={...memberCheckpointFixture,waitReason:'两段检查点逐次保留，等待用户明确继续',supplement:'继续原任务，核实全部检查点链和累计文件。',abandonReason:'用户本轮决定终止最新检查点，保留先前已消费历史。'};
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 function value(request:Request,id:string):any{const message=request.messages.find(m=>m.role==='tool'&&m.tool_call_id===id);assert.ok(message,'缺少真实回包 '+id);let data=JSON.parse(typeof message.content==='string'?message.content:JSON.stringify(message.content));if(Array.isArray(data.content))data=JSON.parse(data.content.filter((x:{type:string})=>x.type==='text').map((x:{text:string})=>x.text).join(''));return data}

@@ -1,5 +1,5 @@
-import type {Application} from '../src/backend/main/assembly/application';
-import type {RepositoryConnectionPreview,RepositoryConnectionReceipt} from '../src/backend/core/connectors/repository-connection';
+import type {Application} from '../src/bridge/server/application';
+import type {RepositoryConnectionPreview,RepositoryConnectionReceipt} from '../src/logic/connectors/rules/repository-connection';
 import {randomUUID} from 'node:crypto';
 import {seedRepositoryConnection} from './repository-connection-fixture';
 import {repositoryToolsFixture as data} from './repository-tools-provider';

@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
 import type {RunSummary} from '../src/bridge/contracts/execution';
-import {threadRecoveryReason,threadResumeRun} from '../src/frontend/conversation/ThreadHistoryNotice';
+import {threadRecoveryReason,threadResumeRun} from '../src/view/conversation/ThreadHistoryNotice';
 
 const run=(extra:Partial<RunSummary>={}):RunSummary=>({runId:'current',status:'interrupted',sessionFile:'native.jsonl',unresolvedTools:[],logIntegrity:{partialTail:false},...extra} as RunSummary);
 

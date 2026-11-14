@@ -5,9 +5,9 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {seedOwnerExecution,ownerExecutionData} from './owner-execution-fixture';
-import {FileAutomations} from '../src/backend/main/automation/storage';
+import {FileAutomations} from '../src/logic/automation/service/storage';
 import {automationActionSchemas} from '../src/bridge/contracts/automation';
-import type {AutomationDefinition,AutomationRun,AutomationJob} from '../src/backend/core/automation/contracts';
+import type {AutomationDefinition,AutomationRun,AutomationJob} from '../src/logic/automation/rules/contracts';
 
 const definition:AutomationDefinition={name:'自动化只读核实',enabled:true,executor:{kind:'main'},moduleIds:[],workflowSelections:[],skillIds:[],prompt:'读取资料并报告实际结果',permission:'read',schedule:{kind:'manual'}};
 async function provider(){

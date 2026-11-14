@@ -1,13 +1,13 @@
 import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
-import {EffectObservationService} from '../src/backend/scheduler-engine/evidence/effect-observation-service';
-import type {KnowledgeTransactionObservation} from '../src/backend/core/knowledge/knowledge-write-observation';
-import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/backend/core/knowledge/knowledge-write-input';
+import {hash,json} from '../src/core/platform/node/serialization';
+import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
+import {EffectObservationService} from '../src/logic/evidence/runtime/effect-observation-service';
+import type {KnowledgeTransactionObservation} from '../src/logic/knowledge/rules/knowledge-write-observation';
+import {originalKnowledgeWrite,originalKnowledgeIdentity,type KnowledgeWriteReference} from '../src/logic/knowledge/rules/knowledge-write-input';
 import {reportFixture,reportIdentity} from './command-verification-fixture';
-import {effectObservationBasis} from '../src/backend/core/tasks/effect-observation-rules';
-import {effectObservationReportSchema} from '../src/backend/core/tasks/effect-observation';
+import {effectObservationBasis} from '../src/logic/tasks/rules/effect-observation-rules';
+import {effectObservationReportSchema} from '../src/logic/tasks/rules/effect-observation';
 import {effectReport} from './effect-core-fixture';
 
 const input={workspaceId:reportIdentity.workspaceId,instanceId:randomUUID(),revision:'original-revision',requestId:randomUUID(),changes:[{path:'.cbim/README.md',text:'PRIVATE_ORIGINAL_TEXT'}]};

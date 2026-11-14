@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import type {GoalFixtureRequest} from './goal-provider-fixture';
-import {governanceGetOutputSchema,governanceRecordedReceiptSchema,governanceReceiptOutputSchema} from '../src/backend/core/governance/module-governance-tools';
+import {governanceGetOutputSchema,governanceRecordedReceiptSchema,governanceReceiptOutputSchema} from '../src/logic/governance/rules/module-governance-tools';
 
 export type ModuleGovernanceToolsMode='complete'|'invalid'|'lost-reply'|'lost-observation'|'stop'|'member';
 export const moduleGovernanceToolsFixture={model:'module-governance-tools-fixture',moduleId:'.cbim/workspace/governed',goal:'MODULE_GOVERNANCE_TOOLS_MAIN: 核实受保护模块并提出精确知识方案，等待人工决定',marker:'MODULE_GOVERNANCE_REAL_PROPOSAL_18b_93ef',draft:'主治理对话草稿保持，不自动提交。',otherDraft:'另一个主会话的草稿保持独立。',final:'真实观察与精确提案已保存，正式知识未修改；请在业务架构审阅，人工决定与实施仍需分别操作。',statement:'模块说明需要明确知识维护与业务实现的区别，保持已有边界。',reason:'依据真实现状提出精确正文，不代替人工决定或业务实现。',alternative:'保留现有原文，通过临时人工说明补充含义。',invariant:'模块身份、维护人、路径和定义不变。',rollback:'如需调整，重新观察并提出新的精确方案，不直接覆盖受保护正文。'};

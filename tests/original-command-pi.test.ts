@@ -2,9 +2,9 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {commandVerificationReportSchema} from '../src/backend/core/tasks/command-verification';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {commandVerificationReportSchema} from '../src/logic/tasks/rules/command-verification';
 import {originalCommandProvider,originalCommandData as data,type OriginalCommandMode} from './original-command-provider';
 import {executeOriginalCommandSeed,waitOriginalCommand,originalCommandRecords,originalCommandLogBytes,originalCommandRunBytes,originalCommandByteEvidence,archiveOriginalCommandEvidence} from './original-command-fixture';
 

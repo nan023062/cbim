@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
-import type {LoopEngine} from '../src/backend/core/models/engine';
-import type {LlmDefinition} from '../src/backend/core/models/config';
-import {workspaceMemberDetailSchema,type WorkspaceMemberAdaptation} from '../src/backend/core/team/workspace-member';
+import type {Application} from '../src/bridge/server/application';
+import type {LoopEngine} from '../src/logic/models';
+import type {LlmDefinition} from '../src/logic/models';
+import {workspaceMemberDetailSchema,type WorkspaceMemberAdaptation} from '../src/logic/team/rules/workspace-member';
 import {seedTeam} from './team-fixture';
 import {moduleFiles,request,summary} from './data/knowledge';
 import {commitWorkspaceMember} from './workspace-member-fixture';

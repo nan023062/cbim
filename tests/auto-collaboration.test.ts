@@ -1,23 +1,56 @@
 import {expect,it,vi} from 'vitest';
-import {AutoCollaboration} from '../src/backend/scheduler-engine/dispatch/auto-collaboration';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import type {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import type {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {TaskSpec,RunSummary} from '../src/backend/core/execution/types';
-import type {GraphSnapshot,TaskNode} from '../src/backend/core/tasks/graph-types';
-import {GlobalRunAdmission} from '../src/backend/scheduler-engine/admission/run-admission';
-import type {ExecutionAdmissionWait} from '../src/backend/scheduler-engine/admission/admission-wait';
-import {admissionRequestId,acquireExecutionLease} from '../src/backend/main/assembly/execution-admission';
+import {AutoCollaboration} from '../src/logic/dispatch/runtime/auto-collaboration';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import type {ExecutionCollaboration,WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import type {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import type {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {TaskSpec,RunSummary} from '../src/logic/execution/rules/types';
+import type {GraphSnapshot,TaskNode} from '../src/logic/tasks/rules/graph-types';
+import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission';
+import type {ExecutionAdmissionWait} from '../src/logic/execution/admission/admission-wait';
+import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
 import {mainToolOwnerSelection,mainToolReplacement} from './main-tool-output-fixture';
-import {mainToolCommandId} from '../src/backend/scheduler-engine/tools/main-tool-contracts';
-import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/backend/core/tasks/queued-dependency-addition';
-import type {MainToolOutputBinding} from '../src/backend/core/tasks/main-tool-output';
-import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
+import {mainToolCommandId} from '../src/logic/tools/runtime/main-tool-contracts';
+import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../src/logic/tasks/rules/queued-dependency-addition';
+import type {MainToolOutputBinding} from '../src/logic/tasks/rules/main-tool-output';
+import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}
-async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex'){
+it('排队用户任务沿已保存身份建立新话题，主运行登记仍使用真实 runId',async()=>{
+  const f=await setup(undefined,undefined,'queued-topic');try{
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,'queued-topic',{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options,undefined);
+  }finally{await f.coordinator.close()}
+});
+it('指定话题补充冻结原工具并等待该话题全部成员，不停止其它话题成员',async()=>{
+  const f=await setup();try{
+    await f.assign();const first=f.graph.tasks[0],scopeId=first.scopeId!;
+    f.graph.tasks.push({...structuredClone(first),taskId:'assigned-2',nodeId:'task:assigned-2',activeRunId:'member-2'},{...structuredClone(first),taskId:'other',nodeId:'task:other',scopeId:'another-office-topic',activeRunId:'other-run'});
+    first.activeRunId='member-1';const released=deferred<void>(),stopping=deferred<void>();
+    f.members.stop.mockImplementation(async(input?:any)=>{const task=f.graph.tasks.find(value=>value.taskId===input.taskId)!;delete task.activeRunId;task.status='cancelled';return {requested:true}});
+    f.members.waitForSettlement.mockImplementation(async()=>{stopping.resolve();await released.promise});
+    const request={...f.graph.identity,scopeId,expectedInputRevision:1,commandId:crypto.randomUUID(),input:{message:'更改目标'},options:{provider:f.options.provider,model:f.options.model,profileId:f.options.profileId,permission:'read' as const}};
+    const scope={...f.graph.identity,scopeId,status:'active' as const,createdAt:new Date().toISOString()};
+    const park=vi.fn(async()=>({...scope,status:'waiting' as const}));
+    Object.assign(f.dispatch,{interruptions:{prepare:vi.fn(async()=>scope),park}});
+    const main=vi.fn(async()=>({task:f.task,runId:'parent-run',status:'cancelled' as const,acceptance:'not_evaluated' as const,unresolvedTools:[],events:[]}));
+    const pending=f.hooks().interruptTopic!(request,main);await stopping.promise;
+    expect(park).not.toHaveBeenCalled();expect((f.members.stop.mock.calls as unknown[][]).map(call=>(call[0] as {taskId:string}).taskId)).toEqual(['assigned-1','assigned-2']);
+    expect(f.graph.tasks.find(value=>value.taskId==='other')?.activeRunId).toBe('other-run');
+    await expect(f.assign()).rejects.toThrow();released.resolve();expect((await pending).status).toBe('waiting');expect(park).toHaveBeenCalledTimes(1);expect(main).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
+  }finally{await f.coordinator.close()}
+});
+it('重查已消费的整话题补充不冻结正在执行的新主轮',async()=>{
+  const f=await setup();try{
+    const scopeId=f.dispatch.openScope.mock.calls[0][1],commandId=crypto.randomUUID();
+    Object.assign(f.dispatch,{interruptions:{prepare:async()=>({...f.graph.identity,scopeId,status:'active',continuations:[{continuationId:commandId}]})}});
+    const main=vi.fn();await f.hooks().interruptTopic!({...f.graph.identity,scopeId,commandId,expectedInputRevision:1,input:{message:'原补充'},options:{provider:'test',model:'test',profileId:crypto.randomUUID(),permission:'read'}},main);
+    expect(main).not.toHaveBeenCalled();await f.assign();f.settleParent();
+    await vi.waitFor(()=>expect(f.members.start).toHaveBeenCalledTimes(1));
+  }finally{await f.coordinator.close()}
+});
+
+async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'codex',queuedTopicId?:string){
   const task:TaskSpec={taskId:'conversation-1',workspaceId:'workspace-1',root:'C:/project',mode:'chat',goal:'原任务',agentId:'cbim:main',moduleIds:[],acceptance:[]};
   const identity={workspaceId:task.workspaceId,rootSessionId:task.taskId};
   const agent={agentId:'member',agentInstanceId:'instance',agentSessionId:'session',name:'成员'};
@@ -58,10 +91,10 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
     messages:vi.fn(async()=>graph.tasks[0].result?[{kind:'result',taskId:'assigned-1',messageId:'message-1',resultId:'result-1'}]:[]),
     acknowledge:vi.fn(async()=>({delivery:'processed'})),
   };
-  const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),cancelPendingLaunches:vi.fn()};
+  const execution={continueGoalRepair:vi.fn<(...args:any[])=>Promise<any>>(),attachCollaboration:(value:ExecutionCollaboration)=>{hooks=value},continueFromResults:vi.fn(async(..._args:unknown[])=>({workspaceId:task.workspaceId,taskId:task.taskId,runId:'continued'})),collaborationReady:vi.fn(async()=>{}),pauseCollaboration:vi.fn(async()=>{}),holdCollaboration:vi.fn(),cancelPendingLaunches:vi.fn()};
   const issues=vi.fn();
   const coordinator=new AutoCollaboration({entry:{id:task.workspaceId,path:task.root},assert:()=>{}} as KnowledgeWorkspace,dispatch as unknown as WorkspaceDispatchService,members as unknown as MemberExecutionManager,execution as unknown as WorkspaceExecutionManager,lease,issues);
-  await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run');
+  await hooks.starting?.(task,options,undefined,'本轮实际输入','parent-run',queuedTopicId);
   execution.continueFromResults.mockImplementation(async(...args:unknown[])=>{
     const wait=args[4] as ExecutionAdmissionWait|undefined;
     const releaseMain=admission?acquireExecutionLease(lease,'main-return',{workspaceId:task.workspaceId,rootSessionId:task.taskId,requestId:admissionRequestId('main',(args[3] as {continuationId:string}).continuationId),workspacePermission:'read',source:'main-result',scopeId:wait?.scopeId},{manager:admission,ownerEpoch:1,isCurrent:()=>true},wait):()=>{};
@@ -81,6 +114,24 @@ async function setup(admission?:GlobalRunAdmission,engine?:'pi'|'claude-code'|'c
 }
 
 const dependencyInput={expectedGraphCursor:{streamId:'stream',seq:5},expectedGoalRevision:3,target:{taskId:'assigned-1',expectedRevision:1,expectedPlanRevision:1},replace:{edgeId:'A-B',expectedRevision:1},with:{taskId:'A2',expectedRevision:4,expectedPlanRevision:1,runId:'A2-run',resultId:'A2-result'},reason:'保留未启动的原下游任务'};
+
+it('同角色对话占用只等待该角色，仍启动其他角色且不提前回传未执行任务',async()=>{
+  const f=await setup();try{
+    await f.assign();
+    f.dispatch.dispatchTask.mockImplementation(async(input:any,scopeId?:string)=>{
+      const node={...structuredClone(f.graph.tasks[0]),scopeId,taskId:'assigned-2',nodeId:'task:assigned-2',assignee:{...f.graph.tasks[0].assignee,agentId:'other',agentInstanceId:'other-instance',agentSessionId:'other-channel'}};
+      f.graph.tasks.push(node);return {commandId:input.commandId,taskId:node.taskId,messageId:'assignment-2',cursor:f.graph.cursor,disposition:'queued' as const};
+    });
+    await f.tools.call('cbim_dispatch_task',{agentId:'other',ownerSelection:mainToolOwnerSelection(['module']),moduleIds:['module'],goal:'另一角色处理独立工作',acceptance:[{id:'actual',text:'真实文件证据'}]},new AbortController().signal,'dispatch-other');
+    f.members.start.mockImplementation(async input=>{
+      if(input.taskId==='assigned-1')throw Object.assign(Error('同角色正在工作'),{code:'TEAM_SESSION_BUSY'});
+      Object.assign(f.graph.tasks[1],{activeRunId:'other-run',runIds:['other-run'],status:'running'});
+      return {taskId:input.taskId,runId:'other-run',cursor:f.graph.cursor};
+    });
+    f.settleParent();await vi.waitFor(()=>expect(f.members.start.mock.calls.some(call=>call[0].taskId==='assigned-2')).toBe(true));
+    expect(f.execution.continueFromResults).not.toHaveBeenCalled();expect(f.issues).not.toHaveBeenCalled();
+  }finally{for(const task of f.graph.tasks)Object.assign(task,{activeRunId:undefined,status:'cancelled'});await f.coordinator.close()}
+});
 
 it.each(['blocked','awaiting_user'] as const)('当前主轮明确%s后不再尝试继承的待办',async decision=>{
   const f=await setup();try{
@@ -434,7 +485,7 @@ it('主轮委派只入队，释放占用后成员才能运行；结果确认失�
     release();await vi.waitFor(()=>expect(f.graph.tasks[0].status).toBe('running'));
     expect(f.dispatch.openScope).toHaveBeenCalledTimes(1);expect(f.dispatch.closeScope).not.toHaveBeenCalled();
     // 目标周期冻结主入口选项；下方仍核对成员执行不继承主模型，使用独立岗位配置。
-    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options);
+    expect(f.dispatch.openScope).toHaveBeenCalledWith(f.graph.identity,expect.any(String),{message:'本轮实际输入',attachmentIds:undefined},'parent-run',f.options,undefined);
     expect(f.members.start.mock.calls.at(-1)![0].options).toMatchObject({permission:'ask'});
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('model');
     expect(f.members.start.mock.calls.at(-1)![0].options).not.toHaveProperty('profileId');

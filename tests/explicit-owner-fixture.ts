@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
-import {workspaceMemberDetailSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema} from '../src/backend/core/team/workspace-member';
-import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema} from '../src/backend/core/workspace/module-ownership';
-import {ownerExecutionDiscoverySchema} from '../src/backend/core/team/owner-execution-discovery';
+import type {Application} from '../src/bridge/server/application';
+import {workspaceMemberDetailSchema,workspaceMemberPreviewSchema,workspaceMemberReceiptSchema} from '../src/logic/team/rules/workspace-member';
+import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema,moduleOwnershipReceiptSchema} from '../src/logic/workspace/rules/module-ownership';
+import {ownerExecutionDiscoverySchema} from '../src/logic/team/rules/owner-execution-discovery';
 
 /** Explicit test setup after knowledge/profile seeding. Uses real public commands without changing global seedTeam or adding model turns. */
 export async function registerExplicitFixtureOwner(app:Application,workspaceId:string,input:{agentId:string;moduleIds:string[];profileId:string;modelId:string;name?:string}){

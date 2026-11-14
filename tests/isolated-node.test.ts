@@ -1,9 +1,9 @@
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import net from 'node:net';
 import koffi from 'koffi';import {execFileSync} from 'node:child_process';
-import {runIsolatedNode} from '../src/backend/main/platform/isolation/isolated-node';
-import {isolatedNodeRequestSchema,type IsolatedNodeRequest} from '../src/backend/main/platform/isolation/isolated-node-protocol';
-import {quoteWindowsArgument,Win32IsolatedNode} from '../src/backend/main/platform/isolation/isolated-node-win32';
+import {runIsolatedNode} from '../src/logic/file-operations/platform/isolation/isolated-node';
+import {isolatedNodeRequestSchema,type IsolatedNodeRequest} from '../src/logic/file-operations/platform/isolation/isolated-node-protocol';
+import {quoteWindowsArgument,Win32IsolatedNode} from '../src/logic/file-operations/platform/isolation/isolated-node-win32';
 const test=process.platform==='win32'&&process.arch==='x64'?it:it.skip;
 const file=(path:string,text:string)=>({path,base64:Buffer.from(text).toString('base64')});
 const request=(code:string,extra:Partial<IsolatedNodeRequest>={}):IsolatedNodeRequest=>({files:[file('main.cjs',code)],entry:'main.cjs',timeoutMs:5000,...extra});

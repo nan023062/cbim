@@ -1,14 +1,14 @@
-import {required} from './helpers';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {required} from './support/assertions';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
-import {prepareTeamTask} from '../src/backend/scheduler-engine/context/team-workflow';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import {LoopRuntime} from '../src/backend/core/execution';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
+import {prepareTeamTask} from '../src/logic/execution/context/team-workflow';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import {LoopRuntime} from '../src/logic/execution/rules';
 
 it('空工作区普通对话默认主 Agent，知识变化后仍可继续，保留每轮消息',async()=>{
   const f=await fixture();let manager:WorkspaceExecutionManager|undefined;

@@ -1,5 +1,5 @@
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -8,9 +8,9 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import {json} from '../src/core/platform/node/serialization';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 
 type ProviderRequest=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 

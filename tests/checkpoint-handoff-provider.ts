@@ -1,10 +1,10 @@
 import {DependencyReviewRounds,serveFixtureCompaction} from './dependency-review-provider-fixture';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {ownerExecutionDiscoverySchema} from '../src/backend/core/team/owner-execution-discovery';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
-import {abandonCheckpointReceiptSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../src/backend/core/tasks/checkpoint-handoff';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {ownerExecutionDiscoverySchema} from '../src/logic/team/rules/owner-execution-discovery';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import {abandonCheckpointReceiptSchema,type AbandonCheckpointInput,type AbandonCheckpointReceipt} from '../src/logic/tasks/rules/checkpoint-handoff';
 import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const checkpointHandoffData={

@@ -46,6 +46,24 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 
 ## 3. 实施与验证
 
+采用 Core、Logic、Bridge、View 四层，源码迁移已完成。Core 技术能力独立，Logic 持有业务，Bridge 负责消息与可信宿主，View 持有页面交互。改动同步导入、测试归属、类图和工作流，不恢复旧 backend/frontend 层级或无人使用的兼容转发。
+
+前后端可复用 src/core/utility 的相同契约，视图/业务专属策略仍分别维护，不相互引用业务实现，也不经 Bridge 转发工具。先核对共享 Core 契约与消费者语义；前端 equalJson 已组合共享排序，保留 localeCompare、undefined、数组及异常语义，原样文本比较和特殊序列化不能直接替换。共享 Core 不依赖三层业务或旧 backend/frontend，Node/Electron 不进入便携入口。
+
+工具函数和数据结构按 JSON、字符串、字节、异步协调等类别内聚组织，优先合入已有类别，不采用一函数一文件。明确的变化原因、环境或契约边界才驱动拆分，后端 Node 能力使用独立入口。各算法契约和实例状态保持独立，测试仍按行为职责拆分，不随源文件合并成混合套件。业务字段、权限、事务与恢复策略留在消费者；迁移保持原字节和失败语义，兼容出口明确说明是否仍在使用。
+
+前端无参数同步通知优先组合 utility 的 SubscriptionSet，状态仍由控制器持有。迁移核对按函数身份去重、同步实时遍历、通知中增删、异常传播和退订重用；不得静默改为快照遍历、引用计数或吞错。首末订阅、轮询、请求取消及 clear 之外的销毁逻辑留在消费者，公共单元与真实轮询/页面生命周期分别验证。
+
+前端迟到结果隔离优先核对 utility 的 AsyncGeneration：capture 不推进，advance 作废旧标记。迁移须保留推进点、校验顺序及成功/失败/finally 分支，不统一包裹 Promise 或替代请求取消；用独立单元验证标记，用消费者测试验证旧结果不能覆盖新状态或清除新在途。业务键和公开数字序号不直接替换。
+
+响应体提炼须保留调用方字节上限、期限、错误映射和不重试策略，验证信号不经 fetch 转发时仍能结束挂起读取；资料/证据不能接受半截成功。已有并行修复先核对原提交及回归，不以重复实现覆盖它。JSON 提炼单独验证原错误码/文案和字段保留，禁止顺带更改远端解析规则。
+
+键排序、在途集合及文本分帧优先核对 utility 已有契约。历史指纹分别验证原比较器与字段规则；集合迁移核实所跟踪 Promise 的范围及原业务关闭顺序；分帧验证分块、CRLF、错误前已交付帧和字符/字节限额。独立单元验证机制，消费者契约验证真实策略，不能把集合清空或拆帧成功视为进程退出和协议成功。
+
+所有单元测试按责任模块组织，实施前核实 `tests/modules.json` 中被测模块、unit/contract/integration 分类及夹具依赖。一个单元套件只验证一个模块；不得直接或间接加载完整 Application、导入其他测试套件、依赖测试顺序或遗留状态。纯数据/断言/临时目录与应用装配分别维护。无关责任拆成不同套件；真实跨模块契约及集成覆盖保留，不能靠改分类掩盖耦合。
+
+优先用 `pnpm test:module --module <模块>` 选择单元，实际受影响协作另加 `--kind contract` / `--kind integration`，或使用精确文件/用例选择器。测试增删、归属、导入或夹具变化时同步目录并执行 `pnpm check:test-modules`。CI 检查所有已提交测试；新测试不得遗漏登记。静态依赖通过仍需 review 断言是否围绕同一行为责任，不能声称机器已证明全部语义解耦。
+
 跨层职责、共享状态、重复机制或扩展传播问题配合 [architecture-evolution](../architecture-evolution/SKILL.md)，把判断落到本步实际代码：
 
 - 新增分支、可选参数或公共状态字段前，查找已有同类能力及消费者。记录共同不变量和独立变化部分，区分重复领域规则、可复用技术机制与偶然相似；证据不足时保留局部实现，不预建万能 Base/Manager 或插件框架。
@@ -90,3 +108,31 @@ description: "遵守通用项目架构设计规范，从 GitHub Issues 拉取清
 - `docs/` 仅保存 01–04 四份概念设计，不新增其他设计说明，`design/` 保存关联方案、规范与验证记录；开发清单从 Issues 获取。已有产品规范仍由实际代码显式装配，本 Skill 不加入 `design/skills/` 或产品内置工具清单。
 - Issue 内容和读取清单不授予批量开发、外部写入、合并或发布的额外权限，按用户现有授权执行；已有明确授权不重复请求。不要为拉取清单自动创建周期任务，也不自动迁移旧 roadmap 事项或创建／关闭工单。
 - `.agents/skills/cbim-development/SKILL.md`、`.claude/skills/cbim-development/SKILL.md`、`.codex/skills/cbim-development/SKILL.md` 三份内容保持一致。Issue 状态、优先级和下一项不写死在 Skill 中，每次从当前仓库重新核实。
+
+前端图布局通过 utility/graphs.ts 的 rankDirectedGraph 组合；只沉淀 ID/边与层级，业务边筛选、错误文案、坐标和路径保留原适配。分层与无环判断是不同契约，暂保留各自实现；共享须核实语义，不开放业务互引；拓扑单元与任务布局消费者分别验证。
+
+前端本地记录存储已有 utility/storage.ts 的 JsonRecordStorage；仅复用注入式有界 JSON 读写。迁移核对空串/缺失规则、UTF-8 上限、序列化字节、写失败前后的内存状态；schema、条数、坏数据禁写、回执及原请求恢复保留业务控制器，不能扩成统一命令状态机。
+
+后端 JSON 补齐优先复用 orderJsonValue，迁移显式固定比较器与 undefined 策略，业务身份与哈希字段留在原模块。调度器仅可导入 core/utility 的通用公开入口，禁止私有实现及 Node/files/web；手工拼接字符串、排序后读取属性的协议须单独核对，不直接统一。
+
+后端字符串精确脱敏统一组合 strings.ts 的 redactLiteral；凭据来源、认证模式、事件序列化和错误屏障留在引擎。保留空凭据、大小写、非重叠及编码语义，不以字符串函数宣称覆盖所有泄露途径；独立算法与真实引擎适配分别测试。
+
+Pi/Codex 的请求关联使用 utility/async.ts 的 PendingRequests；register/take/rejectAll 仅管理 ID、回调与计时器。协议决定超时处置：Pi 单项未知、Codex 整体失败及杀进程必须保留；发送异常、重试与物理退出不下沉，分别验证乱序/重复回包、超时及关闭。
+
+后端无环判断组合 utility/graphs.ts 的 isDirectedAcyclic，前端分层独立实现；领域入口先核验节点/端点，再选择启用依赖与等待边并保留原错误码。公共图算法不认识任务或授权；独立拓扑测试与领域防环/重放契约分别验证，新增私有类别同步依赖清单。
+
+模型位于 src/logic/models：纯目录/连接/选型入口与 service/index.ts 分开，纯入口不得加载服务。Bridge 仅具名转接公开纯契约。Fault 和锁实现只有 Core 一份；主 Agent 设置位于 logic/team/settings，请求预算归 logic/budget。单元、消费者契约与 SDK 容量验证分别登记。
+
+Web 已迁入 src/logic/web：纯工具契约 index.ts 与 service/index.ts 分开；Core 网页拆为 core/web、core/platform/node/web、core/platform/electron/web-reader.ts。Logic 不依赖旧后端或 Electron，浏览器只由桌面宿主注入；仅 bridge/contracts/web.ts 具名导出原设置 Schema/摘要，不能扩散为服务权限。SecretCipher 归 core/contracts/secrets.ts，平台实现不迁入业务。正文转换、HTTP、页面策略、业务适配、设置单元及真实协作契约分别登记；保留匿名兜底、默认 allow、缓存策略隔离、取消、未知失败与密钥语义。
+
+反馈已迁入 src/logic/feedback：index.ts 拥有输入、正文和可信范围；service/index.ts 提供授权与提交，不能反向导入旧后端或模型业务。旧工具范围仅组合并兼容重导出本域 Schema，Bridge 仅具名公开配置 Schema/状态。Core Node locking.ts 持有唯一原生锁实现，旧锁出口已移除，消费者直接使用同一 Core 构造器；保留锁身份、发送前持久化、未知结果不重发、凭据和退出语义。授权单元、HTTP 单元、提交协作契约与平台/真实 Pi 集成分别登记。
+
+资源仓库已迁入 logic/resources：纯分类/状态与 service 分开，ResourceRepositoryPaths 只注入目录边界，不依赖具体工作区 Paths 实现或 Bridge。保留仓库 CAS、只读授权、共享退役取消及未知写结果；知识包位于 logic/resources/packages，授权连接位于 logic/connectors/service。
+
+四层迁移现状：具体引擎与编排已归 Logic；execution/assembly 是具体引擎选择点，规则不能依赖 runtime 服务。继续使用已登记的细粒度公开入口，不能用聚合导出引入类型环。
+
+有状态服务与启动迁移已落地：Logic/Application 持有唯一业务生命周期，Bridge/server 只做通信与可信宿主适配；业务不得反向依赖 IPC/Electron。附件、工作区、资源包和更新类型由 Logic 拥有。构建入口改动须核固定输出名，不能改变用户数据或原恢复语义。
+
+## 当前文档与历史证据
+
+目录迁移后同时核对 CONTRACT 的职责归属、实际消费入口、生成器目录说明、README/设计导航及三宿主引用。ARCHITECTURE 的契约附录从同目录 CONTRACT 生成，不直接修改附录；生成结果一致仅证明同步，不代替语义核对。旧层名称不得继续充当当前职责，已退出的兼容入口不能仍写成在用。保留真实存在的具名重导出及尚未实现的保证；历史验证正文保留当时事实，更新导航时注明链接不是历史版本证据。产品 builtin: 引用按知识白名单核实，不能当作本地文件失效后删除。

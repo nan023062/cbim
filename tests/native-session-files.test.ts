@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {NativeSessionFiles,nativeSessionByteLimit} from '../src/backend/main/platform/native-session-files';
+import {NativeSessionFiles,nativeSessionByteLimit} from '../src/logic/execution/platform/native-session-files';
 
 const temporary:string[]=[];
 it('Codex 原生历史核对 metadata、文件名及单一线程身份',async()=>{

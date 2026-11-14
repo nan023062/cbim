@@ -1,14 +1,14 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {HumanDecisionController,HumanDecisionPool,checkedHumanDecisionPreview,checkedHumanDecisionReceipt,humanDecisionRejected,type HumanDecisionTarget,type HumanDecisionPorts} from '../src/frontend/tasks/human-decision-state';
-import {humanDecisionTarget,type HumanDecisionsView} from '../src/frontend/tasks/useHumanDecisions';
-import {HumanDecisionPanel} from '../src/frontend/tasks/HumanDecisionPanel';
+import {HumanDecisionController,HumanDecisionPool,checkedHumanDecisionPreview,checkedHumanDecisionReceipt,humanDecisionRejected,type HumanDecisionTarget,type HumanDecisionPorts} from '../src/view/tasks/human-decision-state';
+import {humanDecisionTarget,type HumanDecisionsView} from '../src/view/tasks/useHumanDecisions';
+import {HumanDecisionPanel} from '../src/view/tasks/HumanDecisionPanel';
 import {humanDecisionCoverageLimitation,humanDecisionPreviewSchema,humanDecisionReceiptSchema,type HumanDecisionPreviewInput,type HumanDecisionPreview,type HumanDecisionRequest,type HumanDecisionReceipt} from '../src/bridge/contracts/human-decisions';
 import type {DispatchScope,ScopeSummary} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {humanDecisionProof} from '../src/backend/core/tasks/human-decision-proof';
-import {compareHumanReconsideration} from '../src/backend/core/tasks/human-reconsideration';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
+import {humanDecisionProof} from '../src/logic/tasks/rules/human-decision-proof';
+import {compareHumanReconsideration} from '../src/logic/tasks/rules/human-reconsideration';
 
 const time='2026-11-07T00:00:00.000Z',hash='a'.repeat(64),target:HumanDecisionTarget={workspaceId:'workspace',rootSessionId:'root',scopeId:'scope',criterionId:'human',anchor:'anchor-1'};
 const selection={taskId:'task',runId:'member-run',baselineId:'baseline'},criterion={id:'human',text:'请人工判断成果是否满足目标',kind:'human' as const};

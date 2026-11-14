@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
-import {csvValidationLimits} from '../src/backend/core/workspace/csv-validation-schema';
+import {ArtifactFiles} from '../src/logic/file-operations/platform/files/artifact-files';
+import {csvValidationLimits} from '../src/logic/workspace/rules/csv-validation-schema';
 import {csvValidationData as d} from './csv-validation-data';
 const fact=(bytes:Buffer,relativePath=d.file)=>({relativePath,byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-csv-platform-'));let alive=true;return {root,files:new ArtifactFiles(root,()=>{if(!alive)throw Error('retired')}),retire:()=>{alive=false},cleanup:async()=>{const target=path.resolve(root);expect(path.dirname(target)).toBe(path.resolve(os.tmpdir()));expect(path.basename(target)).toMatch(/^cbim-csv-platform-/);await fs.rm(target,{recursive:true,force:true})}}}

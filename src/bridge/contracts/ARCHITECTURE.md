@@ -18,11 +18,11 @@
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
 | [command-verification.ts](command-verification.ts) | 向桌面视图导出原主命令的只读核实协议和固定支持矩阵。 |
 | [controlled-files.ts](controlled-files.ts) | 向桌面公开受控文件原操作查询和显式补偿的纯协议。 |
-| [desktop-updates.ts](desktop-updates.ts) | 正式桌面版本、后台预下载进度与用户确认重启安装的公开 IPC 数据。 |
+| [desktop-updates.ts](desktop-updates.ts) | 桌面更新的通信类型和版本展示文本。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
-| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议。 |
+| [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议与输入 Schema。 |
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
 | [human-continue.ts](human-continue.ts) | 公开按已保存人工决定继续原目标的严格请求与回执，连接桌面和调度入口。 |
 | [human-decisions.ts](human-decisions.ts) | 向桌面公开人工决定的序列化请求、依据预览与不可变记录。 |
@@ -46,13 +46,14 @@
 | [output-manifest.ts](output-manifest.ts) | 桌面完整产物面板使用的纯 DTO 与严格结构校验，不导出后端文件或日志读取实现。 |
 | [owner-execution.ts](owner-execution.ts) | 公开岗位执行的选择、冻结绑定及纯身份校验，供任务和目标视图核对历史归属。 |
 | [repository-connections.ts](repository-connections.ts) | 向桌面公开工作区资源仓库链接器的登记、授权和真实 HTTP 核验协议。 |
-| [resources.ts](resources.ts) | 资源种类、仓库快照、登录占位及仓库状态的共享类型。 |
+| [resources.ts](resources.ts) | 资源界面的通信类型及静态资源包操作协议。 |
 | [runtime.ts](runtime.ts) | 公开应用级成员、任务、目标周期和已报告用量的只读契约及严格传输校验。 |
 | [scope-budget.ts](scope-budget.ts) | 公开目标周期额度策略及只读逐请求摘要，供设置和目标卡片经 IPC 展示；不公开预留或终态写入端口。 |
 | [scope-usage.ts](scope-usage.ts) | 向桌面任务视图公开周期用量的严格查询与报告契约。 |
-| [usage.ts](usage.ts) | 向界面公开 Core 的纯执行计量函数及单轮用量类型。 |
+| [usage.ts](usage.ts) | 向界面公开 Logic 执行规则的纯计量函数及单轮用量类型。 |
+| [web.ts](web.ts) | 迁移期网页设置的具名通信契约出口。 |
 | [workspace-members.ts](workspace-members.ts) | 公开项目岗位登记、预览与原命令回执的数据协议，供 Main IPC 和团队页面核对身份。 |
-| [workspace-view.ts](workspace-view.ts) | 工作区登记与运行视图的公开数据，供 IPC 协议和界面共同引用。 |
+| [workspace-view.ts](workspace-view.ts) | 转接工作区业务公开数据。 |
 | [workspace.ts](workspace.ts) | 跨进程工作区、知识事务与 IPC 数据契约。 |
 
 ## 架构类图
@@ -65,7 +66,7 @@ class N_src_bridge_contracts_admission_ts["admission.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)。
+直接依赖：[../../logic/runtime/rules/admission.ts](../../logic/runtime/rules/admission.ts)。
 
 ### agent-history-ipc.ts
 
@@ -107,7 +108,7 @@ class N_src_bridge_contracts_agent_history_ipc_ts_AgentHistoryCall["AgentHistory
 N_src_bridge_contracts_agent_history_ipc_ts ..> N_src_bridge_contracts_agent_history_ipc_ts_AgentHistoryCall : 声明
 ```
 
-直接依赖：[../../backend/core/team/session-history.ts](../../backend/core/team/session-history.ts)、[agent-history.ts](agent-history.ts)。
+直接依赖：[../../logic/team/rules/session-history.ts](../../logic/team/rules/session-history.ts)、[agent-history.ts](agent-history.ts)。
 
 ### agent-history.ts
 
@@ -117,7 +118,7 @@ class N_src_bridge_contracts_agent_history_ts["agent-history.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/team/session-history.ts](../../backend/core/team/session-history.ts)。
+直接依赖：[../../logic/team/rules/session-history.ts](../../logic/team/rules/session-history.ts)。
 
 ### architecture.ts
 
@@ -153,7 +154,7 @@ class N_src_bridge_contracts_architecture_ts_ArchitectureCommit["ArchitectureCom
 N_src_bridge_contracts_architecture_ts ..> N_src_bridge_contracts_architecture_ts_ArchitectureCommit : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/object-crud.ts](../../backend/core/knowledge/object-crud.ts)、[../../backend/core/workspace/module-outline.ts](../../backend/core/workspace/module-outline.ts)。
+直接依赖：[../../logic/knowledge/rules/object-crud.ts](../../logic/knowledge/rules/object-crud.ts)、[../../logic/workspace/rules/module-outline.ts](../../logic/workspace/rules/module-outline.ts)。
 
 ### automation.ts
 
@@ -192,7 +193,7 @@ class N_src_bridge_contracts_automation_ts_AutomationActionResults["AutomationAc
 N_src_bridge_contracts_automation_ts ..> N_src_bridge_contracts_automation_ts_AutomationActionResults : 声明
 ```
 
-直接依赖：[../../backend/core/automation/contracts.ts](../../backend/core/automation/contracts.ts)。
+直接依赖：[../../logic/automation/rules/contracts.ts](../../logic/automation/rules/contracts.ts)。
 
 ### chat.ts
 
@@ -209,24 +210,6 @@ classDiagram
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_chat_ts_ChatAttachment["ChatAttachment"] {
-  <<interface>>
-  +id
-  +kind
-  +name
-  +source
-  +note
-}
-N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachment : 声明
-class N_src_bridge_contracts_chat_ts_ChatAttachmentPreview["ChatAttachmentPreview"] {
-  <<interface>>
-  +name
-  +source
-  +note
-  +text
-  +image
-}
-N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatAttachmentPreview : 声明
 class N_src_bridge_contracts_chat_ts_ChatMaterialImport["ChatMaterialImport"] {
   <<type>>
 
@@ -234,7 +217,7 @@ class N_src_bridge_contracts_chat_ts_ChatMaterialImport["ChatMaterialImport"] {
 N_src_bridge_contracts_chat_ts ..> N_src_bridge_contracts_chat_ts_ChatMaterialImport : 声明
 ```
 
-直接依赖：[../../backend/core/execution/types.ts](../../backend/core/execution/types.ts)。
+直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/materials/contracts.ts](../../logic/materials/contracts.ts)。
 
 ### command-verification.ts
 
@@ -244,7 +227,7 @@ class N_src_bridge_contracts_command_verification_ts["command-verification.ts"] 
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/command-verification.ts](../../backend/core/tasks/command-verification.ts)。
+直接依赖：[../../logic/tasks/rules/command-verification.ts](../../logic/tasks/rules/command-verification.ts)。
 
 ### controlled-files.ts
 
@@ -254,7 +237,7 @@ class N_src_bridge_contracts_controlled_files_ts["controlled-files.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/file-operations/controlled-file-operation.ts](../../backend/core/file-operations/controlled-file-operation.ts)。
+直接依赖：[../../logic/file-operations/rules/controlled-file-operation.ts](../../logic/file-operations/rules/controlled-file-operation.ts)。
 
 ### desktop-updates.ts
 
@@ -266,37 +249,7 @@ class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
 }
 ```
 
-```mermaid
-classDiagram
-class N_src_bridge_contracts_desktop_updates_ts["desktop-updates.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_desktop_updates_ts_DesktopRelease["DesktopRelease"] {
-  <<interface>>
-  +version
-  +tag
-  +notes
-  +publishedAt
-  +delivery
-  +resourceVersion
-}
-N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopRelease : 声明
-class N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus["DesktopUpdateStatus"] {
-  <<interface>>
-  +currentVersion
-  +currentNotes
-  +enabled
-  +currentResourceVersion
-  +enginePreparations
-  +phase
-  +release
-  +progress
-  +checkedAt
-  +error
-}
-N_src_bridge_contracts_desktop_updates_ts ..> N_src_bridge_contracts_desktop_updates_ts_DesktopUpdateStatus : 声明
-```
-
+直接依赖：[../../logic/updates/contracts.ts](../../logic/updates/contracts.ts)。
 
 ### dispatch.ts
 
@@ -306,7 +259,7 @@ class N_src_bridge_contracts_dispatch_ts["dispatch.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/queued-dependency-replacement.ts](../../backend/core/tasks/queued-dependency-replacement.ts)、[../../backend/core/tasks/queued-dependency-addition.ts](../../backend/core/tasks/queued-dependency-addition.ts)、[../../backend/core/tasks/queued-dependency-revision.ts](../../backend/core/tasks/queued-dependency-revision.ts)、[../../backend/core/tasks/member-checkpoint.ts](../../backend/core/tasks/member-checkpoint.ts)、[../../backend/core/tasks/member-checkpoint-chain.ts](../../backend/core/tasks/member-checkpoint-chain.ts)、[../../backend/core/tasks/checkpoint-handoff.ts](../../backend/core/tasks/checkpoint-handoff.ts)、[../../backend/core/tasks/queued-member-resume.ts](../../backend/core/tasks/queued-member-resume.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/tasks/dispatch-receipt.ts](../../backend/core/tasks/dispatch-receipt.ts)、[../../backend/core/tools/receipt-schema.ts](../../backend/core/tools/receipt-schema.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/tasks/graph-reducer.ts](../../backend/core/tasks/graph-reducer.ts)、[../../backend/core/tasks/graph-rules.ts](../../backend/core/tasks/graph-rules.ts)、[../../backend/core/tasks/dispatch-scope.ts](../../backend/core/tasks/dispatch-scope.ts)、[../../backend/core/tasks/scope-public.ts](../../backend/core/tasks/scope-public.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/evidence/artifact-baseline.ts](../../backend/core/evidence/artifact-baseline.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)、[../../backend/core/tasks/scope-active-input.ts](../../backend/core/tasks/scope-active-input.ts)、[../../backend/core/tasks/scope-continuation-attachments.ts](../../backend/core/tasks/scope-continuation-attachments.ts)。
+直接依赖：[../../logic/tasks/rules/graph-types.ts](../../logic/tasks/rules/graph-types.ts)、[../../logic/team/rules/team-session.ts](../../logic/team/rules/team-session.ts)、[../../logic/tasks/rules/queued-dependency-replacement.ts](../../logic/tasks/rules/queued-dependency-replacement.ts)、[../../logic/tasks/rules/queued-dependency-addition.ts](../../logic/tasks/rules/queued-dependency-addition.ts)、[../../logic/tasks/rules/queued-dependency-revision.ts](../../logic/tasks/rules/queued-dependency-revision.ts)、[../../logic/tasks/rules/member-checkpoint.ts](../../logic/tasks/rules/member-checkpoint.ts)、[../../logic/tasks/rules/member-checkpoint-chain.ts](../../logic/tasks/rules/member-checkpoint-chain.ts)、[../../logic/tasks/rules/checkpoint-handoff.ts](../../logic/tasks/rules/checkpoint-handoff.ts)、[../../logic/tasks/rules/queued-member-resume.ts](../../logic/tasks/rules/queued-member-resume.ts)、[../../logic/tasks/rules/dispatch-commands.ts](../../logic/tasks/rules/dispatch-commands.ts)、[../../logic/tasks/rules/dispatch-receipt.ts](../../logic/tasks/rules/dispatch-receipt.ts)、[../../logic/tools/rules/receipt-schema.ts](../../logic/tools/rules/receipt-schema.ts)、[../../logic/tasks/rules/member-commands.ts](../../logic/tasks/rules/member-commands.ts)、[../../logic/tasks/rules/member-events.ts](../../logic/tasks/rules/member-events.ts)、[../../logic/tasks/rules/graph-reducer.ts](../../logic/tasks/rules/graph-reducer.ts)、[../../logic/tasks/rules/graph-rules.ts](../../logic/tasks/rules/graph-rules.ts)、[../../logic/tasks/rules/dispatch-scope.ts](../../logic/tasks/rules/dispatch-scope.ts)、[../../logic/tasks/rules/scope-public.ts](../../logic/tasks/rules/scope-public.ts)、[../../logic/tasks/rules/scope-view.ts](../../logic/tasks/rules/scope-view.ts)、[../../logic/tasks/rules/scope-continuation.ts](../../logic/tasks/rules/scope-continuation.ts)、[../../logic/tasks/rules/topic-interruption.ts](../../logic/tasks/rules/topic-interruption.ts)、[../../logic/tasks/rules/execution-report.ts](../../logic/tasks/rules/execution-report.ts)、[../../logic/evidence/rules/artifact-baseline.ts](../../logic/evidence/rules/artifact-baseline.ts)、[../../logic/tasks/rules/scope-recovery.ts](../../logic/tasks/rules/scope-recovery.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/tasks/rules/scope-active-input.ts](../../logic/tasks/rules/scope-active-input.ts)、[../../logic/tasks/rules/scope-continuation-attachments.ts](../../logic/tasks/rules/scope-continuation-attachments.ts)。
 
 ### effect-observation.ts
 
@@ -316,7 +269,7 @@ class N_src_bridge_contracts_effect_observation_ts["effect-observation.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/effect-observation.ts](../../backend/core/tasks/effect-observation.ts)。
+直接依赖：[../../logic/tasks/rules/effect-observation.ts](../../logic/tasks/rules/effect-observation.ts)。
 
 ### execution.ts
 
@@ -340,7 +293,7 @@ class N_src_bridge_contracts_execution_ts_PublicValidationResult["PublicValidati
 N_src_bridge_contracts_execution_ts ..> N_src_bridge_contracts_execution_ts_PublicValidationResult : 声明
 ```
 
-直接依赖：[../../backend/core/execution/types.ts](../../backend/core/execution/types.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)、[../../backend/core/tools/input-validation.ts](../../backend/core/tools/input-validation.ts)、[../../backend/core/tools/scope-schema.ts](../../backend/core/tools/scope-schema.ts)、[../../backend/core/evidence/validation.ts](../../backend/core/evidence/validation.ts)。
+直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)、[../../logic/tools/rules/input-validation.ts](../../logic/tools/rules/input-validation.ts)、[../../logic/tools/rules/scope-schema.ts](../../logic/tools/rules/scope-schema.ts)、[../../logic/evidence/rules/validation.ts](../../logic/evidence/rules/validation.ts)。
 
 ### github-feedback.ts
 
@@ -350,7 +303,7 @@ class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)。
+直接依赖：[../../logic/feedback/index.ts](../../logic/feedback/index.ts)。
 
 ### governance.ts
 
@@ -360,7 +313,7 @@ class N_src_bridge_contracts_governance_ts["governance.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/governance/module-governance.ts](../../backend/core/governance/module-governance.ts)。
+直接依赖：[../../logic/governance/rules/module-governance.ts](../../logic/governance/rules/module-governance.ts)。
 
 ### human-continue.ts
 
@@ -370,7 +323,7 @@ class N_src_bridge_contracts_human_continue_ts["human-continue.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/human-continue.ts](../../backend/core/tasks/human-continue.ts)、[../../backend/core/tasks/scope-continuation-record.ts](../../backend/core/tasks/scope-continuation-record.ts)。
+直接依赖：[../../logic/tasks/rules/human-continue.ts](../../logic/tasks/rules/human-continue.ts)、[../../logic/tasks/rules/scope-continuation-record.ts](../../logic/tasks/rules/scope-continuation-record.ts)。
 
 ### human-decisions.ts
 
@@ -380,7 +333,7 @@ class N_src_bridge_contracts_human_decisions_ts["human-decisions.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)。
+直接依赖：[../../logic/tasks/rules/human-decisions.ts](../../logic/tasks/rules/human-decisions.ts)。
 
 ### ipc-call.ts
 
@@ -544,7 +497,7 @@ class N_src_bridge_contracts_ipc_chat_ts_ChatIpcResponses["ChatIpcResponses"] {
 N_src_bridge_contracts_ipc_chat_ts ..> N_src_bridge_contracts_ipc_chat_ts_ChatIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/connectors/repository-tools.ts](../../backend/core/connectors/repository-tools.ts)、[chat.ts](chat.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/connectors/rules/repository-tools.ts](../../logic/connectors/rules/repository-tools.ts)、[chat.ts](chat.ts)。
 
 ### ipc-desktop.ts
 
@@ -652,7 +605,7 @@ class N_src_bridge_contracts_ipc_dispatch_ts_DispatchIpcResponses["DispatchIpcRe
 N_src_bridge_contracts_ipc_dispatch_ts ..> N_src_bridge_contracts_ipc_dispatch_ts_DispatchIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/tools/policy/types.ts](../../backend/core/tools/policy/types.ts)、[../../backend/core/evidence/artifact-baseline.ts](../../backend/core/evidence/artifact-baseline.ts)、[../../backend/core/tasks/command-verification.ts](../../backend/core/tasks/command-verification.ts)、[../../backend/core/file-operations/controlled-file-operation.ts](../../backend/core/file-operations/controlled-file-operation.ts)、[../../backend/core/tasks/dispatch-commands.ts](../../backend/core/tasks/dispatch-commands.ts)、[../../backend/core/dispatch/dispatch-storage.ts](../../backend/core/dispatch/dispatch-storage.ts)、[../../backend/core/tasks/effect-observation.ts](../../backend/core/tasks/effect-observation.ts)、[../../backend/core/tasks/execution-report.ts](../../backend/core/tasks/execution-report.ts)、[../../backend/core/tasks/graph-types.ts](../../backend/core/tasks/graph-types.ts)、[../../backend/core/tasks/human-decisions.ts](../../backend/core/tasks/human-decisions.ts)、[../../backend/core/file-operations/isolated-execution-recovery.ts](../../backend/core/file-operations/isolated-execution-recovery.ts)、[../../backend/core/tasks/member-commands.ts](../../backend/core/tasks/member-commands.ts)、[../../backend/core/tasks/member-events.ts](../../backend/core/tasks/member-events.ts)、[../../backend/core/budget/model-request-budget.ts](../../backend/core/budget/model-request-budget.ts)、[../../backend/core/evidence/output-manifest.ts](../../backend/core/evidence/output-manifest.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)、[../../backend/core/budget/scope-usage.ts](../../backend/core/budget/scope-usage.ts)、[../../backend/core/tasks/scope-view.ts](../../backend/core/tasks/scope-view.ts)、[../../backend/core/team/owner-execution-discovery.ts](../../backend/core/team/owner-execution-discovery.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/tools/rules/policy/types.ts](../../logic/tools/rules/policy/types.ts)、[../../logic/evidence/rules/artifact-baseline.ts](../../logic/evidence/rules/artifact-baseline.ts)、[../../logic/tasks/rules/command-verification.ts](../../logic/tasks/rules/command-verification.ts)、[../../logic/file-operations/rules/controlled-file-operation.ts](../../logic/file-operations/rules/controlled-file-operation.ts)、[../../logic/tasks/rules/dispatch-commands.ts](../../logic/tasks/rules/dispatch-commands.ts)、[../../logic/dispatch/rules/dispatch-storage.ts](../../logic/dispatch/rules/dispatch-storage.ts)、[../../logic/tasks/rules/effect-observation.ts](../../logic/tasks/rules/effect-observation.ts)、[../../logic/tasks/rules/execution-report.ts](../../logic/tasks/rules/execution-report.ts)、[../../logic/tasks/rules/graph-types.ts](../../logic/tasks/rules/graph-types.ts)、[../../logic/tasks/rules/human-decisions.ts](../../logic/tasks/rules/human-decisions.ts)、[../../logic/file-operations/rules/isolated-execution-recovery.ts](../../logic/file-operations/rules/isolated-execution-recovery.ts)、[../../logic/tasks/rules/member-commands.ts](../../logic/tasks/rules/member-commands.ts)、[../../logic/tasks/rules/member-events.ts](../../logic/tasks/rules/member-events.ts)、[../../logic/budget/rules/model-request-budget.ts](../../logic/budget/rules/model-request-budget.ts)、[../../logic/evidence/rules/output-manifest.ts](../../logic/evidence/rules/output-manifest.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/budget/rules/scope-usage.ts](../../logic/budget/rules/scope-usage.ts)、[../../logic/tasks/rules/scope-view.ts](../../logic/tasks/rules/scope-view.ts)、[../../logic/team/rules/owner-execution-discovery.ts](../../logic/team/rules/owner-execution-discovery.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
 
 ### ipc-governance.ts
 
@@ -675,7 +628,7 @@ class N_src_bridge_contracts_ipc_governance_ts_GovernanceIpcResponses["Governanc
 N_src_bridge_contracts_ipc_governance_ts ..> N_src_bridge_contracts_ipc_governance_ts_GovernanceIpcResponses : 声明
 ```
 
-直接依赖：[../../backend/core/governance/module-governance.ts](../../backend/core/governance/module-governance.ts)。
+直接依赖：[../../logic/governance/rules/module-governance.ts](../../logic/governance/rules/module-governance.ts)。
 
 ### ipc-loop.ts
 
@@ -717,6 +670,7 @@ class N_src_bridge_contracts_ipc_loop_ts["ipc-loop.ts"] {
 }
 class N_src_bridge_contracts_ipc_loop_ts_LoopIpcResponses["LoopIpcResponses"] {
   <<interface>>
+  +'loop.topicInterrupt'
   +'loop.goalContinuation'
   +'loop.humanContinue'
   +'loop.humanContinuation'
@@ -735,7 +689,7 @@ class N_src_bridge_contracts_ipc_loop_ts_LoopIpcResponses["LoopIpcResponses"] {
 N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_ipc_loop_ts_LoopIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/execution/types.ts](../../backend/core/execution/types.ts)、[../../backend/core/tools/policy/types.ts](../../backend/core/tools/policy/types.ts)、[../../backend/core/tasks/human-continue.ts](../../backend/core/tasks/human-continue.ts)、[../../backend/core/tasks/queue.ts](../../backend/core/tasks/queue.ts)、[../../backend/core/tasks/scope-continuation.ts](../../backend/core/tasks/scope-continuation.ts)、[../../backend/core/tasks/scope-recovery.ts](../../backend/core/tasks/scope-recovery.ts)、[../../backend/core/tasks/scope-replan.ts](../../backend/core/tasks/scope-replan.ts)、[../../backend/core/tasks/types.ts](../../backend/core/tasks/types.ts)、[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tools/rules/policy/types.ts](../../logic/tools/rules/policy/types.ts)、[../../logic/tasks/rules/human-continue.ts](../../logic/tasks/rules/human-continue.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tasks/rules/scope-continuation.ts](../../logic/tasks/rules/scope-continuation.ts)、[../../logic/tasks/rules/topic-interruption.ts](../../logic/tasks/rules/topic-interruption.ts)、[../../logic/tasks/rules/scope-recovery.ts](../../logic/tasks/rules/scope-recovery.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
 
 ### ipc-people.ts
 
@@ -761,7 +715,7 @@ class N_src_bridge_contracts_ipc_people_ts_PeopleIpcResponses["PeopleIpcResponse
 N_src_bridge_contracts_ipc_people_ts ..> N_src_bridge_contracts_ipc_people_ts_PeopleIpcResponses : 声明
 ```
 
-直接依赖：[../../backend/core/team/workspace-member.ts](../../backend/core/team/workspace-member.ts)、[../../backend/core/workspace/module-ownership.ts](../../backend/core/workspace/module-ownership.ts)。
+直接依赖：[../../logic/team/rules/workspace-member.ts](../../logic/team/rules/workspace-member.ts)、[../../logic/workspace/rules/module-ownership.ts](../../logic/workspace/rules/module-ownership.ts)。
 
 ### ipc-resources.ts
 
@@ -811,7 +765,7 @@ class N_src_bridge_contracts_ipc_resources_ts_ResourcesIpcResponses["ResourcesIp
 N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_resources_ts_ResourcesIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/connectors/repository-connection.ts](../../backend/core/connectors/repository-connection.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[resources.ts](resources.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/connectors/rules/repository-connection.ts](../../logic/connectors/rules/repository-connection.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[resources.ts](resources.ts)。
 
 ### ipc-settings.ts
 
@@ -844,7 +798,7 @@ class N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults["ModelA
 N_src_bridge_contracts_ipc_settings_ts_external_ModelActionResults <|-- N_src_bridge_contracts_ipc_settings_ts_SettingsIpcResponses
 ```
 
-直接依赖：[../../backend/core/connectors/web-tools.ts](../../backend/core/connectors/web-tools.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/models/catalog.ts](../../backend/core/models/catalog.ts)、[../../backend/core/models/config.ts](../../backend/core/models/config.ts)、[../../backend/core/connectors/github-feedback.ts](../../backend/core/connectors/github-feedback.ts)、[../../backend/core/runtime/admission.ts](../../backend/core/runtime/admission.ts)、[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/budget/scope-budget.ts](../../backend/core/budget/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
+直接依赖：[web.ts](web.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[models.ts](models.ts)、[github-feedback.ts](github-feedback.ts)、[../../logic/runtime/rules/admission.ts](../../logic/runtime/rules/admission.ts)、[../../logic/runtime/rules/types.ts](../../logic/runtime/rules/types.ts)、[../../logic/budget/rules/scope-budget.ts](../../logic/budget/rules/scope-budget.ts)、[model-actions.ts](model-actions.ts)。
 
 ### ipc-shapes.ts
 
@@ -854,7 +808,7 @@ class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/tools/questions.ts](../../backend/core/tools/questions.ts)。
+直接依赖：[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
 
 ### ipc-workspace.ts
 
@@ -884,7 +838,7 @@ class N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses["WorkspaceIp
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_workspace_ts_WorkspaceIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../backend/core/knowledge/object-contract.ts](../../backend/core/knowledge/object-contract.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[workspace-view.ts](workspace-view.ts)。
+直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/knowledge/rules/object-contract.ts](../../logic/knowledge/rules/object-contract.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[workspace-view.ts](workspace-view.ts)。
 
 ### isolated-executions.ts
 
@@ -894,7 +848,7 @@ class N_src_bridge_contracts_isolated_executions_ts["isolated-executions.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/file-operations/isolated-execution-recovery.ts](../../backend/core/file-operations/isolated-execution-recovery.ts)。
+直接依赖：[../../logic/file-operations/rules/isolated-execution-recovery.ts](../../logic/file-operations/rules/isolated-execution-recovery.ts)。
 
 ### knowledge-source.ts
 
@@ -904,7 +858,7 @@ class N_src_bridge_contracts_knowledge_source_ts["knowledge-source.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/workspace/knowledge-source.ts](../../backend/core/workspace/knowledge-source.ts)。
+直接依赖：[../../logic/workspace/rules/knowledge-source.ts](../../logic/workspace/rules/knowledge-source.ts)。
 
 ### knowledge-transactions.ts
 
@@ -914,7 +868,7 @@ class N_src_bridge_contracts_knowledge_transactions_ts["knowledge-transactions.t
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/knowledge/tool-output-transactions.ts](../../backend/core/knowledge/tool-output-transactions.ts)。
+直接依赖：[../../logic/knowledge/rules/tool-output-transactions.ts](../../logic/knowledge/rules/tool-output-transactions.ts)。
 
 ### model-actions.ts
 
@@ -956,7 +910,7 @@ class N_src_bridge_contracts_model_actions_ts_ModelActionResults["ModelActionRes
 N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionResults : 声明
 ```
 
-直接依赖：[../../backend/core/models/config.ts](../../backend/core/models/config.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[models.ts](models.ts)。
+直接依赖：[models.ts](models.ts)、[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)。
 
 ### models.ts
 
@@ -966,7 +920,7 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/models/config.ts](../../backend/core/models/config.ts)、[../../backend/core/models/provider-presets.ts](../../backend/core/models/provider-presets.ts)、[../../backend/core/models/provider-connections.ts](../../backend/core/models/provider-connections.ts)、[../../backend/core/team/agent-runtime.ts](../../backend/core/team/agent-runtime.ts)、[../../backend/core/models/catalog.ts](../../backend/core/models/catalog.ts)、[../../backend/core/execution/model-errors.ts](../../backend/core/execution/model-errors.ts)、[../../backend/core/models/engine.ts](../../backend/core/models/engine.ts)。
+直接依赖：[../../logic/models/index.ts](../../logic/models/index.ts)、[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)、[../../logic/execution/rules/model-errors.ts](../../logic/execution/rules/model-errors.ts)。
 
 ### module-ownership.ts
 
@@ -976,7 +930,7 @@ class N_src_bridge_contracts_module_ownership_ts["module-ownership.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/workspace/module-ownership.ts](../../backend/core/workspace/module-ownership.ts)。
+直接依赖：[../../logic/workspace/rules/module-ownership.ts](../../logic/workspace/rules/module-ownership.ts)。
 
 ### output-manifest.ts
 
@@ -986,7 +940,7 @@ class N_src_bridge_contracts_output_manifest_ts["output-manifest.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/evidence/output-manifest.ts](../../backend/core/evidence/output-manifest.ts)。
+直接依赖：[../../logic/evidence/rules/output-manifest.ts](../../logic/evidence/rules/output-manifest.ts)。
 
 ### owner-execution.ts
 
@@ -996,7 +950,7 @@ class N_src_bridge_contracts_owner_execution_ts["owner-execution.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/team/member-execution-binding.ts](../../backend/core/team/member-execution-binding.ts)、[../../backend/core/team/owner-execution-discovery.ts](../../backend/core/team/owner-execution-discovery.ts)、[../../backend/core/team/automatic-execution.ts](../../backend/core/team/automatic-execution.ts)。
+直接依赖：[../../logic/team/rules/member-execution-binding.ts](../../logic/team/rules/member-execution-binding.ts)、[../../logic/team/rules/owner-execution-discovery.ts](../../logic/team/rules/owner-execution-discovery.ts)、[../../logic/team/rules/automatic-execution.ts](../../logic/team/rules/automatic-execution.ts)。
 
 ### repository-connections.ts
 
@@ -1006,7 +960,7 @@ class N_src_bridge_contracts_repository_connections_ts["repository-connections.t
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/connectors/repository-connection.ts](../../backend/core/connectors/repository-connection.ts)、[../../backend/core/connectors/repository-tools.ts](../../backend/core/connectors/repository-tools.ts)。
+直接依赖：[../../logic/connectors/rules/repository-connection.ts](../../logic/connectors/rules/repository-connection.ts)、[../../logic/connectors/rules/repository-tools.ts](../../logic/connectors/rules/repository-tools.ts)。
 
 ### resources.ts
 
@@ -1015,59 +969,6 @@ classDiagram
 class N_src_bridge_contracts_resources_ts["resources.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_resources_ts_ResourceKind["ResourceKind"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceKind : 声明
-class N_src_bridge_contracts_resources_ts_ResourceCategory["ResourceCategory"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceCategory : 声明
-class N_src_bridge_contracts_resources_ts_ResourceDefinition["ResourceDefinition"] {
-  <<interface>>
-  +id
-  +kind
-  +name
-  +summary
-  +content
-  +updatedAt
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceDefinition : 声明
-class N_src_bridge_contracts_resources_ts_ResourceLibrarySnapshot["ResourceLibrarySnapshot"] {
-  <<interface>>
-  +repositoryId
-  +revision
-  +items
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ResourceLibrarySnapshot : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_resources_ts_RepositoryConfig["RepositoryConfig"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositoryConfig : 声明
-class N_src_bridge_contracts_resources_ts_RepositorySession["RepositorySession"] {
-  <<type>>
-
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositorySession : 声明
-class N_src_bridge_contracts_resources_ts_RepositoryStatus["RepositoryStatus"] {
-  <<interface>>
-  +session
-  +source
-  +config
-  +error
-  +sharing
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_RepositoryStatus : 声明
 class N_src_bridge_contracts_resources_ts_PublishWorkspaceInput["PublishWorkspaceInput"] {
   <<interface>>
   +workspaceId
@@ -1081,13 +982,6 @@ class N_src_bridge_contracts_resources_ts_PublishWorkspaceInput["PublishWorkspac
   +summary
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceInput : 声明
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_resources_ts["resources.ts"] {
-  <<module>>
-}
 class N_src_bridge_contracts_resources_ts_ImportWorkspacePreviewInput["ImportWorkspacePreviewInput"] {
   <<interface>>
   +workspaceId
@@ -1108,28 +1002,9 @@ class N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput["ImportWork
   +planId
 }
 N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspaceCommitInput : 声明
-class N_src_bridge_contracts_resources_ts_PublishWorkspaceResult["PublishWorkspaceResult"] {
-  <<interface>>
-  +repository
-  +resourceId
-  +warnings
-  +removedBindings
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_PublishWorkspaceResult : 声明
-class N_src_bridge_contracts_resources_ts_ImportWorkspacePreview["ImportWorkspacePreview"] {
-  <<type>>
-  +planId
-  +kind
-  +mode
-  +targetRoot
-  +files
-  +warnings
-  +removedBindings
-}
-N_src_bridge_contracts_resources_ts ..> N_src_bridge_contracts_resources_ts_ImportWorkspacePreview : 声明
 ```
 
-直接依赖：[../../backend/core/knowledge/portable-package.ts](../../backend/core/knowledge/portable-package.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)。
+直接依赖：[../../logic/resources/index.ts](../../logic/resources/index.ts)、[../../logic/knowledge/rules/portable-package.ts](../../logic/knowledge/rules/portable-package.ts)、[../../logic/resources/packages/contracts.ts](../../logic/resources/packages/contracts.ts)。
 
 ### runtime.ts
 
@@ -1139,7 +1014,7 @@ class N_src_bridge_contracts_runtime_ts["runtime.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/runtime/types.ts](../../backend/core/runtime/types.ts)、[../../backend/core/runtime/runtime-validation.ts](../../backend/core/runtime/runtime-validation.ts)。
+直接依赖：[../../logic/runtime/rules/types.ts](../../logic/runtime/rules/types.ts)、[../../logic/runtime/rules/runtime-validation.ts](../../logic/runtime/rules/runtime-validation.ts)。
 
 ### scope-budget.ts
 
@@ -1149,7 +1024,7 @@ class N_src_bridge_contracts_scope_budget_ts["scope-budget.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/budget/scope-budget.ts](../../backend/core/budget/scope-budget.ts)、[../../backend/core/budget/model-request-budget.ts](../../backend/core/budget/model-request-budget.ts)。
+直接依赖：[../../logic/budget/rules/scope-budget.ts](../../logic/budget/rules/scope-budget.ts)、[../../logic/budget/rules/model-request-budget.ts](../../logic/budget/rules/model-request-budget.ts)。
 
 ### scope-usage.ts
 
@@ -1159,7 +1034,7 @@ class N_src_bridge_contracts_scope_usage_ts["scope-usage.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/budget/scope-usage.ts](../../backend/core/budget/scope-usage.ts)。
+直接依赖：[../../logic/budget/rules/scope-usage.ts](../../logic/budget/rules/scope-usage.ts)。
 
 ### usage.ts
 
@@ -1169,7 +1044,17 @@ class N_src_bridge_contracts_usage_ts["usage.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/execution/usage.ts](../../backend/core/execution/usage.ts)。
+直接依赖：[../../logic/execution/rules/usage.ts](../../logic/execution/rules/usage.ts)。
+
+### web.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_web_ts["web.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../logic/web/index.ts](../../logic/web/index.ts)。
 
 ### workspace-members.ts
 
@@ -1179,7 +1064,7 @@ class N_src_bridge_contracts_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../backend/core/team/workspace-member.ts](../../backend/core/team/workspace-member.ts)。
+直接依赖：[../../logic/team/rules/workspace-member.ts](../../logic/team/rules/workspace-member.ts)。
 
 ### workspace-view.ts
 
@@ -1188,37 +1073,8 @@ classDiagram
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry["WorkspaceEntry"] {
-  <<interface>>
-  +id
-  +path
-  +name
-  +lastOpened
-  +previousIds
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry : 声明
-class N_src_bridge_contracts_workspace_view_ts_Catalog["Catalog"] {
-  <<interface>>
-  +version
-  +entries
-  +recent
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_Catalog : 声明
-class N_src_bridge_contracts_workspace_view_ts_WorkspaceView["WorkspaceView"] {
-  <<interface>>
-  +state
-  +error
-  +tasks
-  +revision
-  +changed
-  +instanceId
-  +knowledgeErrors
-}
-N_src_bridge_contracts_workspace_view_ts ..> N_src_bridge_contracts_workspace_view_ts_WorkspaceView : 声明
-N_src_bridge_contracts_workspace_view_ts_WorkspaceEntry <|-- N_src_bridge_contracts_workspace_view_ts_WorkspaceView
 ```
-
-直接依赖：[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)。
+直接依赖：[../../logic/workspace/contracts.ts](../../logic/workspace/contracts.ts)。
 
 ### workspace.ts
 
@@ -1235,7 +1091,7 @@ class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
 ```
 
-直接依赖：[ipc-call.ts](ipc-call.ts)、[../../backend/core/knowledge/types.ts](../../backend/core/knowledge/types.ts)、[../../backend/core/workspace/project-root.ts](../../backend/core/workspace/project-root.ts)、[workspace-view.ts](workspace-view.ts)、[chat.ts](chat.ts)。
+直接依赖：[ipc-call.ts](ipc-call.ts)、[../../logic/knowledge/rules/types.ts](../../logic/knowledge/rules/types.ts)、[../../logic/workspace/rules/project-root.ts](../../logic/workspace/rules/project-root.ts)、[workspace-view.ts](workspace-view.ts)、[chat.ts](chat.ts)。
 
 ### 本目录调用边界
 
@@ -1365,7 +1221,27 @@ class N_src_bridge_contracts_resources_ts["resources.ts"] {
 class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_web_ts["web.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_models_ts["models.ts"] {
+  <<module>>
+}
+N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_resources_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_web_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
@@ -1374,20 +1250,20 @@ class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
 class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_resources_ts : 导入依赖
-N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
-N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
+class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_github_feedback_ts : 导入依赖
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
+N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
   <<module>>
 }
@@ -1400,20 +1276,15 @@ class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
 class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
-N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
+class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
 ```
 
@@ -1430,6 +1301,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 长期对话公共身份
+
+`dispatch` 导出纯 `TeamSession` 类型与严格 Schema，供 View 校验联合读取；只有逻辑办公室/角色/Session 标识和创建时间，无原生目录、执行入口或调度权限。
+
 ### 图片与路径粘贴
 
 chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予执行权限，图片上限5 MiB、单批最多12项。ChatAttachmentPreview 可带固定MIME图片字节，ChatAttachment 标签元数据仍无正文。pastedLocalPaths 只把整个剪贴板为绝对本地路径列表视为引用；普通句子、相对路径、网页URL保留文本。Main 再校验，前端识别不是授权。
@@ -1438,9 +1313,9 @@ chat.paths/chat.image 是桌面明确粘贴的窄协议；路径不等于授予�
 
 models 公开纯供应商预设和 connectionForEngine/providerSupportsEngine；配置可带 autoDetect 与 alternateConnections，不包含密钥。model-actions 的 models.test 可显式带 engine，返回实际 api/baseUrl/engine；测试只接受已保存配置身份与型号，不接受临时转发地址。未传 engine 保持主接口行为。
 
-### 网页搜索设置
+### 网页与搜索设置
 
-ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；只公开凭据是否存在，不返回密钥。网页执行端口不暴露给渲染进程。
+ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsView 响应；公开 browserRobotsPolicy（allow/respect），配置输入可省略以兼容旧调用；只公开凭据是否存在，不返回密钥。网页执行与代理端口不暴露给渲染进程。
 
 ### 桌面更新状态
 
@@ -1452,11 +1327,11 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 ### 检查点交接放弃
 
-`dispatch` 重导出 Core 的严格 `AbandonCheckpointInput`、`CheckpointAbandonment` 和 `AbandonCheckpointReceipt` 及对应 Schema。任务公开原处置审计，不公开 native、canonical 路径或历史证明私有内容。这里只提供序列化契约；没有新增让渲染进程冒主身份发起处置的 IPC，模型工具仍由可信主运行闭包注入身份。回执只证明原待办取消，不证明新任务启动、成果通过或副作用回滚。
+`dispatch` 重导出 Logic 领域规则的严格 `AbandonCheckpointInput`、`CheckpointAbandonment` 和 `AbandonCheckpointReceipt` 及对应 Schema。任务公开原处置审计，不公开 native、canonical 路径或历史证明私有内容。这里只提供序列化契约；没有新增让渲染进程冒主身份发起处置的 IPC，模型工具仍由可信主运行闭包注入身份。回执只证明原待办取消，不证明新任务启动、成果通过或副作用回滚。
 
 ### 按模块负责人执行的公开契约
 
-公开绑定协议从 Core 的纯叶子 Schema 重导出：选择只携带预期岗位、能力/模型指纹和模块责任版本，不能提交完整配置、凭据或自证来源；实际任务及目标分配保存服务生成的不可变 `OwnerExecutionBinding`。工作区岗位 `memberId`、静态 `agentId`、执行实例与运行各自保持独立身份。
+公开绑定协议从 Logic 领域规则的纯叶子 Schema 重导出：选择只携带预期岗位、能力/模型指纹和模块责任版本，不能提交完整配置、凭据或自证来源；实际任务及目标分配保存服务生成的不可变 `OwnerExecutionBinding`。工作区岗位 `memberId`、静态 `agentId`、执行实例与运行各自保持独立身份。
 
 新显式 `dispatch.task` 要求原主会话的活动 `scopeId`，与模型工具共用真实计划和负责人门禁；旧成功命令只查询原事实，不能据旧无 scope 输入创建新任务。执行请求保留权限与超时，成员模型由已采纳岗位配置确定，主聊天的模型选项不替换成员模型。只读差异查询必须同时绑定原工作区、会话和任务，不修改来源、任务或模型。
 
@@ -1466,7 +1341,7 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 `execution.ts` 重导出仓库 ToolScope 的纯严格 Schema 与类型，主对话/核实报告可展示历史仓库身份；不导出主进程读取闭包、授权存储或凭据。
 
-`repository-connections.ts` 仅重导出 Core 桌面 DTO 与纯 Schema。知识 preview/commit 与本机 grant/revoke 是独立操作；授权命令具有固定 commandId、定义哈希及独立授权版本。list 公开安全状态，check 只返回真实 HTTP 的前 20 项资源摘要、身份和版本；不公开令牌、地址、正文或运行服务。receipt/commitReceipt 查询只核实原命令/事务，不重放；unaccepted 只在旧实例退役、真实存储没有原记录时证明未受理，普通缺回执不能冒充此证明。
+`repository-connections.ts` 仅重导出 Logic 领域规则 桌面 DTO 与纯 Schema。知识 preview/commit 与本机 grant/revoke 是独立操作；授权命令具有固定 commandId、定义哈希及独立授权版本。list 公开安全状态，check 只返回真实 HTTP 的前 20 项资源摘要、身份和版本；不公开令牌、地址、正文或运行服务。receipt/commitReceipt 查询只核实原命令/事务，不重放；unaccepted 只在旧实例退役、真实存储没有原记录时证明未受理，普通缺回执不能冒充此证明。
 
 ### R08 跨等待意见公开边界
 
@@ -1474,13 +1349,13 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 ### 人工决定接续的桌面契约
 
-`human-continue.ts` 只公开 Core 的严格请求、查询、回执和联合类型判别。`loop.humanContinue` 接当前等待、目标/输入/决定版本、最新决定 ID 全集、稳定命令及明确模型权限；不接自由正文、actor 或证明。`loop.humanContinuation` 按完整 workspace/root/scope/command 读取原意图，读取不执行。
+`human-continue.ts` 只公开 Logic 领域规则的严格请求、查询、回执和联合类型判别。`loop.humanContinue` 接当前等待、目标/输入/决定版本、最新决定 ID 全集、稳定命令及明确模型权限；不接自由正文、actor 或证明。`loop.humanContinuation` 按完整 workspace/root/scope/command 读取原意图，读取不执行。
 
 `scope.continuations` 兼容旧纯文本记录，新增 `kind:human_decisions`，没有伪造的 input.message。公开人工接续保留旧等待、实际消费的决定、业务主体、受理前任务 ID 集合及真实新运行；前任务集合用于核验返工是新任务。受理回执不代表运行仍在执行或目标完成，身份和冻结内容必须逐项校验。审阅引用 human-decision 只声明所引用的真实决定，是否适用由调度引擎核验。
 
 ### 人工决定的桌面契约
 
-`human-decisions.ts` 只重导出 Core 严格序列化 DTO 与校验器。`dispatch.humanPreview` 接 workspace/root/scope/criterion 与明确 baseline 选择；响应返回来源、所选有界文件观察、basis、独立决定序列及限制，预览不是提交许可。`dispatch.humanDecide` 另接 commandId、expectedBasis、expectedDecisionRevision、决定及意见；actor/文件正文/可信证明不可由请求传入。
+`human-decisions.ts` 只重导出 Logic 领域规则 严格序列化 DTO 与校验器。`dispatch.humanPreview` 接 workspace/root/scope/criterion 与明确 baseline 选择；响应返回来源、所选有界文件观察、basis、独立决定序列及限制，预览不是提交许可。`dispatch.humanDecide` 另接 commandId、expectedBasis、expectedDecisionRevision、决定及意见；actor/文件正文/可信证明不可由请求传入。
 
 `dispatch.humanReceipt` 按原命令读取回执，`dispatch.humanHistory` 返回本周期最多 64 条不可变记录。回执和历史的 proof.identity 必须匹配外层身份。图与主模型完成结论不因记录改变；只在周期摘要增加独立 humanDecisions 计数和时间，完整历史来自已核验的详情。无模型工具可调用人工提交，也没有隐式继续/批准接口。
 
@@ -1516,9 +1391,9 @@ ipc-settings 声明 web.settings/web.configure 的严格请求及 WebSettingsVie
 
 成员执行已接 `dispatch.executionStart / dispatch.executionStop / dispatch.executionInspect`，可信桌面请求须携带 `workspaceId + rootSessionId + taskId`，启动另带幂等 `commandId`、`expectedRevision` 及公开模型/权限选项。`MemberExecutionView` 只公开任务和运行状态，不返回原生会话路径、完整提示词或密钥。`dispatch.approvals / dispatch.approve / dispatch.questions / dispatch.answerQuestion` 使用相同任务身份；批准仅对当前执行有效。
 
-`dispatch.messages / dispatch.acknowledge` 使用 `workspaceId + rootSessionId + agentSessionId` 限定收件人。确认只消费结果信封，不把任务候选变为已验收；读取或收件本身不会发起模型调用。派发和成员执行共用同一事务存储，终态提交完成后才能释放成员占用。手工派发仍需明确启动；主会话本轮工具派发由协调器推进并可靠回注。执行者无递归派发权，历史唤醒和失败任务重试尚未接通。
+`dispatch.messages / dispatch.acknowledge` 使用 `workspaceId + rootSessionId + agentSessionId` 限定收件人。确认只消费结果信封，不把任务候选变为已验收；读取或收件本身不会发起模型调用。派发和成员执行共用同一事务存储，终态提交完成后才能释放成员占用。手工派发仍需明确启动；主会话本轮工具派发由协调器推进并可靠回注。执行者无递归派发权，读取历史或确认信封不授予唤醒和重试资格；安全检查点预约及已完成结果的自动回传通过独立协议核实。
 
-跨进程的图快照与增量只包含可序列化数据；Bridge 另重导出无 IO 的图校验/归并函数供前端本地消费，不把这些函数作为 IPC 数据传输。节点约束、角色实例和任务状态由 Core 定义，调度产生真实事实；前端不得根据助手回复文字推断“已派发”或直接写图状态。
+跨进程的图快照与增量只包含可序列化数据；Bridge 另重导出无 IO 的图校验/归并函数供前端本地消费，不把这些函数作为 IPC 数据传输。节点约束、角色实例和任务状态由 Logic 领域规则 定义，调度产生真实事实；前端不得根据助手回复文字推断“已派发”或直接写图状态。
 
 ### 成员执行增量入口
 
@@ -1563,7 +1438,7 @@ interface GraphSnapshot {
 }
 ```
 
-根节点 `SessionRootNode` 表示主 Agent 的当前 Session，图内普通任务节点表达执行 Agent、涉及模块列表、任务目标、状态和结果引用。节点、边与成员投影的完整领域结构以 Core 契约为准，本层重导出公开类型和纯校验/归并函数，不引用具体执行器或存储实现。
+根节点 `SessionRootNode` 表示主 Agent 的当前 Session，图内普通任务节点表达执行 Agent、涉及模块列表、任务目标、状态和结果引用。节点、边与成员投影的完整领域结构以 Logic 领域规则 契约为准，本层重导出公开类型和纯校验/归并函数，不引用具体执行器或存储实现。
 
 `rootSessionId` 是最初主 Agent 的会话范围；被派发成员拥有自己的 `agentSessionId`。`taskId` 是图节点身份，`runId` 是执行尝试身份，不能用现有 `loop.taskId` 同时代替这三类标识。
 
@@ -1606,7 +1481,7 @@ type GraphDelta =
 
 - `seq` 按原子提交批次递增，从 1 开始，跨正常重启保持连续。0 仅代表内部空前缀；graph.created 在 seq=1 原子提交根，公开快照始终有根。一次命令造成多个对象变化时，必须在同一个批次中发布。
 - `changes` 只包含有变化对象，但每个对象都是完整新快照；使用稳定 ID 替换旧对象，不把局部字段缺省错误地理解为“保留旧值”。
-- `committedAt` 为 UTC ISO 8601 时间；顺序以 `seq` 为准。`cause` 是 Core 定义的 `GraphCause` 事实枚举，由后端根据真实提交填写，不接受模型自报的发送者。可信发送者等审计信息保存在内部命令记录；公开批次不包含私有推理、密钥或原始凭据。
+- `committedAt` 为 UTC ISO 8601 时间；顺序以 `seq` 为准。`cause` 是 Logic 领域规则 定义的 `GraphCause` 事实枚举，由后端根据真实提交填写，不接受模型自报的发送者。可信发送者等审计信息保存在内部命令记录；公开批次不包含私有推理、密钥或原始凭据。
 - `delta.from` 必须等于客户端提交的游标；`cursor` 表示本次响应已经返回到的最后提交位置，不直接跳到尚未返回的服务端头部。
 - `batches` 内序号必须连续；一次响应不拆开批次。`hasMore` 为 true 时，客户端使用返回的 `cursor` 继续读取。
 - `noop` 不带对象列表或正文，前端保留已有引用与布局。`reset` 的快照整体替换相同图身份的本地投影，不能与旧流对象混合。
@@ -1632,7 +1507,7 @@ interface DispatchGraphApi {
 
 ### 消费与错误处理
 
-前端只有整份响应校验通过后才替换投影并推进游标；`delta.from` 必须等于当前游标，重复的旧 delta 也会因起点不匹配而被拒绝，随后由 Hook 不带游标请求权威 reset。相同游标的 noop，以及相同游标且内容一致的 reset，保留已有对象引用；同版本内容冲突或序号断档均保留旧图并重载，不直接跳过批次。Core 归并函数的批次幂等只在保留对应重放证明时成立，不能据此承诺前端任意历史 delta 都可自动去重。
+前端只有整份响应校验通过后才替换投影并推进游标；`delta.from` 必须等于当前游标，重复的旧 delta 也会因起点不匹配而被拒绝，随后由 Hook 不带游标请求权威 reset。相同游标的 noop，以及相同游标且内容一致的 reset，保留已有对象引用；同版本内容冲突或序号断档均保留旧图并重载，不直接跳过批次。Logic 领域规则 归并函数的批次幂等只在保留对应重放证明时成立，不能据此承诺前端任意历史 delta 都可自动去重。
 
 | 情况 | 返回与处理 |
 | --- | --- |
@@ -1662,7 +1537,7 @@ interface DispatchGraphApi {
 `architecture.ts` 导出 ObjectOperation、ArchitecturePreviewRequest/CommitRequest 和回执。预览绑定工作区/实例/知识版本，响应保留校验、差异、路径、对象 ID 和 planId；确认提交只携带身份和 planId。不再接收真人登记或维护确认，岗位负责人使用独立契约。字段类型不暴露桌面服务或存储实现。
 ### 只读执行核实
 
-`dispatch.ts` 重导出 Core 的 `ExecutionReportInput / ExecutionReport` 和相应 Schema。报告区分在途、结算与未知，不把失败/取消当作回滚；不包含原始工具参数、结果或原生路径。分页基线变化时重置第一页，前端不能合并不同核实版本。该契约不提供批准、复活或重派命令。
+`dispatch.ts` 重导出 Logic 领域规则的 `ExecutionReportInput / ExecutionReport` 和相应 Schema。报告区分在途、结算与未知，不把失败/取消当作回滚；不包含原始工具参数、结果或原生路径。分页基线变化时重置第一页，前端不能合并不同核实版本。该契约不提供批准、复活或重派命令。
 
 ### 显式新只读核实周期
 
@@ -1681,11 +1556,11 @@ interface DispatchGraphApi {
 
 ### 文件基线的只读边界
 
-`dispatch.ts` 公开 Core 的 ArtifactReportInput/ArtifactReport 及严格 Schema。请求必须明确 workspace/root/task/run；无 baselineId 只枚举可靠记录，显式选择才复核文件。响应包含有界相对路径和哈希，不含文件正文、平台根路径、凭据或可恢复执行授权。与既有执行报告分页、核实周期创建的基线分别处理。
+`dispatch.ts` 公开 Logic 领域规则的 ArtifactReportInput/ArtifactReport 及严格 Schema。请求必须明确 workspace/root/task/run；无 baselineId 只枚举可靠记录，显式选择才复核文件。响应包含有界相对路径和哈希，不含文件正文、平台根路径、凭据或可恢复执行授权。与既有执行报告分页、核实周期创建的基线分别处理。
 
 ### 模块知识治理
 
-governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/模块核对列表、原命令及精确提案依据；决定与实施分别提交，actor由可信服务确定。公开实施状态区分未提交、待核实、已提交、回滚与恢复异常；完整知识回执不等于业务验收。
+governance.ts 仅重导 Logic 领域规则 严格纯协议。界面按明确工作区/实例/模块核对列表、原命令及精确提案依据；决定与实施分别提交，actor由可信服务确定。公开实施状态区分未提交、待核实、已提交、回滚与恢复异常；完整知识回执不等于业务验收。
 
 治理公开契约包含可选的真实来源类型，供界面区分主运行、本机操作和缺少来源的旧记录。不会公开模型工具端口、私有账本或原命令签发能力；来源本身不是批准凭据。
 
@@ -1707,23 +1582,23 @@ governance.ts 仅重导 Core 严格纯协议。界面按明确工作区/实例/�
 
 `knowledge-source.ts` 只重导来源引用、核实状态和预览选择；不公开 source authority、journal正文或写前屏障的写端口。预览中的 expectedRef 只是当前版本预期，客户端不能提交自证来源。岗位/责任旧记录可缺省来源，新明确采纳由后端生成；责任独立 `adopt_source` 允许同owner增加一版，不能被一般负责人变更冒用。
 
-`workspace-members.ts` 只重导 Core team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。登记回执本身不是执行许可；正式派发另行核实原计划和模块负责人。
+`workspace-members.ts` 只重导 Logic 领域规则 team 的严格 DTO/Schema。五个 `workspace.members.*` IPC 传递明确岗位选择、实例、版本、预览依据及紧凑原命令回执；界面不能提交 actor、能力正文或模型凭据。registry cursor 与任务图/周期游标分开，稳定 memberId 不取代现有 agentInstanceId。登记回执本身不是执行许可；正式派发另行核实原计划和模块负责人。
 
-`module-ownership.ts` 重导 Core workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent 和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；登记接口不提供旧任务交接授权，新任务经独立派发门禁进入当前负责人执行。
+`module-ownership.ts` 重导 Logic 领域规则 workspace 的责任关系、查询依据、预览和回执协议；六个 `workspace.ownerships.*` IPC 不开放任意审计或 actor 写入。负责人引用 memberId，与静态 Agent 和运行实例分别表达。查询分页同时冻结责任/岗位游标与知识版本；单条责任变更不改任务图。来源观察 hash 不是受控来源代次；登记接口不提供旧任务交接授权，新任务经独立派发门禁进入当前负责人执行。
 # 原主命令核实
 
-`command-verification.ts` 只转出 Core 的严格请求、报告及九类写工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。
+`command-verification.ts` 只转出 Logic 领域规则的严格请求、报告及九类写工具支持矩阵。桌面传原 workspace/root/run/call，scope、稳定命令与指纹由后端原记录推导；公共结果不包含 Prepared、native、私有路径或原始事务帧。`committed` 仅证明原控制面事务已保存，`absent` 不能证明未执行，报告不签发恢复或验收资格。
 
 ## 异常影响与新周期关联
 
-effect-observation.ts 只重导Core的严格来源、观察、处置与关系DTO，不暴露平台文件服务或Store。五个桌面IPC分别观察、保存本机明确处置、查询原回执、读取同来源处置摘要和查询后续关系。客户端不提交actor、文件内容/路径、scope、native或证明；source始终区分真实main/member。
+effect-observation.ts 只重导Logic 领域规则的严格来源、观察、处置与关系DTO，不暴露平台文件服务或Store。五个桌面IPC分别观察、保存本机明确处置、查询原回执、读取同来源处置摘要和查询后续关系。客户端不提交actor、文件内容/路径、scope、native或证明；source始终区分真实main/member。
 
 dispatch.ts 扩展recovery来源联合及纯身份helper，旧无kind字段保持原shape；新main分支不含成员task。可选dispositionId只在新recovery/replan意图创建时固定，不能回填旧记录；公开回执对原来源、处置和独立新run作严格核对。
 
 任务详情使用 `PublicDispatchScope`，与主工具共用纯 `scope-public.ts` 白名单。它保留真实 `recovery/replan` 的公开来源和处置引用，但不含 `context`、原生会话路径或隔离清单；前端不再把这个投影声明为完整持久 `DispatchScope`。
 ### 受控文件公共边界
 
-`controlled-files.ts` 只重导 Core 的公共严格输入、字节摘要、操作报告和补偿预览/请求/回执。原调用使用 workspace/root/task/run/toolCall；新的补偿绑定当前 workspace instance、原operation、稳定command、版本和basis。恢复正文、平台file identity、私有blob与阶段事件不跨 Bridge，也不提供任意路径文件写入端口。回执 applied 仅表示独立操作已可靠保存，不签署任务验收或改写原工具结果。
+`controlled-files.ts` 只重导 Logic 领域规则的公共严格输入、字节摘要、操作报告和补偿预览/请求/回执。原调用使用 workspace/root/task/run/toolCall；新的补偿绑定当前 workspace instance、原operation、稳定command、版本和basis。恢复正文、平台file identity、私有blob与阶段事件不跨 Bridge，也不提供任意路径文件写入端口。回执 applied 仅表示独立操作已可靠保存，不签署任务验收或改写原工具结果。
 
 ## 前置修订公开审计
 
@@ -1750,7 +1625,7 @@ output-manifest.ts 只公开严格清单 DTO；Node 哈希、日志核实及平�
 
 ## 原隔离执行核实与清理
 
-isolated-executions只重导出Core的公开核实和清理协议，不引用Main对象或私有资源字段。
+isolated-executions只重导出Logic 领域规则的公开核实和清理协议，不引用Main对象或私有资源字段。
 
 
 ### 自动与团队协作模式
@@ -1759,7 +1634,7 @@ owner-execution 导出纯自动绑定类型及匹配函数，供界面核历史�
 
 ### 内联派发回执
 
-dispatch 只导出 Core dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。
+dispatch 只导出 Logic 领域规则 dispatch-receipt 的纯结构与 toolReceiptSchema，不导入主工具业务核实或哈希依赖。前端仍须核对原运行、调用、主实例与图游标；Schema 通过不授予执行权。
 
 architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议；它不引用 Node、平台或知识服务实现。
 
@@ -1800,4 +1675,12 @@ Main 的 161 项应用处理器受 `IpcHandlers` 映射约束；11 项桌面操�
 
 ## 工具缺参说明
 
-execution.ts 导出 Core 的 inputIssueMessage，只有无原值的字段说明，无日志读取或副作用；前端据真实事件决定是否为执行前拒绝，不能单凭文本决定恢复能力。
+execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的字段说明，无日志读取或副作用；前端据真实事件决定是否为执行前拒绝，不能单凭文本决定恢复能力。
+
+## 指定话题补充与排空
+
+`loop.topicInterrupt` 接收 `TopicInterruptionRequest`，返回原 `GoalContinuationReceipt`。命令绑定工作区、主 Session、具体话题与输入版本；不接受原生路径、成员直接发送或人工批准。未知回执保留原命令，可从同话题详情读取 topicInterruptions/wait，并复用原请求查询/继续，不换 ID 自动重发。
+
+公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。
+
+loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 scope 覆盖参数，真实新 scope 仍由持久队列身份创建。

@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Application} from '../src/backend/main/assembly/application';
-import type {DispatchMutation,DispatchMessage} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {Application} from '../src/bridge/server/application';
+import type {DispatchMutation,DispatchMessage} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 import {memberHelpFixture as data} from './member-help-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 /** Seed only the isolated project and explicit maintainer; no account or existing workspace is used. */
 export async function seedMemberHelp(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){

@@ -1,12 +1,12 @@
 import {describe,it,expect,vi} from 'vitest';
-import {TaskProgressTools,progressTool,progressToolSchemas} from '../src/backend/core/evidence/progress-tools';
-import {memberToolOutputSchema,memberToolOutputSchemas,memberToolContract,isProgressEvidence,progressToolIdentitySchema,type MemberToolName,type MemberToolOutputBinding} from '../src/backend/core/tasks/member-tool-output';
-import {taskProgressSchema} from '../src/backend/core/evidence/progress-schema';
-import {toolReceiptSchema} from '../src/backend/core/tools/receipt-schema';
-import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import type {TaskProgress} from '../src/backend/core/evidence/progress';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
+import {TaskProgressTools,progressTool,progressToolSchemas} from '../src/logic/evidence/rules/progress-tools';
+import {memberToolOutputSchema,memberToolOutputSchemas,memberToolContract,isProgressEvidence,progressToolIdentitySchema,type MemberToolName,type MemberToolOutputBinding} from '../src/logic/tasks/rules/member-tool-output';
+import {taskProgressSchema} from '../src/logic/evidence/rules/progress-schema';
+import {toolReceiptSchema} from '../src/logic/tools/rules/receipt-schema';
+import {checkedJsonToolResult} from '../src/logic/tools/rules/results';
+import type {TaskProgress} from '../src/logic/evidence/rules/progress';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
 
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},now='2026-11-07T00:00:00.000Z',hash='a'.repeat(64);
 const binding:MemberToolOutputBinding={...identity,teamId:'team',agentId:'agent',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',leaseEpoch:1,planRevision:1};

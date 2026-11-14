@@ -1,8 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import {preparedArtifactScopes} from '../src/backend/core/workspace/artifact-scope';
-import {verifyOutputManifests} from '../src/backend/core/evidence/output-manifest-evidence';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import {preparedArtifactScopes} from '../src/logic/workspace/rules/artifact-scope';
+import {verifyOutputManifests} from '../src/logic/evidence/rules/output-manifest-evidence';
 import {artifactRuntimeFixture,artifactBinding} from './artifact-runtime-fixture';
 
 export const manifestContracts:WorkflowContractBinding[]=[{moduleId:'.cbim/workspace/module',workflowId:'.cbim/workspace/module/workflow.md',workflowVersion:'workflow-one',contract:{version:1,artifactScope:{version:1,roots:[{path:'File.txt',kind:'file'},{path:'outputs',kind:'directory'}]}}}];

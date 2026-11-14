@@ -1,5 +1,5 @@
 import {crc32,deflateSync} from 'node:zlib';
-import type {PngImageSchema} from '../src/backend/core/workspace/png-validation-schema';
+import type {PngImageSchema} from '../src/logic/workspace/rules/png-validation-schema';
 
 export const pngSignature=Buffer.from([137,80,78,71,13,10,26,10]);
 export function pngChunk(type:string,body:Uint8Array){const chunk=Buffer.alloc(body.byteLength+12);chunk.writeUInt32BE(body.byteLength);chunk.write(type,4,4,'ascii');chunk.set(body,8);chunk.writeUInt32BE(crc32(chunk.subarray(4,chunk.length-4)),chunk.length-4);return chunk}

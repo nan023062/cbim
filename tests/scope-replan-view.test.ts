@@ -1,13 +1,13 @@
 import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ScopeReplanController,ScopeReplanPool,checkedReplanPreview,checkedReplanReceipt,replanRejected,REPLAN_INDEX_BYTE_LIMIT,type ReplanPorts,type ReplanTarget} from '../src/frontend/tasks/replan-state';
-import {replanTarget,type ScopeReplanView} from '../src/frontend/tasks/useScopeReplan';
-import {ScopeReplanForm} from '../src/frontend/tasks/ScopeReplanForm';
-import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
-import {SessionTaskView} from '../src/frontend/tasks/SessionTaskView';
+import {ScopeReplanController,ScopeReplanPool,checkedReplanPreview,checkedReplanReceipt,replanRejected,REPLAN_INDEX_BYTE_LIMIT,type ReplanPorts,type ReplanTarget} from '../src/view/tasks/replan-state';
+import {replanTarget,type ScopeReplanView} from '../src/view/tasks/useScopeReplan';
+import {ScopeReplanForm} from '../src/view/tasks/ScopeReplanForm';
+import {ScopeGoalPanel} from '../src/view/tasks/ScopeGoalPanel';
+import {SessionTaskView} from '../src/view/tasks/SessionTaskView';
 import type {ReplanPreview,ReplanRequest,ReplanReceipt,DispatchScope,ScopeSummary,GraphSnapshot} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},scopeId='inspection',time='2026-11-07T00:00:00.000Z',command='22222222-2222-4222-8222-222222222222';
 const target:ReplanTarget={...identity,inspectionScopeId:scopeId,anchor:'graph-8/scope-4/model',graphCursor:{streamId:'graph',seq:8},inspectionGoalRevision:3};

@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
 import {z} from 'zod';
-import {checkedJsonToolResult} from '../src/backend/core/tools/results';
-import {ToolRegistry} from '../src/backend/core/tools/registry';
-import {jsonValueSchema} from '../src/backend/core/knowledge/tool-output-base';
+import {checkedJsonToolResult} from '../src/logic/tools/rules/results';
+import {ToolRegistry} from '../src/logic/tools/rules/registry';
+import {jsonValueSchema} from '../src/logic/knowledge/rules/tool-output-base';
 
 it('领域值只序列化一次，验证并发送原wire而不再次触发toJSON',()=>{
   let count=0;const value={toJSON:()=>{count++;return count===1?{answer:'真实第一次快照'}:{answer:'不得发送的第二次值'}}};

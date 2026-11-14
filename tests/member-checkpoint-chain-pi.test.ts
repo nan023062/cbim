@@ -5,11 +5,11 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {memberCheckpointChainProvider,memberChainData as data} from './member-checkpoint-chain-provider';
 import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes} from './member-checkpoint-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {memberCheckpointView} from '../src/frontend/tasks/member-checkpoint-state';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {memberCheckpointView} from '../src/view/tasks/member-checkpoint-state';
 
 it.each(['complete','stop','abandon'] as const)('two durable checkpoints retain their chain through real Pi and restart (%s)',async mode=>{
   const f=await fixture(),provider=await memberCheckpointChainProvider(mode==='abandon');let app=f.app;

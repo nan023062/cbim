@@ -1,5 +1,5 @@
 import {afterEach,it,expect,vi} from 'vitest';
-import {releaseRequest} from '../src/backend/updater/release-http';
+import {releaseRequest} from '../src/logic/updates/service/release-http';
 const endpoint='https://api.github.com/repos/nan023062/cbim/releases?per_page=30&page=1';
 const options=()=>({method:'GET' as const,signal:new AbortController().signal});
 afterEach(()=>vi.unstubAllGlobals());

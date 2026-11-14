@@ -2,8 +2,8 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {LoopRuntime,checkedConversationAgentBinding,type AgentEngine,type EngineContext,type TaskSpec,type ConversationAgentBinding} from '../src/backend/core/execution';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {LoopRuntime,checkedConversationAgentBinding,type AgentEngine,type EngineContext,type TaskSpec,type ConversationAgentBinding} from '../src/logic/execution/rules';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 const binding=():ConversationAgentBinding=>({workspaceId:'workspace',teamId:'.cbim/team/team.md',agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'conversation-channel',rootSessionId:'main-session'});
 class Engine implements AgentEngine {

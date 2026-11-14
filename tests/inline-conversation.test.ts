@@ -1,15 +1,15 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {transcript} from '../src/frontend/execution-view/transcript';
-import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src/frontend/conversation/inline-task-state';
-import {ToolActivity} from '../src/frontend/tasks/ToolActivity';
-import {MemberActivityCard} from '../src/frontend/tasks/MemberActivity';
-import {WorkStatus} from '../src/frontend/execution-view/WorkStatus';
-import {ConversationTurn} from '../src/frontend/conversation/ConversationTurn';
+import {transcript} from '../src/view/execution-view/transcript';
+import {inlineDependencies,inlineDispatchedTask,inlineHandoffTasks} from '../src/view/conversation/inline-task-state';
+import {ToolActivity} from '../src/view/tasks/ToolActivity';
+import {MemberActivityCard} from '../src/view/tasks/MemberActivity';
+import {WorkStatus} from '../src/view/execution-view/WorkStatus';
+import {ConversationTurn} from '../src/view/conversation/ConversationTurn';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
-import {ToolTimeline} from '../src/frontend/execution-view/ToolTimeline';
+import {ToolTimeline} from '../src/view/execution-view/ToolTimeline';
 
 it('失败轨道显示核实建议，熔断提示不输出 undefined，也不提供重试动作',()=>{
  const run=structuredClone(inlineMainRuns(2)[0]);

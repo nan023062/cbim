@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {ScopeGoalPanel} from '../src/frontend/tasks/ScopeGoalPanel';
-import {ScopeActiveInputs} from '../src/frontend/tasks/ScopeActiveInputs';
-import {summarizeScope} from '../src/backend/core/tasks/scope-view';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
+import {SessionReadProjection,scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {ScopeGoalPanel} from '../src/view/tasks/ScopeGoalPanel';
+import {ScopeActiveInputs} from '../src/view/tasks/ScopeActiveInputs';
+import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import type {ScopeActiveInput,DispatchScope,DispatchSessionRead,GraphEventBatch} from '../src/bridge/contracts/dispatch';
 
 const time='2026-11-07T12:00:00.000Z',identity={workspaceId:'workspace',rootSessionId:'root'},streamId='scopes:graph';

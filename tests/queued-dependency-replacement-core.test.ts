@@ -1,13 +1,13 @@
 import {expect,it} from 'vitest';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {validateGraph} from '../src/backend/core/tasks/graph-rules';
-import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-invariants';
-import {queuedDependencyReplacementSelection} from '../src/backend/core/tasks/queued-dependency-replacement-rules';
-import {validateQueuedDependencyReplacement} from '../src/backend/core/tasks/queued-dependency-replacement-invariants';
-import {dependencyReplacementSchema,replaceQueuedDependencyInputSchema,type DependencyReplacement,type ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {AgentRef,GraphEdge,GraphEventBatch,TaskNode} from '../src/backend/core/tasks/graph-types';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {validateGraph} from '../src/logic/tasks/rules/graph-rules';
+import {validateDispatchExecution} from '../src/logic/tasks/rules/dispatch-invariants';
+import {queuedDependencyReplacementSelection} from '../src/logic/tasks/rules/queued-dependency-replacement-rules';
+import {validateQueuedDependencyReplacement} from '../src/logic/tasks/rules/queued-dependency-replacement-invariants';
+import {dependencyReplacementSchema,replaceQueuedDependencyInputSchema,type DependencyReplacement,type ReplaceQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import type {DispatchMutation,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {AgentRef,GraphEdge,GraphEventBatch,TaskNode} from '../src/logic/tasks/rules/graph-types';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},scopeId='scope',stamp='2026-11-07T00:00:00.000Z',later='2026-11-07T00:00:01.000Z';
 const main:AgentRef={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主调度'};

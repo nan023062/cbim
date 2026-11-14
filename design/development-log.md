@@ -1,3 +1,453 @@
+## 2026-11-14：公开 0.1.16 前补齐真实旧版资源升级前置
+
+- 用户已明确授权公开发布、自动升级与差分下载验收，沿用已确认的未签名候选。建立 develop → master PR #72，原草稿、四附件和冻结源码保持不变；未纳入无关开放 Issue #65。
+- 核对真实 `desktop-v0.1.15` 的 RuntimeUpdates：客户端优先同 C 的资源更新，公开 R4 尚未应用时不会直接选择新 C。原安装验收器只等待目标 C 就绪，会把正常 R4 就绪误判为版本错误。修正验收输入与脚本，真实等待旧版 R4、验证普通退出不应用、点击旧版侧栏就绪入口、观察同一安装路径新进程并核对已激活 R4，之后由原定时器发现 C 0.1.16。只读观察，不改下载源、激活日志或缓存。
+- 中间跳转严格固定已核实的 C 0.1.15/R4，拒绝未知 R、跨 C、降级/重放、错误 tag、非 ready 和错误快照；资源就绪不计为安装器就绪。继续核同一用户目录、唯一已完成模型请求、冷包实际 Range、无全量回退、缓存摘要、普通退出及 UI 重启安装。R 的真实执行结果将在公开升级报告中记录，不将脚本准备视为已通过。
+- 按实际影响选择 `pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs`：57/57；`node --check scripts/desktop-release-acceptance.mjs` 通过；测试导入变化后 `pnpm check:test-modules`：494 文件通过。未改产品或构建输入，不重打包；`src/` 无变化，不涉及产品注释与类图。PR 使用新 head 重跑完整检查后再公开。
+
+## 2026-11-14：0.1.16 在线模型、候选安装与完整 CI 验收通过
+
+- 沿用户确认的 Windows 未签名方式完成候选，R 清单继续使用原 Ed25519 身份。[完整记录](verification/desktop-acceptance-0.1.16-20261114.md) 保存制品摘要、来源、实际命令、失败与修复以及验证边界。冻结源码 `b21a77ec23f17089a80ec738bbe365f9c56e71d5`，候选 `unsigned-20261114-094902-d205c3b0`，安装器 SHA-256 `4ca66fdb13118b67c6e2f08891b9204fc854dc6dabfb2609c09fa182b670ef39`。
+- `pnpm make:desktop --unsigned` 和固定公开 E 字节的 `verify-cold-payload --published-engines` 通过。实际打包 EXE 完成 DeepSeek `deepseek-flash` 在线主/成员派发、两话题排队、候选审阅、同一逻辑子会话与不同原生上下文隔离；六项执行隔离通过。重开同一隔离 profile 没有新运行，办公室当前任务 0、历史 2，头顶入口返回原成员结果。证据入口见报告；生产工作区与已安装程序未被替换。
+- [候选安装 43543271035](https://github.com/nan023062/cbim/actions/runs/43543271035) 通过：干净 Windows runner 全新安装，真实 C 0.1.15/R1 → C 0.1.16/R1 覆盖升级；原会话/工作区/模型/知识/业务文件/主 Agent 设置/自动化全部保留、无重放，实际 NotSigned，固定 Pi 下载 15338 文件通过。模式为 candidate，不将自动发现、差分下载或公开 UI 重启安装计为通过。
+- 验证提交 `cfb30c776a2bd84aa72b1172a29b675f29db4188` 的 [完整 CI 43545100842](https://github.com/nan023062/cbim/actions/runs/43545100842) 通过：494 文件、3354 通过、0 失败、2 项原有历史 EXE 前置条件跳过，类型/架构/模块边界/官网及四片覆盖汇总通过。与冻结候选之间仅测试、夹具和记录差异，没有产品/构建输入变化；无需重新生成已验证制品。先前取消与失败运行保留，不复用为通过证据。
+- 本次收尾仅回填报告和开发记录，不修改 `src/`，没有注释/契约/类图变化；不重复产品测试。自包含 HTML 内嵌真实截图，核对 320px 浅色/深色无溢出。草稿 Release `444935258` 的四附件保持冻结身份；master、公开 0.1.15 通道、旧 Python latest 与官网不变。本轮没有公开、合并或安装到用户生产环境。
+
+## 2026-11-14：候选全量 CI 发现的测试契约与派发夹具修正
+
+- 冻结制品 `b21a77ec23f17089a80ec738bbe365f9c56e71d5` 的完整 CI [43543016620](https://github.com/nan023062/cbim/actions/runs/43543016620) 已结束：静态检查、第 2/4 片通过，第 1/3 片共 9 项失败。本步核对实际 Conversation 管理器、View 输入状态、派发原文及原始 HTTP 记录，未修改产品源码、构建输入、依赖或签名制品。开放 Issue 仍仅 #65；不把本轮候选验收作为其已修复证据。
+- 7 项旧测试断言未跟随办公室设计更新：`starting` 回调明确传递队列话题标识及可选关联话题；普通新任务在在线等待期间为 pending，重启后为 paused；等待期间普通输入仍排队，显式补充沿独立话题入口。修正三个测试文件，增加队列原 ID 传入回调、重启暂停及禁止继续等待队列的断言；租约释放、不可变历史、去重和停止边界保留。
+- 另 2 项真实 Pi 依赖修订测试本地复现。确定性供应商从全部上下文匹配第一个任务名，误将系统提供的前置 A 证据当成当前 D 派发，读取了 A；产品正确拒绝无效候选，随后脚本主轮过早宣称完成。夹具现在从真实用户轮的完整派发原文精确选任务，仍通过真实 read/计划/候选审阅与目标审阅。修复后 A/B/C/D 各自返回对应文件标记；没有绕过依赖审阅、延长超时或改调度状态。
+- 因失败分别属于管理器协作契约、输入状态及真实 Pi 集成，选择 `pnpm exec vitest run tests/queued-task-cancel-pi.test.ts --reporter=json --outputFile=test-results/desktop-016-20261114/queued-task-cancel-local.json`：3/3；`pnpm exec vitest run tests/execution-collaboration.test.ts tests/queue-insertion-view.test.ts tests/queued-dependency-revision-pi.test.ts --reporter=json --outputFile=test-results/desktop-016-20261114/ci-regressions-after.json`：30/30。原失败报告和请求现场另存同目录；`pnpm check:test-modules`：494 文件（146 unit / 155 contract / 193 integration）通过。
+- 此提交只校正验收代码与记录，不影响已通过在线模型和隔离安装的冻结候选。接着对本提交运行完整 CI，结果独立回填；本步不将局部通过写成全仓或公开发布通过。`src/` 没有修改，不涉及产品注释或类图更新。
+
+## 2026-11-14：修复冷包中空目录与签名文件清单不一致
+
+- 首个候选冻结于 `a2fdce3a7f07083fbe7218ad449f38aec8c4dc4d`，目录 `build/desktop-release/0.1.16/unsigned-20261114-094417-9c19e1db`。R/E 制品验证和 NSIS 生成已完成，最终 `verify-cold-payload` 因“资源目录包含多余内容”失败；此候选不发布，回执与现场保留。
+- 实际比对发现 `design/skills/` 迁出后留下多个空目录，`collectResources` 递归复制目录，但签名清单及 ZIP 只登记文件，因此冷包携带了无法由文件清单证明存在的目录。修复 [runtime-packaging.ts](../scripts/runtime-packaging.ts)，仅在新建的资源制品边界内移除空目录，拒绝链接、不改源码目录，不放宽启动器的严格校验。没有修改 `src/`、产品状态或类图。
+- `pnpm exec vitest run tests/runtime-packaging.test.ts`：3/3，新增回归覆盖多级空目录移除、声明文件字节保留、源码空目录保持原状及冷启动器不混入 R；选择该文件是因为修复属于资源收集和制品身份。导入变化后运行 `pnpm check:test-modules`：494 文件边界通过。完整 CI [43542347851](https://github.com/nan023062/cbim/actions/runs/43542347851) 针对首个冻结提交仍在执行，不能作为本次修复后的完整通过证据；重新冻结及打包后另核准确信息。
+
+## 2026-11-14：冻结 0.1.16 未签名安装候选输入
+
+- 沿用户已确认的未签名方式，版本提高到 0.1.16，补充 [版本说明](releases/desktop-v0.1.16.md)。当前公开桌面仍为 0.1.15；旧 Python latest 为 `327801733 / v1.0.2`。本步仅准备候选，公开通道、旧附件和官网不变。
+- 对照真实 `desktop-v0.1.15` 标签的更新入口与 RuntimeUpdates：安装器仍使用后台准备、显式重启交互，固定 C 的模型运行先准备签名 E 包。验收输入显式纳入 0.1.15；旧包缓存摘要、主 Agent 配置及自动化保留断言同步纳入，工作流描述同步。候选模式验证真实 C 0.1.15 内置 R1 → 新 C；未将其称为 R4 起点或公开在线升级通过。原客户端可能优先发现同 C 的资源更新，公开路径必须另外核对实际起点。
+- 选择 `pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs`，因为本步改变的是旧版输入白名单及原交互分类；46/46 通过，继续拒绝同版、降级、未验证的未来旧版及无效制品身份。测试归属、导入和产品源码均未改，不重复模块登记或产品类图生成。完整 Windows CI、准确候选打包及隔离安装结果在完成后追加，尚不据此宣称发布通过。
+
+## 2026-11-14：办公室真实在线模型与跨话题上下文验收
+
+- 用户直接要求继续在线模型和打包发布验收；本步使用 `d6d5db507df5fba398bf338e73c919add95323e9` 的产品源码，新增 [office-team-online-smoke.mts](../scripts/office-team-online-smoke.mts)。模型为本机已配置的 DeepSeek `deepseek-flash`，真实 Pi 引擎、真实 Electron 编译入口及后端；知识与岗位是隔离验收数据，模型响应不设替身。仅复制加密模型配置及系统加密元数据到临时 profile，结束删除副本，不操作生产工作区。
+- `pnpm exec tsx scripts/office-team-online-smoke.mts` 通过，耗时约 131 秒：主 Agent 真实派发两项只读文件核实任务，第一话题完成后队列自动建立第二话题；两个成员候选均 accept、两个目标均 completed。4 个主回合、2 个成员回合成功，页面错误为 0，两个独立标记分别来自成员实际读取。证据：`test-results/office-online-v2RDiK/report.json`、原始隔离运行日志及截图。不是打包 EXE 或安装器验收。
+- `pnpm exec tsx scripts/office-team-online-smoke.mts --verify-report test-results/office-online-v2RDiK/report.json` 通过；只读复核原事务和 Pi 原生记录，不新增付费请求。一个办公室中的同一角色仅一个逻辑 Session，两话题使用不同原生 Session，成员上下文包含各自文件标记且不含另一话题的结果。额外证据单独写入 `member-context-evidence.json`，原报告不覆盖。
+- `node scripts/check-dependencies.mjs`：1510 文件、7354 依赖、0 循环／违规；本步新增验收脚本的导入边界通过。没有改动产品源码、契约或类图，不重复产品单元测试；后续精确冻结版本的完整 CI 及安装升级验收分别记录。
+- 当前源码实际冷指纹 `c192e18fe4616db92dca948f4d279426313e73d150fb7e90eb7996037f5deac9` 与 C 0.1.15 基础不符，不能仅发布 R5；下一步准备 C 0.1.16 安装候选。用户已明确沿用 Windows 未签名模式，R 清单继续由原 Ed25519 身份签名；授权范围为候选验收，未公开发布、未合并或更新官网。
+
+## 2026-11-14：补齐办公室浅色／窄屏 Electron 桌面渲染验收
+
+- 用户直接要求推送最新提交并补齐剩余浅色／窄屏验收，无对应新增 Issue；核对当前 Issues 后不扩展到无关工单。产品源码基线 `fea0b8a5eecaa338c6a96af3d1e00655d664f6f7`，本次只修改验收脚本及记录，不修改 `src/`，也不把桌面渲染验收等同于完整程序或发布验收。
+- 新增 [office-team-desktop-smoke.mjs](../scripts/office-team-desktop-smoke.mjs)：使用 Electron 40.10.6、真实 React App 和既有公开 IPC 内存夹具，绑定 127.0.0.1，使用独立临时用户目录，退出时关闭测试 Electron 与 Vite。复用 [office-team-ui-fixture.tsx](../scripts/office-team-ui-fixture.tsx)，修正会话详情读取参数为公开协议的 `selectedScopeId`。不打开用户项目、不调用在线模型、不操作已安装 CBIM 或用户系统动画设置。
+- `node scripts/office-team-desktop-smoke.mjs`：16 项检查通过，进程退出码 0。核对每个逻辑 Agent 仅一个人物、默认历史折叠、真实新派发／汇报驱动两个人物往返、停止全部人物动态、展开撤销任务、成员原结果可见、成员普通输入仅向主 Session 排队、头顶主／子对话与原话题跳转、重复点击主会话回到对话、两个办公室身份和队列隔离、减少动画偏好分支。页面错误、夹具错误和意外 IPC 均为空；唯一执行类写入为内存 `loop.enqueue`，没有实际模型／项目写入。
+- 保存并逐张目视检查 7 张原生合成截图：浅色桌面 1280×1200，以及 320×900 浅色／深色各上中下三段。窄屏面板高 809px，滚动位置 0／433／865px，连续覆盖主工位、两个成员工位、当前任务与折叠历史；文字、人物、按钮均可辨认，文档、办公室及工位没有横向溢出。证据为本机 `test-results/office-desktop-NKPt1m/report.json` 与自包含 `report.html`（内嵌全部 PNG，未纳入 Git）。补齐了第 12 步未完成的浅色／窄屏目视检查和减少动画行为验证。
+- 验收工具问题及修正：最初 Electron 入口按绝对包路径引用导致取到二进制路径，改为生成入口中的 `require('electron')`；CDP 视口模拟与隐藏窗口合成尺寸不同导致截图超时，改为真实 BrowserWindow 内容尺寸及 `webContents.capturePage`；下段截图重复上段时发现滚动了内部展示节点，改为实际 `.session-task-panel` 并断言滚动距离和覆盖连续性。失败目录保留，不将这些工具失败或重复截图计为产品通过证据。
+- `node scripts/check-dependencies.mjs`：1509 文件、7348 依赖、0 循环／违规。`git diff --check` 通过。因只涉及验收工具与夹具，选择上述真实渲染流程验证，不重复产品单元、类型检查或架构生成；此前 12 步的结果保留为历史证据。本轮未执行全仓回归、完整打包后端、在线模型链、安装升级、合并或发布；远端 CI 另以实际运行结果为准。
+- Review 入口为本次三个文件的 diff：验收脚本 → 夹具协议修正 → 本记录；没有产品职责、状态归属或架构类图变化。按照本轮明确授权推送 `develop` 的原 12 个提交及本次验收提交，推送结果以远端分支回执及最终回复核对。
+
+## 2026-11-14：办公室改版第 12 步——人物工位、往返动态与双向导航
+
+- 基线 `28621d7b`。任务视图默认办公室，可切换原依赖图；每个正式逻辑 Agent 一个人物，显示当前模块/目标、真实状态与同角色待办。历史沿原完成/撤销规则折叠。新增派发驱动主 Agent 往返，候选、求助、检查点驱动成员汇报往返；首次进入、重复/旧图和隐藏期间不回放。关闭动态停止行走及工作摆动，系统减少动画同样保留文字状态和所有入口。模块工位键与主工位/休息区分开，允许业务模块同名。
+- 人物头顶入口返回对应主/子对话与原话题；修复侧栏重复点击相同 Agent 仍滞留任务视图的问题。主子会话和办公室共用 execution-view/team-conversations 投影；只迁移共享只读能力，不允许 Tasks 反向依赖 Conversation。用量折叠，办公室优先展示人物。各相关文件注释、四份 CONTRACT 及五个目录类图同步。
+- Q1 保护真实执行与历史归属，动画不能触发执行；Q2 共享身份投影归 execution-view，办公室状态/动作归 tasks，文字导航归 Conversation/Shell；Q3 本片只影响展示、图消费者、导航与依赖入口，选择对应单元/契约；Q4 teamConversations → officeScene / OfficeEventTracker → OfficeScene → Conversation → App；Q5 无新增通用治理规则。
+- `pnpm exec vitest run tests/office-scene.test.ts tests/task-history-view.test.ts tests/session-task-view.test.ts tests/scope-goal-view.test.ts tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/runtime-navigation.test.ts tests/chat-chrome.test.ts`：48/48；之后补充工位同名边界并关闭全部人物动态，精确重跑 `tests/office-scene.test.ts`：5/5。首轮旧依赖图断言因默认展示变化失败，改核办公室中全部当前节点，独立依赖图的连线断言保留。
+- `pnpm typecheck`、`pnpm check:architecture`（751 代码/样式、1508 文件、0 类图差异/循环/违规）、`pnpm check:test-modules`（494 文件：unit 146 / contract 155 / integration 193）通过。首次依赖检查指出 Tasks 引用 Conversation 及夹具绝对导入，迁移共用投影、修正路径后通过；精确登记共享入口和 Dispatch 类型契约，没有放宽目录限制。`tests/dependencies.test.ts -t 'snapshot contracts and domain views reject reverse or private dependencies without a file cycle|View and Logic can only meet through public Bridge contracts'`：2 通过，149 未选择。最后 `node scripts/source-architecture.mjs --check`：0 差异。
+- 实机渲染验收使用 `node scripts/office-team-ui-preview.mjs` + Cindy 管理的 Chrome，只连接 127.0.0.1，真实 React App 与公开 IPC 形状的内存夹具，不启动模型、不触碰用户工作区。核对两办公室独立人物身份、默认历史折叠、主/成员头顶跳转、侧栏重复点击返回、成员普通输入的 loop.enqueue.taskId=root、只浏览零执行请求。新增派发/汇报各一个人物，测得途中位移 (-269.25,342)/(269.25,-342)，终点均回 (0,0)，轮询不重放；后台定时采样超时后改用页面内动画关键帧测量，不把采样超时当业务失败。关闭动态后行走及工作摆动节点为 0，对话按钮仍有 3 个。
+- Chrome 最小窗口内宽 500，因此使用同源嵌入页获得真实 320px viewport：文档宽/scrollWidth 均 320，办公室 281/281，工位 257/257，无横向溢出；页面 errors/unexpected IPC 均为空。深色截图已目视检查。浅色/深色真实计算样式分别白底深字/深底浅字；截图接口中途返回 CHROME_OPERATION_FAILED，未将浅色和窄屏截图目视验收报告为通过。减少动画系统偏好分支做代码核对，未改变用户系统设置。
+- 本设计的会话身份、话题/排队、上下文、整话题补充、历史关联和办公室场景已完成本轮代码实现；逐片验证不等于全量回归或发布。真实主/成员模型链的本地确定性 Pi 集成见第 6/7/8/11 步；本片未跑在线模型、完整桌面程序、打包/安装升级、全仓回归或 CI，未推送、合并或发布。
+
+## 2026-11-14：办公室改版第 11 步——主 Agent 的按话题归档读取
+
+- 基线 `908a5d8d`。新增只读 `cbim_office_history`，主 Session → 话题 → 原内容引用，按需读取原目标/输入/补充、主轮、派发、成员公开对话及回传。正文沿 canonical 保存，不复制存储或按时间猜归属；长公开消息可完整分块，续页须核原版本。主工具绑定原办公室，成员 Loop 不提供归档入口；公开白名单继续隐藏内部提示词、原生信息及工具私有正文。
+- Q1 保护归属、真实发送者、子上下文隔离及原日志；Q2 协议归 Tasks rules，读取归 Tasks runtime，工具只适配和核回包，Dispatch 装配现有存储端口；Q3 选择新服务/工具、调度工具消费者、真实 Pi 主/成员链；Q4 OfficeHistoryService → OfficeHistoryTools → 主 DispatchTools，mainInstructions 说明读取及历史授权边界；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/office-history-service.test.ts tests/office-history-tools.test.ts tests/dispatch-tools.test.ts tests/auto-collaboration.test.ts tests/loop-engine.test.ts`：82/82。`tests/office-history-pi.test.ts`：1/1，真实 Application/Pi 在关联新话题调用归档并读到原用户输入，原话题保持结束；`tests/application-member-pi.test.ts tests/agent-role-instructions.test.ts`：11/11，真实成员请求不含归档工具且保持跨话题上下文隔离，均使用本机确定性供应商。
+- 首轮类型检查发现测试夹具使用不存在的 team 模式，模块检查发现服务单元直接校验另一模块 Schema；改为真实成员模式并将契约断言留给工具测试，精确重跑服务 4/4。最终 `pnpm typecheck`、`pnpm check:test-modules`（493 文件）与 `pnpm check:architecture`（748 代码/样式、1503 文件、0 差异/循环/违规）通过；公开入口精确登记，边界测试 12 通过/139 未选择。
+- 同步五个目录说明和类图；未跑全仓、真实桌面/在线模型、构建或发布。办公室人物/工位场景继续实施。
+
+## 2026-11-14：办公室改版第 10 步——历史话题的关联新任务
+
+- 基线 `7c2db3b8`。历史话题按钮只设置明确可撤销的来源，用户发送后建立独立排队身份。followupOf 随编辑/重启及新周期保存；入队和建周期均核同办公室、已关闭来源，提交/重放拒绝改绑；旧单轮插入不能消费该任务。原话题保持结束，后续不继承旧验收，话题内可返回查看原话题。
+- Q1 保护旧话题关闭事实、正文与队列安全暂停；Q2 队列携带来源、派发事务核验、View 选择关联，公开投影保留真实引用；Q3 选择队列/真实管理器、协调器、持久事务、话题展示与联合读取；Q4 enqueue → MessageQueue → starting/openScope → followupOf → ConversationTopics；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/message-queue.test.ts tests/dispatch-scope.test.ts tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/conversation-topics.test.ts tests/dispatch-session-read.test.ts tests/scope-goal-view.test.ts`：132/132 通过。类型检查发现测试事务命令夹带未定义字段，修正并增强原生插入拒绝覆盖；精确重跑 `tests/queue-insertion-boundary.test.ts tests/dispatch-scope.test.ts -t '历史后续|关联新话题'`：2 通过、35 未选择。最终 `pnpm typecheck` 和 `pnpm check:architecture`（0 文档差异/循环/违规）通过。
+- 同步七个目录契约、注释与类图。没有测试归属/导入变化，不重跑模块归属检查；未运行全仓、桌面、在线模型、构建或发布。主 Agent 归档读取核查及办公室场景继续实施。
+
+## 2026-11-14：办公室改版第 9 步——主子对话的明确话题补充入口
+
+- 基线 `1608019f`。主/子对话选择同一话题后可明确暂停并补充，独立于普通聊天草稿。原请求先本地保存再发送；重开只查回执，未知结果冻结正文、权限和命令，只有明确点击才重试。普通等待保留原表单，已有 interruptionId 的等待只能沿原请求。话题摘要区分正在排空和可靠暂停，联合投影拒绝不一致详情。
+- Q1 保护发送幂等、话题身份和用户原文；Q2 View 控制本地请求和选择，暂停事实仍归后端；Q3 覆盖控制器、联合投影、普通等待和主子话题展示；Q4 `TopicInterruptionController` → `TopicInterruptionForm` → `Conversation`；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/topic-interruption-view.test.ts tests/scope-continuation-view.test.ts tests/scope-goal-view.test.ts tests/team-conversation-view.test.ts tests/conversation-topics.test.ts`：59/59 通过。首轮类型检查发现测试直接 map(JSON.parse) 的签名不符，改为显式回调；最终 `pnpm typecheck`、`pnpm check:architecture`（745 代码/样式、1497 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（490 文件）和 `git diff --check` 通过。
+- 同步 conversation、tasks、bridge/contracts 的注释/契约和类图，以及 View 上层实际依赖。未跑全仓、真实桌面/在线模型、构建或发布；后续继续关联话题、完整归档核查及办公室场景。
+
+## 2026-11-14：办公室改版第 8 步——安全等待后继续普通话题队列
+
+- 基线 `7154236d`。安全话题等待现在只保留办公室占位，不把普通排队项批量改成持久暂停；文本/人工接续不再改写队列。原话题完成后启动队首 pending，并沿原队列 ID 创建新话题。用户停止、未知结果、重启和既有 paused 队首仍需明确继续，不被自动放行。补充表单同步纠正旧提示，明确普通发送创建新任务。
+- Q1 保护队列顺序、持久暂停与重启屏障；Q2 运行管理器控制推进，协调器区分正常等待和异常暂停，View 只说明入口；Q3 覆盖文本与人工接续、协调器和原插入/取消消费者；Q4 `holdCollaboration` → 接续 beforeRun → `collaborationReady/pump`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/scope-continuation-pi.test.ts tests/human-continuation-pi.test.ts tests/auto-collaboration.test.ts tests/queue-insertion-boundary.test.ts`：96/96 通过。新增 live-queue 实际 Pi 用例验证等待不抢跑、当前完成后自动启动下一话题及稳定 ID；原重启、再次等待、取消竞争和人工决定用例保留并核验 paused 语义。`pnpm typecheck`、`pnpm check:architecture`（0 文档差异/循环/违规）通过；本片没有测试归属或导入变化，不重复测试归属检查。
+- 同步 conversation/runtime、dispatch/runtime、view/tasks 的源码说明、CONTRACT 和类图。仅本地确定性供应商集成与相关单元/契约验证，未跑全仓、桌面、构建、安装升级或发布。话题内打断表单、关联后续话题与办公室可视化仍继续实施。
+
+## 2026-11-14：办公室改版第 7 步——指定话题补充的持久意图与整组排空
+
+- 基线 `4522455b`。新增 `loop.topicInterrupt`：按原办公室/话题/输入版本保存原文、附件和选型，冻结旧调度，停止主轮及原话题全部成员，等待在途工具、领取、引擎退出和结算，再建立带 interruptionId 的可靠等待。复用原接续事务提升输入版本、清除旧审阅并迫使重规划。普通发送和原生 steer 不成为此入口；本片是后端闭环，界面按钮与队列自动衔接另片接入。
+- Q1 保护原话题归属、执行租约、未知结果、人工审批和额度；Q2 Tasks 保存请求/检查点，Dispatch 协调排空，Conversation 管理原主轮和幂等启动，Runtime 仅额外允许可靠 cancelled 主轮的专用接续；Q3 选取持久化/重放、真实协调器、主运行管理器、成员领取、IPC 和 Pi 集成；Q4 `topic-interruption` → `TopicInterruptionService` → `AutoCollaboration.interruptTopic` → `WorkspaceExecutionManager.interruptTopic/continueGoal`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/topic-interruption-service.test.ts tests/scope-continuation.test.ts tests/scope-active-input.test.ts tests/dispatch-session-read.test.ts tests/queue-insertion-boundary.test.ts`：实际选中 4 文件/40 项通过；其中 scope-active-input.test.ts 路径不存在，随后用正确的 scope-active-input-core.test.ts 验证，未将空选择算作通过。`pnpm exec vitest run tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/scope-active-input-core.test.ts tests/ipc-requests.test.ts`：113/113 通过。
+- `pnpm exec vitest run tests/topic-interruption-pi.test.ts`：1/1，通过真实 Pi/IPC/事务链取消旧主轮、同话题新输入重新规划及审阅，成员候选未重放；使用本地确定性供应商，不代表在线模型验收。`pnpm exec vitest run tests/member-execution.test.ts tests/dispatch-execution-store.test.ts tests/topic-interruption-service.test.ts tests/ipc-requests.test.ts`：50/50 通过。新增取消竞争、未知退出重启封存、已消费补充重查不能冻结新轮，分别选择 queue-insertion-boundary 的“整话题”2 项、topic-interruption-service 的“未知主轮”1 项、auto-collaboration 的“话题补充”2 项通过。
+- 类型检查初次发现两个事务回调未返回 Promise 和两个测试类型问题，修复后 `pnpm typecheck` 通过。架构检查指出新增服务和 IPC 契约未登记，补充精确入口而未放宽目录规则；`tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`：12 通过/139 未选择。最终 `pnpm check:architecture`（743 代码/样式、1494 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（489 文件）通过。后续幂等分支补充已过专用测试；类图再次生成无差异。
+- 同步九个目录源码说明、CONTRACT 和类图。可靠等待重启保留；未能确认排空的意图按现有恢复规则封存为 interrupted，保留原补充供核实，不自动重放。界面入口、已结束话题的关联后续、普通排队的自动衔接和办公室场景仍未在本片完成。未运行全仓回归、桌面冒烟、构建、安装升级或发布；仅独立本地保存。
+
+## 2026-11-14：办公室改版第 6 步——成员当前话题上下文隔离
+
+- 基线 `99356503`。成员每轮冻结办公室、逻辑 Session、话题和输入版本，以及同角色同话题的历史候选引用；提示词只解析原引用，拒绝身份或版本漂移。新补充优先进入有界上下文，明确遗漏数量，原归档不截断。跨话题前置任务在派发和运行事务两处拒绝；不同任务保留独立原生通道，长期逻辑会话不会带入其它话题的原生历史。
+- Q1 保护租约、检查点与原生通道身份；Q2 引用契约和纯解析归 Tasks，领取归 Team，装配归 Application；Q3 选取上下文、派发持久事务、实际成员领取和 Pi 装配消费者；Q4 `member-topic-context` → `member-topic-context-rules` → `MemberExecutionManager` → `member-dispatch`；Q5 无新增通用规范。主会话完整归档和整话题打断仍需后续切片。
+- `pnpm exec vitest run tests/member-topic-context.test.ts tests/member-execution-context.test.ts tests/member-execution.test.ts tests/dispatch-execution-store.test.ts tests/dispatch-scope.test.ts`：49/49 通过。补充最新输入优先与真实请求断言后，`pnpm exec vitest run tests/member-topic-context.test.ts tests/application-member-pi.test.ts tests/member-checkpoint-domain.test.ts`：12/12 通过，实际 Pi 第二话题请求不含第一话题正文；`tests/dispatch-scope.test.ts -t '新话题拒绝'`：1 通过、9 未选择。
+- 首轮架构检查发现引用类型经解析逻辑回到运行记录的类型环，已拆分纯契约与算法并登记两个细粒度公开入口。修复后 `tests/member-topic-context.test.ts tests/dispatch-execution-store.test.ts`：14/14；`tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`：9 通过、139 未选择。最终 `pnpm typecheck`、`pnpm check:architecture`（741 代码/样式、1490 文件、0 文档差异/循环/违规）、`pnpm check:test-modules`（487 文件）和 `git diff --check` 通过。
+- 同步五个受影响目录的源码说明、CONTRACT 和类图。未运行全仓回归、桌面冒烟、构建、安装升级或发布；实际 Pi 集成使用本地受控服务，不代表在线模型验收。独立本地保存。
+
+## 2026-11-14：办公室改版第 5 步——普通输入排队与话题身份衔接
+
+- 基线 `3d126a9e`。普通输入在开放/等待话题期间均入队，不再自动转为等待目标的补充；补充保留目标内的明确独立表单。移除界面 Ctrl+Enter/队列项的单轮原生 steer，避免把它误认为整话题暂停；底层旧协议及回归覆盖保留，整话题插入另行实施。
+- 排队项 ID 经可信管理器启动钩子作为实际 scopeId，编辑和排序不更换身份；主列表展示排队话题，实际话题出现后去掉过渡重复项。新主题在原主 Session 延续，结果回注仍归原周期；空主列表不再展示最近已关闭目标的展开控制。
+- Q1 保护原队列、停止、未知输入和重启暂停门禁；Q2 View 只决定明确入口，Logic 维持可信身份与启动；Q3 选择等待输入、话题投影、真实管理器/原插入边界、协调器、独立补充表单消费者；Q4 阅读 `conversationExecutionState` → `Conversation.send` → `pump/launch` → `AutoCollaboration.starting`；Q5 无新增通用规范。
+- `pnpm exec vitest run tests/conversation-waiting.test.ts tests/conversation-topics.test.ts tests/queue-insertion-boundary.test.ts tests/auto-collaboration.test.ts tests/scope-continuation-view.test.ts`：115/115 通过；`pnpm typecheck`、`pnpm check:architecture`（739 代码/样式、0 文档差异/循环/违规）通过。`git diff --check` 初次发现空行尾空格，清理后通过。同步 3 个目录 CONTRACT、类图与源码说明。
+- 当前持久等待/异常/重启仍保留原队列暂停规则；本片未宣称整话题暂停、后续自动排队恢复或场景完成。未跑全仓回归、真实桌面/模型联调、构建/发布；独立本地保存。
+
+## 2026-11-14：办公室改版第 4 步——子 Session 导航与成员对话
+
+- 基线 `402369d3`，延续全部需求实施授权。Bridge 公开纯逻辑对话身份；View 联合投影验证办公室、唯一角色/Session 和不可改绑，全部分页追齐后发布。外壳按工作区实例/主根缓存成员导航，主会话保持可见，子角色按名称折叠，只提供查看入口。
+- 成员页面按话题、派发任务、执行轮次读取真实公开事件；同角色多执行实例合为一个入口，显示主 Agent 派发、成员正文、工具与回传候选。只挂载当前轮读取，切换身份丢弃迟到响应。输入仍经外层原主 `taskId`，不会直接发给成员；本片未实现显式整话题暂停，也未增加伪造的旧逻辑 Session。
+- Q1 保留原执行通道、日志与工具事实；Q2 成员导航属于 View，长期身份由 Logic 原事务提供；Q3 选择联合投影、角色聚合、子对话 SSR、原侧栏与页签消费者；Q4 阅读 `SessionReadProjection` → `teamConversations` → `WorkspaceList/ConversationEntries` → `MemberConversation`；Q5 无新增通用规则。
+- `pnpm exec vitest run tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/scope-goal-view.test.ts tests/chat-chrome.test.ts tests/conversation-tabs.test.ts`：26/26 通过。`pnpm typecheck`、`pnpm check:architecture`（739 代码/样式，0 文档差异/循环/违规）、`pnpm check:test-modules`（486 文件）及 `git diff --check` 通过。同步 bridge/contracts、view/conversation、view/tasks、view/shell 的源码说明、CONTRACT 和类图。
+- 未运行全仓回归、真实桌面/引擎联调、构建或发布；仅本地独立保存。完整需求仍包括排队/话题插入、上下文与办公室可视化后续切片。
+
+## 2026-11-14：办公室改版第 3 步——主会话话题列表
+
+- 延续完整设计的分步实施授权，基线 `9f07dc86`。周期摘要提供有界持久主运行身份；主对话按原周期归类，列表展示摘要，打开后展示原正文和工具；完成/撤销折叠到历史，失败/中断保留可见。旧无明确身份及冲突归属进入未分类，不按时间推测。
+- Q1 保留原日志、工具证据、目标控制与任务定位；Q2 展示归类归 View，身份由原 Logic 周期投影提供，不新增正文存储；Q3 选择话题纯投影/SSR、联合读取和原目标视图消费者；Q4 阅读 `scope-view.summarizeScope` → `conversationTopics` → `ConversationTopics` → `Conversation`；Q5 无新增通用规范。这里只交付话题阅读，输入排队/整话题打断、子对话及办公室场景未在本片完成。
+- `pnpm exec vitest run tests/conversation-topics.test.ts tests/dispatch-session-read.test.ts tests/scope-goal-view.test.ts`：29/29 通过，覆盖迟到反馈、跨办公室隔离、混合来源拒绝、历史折叠和正文范围。`pnpm typecheck`、`pnpm check:architecture`（737 代码/样式、0 文档差异、0 循环/违规）、`pnpm check:test-modules`（484 文件）及 `git diff --check` 通过。
+- 同步 tasks/rules 和 view/conversation 的源码说明、CONTRACT 与类图。未运行全仓回归、真实桌面/引擎联调、构建或发布；此为独立本地提交，不代表全部需求完成。
+
+## 2026-11-14：办公室改版第 2 步——同一 Agent 串行、不同 Agent 继续调度
+
+- 延续同一用户授权，基线 `5a77d57c`。先将 [设计第 2 片](task/team-office-topics.md) 的执行槽独立交付，话题队列身份和上下文组装仍是后续切片，未冒充一起完成。
+- `teamSessionBusy` 以真实 starting/running 及办公室/角色判定占用。`MemberExecutionManager` 在领取前返回 `TEAM_SESSION_BUSY`，不创建运行或引擎；`dispatch-invariants` 再核验新领取事务，不能换执行实例绕过串行。同角色不同办公室不互相占槽；已结算与旧无逻辑登记历史沿原规则。
+- `AutoCollaboration` 遇同角色占用继续寻找其它角色的可执行任务；本批尚有此等待时不提前汇总回传。等待释放仍来自原运行真实结算，停止请求不能自行释放名额。
+- 选取规则单元、实际运行入口、持久事务及自动调度消费者：`pnpm exec vitest run tests/team-session.test.ts tests/dispatch-execution-store.test.ts tests/member-execution.test.ts tests/auto-collaboration.test.ts`，89/89 通过。覆盖 starting 阻塞、直接事务绕过被拒、结算后启动下一项、重放和其他角色不被队首等待阻塞。`pnpm typecheck` 通过。四个相关目录的 CONTRACT、类图与重要源码说明同步。
+- Q1 保留执行占用、原生历史、检查点和真实结算；Q2 逻辑对话串行归 Team 规则，领取与调度分别消费；Q3 验证只覆盖上述变化链；Q4 从 `teamSessionBusy` → 成员领取 → 持久不变量 → 自动调度异常分支阅读；Q5 无新增通用规则。未运行全仓回归、真实桌面/引擎联调、构建或发布；本片本地保存，不代表整套办公室设计完成。
+- `pnpm check:architecture` 通过：128 目录、734 代码/样式、0 文档差异、0 循环/违规；`pnpm check:test-modules` 通过：483 文件，139 unit / 154 contract / 190 integration；`git diff --check` 通过。
+
+## 2026-11-14：办公室改版第 1 步——长期团队对话身份
+
+- 来源：用户直接授权按办公室/话题设计分步实施、测试和保存；基线 `8f743f51`，初始干净。开放 Issue 仅 #65，与此次改版无关，不修改无关工单。方案及 C3/L3 影响边界见 [办公室设计](task/team-office-topics.md)，本文记录已实施切片，不是另建待办。
+- `TeamSession` 作为主/子 Agent 共用的长期逻辑身份，以工作区、主 Session、Agent 唯一登记。主根、主对话绑定、成员登记与派发在原事务保存/复用它；任务/周期关闭不删除。执行租约、原生通道、权限、检查点与验收仍沿原任务保存，不批量合并或改写旧历史。
+- `FileDispatchStore` 在原 fsync/重放屏障校验登记；拒绝重复、改绑、跨工作区及未登记角色。联合读取只返回所选办公室的身份；旧日志缺省保留。新增纯规则细粒度公开入口，Logic 状态归属不变，不新增 Bridge/View 业务状态源。
+- 验证选择：纯规则覆盖唯一性、幂等与隔离；真实 Store 覆盖原子失败及重放；已有派发/关闭/主绑定与联合读取覆盖直接消费者。执行 `pnpm exec vitest run tests/team-session.test.ts tests/dispatch-store.test.ts tests/dispatch-scope.test.ts tests/dispatch-session-read.test.ts tests/conversation-identity.test.ts`，首次 34 通过、1 个旧响应形状断言失败；补充新增字段的明确断言后只重跑 `pnpm exec vitest run tests/dispatch-session-read.test.ts`，7/7 通过，所选 35 个行为用例最终通过。
+- `pnpm typecheck` 通过。首次依赖检查发现新细粒度入口未登记；登记 `team-session.ts` 后 `pnpm check:architecture` 通过：128 目录、734 代码/样式、0 文档差异、0 循环/违规。`pnpm check:test-modules` 通过：483 文件，139 unit / 154 contract / 190 integration。公开入口变更额外执行 `pnpm exec vitest run tests/dependencies.test.ts -t 'domain migration preserves rule/service boundaries'`，7/7 通过，其他 139 用例未选取。
+- 同步 6 个受影响目录的 CONTRACT/ARCHITECTURE、源码定位/字段说明；`node scripts/source-architecture.mjs` 生成资料，`git diff --check` 通过。未运行全仓回归、桌面场景验收、构建、安装或发布；尚未宣称侧栏、话题插入、上下文组装或办公室画面完成。
+- Q1 保护原任务执行与恢复不变量；Q2 将长期对话身份限制在 Team 规则与原调度事务；Q3 验证选择依据及失败修复如上；Q4 从 `team-session.ts` → `prepareMember` → `WorkspaceDispatchService` → `FileDispatchStore.sessionRead` 阅读，测试按同一顺序；Q5 无新增通用规则。切片独立本地提交，未人工 review、未 push/合并/发布。
+
+## 2026-11-14：四层迁移后的全仓文档校正
+
+- 来源：用户明确要求修正所有文档；基线 `af218b19`，开始时工作区干净。查询开放 Issues 仅有 #65，与本轮文档校正无直接对应，不修改工单。覆盖全仓已维护 Markdown、源码契约/类图、README、概念/运行/发布说明、测试说明和三宿主开发 Skill；历史报告保留原日期、统计和范围，旧源码链接更新为当前导航并注明不等于历史证据，未留存的临时源码或本机制品不伪造归档。
+- 对照当前目录、导入和消费者修正模型/主 Agent 设置/预算、共享锁与错误入口、知识查询与刷新、Logic 业务规则和 Bridge 公开契约等归属。连接服务中混合的网页、反馈、仓库和静态包说明分归各自实际模块，新增 `src/logic/resources/packages/CONTRACT.md`。四层设计改为当前结构及保留边界，不再把早期分片状态当作待迁移现状；保留仍在使用的具名重导出及未实现的泛化恢复草案。
+- 补充 CONTRACT 与生成 ARCHITECTURE 的维护关系，修正测试模块命令、运行说明中的旧源码位置，以及主会话权限/成员执行概述与实际装配不符的表述。两处 usage 文件头仅改职责说明；`scripts/source-architecture.mjs` 只修目录描述，生成算法未改。类型/导入、业务逻辑、测试断言和依赖许可均未修改。
+- 实际验证：`node scripts/source-architecture.mjs` 更新后，`node scripts/source-architecture.mjs --check` 返回 128 目录、733 代码/样式、0 份生成差异。本机一次性 Markdown 审核覆盖 505 份文档：相对文件链接、章节/显式锚点、9 类 builtin 引用与三宿主 Skill 一致性通过；修正前 197 处本地文件引用无对应目标，修正后为 0。builtin 引用以 `logic/knowledge/rules/builtins.ts` 白名单核实，没有当成磁盘路径删除。
+- 命令示例检查：`pnpm test:module --module core/platform/node/files --list`、`pnpm test:module --module logic/web/service --list`、`pnpm test:module --module logic/web/service --kind contract --list` 均选中实际用例；只列出而未运行测试。两处注释文件经 TypeScript AST 去注释比较与基线实现一致；生成器 `const norm` 起的全部算法文本与基线一致。`git diff --check` 通过。审核结果保存在忽略目录 `test-results/docs-integrity.json`，不作为新开发清单。
+- 本轮为文档、注释和生成说明维护，未运行产品测试、类型检查、构建或全量回归；前一轮 CI 仍只证明其原验证提交。61 份受影响架构文档同步；记录与文档独立本地提交，未 push、未合并或发布。维护者可从 README、`src/CONTRACT.md` 和 `src/logic/BOUNDARIES.md` 查看当前结构，再下钻具体模块；本次静态校正不声称完成全部业务行为或历史报告的逐条重新验收。
+
+## 2026-11-14：四层迁移推送与全量回归
+
+- 来源：用户明确要求推送这批迁移提交并执行一次全量回归；延续本会话已授权迁移，无对应迁移 Issue，不扩展到开放的 #65。工作区干净，远端无分歧，将 `de333bf0..eaa85d9d` 共 10 笔提交推送至 `origin/develop`，本地与远端 SHA 均核实为 `eaa85d9d4ef5637608ae50d7af226c4ffa80da01`。
+- 命令：`git push origin develop`；`gh workflow run validate.yml --ref develop -f scope=full`。运行 [Validate CBIM #43458901536](https://github.com/nan023062/cbim/actions/runs/43458901536)，验证提交为上述 `eaa85d9d`，最终结论 success。
+- 四片 Windows 完整执行当前发现的 482 个测试文件：第 1 片 120 文件 / 961 通过；第 2 片 121 文件 / 741 通过；第 3 片 121 文件 / 837 通过 / 1 跳过；第 4 片 120 文件 / 744 通过 / 1 跳过。合计 **3283 通过、0 失败、2 跳过**。两项跳过来自 `owner-execution-legacy.test.ts` 和 `knowledge-source-lifecycle-application.test.ts` 的既有条件：CI 没有对应历史 EXE，不代表这两项历史制品兼容验收通过。
+- CI 中 `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules`、官网构建及浏览器检查全部通过。四片分别执行 `pnpm exec vitest run --shard=<1–4>/4 --reporter=default --reporter=json --outputFile=test-results/pr-full-suite.json`，最终汇总验证实际发现、分配与执行全集一致，无遗漏或重复。
+- 下载全部四片报告到本地忽略目录 `test-results/migration-full-43458901536/windows-validation-<1–4>/`，执行 `node scripts/ci-test-coverage.mjs test-results/migration-full-43458901536` 再核对，返回 482 文件 / 3283 通过 / 0 失败 / 2 跳过，发现集摘要 `8ec9b4032222d8b1ecf3bcb32e4bbd4ab48627298b9f5cf801458fcceaec6fc3`。远端报告由该运行的 artifacts 留存。
+- 本次没有产品代码修复；验证记录单独提交。全量回归已完成，未合并到 master、未执行桌面打包或安装升级验收、未发布；保留旧空目录的环境策略限制不影响干净 CI 检出。
+
+## 2026-11-13：连续迁移第五批／View 与四层规则收尾
+
+- 用户授权连续完成所有迁移，基线 8aa3533c。原 frontend 源码、样式和入口迁入 src/view；182 个受影响源码 AST 比对无实现差异。Core、Logic、Bridge、View 均已落地，旧 backend/frontend/foundations 源码层级不再获准，新旧路径不保留无消费者转发。
+- 正式依赖矩阵只保留四层及平台/通信子边界；旧层即使没有导入也拒绝。保留领域规则禁向运行服务、只有 execution/assembly 选择引擎、更新与冷壳的窄依赖、浏览器环境及私有入口限制。模块单元仍不加载完整 Application；源路径扫描、测试夹具和 UI 冒烟脚本的旧引用一并修正，未删除原覆盖。
+- pnpm exec vitest run tests/brain-status.test.ts tests/conversation-activity.test.ts tests/thread-recovery-notice.test.ts tests/usage.test.ts tests/conversation.test.ts tests/knowledge-tool-view.test.ts tests/markdown.test.ts tests/run-view.test.ts tests/governance-feedback-view.test.ts tests/governance-origin-view.test.ts tests/governance-pending.test.ts tests/knowledge-file-tree.test.ts tests/static-owners.test.ts tests/repository-connection-state.test.ts tests/resource-application.test.ts tests/budget-settings-view.test.ts tests/conversation-tabs.test.ts tests/runtime-navigation.test.ts tests/tabs.test.ts tests/artifact-report-view.test.ts tests/candidate-review.test.ts tests/command-verification-view.test.ts tests/continuation-source-view.test.ts tests/controlled-file-view.test.ts tests/effect-observation-view.test.ts tests/execution-recovery-repeat.test.ts tests/execution-report-view.test.ts tests/member-cancellation-view.test.ts tests/member-checkpoint-view.test.ts tests/member-dependency-addition-view.test.ts tests/member-dependency-revision-view.test.ts tests/member-dependency-view.test.ts tests/member-help-view.test.ts tests/output-manifest-view.test.ts tests/scope-budget-view.test.ts tests/scope-continuation-view.test.ts tests/scope-replan-view.test.ts tests/scope-usage-view.test.ts tests/session-task-view.test.ts tests/task-graph-layout.test.ts tests/task-history-view.test.ts tests/agent-history-view.test.ts tests/team-model.test.ts tests/workspace-member-view.test.ts tests/update-button-state.test.ts tests/module-ownership-view.test.ts tests/unit/frontend/foundations/utility/async.test.ts tests/unit/frontend/foundations/utility/events.test.ts tests/unit/frontend/foundations/utility/graphs.test.ts tests/unit/frontend/foundations/utility/json.test.ts tests/unit/frontend/foundations/utility/storage.test.ts tests/ipc-browser.test.ts tests/ipc-preload.test.ts tests/ipc-desktop.test.ts tests/provider-connections.test.ts --reporter=default：55 文件/342 项通过。包含迁移视图模块单元与浏览器/preload/桌面桥接直接契约。tests/dependencies.test.ts 的 144 项、tests/layer-boundaries.test.ts 的 2 项、tests/test-modules.test.ts 的 10 项通过；新增旧层禁用回归，过时模拟路径迁到实际职责位置。
+- 最终路径消费者补验：pnpm exec vitest run tests/core-layer-contracts.test.ts tests/source-architecture.test.ts tests/test-modules.test.ts tests/agent-history-ipc.test.ts --reporter=default。修正规则入口目录匹配后 core-layer-contracts 单独重跑 2 项通过，其余 18 项通过；去重后本片 61 文件/508 项不同用例通过。原断言仍覆盖无环、跨层、完整应用夹具、类图漂移和全部实际 IPC 操作映射。
+- pnpm typecheck、pnpm check:architecture（128 目录/733 代码样式，1477 文件/7208 依赖，0 环/违规）、pnpm check:test-modules（482 测试文件，138 unit/154 contract/190 integration）通过。所有源码文档链接及三宿主工作流镜像一致。pnpm exec vite build --config vite.renderer.config.ts --outDir test-results/four-layer-view 通过，保留大于 500 kB 的既有 bundle 提示；这只是渲染构建，不是桌面打包或安装验收。
+- 同步 src/CONTRACT、Logic 边界与生命周期、Bridge/View 契约、目录类图、四层设计和 AGENTS/三套 AI 工作流。Q1 既有交互与状态；Q2 业务/通信/视图与平台分离；Q3 模块及真实边界验证；Q4 从 src/ARCHITECTURE.md 下钻；Q5 环境执行策略拒绝删除磁盘上的旧空目录（递归与仅删空目录方案均拒绝），保留为空，Git 已删除全部旧源码且不跟踪空目录。
+- 五个独立本地迁移提交完成。未 push、未合并、未发布，未运行全仓 CI、完整桌面或安装升级验收；留后续集成阶段。迁移没有拆开原共享事务，也不把目录收敛或文件无环描述成全部业务耦合已消除。
+
+## 2026-11-13：连续迁移第四批／业务服务、更新与宿主桥接
+
+- 用户已授权连续完成迁移，基线 a54a7c06。94 个旧 Main/Updater/Bootstrap 源文件迁入各领域 service/storage/platform、Logic Application 与 Bridge/server。系统加密归 Core Electron，旧锁转发删除，仍使用唯一 KernelLock。旧 backend 已无维护源码。
+- Application 的状态、构造及全部生命周期实现经 AST 去除 imports/dispatch/接口声明后与原版一致。Bridge 适配器继承业务实例且只补充 dispatch；不覆盖业务方法、不复制状态。其余语法差异仅两个文件的类型导入拆分/别名；附件、工作区、包结果和更新类型归业务，Bridge 具名转接，业务到 Bridge 的反向依赖清零。
+- 保留原权限、事务、共享账本、未知结果、取消和排空；引擎选择、冷壳可见范围、规则到服务与服务到 Application 方向分别检查。实际跨模块公开入口单独登记。终端与预算设置单元归属随真实职责拆开，原集成覆盖保留。构建输入路径与固定输出文件名对应关系已核对，未运行制品或升级验收。
+- pnpm typecheck、pnpm check:architecture（128 目录/733 源码样式，1477 文件/7208 依赖，0 环/违规）、pnpm check:test-modules（482 文件）通过。tests/dependencies.test.ts、tests/layer-boundaries.test.ts、tests/test-modules.test.ts 合计 153 项不同用例通过；迁移时修正模拟输入的相对路径，保留禁向、私有入口和完整应用夹具断言。新增 6 项宿主/生命周期边界回归。
+- pnpm exec vitest run tests/command-evidence-store.test.ts tests/ipc-requests.test.ts tests/native-session-files.test.ts tests/artifact-files.test.ts tests/controlled-namespace-platform.test.ts tests/png-artifact-files.test.ts tests/scoped-execution-platform.test.ts tests/isolated-node.test.ts tests/desktop-updates.test.ts tests/nsis-differential-download.test.ts tests/nsis-updater.test.ts tests/release-http.test.ts tests/update-restart-profile.test.ts tests/terminal.test.ts tests/budget-settings.test.ts tests/dispatch-store.test.ts tests/request-budget-ports.test.ts tests/run-journal-integrity.test.ts tests/agent-history-assembly.test.ts tests/controlled-file-service.test.ts tests/isolated-executions.test.ts tests/runtime-manifest.test.ts tests/runtime-journal.test.ts tests/runtime-store.test.ts tests/runtime-updates.test.ts tests/application-runtime.test.ts tests/chat-inputs.test.ts tests/workspace-packages.test.ts tests/ipc-desktop.test.ts tests/workspace.test.ts tests/knowledge-source-lifecycle-fault.test.ts --reporter=default：31 文件/215 项通过。覆盖受影响模块单元及工作区、知识事务故障、IPC、受控文件、派发存储和更新恢复实际协作；不是全仓回归。测试合计 34 文件/368 项。
+- 注释、类图、业务契约与调度说明、四层设计、三宿主工作流同步；孤立旧目录契约已归回所属模块。Q1 原事实与关闭顺序；Q2 业务生命周期与消息路由拆开；Q3 模块及直接协作验证；Q4 Logic/BOUNDARIES、Application 与 Bridge/server 类图；Q5 无。未运行全仓、完整桌面、构建或安装升级。下一片迁移 View 并清理过渡边界，当前仅本地提交。
+
+## 2026-11-13: Logic execution and orchestration migration
+
+- Authorized sequential four-layer migration; baseline 02ec6db1. Moved 95 engine/orchestration files into their Logic domains. 110 affected source files compared by TypeScript AST: no implementation differences after import/comment normalization. Kept native protocol, durable identity, permission, recovery, cancellation and build output semantics.
+- Registered actual public entry files; only execution/assembly selects concrete engines. Rules cannot depend on runtime services. Updated consumers, build/test paths, module ownership, comments, diagrams, contracts and all three workflow entries.
+- pnpm typecheck; pnpm check:architecture (1472 files, 7202 edges, zero cycles/violations); pnpm check:test-modules (482 suites) passed. Boundary regression: tests/dependencies.test.ts + tests/layer-boundaries.test.ts = 137 passed; tests/test-modules.test.ts = 10 passed. Repaired two stale fixture paths and generated the missing new directory diagrams; original restrictions retained.
+- pnpm exec vitest run tests/native-tool-paths.test.ts tests/claude-engine.test.ts tests/codex-engine.test.ts tests/codex-tools.test.ts tests/codex-write-recovery.test.ts tests/engine-inactivity-pi.test.ts tests/model-request-budget-bootstrap.test.ts tests/pi-cancellation.test.ts tests/pi-rpc.test.ts tests/pi-tool-catalog.test.ts tests/model-request-budget-usage.test.ts tests/scope-usage-service.test.ts tests/main-history-context.test.ts tests/message-queue.test.ts tests/questions.test.ts tests/global-runtime.test.ts tests/public-run-events.test.ts tests/candidate-review-tools.test.ts tests/coordination-schema.test.ts tests/web-tools.test.ts tests/engine-runtime-binding.test.ts tests/engine-runtime-loader.test.ts tests/engine-inactivity.test.ts tests/run-admission.test.ts tests/automation-scheduler.test.ts tests/execution-collaboration.test.ts tests/goal-repair.test.ts tests/member-failure-limit.test.ts tests/command-verification-service.test.ts tests/agent-history-store.test.ts tests/member-events.test.ts tests/dispatch-tools.test.ts tests/github-feedback-tools.test.ts tests/question-tools.test.ts --reporter=default: 34 files, 203 passed. Selected migrated modules and direct orchestration contracts, including actual CLI cancellation/protocol fixtures. No full suite, packaging or desktop upgrade run.
+- Q1 unchanged state and runtime facts; Q2 domain scheduling vs engine selection; Q3 module and direct contract verification; Q4 src/logic/SCHEDULING.md and domain diagrams; Q5 none. This slice is a local commit; remaining services/Bridge/View continue next.
+
+## 2026-11-13：连续迁移第二批／领域规则与端口
+
+- 来源为用户已授权的四层迁移，基线 d1c57e71。旧 backend/core 的 219 个文件迁移：领域规则归 logic/<业务>/rules，身份及工作区路径归业务 ports；严格 JSON 错误适配、hash/json 兼容函数归 Core，旧 Fault 转发删除，消费者使用同一构造器。408 个受影响源码经 TypeScript AST 规范化比对，除模块路径与注释外无实现差异。
+- 保护既有事务、权限、幂等、未知结果及恢复语义；不聚合领域总 barrel，保留实际跨领域消费者使用的 197 个细粒度入口。原私有读模型、存储端口和运行环境限制继续有效，新增未登记入口、规则反向服务依赖回归。领域聚合仍有协作关系，不以文件无环宣称完成全部解耦。
+- 同步消费者、测试登记、检查器所有权、源码注释、118 份目录类图及相关契约、四层说明和三宿主工作流。pnpm typecheck、pnpm check:architecture（1471 文件/7201 依赖，0 环/违规）、pnpm check:test-modules（482 测试文件）通过。原模拟路径导致的 9 个边界失败已修复，未删除断言。
+- pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot：132 项通过；新增边界用例单独 -t 'domain migration'：5 项通过、130 项未选中；tests/test-modules.test.ts 前次 10 项通过。业务验证选择迁移领域自身单元及其直接协作契约：pnpm exec vitest run tests/connector-registry.test.ts tests/task-progress.test.ts tests/engine-session.test.ts tests/runtime-usage.test.ts tests/governance-feedback-wire.test.ts tests/module-governance-core.test.ts tests/module-governance-feedback-core.test.ts tests/knowledge-queries.test.ts tests/core-domains.test.ts tests/effect-observation-core.test.ts tests/human-continuation-core.test.ts tests/human-decisions-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-dependency-revision-core.test.ts tests/scope-active-input-core.test.ts tests/tool-registry.test.ts tests/workflow-contract.test.ts tests/scope-usage-metering.test.ts tests/knowledge-query-ports.test.ts tests/rules.test.ts tests/dispatch-graph.test.ts tests/engine-tools.test.ts tests/engine-capabilities.test.ts tests/controlled-file-core.test.ts tests/owner-execution-core.test.ts tests/workspace-member-core.test.ts tests/execution-scope.test.ts tests/repository-tool-core.test.ts --reporter=default，28 文件/220 项通过。合计 31 文件/367 项不同用例通过。
+- Q1 状态与实现保持；Q2 规则和服务边界保留；Q3 模块单元及直接契约验证；Q4 logic 各业务 rules/ports 的类图为 review 入口；Q5 无。未运行全仓回归、打包、桌面和升级验证，留后续集成。后续继续有状态服务、调度、Bridge/View；本片独立本地提交，不代表全部迁移完成。
+
+## 2026-11-13：连续迁移第一批／资源仓库
+
+- 用户授权依次完成剩余四层迁移；基线 650c186e，初始干净，开放 Issue 仅无关 #65。C3/L3。先迁边界已闭合的 LocalRepository、RemoteRepository、ResourceRepositories 到 logic/resources/service；Bridge 的纯资源定义归 logic/resources，包/知识事务仍待其依赖闭合后迁移。ResourceRepositoryPaths 仅注入三个目录属性，替代对 Main Paths 的类型依赖；既有 Paths 结构兼容。
+- 保持原 CAS、锁名、摘要、文件格式、取消、只读共享代际与未知写结果；Logic 不依赖 Main 或 Bridge。新增公开入口与精确迁移许可，调用方及原 HTTP 子进程测试入口同步。源码注释、类图、契约、四层设计与三宿主工作流同步。
+- 类型及架构、测试归属检查通过：105 目录/730 源码样式，1471 文件/7201 依赖，0 环/违规；482 测试文件（138 unit、154 contract、190 integration）。命令：pnpm typecheck、pnpm check:architecture、pnpm check:test-modules。
+- `pnpm exec vitest run tests/resource-store.test.ts tests/resource-repository.test.ts tests/repository-connection-http.test.ts tests/repository-connection-service.test.ts tests/repository-tools.test.ts tests/chat-material-imports.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`：9 文件/180 项通过；`pnpm exec vitest run tests/utility-body-consumers.test.ts -t repository --reporter=default`：2 项通过、9 项按选择器未运行。合计 10 文件/182 项，覆盖本模块 CAS、共享/授权/资料消费者、真实网络取消及修改过的检测规则，不运行无关全仓。
+- Q1 原身份/版本/权限与提交语义；Q2 仓库服务与知识包事务分别定位；Q3 单元与实际协作验证保留；Q4 logic/resources 的纯入口和 service 契约；Q5 无。回退单位为此片全部路径、消费者与规则。仅本地提交；后续继续领域、调度、Bridge/View 与旧入口清理，不将本片视为全部完成。
+
+## 2026-11-13：Logic 第三步／反馈服务
+
+- 来源：用户明确授权迁移反馈服务并运行反馈模块测试；基线 ac62d9d3，初始工作区干净。开放 Issues 查询仅 #65，与本次目录迁移无关，未写入无关工单。C3/L3；阅读反馈输入、授权、账本、HTTP、工具策略、Main/IPC 装配和原生锁实际依赖，本片不包含资源或模块治理反馈业务迁移。
+- 反馈纯契约迁到 src/logic/feedback/index.ts，GitHubFeedback/GitHubFeedbackAuth 及传输迁到 service；宿主只通过 service/index.ts 装配。githubFeedbackScopeSchema 的唯一实现归反馈领域，旧工具范围组合并兼容重导出它，避免 Logic 依赖旧工具。Bridge 仅具名转接配置 Schema 和公开连接状态，不能导出提交端口、凭据或服务；旧调度/Core 仅获准纯入口。HTTP 文件独立登记逻辑边界与测试责任。
+- KernelLock 实现迁到 src/core/platform/node/locking.ts；旧 Main/platform/locking.ts 仍有工作区、资源、执行消费者，保留同一构造器的兼容重导出，共享原进程内 held 集合。Windows/POSIX 实现、锁名、scope、错误及关闭语义未重写。反馈直接组合 Core 的 SecretCipher、Fault、摘要、文件和锁，不依赖模型业务或旧 Main。原配置、指纹、先保存 sending 再 POST、结果未知禁止重发及原目标核实保持，不修改用户数据。
+- 测试拆分：纯字段/正文/范围、授权状态和 HTTP 各自单元登记；授权单元直接构造 Auth，使用请求、加密、锁替身与临时文件。提交契约保留真实 Auth/文件/原生锁，原 pending 下不得装配提交端口的断言仍在契约中。新增原生锁集成验证旧新入口同构造器、互斥与释放；工作区跨进程锁及真实 Pi 调用链另选原集成用例，没有以替身删除真实边界覆盖。
+- 首轮依赖检查拦下遗漏的旧范围导入造成的循环，以及 HTTP 测试直达未公开文件；模块选择器据此拒绝执行，没有回退全仓。补齐范围归属、独立 HTTP 边界后依赖通过。该循环亦曾使工具回执类型推断失败；修复后仅剩新增测试联合类型未收窄，补充 kind 检查后类型通过，并补跑该测试 3 项通过。产品实现未因测试作行为改写。
+- 模块测试：`pnpm test:module --module logic/feedback`（1 文件/3 项）、`pnpm test:module --module logic/feedback/service`（1 文件/9 项）、`pnpm test:module --module logic/feedback/http`（1 文件/1 项）通过。选择依据是纯业务协议、独立授权状态与有界传输责任。
+- 直接相关边界：`pnpm exec vitest run tests/github-feedback.test.ts tests/github-feedback-tools.test.ts tests/github-feedback-status.test.ts tests/kernel-lock.test.ts tests/ipc-requests.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`，8 文件/187 项通过。`pnpm exec vitest run tests/utility-body-consumers.test.ts -t github --reporter=dot`，2 项通过、9 项未选择；`pnpm exec vitest run tests/workspace.test.ts -t '目录别名与跨进程工程互斥' --reporter=dot`，1 项通过、9 项未选择。`pnpm exec vitest run tests/github-feedback-pi.test.ts tests/github-feedback-lifecycle-pi.test.ts --reporter=dot`，2 文件/5 项通过，使用真实本地 Pi 路径及测试 HTTP，不访问在线 GitHub。合计 15 个文件、208 个不同用例通过，18 项选择器排除不计通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 最终通过：103 目录/727 源码样式，1467 扫描文件/7190 依赖/0 环与违规；481 测试文件（137 unit、154 contract、190 integration）。15 个原源码实现去除导入/重导出/注释及单独核对的范围声明后语法一致；范围字段与约束逐项保持，锁与异常使用同一实现。
+- Vite 自带 esbuild 对反馈纯入口和桥配置入口做 browser/esm/write:false 打包，12/13 个输入，无服务/平台输入；宿主服务做 node/esm、external koffi、write:false 构建，28 个输入。没有生成发布制品。同步源码注释、受影响类图/契约、四层设计、AGENTS 和三宿主工作流，旧 feedback 目录及无消费者协议文件删除，保留仍使用中的 scope/locking 兼容出口。
+- Q1 保持授权代际、加密、锁、发送屏障和回执归属；Q2 反馈字段与格式归纯契约、登录与账本归业务服务、原生互斥归 Core；Q3 按纯行为、直接消费者、真实平台和 Pi 链路验证；Q4 logic/feedback/CONTRACT.md → service/CONTRACT.md → auth/提交/HTTP，对应修改各自责任测试；Q5 无新增自动治理。回退单位为本片目录、规则、消费者与测试的完整提交；保留人工 review。未运行全量回归、在线 OAuth/真实 Issue 提交、完整桌面制品或发布验收；本轮仅本地提交，不 push、合并或发布。
+
+## 2026-11-13：Logic 第二批第一片／Web 服务
+
+- 来源：用户明确授权迁移 Web 服务并运行 Web 模块测试；基线 03abb281，初始工作区干净。开放 Issues 仅 #65，与本片无关，未修改无关工单。C3/L3；范围为网页协议、服务、配置及其技术基础和消费者，不包含反馈及资源业务迁移。
+- `src/logic/web/index.ts` 公开纯业务契约，`service/index.ts` 公开 WebService/WebSettings。便携协议及正文转换迁入 Core web，HTTP/代理/页面读取进入 Core platform/node/web，Electron 读取器单独装配。旧 Web 目录及转发入口删除；SecretCipher 提升为 Core 契约，models/ports 保留同名类型重导出兼容原消费者。文件格式、策略缺省、凭据保存、缓存及错误语义不变，不改写用户数据。
+- 迁移例外限定为公开入口：旧 Core/Main/调度只按规则访问 Web 纯契约，Main 与桥服务访问 service/index.ts，Electron 读取器仅由桌面 main.ts 装配。bridge/contracts/web.ts 只具名导出 webConfigureInput/WebSettingsView；拒绝星号、服务、凭据及私有文件穿透，前端与桥客户端仍禁止平台实现。WebService 增加可选第五个读取端口参数，原四参和默认真实读取器不变，使业务适配单元独立于 Core 读取实现。
+- 测试按责任拆分：原 robots/缓存/重定向等用例移入 web-page-reader，正文转换移入 web-content；真实 HTTP 取消/限额移入 web-http-transport，与真实代理一同明确登记为 integration。web-browser-fallback 保留真实读取器和服务的 contract 覆盖。服务单元增加策略捕获、取消信号、untrusted 标记、非法输入拒绝和原始失败透传；设置单元保持临时目录及加密替身。原断言保留，无跨测试套件导入，归属同步 tests/modules.json。
+- 验证选择为迁移模块、Web IPC/工具消费者和修改过的边界检查器。`pnpm test:module --module logic/web/service`：2 文件/7 项通过。`pnpm exec vitest run tests/web-content.test.ts tests/web-foundations.test.ts tests/web-page-reader.test.ts tests/web-browser-fallback.test.ts tests/web-browser-proxy.test.ts tests/web-http-transport.test.ts tests/web-tools.test.ts tests/web-settings-ipc.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`：11 文件/177 项通过。合计 13 文件/184 项；未以全仓测试替代模块验证。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：102 目录/724 源码样式，1460 扫描文件/7176 依赖/0 环及违规；477 测试文件（134 unit、154 contract、189 integration）。迁移语法比较覆盖 18 个原有源码文件，除 WebService 的可选端口注入外，去除导入、重导出和注释后的实现一致。
+- 使用 Vite 自带 esbuild 做 browser/esm/write:false 打包：logic/web/index.ts、bridge/contracts/web.ts、core/web/index.ts 分别为 12/13/32 个输入，无服务或平台实现。Electron 测试夹具以 node/esm、external electron、write:false 构建通过（56 输入），未启动 Electron。同步文件头和接口注释、受影响类图、Core/Logic/旧目录契约、四层设计、AGENTS 及三个宿主工作流；末轮旧链接说明修正后重新生成类图，0 漂移。
+- Q1 保持抓取/robots/缓存/持久化原行为；Q2 业务配置归 Logic，读取机制按平台归 Core，资源生命周期不进入 UI；Q3 分开验证单元、跨模块兜底和真实网络边界；Q4 logic/web/CONTRACT.md → service，技术机制从 core/web 与 platform/node/web 下钻；Q5 无新增自动治理。回退单位为本片迁移、消费者、测试归属与边界规则的完整提交，保留人工 review。本轮不含 push、全量回归、真实网站、完整桌面运行或发布验收。
+
+## 2026-11-13：Logic 第一批／模型目录、供应商连接与选型
+
+- 来源：用户明确授权迁移第一批并运行模块测试；基线 aaa050df，初始工作区干净。开放 Issues 查询仅 #65，与本片无关，未修改无关工单或创建平行待办。C3/L3；沿模型设置、主 Agent 选型、岗位配置锁和执行快照核对真实消费者，未宣称全仓逐行审计。
+- 目录与规则迁到 src/logic/models，index.ts 为纯入口；LlmProfiles 迁入 service/llm-profiles.ts，经 service/index.ts 向宿主公开。两个边界分别登记，纯规则禁止导入服务、Node、Electron 或 SDK，Logic 不引用旧 backend、Bridge 或 View。旧 Main 的服务访问与旧 Core/引擎/调度的纯入口访问精确登记，没有开放整个 Logic。主 Agent 设置和逐请求预算仍留旧目录。
+- Node 单文件原语同步迁到 src/core/platform/node/files，真实消费者改为新入口，无旧 files 转发；通用 Fault/fail 位于 src/core/errors.ts，旧 errors.ts 仍被旧业务使用，作为同一构造器的兼容出口保留。服务只组合 Core 的文件、队列、错误与注入的加密端口；原文件格式、凭据保存条件、锁范围、延迟解密、运行快照及失败语义不变，不重写用户数据。
+- Bridge 配套限制：仅 bridge/contracts/models.ts 具名重导出纯模型规则，ipc-settings/model-actions 改经该契约使用 Schema。保留现有同步草稿预览及共同选型；检查拒绝星号、凭据类型和其他 Bridge 文件直接引入 Logic。此处为过渡债务，后续 DTO/预览迁移时连同真实消费者退出，未宣称 Bridge 已解耦。首轮类型检查发现漏导出 connectionSchema/definition，补齐原有校验契约后通过；首轮依赖检查发现服务穿透纯规则私有文件，改用 index.ts 后通过。
+- 测试责任调整：模型目录单元只验证 parseModelCatalog；原 Pi SDK 容量断言完整移入 model-capacity-sdk 契约。供应商无 UI 的 11 项断言移入独立模型单元，界面联合断言保留原契约；无跨套件导入或删除原覆盖。配置服务单元保留临时目录、加密替身、排队、锁内失效和错误验证；所有新增/移动归属同步 tests/modules.json。
+- 验证命令及选择依据：`pnpm test:module --module logic/models`，2 文件/12 项通过；`pnpm test:module --module logic/models/service`，2 文件/21 项通过。`pnpm exec vitest run tests/unit/foundations/files.test.ts tests/unit/core/errors.test.ts tests/engine-configuration.test.ts tests/provider-connections.test.ts tests/model-capacity-sdk.test.ts tests/main-agent-settings.test.ts tests/model-actions.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`，10 文件/126 项通过。选取依据为迁移基础机制、真实模型/界面/主 Agent/IPC 消费者及修改过的边界检查器；应用夹具仍按既有 integration 登记，未伪装成单元。合计 14 文件/159 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：98 目录/719 源码样式，1452 扫描文件/7162 依赖/0 环及违规，474 测试文件（133 unit、154 contract、187 integration）。规则新增纯入口/宿主入口、私有实现、反向依赖、运行环境和具名桥出口回归。
+- 迁移语法核对覆盖 62 个原有源码文件：61 个去除导入/重导出与注释后的语法一致，余下 auto-collaboration 仅改内联 import type 的路径，已核对完整 diff。原错误类/抛出实现保留，旧兼容出口指向同一构造器。用 Vite 自带 esbuild 对 logic/models/index.ts 和 bridge/contracts/models.ts 做 browser/esm/write:false 打包：分别 16/19 个输入、131704/132825 字节，无 service、平台或 Electron 输入，未写出构建制品。
+- 同步受影响源码注释、38 份生成类图、Core/Logic/旧模块契约、四层迁移设计、AGENTS 与三宿主工作流。9 份工作流一致；61 份受影响 Markdown 的 2039 个本地链接有效。Q1 保持选型优先级、原文件/快照及锁和失败语义；Q2 供应商变化归模型规则，存储/探测变化归服务，基础机制归 Core；Q3 用单模块行为、真实消费契约、静态边界及浏览器目标证明本片；Q4 models/CONTRACT.md → index.ts → provider-connections.ts 或 service/llm-profiles.ts；Q5 无新增自动治理规则。
+- 回退单位为本片目录、消费者、测试归属及边界规则的完整提交。保留人工 review；本轮不含 push、合并、全仓测试、完整桌面构建、在线供应商或发布验收。后续业务迁移不属于本次交付范围。
+
+## 2026-11-13：四层架构第一片／共享 Core 与依赖规则
+
+- 来源：用户确认 Core、Logic、Bridge、View 四层，要求先建立 Core 和规则、再逐步迁移，并提供具体目录与第一步清单。基线 8b1dfd4e，初始工作区干净；C3/L3。当前开放 #65 与本片无关，按用户直接授权实施，不更改无关工单。目标及分片规格在 design/four-layer-architecture.md，当前实现契约在 src；不建立另一份实时待办。
+- 第一片迁移原 backend/core/foundation/utility 的六个便携文件到 src/core/utility，Node SHA-256 单独迁入 src/core/platform/node/digest.ts。保留旧 hash/json/JSON Fault 业务适配，全部真实导入与测试同步，无旧路径转发。files/web、业务规则与存储暂留原位；旧 backend/core 不等同于新共享 Core，未将 Logic/View 的目标画成已全部迁移。Node 与便携测试分别归 core/platform/node、core/utility，原测试文件位置保持。
+- 第一条双端消费者：前端 equalJson 删除本地排序递归，组合共享 orderJsonValue，显式保留 localeCompare、undefined、数组/整数键/Unicode 同序及异常行为；后端原各类指纹策略保持。队列、请求关联、流与运行生命周期不变。对照 52 个受影响源码，导入与注释外仅前端这一适配变化，其余算法语法一致。
+- 依赖规则同时覆盖新目标层与旧迁移期边界：Core 不反向依赖业务、桥或视图；便携入口不引用平台；View 只使用桥客户端/契约及适用 Core；Bridge server 只能使用 Logic 各业务 index.ts，Logic 模块间同样不能穿透私有文件；旧引擎/调度/更新子系统不获得 Node/files/web 权限。Core 未登记模块拒绝，便携模块新文件也受第三方限制；View/前端/Bridge client/contracts 直接导入 node:、Node 内置或 Electron 同样拒绝。新增 29 条参数化/独立回归，包含类型依赖、公开/私有入口及运行环境；旧循环、别名、动态加载与模块测试边界回归保留。
+- 首轮命令：`pnpm exec vitest run tests/unit/foundations/utility tests/unit/frontend/foundations/utility/json.test.ts tests/workspace-member-view.test.ts tests/module-ownership-view.test.ts tests/scope-continuation-view.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/utility-json-contract.test.ts tests/utility-json-order-contract.test.ts tests/utility-serialization-contract.test.ts tests/utility-body-consumers.test.ts tests/utility-redaction-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=default`，26 文件/231 项通过。选取依据为迁移库、前端比较与五个直接控制器、后端共享机制契约及规则检查器。随后补齐新层的独立矩阵检查，单跑 layer-boundaries 两项通过；增加直接 Node/Electron 绕过回归后仅重跑 dependencies 与 test-modules，76 项通过，最终共 26 文件/235 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：95 目录/716 源码样式；1446 扫描文件/7151 依赖/0 环与违规；471 测试文件（131 unit、153 contract、187 integration）。通过 Vite 自带 esbuild 对 src/frontend/foundations/utility/json.ts 做 `bundle:true, platform:'browser', format:'esm', write:false, metafile:true` 的浏览器目标验证：9779 字节、13 输入，无 Node/Electron/平台输入。不是完整桌面构建。
+- 同步 Core/平台/前端适配及调用方注释、相关契约和类图、测试模块归属、AGENTS 与三宿主 AI 工作流。9 份工作流内容一致、66 处本地引用有效；首轮 48 份受影响/新增文档本地链接有效。Q1 原算法和消费者字节/失败语义；Q2 排序机制共享，业务/视图策略留本地；Q3 独立机制、实际消费者、层规则及浏览器目标验证；Q4 Core 契约→utility/index.ts 或 platform/node/digest.ts→equalJson/后端适配；Q5 无新增候选规则，四层及共享许可来自用户明确决策。
+- 回退单位是本片目录、调用方、测试与规则的完整提交。未运行全仓、完整桌面、在线供应商、网站读取或发布验收；不声称后续 Logic/Bridge/View 物理迁移已完成。该片独立本地提交，未 push、合并或发布，保留完整 diff 供人工 review。
+
+## 2026-11-13：后端公共库统一归入 Core/foundation
+
+- 来源：用户明确要求将顶层 foundations 合并到 backend/core/foundation；基线 de333bf0，工作区初始干净，C3/L3。已查询当前开放 Issues，仅 #65 与本目录迁移无关，本项按用户直接授权实施，不改写无关工单。目的为统一后端公共库位置，不宣称目录移动带来新的业务解耦或性能收益。
+- 将 utility/files/web 三个能力子目录及契约整体迁入，保留根层 Fault、safeId、StoragePaths 与 JSON/摘要兼容适配。原顶层目录退出，真实消费者、测试与桌面浏览器 fixture 直接使用新入口，无旧路径转发。前端公共库保持独立，仅更新其文档中的后端位置。测试模块 ID 及 tests/unit/foundations 测试路径保持兼容，modules.json 的源码归属同步迁移。
+- 依赖保持单向：根层适配 → utility；子库不得依赖根层约定、Core 业务或上层。检查器以独立逻辑层识别新物理位置，Core 的宽路径许可不覆盖技术子库，根层约定许可不递归包含子库；Engines/Scheduler/Updater 仍仅使用 utility 通用入口，Bridge 不取得技术子库权限。公开入口、Node/可移植/Electron 隔离及原测试支持边界保留。
+- 验证选取迁移的独立库、直接组合契约及被修改的检查器：`pnpm exec vitest run tests/unit/foundations tests/web-foundations.test.ts tests/web-browser-fallback.test.ts tests/web-browser-proxy.test.ts tests/web-service.test.ts tests/utility-json-contract.test.ts tests/utility-json-order-contract.test.ts tests/utility-serialization-contract.test.ts tests/utility-body-consumers.test.ts tests/utility-redaction-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/test-modules.test.ts --reporter=dot`。初轮 178 通过、2 条边界回归失败，证实原 Core 宽路径规则扩大了访问权；修正后仅重跑 `pnpm exec vitest run tests/dependencies.test.ts tests/test-modules.test.ts --reporter=default`，47/47 通过。合计 25 文件、180 项最终通过，新增父层反向依赖及 Updater/Bridge 权限回归，拒绝用无法解析的路径代替真实越界验证。
+- `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：92 目录、716 源码/样式文件；1446 扫描文件、7150 含类型依赖、0 环/违规；471 测试文件（131 unit、153 contract、187 integration）。按旧新路径映射比较 81 个受影响源码的去注释语法，导入外逻辑无差异；比较前统一工作树 CRLF 与 Git LF，避免模板字符串换行产生假阳性。三宿主 9 份工作流同内容，57 处本地引用有效；59 份受影响文档的本地链接有效。
+- 同步源码边界注释、能力契约、受影响目录及父层类图、架构生成器、依赖检查、AGENTS 与三宿主工作流。Q1 保持原算法、错误、I/O 和资源生命周期；Q2 此次只统一物理归属，业务策略仍留原消费者；Q3 路径迁移以类型/依赖/语法对照及入口回归验证；Q4 从 core/foundation/CONTRACT.md 下钻各子库，业务入口仍在 Main/Core/Engines；Q5 无新治理规则，沿用既有独立边界。回退应整体还原本提交的目录、消费者及规则，不单独恢复旧目录。
+- 未运行全仓、真实网站/Electron 冒烟、打包或发布验收，目录迁移未改变运行数据或产物入口；局部验证不代表这些阶段通过。代码与资料供人工 review，本步独立本地提交，未 push、合并或发布。
+
+## 2026-11-13：候选清单收尾六／后端图校验与本轮交付
+
+- 用户批量授权内最后一片，基线 7b009ac9，C3/L2。后端 graphs.ts 提供 isDirectedAcyclic，Core graph-rules 分别组合它检查派发/依赖图与等待图。节点/端点/父子身份、启用边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 原错误仍留在 Core；公共层不认识业务或前端。无环判断不是授权，重复节点/缺端点由领域先校验，公共入口也拒绝无效结构。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/graphs.test.ts tests/dispatch-graph.test.ts tests/checkpoint-handoff-core.test.ts tests/member-checkpoint-domain.test.ts tests/queued-dependency-addition-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/workflow-selection-core.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot：9 文件/97 项通过。独立算法覆盖空图、平行边、循环、非法端点、长链；领域测试覆盖图重放、防互等与依赖修订；新增私有类别进入检测清单并验证禁止直达。
+- pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过：93 目录/716 源码样式，1446 扫描文件/7150 含类型依赖，0 环/违规；471 测试文件（131 unit、153 contract、187 integration）。三宿主 9 份工作流同内容且 57 处本地引用有效；diff 空白检查通过。同步后端 utility/Core tasks 及前后端基础库汇总的五份类图、契约与注释，当前入口清单反映所有已交付类别。
+- Q1 原领域防环与错误顺序；Q2 边选择及业务资格变化局限 Core；Q3 独立算法、图消费者与边界回归；Q4 utility/graphs.ts→Core graph-rules.ts；Q5 无新规则，历史频率未知。未运行全仓、完整桌面、打包或发布验收，验证不替代人工 review。
+- 本轮原清单剩余六项均已交付：前端分层 d13f402d、本地记录 ffe8c058、后端 JSON 7711dead、脱敏 0fbd20af、RPC 7b009ac9、后端图校验本条。分别验证与提交，完整 review 范围 git diff 4a1b2858..HEAD；之前 JSON 比较/订阅/异步代次三项保持。领域状态机、手工序列化特殊协议、HTTP/进程关闭/日志事务等原明确保留范围没有机械统一。无外部 Issue 写入、push、合并或发布。
+
+## 2026-11-13：候选清单收尾五／后端 RPC 请求关联
+
+- 用户批量授权内，基线 0fbd20af，C3/L2。沿 Pi/Codex 的 register、回包、超时、fail、close 精读实际协议；共同 ID/回调/定时器下沉 async.ts 的 PendingRequests，实例独立，重复 ID 拒绝覆盖，take 清计时器并移除，rejectAll 支持固定错误或逐项错误工厂。
+- Pi 保留单请求超时后可继续、发送异常仍经原 Promise 构造器传播；Codex 保留整体失败/杀进程，close 仍等待进程与处理排空。自查发现关闭原本每请求独立 Error，已用工厂保留身份并补测试。集合不发请求、不重试、不宣称物理退出。
+- 初轮命令：pnpm exec vitest run tests/unit/foundations/utility/pending-requests.test.ts tests/utility-rpc-framing-contract.test.ts tests/pi-rpc.test.ts tests/codex-lifecycle.test.ts --reporter=dot，4 文件/16 项通过。错误工厂变更后，仅重跑前三者中的 pending-requests、utility-rpc-framing-contract 及 codex-lifecycle（3 文件/15 项通过）；加上未受影响且已通过的 Pi 两项，共 17 项。覆盖独立关联、重复/乱序回包、单项/整体超时、关闭及实际 Pi 子进程。
+- pnpm typecheck（工厂变更后复核）、pnpm check:architecture、pnpm check:test-modules 通过，0 环/违规；最终仅注释与契约汇总变更重新生成类图。utility、上层 foundations 及两个引擎四份类图、源码注释、契约与三宿主工作流同步。
+- Q1 原协议/时限/失败及错误身份；Q2 进程与业务策略在适配器；Q3 独立数据结构和真实协议契约；Q4 async.ts→两份 rpc.ts；Q5 无新规则。历史变化频率未知。未运行全量、供应商在线或发布验收；独立本地提交未推送，保留人工 review。
+
+## 2026-11-13：候选清单收尾四／后端字符串脱敏
+
+- 用户批量授权内，基线 7711dead，C3/L2。strings.ts 增加 redactLiteral，Pi/Claude/Codex 的原精确 split/join 替换共用实现；空凭据、非重叠、大小写和 JSON 编码顺序保持。Pi 仍只对 api-key 认证替换，Claude 无凭据保留事件引用。凭据发现与事件失败屏障不下沉。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/redaction.test.ts tests/utility-redaction-contract.test.ts tests/engine-inactivity.test.ts --reporter=dot：3 文件/17 项通过；独立字符串单元、三引擎适配契约及既有事件/异常生命周期。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 全通过，0 环/违规。
+- utility/pi/claude/codex 四份类图与契约、源码注释、三宿主工作流同步。Q1 原精确替换；Q2 凭据策略仍在引擎；Q3 算法及适配契约；Q4 strings.ts→各 engine 的 redact/emit；Q5 无新规则。历史频率未知，不声称此函数能识别编码或变形凭据。未运行原生供应商、全仓、桌面或发布验收；本地独立提交未推送。
+
+## 2026-11-13：候选清单收尾三／后端 JSON 复用
+
+- 用户批量授权内，基线 ffe8c058，C3/L2。五处同义递归排序改为已有 orderJsonValue：岗位、来源、负责人绑定、人工决定依据、调度执行上下文。字符序与各自 undefined 规则显式保留，不改变输入、JSON 字节或领域指纹字段；手工拼接协议和排序后读取属性的不同实现保留。
+- 调度层仅开放 utility/index.ts，私有 JSON、Node/files/web 仍拒绝。初轮依赖回归发现通用许可遮住细粒度预算规则；首次移动受 CRLF 影响未移除旧行，第二次定位并清除，最终将通用规则放在专用规则之后。现有细粒度拒绝与新增入口许可测试均通过，未弱化原检测。
+- 命令：pnpm exec vitest run tests/unit/foundations/utility/json-order.test.ts tests/utility-json-order-contract.test.ts tests/workspace-member-core.test.ts tests/knowledge-source-core.test.ts tests/owner-execution-core.test.ts tests/module-ownership-core.test.ts tests/human-decisions-core.test.ts tests/human-continuation-core.test.ts tests/member-execution-context.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot；初轮 135 通过/1 失败，仅重跑受影响 dependencies 后 33/33 通过，合计 11 文件/136 项最终通过。选择依据为排序单元、迁移后的领域校验/指纹及变更的边界检查器。
+- pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过；规则修正后 pnpm check:dependencies 再核实 0 环/违规。未运行完整 Pi/服务集成、全仓、桌面或发布。
+- 五份类图、相关契约与源码注释、三宿主工作流及分层说明同步。Q1 历史字节；Q2 业务字段仍局限原消费者；Q3 单元/指纹与边界回归；Q4 utility/json.ts→五个适配；Q5 无新规则。历史频率未知，不把相似文本视为同一契约。独立本地提交未推送，保留人工 review。
+
+## 2026-11-13：候选清单收尾二／前端本地记录读写
+
+- 用户批量授权内第二片，基线 d13f402d，C3/L2。精读岗位与模块负责人持久命令的读取、保存、恢复和失败路径，实际重复为同步 JSON 与 UTF-8 限额，不是整个命令状态机。
+- 新 storage.ts 的 JsonRecordStorage 注入存储端口、键与容量；两控制器迁移，原紧凑字节、空串规则、限额/IO 错误、先更新内存后写盘顺序不变。128 条数、schema、回执、corrupt/unavailable、未知只查询/显式重送仍属业务，其他不同存储策略未机械迁移。
+- 验证命令：pnpm exec vitest run tests/unit/frontend/foundations/utility/storage.test.ts tests/inline-module-ownership.test.ts tests/knowledge-source-view.test.ts tests/module-ownership-view.test.ts tests/workspace-member-view.test.ts --reporter=dot：5 文件/40 项通过。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过，0 环/违规，467 测试登记。独立单元覆盖 UTF-8 精确边界、坏数据保留、端口故障及不缓存；消费者覆盖存储失败与未知恢复。
+- utility/team/workspace 三份类图、契约、源码注释及三宿主工作流同步。Q1 原字节与故障策略；Q2 业务变化局限控制器；Q3 独立存储及直接消费者；Q4 storage.ts→两个 Commands；Q5 无新规则，历史频率未知。未运行全量、桌面或发布；本地独立提交未推送，保留人工 review。
+
+## 2026-11-13：候选清单收尾一／前端拓扑分层
+
+- 用户授权依次完成原清单；从当前会话核实剩余前端图布局/本地记录及后端 JSON/脱敏/RPC/图校验六项，当前开放 #65 无关，未更改工单。基线 4a1b2858，C3/L2，沿 tasks/graph-layout 精读真实启用边、分层、坐标及三套消费者测试。
+- graphs.ts 提供 rankDirectedGraph 与结构错误；图层级脱离 GraphSnapshot，原重复节点检查、错误文案、边筛选、同层顺序与 SVG 路由保留。公共算法按类别组织，前后端无依赖。
+- 验证：pnpm exec vitest run tests/unit/frontend/foundations/utility/graphs.test.ts tests/task-graph-layout.test.ts tests/member-dependency-view.test.ts tests/member-dependency-addition-view.test.ts --reporter=dot：4 文件/22 项通过。pnpm typecheck、pnpm check:architecture、pnpm check:test-modules 通过；0 环/违规，466 测试已登记。选择依据为纯拓扑及全部直接布局消费者。
+- 注释、utility/tasks 两份类图、契约及三宿主开发/架构工作流已同步。Q1 保持原层级与绘制结果；Q2 几何变化止于任务布局；Q3 拓扑单元与实际视图测试；Q4 graphs.ts→graph-layout.ts；Q5 无新规则。机制稳定性依据真实使用，历史频率未知。未运行全量、桌面或发布验收；独立本地提交未推送，保留人工 review。
+
+## 2026-11-13：前端实例异步代次提取
+
+- 来源与基线：用户要求继续前端公共库下一个候选，按已核实清单推进异步响应失效控制，基线 f014d032（前两项已本地提交，未推送）。开放工单仅 #65，与此切片无关，未更改工单状态。治理 C3、认知 L2；复用分层和规范上下文，核对前端代次字段、真实请求/选择/销毁路径及直接消费者测试。
+- 机制与迁移：在前端 utility 的 async.ts 提供 AsyncGeneration，经 index.ts 导出 capture、advance、isCurrent。每实例使用 Symbol 标记，捕获不作废旧标记，推进后全部旧标记失效，不复用数字版本、不跨实例命中。12 个消费者迁移：runtime 1、settings 1、shell 1、tasks 9；分别保留每请求推进、只捕获生命周期和选择/取消时推进的原规则。成功、失败及 finally 检查位置、响应验证次序、单次在途与轮询调度保持；不取消请求、不吞错、不统一 Promise 包装。
+- 共同机制与合法差异：标记相等判断是稳定候选；失效时机、业务身份/版本、来源与草稿校验、状态发布和资源释放留在控制器。RuntimeFeed/AdmissionFeed 读取只捕获订阅代次，旧读取完成仍为当前订阅安排补读；负责人旧 finally 不清新 inFlight；重规划只隔离预览，冻结命令及其迟到回执仍处理。历史变化频率未统计，以实际消费者差异划界。带业务键的代次 Map、Hook 中混合生命周期的 ref、公开令牌/业务键中的数字序号暂未迁移，不能机械替换。
+- 兼容自查：逆向还原本次代次调用、字段和导入后，12 个消费者的 TypeScript AST 与基线一致（去注释并规范化纯标记相等表达式左右顺序）。这证明迁移未夹带其他源码流程改写，不替代运行验证或人工 review；数值内部计数改成不透明标记是本步明确的内部表示变化。
+- 注释与资料：实现、公开入口、12 个消费者文件头同步；utility/foundations 和 runtime/settings/tasks/shell 契约补齐边界，维护上述目录及 frontend 的 7 份类图。三套开发/架构工作流的 9 个入口同步且 57 处本地引用有效；未修改产品内置业务 Skill 或分层规则。
+- 测试选择：新基础模块单元 4 项验证同代捕获、推进失效、实例隔离和不取消底层工作；预算设置补 2 项旧成功/失败及 finally 不覆盖新请求 busy 的回归。其余 14 个直接消费者套件覆盖原报告、轮询、导航、选择、取消和重规划行为，继续保留既有 unit/contract/integration 归属。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/async.test.ts tests/admission-view.test.ts tests/artifact-report-view.test.ts tests/budget-settings-view.test.ts tests/command-verification-view.test.ts tests/execution-recovery-view.test.ts tests/execution-report-view.test.ts tests/model-request-budget-view.test.ts tests/output-manifest-view.test.ts tests/owner-execution-view.test.ts tests/runtime-feed.test.ts tests/runtime-navigation.test.ts tests/scope-replan-view.test.ts tests/scope-usage-view.test.ts tests/tabs.test.ts --reporter=dot`：15 文件、113 项通过。新单元只依赖前端 utility，不加载应用或消费者夹具。
+- 静态验证：`pnpm typecheck`、`pnpm check:architecture`（93 目录/713 源码样式，1437 扫描文件/7127 含类型依赖，0 环/违规）、`pnpm check:test-modules`（465 文件：126 unit、152 contract、187 integration）及 diff 空白检查通过。未改检测器或分层规则，不重复其测试；未运行全量回归、桌面、打包、安装或发布验收，留后续自动化阶段。
+- 维护交接：先读前端 utility/CONTRACT.md 与 async.ts，再读预算设置的成功/失败/finally 和 RuntimeFeed 的订阅生命周期。新增同类页面组合 AsyncGeneration，推进时机只改对应控制器，无需给基础类添加业务条件。Q1 保持迟到结果隔离及原校验次序；Q2 生命周期变化局限各消费者；Q3 独立单元、消费者回归与 AST 自查；Q4 async.ts/各控制器契约；Q5 无新增候选规则。本步独立本地提交，未推送，验证不代替人工 review。
+
+## 2026-11-13：前端实例订阅集合提取
+
+- 来源与基线：用户指定继续前端公共库订阅集合，基线 `b24348bb`（JSON 提取已本地提交、未推送）。开放工单仅 #65，与本步无关，未推进其状态；复用已核实的分层及治理约束，核对前端全部监听集合、订阅/通知/清理入口和直接消费者测试。范围 C3、认知 L2，只提取监听机制，不引入状态管理或跨域工具依赖。
+- 实现：前端 utility 的 `events.ts` 提供 SubscriptionSet，经 index.ts 公开 subscribe、notify、size、clear。19 个控制器迁移：runtime 1、settings 1、tasks 15、team 1、workspace 1。集合每实例独立、按函数身份去重，注册不立即通知；notify 同步遍历当前 Set，通知中增删及重入语义保留，异常原样传播并中断本轮。无引用计数、快照、吞错、全局总线、自动调度或异步等待；旧退订删除重新注册的同身份监听器行为保留并有测试。
+- 稳定与变化：各控制器仍先改状态再通知；RuntimeFeed/AdmissionFeed 保留首订阅读取、末退订停止计时、generation 与 pending；canRelease 仍包含原在途/预览条件，dispose 仍拥有请求失效及资源逻辑。集合只清监听器，不宣称取消请求或物理资源已退出。TypeScript AST 去注释对比：逆向替换本步监听机制后，19 个消费者与基线源码结构一致，没有附带业务逻辑改写。
+- 注释与资料：新类别实现、公开入口与 19 个消费者文件头同步；维护 utility/foundations 契约、runtime/settings/tasks/team/workspace 五目录订阅边界，以及以上受影响目录和 frontend 的 8 份类图。三套开发/架构 Skill 的 9 个入口同步，明确集合机制与业务生命周期分离，全部本地引用有效。
+- 测试选择与结果：新集合单元 9 项验证隔离、去重、退订身份、通知中增删、清空、异常、嵌套及不等待 Promise；预算设置补“先更新再通知，退订不阻止状态更新”回归；23 个直接消费者套件验证原页面、回执、恢复和轮询生命周期。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/events.test.ts tests/artifact-report-view.test.ts tests/admission-view.test.ts tests/budget-settings-view.test.ts tests/controlled-file-view.test.ts tests/continuation-source-view.test.ts tests/command-verification-view.test.ts tests/inline-module-ownership.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/execution-report-view.test.ts tests/execution-recovery-view.test.ts tests/execution-recovery-repeat.test.ts tests/effect-observation-view.test.ts tests/knowledge-source-view.test.ts tests/model-request-budget-view.test.ts tests/module-ownership-view.test.ts tests/output-manifest-view.test.ts tests/owner-execution-view.test.ts tests/runtime-feed.test.ts tests/scope-usage-view.test.ts tests/scope-replan-view.test.ts tests/scope-continuation-view.test.ts tests/workspace-member-view.test.ts --reporter=dot`：24 文件/242 项通过。
+- `pnpm typecheck`、`pnpm check:architecture`（93 目录/712 源码样式，1435 扫描文件/7124 含类型依赖，0 环/违规）、`pnpm check:test-modules`（464 文件：125 unit、152 contract、187 integration）及 diff 空白检查通过。新单元独立登记在 frontend/foundations/utility，无应用或业务夹具。未改变分层检测器，不重复其测试；未运行全仓、桌面、打包或发布验收。
+- 维护交接：机制入口为前端 events.ts；新增同类通知在本域组合该集合，首末订阅副作用和状态规则仍修改对应控制器。Q1 保留原 Set 通知契约；Q2 生命周期变化局限原控制器；Q3 集合单元、直接消费者和 AST 对比；Q4 events.ts/控制器契约；Q5 无新增候选规则。验证完成不代替人工 review。本步独立本地提交，未推送。
+
+## 2026-11-13：前端域独立提取 JSON 比较
+
+- 来源与基线：用户明确要求从前端公共库的 JSON 比较开始，基线 `90da0806`；开放 Issues 仅 #65，与此切片无关，未推进该工单。沿用已核实的全局分层，再精读前端比较、五个控制器及消费者测试。前端和后端属于不同域，本步不开放跨域公共工具依赖；治理范围 C3、认知 L2，涉及前端公共入口与依赖边界，不改变业务契约。
+- 已实现：新增 `src/frontend/foundations/utility`，以 `index.ts` 公开 `json.ts` 的 equalJson。岗位登记、模块责任、目标接续、人工决定、人工继续五处原排序比较改为消费前端入口；保留 localeCompare、对象 undefined 省略、数组顺序及原异常传播，不修改身份、版本、回执接受条件、持久化或恢复策略。原样 JSON.stringify 比较及负责人视图的特殊字典序/递归序列化保留原实现，未强行统一。
+- 边界与维护：前端 utility 无项目或第三方依赖，类别实现私有；前端基础库不反向依赖页面、bridge 或后端，后端也不能消费此前端库。同步两份新 CONTRACT、两个新目录类图，以及 src、后端 foundations、frontend、tasks、team、workspace 六份相关架构文档；更新五个消费者文件头和新入口说明。三个开发/架构 Skill 的 9 个宿主入口保持一致，明确两域独立沉淀、按类别组织及本次比较的迁移限制。
+- 测试选择：新比较模块自身单元覆盖嵌套键、数组、空值、冻结输入、自有危险名称键、Unicode 同序键及错误传播；选择五个控制器的直接使用套件，覆盖预览、回执、资料接续、准入及未知结果恢复。实际命令：`pnpm exec vitest run tests/unit/frontend/foundations/utility/json.test.ts tests/workspace-member-view.test.ts tests/module-ownership-view.test.ts tests/scope-continuation-view.test.ts tests/human-decision-view.test.ts tests/human-continuation-view.test.ts tests/inline-module-ownership.test.ts tests/knowledge-source-view.test.ts tests/continuation-source-view.test.ts tests/admission-view.test.ts --reporter=dot`：10 文件/112 项通过，其中公共比较单元 8 项、消费者 104 项。测试登记到独立 frontend/foundations/utility 模块，未引入完整应用夹具或跨套件依赖。
+- 因变更依赖规则，运行 `pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`：2 文件/34 项通过，包含公开入口、私有实现、类型反向、跨域、React 越界拒绝。`pnpm typecheck`、`pnpm check:architecture`（93 目录/711 源码样式，1433 扫描文件/7108 含类型依赖，0 环/违规）、`pnpm check:test-modules`（463 文件：124 unit、152 contract、187 integration）与 diff 空白检查通过；三宿主引用与一致性核对通过。
+- 维护交接：稳定候选是已有五处完全同义的前端值比较，业务接受规则仍局限在各控制器；新增同类比较先读前端 utility CONTRACT，再使用公开入口，语义变化须核对这些消费者。Q1 保护原比较契约；Q2 业务规则保留原控制器；Q3 使用公共单元、真实消费者与边界回归；Q4 修改入口为前端 json.ts 与相应业务控制器；Q5 无新增候选规则，两域分离落实用户已明确要求。未运行全仓回归、桌面、打包或发布验收，未宣称人工 review 已接受。本步独立本地提交，未推送。
+
+## 2026-11-13：utility 按数据与问题类别合并文件
+
+- 用户直接指定本轮整理：工具函数与数据结构按类别内聚，不采用一函数一文件；开放 Issue #65 与本步无关，未推进其状态。核对基线 `9cccc94e` 的 utility 全部实现、公开出口、依赖白名单、消费者契约测试和现行 AI 工作流，范围为文件组织，不扩展业务行为。
+- utility 从 10 个源码文件合并为 6 个：`json.ts` 收拢格式化、严格解析、键排序；`async.ts` 收拢实例串行队列和在途集合；`strings.ts` 承载文本分帧；`bytes.ts` 承载有界字节流收集；`index.ts` 保持通用公开导出；`node.ts` 直接提供 SHA-256 并隔离 Node 依赖。删除旧私有路径，消费者导入和状态归属保持不变。
+- 文件边界按类别组织，算法契约和实例状态仍独立：JSON 排序策略与严格解析不隐式组合；Promise 快照不代替物理退出；字符串与字节计量保持分离。现有单元套件继续按具体行为职责拆分，不因源码合并而混合测试。后续同类能力优先进入已有类别，明确的变化原因、环境或契约差异才驱动新文件。
+- 同步全部受影响源码文件头与关键接口说明、utility CONTRACT、utility 与 foundations 两份 ARCHITECTURE、生成器目录定位、依赖白名单及对应私有路径回归。开发、架构治理、架构维护三个 Skill 的三宿主共 9 个入口一致，本地引用有效；工作流明确禁止机械的一函数一文件。
+- 选取依据：公开 API 未变，验证 utility 各行为及真实消费者组合；依赖文件列表改变，验证分层检测器。`pnpm test:module --module foundations/utility --kind all`：13 文件/52 项通过；`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`：2 文件/32 项通过。额外用 TypeScript AST 打印去注释后的声明，与基线逐项比较，12 个声明实现完全一致。
+- `pnpm typecheck`、`pnpm check:architecture`（91 目录/709 源码样式，1430 扫描文件/7101 含类型依赖，0 环/违规）、`pnpm check:test-modules`（462 文件：123 unit、152 contract、187 integration）及 diff 空白检查通过。未运行全仓回归、桌面、构建或发布验收；本步独立本地提交，未推送或发布。
+
+## 2026-11-13：合并远端 CI 与取消修复，收齐本地变动
+
+- 用户授权提交/push 全部改动；任务历史视图已独立提交 `d342c05e`。正常合并远端 develop `9e3f4d49`，保留本地网页/基础库/测试模块化成果和远端 CI 分流、分片计时与覆盖核对、#70 取消修复回归；不强推或改写远端历史。
+- 处理三处内容冲突：validate.yml 采用远端共享检查与分片布局，将本地 `check:test-modules` 放回共享静态任务且只运行一次；resource-http 保留已包含显式 reader 取消的 utility 路径，清理远端旧 readBody 的重复实现及过时类图/契约；开发记录保留双方完整新增段落。新增 CI 测试登记 tooling/ci-validation，并断言模块检查的实际工作流接线。
+- 冲突相关验证：`& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/ci-validation.test.mjs tests/repository-connection-http.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，3 文件/50 项通过，包含真实 8 秒 HTTP 超时、未转发取消及 CI 聚合/分片/模块检查。任务历史 16 项结果见下一条记录，不重复运行未受合并影响的前端测试。
+- `pnpm typecheck`、`pnpm check:architecture`（91 目录/713 源码样式，1434 扫描文件/7105 含类型依赖，0 环/违规）、`pnpm check:test-modules`（462 文件：123 unit、152 contract、187 integration）、`git diff --cached --check` 通过；四组 Skill 的三宿主入口一致。相关源码说明与资源目录类图已同步。
+- 本步验证仅覆盖提交与合并实际影响，未运行完整四片 CI、桌面、打包或发布验收；未创建 PR、合并 master 或发布版本。正常推送当前 develop 后，以 Git 远端 SHA 和工作区状态核对结果。
+
+## 2026-11-13：提交任务历史折叠并准备同步 develop
+
+- 用户要求提交并 push 所有变动。基线 `4f7ba8db`，将此前保留的任务历史视图 7 个文件纳入独立提交；新增测试登记到 frontend/tasks 单元模块。已完成/撤销任务默认折叠、直接定位展开、完整拓扑先校验，均只影响展示，不改变任务状态或调度。
+- 核对现有实现、注释、CONTRACT 与类图；执行 `pnpm exec vitest run tests/task-history-view.test.ts tests/session-task-view.test.ts tests/task-graph-layout.test.ts --reporter=dot`，3 文件/16 项通过；`pnpm check:test-modules` 通过（461 文件），`git diff --check` 通过。类型及类图检查沿用本轮之前对相同前端源码的通过结果，未重复运行桌面/全量测试。
+- fetch 后本地 develop 有 7 个独有提交，远端有 6 个（CI 优化与 #70 修复等）。本步先保存完整本地工作；随后正常合并远端并验证冲突涉及的 HTTP/CI 边界，再推送 develop，不强推，不自动合并 master 或发布。
+
+## 2026-11-13：utility 候选 5–7 与兼容策略组合
+
+- S1 / 来源：用户直接授权继续候选提炼，并确认“完成剩余 5–7 即可”；原名单没有第 8 项。基线 `e6a5dd39`，本次开放 Issues 查询仅 #65，与本片无对应关系，未新建/修改外部工单。保留原任务历史视图的 7 个并行文件，不纳入提交。
+- S2–S4 / C3、L2：核对 Core 证据/预算/知识/任务的对象排序、Main 文件/资料和三种 Run 能力的在途集合、Pi/Codex RPC。保护共同遍历/集合/拆行机制，把历史比较器、字段省略、业务关闭门禁、物理退出和协议限额留在调用方；未逐行审计全仓，也不把无环等同语义解耦。
+- S5：新增 `orderJsonValue`，迁移 15 个 Core 排序适配，逐一保留 localeCompare/字符序及 undefined 规则；JSON 序列化与根 fingerprint 排除不变。新增 `InFlightOperations`，迁移 ControlledFiles、ChatMaterialImports、RunControlledFile/RunScopedExecution/RunArtifactTransition、codexTools 和 CodexRpc 共 7 处集合。新增 `LineFramer`，迁移 Pi/Codex 两处 LF 缓冲，保留 Pi 的 UTF-16 长度与去 CR、Codex 的 UTF-8 字节/原 CR、完整空白帧忽略及尾部限额。没有统一 RPC、取消控制器、短门闩或业务恢复。
+- 兼容性实证：修改前保存 15 个真实排序实现，以 TypeScript 转译执行与新基础函数比较；6 组输入包含数组空位、undefined、数字键、危险键和非 ASCII，90 次对象结构/最终 JSON 比较一致。原始基线与结果留在本机 `test-results/utility-5-7/`；长期回归由模块单元和 `utility-json-order-contract.test.ts` 的真实消费者契约承担。保留图重放/治理手写字符串 canonical、工具失败参数和调度内部比较，不将不同序列化契约强行统一。
+- 模块单元：`pnpm exec vitest run tests/unit/foundations/utility/json-order.test.ts tests/unit/foundations/utility/in-flight.test.ts tests/unit/foundations/utility/line-framer.test.ts --reporter=dot`，3 文件/11 项通过。分别验证递归排序/不修改输入/策略与数组、集合身份/实例隔离/快照排空/拒绝、拆帧/尾部/错误顺序/字符字节差异，不加载应用。
+- 生命周期与协议消费者：`pnpm exec vitest run tests/utility-json-order-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/pi-rpc.test.ts tests/codex-tools.test.ts tests/controlled-file-runtime.test.ts tests/scoped-execution-runtime.test.ts tests/artifact-transition-runtime.test.ts tests/chat-material-imports.test.ts tests/controlled-file-service.test.ts --reporter=dot`，9 文件/76 项通过。覆盖历史指纹、模拟管道的策略差异与关闭等待、真实子进程 Pi RPC/受控 Codex 工具、取消与未知写屏障；平台替身/本机受控协议证据不冒充在线模型或全部 Windows 物理故障验收。
+- 排序消费者：`pnpm exec vitest run tests/artifact-evidence.test.ts tests/workflow-evidence.test.ts tests/output-manifest-evidence.test.ts tests/json-artifact-validation-core.test.ts tests/scope-budget.test.ts tests/workspace-packages.test.ts tests/member-execution-context.test.ts tests/member-checkpoint-domain.test.ts tests/member-checkpoint-core.test.ts tests/queued-dependency-replacement-core.test.ts tests/queued-task-cancel.test.ts tests/scope-goal.test.ts tests/scope-run-tracking.test.ts tests/queued-dependency-addition-core.test.ts --reporter=dot`，14 文件/157 项通过，按本次证据/预算/知识/任务规则适配选取。
+- S6：引擎增加 utility 通用入口访问权，明确禁止 Node 入口、私有实现、files/web；未放宽 Core 反向依赖或调度装配限定。`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`，2 文件/32 项通过。以上合计 28 文件/276 项，无重复累计。`pnpm typecheck`、`pnpm check:architecture`（91 目录、713 源码/样式，1426 扫描文件、7096 含类型依赖，0 环/违规）、`pnpm check:test-modules`（460 文件：121 unit、152 contract、187 integration）通过。统计含已有并行源码；不是全仓测试结论。
+- 文档与 AI 工作流：同步变更源码文件头/公共接口、utility 与消费者 CONTRACT、13 份受影响类图及生成器；三宿主的开发/架构演进/架构维护入口共 9 份同步，描述现有机制入口、兼容性检查、模块单元与消费者验证。未改产品内置业务 Skill、全局模型规则或 CI。`git diff --check`、相对文件链接及三宿主逐字一致性检查通过。
+- S7 / 交接：Review 顺序为 `src/foundations/utility/CONTRACT.md` → 三个独立实现 → 原排序适配、业务关闭/物理退出路径、Pi/Codex RPC → 独立单元与消费者契约。新增业务排序规则、限额或关闭策略在本地适配修改；共同机制缺陷才修改 utility，并沿真实消费者验证。源代码自查与测试已完成，人工 review 尚未发生；不以一次提炼证明长期稳定。保留原 locale 依赖及快照等待边界，未添加定时任务。未运行全仓回归、桌面冒烟、打包或安装验收，未推送、合并或发布。
+
+## 2026-11-13：utility 候选 1–4 收敛与消费者迁移
+
+- 来源与 S1：用户直接授权继续提炼候选 1–4，并同步类图和 AI 工作流；基线 `8eb1c7da`。已核对当前 Issues，无本切片对应工单，不新增或回填外部 Issue。候选 2（SHA-256）与 4（JSON 文本格式化）沿用上一提交，补齐候选 1（有界字节流）与 3（严格 JSON）。原任务历史视图的并行改动保留，不纳入本提交。
+- S2–S4：utility 只拥有通用算法及本次 reader，不依赖其他项目模块。字节流机制负责上限、取消、锁与监听释放；URL、凭据、期限、业务错误、JSON 协议和重试决策留在消费者。严格 JSON 保留 jsonc-parser 原行为，Core 适配原 `JSON` Fault。通用入口不加载 Node；摘要仍走独立 Node 入口。保护稳定算法，把业务变化限制在原适配层。
+- S5：新增 `readBoundedBytes`/`ByteLimitError`、`parseStrictJson`/`StrictJsonError`。迁移资源仓库、GitHub HTTP、网页材料、Release 列表和更新小清单五处响应体读取，保持各自字节上限及错误映射。核对已有 #70 修复提交 `36c36bf649614b0f4aeac140c9ba90a9767203a2`，保留显式取消挂起 reader 的语义，不依赖 fetch 转发信号；底层 cancel 不返回时也不无限等待。未合并远端分支、改动 CI 或扩大到安装包流式落盘、模型字符限额及 Node 原始 HTTP。
+- 模块测试：新增字节流与严格 JSON 的独立单元；Core 错误兼容与五消费者业务映射独立作为契约测试，登记在 `tests/modules.json`。`pnpm test:module --module foundations/utility --kind all` 首轮 8 文件/28 项通过；随后新增的五个超限映射和清单成功/空正文用例包含在下述 Node 22 验证，重叠用例不重复计数。
+- Node 22 验证：核对本机 `test-results/ci-speed/node22/node.exe` 为 v22.19.0，SHA-256 `995a3fb3cefad590cd3f4b321532a4b9582fb9c6575320ed2e3e894caac3e362` 与已有官方校验文件一致。执行 `& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/repository-connection-http.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，2 文件/15 项通过；覆盖真实 HTTP 8 秒超时、取消以及 fetch 不转发信号且底层 cancel 挂起的五消费者契约。测试证明读取停止等待和 reader 释放，不把它解释为所有底层连接物理退出。
+- 受影响回归选取：解析适配影响规则、数组、领域及产物验证；响应体迁移影响更新、资料与资源仓库；依赖规则调整需验证检测器。执行 `pnpm exec vitest run tests/rules.test.ts tests/rules-json-arrays.test.ts tests/core-domains.test.ts tests/json-artifact-validation-core.test.ts tests/release-http.test.ts tests/runtime-download.test.ts tests/chat-material-imports.test.ts tests/resource-repository.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts --reporter=dot`，10 文件/75 项通过。该批先前执行回执未能恢复，在确认无活动进程后重新取得完整结果。
+- Review 补充：发现 Buffer.slice 共享存储会违背字节快照契约。先以 `pnpm exec vitest run tests/unit/foundations/utility/bounded-bytes.test.ts -t 'Buffer' --reporter=dot` 复现失败，再改为显式 Uint8Array 副本，同步注释、契约及类图。执行 `& ./test-results/ci-speed/node22/node.exe ./node_modules/vitest/vitest.mjs run tests/unit/foundations/utility/bounded-bytes.test.ts tests/utility-body-consumers.test.ts --reporter=dot`，2 文件/18 项通过，包含全部流单元和五消费者契约；不重复累加早先已运行用例。
+- S6：`pnpm typecheck` 通过；`pnpm check:architecture` 通过（91 目录、710 源码/样式文件，1418 扫描文件、7062 条含类型依赖，0 循环/边界违规）；`pnpm check:test-modules` 通过（455 文件：118 unit、150 contract、187 integration）。检查包含工作区已有并行源码；未改变其内容。三宿主的三个相关 Skill 共 9 份入口逐字一致，`git diff --check` 通过。
+- 文档与 S7：同步变更源文件头/公共入口说明、utility 与消费者 CONTRACT、9 份受影响目录类图及生成器/边界规则。AI 工作流补充流消费与连接归属、非阻塞取消、JSON 错误适配及真实消费者回归要求。Review 入口为 `src/foundations/utility/CONTRACT.md`、两项独立实现、Core JSON 适配和五消费者契约测试；未来业务修改留在调用方，新增算法从 utility 契约与模块单元进入。本步只做受影响开发验证，未运行全仓测试、桌面冒烟、构建或发布验收；未推送、合并或发布。
+
+## 2026-11-13：utility 算法与数据结构基础库，迁入实例串行队列
+
+- 来源与 S1：用户要求创建 `foundations/utility`，并明确将实例级串行执行方案迁入；基线 `2a2dca39`。已核实开放 Issues 当前仅 #65，无对应本片工单，沿直接授权实施，不新增或回填外部 Issue。原任务历史界面并行改动完整保留；未整合远端另一轮 HTTP/CI 改动，本片不修改该请求路径。
+- S2–S4 / C3 / L2：核实 SerialQueue 及五个设置/模型消费者、Core serialization 与知识/证据消费者。utility 归领域无关算法和数据结构，分别实现、具名导出；通用入口无 Node 依赖，Node 摘要单独公开入口。文件、网页、原生进程、权限、事务、业务关闭和失败屏障仍在原模块。未预建无消费者容器，也未统一不同 canonical 排序。
+- S5：SerialQueue 实现与原 2 项测试迁入 utility，WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 改用新公开入口，旧 concurrency 四文件及目录清理。保留队列顺序、调用者失败可见、失败后继续、drain 等待调用时队尾及实例隔离语义。新增 formatJson 与 sha256；Core hash/json 直接重导出唯一实现以保留现有消费者名称，适配出口尚未退役。JSON 缩进/末尾 LF/异常和顶层 undefined 的既有行为、摘要 UTF-8 与字节视图语义均固定，业务字段与指纹规范化仍由调用者决定。
+- S6 选取依据：utility 三类单元验证原语；兼容契约核对旧名称确为同一实现；五个队列消费者覆盖并发版本、保存失败及模型锁；知识和产物证据验证现有字节/指纹消费；依赖与测试检查器覆盖本次规则变更。
+  - `pnpm test:module --module foundations/utility`：3 文件 / 6 项通过。
+  - `pnpm exec vitest run tests/utility-serialization-contract.test.ts tests/budget-settings.test.ts tests/admission-settings.test.ts tests/main-agent-settings.test.ts tests/web-settings.test.ts tests/owner-model-configuration.test.ts tests/rules.test.ts tests/artifact-evidence.test.ts tests/dependencies.test.ts tests/test-modules.test.ts --reporter=dot`：10 文件 / 72 项通过。共 13 文件 / 78 项，不重复累计。
+  - `pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过：91 目录 / 708 源码样式、1412 扫描文件 / 7043 依赖、0 环/违规；451 测试文件，116 unit / 148 contract / 187 integration。检查包含保留的并行工作，不将其计入本片提交。
+- 资料与流程：更新 utility 文件头、接口、契约/类图，foundations、Core/foundation 与上层 Core、Main/settings/models 的相关类图和契约。AGENTS 与开发/演进/维护三类 Skill 的三个宿主入口同步 utility 归属、环境边界、真实消费者和字节兼容要求；9 份入口一致，本地引用与 diff 空白检查通过。模块目录和检查器移除旧 concurrency 归属；历史记录中的旧路径保留为历史。
+- S7 / 四问：保护原队列与字节算法，机制变化限制在 utility，业务策略保持原服务；只验证以上实际入口及消费者，不扩大全仓。后续同类能力从 utility/CONTRACT → index/node → 独立实现与模块单元修改；不要向统一类添加业务开关。Q5 的 utility 归属为用户明确要求，未新增定时自动化。完整 review 入口是本片相对 `2a2dca39` 的 diff；回退需同时恢复消费者、旧入口及依赖/测试归属，不能保留两份队列实现。
+- 未运行全量回归、桌面、构建/安装/升级或浏览器实站；未推送、合并、发布或对外回填，尚待人工代码 review。
+
+## 2026-11-13：模块测试目录、CI 门禁与 AI 开发流程同步
+
+- 来源：同轮用户直接授权，前一切片提交 `3d6a091d` 已完成基础能力及实际产品测试拆分。本片不继续扩张产品重构，将单元职责/夹具边界接入现有开发流程与 PR 验证；未创建新的任务系统或定时自动化。
+- `tests/modules.json` 对 448 文件登记唯一模块和 unit/contract/integration 类型（71 模块，114/147/187）。`scripts/test-modules.mjs` 阻止漏登记、重复、缺文件、跨套件导入、单元间接装配 Application 及越界运行时被测模块；包含类型的循环/应用可达性仍保留。显式模块选择默认 unit，空选择/未知模块失败，不回退全仓；既有未登记、未跟踪的个人草稿不接管。
+- `pnpm test:module --module tooling/test-modules` 实际选中 1 文件/10 项通过。首次同一行多条 import 的类型判定用例失败，按 spec 与行号共同定位声明后通过。`pnpm check:test-modules` 验证全部登记测试通过；源码切片已有 `pnpm typecheck` 与完整架构检查通过，文档最后补充后 `node scripts/source-architecture.mjs --check` 无差异。三类 Skill 的三宿主入口共 9 份一致，本地引用核对通过。
+- PR 流程新增模块边界检查，完整四片测试仍保留。AGENTS、两份架构规范、设计入口、三个开发/架构 Skill 同步模块单元要求；`tests/README.md` 提供执行命令、夹具规则及静态检查限制。不能把真实集成改名为单元，不能删断言或以改分类掩盖混合职责。
+- 全局候选取舍、迁移语义、完整实际测试命令、初轮失败/修复及未运行范围见 [本轮治理与验证](verification/foundations-module-tests-20261113.md)。静态归属不证明所有历史测试已语义解耦；维护者仍需 review 单一责任、共享状态和模拟契约。完整两片 diff 从 `48bd18cd` 起审阅，源码注释/类图在前片同步。
+- 未运行全量四片、桌面、构建/安装/升级及实站重测；未推送、创建 PR、合并、发布或对外回填 Issue。任务历史并行工作保留，尚无人工 review 通过结论。
+
+## 2026-11-13：独立文件/队列基础库与消费者迁移
+
+- 来源：用户直接授权按单一职责、开闭原则做全局基础能力优化，并要求基础库不依赖其他产品模块；基线 `48bd18cd`，开放 #65/#68 不对应本次新增范围，未对外写入。C3/L3 分析核对全仓静态图、契约及实际文件/队列消费者，未声称全仓逐行审计。任务历史界面并行改动保留。
+- 将文件原语迁入 `foundations/files`，23 个源码消费者改用公开入口，删除旧 Core 出口；修复写入/同步/关闭失败的临时文件清理。新增 `foundations/concurrency/SerialQueue`，替换三个设置、两个模型服务中的恢复型 Promise 队尾。Core 可单向使用 foundations，反向引用含类型及跨能力私有入口仍禁止。
+- 业务仍拥有路径授权、Schema、revision、凭据、模型锁和事务；未把失败即停止的证据日志、原生隔离或不同协议的重试强行统一。同步基础库/后端/知识/设置/模型契约、文件头与关键字段说明及所有受影响目录类图。
+- 验证依据为文件成功/失败清理、队列顺序/失败恢复、配置并发保存、模型选型，以及历史/工作区/资源真实消费者。与下个测试拆分切片在同一工作区验证：首批 18 文件/92 项中 90 通过，分层两项因旧 Core 镜像与待生成类图失败；修正后分层和新增入口规则复验通过。消费者 6 文件/56 项通过，后续拆分/规则/辅助消费者 8 文件/48 项通过，重合项不重复累计。完整原始选择器及不存在文件名的边界在下一条测试治理记录归档。
+- `pnpm typecheck`、`pnpm check:architecture` 通过，91 目录/705 源码样式、1406 扫描文件/7034 依赖、0 环和违规；扫描包含保留的并行工作。源码迁移测试中使用了独立临时目录与拆分夹具，产品测试拆分一并提交，下一片接入全仓目录和 CI。
+- S7：保护单文件替换与失败可见性，机制变化限制在基础库，业务变化限制在原消费者。下次修改先看各 foundations 契约与单元，再看 Main/settings/models；真实日志语义需另立契约。未运行全量、桌面、打包/升级；未推送、合并或发布，尚待人工 review。模块单元解耦规则来自本轮用户明确要求，不引入额外自动化。
+
+## 2026-11-13：浏览器 robots 可配置与 Saltline 实站读取
+
+- 来源：用户直接要求“浏览器访问的 robots 策略改成可配置，默认允许读正文，Saltline 实站要能读通”。基线 `61bc5d76`；本轮查询开放 Issues 为 #65、#68，未发现对应新工单，沿已关闭 #39 的能力增量实施，不重开或对外回填。原任务历史折叠前端工作保留，不纳入本次提交。
+- S1–S4 / C3 / L3：策略值属于产品设置，WebSettings 持久化并通过既有 IPC/界面公开；WebService 每次调用捕获值，基础读取器只接收 allow/respect 契约。foundations 仍只依赖自身、标准库和必要第三方库，不反向依赖 Core、Main 或前端。独立网络连接与平台渲染分开，避免为一个站点修改搜索或 Agent 工具协议。
+- S5：设置→网页与搜索增加浏览器 robots 策略，默认 allow，strict 对应 respect。旧配置缺字段默认 allow，旧客户端省略字段保留已保存值；不需要 Brave 密钥或安全存储。静态路径仍遵守 robots；allow 下静态 robots 拒绝也可触发一次浏览器兜底，respect 对浏览器所有资源核实 robots。缓存按策略分隔，正在执行的读取使用捕获值，后续调用使用新配置。
+- 实站根因与调整：解除 robots 限制后，旧 protocol.handle→Node HTTPS 路径仍进入 challenge_redirect 并收到 HTTP 403，补临时 Cookie 未解决，不能据此认定页面私有。最终使用 Chromium 原生网络，经基础类库 openBrowserProxy 固定公网 TCP 地址；CONNECT 不终止 TLS，原生 webRequest 逐资源执行 robots/权限策略。恢复站点当次匿名 Cookie，结束即清理，仍不共享用户登录态、不发送认证头或写请求。禁止内网/保留地址、校验全部 DNS，取消销毁窗口及代理连接。
+- 资源边界：两个匿名槽位、每次 30 秒、32 文档/框架、160 资源/连接，代理累计 32 MiB，连接空闲 15 秒；新原生路径的字节上限计算 HTTPS 隧道字节或 HTTP 响应体，不再声称旧协议转发器的“单个解压资源 8 MiB/8 并行请求”约束。静态 PublicHttp 仍保持原体积规则。仍不自动登录、点击游戏或识别 canvas 像素。
+- S6 定向选择：web-service（31）覆盖原读取/搜索消费者；web-browser-fallback（22）覆盖策略、缓存隔离、取消和一次兜底；web-settings（3）覆盖旧文件迁移、重启、旧客户端保存及实际 IPC；web-tools-pi（1）覆盖真实工具回传；dependencies（25）/layer-boundaries（2）覆盖基础层与公开入口；新增 web-browser-proxy（7）覆盖 HTTP 固定地址、CONNECT 透明传输、混合 DNS 拒绝、取消及累计字节上限。最终 7 文件、91 个不同用例通过，不累计复跑。
+- 实际命令：`pnpm exec vitest run tests/web-browser-proxy.test.ts tests/web-browser-fallback.test.ts tests/web-settings.test.ts tests/web-service.test.ts tests/web-tools-pi.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`；初轮暴露测试参数数组被 it.each 展开及测试直接导入私有实现，修正参数与经公开入口消费后，`pnpm exec vitest run tests/web-browser-proxy.test.ts tests/dependencies.test.ts` 31 项通过；最后新增体积用例以 `pnpm exec vitest run tests/web-browser-proxy.test.ts -t '响应超过累计字节上限'` 通过，其他 6 项仅因选择器未重跑。类型初检修正 HTTP headers 的索引类型后 `pnpm typecheck` 通过。`pnpm check:architecture`：89 目录、702 源码/样式、1387 扫描文件、7018 条依赖，0 环/违规。
+- 真实 Chromium：`node scripts/web-browser-smoke.mjs` 9 项通过，使用生产原生网络与受控代理，仅可信测试 TCP 装配映射夹具；覆盖 JS/跨域 iframe、登录/404 区分、严格 robots 在传输前拒绝、匿名 Cookie 不跨次保留、认证头/写请求/弹窗禁止、取消、私网拒绝、失败复用和静态空正文完整兜底。首轮明文夹具暴露 agent:false 忽略 createConnection，已改为专有 Agent 固定连接并补单元验证，没有放宽公网边界。
+- Saltline 验收：`node scripts/web-browser-smoke.mjs --live-only` 使用实际 WebSettings（默认 allow）→WebService→WebPageReader→ElectronBrowserReader→受控代理。2026-11-13T09:18:52.276Z 返回标题 Saltline，正文含 SALTLINE、Deploy、Mission、操作说明与任务说明，cached=false、untrusted=true、truncated=false。脚本强制同时断言游戏标题与 Deploy，失败退出非零；证据为 `test-results/web-browser-smoke/live.json`，夹具证据为 report.json。不复用 Cindy 浏览器结果冒充 CBIM 验收。
+- S7：同步 foundations/web、Core/connectors、Main/settings/web/ipc、bridge/contracts、frontend/settings 的源码注释、契约和目录类图。review 顺序为 WebSettings/设置 UI → WebService → page-reader 策略捕获及缓存 → electron-browser-reader/browser-proxy 连接/会话生命周期。保护静态解析、搜索凭据、工具输入及公网边界，浏览器网络实现变化留在 foundations 内。未运行全量回归、完整桌面设置点击/打包、安装升级；未推送、合并或发布，不将源码验收说成已安装生效。
+
+## 2026-11-13：网页浏览器兜底与独立 foundations 基础类库
+
+- 来源：用户明确要求静态抓取失败/正文为空时改用真实浏览器，并补充 foundations 不依赖 Core 或任何其他项目模块。已查询开放 Issues（当时仅 #65），回读已关闭 [#39](https://github.com/nan023062/cbim/issues/39) 的原网页能力与讨论；本步是用户直接授权的增量，不重开旧工单、不创建或回填新 Issue。分析起点 `ae6deee9`，期间独立发布工作合并至 `bff94f9b`；既有任务历史折叠前端改动保留，不纳入本提交。
+- S1–S4 / C3 / L3：问题是 Main/web 同时持有通用读取、产品配置和新增浏览器实现。按已确认边界将网页方案迁入 `src/foundations/web`，通过 Node 公共入口和独立 Electron 入口消费；其项目内依赖仅限自身。没有批量迁移其他工具或 Core/foundation，具体变化频率仍未知，不以目录位置证明所有能力已稳定。
+- S5：WebPageReader 拥有静态读取、robots/域名节流、5 分钟缓存与一次兜底决策；PublicHttp 复用 DNS 固定传输并支持有界二进制资源；ElectronBrowserReader 使用匿名内存会话及真实 Chromium，读取脚本生成 DOM 和跨域 iframe。WebService 保留 Core 协议、来源不可信标记和 Brave 设置/查询；桌面 Application 注入 BrowserReader，Node 消费者不加载 Electron。静态成功优先返回，空正文、可恢复失败、iframe/短脚本外壳最多渲染一次；取消、SSRF、robots、限流、挑战及体积/跳转上限不绕过。主窗口关闭仍走 before-quit 排空，不因隐藏读取窗口而延迟退出。
+- 安全/生命周期：所有 HTTP 资源在协议传输入口核 robots，文档额外节流；浏览器原生网络设不可达代理，真实出网只经校验全部 DNS 并固定地址的 PublicHttp。禁止写请求、透传 Cookie/认证头、下载、弹窗和权限请求；有并发、时间、框架、请求数量及字节上限。取消关闭窗口并清理匿名会话，缓存不接受迟到结果。不存在系统浏览器登录态接入或人工登录能力。
+- S6 选取依据：读取/搜索消费者与 HTML/HTTP 迁移由 web-service 覆盖；新增兜底失败、取消、缓存、robots 等由 web-browser-fallback 覆盖；真实 Pi 主工具回传由 web-tools-pi 覆盖；新增基础层和公开入口约束由 dependencies/layer-boundaries 覆盖。实际命令 `pnpm exec vitest run tests/web-service.test.ts tests/web-browser-fallback.test.ts tests/web-tools-pi.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`：5 文件、78 项通过。`pnpm typecheck` 与 `pnpm check:architecture` 通过：89 目录、701 源码/样式、1385 扫描文件、7013 依赖、0 环/违规。
+- 真实验证：`node scripts/web-browser-smoke.mjs --live` 的 9 项 Chromium 夹具检查通过，覆盖动态跨域 iframe、登录/404 区分、iframe robots 在传输前拒绝、禁止写请求/凭据/弹窗、隐藏密码框、取消、私网拒绝、槽位清理复用以及静态空正文→真实浏览器完整链路。证据在 `test-results/web-browser-smoke/report.json`。初轮发现 Electron protocol.handle 不经过预期的 webRequest 回调，已把授权迁到真实协议传输前；之后发现拒绝原因被合成 502 覆盖，已保留首个真实原因，并加真实回归。类型检查发现测试类型声明不完整，已修正，未降低断言。
+- 实站边界：Saltline 链接 `https://claude.ai/artifact/BGY1SztrAYcJQHSsnHHGmp` 在新路径下仍被资源 robots 规则拒绝。再以 `node scripts/web-browser-smoke.mjs --live-only` 沿生产 WebService 配置核实，拒绝发生在 `/api/frame/...` 与 `/api/account`，记录于 `test-results/web-browser-smoke/live.json`；未报告已解决该站点、未解释成未公开/必须登录。浏览器读取可见文字，不识别 canvas 像素，也不保证任意延迟脚本全部执行。Brave 付费账号、全量回归、完整桌面退出/打包、安装升级、合并和发布本轮未运行。
+- 资料/边界：同步相关文件头、基础类库契约和类图、Main/assembly/resources/web、Scheduler 工具契约及上层导航；三份 architecture-maintenance 入口同步 foundations 单向依赖。依赖检查新增基础层与能力私有入口限制，并用包括类型引用的反向依赖样本验证，不增加循环豁免。旧 public-http/web-content 路径已清理，仓库源码和测试消费者已迁移；不涉及持久化格式或工具 schema 变化。
+- S7 / 四问：Q1 保留公开工具协议、Brave 凭据边界及公网/取消不变量；Q2 将网页机制和浏览器平台变化限制在基础网页模块，业务配置留在 Main；Q3 上述定向用例覆盖本次实际消费者和新增网络边界，不重复全仓回归；Q4 从 foundations/web/contracts、browser-reader、page-reader 到 electron-browser-reader，再看 Main/web 与桌面装配。Q5 无新增候选规则，foundations 的独立性为用户本轮明确要求。完整 review 以本提交 diff 为准，尚无人工作代码 review、推送、合并或发布回执。
+- 平台依据：[Electron protocol](https://www.electronjs.org/docs/latest/api/protocol)、[WebFrameMain](https://www.electronjs.org/docs/latest/api/web-frame-main)、[Session](https://www.electronjs.org/docs/latest/api/session)；以上平台说明与本次真实 Chromium 证据分别记录，不以文档代替执行验证。
+
 ## 2026-11-13：CI 优化成功运行与覆盖对照
 
 - #68 / PR #69 完整 CI run 43404271598 通过：436 文件、3001 通过、0 失败、2 个既有跳过；原 2968 个测试名称及出现次数全部保留。
@@ -141,7 +591,7 @@
 
 - 来源：用户要求实施“常见供应商预设、自定义兼容接口、按引擎匹配模型”，并询问改动文件。基线 `e38ddb70`，`nan023062/cbim` 开放 Issues 查询为空，按直接需求开发，未创建工单。
 - 行为：旧 DeepSeek 官方配置无需复制或迁移，Pi 保持原接口，Claude Code / Codex 在需要时选择 Anthropic Messages / Responses。增加 DeepSeek、Kimi 国际 API、MiniMax 国际 API、OpenAI、Anthropic 预设；地域、套餐及代理地址不模糊匹配，供应商明确限制的型号也参与筛选。自定义供应商可保存另外两种协议地址及适用型号，所有接口只共用原供应商一份加密 Key。新增或改动自定义凭据目标仍需重输 Key；读取、切换和预览不联网。
-- 职责与 review 入口：先读 [接口选择契约](../src/backend/core/models/CONTRACT.md) → `provider-presets.ts`（已核对官方资料的可变地址策略）→ `provider-connections.ts`（纯选型）→ [LlmProfiles 契约](../src/backend/main/models/CONTRACT.md)（配置锁与延迟解密）→ `ProviderConnections.tsx` / `ModelSettings.tsx`。运行只冻结选中的 api/baseUrl，候选接口及自动识别不进入任务/岗位快照；主会话、Agent 编辑、岗位和模块负责人入口共用解析，保持原引擎、型号、权限与运行生命周期。今后增加供应商预设只改策略数据及其验证，不修改原生引擎或请求传输。
+- 职责与 review 入口：先读 [接口选择契约](../src/logic/budget/rules/CONTRACT.md) → `provider-presets.ts`（已核对官方资料的可变地址策略）→ `provider-connections.ts`（纯选型）→ [LlmProfiles 契约](../src/logic/models/service/CONTRACT.md)（配置锁与延迟解密）→ `ProviderConnections.tsx` / `ModelSettings.tsx`。运行只冻结选中的 api/baseUrl，候选接口及自动识别不进入任务/岗位快照；主会话、Agent 编辑、岗位和模块负责人入口共用解析，保持原引擎、型号、权限与运行生命周期。今后增加供应商预设只改策略数据及其验证，不修改原生引擎或请求传输。
 - 完整产品改动范围（16 个代码/样式文件）：`src/backend/core/models/{config.ts,ports.ts,provider-presets.ts,provider-connections.ts}`；`src/backend/main/models/llm-profiles.ts`；`src/backend/main/ipc/settings-handlers.ts`；`src/bridge/contracts/{models.ts,model-actions.ts}`；`src/frontend/settings/{ModelSettings.tsx,ProviderConnections.tsx,models.css}`；`src/frontend/components/EngineModelPicker.tsx`；`src/frontend/conversation/Conversation.tsx`；`src/frontend/knowledge/ArchitectureEditor.tsx`；`src/frontend/team/WorkspaceMemberForm.tsx`；`src/frontend/workspace/inline-module-ownership.ts`。相关文件头/关键说明与上述涉及的 10 个目录、以及 main/settings 的契约和 11 份架构文档同步；未调整其他业务行为。
 - 单元选取依据：纯接口解析和 UI 筛选、加密保存/HTTP 测试、旧快照兼容、主 Agent 保存、岗位配置锁、IPC 及模块登记是实际消费者。`pnpm exec vitest run tests/provider-connections.test.ts tests/llm.test.ts tests/engine-configuration.test.ts tests/main-agent-settings.test.ts tests/owner-model-configuration.test.ts tests/model-actions.test.ts tests/inline-module-ownership.test.ts --reporter=dot` 首批 7 文件 / 60 项通过。补齐模块卡片实际采纳 Anthropic 接口及调整设置控件后，`pnpm exec vitest run tests/provider-connections.test.ts tests/inline-module-ownership.test.ts --reporter=dot` 23 项通过；去重现行覆盖 61 项。随后 IPC 改走已有公开重导出，`pnpm exec vitest run tests/model-actions.test.ts --reporter=dot` 3 项通过。
 - 界面验证：`node scripts/provider-connections-ui-smoke.mjs` 使用真实 React 设置组件和确定性 IPC，6 组检查通过、0 页面错误：旧供应商跨引擎可选、显式测试目标、失败保留目录、取消草稿、自定义地址/型号范围保存、预设填写及 390px 布局。初次两次在新增预设控件的精确标签定位处失败，保留失败报告并补齐明确 aria-label 后通过；未掩盖页面异常。结果位于 `test-results/provider-connections-ui-report.json` 与 `provider-connections-mobile.png`，失败记录为 `provider-connections-ui-failure.json`。真实 HTTP 路径、鉴权头和失败不降级由 `llm.test.ts` 的本地 HTTP 服务验证。
@@ -194,7 +644,7 @@
 
 - 来源：用户直接要求实现缺口 1 并运行相关测试；开放 GitHub Issues 查询为空，未创建工单。保留此前文档清理等未提交改动。
 - 实现：Workflow 冻结命令、cwd、超时及成功判据；成员授权后运行整组真实进程，保存可信检查事件。交付与历史重算核对命令要求、知识版本和最终完整源码集合。零测试、失败、超时及检查期间源码变化拒绝通过。
-- 阅读入口：[验证契约](../src/backend/core/evidence/CONTRACT.md)。范围复用 artifactScope，支持显式输入集合，不声称覆盖未声明依赖或环境；受原完整清单容量限制。测试适配脚本负责输出结构化摘要。
+- 阅读入口：[验证契约](../src/logic/evidence/rules/CONTRACT.md)。范围复用 artifactScope，支持显式输入集合，不声称覆盖未声明依赖或环境；受原完整清单容量限制。测试适配脚本负责输出结构化摘要。
 - 验证：`pnpm exec vitest run tests/code-check.test.ts tests/workflow-contract.test.ts tests/workflow-evidence.test.ts tests/workflow-runtime.test.ts tests/complete-output-runtime.test.ts tests/task-progress.test.ts tests/member-tool-output-core.test.ts` 首轮 72 项通过；新增真实运行到持久日志重算用例后，`pnpm exec vitest run tests/code-check.test.ts` 9 项通过，共 73 个相关用例。覆盖平台执行、失败判据、新交付链及原 Workflow 消费者；未运行全量、桌面模型实测、构建或发布。
 - 静态检查：类型检查发现并修复新增测试回执缺字段及公开证明类型遗漏；最终 `pnpm typecheck`、`pnpm check:architecture` 通过，依赖零循环。同步相关源码说明、证据契约和八个受影响目录架构图。
 - 本次仍需人工代码 review；未实现自动返工或自动恢复，未推送。
@@ -233,7 +683,7 @@
 - 构建工具：新增 R/E 制作、验证及手动投放入口；普通 R 只编译 JS，不打 Electron/NSIS，不复制引擎。冷指纹拒绝原生/固定入口变化冒充 R。新 C 继续原发布流程并检查初始 E 已公开；资源投放先不可变附件回读、最后清单。没有内置完整发布 CI/人工门禁，正式发布仍走原验收授权。
 - 验证按清单/缓存/激活、真实引擎、更新生命周期、路径消费者、UI 与依赖检测分批指定受影响文件，最终通过；命令、选择依据、修正和范围见[专项记录](verification/desktop-runtime-20261112.md)。最终 E 装载/打包补测 4 文件 5 项通过。真实 App 浏览器 11 组通过；真实 Electron 隔离 R1→R2 10 项通过、0 页面错误，证明后台准备、普通退出不安装、显式重启切换和用户数据标记保留。样本 R ZIP 约 3.82 MiB，不作为生产耗时/下载量承诺。
 - `pnpm typecheck`、新增 CLI 专项类型检查、`pnpm check:architecture` 通过；后者 87 目录/681 源码样式、1340 文件/6799 依赖，0 循环/违规。同步全部受影响源码注释、契约、类图和父层导航，以及架构维护/发布三入口。新增冷壳动态装载也纳入源依赖审计。没有运行全仓回归、正式冷包、安装升级、合并、推送或公开投放。
-- 交接：从 [bootstrap 契约](../src/backend/bootstrap/CONTRACT.md)、[更新契约](../src/backend/updater/CONTRACT.md)、[引擎契约](../src/backend/engines/CONTRACT.md) 到[构建/发布运行说明](task/desktop-runtime-release.md) review。保护低频 C 及原数据，将日常需求/BUGFix 限制到 R、外部引擎变化限制到 E。旧用户仍需一次冷更迁移；生产资源签名身份需发布者配置。首版不含文件级增量、主进程 HMR、旧 E 自动选择/跨 E 会话迁移和缓存自动回收，不把目标设计中的扩展写成已实现。
+- 交接：从 [bootstrap 契约](../src/bridge/server/bootstrap/CONTRACT.md)、[更新契约](../src/logic/updates/service/CONTRACT.md)、[引擎契约](../src/logic/execution/engines/CONTRACT.md) 到[构建/发布运行说明](task/desktop-runtime-release.md) review。保护低频 C 及原数据，将日常需求/BUGFix 限制到 R、外部引擎变化限制到 E。旧用户仍需一次冷更迁移；生产资源签名身份需发布者配置。首版不含文件级增量、主进程 HMR、旧 E 自动选择/跨 E 会话迁移和缓存自动回收，不把目标设计中的扩展写成已实现。
 
 ## 2026-11-12：团队与工作区网络核心模型及 Cindy 承载边界
 
@@ -325,7 +775,7 @@
 - 用户直接授权重新整理项目；开放 Issues 为空。基线 `63497206` 的产品源码与上一轮 V&B 快照一致，复用已有映射，迁移 185 个源码文件并同步真实消费者、Forge 平台入口、源码定位注释和类图。
 - Core 持有执行/模型契约，具体 SDK 与传输归 backend/engines；仅调度 assembly 选择引擎。预算、证据、派发、知识读模型和本机存储按职责集中；已有事务、状态、权限与运行数据不变。运行内核、目标服务与共享 Store 的高依赖密度仍保留。
 - 621 个源码脚本除引用路径/JSDoc 外无语法差异，3075 条源码引用对应不变。类型、架构和依赖检查通过；23 个定向测试文件/152 个用例通过。选择依据及首次夹具旧路径失败/修正详见报告；未运行全仓、全部 UI、原生制品/安装或发布，未获得人工 review。
-- 同步 86 个代码目录的现状类图、相关契约与三份维护入口；[模块导航](../src/backend/CONTRACT.md)、[迁移清单、四问与验证边界](verification/source-reorganization-20261112.md)。历史 V&B 快照、发布和恢复资料保留原样；本次不修复隔离恢复竞争。
+- 同步 86 个代码目录的现状类图、相关契约与三份维护入口；[模块导航](../src/logic/BOUNDARIES.md)、[迁移清单、四问与验证边界](verification/source-reorganization-20261112.md)。历史 V&B 快照、发布和恢复资料保留原样；本次不修复隔离恢复竞争。
 
 ## 2026-11-12：0.1.12 缓存修复正式发布
 

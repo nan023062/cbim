@@ -6,7 +6,7 @@ import {chromium} from 'playwright-core';
 const root=await fs.realpath(process.cwd()),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'desktop-updates-ui.html'),'<div id="root"></div><script type="module" src="/test-results/desktop-updates-ui.mjs"></script>');
 const fixture=String.raw`
-import React from 'react';import {createRoot} from 'react-dom/client';import '/src/frontend/shell/shell.css';
+import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
 let status={currentVersion:'0.1.0',currentNotes:'修复反馈工具诊断\n支持手动更新\n<img src=x onerror=alert(1)>',enabled:true,phase:'idle'};
 window.fixture={calls:[],unexpected:[],hasUpdate:false,failDownload:false,failStatus:false,holdRead:false,set:value=>status={...status,...value}};
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});
@@ -25,7 +25,7 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
  if(action==='github.feedback.status')return {config:{clientId:'public-test-client',owner:'nan023062',repo:'cbim',visibility:'public'},secureStorage:true};
  f.unexpected.push(action);throw Error('Unexpected IPC '+action);
 }};
-const {App}=await import('/src/frontend/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
+const {App}=await import('/src/view/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
 `;
 await fs.writeFile(path.join(out,'desktop-updates-ui.mjs'),fixture);
 const server=await createServer({root,configFile:false,resolve:{dedupe:['react','react-dom']},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});let browser;

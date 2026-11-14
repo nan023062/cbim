@@ -2,10 +2,10 @@ import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {artifactRuntimeFixture,seedProgress,invoke,captureInput,artifactBinding} from './artifact-runtime-fixture';
-import {ArtifactReportService} from '../src/backend/scheduler-engine/evidence/artifact-report-service';
-import type {DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {ArtifactReportService} from '../src/logic/evidence/runtime/artifact-report-service';
+import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 
 async function setup(){
   const f=await artifactRuntimeFixture(async c=>{await seedProgress(c);await invoke(c,'cbim_task_artifact_capture','capture',captureInput)}),summary=await (await f.start()).done;

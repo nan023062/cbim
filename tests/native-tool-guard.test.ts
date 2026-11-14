@@ -2,7 +2,7 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {guard} from '../src/backend/main/platform/tool-guard';
+import {guard} from '../src/logic/execution/platform/tool-guard';
 
 it('根目录可非递归列出并创建业务文件，递归知识访问被拒绝',()=>{
   const root=path.resolve('test-results/guard-root');

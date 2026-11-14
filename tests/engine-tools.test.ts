@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
-import {runtimeEngineTools} from '../src/backend/core/execution/engine-tools';
-import {claudeTools} from '../src/backend/engines/claude/tools';
-import {codexTools} from '../src/backend/engines/codex/tools';
-import {engineInstructions} from '../src/backend/core/execution/engine-instructions';
-import {memberToolCapabilities} from '../src/backend/core/execution/capabilities/member-tool-capabilities';
-import type {EngineContext} from '../src/backend/core/execution/types';
+import {runtimeEngineTools} from '../src/logic/execution/rules/engine-tools';
+import {claudeTools} from '../src/logic/execution/engines/claude/tools';
+import {codexTools} from '../src/logic/execution/engines/codex/tools';
+import {engineInstructions} from '../src/logic/execution/rules/engine-instructions';
+import {memberToolCapabilities} from '../src/logic/execution/rules/capabilities/member-tool-capabilities';
+import type {EngineContext} from '../src/logic/execution/rules/types';
 
 const context=():EngineContext=>({task:{taskId:'task',workspaceId:'workspace',root:'.',mode:'chat',agentId:'cbim:main',goal:'test',moduleIds:[],acceptance:[]},runId:'run',directory:'.',emit:async()=>{},beforeTool:async()=>({allow:true})});
 const empty={list:async()=>[],call:vi.fn(async()=>({content:[]}))};

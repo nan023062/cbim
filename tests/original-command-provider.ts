@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
-import {commandVerificationReportSchema,type CommandVerificationReport} from '../src/backend/core/tasks/command-verification';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import {commandVerificationReportSchema,type CommandVerificationReport} from '../src/logic/tasks/rules/command-verification';
 import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 import {mainToolValue} from './main-tool-contract-provider';
 

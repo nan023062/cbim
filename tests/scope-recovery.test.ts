@@ -6,16 +6,16 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {recoveryRequestSchema,recoveryReceiptSchema,type RecoveryRequest} from '../src/backend/core/tasks/scope-recovery';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager,type MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {EngineContext,TaskSpec} from '../src/backend/core/execution/types';
+import {json} from '../src/core/platform/node/serialization';
+import {recoveryRequestSchema,recoveryReceiptSchema,type RecoveryRequest} from '../src/logic/tasks/rules/scope-recovery';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager,type MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
 
 async function setup(withRun=true){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot();

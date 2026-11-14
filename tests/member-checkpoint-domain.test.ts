@@ -4,19 +4,19 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerServiceOwner} from './owner-service-fixture';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {prepareDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {validateGraph} from '../src/backend/core/tasks/graph-rules';
-import {validateDispatchExecution} from '../src/backend/core/tasks/dispatch-invariants';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {memberResumeSelection} from '../src/backend/core/tasks/queued-member-resume-rules';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {DispatchState,DispatchMutation,AssignmentMessage,CheckpointMessage} from '../src/backend/core/dispatch/dispatch-storage';
-import type {TaskNode,GraphEventBatch,AgentGraphView} from '../src/backend/core/tasks/graph-types';
-import type {MemberCheckpointRecord} from '../src/backend/core/tasks/member-checkpoint';
-import type {MemberResumeRequest} from '../src/backend/core/tasks/queued-member-resume';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {prepareDispatchExecutionContext} from '../src/logic/execution/context/execution-context';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {validateGraph} from '../src/logic/tasks/rules/graph-rules';
+import {validateDispatchExecution} from '../src/logic/tasks/rules/dispatch-invariants';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {memberResumeSelection} from '../src/logic/tasks/rules/queued-member-resume-rules';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {DispatchState,DispatchMutation,AssignmentMessage,CheckpointMessage} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {TaskNode,GraphEventBatch,AgentGraphView} from '../src/logic/tasks/rules/graph-types';
+import type {MemberCheckpointRecord} from '../src/logic/tasks/rules/member-checkpoint';
+import type {MemberResumeRequest} from '../src/logic/tasks/rules/queued-member-resume';
 
 function changed<T>(old:T[],values:T[]|undefined,key:(item:T)=>string){const map=new Map(old.map(item=>[key(item),item]));for(const item of values??[])map.set(key(item),item);return [...map.values()]}
 function project(previous:DispatchState,mutation:DispatchMutation):DispatchState{return {...previous,graphs:previous.graphs.map(graph=>mutation.batch&&graph.identity.rootSessionId===mutation.batch.identity.rootSessionId?applyGraphBatch(graph,mutation.batch):graph),members:changed(previous.members,mutation.members,item=>item.agentInstanceId),sessions:changed(previous.sessions,mutation.sessions,item=>item.agentSessionId),runs:changed(previous.runs??[],mutation.runs,item=>item.binding.runId),outbox:changed(previous.outbox,mutation.messages,item=>item.messageId),scopes:changed(previous.scopes??[],mutation.scopes,item=>item.scopeId)}}

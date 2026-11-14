@@ -4,10 +4,10 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {globalAdmissionProvider,globalAdmissionFixture as data} from './global-admission-provider';
 import {seedGlobalAdmission,admissionScopes} from './global-admission-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {admissionReadSchema} from '../src/backend/core/runtime/admission';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {admissionReadSchema} from '../src/logic/runtime/rules/admission';
 
 it.each(['complete','stop','restart-waiting'] as const)('shares actual Pi admission across two workspaces, preserves FIFO and never starts a cancelled ticket (%s)',async mode=>{
   const f=await fixture(),provider=await globalAdmissionProvider();let app=f.app,failed=false;

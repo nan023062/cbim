@@ -1,4 +1,4 @@
-import {required} from './helpers';
+import {required} from './support/assertions';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -8,12 +8,12 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {scopeContinuationProvider,continuationFixture} from './scope-continuation-provider';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/backend/core/tasks/scope-continuation';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {GoalContinuationRequest,GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 
-it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only explicit goal input and preserves original scope with real Pi (%s)',async(mode)=>{
+it.each(['complete-restart','wait-again','stop-race','live-queue'] as const)('resumes only explicit goal input and preserves original scope with real Pi (%s)',async(mode)=>{
   const f=await fixture(),provider=await scopeContinuationProvider({holdContinuation:true,waitAgain:mode==='wait-again'});let app=f.app;
   try{
     await app.models.save({profile:{name:'Scope continuation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
@@ -34,9 +34,9 @@ it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only ex
     await vi.waitFor(async()=>{expect((await scopes())[0].status).toBe('waiting');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
     const original=(await scopes())[0],originalGraph=await graph();expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);
     await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:continuationFixture.queuedGoal,options:{permission:'read'}});
-    const queued=await queue();expect(queued).toHaveLength(1);expect(queued[0].status).toBe('paused');
+    let queued=await queue();expect(queued).toHaveLength(1);expect(queued[0].status).toBe('pending');
     await expect(app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId})).rejects.toThrow();
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    if(mode!=='live-queue'){await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();queued=await queue();expect(queued[0].status).toBe('paused')}
     expect(await scopes()).toEqual([original]);expect(provider.mainRequests).toHaveLength(6);expect(await queue()).toEqual(queued);
     const req:GoalContinuationRequest={...identity,scopeId:original.scopeId,waitId:original.wait!.waitId,expectedGoalRevision:original.goal!.revision,expectedInputRevision:original.goal!.inputRevision??1,commandId:randomUUID(),input:{message:continuationFixture.supplement},options:{provider:'cbim-'+profileId,model:'continue-fixture',profileId,permission:'read',turnTimeoutMs:30000}};
     const lookup={...identity,scopeId:req.scopeId,commandId:req.commandId};
@@ -64,19 +64,20 @@ it.each(['complete-restart','wait-again','stop-race'] as const)('resumes only ex
     await expect(app.dispatch('loop.goalContinue',{...req,input:{message:'changed input'}})).rejects.toThrow();
     await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID()})).rejects.toThrow();
     await expect(app.dispatch('loop.goalContinuation',{...lookup,rootSessionId:'wrong-root'})).rejects.toThrow();
-    expect(await queue()).toEqual(queued.map((item:any)=>({...item,reason:'原目标已接收补充，后续消息仍暂停；目标结束后可继续队列'})));provider.releaseContinuation();
+    expect(await queue()).toEqual(queued);provider.releaseContinuation();
     await vi.waitFor(async()=>{expect((await scopes())[0].status).toBe(mode==='wait-again'?'waiting':'closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
+    if(mode==='live-queue')await vi.waitFor(async()=>{expect((await scopes())[1]).toMatchObject({scopeId:queued[0].id,status:'closed',outcome:'completed'});expect(await queue()).toEqual([])},{timeout:20000,interval:30});
     const resolved=(await scopes())[0],thread=await app.execution(entry.id).thread(started.taskId);
-    expect(thread).toHaveLength(3);expect(thread[2].source).toMatchObject({kind:'user-continuation',scopeId:req.scopeId,continuationId:req.commandId,inputRevision:2});expect(thread[2].runId).toBe(receipt.continuation.runId);expect(thread[2].events.find(event=>event.type==='run.started')?.data.message).toBe(req.input.message);
+    expect(thread).toHaveLength(mode==='live-queue'?4:3);expect(thread[2].source).toMatchObject({kind:'user-continuation',scopeId:req.scopeId,continuationId:req.commandId,inputRevision:2});expect(thread[2].runId).toBe(receipt.continuation.runId);expect(thread[2].events.find(event=>event.type==='run.started')?.data.message).toBe(req.input.message);
     expect(resolved.goal?.input).toEqual(original.goal?.input);expect(resolved.continuations).toEqual([receipt.continuation]);expect(resolved.goal?.plan?.inputRevision).toBe(2);expect(resolved.goal?.review?.inputRevision).toBe(2);expect((await graph()).tasks).toEqual(originalGraph.tasks);
     const denied=thread[2].toolReceipts?.find(item=>item.toolCallId==='continue-stale-review');expect(denied?.outcome).toBe('failed');
-    expect(provider.mainRequests).toHaveLength(12);expect(provider.memberRequests).toHaveLength(5);expect((await queue())[0].status).toBe('paused');
+    expect(provider.mainRequests).toHaveLength(mode==='live-queue'?13:12);expect(provider.memberRequests).toHaveLength(5);if(mode!=='live-queue')expect((await queue())[0].status).toBe('paused');
     if(mode==='wait-again'){
       expect(resolved.wait!.waitId).not.toBe(original.wait!.waitId);expect(resolved.wait!.mainRunIds).toEqual(thread.map(run=>run.runId));expect(resolved.wait!.goalRevision).toBe(resolved.goal!.revision);
       await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID(),expectedGoalRevision:resolved.goal!.revision,expectedInputRevision:2})).rejects.toThrow();
       expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(await scopes()).toEqual([resolved]);expect(provider.mainRequests).toHaveLength(12);
       await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await scopes())[0].outcome).toBe('cancelled');
-    }else{
+    }else if(mode!=='live-queue'){
       expect(resolved).toMatchObject({status:'closed',outcome:'completed',goal:{review:{decision:'complete'}}});
       await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID()})).rejects.toThrow();
       expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);

@@ -4,8 +4,8 @@ import path from 'node:path';
 import {it,expect} from 'vitest';
 import {transitionFixture,prepareTransition,transitionInput,transitionTool,runTransitions,finishTransitions,transitionContracts} from './artifact-transition-fixture';
 import {invoke,deferred} from './artifact-runtime-fixture';
-import {completeOutputProof} from '../src/backend/core/evidence/complete-output-evidence';
-import {workflowContractSchema} from '../src/backend/core/workspace/workflow-contract';
+import {completeOutputProof} from '../src/logic/evidence/rules/complete-output-evidence';
+import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-contract';
 
 it('真实删除与移动连续链贯通完整候选，保存前态与原阶段，文件字节不进入证明',async()=>{
   const f=await transitionFixture(async c=>{const manifestId=await runTransitions(c);const result=await finishTransitions(c,manifestId);expect(result.delivery.workflow.manifest.operations).toHaveLength(2)});

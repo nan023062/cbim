@@ -1,12 +1,12 @@
 import {runtimeToolGroup} from './runtime-tool-group';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {it,expect} from 'vitest';
 import {z} from 'zod';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/backend/core/execution';
+import {LoopRuntime,type AgentEngine,type EngineContext,type TaskSpec} from '../src/logic/execution/rules';
 
 async function setup(factory:()=>AgentEngine,describeTool?:ConstructorParameters<typeof LoopRuntime>[0]['describeTool'],normalizeToolInput?:ConstructorParameters<typeof LoopRuntime>[0]['normalizeToolInput']){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-loop-unit-'));let locked=false;

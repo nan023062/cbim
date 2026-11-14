@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {seedTeam} from './team-fixture';
-import {moduleGetOutputSchema,moduleRegistryOutputSchema} from '../src/backend/core/knowledge/tool-output-queries';
+import {moduleGetOutputSchema,moduleRegistryOutputSchema} from '../src/logic/knowledge/rules/tool-output-queries';
 
 test('内置根始终可查询，不伪造正式模块文件或改写派生索引',async()=>{
   const f=await fixture();try{

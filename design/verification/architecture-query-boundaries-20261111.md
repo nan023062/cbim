@@ -1,5 +1,7 @@
 # 知识查询边界与局部测试隔离
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-11。来源：用户直接要求先优化单向依赖与分层，再按作用域测试，并继续开发。本片没有对应架构 Issue，不虚构或自动创建工单。
 
 ## 基线与范围
@@ -47,9 +49,9 @@ pnpm exec vitest run tests/knowledge-queries.test.ts -t '刷新先核|原成功�
 
 完整改动通过 `git diff 7fad631e..refactor/query-boundaries` 或本片提交查看，包括所有源码、测试、检测器与资料。建议依次阅读：
 
-1. [知识边界矩阵与状态归属](../../src/backend/core/knowledge/CONTRACT.md#快照契约领域视图与查询编排)、[snapshot.ts](../../src/backend/core/knowledge/snapshot.ts)、[ports.ts](../../src/backend/core/knowledge/ports.ts)。
-2. [查询编排](../../src/backend/scheduler-engine/context/knowledge-queries.ts) 与 [索引刷新](../../src/backend/core/knowledge/knowledge-refresh.ts)：确认读写分离，原提交顺序未改。
-3. [工具装配](../../src/backend/scheduler-engine/tools/knowledge-tools.ts)、[任务准备](../../src/backend/scheduler-engine/context/team-workflow.ts)：确认真实消费者和原版本/权限门禁。
+1. [知识边界矩阵与状态归属](../../src/logic/knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)、[snapshot.ts](../../src/logic/knowledge/rules/read-models/snapshot.ts)、[ports.ts](../../src/logic/knowledge/rules/ports.ts)。
+2. [查询编排](../../src/logic/knowledge/rules/knowledge-queries.ts) 与 [索引刷新](../../src/logic/knowledge/rules/knowledge-refresh.ts)：确认读写分离，原提交顺序未改。
+3. [工具装配](../../src/logic/tools/runtime/knowledge-tools.ts)、[任务准备](../../src/logic/execution/context/team-workflow.ts)：确认真实消费者和原版本/权限门禁。
 4. [依赖规则](../../scripts/check-dependencies.mjs)、[领域环境](../../tests/knowledge-fixture.ts)、[查询/刷新回归](../../tests/knowledge-queries.test.ts)。
 
 同步注释：snapshot、ports、Team/BusinessWorkspace、两个新增用例入口、tools 与 team-workflow。同步知识、团队、工作区、Context、Tools 五份 CONTRACT，以及 backend、core、knowledge、team、workspace、scheduler-engine、context、tools 八份 ARCHITECTURE。

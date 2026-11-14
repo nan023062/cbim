@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
-import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/backend/core/governance/module-governance';
+import type {Application} from '../src/bridge/server/application';
+import {moduleGovernanceReceiptSchema,moduleGovernanceListSchema} from '../src/logic/governance/rules/module-governance';
 import {seedModuleGovernance} from './module-governance-fixture';
 import {governanceFeedbackFixture as data} from './module-governance-feedback-provider';
 export {moduleGovernanceToolsRecords as governanceFeedbackRecords,moduleGovernanceToolsLogBytes as governanceFeedbackLogBytes,moduleGovernanceToolsJournalBytes as governanceFeedbackJournalBytes} from './module-governance-tools-fixture';

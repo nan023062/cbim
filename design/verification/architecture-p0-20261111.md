@@ -1,5 +1,7 @@
 # P0 架构整改与复扫记录
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-11。仓库：`nan023062/cbim`。产品基线：`a5938170cf9675b69960dde6a9bb535eb845bdd8`。
 
 ## 范围与结论
@@ -25,7 +27,7 @@
 
 逻辑方向、公开入口和外部依赖均为可检查约束；包含类型导入、重导出、别名、字面量动态导入及相对路径直达 `node_modules`。保留原物理层矩阵、文件级强连通检测、未解析引用拒绝及七项已核实的外部动态加载说明，没有增加目录级豁免。
 
-新增 [read-models.ts](../../src/backend/core/knowledge/read-models.ts) 作为固定快照读取入口。查询编排、成员上下文、执行管理、模块负责人服务和相关测试已迁移；三份实现不再接受外部直接导入。逻辑归属跨越原有 knowledge／team／workspace 目录，不为满足图形而搬动文件。
+新增 [read-models.ts](../../src/logic/knowledge/rules/read-models/index.ts) 作为固定快照读取入口。查询编排、成员上下文、执行管理、模块负责人服务和相关测试已迁移；三份实现不再接受外部直接导入。逻辑归属跨越原有 knowledge／team／workspace 目录，不为满足图形而搬动文件。
 
 **验收事实：** 有真实生产消费者通过公开入口访问；反向依赖、私有类型入口、别名重导出、私有动态导入和外部 SDK 均有拒绝用例。直接及间接引入文件操作的绕行也被覆盖。复扫中六个边界覆盖 12 个文件，违规 0；私有读取实现的外部直接消费者为 0。
 
@@ -87,10 +89,10 @@ pnpm exec vitest run tests/dependencies.test.ts --reporter=default --reporter=js
 
 ## 源码同步与 review 入口
 
-维护 [知识契约](../../src/backend/core/knowledge/CONTRACT.md)，更新九个涉及源码文件（含新入口）的文件头，并用 `node scripts/source-architecture.mjs` 同步七份架构文档：
+维护 [知识契约](../../src/logic/knowledge/rules/CONTRACT.md)，更新九个涉及源码文件（含新入口）的文件头，并用 `node scripts/source-architecture.mjs` 同步七份架构文档：
 
-- [core](../../src/backend/core/ARCHITECTURE.md)、[knowledge](../../src/backend/core/knowledge/ARCHITECTURE.md)、[team](../../src/backend/core/team/ARCHITECTURE.md)、[workspace](../../src/backend/core/workspace/ARCHITECTURE.md)。
-- [Main workspace](../../src/backend/main/workspace/ARCHITECTURE.md)、[Scheduler context](../../src/backend/scheduler-engine/context/ARCHITECTURE.md)、[Scheduler execution](../../src/backend/scheduler-engine/execution/ARCHITECTURE.md)。
+- [core](../../src/logic/ARCHITECTURE.md)、[knowledge](../../src/logic/knowledge/rules/ARCHITECTURE.md)、[team](../../src/logic/team/rules/ARCHITECTURE.md)、[workspace](../../src/logic/workspace/rules/ARCHITECTURE.md)。
+- [Main workspace](../../src/logic/workspace/service/ARCHITECTURE.md)、[Scheduler context](../../src/logic/execution/context/ARCHITECTURE.md)、[Scheduler execution](../../src/logic/execution/ARCHITECTURE.md)。
 
 建议阅读顺序：逻辑规则 → 依赖检查器及声明 → 读取公共入口／知识契约 → 查询与上下文消费者 → 三类测试辅助 → 单元与原集成场景 → 本报告。新增同类读取实现应先明确归属及公开契约，再由入口导出；新测试数据放入受约束的数据边界，需要真实应用时显式选择完整夹具。
 

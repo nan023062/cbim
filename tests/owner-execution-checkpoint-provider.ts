@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import {ownerExecutionDiscoverySchema} from '../src/backend/core/team/owner-execution-discovery';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import {ownerExecutionDiscoverySchema} from '../src/logic/team/rules/owner-execution-discovery';
 import {goalCompleteArguments,goalInspection} from './goal-provider-fixture';
 import {ownerExecutionToolValue,type OwnerExecutionRequest} from './owner-execution-provider';
 import {ownerExecutionData as data} from './owner-execution-fixture';

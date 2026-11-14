@@ -1,0 +1,16 @@
+# 共享 Core
+
+Core 是四层架构的基础公共层，不含业务规则、通信操作、页面状态或应用装配。前端和后端可以组合相同公开能力；运行环境是独立约束，Node 能力不经便携入口加载。
+
+当前公开能力包括 [utility](utility/CONTRACT.md)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/CONTRACT.md)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/CONTRACT.md) 及 [Electron 适配](platform/electron/CONTRACT.md)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
+
+前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
+
+旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图均已按四层归属迁移。
+
+没有全局 Core 容器或统一大导出。公共函数不持有业务状态，队列/集合由调用方逐实例创建并负责关闭策略。通用入口不能经重导出或间接依赖加载 Node/Electron；业务数据、路径权限、事务和进程生命周期不因使用基础库而转移。
+
+
+Web 迁移补充：core/web 为纯契约与正文算法，platform/node/web 为抓取编排，platform/electron/web-reader.ts 为宿主渲染适配。contracts/secrets.ts 提供独立加密端口；模型保留原类型兼容出口，Web 不依赖模型模块。
+
+Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行为；业务决定持有范围。SecretCipher 同时用于模型、Web 和反馈服务，Core 不依赖这些消费者。

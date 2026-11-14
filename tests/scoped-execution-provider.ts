@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';import http from 'node:http';
 import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 export const scopedData={model:'scoped-execution-fixture',goal:'SCOPED_MAIN: 在冻结范围内执行并交付',memberGoal:'SCOPED_MEMBER: 使用受控读取、隔离Node及受控写入',acceptance:['最终文件是隔离执行的实际输出，并有本轮读取基线'],file:'result.txt',before:'before',after:'computed-in-lpac',draft:'保持范围验收的普通草稿'};
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 export function scopedResult(body:Request,id:string):any{const message=body.messages.find(m=>m.role==='tool'&&m.tool_call_id===id);assert.ok(message,'缺实际回包 '+id);const raw=typeof message.content==='string'?message.content:JSON.stringify(message.content);let value;try{value=JSON.parse(raw)}catch{return {error:raw}}if(Array.isArray(value.content)){const text=value.content.filter((x:any)=>x.type==='text').map((x:any)=>x.text).join('');try{return JSON.parse(text)}catch{return {error:text}}}return value}

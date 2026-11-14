@@ -1,14 +1,14 @@
 import {runtimeToolGroup} from './runtime-tool-group';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {AgentEngine,EngineContext,TaskSpec} from '../src/backend/core/execution/types';
-import {RunControlledFile,type ControlledFileRunPort} from '../src/backend/core/execution/capabilities/run-controlled-file';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {controlledFileWriteToolName as tool,type ControlledFileWriteApplied} from '../src/backend/core/file-operations/controlled-file-operation';
-import {controlledFileOperationId} from '../src/backend/core/file-operations/controlled-file-rules';
-import {authorizeRunTool} from '../src/backend/core/tools/policy/tool-policy';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {AgentEngine,EngineContext,TaskSpec} from '../src/logic/execution/rules/types';
+import {RunControlledFile,type ControlledFileRunPort} from '../src/logic/execution/rules/capabilities/run-controlled-file';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {controlledFileWriteToolName as tool,type ControlledFileWriteApplied} from '../src/logic/file-operations/rules/controlled-file-operation';
+import {controlledFileOperationId} from '../src/logic/file-operations/rules/controlled-file-rules';
+import {authorizeRunTool} from '../src/logic/tools/rules/policy/tool-policy';
+import {hash} from '../src/core/platform/node/serialization';
 import {artifactBinding as binding,deferred} from './artifact-runtime-fixture';
 const input={path:'File.txt',expectedBefore:{byteLength:3,sha256:hash('old')},content:'new'};
 function applied(id='call',scopeId='scope'):ControlledFileWriteApplied{return {version:1,state:'applied',operationId:controlledFileOperationId(binding,id),revision:3,scopeId,binding,toolCallId:id,inputHash:hash(JSON.stringify(input)),relativePath:input.path,before:input.expectedBefore,after:{byteLength:3,sha256:hash('new')},appliedAt:new Date().toISOString(),coverage:'single_file_default_stream',acceptance:'not_evaluated'}}

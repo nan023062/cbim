@@ -7,19 +7,19 @@ import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
 import {summary} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {builtinSkills} from '../src/backend/core/knowledge/builtins';
-import {content} from '../src/backend/core/knowledge/read-models';
+import {builtinSkills} from '../src/logic/knowledge/rules/builtins';
+import {content} from '../src/logic/knowledge/rules/read-models';
 import {
   jsonValueSchema,knowledgeSnapshotOutputSchema,knowledgeSearchOutputSchema,workspaceIdentityOutputSchema,
-} from '../src/backend/core/knowledge/tool-output-base';
+} from '../src/logic/knowledge/rules/tool-output-base';
 import {
   moduleRegistryOutputSchema,moduleGetOutputSchema,agentRegistryOutputSchema,agentGetOutputSchema,knowledgeContentOutputSchema,
-} from '../src/backend/core/knowledge/tool-output-queries';
-import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../src/backend/core/knowledge/tool-output-builtins';
+} from '../src/logic/knowledge/rules/tool-output-queries';
+import {builtinCatalogOutputSchema,builtinReadOutputSchema} from '../src/logic/knowledge/rules/tool-output-builtins';
 import {
   knowledgePreviewOutputSchema,knowledgeCommitOutputSchema,objectPreviewOutputSchema,objectCommitOutputSchema,knowledgeRefreshOutputSchema,
   maintenanceTaskOutputSchema,maintenanceTaskStatusOutputSchema,
-} from '../src/backend/core/knowledge/tool-output-transactions';
+} from '../src/logic/knowledge/rules/tool-output-transactions';
 
 /** 对真实传输快照作严格校验，任何裁剪、默认值或类型转换都不算通过。 */
 function accepts<T>(schema:z.ZodTypeAny,value:T):T{

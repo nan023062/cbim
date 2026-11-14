@@ -1,7 +1,7 @@
 import {test,expect} from 'vitest';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import type {TaskProgress} from '../src/backend/core/evidence/progress';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import type {TaskProgress} from '../src/logic/evidence/rules/progress';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
 
 const plan={expectedVersion:0,goal:'实现游戏',reason:'用户要求实现',acceptance:['浏览器可运行'],steps:[{id:'build',title:'实现并验证',owner:'主 Agent'}]};
 const identity={workspaceId:'w',taskId:'t',runId:'r'};

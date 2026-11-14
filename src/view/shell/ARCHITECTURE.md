@@ -1,0 +1,373 @@
+# src/view/shell 架构
+
+## 目录定位
+
+工作区侧栏、会话选择、用户栏与右侧扩展页签；会话区与项目级视图区分开。向会话传递活动页签状态，隐藏页签保留草稿/节点选择并降低成员与任务图同步频率。 用户栏更新图标显示版本和进度，仅就绪后显式安装；新版提醒打开详情，原页面与草稿保持挂载。 导航的操作桥按明确请求Schema解析，坏历史记录不能当完整运行。
+
+本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
+
+## 代码清单
+
+| 文件 | 当前职责 |
+| --- | --- |
+| [App.tsx](App.tsx) | 桌面外壳：工作区下展示对话，中间固定主 Agent 会话（对话/任务视图），右侧独立扩展区承载架构/流程等视图；可调整宽度的侧边栏、工作区选择、页签、轮询、全局页面和未提交修改提示。 |
+| [ExtensionArea.tsx](ExtensionArea.tsx) | 工作区右侧扩展页签，独立于中央对话管理浏览器、命令终端、架构与内部运行诊断视图。 |
+| [extensions.css](extensions.css) | 中央对话与右侧扩展区的分栏、空页签及各扩展面板布局。 |
+| [runtime-navigation.ts](runtime-navigation.ts) | 把全局运行页的定位目标核对为现有主会话，并只更新本机页签与任务图选择。 |
+| [shell.css](shell.css) | 工作区外壳、侧栏、页签、菜单和主题布局样式。 |
+| [tabs.ts](tabs.ts) | 页签种类、默认布局、排序与本机布局恢复。 |
+| [UserMenu.tsx](UserMenu.tsx) | 本地账号、主题与设置菜单；用户栏右侧装配独立的版本更新图标。 |
+| [useSidebarWidth.ts](useSidebarWidth.ts) | 管理侧边栏宽度、拖动与键盘调整，并在本地保留布局。 |
+| [workspace-list.css](workspace-list.css) | 工作区树、名称旁的折叠按钮及点击位置浮动菜单。 |
+| [WorkspaceList.tsx](WorkspaceList.tsx) | 工作区树、主/子会话导航、主条目管理与工作区浮动操作菜单；子成员只提供观察入口。 |
+
+## 架构类图
+
+### App.tsx
+
+```mermaid
+classDiagram
+class N_src_view_shell_App_tsx["App.tsx"] {
+  <<component>>
+  +App()
+}
+```
+
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+
+### ExtensionArea.tsx
+
+```mermaid
+classDiagram
+class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
+  <<component>>
+  +ExtensionArea()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_ExtensionArea_tsx_Kind["Kind"] {
+  <<type>>
+
+}
+N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_ExtensionArea_tsx_Kind : 声明
+class N_src_view_shell_ExtensionArea_tsx_Panel["Panel"] {
+  <<type>>
+  +id
+  +kind
+}
+N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_ExtensionArea_tsx_Panel : 声明
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)。
+
+### extensions.css
+
+```mermaid
+classDiagram
+class N_src_view_shell_extensions_css["extensions.css"] {
+  <<stylesheet>>
+}
+```
+
+### runtime-navigation.ts
+
+```mermaid
+classDiagram
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+  <<module>>
+  +bindRuntimeConversation()
+  +runtimeTaskSelection()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+  <<module>>
+}
+class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest["RuntimeNavigationRequest"] {
+  <<interface>>
+  +requestId
+  +instanceId
+}
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest : 声明
+class N_src_view_shell_runtime_navigation_ts_external_RuntimeNavigationTarget["RuntimeNavigationTarget (外部契约)"] {
+  <<external>>
+}
+N_src_view_shell_runtime_navigation_ts_external_RuntimeNavigationTarget <|-- N_src_view_shell_runtime_navigation_ts_RuntimeNavigationRequest
+class N_src_view_shell_runtime_navigation_ts_VerifiedRuntimeNavigation["VerifiedRuntimeNavigation"] {
+  <<interface>>
+  +target
+  +workspace
+  +conversation
+}
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_VerifiedRuntimeNavigation : 声明
+class N_src_view_shell_runtime_navigation_ts_NavigationReader["NavigationReader"] {
+  <<type>>
+
+}
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_NavigationReader : 声明
+class N_src_view_shell_runtime_navigation_ts_NavigationGraph["NavigationGraph"] {
+  <<type>>
+  +identity
+  +root
+  +tasks
+}
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_NavigationGraph : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+  <<module>>
+}
+class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver["RuntimeNavigationResolver"] {
+  +cancel()
+  +resolve()
+  -read
+  -generation
+}
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver : 声明
+```
+
+直接依赖：[../foundations/utility/index.ts](../foundations/utility/index.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[tabs.ts](tabs.ts)。
+
+### shell.css
+
+```mermaid
+classDiagram
+class N_src_view_shell_shell_css["shell.css"] {
+  <<stylesheet>>
+}
+```
+
+### tabs.ts
+
+```mermaid
+classDiagram
+class N_src_view_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+  +newTab()
+  +initialLayout()
+  +moveTab()
+  +readLayouts()
+  +mergeConversations()
+  +renameConversation()
+  +removeConversation()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
+class N_src_view_shell_tabs_ts_TabKind["TabKind"] {
+  <<type>>
+
+}
+N_src_view_shell_tabs_ts ..> N_src_view_shell_tabs_ts_TabKind : 声明
+class N_src_view_shell_tabs_ts_ViewTab["ViewTab"] {
+  <<interface>>
+  +id
+  +kind
+  +title
+  +customTitle
+  +draft
+  +taskId
+  +attachments
+}
+N_src_view_shell_tabs_ts ..> N_src_view_shell_tabs_ts_ViewTab : 声明
+class N_src_view_shell_tabs_ts_TabLayout["TabLayout"] {
+  <<interface>>
+  +tabs
+  +active
+  +hiddenTaskIds
+}
+N_src_view_shell_tabs_ts ..> N_src_view_shell_tabs_ts_TabLayout : 声明
+class N_src_view_shell_tabs_ts_Layouts["Layouts"] {
+  <<type>>
+
+}
+N_src_view_shell_tabs_ts ..> N_src_view_shell_tabs_ts_Layouts : 声明
+```
+
+直接依赖：[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)。
+
+### UserMenu.tsx
+
+```mermaid
+classDiagram
+class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
+  <<component>>
+  +UserMenu()
+}
+```
+
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../updates/SoftwareUpdateButton.tsx](../updates/SoftwareUpdateButton.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
+
+### useSidebarWidth.ts
+
+```mermaid
+classDiagram
+class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
+  <<module>>
+  +useSidebarWidth()
+}
+```
+
+
+### workspace-list.css
+
+```mermaid
+classDiagram
+class N_src_view_shell_workspace_list_css["workspace-list.css"] {
+  <<stylesheet>>
+}
+```
+
+### WorkspaceList.tsx
+
+```mermaid
+classDiagram
+class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
+  <<component>>
+  +WorkspaceList()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../conversation/ConversationEntries.tsx](../conversation/ConversationEntries.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../components/state-labels.ts](../components/state-labels.ts)、[workspace-list.css](workspace-list.css)。
+
+### 本目录调用边界
+
+```mermaid
+classDiagram
+class N_src_view_shell_App_tsx["App.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
+class N_src_view_shell_UserMenu_tsx["UserMenu.tsx"] {
+  <<component>>
+}
+N_src_view_shell_App_tsx ..> N_src_view_shell_WorkspaceList_tsx : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_ExtensionArea_tsx : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_tabs_ts : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_UserMenu_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_App_tsx["App.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_useSidebarWidth_ts["useSidebarWidth.ts"] {
+  <<module>>
+}
+class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
+  <<module>>
+}
+class N_src_view_shell_ExtensionArea_tsx["ExtensionArea.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_extensions_css["extensions.css"] {
+  <<stylesheet>>
+}
+class N_src_view_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
+N_src_view_shell_App_tsx ..> N_src_view_shell_useSidebarWidth_ts : 导入依赖
+N_src_view_shell_App_tsx ..> N_src_view_shell_runtime_navigation_ts : 导入依赖
+N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_extensions_css : 导入依赖
+N_src_view_shell_runtime_navigation_ts ..> N_src_view_shell_tabs_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_shell_WorkspaceList_tsx["WorkspaceList.tsx"] {
+  <<component>>
+}
+class N_src_view_shell_tabs_ts["tabs.ts"] {
+  <<module>>
+}
+class N_src_view_shell_workspace_list_css["workspace-list.css"] {
+  <<stylesheet>>
+}
+N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_tabs_ts : 导入依赖
+N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_workspace_list_css : 导入依赖
+```
+
+
+## 子目录导航
+
+无子目录。
+
+[返回上层](../ARCHITECTURE.md)。
+
+每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+# 工作区外壳与原会话定位
+
+外壳按工作区实例与主 Session 缓存对话页面发布的已验证成员投影。主条目始终可见，成员在其下折叠；点击成员保留主页签/taskId，仅设置本机查看身份，点击主条目回到主话题列表。子会话无创建、重命名和删除操作；工作区重新打开后的实例不复用旧动态缓存。草稿和发送归属仍由原主页签持有。
+
+对话列表与会话历史菜单共用 `ConversationEntries` 和本机 `TabLayout`：自定义标题不覆盖原任务目标，移除条目保存工作区隔离的 `hiddenTaskIds`，轮询和重开不复活；删除最后一项创建空对话，不停止后台运行或删除日志。运行总览的显式定位可以恢复被移除条目。红色运行灯取 `runtime.snapshot` 的 ready 工作区及实际主／成员 running 记录，排队、历史状态和持久等待不点亮，读取失败清除观察。工作区菜单使用 portal 以点击坐标锚定左上角，视口边缘避让，支持键盘与焦点返回；折叠按钮紧邻项目名。
+
+`ExtensionArea` 向业务架构传递完整的 `WorkspaceView` 与共享快照，使负责人入口复用项目岗位登记时仍核实真实运行状态和实例。登记、返回原模块及选择状态由业务视图持有；外壳不生成岗位或执行责任写入。
+
+`App` 保存工作区页签、草稿与附件，界面选择不代表后端运行。全局“运行管理”挂载独立只读 `RuntimeOverview`；离开该页卸载其读取，不创建或恢复任务。
+
+展开侧栏仅显示“团队空间”文字及收起按钮，不重复展示 CBIM/BrandMark；窄侧栏也保留文字。欢迎页仍展示完整名称 CBIM Assistant 与 BrandMark。标题变化不改变账号、工作区、侧栏伸缩或品牌资源。
+
+用户栏右侧原主题按钮改为常驻更新图标；账号菜单只保留设置、主题和账号项，不重复更新入口或绿点。`App` 持有唯一 `useSoftwareUpdates`，把同一个 controller 交给 `UserMenu` 内的 `SoftwareUpdateButton`、新版提醒和详情。图标悬停或聚焦只读版本和进度；仅 ready 时点击安装，未就绪不打开弹窗、不下载、不排队安装。具体进度环、呼吸与错误语义归 updates。主题切换仍由 UserMenu 的菜单项调用原回调。详情从新版提醒打开，不切换 screen 或卸载原会话和设置草稿。
+
+更新呈现独立归入 [updates](../updates/ARCHITECTURE.md)，通过固定 IPC 依赖公开更新契约，不将账号登录、菜单展示或弹窗状态放进 logic/updates/service。菜单位置是本次已确认的变化点；检查、下载与排空安装的规则保持原后端归属，变化频率没有统计结论。
+
+```mermaid
+classDiagram
+class App { <<component>> }
+class UserMenu { <<component>> }
+class SoftwareUpdates { <<external component>> }
+class SoftwareUpdateButton { <<external component>> }
+class useSoftwareUpdates { <<external module>> }
+class BrandMark { <<external component>> }
+App ..> BrandMark : 欢迎页产品标识
+App ..> UserMenu : 提供唯一更新 controller
+UserMenu ..> SoftwareUpdateButton : 用户栏右侧常驻入口
+App ..> useSoftwareUpdates : 持有窗口级状态
+App ..> SoftwareUpdates : 叠加弹窗，保留原页面
+note for SoftwareUpdates "../updates/SoftwareUpdates.tsx：只消费更新状态与显式操作"
+```
+
+运行页的 `onOpen` 只携带 `workspaceId/rootSessionId` 与可选 `scopeId/taskId`。`RuntimeNavigationResolver` 依次读取工作区清单、该工作区的 `loop.list`、再次读取清单，要求同一实例始终为 running，且原根存在真实 chat 记录并属于该工作区。缺失、不可读或身份冲突明确失败，不调用 open、chat、resume、dispatch 或重试接口。
+
+导航只复用已绑定该根的聊天页签；本机没有页签时，新增绑定真实历史的页签，不挪用未发送草稿页签，不改原标题、草稿或附件。两次点击不会建立重复绑定。切屏、新导航和卸载使旧请求失效，迟到失败也不覆盖新页面。工作区实例变化重新挂载会话投影，原本机草稿保持。
+
+一次性 `RuntimeNavigationRequest` 交给 `Conversation`；任务图与周期加载完成后再次核对原身份并消费。选中旧周期仅影响展示，不改变实际开放目标。消费后请求清除，后续轮询或返回对话不会重复重置用户选择；不存在节点和周期不回退为最新目标。
+
+扩展区将真实治理启动回执交给 Shell，按原工作区绑定新会话，不覆盖其他草稿。右上运行绿点与展开工作区详情入口已移除；工作区管理在左侧更多菜单中保留，不删除后台状态或既有任务。团队文件编辑与业务编辑共用页签离开保护。
+
+## 自动化会话定位
+
+App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。右侧旧自动化条目复用同一工作区视图，不建立第二份配置或调度服务。
+
+
+### 异步结果失效边界
+
+RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
+主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。

@@ -1,9 +1,9 @@
 import {test,expect,vi} from 'vitest';
 import path from 'node:path';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {RunSummary} from '../src/backend/core/execution/types';
-import type {RunStorage} from '../src/backend/core/execution/storage';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {RunSummary} from '../src/logic/execution/rules/types';
+import type {RunStorage} from '../src/logic/execution/rules/storage';
 
 function fixture(){
   const context={initialRunId:'initial',nativeSessionId:'680739fc-53ab-4099-bc8d-273f3c5c4a37',excludedRunIds:['old']};

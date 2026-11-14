@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {goalPlanArguments,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const outputManifestData={goal:'OUTPUT_MANIFEST_MAIN: 读取产物并记录声明目录的完整集合',memberGoal:'OUTPUT_MANIFEST_MEMBER: 读取产物文件并完整采集冻结目录',model:'output-manifest-fixture',root:'outputs',file:'outputs/result.txt',content:'ACTUAL_MANIFEST_CONTENT_8c42',acceptance:['读取真实产物并记录声明范围完整集合；清单不代替验收'],draft:'完整产物只读复核期间保留此草稿。',final:'已记录真实读取与完整集合，观察不代替业务验收。'};

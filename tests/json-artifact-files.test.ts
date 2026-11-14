@@ -3,8 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {createHash} from 'node:crypto';
-import {ArtifactFiles} from '../src/backend/main/platform/files/artifact-files';
-import {jsonValidationLimits,type BoundedJsonSchema} from '../src/backend/core/workspace/json-validation-schema';
+import {ArtifactFiles} from '../src/logic/file-operations/platform/files/artifact-files';
+import {jsonValidationLimits,type BoundedJsonSchema} from '../src/logic/workspace/rules/json-validation-schema';
 
 const schema:BoundedJsonSchema={type:'object',properties:{count:{type:'integer',minimum:1}},required:['count'],additionalProperties:false};
 const fact=(bytes:Buffer,relativePath='result.json')=>({relativePath,byteLength:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});

@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {parseWorkflowContract,workflowContractSchema,workflowContractLimits} from '../src/backend/core/workspace/workflow-contract';
+import {parseWorkflowContract,workflowContractSchema,workflowContractLimits} from '../src/logic/workspace/rules/workflow-contract';
 
 const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'inspect-result',toolName:'read'}]}};
 const block=(value:unknown,mark='```')=>mark+'cbim-workflow\n'+JSON.stringify(value)+'\n'+mark;

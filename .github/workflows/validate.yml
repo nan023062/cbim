@@ -55,6 +55,8 @@ jobs:
         run: pnpm typecheck
       - name: Check architecture and dependencies
         run: pnpm check:architecture
+      - name: Check module test ownership and isolation
+        run: pnpm check:test-modules
       - name: Build website and verify brand once
         if: needs.scope.outputs.website != 'true'
         env:

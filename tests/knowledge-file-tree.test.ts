@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {knowledgeFileTree} from '../src/frontend/knowledge/knowledge-file-tree';
-import {KnowledgeFileTree} from '../src/frontend/knowledge/KnowledgeFileTree';
-import {KnowledgeFilePreview} from '../src/frontend/knowledge/KnowledgeFilePreview';
-import {governanceWorkflow} from '../src/frontend/knowledge/GovernanceLaunch';
+import {knowledgeFileTree} from '../src/view/knowledge/knowledge-file-tree';
+import {KnowledgeFileTree} from '../src/view/knowledge/KnowledgeFileTree';
+import {KnowledgeFilePreview} from '../src/view/knowledge/KnowledgeFilePreview';
+import {governanceWorkflow} from '../src/view/knowledge/GovernanceLaunch';
 import type {Snapshot} from '../src/bridge/contracts/workspace';
 const files=['.cbim/team/dev/agent.json','.cbim/team/dev/principles.md','.cbim/team/dev/skills/review/SKILL.md','.cbim/workspace/game/module.md','.cbim/team/../escape.md'].map(path=>({path,text:path.endsWith('.json')?'bad json':'# 实际正文',hash:'a'.repeat(64)}));
 it('目录树只展示根内真实文件，保留方法目录与搜索父链，不把文件当业务模块',()=>{

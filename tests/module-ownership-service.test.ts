@@ -2,12 +2,12 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Snapshot} from '../src/backend/core/knowledge/types';
+import type {Snapshot} from '../src/logic/knowledge/rules/types';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedModuleOwnership,moduleOwnershipChange,commitModuleOwnership,moduleOwnershipJournal} from './module-ownership-fixture';
 import {commitWorkspaceMember} from './workspace-member-fixture';
-import type {ModuleOwnershipChangeInput,ModuleOwnershipPreview} from '../src/backend/core/workspace/module-ownership';
+import type {ModuleOwnershipChangeInput,ModuleOwnershipPreview} from '../src/logic/workspace/rules/module-ownership';
 
 const cleanups:Array<()=>Promise<void>>=[];
 afterEach(async()=>{vi.restoreAllMocks();for(const cleanup of cleanups.splice(0).reverse())await cleanup()});

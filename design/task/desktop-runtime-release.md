@@ -51,4 +51,4 @@ R 构建重新计算固定 bootstrap 产物、实际 Electron 版本、koffi 文
 
 当前选择完整小型 R ZIP、完整按需 E ZIP。未实现文件/块差分、页面独立 reload、主进程 HMR、旧版本缓存自动回收、跨 C 共用 E 缓存或跨 E 会话迁移。首次引擎下载仍需网络；R/E 缓存与失败恢复不能替代用户数据备份。旧 NSIS 已有差分，因此新方案的主要收益是免安装与窗口优先，不能保证每次下载字节更少。
 
-维护入口：[bootstrap 契约](../../src/backend/bootstrap/CONTRACT.md)、[更新契约](../../src/backend/updater/CONTRACT.md)、[引擎契约](../../src/backend/engines/CONTRACT.md)、[方案与取舍](desktop-hot-update-design.md)。
+维护入口：[bootstrap 契约](../../src/bridge/server/bootstrap/CONTRACT.md)、[更新契约](../../src/logic/updates/service/CONTRACT.md)、[引擎契约](../../src/logic/execution/engines/CONTRACT.md)、[方案与取舍](desktop-hot-update-design.md)。

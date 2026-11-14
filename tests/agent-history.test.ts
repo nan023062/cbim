@@ -4,15 +4,15 @@ import path from 'node:path';
 import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema} from '../src/backend/core/workspace/module-ownership';
+import {moduleOwnershipDetailSchema,moduleOwnershipPreviewSchema} from '../src/logic/workspace/rules/module-ownership';
 import {fixture} from './helpers';
 import {request,summary} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import type {TaskSpec,StoredEvent} from '../src/backend/core/execution/types';
-import type {AgentHistoryRoles,AgentHistoryPage,AgentHistorySession,AgentHistoryRun,AgentHistoryEventsRead} from '../src/backend/core/team/session-history';
+import {json} from '../src/core/platform/node/serialization';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import type {TaskSpec,StoredEvent} from '../src/logic/execution/rules/types';
+import type {AgentHistoryRoles,AgentHistoryPage,AgentHistorySession,AgentHistoryRun,AgentHistoryEventsRead} from '../src/logic/team/rules/session-history';
 
 /** Real Application + pinned Pi, with a deterministic local provider. History queries never call this provider. */
 it('按静态角色聚合真实主会话和独立执行通道，释放及删除定义后历史仍可分页只读查询',async()=>{

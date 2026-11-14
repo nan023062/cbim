@@ -19,10 +19,10 @@
 
 ## 模块分工
 
-- `core/tasks`：严格请求、帮助记录与信封，图及持久化不变量。
-- `core/brain` 与 Pi：真实调用身份、暂存事件、标准回执、在途与暂存后工具门禁。
-- `scheduler-engine/execution`：canonical 结算、可靠信封、释放占用后的主调度回注与补做；不让等待主回复占住成员租约。
-- `frontend/tasks` 与对话：只读事实展示与任务节点状态，保持静态图和动态任务图边界。
+- `logic/tasks/rules`：严格请求、帮助记录与信封，图及持久化不变量。
+- `logic/execution/rules` 与 Pi：真实调用身份、暂存事件、标准回执、在途与暂存后工具门禁。
+- `logic/team/runtime 与 logic/dispatch/runtime`：canonical 结算、可靠信封、释放占用后的主调度回注与补做；不让等待主回复占住成员租约。
+- `view/tasks` 与对话：只读事实展示与任务节点状态，保持静态图和动态任务图边界。
 
 ## 本轮验收
 

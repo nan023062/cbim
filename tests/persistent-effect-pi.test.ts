@@ -3,13 +3,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/backend/core/tasks/effect-observation';
-import {originalPersistentWrite,persistentWriteIdentity} from '../src/backend/core/tasks/persistent-write-input';
-import {observePersistentWrite} from '../src/backend/main/evidence/persistent-effect-reader';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
+import {originalPersistentWrite,persistentWriteIdentity} from '../src/logic/tasks/rules/persistent-write-input';
+import {observePersistentWrite} from '../src/logic/evidence/service/persistent-effect-reader';
 import {preparePersistentEffect,verifyPersistentEffectOriginal} from './persistent-effect-fixture';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {hash} from '../src/core/platform/node/serialization';
 
 it.each(['observe','propose','ownership'] as const)('真实 Pi %s 保存后丢回包：原失败保留、原命令可核实，处置和重开不重放',async mode=>{
  const f=await fixture();let app=f.app,source:Awaited<ReturnType<typeof preparePersistentEffect>>|undefined;

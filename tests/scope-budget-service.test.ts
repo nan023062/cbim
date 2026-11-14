@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import type {ScopeBudgetPolicy} from '../src/backend/core/budget/scope-budget';
-import type {RunSummary,TaskSpec,EngineEvent} from '../src/backend/core/execution/types';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import type {ScopeBudgetPolicy} from '../src/logic/budget/rules/scope-budget';
+import type {RunSummary,TaskSpec,EngineEvent} from '../src/logic/execution/rules/types';
 
 async function setup(limits:ScopeBudgetPolicy['limits']={tokens:200}){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),directory=path.join(f.user,'budget-tests'),store=new FileDispatchStore(directory,entry.id);

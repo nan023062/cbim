@@ -1,7 +1,7 @@
 import {it,expect} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {ScopeBudgetPanel} from '../src/frontend/tasks/ScopeBudgetPanel';
+import {ScopeBudgetPanel} from '../src/view/tasks/ScopeBudgetPanel';
 import type {ScopeBudgetSummary,ScopeBudgetReason} from '../src/bridge/contracts/scope-budget';
 
 const render=(budget?:ScopeBudgetSummary,waiting=false)=>renderToStaticMarkup(createElement(ScopeBudgetPanel,{budget,waiting}));

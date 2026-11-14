@@ -1,9 +1,9 @@
-import {RunArtifactCapture} from '../src/backend/core/execution/capabilities/artifact-capture';
+import {RunArtifactCapture} from '../src/logic/execution/rules/capabilities/artifact-capture';
 import {runtimeToolGroup} from './runtime-tool-group';
 import {afterEach,it,expect,vi} from 'vitest';
-import type {ArtifactBaselineStaged,ArtifactCaptureInput} from '../src/backend/core/evidence/artifact-baseline';
+import type {ArtifactBaselineStaged,ArtifactCaptureInput} from '../src/logic/evidence/rules/artifact-baseline';
 import {artifactRuntimeFixture,seedProgress,invoke,captureInput,deferred} from './artifact-runtime-fixture';
-import {verifyArtifactBaselines} from '../src/backend/core/evidence/artifact-evidence';
+import {verifyArtifactBaselines} from '../src/logic/evidence/rules/artifact-evidence';
 import {artifactBinding} from './artifact-runtime-fixture';
 
 it('records real sources before receipt, exposes only confirmed refs and never uses a capture as delivery evidence',async()=>{

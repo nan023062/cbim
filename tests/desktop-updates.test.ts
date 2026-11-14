@@ -1,8 +1,8 @@
 import {describe,it,expect,vi,beforeEach,afterEach} from 'vitest';
-import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/backend/updater/desktop-updates';
-import {compareDesktopVersions,parseDesktopRelease,latestDesktopRelease,desktopReleaseBase,desktopInstallerName} from '../src/backend/updater/desktop-releases';
+import {DesktopUpdates,type DesktopUpdateInstaller} from '../src/logic/updates/service/desktop-updates';
+import {compareDesktopVersions,parseDesktopRelease,latestDesktopRelease,desktopReleaseBase,desktopInstallerName} from '../src/logic/updates/service/desktop-releases';
 import type {DesktopRelease} from '../src/bridge/contracts/desktop-updates';
-import type {ReleaseRequest} from '../src/backend/updater/release-http';
+import type {ReleaseRequest} from '../src/logic/updates/service/release-http';
 
 const release:DesktopRelease={version:'0.2.0',tag:'desktop-v0.2.0',notes:'修复与功能',publishedAt:'2026-11-08T00:00:00Z'};
 function wire(version='0.2.0') {return {draft:false,prerelease:false,tag_name:'desktop-v'+version,html_url:'https://github.com/nan023062/cbim/releases/tag/desktop-v'+version,published_at:release.publishedAt,body:release.notes,assets:[desktopInstallerName(version),'latest.yml'].map(name=>({name,state:'uploaded',size:100,browser_download_url:desktopReleaseBase(version)+name}))}}

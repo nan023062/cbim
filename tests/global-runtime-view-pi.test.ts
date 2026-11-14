@@ -1,12 +1,12 @@
 import {expect,it,vi} from 'vitest';
 import path from 'node:path';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
-import {runtimeSnapshotSchema,runtimeReadSchema} from '../src/backend/core/runtime/runtime-validation';
-import {admissionReadSchema} from '../src/backend/core/runtime/admission';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
+import {runtimeSnapshotSchema,runtimeReadSchema} from '../src/logic/runtime/rules/runtime-validation';
+import {admissionReadSchema} from '../src/logic/runtime/rules/admission';
 import {globalRuntimeProviders,seedGlobalRuntime,globalRuntimeFixture as data,waitFixture,globalAdmissionFixture as admissionData,admissionScopes} from './global-runtime-fixture';
 
 it('projects real waiting, active member and queued admission across two workspaces without reading models or replaying after restart',async()=>{

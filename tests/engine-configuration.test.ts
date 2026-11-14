@@ -5,14 +5,14 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {LlmProfiles} from '../src/backend/main/models/llm-profiles';
-import {definition,type LlmDefinition,type LlmProfile} from '../src/backend/core/models/config';
-import {engineSupportsApi,loopEngineSchema} from '../src/backend/core/models/engine';
-import {workspaceMemberModelHash} from '../src/backend/core/team/workspace-member-rules';
-import {workspaceMemberModelSnapshotSchema} from '../src/backend/core/team/workspace-member';
-import {objectOperation} from '../src/backend/core/knowledge/object-crud';
-import {queuedMessageSchema} from '../src/backend/core/tasks/queue';
-import {EngineModelPicker} from '../src/frontend/components/EngineModelPicker';
+import {LlmProfiles} from '../src/logic/models/service';
+import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
+import {engineSupportsApi,loopEngineSchema} from '../src/logic/models';
+import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member-rules';
+import {workspaceMemberModelSnapshotSchema} from '../src/logic/team/rules/workspace-member';
+import {objectOperation} from '../src/logic/knowledge/rules/object-crud';
+import {queuedMessageSchema} from '../src/logic/tasks/rules/queue';
+import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
 
 const base:LlmDefinition={name:'Shared provider',api:'anthropic-messages',auth:'none',baseUrl:'http://127.0.0.1:1',defaultModel:'test',models:[{id:'test',name:'Test model',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]};
 async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-engine-config-'));return {models:new LlmProfiles(path.join(root,'models.json')),filename:path.join(root,'models.json'),cleanup:async()=>{if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-engine-config-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true})}}}

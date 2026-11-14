@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {managedNativeTools,nativeToolInput} from '../src/backend/engines/native-tools';
+import {managedNativeTools,nativeToolInput} from '../src/logic/execution/engines/native-tools';
 
 test.each(['read','write','edit','find','grep','ls'])('Windows %s 根相对路径与工作区盘符一致，不修改原参数',name=>{
   for(const target of ['/tmp/截图.png','\\tmp\\截图.png']){

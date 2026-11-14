@@ -3,8 +3,8 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {AgentHistoryPage,AgentHistoryRun,AgentHistorySession} from '../src/bridge/contracts/agent-history';
 import type {RunSummary} from '../src/bridge/contracts/execution';
-import {mergeHistoryPage,historyScopeKey,historyRunKey,historyEventScope} from '../src/frontend/team/agent-history-state';
-import {AgentSessionHistory,HistoryRunContent} from '../src/frontend/team/AgentSessionHistory';
+import {mergeHistoryPage,historyScopeKey,historyRunKey,historyEventScope} from '../src/view/team/agent-history-state';
+import {AgentSessionHistory,HistoryRunContent} from '../src/view/team/AgentSessionHistory';
 
 const identity={workspaceId:'workspace',agentId:'cbim:main'};
 const record:AgentHistoryRun={...identity,sessionId:'channel',taskId:'task',runId:'run',source:'main',binding:'registered',agentName:'历史主角色',goal:'审阅业务任务',moduleIds:['.cbim/workspace/game'],status:'completed',startedAt:'2026-11-07T10:00:00Z',updatedAt:'2026-11-07T10:01:00Z',agentSessionId:'channel',agentInstanceId:'instance',rootSessionId:'root',configurationRevision:'old-configuration'};

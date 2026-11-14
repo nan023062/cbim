@@ -1,8 +1,8 @@
 import {expect,test} from 'vitest';
 import {fixture} from './helpers';
 import {seedTeam} from './team-fixture';
-import {assertAutomaticExecution} from '../src/backend/core/tasks/automatic-execution-rules';
-import type {AutomaticExecutionBinding} from '../src/backend/core/team/automatic-execution';
+import {assertAutomaticExecution} from '../src/logic/tasks/rules/automatic-execution-rules';
+import type {AutomaticExecutionBinding} from '../src/logic/team/rules/automatic-execution';
 
 async function setup(modules=false,mode:'auto'|'team'='auto'){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id);

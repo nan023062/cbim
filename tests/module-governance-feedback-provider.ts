@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {governanceGetOutputSchema,governanceRecordedReceiptSchema} from '../src/backend/core/governance/module-governance-tools';
+import {governanceGetOutputSchema,governanceRecordedReceiptSchema} from '../src/logic/governance/rules/module-governance-tools';
 import {governanceToolsResult,moduleGovernanceToolNames,type GovernanceToolsRequest} from './module-governance-tools-provider';
 
 export const governanceFeedbackFixture={model:'module-governance-feedback-fixture',moduleId:'.cbim/workspace/governed',goal:'GOVERNANCE_FEEDBACK_INITIAL: 核实模块后提出知识维护职责的精确方案',nextGoal:'GOVERNANCE_FEEDBACK_REVISE: 阅读刚保存的人工意见，重新观察并提出真正回应意见的修订方案',initialText:'知识维护与业务实现分别记录，正式知识变更须经过明确批准。',revisedText:'知识维护与业务实现分别记录。提出知识变更时，应说明实际观察、受影响模块和待核实证据；业务验证由执行者完成并保留真实回执。知识提案、人工决定与正式实施分别记录，批准后仍须单独实施，不将模型解释当作业务验收。',concern:'原方案没有说明证据由谁核实，也没有解释批准后是否会自动实施。',expectedResponse:'请在模块说明里明确观察与验证证据的责任、决定和实施的分离，并说明模型解释不是业务验收。',assessment:'新正文明确执行者负责业务验证并保留真实回执，同时拆分提案、人工决定和实施；已回应本条意见，不代表认证理解或专业验收。',draft:'治理反馈会话的主草稿保留。',otherDraft:'第二个会话草稿不受治理反馈操作影响。'};

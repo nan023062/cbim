@@ -6,24 +6,24 @@ import {expect,vi} from 'vitest';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {AgentEngine,EngineContext} from '../src/backend/core/execution/types';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import {RunJournal} from '../src/backend/main/run-storage/run-journal';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {ArtifactFiles,normalizeArtifactPath} from '../src/backend/main/platform/files/artifact-files';
-import {OutputManifestFiles} from '../src/backend/main/platform/files/output-manifest-files';
-import type {HumanDecisionPreviewInput} from '../src/backend/core/tasks/human-decisions';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceExecutionLease} from '../src/backend/scheduler-engine/admission/workspace-lease';
-import {recheckDispatchExecutionContext} from '../src/backend/scheduler-engine/context/execution-context';
-import {preparedWorkflowContracts} from '../src/backend/core/tasks/execution-context';
-import {validationTool} from '../src/backend/core/evidence/validation-tools';
+import {json} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import type {AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import {RunJournal} from '../src/logic/execution/storage/run-journal';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {ArtifactFiles,normalizeArtifactPath} from '../src/logic/file-operations/platform/files/artifact-files';
+import {OutputManifestFiles} from '../src/logic/file-operations/platform/files/output-manifest-files';
+import type {HumanDecisionPreviewInput} from '../src/logic/tasks/rules/human-decisions';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
+import {recheckDispatchExecutionContext} from '../src/logic/execution/context/execution-context';
+import {preparedWorkflowContracts} from '../src/logic/tasks/rules/execution-context';
+import {validationTool} from '../src/logic/evidence/rules/validation-tools';
 import {registerFixtureOwner} from './owner-execution-fixture';
-import type {PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
+import type {PreparedEngine} from '../src/logic/team/runtime/member-execution';
 
 export function latch(){let resolve!:()=>void;const promise=new Promise<void>(done=>{resolve=done});return {promise,resolve}}
 export async function humanServiceFixture(options:{candidates?:number;command?:boolean;jsonValidation?:boolean;validationFiles?:number;completeManifest?:boolean}={}){
@@ -59,7 +59,7 @@ export async function humanServiceFixture(options:{candidates?:number;command?:b
       if(options.jsonValidation){for(let index=0;index<validationPaths.length;index++)evidenceIds.push((await invoke('cbim_validation_run',{moduleId,requirementId:'json-'+index,...(manifest?{manifestId:manifest.manifestId}:{baselineId:base.body.baseline.baselineId}),expectedTaskProgressVersion:version})).id);const note=await invoke('read',{path:'human-note.txt'});await invoke('cbim_task_artifact_capture',{expectedTaskProgressVersion:version,sourceToolCallIds:[note.id]})}else evidenceIds.push(source.id);
       await invoke('cbim_task_step',{expectedVersion:version,id:'verify',state:'reported_done',evidenceIds});await invoke('cbim_delivery_prepare',{expectedVersion:version+1,summary:'已读取 '+context.task.goal,limitations:[],...(manifest?{manifestId:manifest.manifestId}:{})});return {status:'completed'};
     }};
-    return new LoopRuntime({storage,directory:memberLogs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:ports.normalizePath,assertCurrentKnowledge:()=>recheckDispatchExecutionContext(workspace,run.prepared),captureFiles:(paths,signal)=>files.captureFiles(paths,signal)},manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:()=>recheckDispatchExecutionContext(workspace,run.prepared),capture:manifestFiles.capture.bind(manifestFiles)},...((options.jsonValidation||options.completeManifest)?{workflowContracts:preparedWorkflowContracts(run.prepared),validations:{validateFile:files.validateFile.bind(files),checkFiles},describeTool:(call:import('../src/backend/core/execution/types').ToolCall)=>({...validationTool(call.name,call.input),native:false,effects:[['read','cbim_validation_run'].includes(call.name)?'read' as const:'maintenance' as const],contractVersion:1})}:{}),toolPolicy:async call=>({allow:true,effects:[['read','cbim_validation_run'].includes(call.name)?'read':call.name==='bash'?'command':'maintenance'],scope:call.name==='bash'?{kind:'unknown',workspaceId:entry.id}:{kind:'workspace',workspaceId:entry.id}})});
+    return new LoopRuntime({storage,directory:memberLogs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:ports.normalizePath,assertCurrentKnowledge:()=>recheckDispatchExecutionContext(workspace,run.prepared),captureFiles:(paths,signal)=>files.captureFiles(paths,signal)},manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:()=>recheckDispatchExecutionContext(workspace,run.prepared),capture:manifestFiles.capture.bind(manifestFiles)},...((options.jsonValidation||options.completeManifest)?{workflowContracts:preparedWorkflowContracts(run.prepared),validations:{validateFile:files.validateFile.bind(files),checkFiles},describeTool:(call:import('../src/logic/execution/rules/types').ToolCall)=>({...validationTool(call.name,call.input),native:false,effects:[['read','cbim_validation_run'].includes(call.name)?'read' as const:'maintenance' as const],contractVersion:1})}:{}),toolPolicy:async call=>({allow:true,effects:[['read','cbim_validation_run'].includes(call.name)?'read':call.name==='bash'?'command':'maintenance'],scope:call.name==='bash'?{kind:'unknown',workspaceId:entry.id}:{kind:'workspace',workspaceId:entry.id}})});
   }});
   const members=new MemberExecutionManager(workspace,store,{inspect:read,artifacts:ports,manifests:{check:checkManifest,acquireRead:ports.acquireRead},acquire:(key,permission,agent)=>lease.acquire(key,permission,agent),owners:service.owners,prepare:async()=>prepare(),withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
   for(let index=0;index<(options.candidates??1);index++){

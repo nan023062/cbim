@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {verifyBootResources} from '../src/backend/bootstrap/selection';
-import {verifyRuntimeManifest,type ColdRuntime} from '../src/backend/updater/runtime-manifest';
+import {verifyBootResources} from '../src/bridge/server/bootstrap/selection';
+import {verifyRuntimeManifest,type ColdRuntime} from '../src/logic/updates/service/runtime-manifest';
 import {verifyPublishedPackage} from './runtime-candidate';
 async function main(){
   const [packaged,candidate,remote,...rest]=process.argv.slice(2);if(!packaged||!candidate||rest.length||remote&&remote!=='--published-engines')throw Error('用法：tsx scripts/verify-cold-payload.ts <桌面目录> <runtime候选目录> [--published-engines]');

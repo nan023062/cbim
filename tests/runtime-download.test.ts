@@ -2,7 +2,7 @@ import {it,expect,vi,afterEach} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {runtimeFixture,digest} from './runtime-fixture';
-import {runtimeAssetResponse,downloadRuntimePackage} from '../src/backend/updater/runtime-download';
+import {runtimeAssetResponse,downloadRuntimePackage} from '../src/logic/updates/service/runtime-download';
 afterEach(()=>vi.unstubAllGlobals());
 it('follows only public GitHub asset redirects and preserves 404 for a missing channel',async()=>{
   const fetcher=vi.fn().mockResolvedValueOnce(new Response(null,{status:302,headers:{location:'https://release-assets.githubusercontent.com/a?token=public'}})).mockResolvedValueOnce(new Response('ok'));

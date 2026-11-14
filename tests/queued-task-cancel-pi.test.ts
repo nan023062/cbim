@@ -5,10 +5,10 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {queuedTaskCancelProvider,queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 import {seedQueuedTaskCancel,queuedTaskCancelRecords} from './queued-task-cancel-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {GoalContinuationRequest} from '../src/backend/core/tasks/scope-continuation';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
 
 it.each(['complete','stop','cancel-not-success'] as const)('explicitly cancels unstarted dependencies then preserves the goal and immutable history (%s)',async mode=>{
   const f=await fixture(),provider=await queuedTaskCancelProvider({holdContinuation:true,invalidComplete:mode==='cancel-not-success'});let app=f.app;
@@ -33,8 +33,10 @@ it.each(['complete','stop','cancel-not-success'] as const)('explicitly cancels u
       expect(scope.outcome).toBe('failed');expect(scope.goal?.blocked).toBeDefined();expect(scope.goal?.review?.decision).not.toBe('complete');expect(scope.wait).toBeUndefined();
       await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await records()).toEqual(parked);expect(await graph()).toEqual(before);expect(provider.mainRequests).toHaveLength(15);expect(provider.memberRequests).toHaveLength(4);expect(provider.errors).toEqual([]);return;
     }
-    expect(scope.wait).toBeDefined();expect(scope.goal?.review?.decision).toBe('awaiting_user');await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:'同意',options:{permission:'read'}});await expect(app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId})).rejects.toThrow();expect((await queue())[0]).toMatchObject({message:'同意',status:'paused'});
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await records()).toEqual(parked);expect(await graph()).toEqual(before);expect(provider.mainRequests).toHaveLength(14);expect(provider.memberRequests).toHaveLength(4);
+    expect(scope.wait).toBeDefined();expect(scope.goal?.review?.decision).toBe('awaiting_user');await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:'同意',options:{permission:'read'}});await expect(app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId})).rejects.toThrow();
+    // 在线等待保留下一话题为 pending，不能插入原话题；重启才按保守恢复语义转为 paused。
+    const queued=await queue();expect(queued).toHaveLength(1);expect(queued[0]).toMatchObject({message:'同意',status:'pending'});expect(await records()).toEqual(parked);expect(provider.mainRequests).toHaveLength(14);
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect((await queue())[0]).toMatchObject({id:queued[0].id,message:'同意',status:'paused'});expect(await records()).toEqual(parked);expect(await graph()).toEqual(before);expect(provider.mainRequests).toHaveLength(14);expect(provider.memberRequests).toHaveLength(4);
     const req:GoalContinuationRequest={...identity,scopeId:scope.scopeId,waitId:scope.wait!.waitId,expectedGoalRevision:scope.goal!.revision,expectedInputRevision:scope.goal!.inputRevision??1,commandId:randomUUID(),input:{message:data.supplement},options:{profileId,provider:'cbim-'+profileId,model:'cancel-fixture',permission:'read',turnTimeoutMs:30000}};
     const receipt=await app.dispatch('loop.goalContinue',req);await vi.waitFor(()=>expect(provider.mainRequests).toHaveLength(15),{timeout:20000,interval:30});expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(15);expect((await graph()).tasks).toEqual(before.tasks);
     if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});else provider.releaseContinuation();

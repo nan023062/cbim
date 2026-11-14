@@ -1,5 +1,5 @@
 import {governanceCommandReceipts} from '../src/bridge/contracts/ipc-governance';
-import {required} from './helpers';
+import {required} from './support/assertions';
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -7,10 +7,10 @@ import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {request,moduleFiles} from './data/knowledge';
 import {seedModuleGovernance,moduleGovernanceFixture as data} from './module-governance-fixture';
-import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
-import {ArchitectureService} from '../src/backend/main/workspace/architecture-service';
-import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../src/backend/core/governance/module-governance';
-import {json} from '../src/backend/core/foundation/serialization';
+import {WorkspacePackages} from '../src/logic/resources/packages/workspace-packages';
+import {ArchitectureService} from '../src/logic/workspace/service/architecture-service';
+import {moduleGovernanceReceiptSchema,type ModuleGovernanceReceipt} from '../src/logic/governance/rules/module-governance';
+import {json} from '../src/core/platform/node/serialization';
 
 async function setup(){const f=await fixture();try{
   const seeded=await seedModuleGovernance(f.app,f.a),ws=f.app.workspace(seeded.entry.id),identity=seeded.identity;

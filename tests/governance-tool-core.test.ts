@@ -1,20 +1,20 @@
 import {describe,it,expect,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {hash} from '../src/core/platform/node/serialization';
 import {
   moduleGovernanceOriginSchema,moduleGovernanceObservationSchema,moduleGovernanceProposalSchema,
   type ModuleGovernanceList,type ModuleGovernanceMainOrigin,type ModuleGovernanceObservation,type ModuleGovernanceProposal,type ModuleGovernanceProtection,
-} from '../src/backend/core/governance/module-governance';
-import {moduleGovernanceMainCommandId,moduleGovernanceProposalBasis,validateModuleGovernanceRecordOrigin,validateModuleGovernanceMainObservation,validateModuleGovernanceProposal} from '../src/backend/core/governance/module-governance-rules';
+} from '../src/logic/governance/rules/module-governance';
+import {moduleGovernanceMainCommandId,moduleGovernanceProposalBasis,validateModuleGovernanceRecordOrigin,validateModuleGovernanceMainObservation,validateModuleGovernanceProposal} from '../src/logic/governance/rules/module-governance-rules';
 import {
   governanceGetInputSchema,governanceObserveInputSchema,governanceProposeInputSchema,governanceReceiptInputSchema,governanceGetOutputSchema,governanceReceiptOutputSchema,
   governanceToolBodyLimit,governanceToolOutputLimit,governanceToolEffects,projectGovernanceGet,projectGovernanceBody,projectGovernanceReceipt,
-} from '../src/backend/core/governance/module-governance-tools';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
-import {artifactSources,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
+} from '../src/logic/governance/rules/module-governance-tools';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import {evaluateWorkflowDelivery} from '../src/logic/evidence/rules/workflow-evidence';
+import {artifactSources,type ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
 
 const workspaceId='workspace',rootSessionId='main-root',identity={workspaceId,rootSessionId},now='2026-11-07T08:00:00.000Z',moduleId='.cbim/workspace/module';
 const source:ModuleGovernanceMainOrigin={kind:'main_agent',rootSessionId,agentInstanceId:'main-instance',agentSessionId:'main-channel',runId:'main-run',toolCallId:'observe-call',toolName:'cbim_governance_observe'};

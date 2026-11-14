@@ -3,12 +3,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID,createHash} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
-import type {ObjectOperation} from '../src/backend/core/knowledge/object-crud';
-import type {Snapshot} from '../src/backend/core/knowledge/types';
-import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';
-import type {ModuleOwnershipChangeInput} from '../src/backend/core/workspace/module-ownership';
-import {WorkspacePackages} from '../src/backend/main/resources/workspace-packages';
+import type {Application} from '../src/bridge/server/application';
+import type {ObjectOperation} from '../src/logic/knowledge/rules/object-crud';
+import type {Snapshot} from '../src/logic/knowledge/rules/types';
+import type {WorkspaceMemberChangeInput} from '../src/logic/team/rules/workspace-member';
+import type {ModuleOwnershipChangeInput} from '../src/logic/workspace/rules/module-ownership';
+import {WorkspacePackages} from '../src/logic/resources/packages/workspace-packages';
 import {moduleFiles,summary} from './data/knowledge';
 export {workspaceMemberHttpProbe as knowledgeSourceHttpProbe,workspaceMemberRuntimeEvidence as knowledgeSourceRuntimeEvidence} from './workspace-member-fixture';
 

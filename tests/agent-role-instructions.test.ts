@@ -1,6 +1,6 @@
 import {expect,test} from 'vitest';
-import {mainAgentId,mainAgentInstructions,mainInstructions,collaborationInstructions} from '../src/backend/scheduler-engine/conversation/main-agent';
-import {loopInstructions} from '../src/backend/scheduler-engine/context/team-workflow';
+import {mainAgentId,mainAgentInstructions,mainInstructions,collaborationInstructions} from '../src/logic/conversation/runtime/main-agent';
+import {loopInstructions} from '../src/logic/execution/context/team-workflow';
 
 test.each(['auto','team'] as const)('新主轮 %s 区分原生历史与当前目标，不把原因询问扩大成开发',mode=>{
   const text=mainInstructions(mode);

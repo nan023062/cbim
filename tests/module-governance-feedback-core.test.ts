@@ -1,13 +1,13 @@
 import {describe,it,expect} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {hash} from '../src/core/platform/node/serialization';
 import {
   moduleGovernanceDecideInputSchema,moduleGovernanceDecisionSchema,moduleGovernanceFeedbackSchema,moduleGovernanceProposeInputSchema,moduleGovernanceResponseRefsSchema,moduleGovernanceListSchema,
   type ModuleGovernanceProposal,type ModuleGovernanceDecision,type ModuleGovernanceList,type ModuleGovernanceResponseAssessment,
-} from '../src/backend/core/governance/module-governance';
-import {moduleGovernanceProposalBasis} from '../src/backend/core/governance/module-governance-rules';
-import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments,type ModuleGovernanceResponseSource} from '../src/backend/core/governance/module-governance-feedback';
-import {governanceProposeInputSchema,projectGovernanceGet,governanceGetOutputSchema,governanceToolOutputLimit} from '../src/backend/core/governance/module-governance-tools';
+} from '../src/logic/governance/rules/module-governance';
+import {moduleGovernanceProposalBasis} from '../src/logic/governance/rules/module-governance-rules';
+import {resolveModuleGovernanceResponses,validateModuleGovernanceResponseSources,validateModuleGovernanceAssessments,type ModuleGovernanceResponseSource} from '../src/logic/governance/rules/module-governance-feedback';
+import {governanceProposeInputSchema,projectGovernanceGet,governanceGetOutputSchema,governanceToolOutputLimit} from '../src/logic/governance/rules/module-governance-tools';
 
 const workspaceId='workspace',instanceId=randomUUID(),moduleId='.cbim/workspace/engine',now='2026-11-07T10:00:00.000Z',actor={kind:'local_desktop',interaction:'explicit_submit'} as const;
 const feedback={kind:'evidence_request',focus:'evidence',expectedResponse:'请补充真实调用方异常恢复约定'} as const;

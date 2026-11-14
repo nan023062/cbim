@@ -1,0 +1,9 @@
+/**
+ * 作用定位：前端域通用工具函数与数据结构的公开入口，提供按类别组织的纯算法与实例数据结构。
+ * 设计原因：消费者通过稳定入口组合前端基础能力，类别文件保持私有；不借 bridge 复用后端工具。
+ */
+export {equalJson} from './json';
+export {SubscriptionSet} from './events';
+export {AsyncGeneration} from './async';
+export {rankDirectedGraph,GraphTopologyError} from './graphs';
+export {JsonRecordStorage,type TextStorage} from './storage';

@@ -2,9 +2,7 @@ import {test,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {MessageQueue} from '../src/backend/scheduler-engine/conversation/message-queue';
-import {brainStatus} from '../src/frontend/conversation/brain-status';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {MessageQueue} from '../src/logic/conversation/runtime/message-queue';
 test('queue ordering, task isolation and interrupted starting receipts survive restart without replay',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-'));try{
  const file=path.join(dir,'queue.json'),q=new MessageQueue(file);await q.load();
@@ -15,10 +13,6 @@ test('queue ordering, task isolation and interrupted starting receipts survive r
  await q.complete(b.id);expect((await q.take('t'))?.id).toBe(a.id);await q.pause('t','stopped');expect(await q.take('t')).toBeUndefined();await q.resume('t');expect((await q.take('t'))?.id).toBe(a.id);
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 });
-test('brain activity ignores telemetry and never needs reasoning text',()=>{
- const run={status:'running',events:[{type:'engine.status',data:{metric:'activity',label:'正在思考…'}},{type:'engine.status',data:{metric:'context',tokens:100}}]} as unknown as RunSummary;
- expect(brainStatus(run)).toBe('正在思考…');run.events.push({type:'tool.started',data:{name:'write'}} as any);expect(brainStatus(run)).toBe('正在写文件…');expect(brainStatus(run,true)).toBe('等待确认…');run.events.push({type:'tool.finished',data:{name:'write'}} as any);expect(brainStatus(run)).toBe('正在思考…');run.status='cancelled';expect(brainStatus(run)).toBe('已停止');
-});
 test('editing preserves attachment context, detects stale edits, and drag ordering stays in one task',async()=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-edit-'));try{
  const q=new MessageQueue(path.join(dir,'queue.json'));await q.load();
@@ -28,5 +22,14 @@ test('editing preserves attachment context, detects stale edits, and drag orderi
  await expect(q.edit('t',first.id,'stale','original'+suffix)).rejects.toThrow();
  await q.move('t',second.id,first.id);expect(q.list('t').map(x=>x.id)).toEqual([second.id,first.id]);await expect(q.move('t',second.id,other.id)).rejects.toThrow();
  await q.claim('t',first.id);await expect(q.edit('t',first.id,'blocked',first.message)).rejects.toThrow();await expect(q.move('t',second.id,first.id)).rejects.toThrow();
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+});
+
+test('关联历史话题在编辑排序与重启后保留，新排队身份独立',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-followup-'));try{
+  const file=path.join(dir,'queue.json'),queue=new MessageQueue(file);await queue.load();
+  const item=await queue.add('root','后续要求',{provider:'p',model:'m'},'closed-topic');expect(item.id).not.toBe('closed-topic');
+  await queue.edit('root',item.id,'修正要求','后续要求');const restored=new MessageQueue(file);await restored.load();
+  expect(restored.list('root')).toMatchObject([{id:item.id,message:'修正要求',followupOf:'closed-topic',status:'paused'}]);
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 });

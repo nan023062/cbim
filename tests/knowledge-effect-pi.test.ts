@@ -5,13 +5,13 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {moduleFiles,request as changeRequest} from './data/knowledge';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {RunSummary} from '../src/backend/core/execution/types';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {RunSummary} from '../src/logic/execution/rules/types';
 import {knowledgeContractProvider,knowledgeContractFixture as data} from './knowledge-contract-provider';
 import {seedKnowledgeContract,knowledgeContractRecords,knowledgeContractLogBytes} from './knowledge-contract-fixture';
-import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/backend/core/tasks/effect-observation';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {effectObservationReportSchema,effectDispositionReceiptSchema} from '../src/logic/tasks/rules/effect-observation';
+import {hash} from '../src/core/platform/node/serialization';
 import {knowledgeEffectObjectProvider} from './knowledge-effect-object-provider';
 
 it.each(['direct','object','refresh'] as const)('真实 Pi %s 已提交知识后坏输出：原调用仍失败，原事务可核实与明确处置，重开零写入重放',async kind=>{

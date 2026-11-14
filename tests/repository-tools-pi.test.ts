@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import {fixture} from './helpers';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {RunSummary} from '../src/backend/core/execution/types';
-import type {AgentHistoryPage,AgentHistorySession,AgentHistoryEventsRead} from '../src/backend/core/team/session-history';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {RunSummary} from '../src/logic/execution/rules/types';
+import type {AgentHistoryPage,AgentHistorySession,AgentHistoryEventsRead} from '../src/logic/team/rules/session-history';
 import {repositoryToolsProvider,repositoryToolsFixture as data,type RepositoryToolsMode} from './repository-tools-provider';
 import {seedRepositoryTools,repositoryToolsRecords,repositoryToolsLogBytes} from './repository-tools-fixture';
 

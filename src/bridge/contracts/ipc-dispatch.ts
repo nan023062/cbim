@@ -4,26 +4,26 @@
  */
 import {z} from 'zod';
 import {ipcId,questionAnswers} from './ipc-shapes';
-import {type ChatApproval} from '../../backend/core/tools/policy/types';
-import {type ArtifactReport,artifactReportInputSchema} from '../../backend/core/evidence/artifact-baseline';
-import {type CommandVerificationReport,commandVerificationInputSchema} from '../../backend/core/tasks/command-verification';
-import {type ControlledFileReport,type FileCompensationPreview,type FileCompensationReceipt,controlledFileReportInputSchema,fileCompensationInputSchema,fileCompensationLookupSchema,fileCompensationPreviewInputSchema} from '../../backend/core/file-operations/controlled-file-operation';
-import {type CreateMemberReceipt,type DispatchReceipt,type OpenGraphReceipt,createMemberInput,dispatchTaskInput,graphIdentityInput,openGraphInput} from '../../backend/core/tasks/dispatch-commands';
-import {type DispatchMessage} from '../../backend/core/dispatch/dispatch-storage';
-import {type EffectDispositionList,type EffectDispositionReceipt,type EffectObservationReport,type EffectRelations,effectDispositionInputSchema,effectDispositionListInputSchema,effectDispositionLookupSchema,effectObservationInputSchema,effectRelationsInputSchema} from '../../backend/core/tasks/effect-observation';
-import {type ExecutionReport,executionReportInputSchema} from '../../backend/core/tasks/execution-report';
-import {type GraphDelta,type GraphSnapshot} from '../../backend/core/tasks/graph-types';
-import {type HumanDecisionHistory,type HumanDecisionPreview,type HumanDecisionReceipt,humanDecisionHistoryInputSchema,humanDecisionLookupSchema,humanDecisionPreviewInputSchema,humanDecisionRequestSchema} from '../../backend/core/tasks/human-decisions';
-import {type IsolatedExecutionReport,isolatedExecutionCleanupReceiptSchema,isolatedExecutionCleanupSchema,isolatedExecutionRunSchema} from '../../backend/core/file-operations/isolated-execution-recovery';
-import {type MemberExecutionView,type MemberStartReceipt,memberAcknowledgeInput,memberMessageInput,memberStartInput,memberTaskInput} from '../../backend/core/tasks/member-commands';
-import {type MemberEventsRead,memberEventsInput} from '../../backend/core/tasks/member-events';
-import {type RequestBudgetReport,requestBudgetQuerySchema} from '../../backend/core/budget/model-request-budget';
-import {type OutputManifestReport,outputManifestQuerySchema} from '../../backend/core/evidence/output-manifest';
-import {type ReplanPreview,replanPreviewInputSchema} from '../../backend/core/tasks/scope-replan';
-import {type ScopeUsageReport,scopeUsageInputSchema} from '../../backend/core/budget/scope-usage';
-import {type DispatchSessionRead,dispatchSessionReadInput} from '../../backend/core/tasks/scope-view';
-import {type TaskOwnerInspectOutput,taskOwnerInspectInputSchema} from '../../backend/core/team/owner-execution-discovery';
-import {type PendingQuestion} from '../../backend/core/tools/questions';
+import {type ChatApproval} from '../../logic/tools/rules/policy/types';
+import {type ArtifactReport,artifactReportInputSchema} from '../../logic/evidence/rules/artifact-baseline';
+import {type CommandVerificationReport,commandVerificationInputSchema} from '../../logic/tasks/rules/command-verification';
+import {type ControlledFileReport,type FileCompensationPreview,type FileCompensationReceipt,controlledFileReportInputSchema,fileCompensationInputSchema,fileCompensationLookupSchema,fileCompensationPreviewInputSchema} from '../../logic/file-operations/rules/controlled-file-operation';
+import {type CreateMemberReceipt,type DispatchReceipt,type OpenGraphReceipt,createMemberInput,dispatchTaskInput,graphIdentityInput,openGraphInput} from '../../logic/tasks/rules/dispatch-commands';
+import {type DispatchMessage} from '../../logic/dispatch/rules/dispatch-storage';
+import {type EffectDispositionList,type EffectDispositionReceipt,type EffectObservationReport,type EffectRelations,effectDispositionInputSchema,effectDispositionListInputSchema,effectDispositionLookupSchema,effectObservationInputSchema,effectRelationsInputSchema} from '../../logic/tasks/rules/effect-observation';
+import {type ExecutionReport,executionReportInputSchema} from '../../logic/tasks/rules/execution-report';
+import {type GraphDelta,type GraphSnapshot} from '../../logic/tasks/rules/graph-types';
+import {type HumanDecisionHistory,type HumanDecisionPreview,type HumanDecisionReceipt,humanDecisionHistoryInputSchema,humanDecisionLookupSchema,humanDecisionPreviewInputSchema,humanDecisionRequestSchema} from '../../logic/tasks/rules/human-decisions';
+import {type IsolatedExecutionReport,isolatedExecutionCleanupReceiptSchema,isolatedExecutionCleanupSchema,isolatedExecutionRunSchema} from '../../logic/file-operations/rules/isolated-execution-recovery';
+import {type MemberExecutionView,type MemberStartReceipt,memberAcknowledgeInput,memberMessageInput,memberStartInput,memberTaskInput} from '../../logic/tasks/rules/member-commands';
+import {type MemberEventsRead,memberEventsInput} from '../../logic/tasks/rules/member-events';
+import {type RequestBudgetReport,requestBudgetQuerySchema} from '../../logic/budget/rules/model-request-budget';
+import {type OutputManifestReport,outputManifestQuerySchema} from '../../logic/evidence/rules/output-manifest';
+import {type ReplanPreview,replanPreviewInputSchema} from '../../logic/tasks/rules/scope-replan';
+import {type ScopeUsageReport,scopeUsageInputSchema} from '../../logic/budget/rules/scope-usage';
+import {type DispatchSessionRead,dispatchSessionReadInput} from '../../logic/tasks/rules/scope-view';
+import {type TaskOwnerInspectOutput,taskOwnerInspectInputSchema} from '../../logic/team/rules/owner-execution-discovery';
+import {type PendingQuestion} from '../../logic/tools/rules/questions';
 
 export const dispatchIpcRequests={
   'dispatch.isolatedExecutionReport':isolatedExecutionRunSchema,

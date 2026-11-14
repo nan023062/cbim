@@ -4,9 +4,9 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {Application} from '../src/backend/main/assembly/application';
-import {AutoCollaboration} from '../src/backend/scheduler-engine/dispatch/auto-collaboration';
-import {readJson,exists} from '../src/backend/core/foundation/files';
+import {Application} from '../src/bridge/server/application';
+import {AutoCollaboration} from '../src/logic/dispatch/runtime/auto-collaboration';
+import {readJson,exists} from '../src/core/platform/node/files';
 
 it('登记工作区随应用启动，移除与退出释放实例，旧启动设置被清理',async()=>{
   const f=await fixture();let next:Application|undefined;try{

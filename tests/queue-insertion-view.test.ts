@@ -2,14 +2,14 @@ import {expect,it,vi} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {RunSummary,QueueInsertRequest} from '../src/bridge/contracts/execution';
-import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from '../src/frontend/conversation/queue-insertion';
-import {ConversationStopGate} from '../src/frontend/conversation/conversation-stop';
-import {conversationExecutionState} from '../src/frontend/conversation/conversation-state';
-import {SessionTaskView} from '../src/frontend/tasks/SessionTaskView';
-import {scopeGoalView,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from '../src/view/conversation/queue-insertion';
+import {ConversationStopGate} from '../src/view/conversation/conversation-stop';
+import {conversationExecutionState} from '../src/view/conversation/conversation-state';
+import {SessionTaskView} from '../src/view/tasks/SessionTaskView';
+import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
 import type {ScopeSummary} from '../src/bridge/contracts/dispatch';
-import {dispatchApplication} from '../src/backend/main/ipc/dispatch';
-import type {ApplicationServices} from '../src/backend/main/ipc/services';
+import {dispatchApplication} from '../src/bridge/server/ipc/dispatch';
+import type {ApplicationServices} from '../src/bridge/server/ipc/services';
 
 const run=():RunSummary=>({task:{workspaceId:'workspace',taskId:'root',root:'/workspace',goal:'主任务',moduleIds:[],acceptance:[],agentId:'cbim:main',mode:'chat'},runId:'run-before',status:'running',acceptance:'not_evaluated',unresolvedTools:[],events:[]});
 const deferred=<T>()=>{let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>resolve=r);return {promise,resolve}};
@@ -39,9 +39,9 @@ it('已有队列项入口使用同一冻结身份，丢回包只报错不改为�
   await expect(insertQueuedMessage(captured,'existing',insert)).rejects.toThrow('IPC_REPLY_LOST');expect(insert).toHaveBeenCalledExactlyOnceWith({id:'workspace',taskId:'root',queueId:'existing',expectedRunId:'run-before'});
 });
 
-it('成员忙只排队，持久waiting交给原目标续接；两者均不能生成插入请求',async()=>{
+it('成员忙和持久waiting期间普通输入均排队；补充需显式话题入口，不能生成单轮插入请求',async()=>{
   const scope:ScopeSummary={scopeId:'scope',status:'active',createdAt:'2026-11-07T00:00:00.000Z',hasGoal:false,hasPlan:false,stamp:{scopeId:'scope',streamId:'scopes',seq:1}},memberBusy=conversationExecutionState({...run(),status:'completed'},scope),waiting=conversationExecutionState(run(),{...scope,status:'waiting'});
-  expect(memberBusy.shouldQueue).toBe(true);expect(waiting.shouldQueue).toBe(false);
+  expect(memberBusy.shouldQueue).toBe(true);expect(waiting.shouldQueue).toBe(true);expect(waiting.canContinueQueue).toBe(false);
   for(const state of [memberBusy,waiting]){expect(state.canInsert).toBe(false);expect(captureQueueInsertTarget('workspace','root',run(),state.canInsert)).toBeUndefined()}
   for(const [id,taskId,current] of [['other','root',run()],['workspace','other',run()],['workspace','root',undefined]] as const)expect(captureQueueInsertTarget(id,taskId,current,true)).toBeUndefined();
   const insert=vi.fn(),accepted=vi.fn();await enqueueConversationMessage({enqueue:async()=>({taskId:'root',id:'q'}),accepted,insert});expect(accepted).toHaveBeenCalledTimes(1);expect(insert).not.toHaveBeenCalled();

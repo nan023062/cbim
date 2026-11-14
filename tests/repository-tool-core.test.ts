@@ -1,15 +1,15 @@
 import {it,expect,vi} from 'vitest';
-import {toolScopeSchema,repositoryToolScopeSchema,type RepositoryToolScope} from '../src/backend/core/tools/scope-schema';
-import {repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema} from '../src/backend/core/connectors/repository-tools';
-import {authorizeRunTool,type RunToolDescriptor} from '../src/backend/core/tools/policy/tool-policy';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {ToolReceipt} from '../src/backend/core/tools/types';
-import {executionReportSchema} from '../src/backend/core/tasks/execution-report';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import {evaluateWorkflowDelivery} from '../src/backend/core/evidence/workflow-evidence';
-import {artifactSucceededCall,artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import {hash} from '../src/backend/core/foundation/serialization';
+import {toolScopeSchema,repositoryToolScopeSchema,type RepositoryToolScope} from '../src/logic/tools/rules/scope-schema';
+import {repositoryListInputSchema,repositoryGetInputSchema,repositoryListOutputSchema,repositoryGetOutputSchema,repositoryToolTargetSchema} from '../src/logic/connectors/rules/repository-tools';
+import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/policy/tool-policy';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import type {ToolReceipt} from '../src/logic/tools/rules/types';
+import {executionReportSchema} from '../src/logic/tasks/rules/execution-report';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import {evaluateWorkflowDelivery} from '../src/logic/evidence/rules/workflow-evidence';
+import {artifactSucceededCall,artifactSources,verifyArtifactBaselines,type ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import {hash} from '../src/core/platform/node/serialization';
 
 const connectorId='.cbim/connectors/resources',repositoryId='10000000-0000-0000-0000-000000000001',connectionId='20000000-0000-0000-0000-000000000001',resourceId='30000000-0000-0000-0000-000000000001';
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},revision='a'.repeat(64);

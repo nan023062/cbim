@@ -6,8 +6,8 @@ import {createRequire} from 'node:module';
 import {_electron as electron,type ElectronApplication,type Page} from 'playwright-core';
 import {buildRuntimeCode} from './runtime-build';
 import {archiveDirectory,collectResources,signRuntimeManifest,coldFingerprint} from './runtime-packaging';
-import {RuntimeJournal} from '../src/backend/updater/runtime-journal';
-import type {ColdRuntime,RuntimeManifest} from '../src/backend/updater/runtime-manifest';
+import {RuntimeJournal} from '../src/logic/updates/service/runtime-journal';
+import type {ColdRuntime,RuntimeManifest} from '../src/logic/updates/service/runtime-manifest';
 import type {} from '../src/bridge/contracts/workspace';
 
 async function main(){

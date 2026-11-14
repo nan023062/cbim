@@ -2,12 +2,12 @@ import {afterEach, expect, test, vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {hash} from '../src/backend/core/foundation/serialization';
-import type {DispatchMutation,DispatchState} from '../src/backend/core/dispatch/dispatch-storage';
-import type {AgentInstance, AgentSessionBinding} from '../src/backend/core/team/agent-types';
-import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/backend/core/tasks/graph-types';
-import {prepareMember} from '../src/backend/scheduler-engine/members/agent-manager';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {hash} from '../src/core/platform/node/serialization';
+import type {DispatchMutation,DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {AgentInstance, AgentSessionBinding} from '../src/logic/team/rules/agent-types';
+import type {AgentRef, GraphEventBatch, GraphIdentity, TaskNode} from '../src/logic/tasks/rules/graph-types';
+import {prepareMember} from '../src/logic/team/runtime/agent-manager';
 import {seedExecutionOwner} from './owner-execution-store-support';
 import {bindingFor} from './owner-execution-core-fixture';
 
@@ -36,6 +36,20 @@ function taskMutation(state:DispatchState):DispatchMutation<{taskId:string}>{
 }
 async function setup(){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-dispatch-store-'));const store=new FileDispatchStore(dir,identity.workspaceId);return {dir,store,cleanup:async()=>{await store.close().catch(()=>{});await fs.rm(dir,{recursive:true,force:true})}}}
 const commitRoot=(store:FileDispatchStore)=>store.transact({commandId:'create-root',fingerprint:'root-input'},async()=>rootMutation());
+
+test('长期团队对话随原事务保存并重放，拒绝未登记角色与身份改绑',async()=>{
+  const f=await setup();try{
+    const logical={...identity,sessionId:'logical-main',agentId:main.agentId,teamId:'.cbim/team',createdAt};
+    await f.store.transact({commandId:'create-root',fingerprint:'root-input'},async()=>({...rootMutation(),teamSessions:[logical]}));
+    expect((await f.store.sessionRead({identity})).teamSessions).toEqual([logical]);
+    const before=await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8');
+    await expect(f.store.transact({commandId:'foreign-role',fingerprint:'foreign-role'},async()=>({teamSessions:[{...logical,sessionId:'unknown',agentId:'unknown'}],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await expect(f.store.transact({commandId:'rebind-logical',fingerprint:'rebind-logical'},async()=>({teamSessions:[{...logical,rootSessionId:'other'}],receipt:true}))).rejects.toMatchObject({code:'TEAM_SESSION_CONFLICT'});
+    expect(await fs.readFile(path.join(f.dir,'dispatch.jsonl'),'utf8')).toBe(before);
+    await f.store.close();const reopened=new FileDispatchStore(f.dir,identity.workspaceId);
+    try{expect((await reopened.read()).teamSessions).toEqual([logical]);expect((await reopened.sessionRead({identity})).teamSessions).toEqual([logical])}finally{await reopened.close()}
+  }finally{await f.cleanup()}
+});
 afterEach(()=>vi.restoreAllMocks());
 
 test('dispatch commit restores members, independent channels, graph and one pending assignment atomically',async()=>{

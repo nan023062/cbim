@@ -1,12 +1,12 @@
 import {expect,it,vi,afterEach} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {AdmissionFeed,sessionAdmission} from '../src/frontend/tasks/admission-state';
-import {AdmissionNotice} from '../src/frontend/tasks/AdmissionNotice';
-import {continuationRejected} from '../src/frontend/tasks/continuation-state';
-import {recoveryRejected} from '../src/frontend/tasks/recovery-state';
-import {replanRejected} from '../src/frontend/tasks/replan-state';
-import {UsageStatus} from '../src/frontend/conversation/UsageStatus';
+import {AdmissionFeed,sessionAdmission} from '../src/view/tasks/admission-state';
+import {AdmissionNotice} from '../src/view/tasks/AdmissionNotice';
+import {continuationRejected} from '../src/view/tasks/continuation-state';
+import {recoveryRejected} from '../src/view/tasks/recovery-state';
+import {replanRejected} from '../src/view/tasks/replan-state';
+import {UsageStatus} from '../src/view/conversation/UsageStatus';
 import type {AdmissionSnapshot,AdmissionTicket} from '../src/bridge/contracts/admission';
 
 const time='2026-11-07T00:00:00.000Z';

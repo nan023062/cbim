@@ -2,10 +2,10 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
-import type {Application} from '../src/backend/main/assembly/application';
-import type {LlmDefinition} from '../src/backend/core/models/config';
-import type {WorkspaceMemberChangeInput} from '../src/backend/core/team/workspace-member';
-import type {DispatchStore} from '../src/backend/core/dispatch/dispatch-storage';
+import type {Application} from '../src/bridge/server/application';
+import type {LlmDefinition} from '../src/logic/models';
+import type {WorkspaceMemberChangeInput} from '../src/logic/team/rules/workspace-member';
+import type {DispatchStore} from '../src/logic/dispatch/rules/dispatch-storage';
 import {seedTeam} from './team-fixture';
 import {request} from './data/knowledge';
 export {repositoryConnectionRunFiles as workspaceMemberRunFiles} from './repository-connection-fixture';
@@ -74,7 +74,7 @@ export async function workspaceMemberRuntimeEvidence(app:Application,workspaceId
 /** Invoke the real public preview and commit actions. A fresh command is generated only for a new explicit change. */
 export async function commitWorkspaceMember(app:Application,workspaceId:string,change:WorkspaceMemberChangeInput){
   const identity={workspaceId,instanceId:app.workspace(workspaceId).instanceId};
-  const {workspaceMemberPreviewSchema,workspaceMemberReceiptSchema}=await import('../src/backend/core/team/workspace-member');
+  const {workspaceMemberPreviewSchema,workspaceMemberReceiptSchema}=await import('../src/logic/team/rules/workspace-member');
   const preview=workspaceMemberPreviewSchema.parse(await app.dispatch('workspace.members.preview',{...identity,change}));
   const input={...identity,change,commandId:randomUUID(),expectedRegistryCursor:preview.registryCursor,expectedBasis:preview.basis};
   const receipt=workspaceMemberReceiptSchema.parse(await app.dispatch('workspace.members.commit',input));

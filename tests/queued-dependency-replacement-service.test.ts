@@ -5,16 +5,16 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {json} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import type {RunSummary,AgentEngine,EngineContext} from '../src/backend/core/execution/types';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {ReplaceQueuedDependencyInput} from '../src/backend/core/tasks/queued-dependency-replacement';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import {MemberExecutionManager,type PreparedEngine} from '../src/backend/scheduler-engine/members/member-execution';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {json} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import type {RunSummary,AgentEngine,EngineContext} from '../src/logic/execution/rules/types';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {ReplaceQueuedDependencyInput} from '../src/logic/tasks/rules/queued-dependency-replacement';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import {MemberExecutionManager,type PreparedEngine} from '../src/logic/team/runtime/member-execution';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 import {registerServiceOwner} from './owner-service-fixture';
 
 function deferred<T>(){let resolve!:(value:T)=>void;const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve}}

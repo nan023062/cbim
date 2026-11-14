@@ -1,10 +1,10 @@
 import {expect,it,vi} from 'vitest';
-import {EffectObservationController,EffectObservationPool,checkedEffectReport,checkedEffectReceipt,type EffectPorts} from '../src/frontend/tasks/effect-observation-state';
-import {effectRecoveryTarget,effectObservationAnchor} from '../src/frontend/tasks/effect-recovery-state';
-import {ExecutionRecoveryController,checkedRecoveryReceipt,recoverySourceKey} from '../src/frontend/tasks/recovery-state';
+import {EffectObservationController,EffectObservationPool,checkedEffectReport,checkedEffectReceipt,type EffectPorts} from '../src/view/tasks/effect-observation-state';
+import {effectRecoveryTarget,effectObservationAnchor} from '../src/view/tasks/effect-recovery-state';
+import {ExecutionRecoveryController,checkedRecoveryReceipt,recoverySourceKey} from '../src/view/tasks/recovery-state';
 import type {EffectObservationInput,EffectObservationReport,EffectDispositionInput,EffectDispositionReceipt} from '../src/bridge/contracts/effect-observation';
 import type {RecoveryRequest,RecoveryReceipt} from '../src/bridge/contracts/dispatch';
-import type {ScopeGoalState} from '../src/frontend/tasks/scope-state';
+import type {ScopeGoalState} from '../src/view/tasks/scope-state';
 
 const identity:EffectObservationInput={workspaceId:'workspace',rootSessionId:'root',subject:{kind:'main_run',runId:'original-main',toolCallIds:['original-call']}},hash='a'.repeat(64),command='11111111-1111-4111-8111-111111111111',time='2026-11-08T00:00:00.000Z';
 function report():EffectObservationReport{return {version:1,identity:structuredClone(identity),checkedAt:time,basis:hash,dispositionRevision:0,consistency:'stable',source:{state:'verified',scopeId:'old-scope',scopeStatus:'closed',scopeOutcome:'failed',execution:'settled',logState:'verified',logPrefixHash:hash,throughSeq:6,unknownToolCount:1},calls:[{toolCallId:'original-call',toolName:'write',outcome:'unknown',coverage:'selected_files_now',inputHash:hash,proposedSeq:2,allowedSeq:3,scope:{kind:'workspace',workspaceId:'workspace'},file:{relativePath:'src/result.txt',state:'present',byteLength:8,sha256:hash},limitations:['当前文件不说明原操作完整效果']}],limitations:[],readOnly:true,acceptance:'not_evaluated'}}

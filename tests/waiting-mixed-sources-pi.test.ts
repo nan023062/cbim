@@ -1,15 +1,15 @@
-import {required} from './helpers';
+import {required} from './support/assertions';
 import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {ChatInputs} from '../src/backend/main/materials/chat-inputs';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {GoalContinuationReceipt} from '../src/backend/core/tasks/scope-continuation';
-import type {ContinuationSourceItem} from '../src/backend/core/tasks/scope-continuation-attachments';
+import {ChatInputs} from '../src/logic/materials/service/chat-inputs';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
+import type {ContinuationSourceItem} from '../src/logic/tasks/rules/scope-continuation-attachments';
 import type {ChatAttachment} from '../src/bridge/contracts/chat';
-import {hash,json} from '../src/backend/core/foundation/serialization';
+import {hash,json} from '../src/core/platform/node/serialization';
 import {waitingMixedSourcesProvider,mixedSourceGoal as goal,mixedSourceData as data,mixedResourceKinds,mixedResourceText,requestImages} from './waiting-mixed-sources-provider';
 import {seedMixedSources,mixedSnapshotEvidence,mixedRecords,mixedRunBytes,mixedRunByteEvidence,attachmentHash,attachmentWait} from './waiting-mixed-sources-fixture';
 

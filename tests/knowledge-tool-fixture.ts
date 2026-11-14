@@ -1,5 +1,5 @@
-import {knowledgeTools} from '../src/backend/scheduler-engine/tools/knowledge-tools';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
+import {knowledgeTools} from '../src/logic/tools/runtime/knowledge-tools';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 
 /** 适配已有知识端口与逐调用权限；不创建 Application，不启动外部传输或改变工作区授权。 */
 export function internalKnowledge(workspace:KnowledgeWorkspace){

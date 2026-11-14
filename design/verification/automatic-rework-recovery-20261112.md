@@ -1,5 +1,7 @@
 # 有界返工与可靠结果自动恢复：实施验证记录
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 日期：2026-11-12。基线：`2187842f` 加既有未提交清理与通用代码验证实现。来源：用户要求“依次完成其它缺口”；查询开放 Issues 为空，按直接授权先实现最终验收返工，再实现重启接收。没有创建或回填工单；本记录不是实时待办。
 
 ## 已实现行为与边界
@@ -8,14 +10,14 @@
 2. 主轮结算、成员启动前持久保存精确待回传批次。宿主意外退出后，仅当全部成员可靠交付、原主链与当前声明的证据仍有效、模型未变、结果信封未消费，自动启动新的主接收轮并完成原目标。成员不再次执行；启动意图已登记但日志缺失的情况不再次发送。
 3. 运行中断、未知副作用、损坏日志、已停止目标、旧无批次记录、人工等待和过期证据仍按原边界停放或封存。本次不是任意断点恢复或命令重试框架；文件有效性仅覆盖原交付声明的验证范围。正常退出会关闭活动周期，不等同意外崩溃。
 
-当前协议及维护入口见[任务契约](../../src/backend/core/tasks/CONTRACT.md)。主代码入口：
+当前协议及维护入口见[任务契约](../../src/logic/tasks/rules/CONTRACT.md)。主代码入口：
 
-- [goal-repair.ts](../../src/backend/scheduler-engine/dispatch/goal-repair.ts)：错误分类、反馈及限次。
-- [scope-goal-service.ts](../../src/backend/scheduler-engine/goals/scope-goal-service.ts)：`repairContext` 与旧候选/当前交付证据核验。
-- [automatic-return.ts](../../src/backend/core/tasks/automatic-return.ts)：持久批次的严格结构与不可变不变量。
-- [automatic-return-service.ts](../../src/backend/scheduler-engine/dispatch/automatic-return-service.ts)：记录原批次、重启前核实。
-- [auto-collaboration.ts](../../src/backend/scheduler-engine/dispatch/auto-collaboration.ts)：最终关闭、返工调度、恢复批次及停止竞态。
-- [execution-manager.ts](../../src/backend/scheduler-engine/conversation/execution-manager.ts)：共享系统接续机制、去重、原生会话与准入。
+- [goal-repair.ts](../../src/logic/dispatch/runtime/goal-repair.ts)：错误分类、反馈及限次。
+- [scope-goal-service.ts](../../src/logic/tasks/runtime/scope-goal-service.ts)：`repairContext` 与旧候选/当前交付证据核验。
+- [automatic-return.ts](../../src/logic/tasks/rules/automatic-return.ts)：持久批次的严格结构与不可变不变量。
+- [automatic-return-service.ts](../../src/logic/dispatch/runtime/automatic-return-service.ts)：记录原批次、重启前核实。
+- [auto-collaboration.ts](../../src/logic/dispatch/runtime/auto-collaboration.ts)：最终关闭、返工调度、恢复批次及停止竞态。
+- [execution-manager.ts](../../src/logic/conversation/runtime/execution-manager.ts)：共享系统接续机制、去重、原生会话与准入。
 
 ## 代表性运行证据
 

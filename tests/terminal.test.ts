@@ -1,6 +1,6 @@
 import {test,expect} from 'vitest';
 import fs from 'node:fs/promises';
-import {TerminalSessions} from '../src/backend/main/platform/terminal';
+import {TerminalSessions} from '../src/logic/terminal/service/terminal';
 test('manual terminal captures output and exit status without sharing sessions',async()=>{
  const terminals=new TerminalSessions(),started=performance.now();let slowSnapshot:ReturnType<TerminalSessions['read']>|undefined,completionSnapshot:ReturnType<TerminalSessions['read']>|undefined;
  // 本项验证真实输出、退出码和会话隔离；Windows PowerShell 冷启动耗时不属于产品完成条件。

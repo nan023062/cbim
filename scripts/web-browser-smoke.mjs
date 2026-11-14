@@ -1,0 +1,12 @@
+import {build} from 'vite';
+import {builtinModules} from 'node:module';
+import {spawn} from 'node:child_process';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+await build({configFile:false,logLevel:'warn',build:{target:'node22',outDir:'test-results/web-browser-smoke',emptyOutDir:false,lib:{entry:'tests/web-browser-electron-fixture.ts',formats:['es'],fileName:()=> 'fixture.mjs'},rollupOptions:{external:['electron',...builtinModules,...builtinModules.map(value=>'node:'+value)]}}});
+const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
+const child=spawn(require('electron'),[path.resolve('test-results/web-browser-smoke/fixture.mjs'),...process.argv.slice(2)],{env,stdio:'inherit',windowsHide:true});
+const timeout=setTimeout(()=>{child.kill();process.exitCode=1},120000);
+child.on('error',error=>{console.error(error);clearTimeout(timeout);process.exitCode=1});
+child.on('exit',code=>{clearTimeout(timeout);process.exitCode=code??1});

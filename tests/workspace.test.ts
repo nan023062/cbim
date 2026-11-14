@@ -4,10 +4,10 @@ import path from 'node:path';
 import {fixture} from './helpers';
 import {request,moduleFiles} from './data/knowledge';
 import {internalKnowledge} from './knowledge-tool-fixture';
-import {exists,readJson} from '../src/backend/core/foundation/files';
-import {json} from '../src/backend/core/foundation/serialization';
-import {Workspace} from '../src/backend/main/workspace/workspace';
-import {KernelLock} from '../src/backend/main/platform/locking';
+import {exists,readJson} from '../src/core/platform/node/files';
+import {json} from '../src/core/platform/node/serialization';
+import {Workspace} from '../src/logic/workspace/service/workspace';
+import {KernelLock} from '../src/core/platform/node/locking';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 

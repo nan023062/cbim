@@ -6,7 +6,7 @@ import {parseIpcRequest,ipcSuccess} from '../src/bridge/contracts/ipc-call';
 
 // 执行 main.ts 真正注册的回调；仅替换 Electron/系统副作用，不复制分派实现。
 function desktop(){
-  const file='src/backend/main/main.ts',source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
+  const file='src/bridge/server/main.ts',source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
   let callback:ts.Expression|undefined;
   const visit=(node:ts.Node)=>{if(ts.isCallExpression(node)&&node.expression.getText(source)==='ipcMain.handle'&&node.arguments[0]?.getText(source)==="'cbim:call'")callback=node.arguments[1];ts.forEachChild(node,visit)};visit(source);
   if(!callback)throw Error('Missing actual desktop IPC registration');

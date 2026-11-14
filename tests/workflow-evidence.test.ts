@@ -1,11 +1,11 @@
 import {expect,it} from 'vitest';
-import {TaskProgressTools} from '../src/backend/core/evidence/progress-tools';
-import {evaluateWorkflowDelivery,validateWorkflowEvidence} from '../src/backend/core/evidence/workflow-evidence';
-import type {WorkflowContractBinding} from '../src/backend/core/tasks/execution-context';
-import type {TaskProgress} from '../src/backend/core/evidence/progress';
-import type {ArtifactEvidenceEvent} from '../src/backend/core/evidence/artifact-evidence';
-import {toolReceipt} from '../src/backend/core/tools/receipts';
-import type {ToolCall,ToolDecision,ToolReceipt} from '../src/backend/core/tools/types';
+import {TaskProgressTools} from '../src/logic/evidence/rules/progress-tools';
+import {evaluateWorkflowDelivery,validateWorkflowEvidence} from '../src/logic/evidence/rules/workflow-evidence';
+import type {WorkflowContractBinding} from '../src/logic/tasks/rules/execution-context';
+import type {TaskProgress} from '../src/logic/evidence/rules/progress';
+import type {ArtifactEvidenceEvent} from '../src/logic/evidence/rules/artifact-evidence';
+import {toolReceipt} from '../src/logic/tools/rules/receipts';
+import type {ToolCall,ToolDecision,ToolReceipt} from '../src/logic/tools/rules/types';
 
 const identity={workspaceId:'workspace',taskId:'task',runId:'run'},task={workspaceId:'workspace',taskId:'task',goal:'实现本模块成果',acceptance:['实际读取成果']};
 const bindings:WorkflowContractBinding[]=[{moduleId:'project/module',workflowId:'project/module/workflows/review',workflowVersion:'body-hash',contract:{version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'read-result',toolName:'read'}]}}}];

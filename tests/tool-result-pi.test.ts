@@ -4,9 +4,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {LoopRuntime,type TaskSpec} from '../src/backend/core/execution';
-import {PiEngine} from '../src/backend/engines/pi/engine';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
+import {LoopRuntime,type TaskSpec} from '../src/logic/execution/rules';
+import {PiEngine} from '../src/logic/execution/engines/pi/engine';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
 /** Real pinned Pi subprocess; the local SSE provider never sends a request to an external model. */
 it('rejects malformed internal tool output before Pi persists it and can resume the same session',async()=>{

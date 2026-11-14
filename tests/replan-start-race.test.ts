@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import {randomUUID} from 'node:crypto';
-import {WorkspaceExecutionManager} from '../src/backend/scheduler-engine/conversation/execution-manager';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import type {KnowledgeWorkspace} from '../src/backend/core/knowledge/ports';
-import type {ReplanRequest,ReplanReceipt} from '../src/backend/core/tasks/scope-replan';
+import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
+import type {ReplanRequest,ReplanReceipt} from '../src/logic/tasks/rules/scope-replan';
 
 function barrier(){let resolve!:()=>void;const promise=new Promise<void>(accept=>{resolve=accept});return {promise,resolve}}
 async function fixture(stage:'preflight'|'factory'|'accepted'){

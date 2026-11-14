@@ -1,5 +1,7 @@
 # CBIM Assistant 0.1.5 发布验收
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 ## 授权、范围与基线
 
 - 用户要求三项需求全部完成后提交 PR、合并并发布新版本。范围为主 Agent 默认执行、Claude Code 和 Codex 三引擎、Agent/岗位/主对话引擎与模型菜单。
@@ -68,36 +70,36 @@
 
 [PR #30 全部文件](https://github.com/nan023062/cbim/pull/30/files) 对应上述 base 到 ca5128ec 的完整范围；功能 a4472ecb、界面 af3ce53a、可信核证租约 f9c2892d 和验证 ca5128ec 保留为独立提交。测试通过、本人代码自查、桌面验收与人工 review 是不同事实，本记录不宣称已获得维护者人工审阅接受。
 
-阅读顺序：先看 [引擎契约](../../src/backend/core/brain/CONTRACT.md) 与 [模型配置](../../src/backend/core/brain/llm/ARCHITECTURE.md)，再看 [Claude 适配](../../src/backend/core/brain/claude/ARCHITECTURE.md) / [Codex 适配](../../src/backend/core/brain/codex/ARCHITECTURE.md)（现行入口；原 docs 文档已按文档清理提交删除）；随后看 [执行装配](../../src/backend/scheduler-engine/execution/ARCHITECTURE.md)、[主会话装配](../../src/backend/main/ARCHITECTURE.md) 和 [共用下拉菜单](../../src/frontend/components/ARCHITECTURE.md)。引擎只负责原生协议和会话，任务/权限/知识事务/请求账本仍由原服务拥有；新增协议主要改适配器和装配，不复制业务规则。可信主核证通过原主占用派生独立释放的读占用，桌面预览/决定仍独立获取权限，不扩大外部入口。
+阅读顺序：先看 [引擎契约](../../src/logic/execution/rules/CONTRACT.md) 与 [模型配置](../../src/logic/execution/engines/ARCHITECTURE.md)，再看 [Claude 适配](../../src/logic/execution/engines/claude/ARCHITECTURE.md) / [Codex 适配](../../src/logic/execution/engines/codex/ARCHITECTURE.md)（现行入口；原 docs 文档已按文档清理提交删除）；随后看 [执行装配](../../src/logic/execution/ARCHITECTURE.md)、[主会话装配](../../src/logic/application/ARCHITECTURE.md) 和 [共用下拉菜单](../../src/view/components/ARCHITECTURE.md)。引擎只负责原生协议和会话，任务/权限/知识事务/请求账本仍由原服务拥有；新增协议主要改适配器和装配，不复制业务规则。可信主核证通过原主占用派生独立释放的读占用，桌面预览/决定仍独立获取权限，不扩大外部入口。
 
 已同步变更源码的文件头、重要接口/字段说明；受影响 ARCHITECTURE 清单如下，各条链接给出实际职责和类图，不以目录统计代替源码审阅：
 
-- [src/backend/core/ARCHITECTURE.md](../../src/backend/core/ARCHITECTURE.md)
-- [src/backend/core/brain/ARCHITECTURE.md](../../src/backend/core/brain/ARCHITECTURE.md)
-- [src/backend/core/brain/claude/ARCHITECTURE.md](../../src/backend/core/brain/claude/ARCHITECTURE.md)
-- [src/backend/core/brain/codex/ARCHITECTURE.md](../../src/backend/core/brain/codex/ARCHITECTURE.md)
-- [src/backend/core/brain/llm/ARCHITECTURE.md](../../src/backend/core/brain/llm/ARCHITECTURE.md)
-- [src/backend/core/brain/pi/ARCHITECTURE.md](../../src/backend/core/brain/pi/ARCHITECTURE.md)
-- [src/backend/core/knowledge/ARCHITECTURE.md](../../src/backend/core/knowledge/ARCHITECTURE.md)
-- [src/backend/core/tasks/ARCHITECTURE.md](../../src/backend/core/tasks/ARCHITECTURE.md)
-- [src/backend/core/team/ARCHITECTURE.md](../../src/backend/core/team/ARCHITECTURE.md)
-- [src/backend/core/tools/ARCHITECTURE.md](../../src/backend/core/tools/ARCHITECTURE.md)
-- [src/backend/main/ARCHITECTURE.md](../../src/backend/main/ARCHITECTURE.md)
-- [src/backend/main/persistence/settings/ARCHITECTURE.md](../../src/backend/main/persistence/settings/ARCHITECTURE.md)
-- [src/backend/main/platform/ARCHITECTURE.md](../../src/backend/main/platform/ARCHITECTURE.md)
-- [src/backend/scheduler-engine/ARCHITECTURE.md](../../src/backend/scheduler-engine/ARCHITECTURE.md)
-- [src/backend/scheduler-engine/context/ARCHITECTURE.md](../../src/backend/scheduler-engine/context/ARCHITECTURE.md)
-- [src/backend/scheduler-engine/conversation/ARCHITECTURE.md](../../src/backend/scheduler-engine/conversation/ARCHITECTURE.md)
-- [src/backend/scheduler-engine/execution/ARCHITECTURE.md](../../src/backend/scheduler-engine/execution/ARCHITECTURE.md)
-- [src/backend/scheduler-engine/tools/ARCHITECTURE.md](../../src/backend/scheduler-engine/tools/ARCHITECTURE.md)
+- [src/backend/core/ARCHITECTURE.md](../../src/logic/ARCHITECTURE.md)
+- [src/backend/core/brain/ARCHITECTURE.md](../../src/logic/execution/rules/ARCHITECTURE.md)
+- [src/backend/core/brain/claude/ARCHITECTURE.md](../../src/logic/execution/engines/claude/ARCHITECTURE.md)
+- [src/backend/core/brain/codex/ARCHITECTURE.md](../../src/logic/execution/engines/codex/ARCHITECTURE.md)
+- [src/backend/core/brain/llm/ARCHITECTURE.md](../../src/logic/execution/engines/ARCHITECTURE.md)
+- [src/backend/core/brain/pi/ARCHITECTURE.md](../../src/logic/execution/engines/pi/ARCHITECTURE.md)
+- [src/backend/core/knowledge/ARCHITECTURE.md](../../src/logic/knowledge/rules/ARCHITECTURE.md)
+- [src/backend/core/tasks/ARCHITECTURE.md](../../src/logic/tasks/rules/ARCHITECTURE.md)
+- [src/backend/core/team/ARCHITECTURE.md](../../src/logic/team/rules/ARCHITECTURE.md)
+- [src/backend/core/tools/ARCHITECTURE.md](../../src/logic/tools/rules/ARCHITECTURE.md)
+- [src/backend/main/ARCHITECTURE.md](../../src/logic/application/ARCHITECTURE.md)
+- [src/backend/main/persistence/settings/ARCHITECTURE.md](../../src/logic/BOUNDARIES.md)
+- [src/backend/main/platform/ARCHITECTURE.md](../../src/logic/execution/platform/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/ARCHITECTURE.md](../../src/logic/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/context/ARCHITECTURE.md](../../src/logic/execution/context/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/conversation/ARCHITECTURE.md](../../src/logic/conversation/runtime/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/execution/ARCHITECTURE.md](../../src/logic/execution/ARCHITECTURE.md)
+- [src/backend/scheduler-engine/tools/ARCHITECTURE.md](../../src/logic/tools/runtime/ARCHITECTURE.md)
 - [src/bridge/contracts/ARCHITECTURE.md](../../src/bridge/contracts/ARCHITECTURE.md)
-- [src/frontend/ARCHITECTURE.md](../../src/frontend/ARCHITECTURE.md)
-- [src/frontend/components/ARCHITECTURE.md](../../src/frontend/components/ARCHITECTURE.md)
-- [src/frontend/conversation/ARCHITECTURE.md](../../src/frontend/conversation/ARCHITECTURE.md)
-- [src/frontend/knowledge/ARCHITECTURE.md](../../src/frontend/knowledge/ARCHITECTURE.md)
-- [src/frontend/settings/ARCHITECTURE.md](../../src/frontend/settings/ARCHITECTURE.md)
-- [src/frontend/team/ARCHITECTURE.md](../../src/frontend/team/ARCHITECTURE.md)
-- [src/frontend/workspace/ARCHITECTURE.md](../../src/frontend/workspace/ARCHITECTURE.md)
+- [src/frontend/ARCHITECTURE.md](../../src/view/ARCHITECTURE.md)
+- [src/frontend/components/ARCHITECTURE.md](../../src/view/components/ARCHITECTURE.md)
+- [src/frontend/conversation/ARCHITECTURE.md](../../src/view/conversation/ARCHITECTURE.md)
+- [src/frontend/knowledge/ARCHITECTURE.md](../../src/view/knowledge/ARCHITECTURE.md)
+- [src/frontend/settings/ARCHITECTURE.md](../../src/view/settings/ARCHITECTURE.md)
+- [src/frontend/team/ARCHITECTURE.md](../../src/view/team/ARCHITECTURE.md)
+- [src/frontend/workspace/ARCHITECTURE.md](../../src/view/workspace/ARCHITECTURE.md)
 
 同范围的 23 份 CONTRACT 与 12 份概念文档已同步，可在 PR 完整文件列表核对。官网收尾只修改外部发布页面、README、维护说明和开发 Skill；不修改已公开制品或产品源码。在线供应商兼容性、模型业务质量及缺少历史 EXE 的两项迁移仍是验证边界。
 

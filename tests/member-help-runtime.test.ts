@@ -3,10 +3,10 @@ import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type MemberRunLaunch,type ToolDecision} from '../src/backend/core/execution';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {MemberHelpTools} from '../src/backend/core/tasks/member-help-tools';
-import {memberHelpStagedSchema} from '../src/backend/core/tasks/member-help';
+import {LoopRuntime,type AgentEngine,type EngineContext,type EngineEvent,type TaskSpec,type MemberRunLaunch,type ToolDecision} from '../src/logic/execution/rules';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {MemberHelpTools} from '../src/logic/tasks/rules/member-help-tools';
+import {memberHelpStagedSchema} from '../src/logic/tasks/rules/member-help';
 
 const input={kind:'missing_input' as const,reason:'验收所需配置缺失',question:'请确认目标配置',attemptedToolCallIds:[] as string[]};
 const binding={workspaceId:'workspace-one',teamId:'.cbim/team',agentId:'cbim:executor',agentInstanceId:'member-one',agentSessionId:'channel-one',rootSessionId:'root-session',taskId:'task-one',runId:'run-one',leaseEpoch:1,planRevision:1};

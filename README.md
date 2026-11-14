@@ -6,9 +6,9 @@
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
-[引擎无关执行内核](src/backend/core/execution/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/backend/engines/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
+[引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/logic/execution/engines/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
-界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/frontend/ARCHITECTURE.md)。
+界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
 
 **CBIM 是面向单人或少数人使用的本地 AI Native 团队开发工具。** Agent 团队在具有业务架构、岗位责任和知识的工作区中分工协作，首要目标是贯通“目标 → 分工 → 开发 → 自动 review/验证 → 返工 → 交付 → 知识沉淀”。工作区网络先表达本地业务关系；当前不建设 Cindy 接入、联网协作或大型团队平台。
 
@@ -26,7 +26,7 @@ Windows x64 当前公开桌面版为 [desktop-v0.1.15](https://github.com/nan023
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/backend/updater/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
@@ -43,7 +43,7 @@ pnpm start
 
 日常开发只运行受影响单元的测试：使用 `pnpm exec vitest run` 后跟明确的相关测试文件，必要时用 `-t` 选择用例；类型、依赖和架构检查按实际变化选择。通过后即可记录并提交，不默认执行全量 `pnpm test`、打包或整套桌面测试，详见 [日常验证范围](AGENTS.md#日常验证范围)。面向 `master` 的 PR 由现有 CI 自动执行全量回归；`pnpm package`、`pnpm make` 和 `pnpm test:desktop` 等制品验证留在后续集成／发布阶段按需执行。
 
-正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](src/backend/main/commands/ARCHITECTURE.md)。
+正式业务执行使用桌面主对话。`pnpm loop` 保留受限开发兼容接口，旧直接业务启动已拒绝；参数、模型配置和具体限制见 [Loop Engine](src/bridge/server/commands/ARCHITECTURE.md)。
 
 ## 分支约定
 
@@ -79,20 +79,20 @@ pnpm start
 
 源码阅读从 [src 整体架构](src/ARCHITECTURE.md) 开始：包含目录划分原因、运行路径、数据归属与逐层类图。代码注释和目录架构文档的同步维护规则仅适用于 `src/`。
 
-顶层分为 `src/frontend/`（前端视图层）与 `src/backend/`（本机后端逻辑层）。`src/bridge/` 集中维护两层之间的公开契约和 Electron 安全桥。后端继续分为 main、scheduler-engine 和 core，保持单向依赖。
+源码采用 Core、Logic、Bridge、View 四层：Core 提供共享技术能力，Logic 持有业务与数据，Bridge 处理通信和可信宿主，View 负责界面与交互。便携能力与 Node/Electron 平台入口独立，具体允许依赖以检查器为准。
 
 | 位置 | 内容 |
 |---|---|
-| `src/backend/core/execution/` | 引擎无关生命周期、存储端口和成员能力 |
-| `src/backend/core/models/` | 模型参数、能力元数据与请求预算端口 |
-| `src/backend/engines/` | Pi / Claude Code / Codex 适配器及共享传输 |
-| `src/backend/core/connectors/` | 链接器定义、身份与插件映射 |
-| `src/backend/core/team/` | Team、Agent、项目岗位与 Skill 领域视图 |
-| `src/backend/core/workspace/` | 业务 Workspace、Module 与 Workflow 领域视图 |
-| `src/backend/core/knowledge/` | 核心规则、查询、对象治理及事务契约 |
-| `src/backend/scheduler-engine/` | 调度引擎：团队工作流准备、内部知识接入与执行管理 |
-| `src/backend/main/` | 应用装配；分为工作区、持久化、平台、IPC、资源和内部执行命令 |
-| `src/bridge/preload/`、`src/frontend/`、`src/bridge/contracts/` | 隔离 IPC、React 界面、跨进程协议 |
+| `src/core/` | 通用算法、错误、文件/网页/锁/加密等基础能力 |
+| `src/logic/execution/` | 引擎无关生命周期、具体引擎、准入及装配 |
+| `src/logic/models/`、`src/logic/budget/` | 模型目录与配置、请求及作用域预算 |
+| `src/logic/team/`、`src/logic/workspace/` | 岗位、主 Agent 设置、工作区及责任 |
+| `src/logic/knowledge/` | 知识规则、固定快照查询、存储与事务 |
+| `src/logic/tasks/`、`src/logic/dispatch/` | 目标/任务规则、编排及派发事务 |
+| `src/logic/application/` | 唯一业务应用生命周期及装配 |
+| `src/bridge/server/` | 桌面入口、冷启动、IPC、CLI 与平台传输 |
+| `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
+| `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
 | `docs/` | 01–04 四份概念设计 |
 | `design/` | Issue 关联方案、运行规范、Schema 与开发／验证记录 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
@@ -102,12 +102,12 @@ pnpm start
 
 实现说明随源码维护，可从以下入口逐层阅读：
 
-- [后端模块、源码映射与修改入口](src/backend/CONTRACT.md)
-- [执行引擎与生命周期](src/backend/core/execution/ARCHITECTURE.md)
-- [任务身份与派发契约](src/backend/core/tasks/CONTRACT.md)
-- [调度与成员执行](src/backend/scheduler-engine/ARCHITECTURE.md)
-- [运行统计与准入](src/backend/core/runtime/CONTRACT.md)
-- [桌面视图与交互](src/frontend/ARCHITECTURE.md)
+- [后端模块、源码映射与修改入口](src/logic/BOUNDARIES.md)
+- [执行引擎与生命周期](src/logic/execution/rules/ARCHITECTURE.md)
+- [任务身份与派发契约](src/logic/tasks/rules/CONTRACT.md)
+- [调度与成员执行](src/logic/ARCHITECTURE.md)
+- [运行统计与准入](src/logic/runtime/rules/CONTRACT.md)
+- [桌面视图与交互](src/view/ARCHITECTURE.md)
 - [开发事实、验证证据与限制](design/development-log.md)
 
 正式知识仅存于 `<项目根>/.cbim/`；登记和本机项目历史存于 `<用户主目录>/.cbim/`。新应用不创建项目内 `.cbim.local/`。测试全部使用隔离用户目录。

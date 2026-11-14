@@ -1,12 +1,12 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/frontend/tasks/scope-state';
-import {ScopeGoalPanel,goalTaskReference} from '../src/frontend/tasks/ScopeGoalPanel';
-import {MemberTaskDetail} from '../src/frontend/tasks/MemberTaskDetail';
-import {SessionTaskView,sessionRoot} from '../src/frontend/tasks/SessionTaskView';
-import {applyGraphBatch} from '../src/backend/core/tasks/graph-reducer';
-import {summarizeScope} from '../src/backend/core/tasks/scope-view';
+import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/view/tasks/scope-state';
+import {ScopeGoalPanel,goalTaskReference} from '../src/view/tasks/ScopeGoalPanel';
+import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
+import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
+import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
 
 const identity={workspaceId:'workspace',rootSessionId:'main-session'},time='2026-11-07T00:00:00.000Z';
@@ -25,6 +25,18 @@ it('未建立业务计划的结束状态不把独立知识写入显示成目标�
  const business=planned();business.status='closed';business.outcome='failed';
  expect(scopeGoalView(summarizeScope(business,streamId,1)).label).toBe('目标未完成');
 });
+
+it('整话题暂停只显示已提交阶段，摘要详情不一致时保持旧投影',()=>{
+  const value=scope(),command='22222222-2222-4222-8222-222222222222';
+  value.topicInterruptions=[{requestedAt:time,request:{...identity,scopeId:value.scopeId,expectedInputRevision:1,commandId:command,input:{message:'调整当前话题'},options:{provider:'cbim-11111111-1111-4111-8111-111111111111',profileId:'11111111-1111-4111-8111-111111111111',model:'model',permission:'ask'}}}];
+  expect(scopeGoalView(summarizeScope(value,streamId,1)).phase).toBe('topic_pausing');
+  const projection=new SessionReadProjection(identity);projection.apply(reset(value));const prior=projection.detail();
+  const broken=reset(value,2);if(broken.scopes.mode==='reset')delete broken.scopes.snapshot.scopes[0].interruption;
+  expect(()=>projection.apply(broken)).toThrow('话题暂停');expect(projection.detail()).toBe(prior);
+  value.status='waiting';value.wait={waitId:command,interruptionId:command,reason:'全部参与者可靠退出',createdAt:time,runId:'main-run',goalRevision:1,graphCursor:{streamId:'graph',seq:1},knowledgeRevision:'knowledge',mainRunIds:['main-run']};
+  projection.apply(reset(value,2));expect(scopeGoalView(summarizeScope(value,streamId,2)).phase).toBe('topic_paused');
+  value.status='closed';value.outcome='interrupted';value.closedAt=time;expect(scopeGoalView(summarizeScope(value,streamId,3)).phase).toBe('interrupted');
+});
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
 
 it('替代审阅只导航已同步的本周期节点，旧节点与新成果各自保留原身份',()=>{
@@ -40,6 +52,14 @@ it('替代审阅只导航已同步的本周期节点，旧节点与新成果各�
     const invalid={...state,graph:changed};expect(goalTaskReference(invalid,'old-task')).toBeUndefined();const rendered=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:invalid,onSelectTask:()=>{}}));expect(rendered).not.toContain('data-task-id="old-task"');expect(rendered).toContain('old-task');
   }
   expect(state.graph.edges).toEqual(graph.edges);expect(old.assignee.agentInstanceId).toBe('old-task-instance');
+});
+
+it('联合投影只发布本办公室稳定对话，身份错误或改绑不污染既有状态',()=>{
+  const projection=new SessionReadProjection(identity),response=reset(),session={...identity,sessionId:'main-logical',teamId:'team',agentId:'cbim:main',createdAt:time};
+  projection.apply({...response,teamSessions:[session]});const previous=projection.teamSessions;
+  projection.apply({...response,teamSessions:[{...session}]});expect(projection.teamSessions).toBe(previous);
+  for(const teamSessions of [[{...session,rootSessionId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.apply({...response,teamSessions})).toThrow();
+  expect(projection.teamSessions).toBe(previous);expect(completeSessionRead(response,projection)!.teamSessions).toBe(previous);
 });
 
 it('目标与成员只展示各自持久的指定流程，切回无选择历史不补造选择',()=>{
@@ -167,7 +187,7 @@ it('主回合结束后活动周期根仍有停止入口，历史目标选择不�
   const tasks=['scope-one','scope-old'].map((scopeId,index)=>({kind:'task' as const,nodeId:'task:t'+index,taskId:'t'+index,scopeId,identity,requester:agent,assignee:{...agent,agentId:'cbim:executor',name:'执行 Agent',agentInstanceId:'executor-'+index},modules:[],goal:'任务 '+index,acceptance:[],revision:1,planRevision:1,status:'running' as const,awaitedChildren:[],runIds:[],createdAt:time,updatedAt:time}));
   const fullGraph:GraphSnapshot={...graph,tasks,edges:tasks.map((task,index)=>({edgeId:'edge-'+index,identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:task.nodeId,revision:1,enabled:true}))};
   const html=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
-  expect(html).toContain('dispatch-root-goal');expect(html).toContain('data-testid="scope-stop"');expect(html).toContain('停止当前任务');expect(html).toContain('data-task-id="t0"');expect(html).toContain('data-task-id="t1"');expect(html).toContain('data-highlighted="false"');expect(html).toContain('当前周期的治理目标');
+  expect(html).toContain('dispatch-root-goal');expect(html).toContain('data-testid="scope-stop"');expect(html).toContain('停止当前任务');expect(html).toContain('data-task-id="t0"');expect(html).toContain('data-task-id="t1"');expect(html).toContain('data-testid="office-scene"');expect(html).toContain('当前周期的治理目标');
   const legacyState=view({...scope('legacy'),goal:undefined});expect(sessionRoot([history],identity.rootSessionId,0,fullGraph,legacyState).goal).toBe('旧周期 · 未保存原始目标');expect(sessionRoot([history],identity.rootSessionId,0,fullGraph).goal).toBe('首次标题');
   const browsing={...legacyState,openScope:state.openScope,activeScope:state.activeScope};const oldHtml=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(oldHtml).toContain('当前另有任务运行');expect(oldHtml).toContain('停止正在运行的任务');
 });

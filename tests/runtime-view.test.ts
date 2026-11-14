@@ -1,10 +1,10 @@
 import {expect,it} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {RuntimeMetrics} from '../src/frontend/runtime/RuntimeOverview';
-import {RuntimeScopeRow,RuntimeTaskRow} from '../src/frontend/runtime/RuntimeRows';
-import {runtimeScopeLabel,runtimeScopeMatches,runtimeTaskMatches,runtimeTaskTarget,runtimeRunTarget} from '../src/frontend/runtime/runtime-view-state';
-import {GlobalRuntimeManager} from '../src/backend/scheduler-engine/runtime/global-runtime';
+import {RuntimeMetrics} from '../src/view/runtime/RuntimeOverview';
+import {RuntimeScopeRow,RuntimeTaskRow} from '../src/view/runtime/RuntimeRows';
+import {runtimeScopeLabel,runtimeScopeMatches,runtimeTaskMatches,runtimeTaskTarget,runtimeRunTarget} from '../src/view/runtime/runtime-view-state';
+import {GlobalRuntimeManager} from '../src/logic/runtime/monitoring/global-runtime';
 import type {RuntimeLoopTask,RuntimeScope} from '../src/bridge/contracts/runtime';
 const scope:RuntimeScope={workspaceId:'a',rootSessionId:'root',scopeId:'scope',status:'waiting',createdAt:'2026-11-07T00:00:00.000Z',hasGoal:true,goalRevision:2,wait:{createdAt:'2026-11-07T00:01:00.000Z',reason:'需要用户提供验收证据'}};
 const loop:RuntimeLoopTask={source:'loop',binding:'role-only',workspaceId:'a',taskId:'root',moduleIds:[],status:'completed',runIds:['run'],activeRunIds:[],lastRunId:'run',updatedAt:'2026-11-07T00:00:00.000Z'};

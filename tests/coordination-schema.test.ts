@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import Ajv from 'ajv';
-import {CoordinationTools} from '../src/backend/scheduler-engine/tools/coordination-tools';
-import {ModuleOwnershipTools} from '../src/backend/scheduler-engine/tools/module-ownership-tools';
+import {CoordinationTools} from '../src/logic/tools/runtime/coordination-tools';
+import {ModuleOwnershipTools} from '../src/logic/tools/runtime/module-ownership-tools';
 
 const binding={workspaceId:'workspace',instanceId:'instance',rootSessionId:'root',scopeId:'scope',agentInstanceId:'main',agentSessionId:'session',runId:'run'};
 const owners=()=>new ModuleOwnershipTools({inspect:vi.fn(),preview:vi.fn(),commit:vi.fn(),receipt:vi.fn()},binding);

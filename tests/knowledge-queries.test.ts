@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
-import {KnowledgeQueries} from '../src/backend/core/knowledge/knowledge-queries';
-import {KnowledgeRefresh,type KnowledgeRefreshPort as KnowledgeRefreshWorkspace} from '../src/backend/core/knowledge/knowledge-refresh';
+import {KnowledgeQueries} from '../src/logic/knowledge/rules/knowledge-queries';
+import {KnowledgeRefresh,type KnowledgeRefreshPort as KnowledgeRefreshWorkspace} from '../src/logic/knowledge/rules/knowledge-refresh';
 const refreshKnowledgeIndexes=(workspace:KnowledgeRefreshWorkspace,input:Parameters<KnowledgeRefresh['refresh']>[0])=>new KnowledgeRefresh(workspace).refresh(input);
-import type {Snapshot} from '../src/backend/core/knowledge/types';
+import type {Snapshot} from '../src/logic/knowledge/rules/types';
 import {knowledgeFixture,teamKnowledgeFiles,teamIds} from './knowledge-fixture';
 
 it('查询只取得快照端口，保持筛选、Skill 继承、本模块流程与内置根身份',async()=>{

@@ -3,10 +3,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
-import type {RuntimeSnapshot} from '../src/backend/core/runtime/types';
-import {admissionReadSchema} from '../src/backend/core/runtime/admission';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
+import type {RuntimeSnapshot} from '../src/logic/runtime/rules/types';
+import {admissionReadSchema} from '../src/logic/runtime/rules/admission';
 import {globalRuntimeProviders,seedGlobalRuntime,globalRuntimeFixture as data,waitFixture,globalAdmissionFixture as admissionData,admissionScopes,globalRuntimeLogBytes} from '../tests/global-runtime-fixture';
 import {latestExecutable} from './build-artifact.mjs';
 

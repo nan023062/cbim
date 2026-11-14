@@ -1,4 +1,4 @@
-import type {CsvTableSchema} from '../src/backend/core/workspace/csv-validation-schema';
+import type {CsvTableSchema} from '../src/logic/workspace/rules/csv-validation-schema';
 
 export const csvInventorySchema:CsvTableSchema={columns:[{name:'sku',type:'string',minLength:1,maxLength:32},{name:'quantity',type:'integer',minimum:0,maximum:100000},{name:'location',type:'string',minLength:1,maxLength:100}],minRows:1,maxRows:100,uniqueBy:['sku']};
 export const csvValidationData={

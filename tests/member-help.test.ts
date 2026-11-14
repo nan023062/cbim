@@ -6,17 +6,17 @@ import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import {hash,json} from '../src/backend/core/foundation/serialization';
-import {jsonToolResult} from '../src/backend/core/tools/results';
-import {memberHelpInputSchema} from '../src/backend/core/tasks/member-help';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {FileRunStorage} from '../src/backend/main/run-storage/run-storage';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
-import {MemberExecutionManager} from '../src/backend/scheduler-engine/members/member-execution';
-import {memberHelpCandidate} from '../src/backend/scheduler-engine/members/member-help-state';
-import {LoopRuntime} from '../src/backend/core/execution/runtime/runtime';
-import type {EngineContext,RunSummary} from '../src/backend/core/execution/types';
-import type {MemberExecutionPorts} from '../src/backend/scheduler-engine/members/member-execution';
+import {hash,json} from '../src/core/platform/node/serialization';
+import {jsonToolResult} from '../src/logic/tools/rules/results';
+import {memberHelpInputSchema} from '../src/logic/tasks/rules/member-help';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
+import {MemberExecutionManager} from '../src/logic/team/runtime/member-execution';
+import {memberHelpCandidate} from '../src/logic/team/runtime/member-help-state';
+import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
+import type {EngineContext,RunSummary} from '../src/logic/execution/rules/types';
+import type {MemberExecutionPorts} from '../src/logic/team/runtime/member-execution';
 
 async function setup(mode:'help'|'hold'|'failed'|'close-error'|'write-first'|'post-denial'='help'){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),team=await seedTeam(owner),snapshot=await owner.snapshot(),moduleId=team.input.moduleId;

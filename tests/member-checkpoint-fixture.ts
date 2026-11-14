@@ -1,14 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import type {Application} from '../src/backend/main/assembly/application';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
+import type {Application} from '../src/bridge/server/application';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
 import {memberCheckpointFixture as data} from './member-checkpoint-provider';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 export {queuedTaskCancelRecords as checkpointRecords} from './queued-task-cancel-fixture';
 export {dependencyRuns as checkpointRuns} from './queued-dependency-replacement-fixture';
 

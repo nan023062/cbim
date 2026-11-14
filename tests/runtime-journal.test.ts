@@ -2,9 +2,9 @@ import {it,expect} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {runtimeFixture,digest} from './runtime-fixture';
-import {RuntimeJournal} from '../src/backend/updater/runtime-journal';
-import {selectBootResources} from '../src/backend/bootstrap/selection';
-import {RuntimeStore} from '../src/backend/updater/runtime-store';
+import {RuntimeJournal} from '../src/logic/updates/service/runtime-journal';
+import {selectBootResources} from '../src/bridge/server/bootstrap/selection';
+import {RuntimeStore} from '../src/logic/updates/service/runtime-store';
 it('download does not activate; confirmed activation advances monotonically and cannot replay an old resource',async()=>{
   const f=await runtimeFixture();try{
     const cache=path.join(f.root,'cache'),initial=digest(f.envelope().payload),store=new RuntimeStore(cache,f.cold,f.download),journal=new RuntimeJournal(path.join(cache,'state'),{digest:initial,resourceVersion:1});

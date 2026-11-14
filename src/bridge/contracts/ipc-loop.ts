@@ -1,18 +1,20 @@
 /**
  * 作用定位：会话、排队、历史与安全续接的公开 IPC 请求与响应。
+ * followupOf 仅供排队新任务显式关联历史话题，后端仍校验同办公室和关闭状态。
  * 设计原因：插入绑定原 expectedRunId，查询原回执不重放；退役的业务启动入口继续拒绝。类型不替代身份和权限校验。
  */
 import {z} from 'zod';
 import {ipcId,workspaceIdArgs,taskIdArgs,runIdArgs,questionAnswers} from './ipc-shapes';
-import {type ConversationThreadView,type RunSummary} from '../../backend/core/execution/types';
-import {type ChatApproval} from '../../backend/core/tools/policy/types';
-import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../backend/core/tasks/human-continue';
-import {type QueueDelta,type QueuedMessage} from '../../backend/core/tasks/queue';
-import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../backend/core/tasks/scope-continuation';
-import {type RecoveryReceipt,recoveryLookupSchema,recoveryRequestSchema} from '../../backend/core/tasks/scope-recovery';
-import {type ReplanReceipt,replanLookupSchema,replanRequestSchema} from '../../backend/core/tasks/scope-replan';
-import {type TaskSpec} from '../../backend/core/tasks/types';
-import {type PendingQuestion} from '../../backend/core/tools/questions';
+import {type ConversationThreadView,type RunSummary} from '../../logic/execution/rules/types';
+import {type ChatApproval} from '../../logic/tools/rules/policy/types';
+import {type HumanContinuationReceipt,humanContinuationLookupSchema,humanContinuationRequestSchema} from '../../logic/tasks/rules/human-continue';
+import {type QueueDelta,type QueuedMessage} from '../../logic/tasks/rules/queue';
+import {type GoalContinuationReceipt,goalContinuationRequestSchema,scopeContinuationLookupSchema} from '../../logic/tasks/rules/scope-continuation';
+import {topicInterruptionRequestSchema} from '../../logic/tasks/rules/topic-interruption';
+import {type RecoveryReceipt,recoveryLookupSchema,recoveryRequestSchema} from '../../logic/tasks/rules/scope-recovery';
+import {type ReplanReceipt,replanLookupSchema,replanRequestSchema} from '../../logic/tasks/rules/scope-replan';
+import {type TaskSpec} from '../../logic/tasks/rules/types';
+import {type PendingQuestion} from '../../logic/tools/rules/questions';
 
 export const loopIpcRequests={
   'loop.prepare':workspaceIdArgs.extend({task:z.object({goal:z.string(),moduleId:ipcId,agentId:ipcId,workflowId:ipcId,responsiblePerson:z.string().optional(),acceptance:z.array(z.string())}).strict()}).strict(),
@@ -22,7 +24,7 @@ export const loopIpcRequests={
   'loop.start':z.never(),
   'loop.queue':taskIdArgs,
   'loop.queueDelta':taskIdArgs.extend({cursor:z.object({epoch:ipcId,revision:z.number().int().nonnegative(),items:z.record(z.number())}).strict().optional()}).strict(),
-  'loop.enqueue':taskIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
+  'loop.enqueue':taskIdArgs.extend({followupOf:ipcId.optional(),message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
   'loop.chat':workspaceIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
   'loop.resume':runIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional(),reconciledToolIds:z.array(z.string()).optional()}).strict(),
   'loop.queueChange':taskIdArgs.extend({queueId:ipcId,action:z.enum(['first','up','down','remove'])}).strict(),
@@ -31,6 +33,7 @@ export const loopIpcRequests={
   'loop.queueInsert':taskIdArgs.extend({queueId:ipcId,expectedRunId:ipcId}).strict(),
   'loop.queueContinue':taskIdArgs,
   'loop.goalContinue':goalContinuationRequestSchema,
+  'loop.topicInterrupt':topicInterruptionRequestSchema,
   'loop.goalContinuation':scopeContinuationLookupSchema,
   'loop.humanContinue':humanContinuationRequestSchema,
   'loop.humanContinuation':humanContinuationLookupSchema,
@@ -63,6 +66,7 @@ export interface LoopIpcResponses {
   'loop.queueInsert':void;
   'loop.queueContinue':void;
   'loop.goalContinue':GoalContinuationReceipt;
+  'loop.topicInterrupt':GoalContinuationReceipt;
   'loop.goalContinuation':GoalContinuationReceipt|undefined;
   'loop.humanContinue':HumanContinuationReceipt;
   'loop.humanContinuation':HumanContinuationReceipt|undefined;

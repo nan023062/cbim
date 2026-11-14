@@ -1,8 +1,8 @@
 import {expect,it,vi} from 'vitest';
-import {runtimeEngineTools,nativeToolsDisabled,type EngineCapability,type EngineToolsPort} from '../src/backend/core/execution/engine-tools';
-import {memberToolCapabilities} from '../src/backend/core/execution/capabilities/member-tool-capabilities';
-import {RunScopedExecution} from '../src/backend/core/execution/capabilities/run-scoped-execution';
-import type {ExecutionScope} from '../src/backend/core/workspace/execution-scope';
+import {runtimeEngineTools,nativeToolsDisabled,type EngineCapability,type EngineToolsPort} from '../src/logic/execution/rules/engine-tools';
+import {memberToolCapabilities} from '../src/logic/execution/rules/capabilities/member-tool-capabilities';
+import {RunScopedExecution} from '../src/logic/execution/rules/capabilities/run-scoped-execution';
+import type {ExecutionScope} from '../src/logic/workspace/rules/execution-scope';
 
 const empty:EngineToolsPort={list:async()=>[],call:async()=>{throw Error('not registered')}};
 it('新能力不扩展上下文字段即可注册，目录冻结，调用身份和停止信号原样传递',async()=>{

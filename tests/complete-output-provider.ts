@@ -1,9 +1,9 @@
 import http from 'node:http';
 import assert from 'node:assert/strict';
-import type {OwnerExecutionSelection} from '../src/backend/core/team/member-execution-binding';
+import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {goalPlanArguments,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
 import {mainToolValue} from './main-tool-contract-provider';
-import type {ArtifactTransitionDefinition} from '../src/backend/core/workspace/artifact-scope';
+import type {ArtifactTransitionDefinition} from '../src/logic/workspace/rules/artifact-scope';
 
 export type CompleteOutputMode='automatic'|'changed'|'human';
 export const completeOutputData={model:'complete-output-fixture',root:'outputs',file:'outputs/result.json',content:'{"count":1}',goal:'COMPLETE_OUTPUT_MAIN: 核实完整集合及JSON结构，按明确验收流程完成目标',memberGoal:'COMPLETE_OUTPUT_MEMBER: 生成真实JSON并以同一完整清单验证交付',acceptance:['冻结目录完整集合与JSON结构均已核实'],humanId:'full-human',humanCriterion:'请人工判断完整输出集合满足业务要求',draft:'保留普通草稿，完整验收不会发送此内容。',schema:{type:'object',properties:{count:{type:'integer',minimum:1}},required:['count'],additionalProperties:false}};

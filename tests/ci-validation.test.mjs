@@ -118,6 +118,8 @@ it('wires shared checks independently and keeps one unconditional aggregate resu
   expect(workflow.jobs.static.needs).toBe('scope');
   expect(workflow.jobs.windows.steps.some(step=>step.run?.includes('pnpm typecheck'))).toBe(false);
   expect(workflow.jobs.static.steps.filter(step=>step.run==='pnpm typecheck')).toHaveLength(1);
+  expect(workflow.jobs.static.steps.filter(step=>step.run==='pnpm check:test-modules')).toHaveLength(1);
+  expect(workflow.jobs.windows.steps.some(step=>step.run?.includes('pnpm check:test-modules'))).toBe(false);
   expect(workflow.jobs.result.needs).toEqual(['scope','static','windows','light']);
   expect(workflow.jobs.result.if).toBe('always()');
   expect(workflow.jobs.windows.strategy['fail-fast']).toBe(false);

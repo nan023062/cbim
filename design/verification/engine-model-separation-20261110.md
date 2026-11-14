@@ -1,5 +1,7 @@
 # 引擎、模型与 Agent 配置归属修复
 
+> 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
+
 - 来源：用户直接反馈，未关联新 GitHub Issue。0.1.5 菜单只显示 Pi；进一步明确三个执行引擎内置、供应商统一模型目录；对话栏设置主 Agent，与 Agent 界面等效。
 - 基线：origin/master d8fd91f47e14a9694e398b43606e13afbc1e875f。独立修复工作树；不纳入本机 develop 的 a5938170 文档/资源整理，原工作不移动或重置。
 
@@ -10,7 +12,7 @@
 3. 岗位引用独立携带 engine。旧字段缺省时从已采纳 snapshot.engine 读取，未声明 Pi 不补字段，不改变历史哈希。配置当前差异、采纳、派发和领取沿同一独立选型；同一模型多引擎按完整配置指纹匹配。
 4. 稳定机制保持：模型加密、设置短锁、知识事务、岗位审计、工具授权、请求预算和原生恢复均复用原服务；新增引擎协议规则应在 llm/engine.ts 维护，不能回到供应商表单加引擎分类。
 
-入口：[模型纯规则](../../src/backend/core/brain/llm/engine.ts)、[设置存储契约](../../src/backend/main/persistence/settings/CONTRACT.md)、[主 Agent UI 契约](../../src/frontend/team/CONTRACT.md)、[运行装配契约](../../src/backend/scheduler-engine/execution/CONTRACT.md)。本次精读相关选型、持久化、岗位与运行链，不宣称全仓逐行审计。
+入口：[模型纯规则](../../src/logic/models/engine.ts)、[设置存储契约](../../src/logic/runtime/settings/CONTRACT.md)、[主 Agent UI 契约](../../src/view/team/CONTRACT.md)、[运行装配契约](../../src/logic/SCHEDULING.md)。本次精读相关选型、持久化、岗位与运行链，不宣称全仓逐行审计。
 
 ## 开发验证
 

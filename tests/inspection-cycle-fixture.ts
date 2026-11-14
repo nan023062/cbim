@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 
 /** Read only this fixture's durable scopes; never infer recovery identity from rendered labels. */
 export async function inspectionScopes(user:string,workspaceId:string):Promise<DispatchScope[]>{

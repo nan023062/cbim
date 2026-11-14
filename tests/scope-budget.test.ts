@@ -1,17 +1,17 @@
 import {expect,it} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import path from 'node:path';
-import {scopeBudgetPolicySchema,createScopeBudget,evaluateScopeBudget,type ScopeBudgetObservation,type ScopeBudgetPolicy,type ScopeBudgetAdmission} from '../src/backend/core/budget/scope-budget';
-import {validateScopeBudgets} from '../src/backend/core/budget/scope-budget-invariants';
-import {validateDispatchScopes} from '../src/backend/core/tasks/dispatch-scope-invariants';
-import {emptyScopeSnapshot,summarizeScope,applyScopeBatch,validateScopeSnapshot,readScopeDetail} from '../src/backend/core/tasks/scope-view';
-import type {DispatchScope} from '../src/backend/core/tasks/dispatch-scope';
-import type {DispatchState,DispatchMutation} from '../src/backend/core/dispatch/dispatch-storage';
-import type {DispatchRun} from '../src/backend/core/tasks/dispatch-execution';
-import type {TaskNode} from '../src/backend/core/tasks/graph-types';
+import {scopeBudgetPolicySchema,createScopeBudget,evaluateScopeBudget,type ScopeBudgetObservation,type ScopeBudgetPolicy,type ScopeBudgetAdmission} from '../src/logic/budget/rules/scope-budget';
+import {validateScopeBudgets} from '../src/logic/budget/rules/scope-budget-invariants';
+import {validateDispatchScopes} from '../src/logic/tasks/rules/dispatch-scope-invariants';
+import {emptyScopeSnapshot,summarizeScope,applyScopeBatch,validateScopeSnapshot,readScopeDetail} from '../src/logic/tasks/rules/scope-view';
+import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
+import type {DispatchState,DispatchMutation} from '../src/logic/dispatch/rules/dispatch-storage';
+import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
+import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
 import {fixture} from './helpers';
-import {FileDispatchStore} from '../src/backend/main/dispatch-storage/dispatch-store';
-import {WorkspaceDispatchService} from '../src/backend/scheduler-engine/dispatch/dispatch-service';
+import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
+import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
 const at='2026-11-07T10:00:00.000Z';
 const policy:ScopeBudgetPolicy={revision:3,enabled:true,limits:{tokens:100}};

@@ -4,12 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {Application} from '../src/backend/main/assembly/application';
-import {Paths} from '../src/backend/main/platform/paths';
+import {Application} from '../src/bridge/server/application';
+import {Paths} from '../src/logic/workspace/service/paths';
 import {inspectionCycleProvider,inspectionFixture as data} from '../tests/inspection-cycle-provider';
 import {seedExecutionReport} from '../tests/execution-report-fixture';
 import {corruptInspectionHistory,inspectionScopes} from '../tests/inspection-cycle-fixture';
-import type {RecoveryRequest} from '../src/backend/core/tasks/scope-recovery';
+import type {RecoveryRequest} from '../src/logic/tasks/rules/scope-recovery';
 import {latestExecutable} from './build-artifact.mjs';
 
 // The executable, Pi loop, failed write and later read are real. Only model responses and explicit

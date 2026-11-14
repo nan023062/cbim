@@ -1,7 +1,21 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
+
+const resourceReady = () => ({currentVersion:'0.1.15',currentResourceVersion:1,phase:'ready',release:{version:'0.1.15',resourceVersion:4,delivery:'resources',tag:'runtime-c0.1.15'}});
+it('requires the verified public R4 hop before treating a newer cold installer as ready',()=>{
+  expect(acceptanceReadyTarget(resourceReady(),'0.1.15','0.1.16')).toEqual({kind:'resources',resourceVersion:4});
+  expect(acceptanceReadyTarget({...resourceReady(),currentResourceVersion:4,release:{version:'0.1.16',delivery:'installer'}},'0.1.15','0.1.16')).toEqual({kind:'installer'});
+  expect(acceptanceReadyTarget({currentVersion:'0.1.14',phase:'ready',release:{version:'0.1.16'}},'0.1.14','0.1.16')).toEqual({kind:'installer'});
+});
+it.each([
+  {phase:'downloading'}, {error:'failed'}, {currentVersion:'0.1.14'}, {currentResourceVersion:4}, {currentResourceVersion:undefined},
+  {release:{...resourceReady().release,version:'0.1.16'}}, {release:{...resourceReady().release,tag:'other'}},
+  {release:{...resourceReady().release,resourceVersion:5}}, {release:{version:'0.1.15'}}, {release:{version:'0.1.16',delivery:'other'}},
+])('rejects stale, unverified, or wrong ready targets: %j',change=>{
+  expect(()=>acceptanceReadyTarget({...resourceReady(),...change},'0.1.15','0.1.16')).toThrow();
+});
 
 it('keeps differential mandatory unless the separate online fallback diagnosis is explicitly selected', () => {
   expect(acceptanceTransferExpectation({}, {mode:'online', previousUpdateFlow:'prefetch'})).toBe('differential');
@@ -19,7 +33,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.15'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -58,6 +72,10 @@ it.each(['candidate', 'online'])('accepts the verified 0.1.13 prefetch client fo
 });
 
 it.each(['candidate','online'])('accepts the actual 0.1.14 client for the first runtime migration in %s mode',mode=>{expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.15',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.14',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.14',previousUpdateFlow:'prefetch',mode})});
+it.each(['candidate','online'])('pins the released 0.1.15 cold client for a newer installer in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.15',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.16',previousVersion:'0.1.15',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.15',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.15',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
+});
 it.each(['candidate','online'])('supports actual 0.1.6 automatic updater in %s mode',mode=>{expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.7',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.6',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.6',previousUpdateFlow:'automatic',mode})});
 it.each(['candidate','online'])('supports the unchanged 0.1.7 updater for the aligned 0.1.8 candidate in %s mode',mode=>{expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.8',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.7',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.8',previousVersion:'0.1.7',previousUpdateFlow:'automatic',mode})});
 

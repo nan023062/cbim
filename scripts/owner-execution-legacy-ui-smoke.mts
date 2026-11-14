@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
-import type {GraphSnapshot} from '../src/backend/core/tasks/graph-types';
+import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {createOwnerExecutionLegacyFixture} from '../tests/owner-execution-legacy-fixture';
 import {ownerExecutionRecords} from '../tests/owner-execution-fixture';
 import {knowledgeSourceDiskEvidence} from '../tests/knowledge-source-lifecycle-fixture';

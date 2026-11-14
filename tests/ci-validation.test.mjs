@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {execFileSync, spawnSync} from 'node:child_process';
 import {parse} from 'yaml';
-import {classifyChanges, parseChangedPaths} from '../scripts/ci-scope.mjs';
+import {classifyChanges, parseChangedPaths, pullRequestChecks} from '../scripts/ci-scope.mjs';
 import {assertCiResults} from '../scripts/ci-result.mjs';
 import {balancedShards} from '../scripts/ci-test-shards';
 import CiTestSequencer from '../scripts/ci-test-sequencer';
@@ -21,6 +21,14 @@ afterEach(() => {
 });
 
 describe('change routing', () => {
+  it('defers draft pushes but restores full checks for the same ready head, including unknown files', () => {
+    for(const paths of [['scripts/desktop-release-acceptance.mjs'],['unknown.md'],[]]){
+      expect(pullRequestChecks(paths,true).mode).toBe('deferred');
+      expect(pullRequestChecks(paths,false).mode).toBe('full');
+    }
+    expect(pullRequestChecks(['README.md'],false).mode).toBe('docs');
+    expect(()=>pullRequestChecks(['README.md'],undefined)).toThrow(/draft state/);
+  });
   it.each([
     [['README.md','design/development-log.md','design/verification/check.md'],'docs',false],
     [['website/index.html','website/release.json','README.md'],'website',true],
@@ -87,6 +95,7 @@ describe('CI result cannot turn a skipped or failed check green', () => {
   it.each(['failure','cancelled','skipped',undefined])('rejects product result %s', result=>expect(()=>assertCiResults('full',{...full,windows:{result}})).toThrow());
   it('rejects unknown routing and a failed scope or lightweight job', () => {
     expect(()=>assertCiResults(undefined,full)).toThrow();
+    expect(()=>assertCiResults('deferred',full)).toThrow();
     expect(()=>assertCiResults('full',{...full,scope:{result:'failure'}})).toThrow();
     expect(()=>assertCiResults('website',{...light,light:{result:'failure'}})).toThrow();
     expect(()=>assertCiResults('full',light)).toThrow();
@@ -102,11 +111,19 @@ it('runs actual change detection and lightweight local-link checks on an isolate
   fs.writeFileSync(path.join(root,'README.md'),'# After\n\n[existing](existing.md)\n');
   git(['add','.']);git(['-c','user.name=CI test','-c','user.email=ci@example.invalid','commit','-m','docs']);const head=git(['rev-parse','HEAD']);
   const event=path.join(root,'event.json'),output=path.join(root,'output'),summary=path.join(root,'summary');
-  fs.writeFileSync(event,JSON.stringify({pull_request:{base:{sha:base},head:{sha:head}}}));
+  fs.writeFileSync(event,JSON.stringify({pull_request:{draft:true,base:{sha:base},head:{sha:head}}}));
   const env={...process.env,GITHUB_EVENT_NAME:'pull_request',GITHUB_EVENT_PATH:event,GITHUB_OUTPUT:output,GITHUB_STEP_SUMMARY:summary,CBIM_CI_BASE:base,CBIM_CI_HEAD:head};
   const run = script=>spawnSync(process.execPath,[path.resolve('scripts',script)],{cwd:root,env,encoding:'utf8'});
   expect(run('ci-scope.mjs').status).toBe(0);
+  expect(fs.readFileSync(output,'utf8')).toContain('mode=deferred\n');
+  fs.writeFileSync(event,JSON.stringify({pull_request:{draft:false,base:{sha:base},head:{sha:head}}}));
+  fs.writeFileSync(output,'');
+  expect(run('ci-scope.mjs').status).toBe(0);
   expect(fs.readFileSync(output,'utf8')).toContain('mode=docs\n');
+  env.GITHUB_EVENT_NAME='workflow_dispatch';env.CBIM_CI_SCOPE='full';fs.writeFileSync(output,'');
+  expect(run('ci-scope.mjs').status).toBe(0);
+  expect(fs.readFileSync(output,'utf8')).toContain('mode=full\n');
+  env.GITHUB_EVENT_NAME='pull_request';
   expect(run('ci-light-check.mjs').status).toBe(0);
   fs.writeFileSync(path.join(root,'README.md'),'# After\n\n[missing](missing.md)\n');git(['add','.']);git(['-c','user.name=CI test','-c','user.email=ci@example.invalid','commit','-m','bad link']);env.CBIM_CI_HEAD=git(['rev-parse','HEAD']);
   expect(run('ci-light-check.mjs').status).not.toBe(0);
@@ -121,7 +138,12 @@ it('wires shared checks independently and keeps one unconditional aggregate resu
   expect(workflow.jobs.static.steps.filter(step=>step.run==='pnpm check:test-modules')).toHaveLength(1);
   expect(workflow.jobs.windows.steps.some(step=>step.run?.includes('pnpm check:test-modules'))).toBe(false);
   expect(workflow.jobs.result.needs).toEqual(['scope','static','windows','light']);
-  expect(workflow.jobs.result.if).toBe('always()');
+  expect(workflow.jobs.result.if).toBe("always() && needs.scope.outputs.mode != 'deferred'");
+  expect(workflow.on.pull_request.types).toEqual(['opened','synchronize','reopened','ready_for_review','converted_to_draft']);
+  expect(workflow.jobs.deferred.if).toBe("needs.scope.outputs.mode == 'deferred'");
+  expect(workflow.jobs.deferred.name).not.toBe('CBIM validation');
+  expect(workflow.concurrency.group).toContain("inputs.scope || 'pull-request'");
+  expect(workflow.concurrency.group).toContain('github.event_name');
   expect(workflow.jobs.windows.strategy['fail-fast']).toBe(false);
   expect(workflow.jobs.windows.steps.find(step=>step.name==='Run full test suite').run).toContain('--shard=${{ matrix.shard }}/4');
 });

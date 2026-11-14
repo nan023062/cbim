@@ -2244,3 +2244,10 @@ A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 �
 - 按影响选择进程所有者单元、真实 Node/inspector 退出集成、输入和被动网络消费者：`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`：5 文件 80/80。`pnpm check:test-modules`：497 文件；`pnpm check:dependencies`：1515 文件、0 循环/违规；验收入口语法和 diff 空白检查通过。尚未将这些局部结果视为真实 Windows 安装、全量 CI 或发布通过。
 - Review 顺序：进程所有者 → 两种调试适配/原生窗口适配 → 主验收场景 → 单元/集成；说明在 design/task/desktop-release.md。改动属于 scripts/tests 工具边界，未改 src，因此不涉及产品类图/契约。
 
+## 2026-11-14：发布复盘改进——草稿暂缓全量与安装前置检查
+
+- 按同一次用户直接授权实施第二片。草稿 PR 仅报告 deferred，正式汇总跳过；转 Ready/reopen/synchronize 重新按当前 head/base 差异选正式检查，取消过时同 PR 运行。手动 full 强制全量，runtime-diagnostic 使用独立并发组，不再互相取消。
+- 安装工作流增加已验证五套进程/协议/输入/网络前置检查及原始报告；前置失败不安装。相同 ref/目标/来源/模式/传输要求才去重，候选和在线等不同场景互不取消。正式全量四片、静态检查、完整发现全集核验和未知路径默认全量均保留。
+- `pnpm exec vitest run tests/ci-validation.test.mjs`：35/35，涵盖 draft→ready、未知路径、实际隔离 Git 差异、手动 full、不接受 deferred 为正式通过，以及 workflow 触发和并发约束。相关依赖/测试边界已随上一片同一工作树检查通过；未改产品源码或类型，不重复产品测试、类型和类图生成。
+- 更新 design/task/ci-validation.md 和 cbim-release 三个同内容入口；准备在真实草稿 PR 核 deferred，再跑隔离线上验收，最后固定提交运行完整发布检查。进度/最终云端证据回填本次 PR，不创建无关 Issue，也不覆盖公开 0.1.16 附件。
+

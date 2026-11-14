@@ -35,6 +35,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: desktop-acceptance-${{ github.ref }}-${{ inputs.version }}-${{ inputs.previous_version }}-${{ inputs.mode }}-${{ inputs.transfer_expectation }}
+  cancel-in-progress: true
+
 jobs:
   acceptance:
     runs-on: windows-latest
@@ -51,6 +55,8 @@ jobs:
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Check acceptance process lifecycle before installing
+        run: pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs --reporter=default --reporter=json --outputFile=test-results/acceptance-preflight.json
       - name: Install and verify the exact release artifact
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,6 +75,7 @@ jobs:
         with:
           name: desktop-${{ inputs.version }}-${{ inputs.mode }}
           path: |
+            test-results/acceptance-preflight.json
             test-results/desktop-acceptance/*.json
             test-results/desktop-acceptance/*.png
           if-no-files-found: ignore

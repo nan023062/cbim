@@ -90,3 +90,9 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 ## 官网与记录的轻量收尾
 
 产品发布前仍要求精确源码的完整四片 CI。发布后的 PR 若只修改官网、README 或发布记录白名单，按 design/task/ci-validation.md 执行对应轻量检查并核对统一汇总；不再重复产品全量。未知路径、内置业务资料和构建配置仍全量，不能仅按 Markdown 扩展名豁免。
+
+## 验收工具修复与全量调度
+
+发布工具修复阶段使用草稿 PR：先完成进程生命周期、真实调试连接、输入及网络统计的定向检查，再独立派发 desktop-acceptance。草稿的 deferred 提示不等于正式验证通过；修复稳定后标记 Ready for review，运行最终 head/base 的完整四片。手动 full 保持可用，诊断与正式全量不互相取消。通过后的证据优先回填 PR，不为记录最终 SHA 再次触发产品全量。具体行为见 [CI 验证范围](../../../design/task/ci-validation.md)。
+
+验收进程由 DesktopAcceptanceProcess 统一持有 PID 和连接；退出动作只发送一次，清理等待真实退出，未知结果不自动重放。online 模式先验全新安装，再从真实旧版走公开升级，适用于不修改现有 Release 的完整复验。新增版本、制品替换和公开投放仍需本次任务授权；实现与回归入口见 [发布说明](../../../design/task/desktop-release.md#验收进程与发布复验)。

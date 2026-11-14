@@ -20,9 +20,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.18](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.18)，**C 0.1.18 / R1**。对话和办公室使用单按钮切换，点击 Agent 或任务入口直接查看对应工作记录；团队和业务树精简冗余资料，并提供只读源文件浏览器。设置与首页侧栏统一，引擎使用下拉列表和独立详情，所有引擎状态、下载及管理均在详情完成。
+Windows x64 当前公开桌面版为 [desktop-v0.1.18](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.18)，当前资源为 **[C 0.1.18 / R2](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.18)**。引擎设置默认显示“全部引擎”，集中查看已安装引擎的版本、启停、运行占用、准备进度和异常；点击条目进入详情管理。对话/办公室单按钮切换、精简团队与业务树、源文件浏览器继续保留。
 
-本版更新基础程序，Pi、Claude Code、Codex 和 Memory 引擎包的版本与摘要保持不变；真实 0.1.17 → 0.1.18 公开自动升级已通过，安装器差分传输约 3.05 MB、无全量回退，原数据、安装清单、停用状态及共享缓存保留；结果见 [0.1.18 发布验收](design/verification/desktop-release-0.1.18-20261115.md)。当前版本后台准备更新，用户明确点击后才重启安装，普通退出不应用。Windows 安装包未签名，资源与引擎索引继续由原 Ed25519 身份签名；首次使用未安装引擎需要联网。Memory 的真实生成/向量双模型另验。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+本次只发布约 4.06 MB 的资源更新，0.1.18 基础安装器及 Pi、Claude Code、Codex、Memory 四个引擎包保持不变；已有安装、停用状态与共享缓存继续保留，详情见 [R2 发布验收](design/verification/runtime-c0.1.18-r2-20261115.md)。客户端后台准备更新，用户明确点击侧栏图标后才短重启应用，普通退出不应用；更早版本先按原通道升级基础程序，历史结果见 [0.1.18 安装升级记录](design/verification/desktop-release-0.1.18-20261115.md)。Windows 基础安装包未签名，资源与引擎索引继续由原 Ed25519 身份签名；首次使用未安装引擎需要联网。Memory 的真实生成/向量双模型另验。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 

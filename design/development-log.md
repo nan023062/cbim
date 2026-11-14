@@ -1,3 +1,11 @@
+## 2026-11-14：切片 5a——引擎能力支持列表
+
+- 基线 acd94516。设置新增官方引擎列表，显示业务专长、支持模型范围、已配置可用模型、活动/候选版本、引用与依赖；显式检查、添加/更新、启停和移除。无自定义 URL/路径入口，源码模式明确不管理正式包。
+- 公开修改带 revision，安装同时带显示的准确候选摘要；过时设置/版本在下载前拒绝。操作失败刷新真实状态并保留原因，不自动重试；原模型草稿独立。状态投影无加载地址或密钥。
+- 精确验证：pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/engine-settings-ipc.test.ts --reporter=dot，8/8；node scripts/engine-settings-ui-smoke.mjs 用真实 React/Edge 无头页面及隔离 IPC，4 项（模型显示、准确候选提交、启停、依赖移除失败）通过、pageErrors=[]。pnpm exec vitest run tests/dependencies.test.ts -t 引擎 --reporter=dot 通过。
+- pnpm typecheck、pnpm check:test-modules（507 文件，154/157/196）、pnpm check:architecture（1558 文件，7498 边，无环/违规）通过。首次边界检查发现纯状态类型未登记跨模块入口，补充精确端口边与正反例，未开放服务访问。同步引擎、包服务、桥契约、IPC 与设置目录注释、契约和类图。
+- 本步未执行真实官方包下载、用户安装、外部模型或全仓回归；向量模型编辑与多角色选择是下一切片。
+
 ## 2026-11-14：切片 4c——独立引擎发布候选
 
 - 基线 53e28bdc。make:engines 接受可选官方引擎 ID，只构建目标与声明依赖；输出区分包版本、上游版本、摘要。新增 sign:engines：源码冻结、归档摘要/完整展开文件核实后，以现有冷基础公钥对应私钥签名独立 E 索引；不上传或修改公开通道。

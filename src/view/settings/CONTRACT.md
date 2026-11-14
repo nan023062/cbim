@@ -45,3 +45,5 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 ### 异步结果失效边界
 
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
+
+EngineSettings 展示官方业务专长、兼容模型、版本与依赖，查询不激活；安装提交显示的摘要和 revision。错误后刷新真实状态并保留原错误，不自动重试。与模型编辑表单独立，刷新引擎列表不会提交模型草稿。

@@ -13,6 +13,7 @@
 | [index.ts](index.ts) | 官方引擎目录、兼容规则和运行选型的便携公共入口。 |
 | [model-roles.ts](model-roles.ts) | V2 额外模型角色的公开引用与冻结快照，供 Agent、岗位和任务共同携带。 |
 | [model.ts](model.ts) | 引擎执行准备后的模型快照契约，供岗位、任务与装配保存公开参数。 |
+| [package-status.ts](package-status.ts) | 官方引擎包管理的便携状态投影。 |
 
 ## 架构类图
 
@@ -51,6 +52,9 @@ classDiagram
 class N_src_logic_engines_model_ts["model.ts"] {
   <<module>>
 }
+class N_src_logic_engines_package_status_ts["package-status.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -60,8 +64,10 @@ class N_src_logic_engines_model_ts["model.ts"] {
 - `index.ts` → `rules`：导入。
 - `index.ts` → `model.ts`：导入。
 - `index.ts` → `model-roles.ts`：导入。
+- `index.ts` → `package-status.ts`：导入。
 - `model.ts` → `catalog`：导入。
 - `model.ts` → `model-roles.ts`：导入。
+- `package-status.ts` → `catalog`：导入。
 - `packages` → `index.ts`：导入。
 - `rules` → `model-roles.ts`：导入。
 - `rules` → `catalog`：导入。
@@ -128,3 +134,5 @@ primary 仍由 Agent 原来的 profileId/modelId 与运行 profile 表达；可�
 ### 官方包管理
 
 packages 服务独立于 model-profiles；Application 持有唯一安装状态。静态声明新增 storageDirectory 和固定依赖种类，制品决定依赖准确摘要。目录不加载包或发起网络；详细恢复、引用与重试语义见 [包管理契约](packages/CONTRACT.md)。
+
+package-status 只投影版本、固定依赖、使用数量及错误，没有路径或凭据；View 通过桥契约访问。

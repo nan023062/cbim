@@ -1520,7 +1520,9 @@
         "unit": [
           "tests/unit/logic/engines/packages.test.ts"
         ],
-        "contract": [],
+        "contract": [
+          "tests/engine-settings-ipc.test.ts"
+        ],
         "integration": []
       }
     },

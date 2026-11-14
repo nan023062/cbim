@@ -29,20 +29,9 @@ class N_src_logic_engines_packages_engine_packages_ts_State["State"] {
 
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_State : 声明
-class N_src_logic_engines_packages_engine_packages_ts_EnginePackageStatus["EnginePackageStatus"] {
-  <<interface>>
-  +kind
-  +enabled
-  +active
-  +candidate
-  +installed
-  +references
-  +preparing
-  +error
-}
-N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackageStatus : 声明
 class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePackages"] {
   +init()
+  +read()
   +list()
   +check()
   +install()
@@ -57,7 +46,6 @@ class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePack
   -busy
   -failures
   -save()
-  -trusted()
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackages : 声明
 class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (外部契约)"] {
@@ -74,7 +62,9 @@ class N_src_logic_engines_packages_engine_packages_ts["engine-packages.ts"] {
   <<module>>
 }
 class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePackages"] {
+  -trusted()
   -closure()
+  -assertRevision()
   -installNow()
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackages : 声明
@@ -94,7 +84,7 @@ class N_src_logic_engines_packages_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine-packages.ts](engine-packages.ts)。
+直接依赖：[engine-packages.ts](engine-packages.ts)、[../index.ts](../index.ts)。
 
 ### 本目录调用边界
 
@@ -133,3 +123,5 @@ N_src_logic_engines_packages_index_ts ..> N_src_logic_engines_packages_engine_pa
 停用/移除拒绝运行引用和启用引擎的依赖。移除只清活动选择，保留不可变缓存、安装历史、模型配置和原生会话。尚未开始的任务若使用已停用引擎，会在准备阶段明确失败；不切换引擎或自动重新安装。历史原生会话继续核对确切包身份，不能因为有新版而静默恢复。
 
 源码开发没有冷宿主制品端口，继续使用源工厂；它不伪装成已安装正式包。正式包通过同一通用加载契约启动。用户操作入口和独立发布脚本在后续切片接通，本目录不提供任意包路径、URL 或第三方源入口。
+
+设置 read 返回同一状态代次的 revision；公开安装必须同时提交所展示的候选摘要，启停/移除提交 revision。过时页面或检查更新改变候选时在下载前拒绝。

@@ -13,8 +13,13 @@ import {type AdmissionPolicy,type AdmissionRead,admissionConfigureSchema,admissi
 import {type RuntimeRead,type RuntimeSnapshot} from '../../logic/runtime/rules/types';
 import {type ScopeBudgetPolicy,scopeBudgetPolicySchema} from '../../logic/budget/rules/scope-budget';
 import {modelActionSchemas,type ModelActionResults} from './model-actions';
+import {loopEngineSchema,type EnginePackageSettings} from './engines';
 
 export const settingsIpcRequests={
+  'engines.settings':noIpcArgs,
+  'engines.check':noIpcArgs,
+  'engines.install':z.object({kind:loopEngineSchema,revision:z.number().int().nonnegative(),identity:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),
+  'engines.configure':z.object({kind:loopEngineSchema,revision:z.number().int().nonnegative(),action:z.enum(['enable','disable','remove'])}).strict(),
   ...modelActionSchemas,
   'web.settings':noIpcArgs,
   'web.configure':webConfigureInput,
@@ -33,6 +38,10 @@ export const settingsIpcRequests={
   'github.feedback.poll':z.object({flowId:z.string().uuid()}).strict(),
 };
 export interface SettingsIpcResponses extends ModelActionResults {
+  'engines.settings':EnginePackageSettings;
+  'engines.check':EnginePackageSettings;
+  'engines.install':EnginePackageSettings;
+  'engines.configure':EnginePackageSettings;
   'web.settings':WebSettingsView;
   'web.configure':WebSettingsView;
   'runtime.snapshot':RuntimeSnapshot;

@@ -3,4 +3,4 @@
  * 设计原因：Node 存储与便携模型兼容规则隔离，View 只通过桥接契约访问状态与明确动作。
  */
 export {EnginePackages} from './engine-packages';
-export type {EnginePackageStatus} from './engine-packages';
+export type {EnginePackageStatus,EnginePackageSettings} from '../index';

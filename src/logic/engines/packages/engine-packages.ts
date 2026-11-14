@@ -10,12 +10,12 @@ import {SerialQueue} from '../../../core/utility';
 import {supportedEngines,engineDescriptor,loopEngineSchema,type LoopEngine} from '../index';
 import type {EngineArtifact,EngineArtifactsPort} from '../../updates/engine-artifacts';
 import type {EngineRuntimePackage,EngineRuntimeResolver} from '../../execution/rules/engine-runtime';
+import type {EnginePackageStatus,EnginePackageSettings} from '../index';
 
 const hash=z.string().regex(/^[a-f0-9]{64}$/);
 const entry=z.object({kind:loopEngineSchema,enabled:z.boolean(),active:hash.optional(),installed:z.array(hash).max(256),error:z.string().max(2000).optional()}).strict();
 const stateSchema=z.object({schema:z.literal(1),revision:z.number().int().nonnegative(),entries:z.array(entry).max(64)}).strict();
 type State=z.infer<typeof stateSchema>;
-export interface EnginePackageStatus {kind:LoopEngine;enabled:boolean;active?:EngineArtifact;candidate?:EngineArtifact;installed:EngineArtifact[];references:number;preparing:boolean;error?:string}
 
 export class EnginePackages implements EngineRuntimeResolver {
   private state:State={schema:1,revision:0,entries:[]};
@@ -41,17 +41,21 @@ export class EnginePackages implements EngineRuntimeResolver {
     const visit=(value:EngineArtifact)=>{this.trusted(value);const key=value.kind+':'+value.identity;if(visiting.has(key))throw Error('引擎依赖成环');if(visited.has(key))return;visiting.add(key);for(const ref of value.dependencies){const dependency=available.find(item=>item.kind===ref.kind&&item.identity===ref.identity);if(!dependency)throw Error('固定的引擎依赖制品缺失');visit(dependency)}visiting.delete(key);visited.add(key);result.push(value)};
     visit(root);return result;
   }
-  async list():Promise<EnginePackageStatus[]>{
+  async read():Promise<EnginePackageSettings>{
     await this.init();const versions=await this.artifacts.list();
-    return supportedEngines.map(descriptor=>{const item=this.state.entries.find(entry=>entry.kind===descriptor.id),find=(id?:string)=>versions.available.find(value=>value.kind===descriptor.id&&value.identity===id);return {kind:descriptor.id,enabled:item?.enabled??true,active:find(item?.active),candidate:versions.current.find(value=>value.kind===descriptor.id),installed:(item?.installed??[]).map(id=>find(id)).filter((value):value is EngineArtifact=>!!value),references:[...this.references].filter(([key])=>key.startsWith(descriptor.id+':')).reduce((sum,[,count])=>sum+count,0),preparing:this.busy.has(descriptor.id),error:item?.error??this.failures.get(descriptor.id)?.message}});
+    const items:EnginePackageStatus[]=supportedEngines.map(descriptor=>{const item=this.state.entries.find(entry=>entry.kind===descriptor.id),find=(id?:string)=>versions.available.find(value=>value.kind===descriptor.id&&value.identity===id);return {kind:descriptor.id,enabled:item?.enabled??true,active:find(item?.active),candidate:versions.current.find(value=>value.kind===descriptor.id),installed:(item?.installed??[]).map(id=>find(id)).filter((value):value is EngineArtifact=>!!value),references:[...this.references].filter(([key])=>key.startsWith(descriptor.id+':')).reduce((sum,[,count])=>sum+count,0),preparing:this.busy.has(descriptor.id),error:item?.error??this.failures.get(descriptor.id)?.message}});
+    return {managed:true,revision:this.state.revision,items};
   }
+  async list(){return (await this.read()).items}
   async check(){await this.init();await this.artifacts.check();return this.list()}
   /** 用户显式动作；整个依赖闭包准备完成才改活动指针，其他引擎的活动版本不随依赖下载改变。 */
-  install(kind:LoopEngine){return this.queue.run(async()=>{await this.init();return this.installNow(kind,true)})}
-  private async installNow(kind:LoopEngine,explicit:boolean){
+  install(kind:LoopEngine,expected?:{revision:number;identity:string}){return this.queue.run(async()=>{await this.init();this.assertRevision(expected?.revision);return this.installNow(kind,true,expected?.identity)})}
+  private assertRevision(revision?:number){if(revision!==undefined&&revision!==this.state.revision)throw Error('引擎设置已变化，请刷新后再操作')}
+  private async installNow(kind:LoopEngine,explicit:boolean,expectedIdentity?:string){
     loopEngineSchema.parse(kind);const previous=this.state.entries.find(item=>item.kind===kind);
     if(!explicit&&(previous?.enabled===false||previous?.error||this.failures.has(kind)))throw Error(previous?.error??this.failures.get(kind)?.message??'引擎已停用，请在引擎设置中启用');
     const versions=await this.artifacts.list(),candidate=versions.current.find(item=>item.kind===kind);if(!candidate)throw Error('官方目录没有可安装的兼容引擎版本');
+    if(expectedIdentity!==undefined&&candidate.identity!==expectedIdentity)throw Error('可安装版本已变化，请刷新后核对');
     this.busy.add(kind);
     try{
       const closure=this.closure(candidate,versions.available);
@@ -63,8 +67,8 @@ export class EnginePackages implements EngineRuntimeResolver {
     finally{this.busy.delete(kind)}
   }
   /** 停用与移除均拒绝正在运行的引用和活动依赖；移除不删除历史包字节或模型设置。 */
-  setEnabled(kind:LoopEngine,enabled:boolean,remove=false){return this.queue.run(async()=>{
-    await this.init();loopEngineSchema.parse(kind);
+  setEnabled(kind:LoopEngine,enabled:boolean,remove=false,revision?:number){return this.queue.run(async()=>{
+    await this.init();this.assertRevision(revision);loopEngineSchema.parse(kind);
     if(!enabled){if([...this.references].some(([key,count])=>key.startsWith(kind+':')&&count>0))throw Error('引擎仍有运行引用，请先结束任务');const versions=await this.artifacts.list();for(const item of this.state.entries){if(item.kind===kind||!item.enabled||!item.active)continue;const artifact=versions.available.find(v=>v.kind===item.kind&&v.identity===item.active);if(artifact&&this.closure(artifact,versions.available).some(v=>v.kind===kind))throw Error('仍被启用的 '+item.kind+' 引擎依赖，请先停用它')}}
     const next=structuredClone(this.state);let item=next.entries.find(value=>value.kind===kind);if(!item){item={kind,enabled,installed:[]};next.entries.push(item)}item.enabled=enabled;if(remove)delete item.active;await this.save(next);
   })}

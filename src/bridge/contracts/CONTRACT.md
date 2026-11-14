@@ -381,3 +381,5 @@ execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的
 公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。
 
 loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 scope 覆盖参数，真实新 scope 仍由持久队列身份创建。
+
+引擎设置公开 engines.settings/check/install/configure。安装只接官方 ID、展示的准确摘要与 revision；启停/移除不接受 URL、路径或第三方来源。

@@ -5,7 +5,7 @@ export const logicalBoundaries = [
   {id:'engine-runtime-contract',files:['src/logic/execution/rules/engine-runtime.ts'],public:['src/logic/execution/rules/engine-runtime.ts'],dependencies:[],external:[]},
   {id:'engine-artifact-contract',files:['src/logic/updates/engine-artifacts.ts'],public:['src/logic/updates/engine-artifacts.ts'],dependencies:[],external:[]},
   {id:'engine-model-service',prefix:'src/logic/engines/service/',public:['src/logic/engines/service/index.ts'],dependencies:['engine-catalog','model-rules','model-service','core-errors'],external:[]},
-  {id:'engine-catalog',prefix:'src/logic/engines/',public:['src/logic/engines/index.ts'],dependencies:['model-rules'],external:['zod']},
+  {id:'engine-catalog',prefix:'src/logic/engines/',public:['src/logic/engines/index.ts'],dependencies:['model-rules','engine-artifact-contract'],external:['zod']},
   {id:'engine-bridge',files:['src/bridge/contracts/engines.ts'],public:['src/bridge/contracts/engines.ts'],dependencies:['engine-catalog'],external:[]},
   {id:'system-secret-cipher',files:['src/core/platform/electron/secrets.ts'],public:['src/core/platform/electron/secrets.ts'],dependencies:['secret-contract'],external:['electron']},
   {id:'material-data',files:['src/logic/materials/contracts.ts'],public:['src/logic/materials/contracts.ts'],dependencies:[],external:[]},

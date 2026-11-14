@@ -58,3 +58,11 @@ test('已冻结尚未启动的实例在停用后拒绝取得引用，缓存校�
     await f.manager.install('pi');expect((await f.manager.resolveEngine('pi')).identity).toBe(f.pi.identity);
   }finally{await f.cleanup()}
 });
+test('页面必须提交显示的准确版本及当前 revision，过时请求不触发下载或停用',async()=>{
+  const f=await fixture();try{
+    const original=await f.manager.read();await f.manager.install('pi',{revision:original.revision,identity:f.pi.identity});
+    const calls=f.prepare.mock.calls.length;await expect(f.manager.setEnabled('pi',false,false,original.revision)).rejects.toThrow(/刷新/);
+    const current=await f.manager.read(),next=artifact('pi','c','1.1.0');f.versions.current=[next];f.versions.available.push(next);
+    await expect(f.manager.install('pi',{revision:current.revision,identity:f.pi.identity})).rejects.toThrow(/版本已变化/);expect(f.prepare).toHaveBeenCalledTimes(calls);expect((await f.manager.read()).items[0].enabled).toBe(true);
+  }finally{await f.cleanup()}
+});

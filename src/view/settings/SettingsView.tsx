@@ -8,6 +8,7 @@ import {useEffect,useState} from 'react';
 import type {RepositoryStatus} from '../../bridge/contracts/resources';
 import {WebSettings} from './WebSettings';
 import {ModelSettings} from './ModelSettings';
+import {EngineSettings} from './EngineSettings';
 import {AdmissionSettings} from './AdmissionSettings';
 import {BudgetSettings} from './BudgetSettings';
 import {GitHubFeedbackSettings} from './GitHubFeedbackSettings';
@@ -28,6 +29,7 @@ export function SettingsView(){
     {error&&<div className="shell-alert" role="alert">{error}</div>}
     {notice&&<p role="status">{notice}</p>}
     <ModelSettings/>
+    <EngineSettings/>
     <AdmissionSettings/>
     <BudgetSettings/>
     <GitHubFeedbackSettings/>

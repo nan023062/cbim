@@ -33,3 +33,5 @@ primary 仍由 Agent 原来的 profileId/modelId 与运行 profile 表达；可�
 ### 官方包管理
 
 packages 服务独立于 model-profiles；Application 持有唯一安装状态。静态声明新增 storageDirectory 和固定依赖种类，制品决定依赖准确摘要。目录不加载包或发起网络；详细恢复、引用与重试语义见 [包管理契约](packages/CONTRACT.md)。
+
+package-status 只投影版本、固定依赖、使用数量及错误，没有路径或凭据；View 通过桥契约访问。

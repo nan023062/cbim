@@ -140,3 +140,5 @@ dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecuti
 `loop.topicInterrupt` 仅转交工作区执行管理器的整话题补充入口；错误参数映射 TOPIC_INPUT_INVALID。后端检查原话题并等待真实停止，IPC 返回不是自行签发运行权限；普通 loop.chat/enqueue/resume 保持普通新任务语义。
 
 loop.enqueue 转交明确的 followupOf；IPC 不恢复原话题，执行管理器与派发事务独立核实来源。
+
+settings-handlers 将引擎设置动作交给 Application 的唯一 EnginePackages；开发模式只显示 managed:false，安装动作明确拒绝，不伪造成功。

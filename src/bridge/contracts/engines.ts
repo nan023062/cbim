@@ -3,4 +3,4 @@
  * 设计原因：只公开便携声明与纯规则，隐藏具体 SDK、引擎实例、凭据和配置存储。
  */
 export {supportedEngines,loopEngineSchema,engineDescriptor,engineLabel,engineApi,engineSupportsApi,connectionForEngine,providerSupportsEngine} from '../../logic/engines';
-export type {LoopEngine,EngineDescriptor} from '../../logic/engines';
+export type {LoopEngine,EngineDescriptor,EnginePackageStatus,EnginePackageSettings} from '../../logic/engines';

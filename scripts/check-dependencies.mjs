@@ -46,7 +46,7 @@ const projectRoot='src/logic/workspace/rules/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
 const enginePublic='src/logic/engines/index.ts',engineService='src/logic/engines/service/index.ts';
-const allowsEngineAccess=(from,to)=>to===enginePublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/engines.ts')||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
+const allowsEngineAccess=(from,to)=>from==='src/logic/engines/package-status.ts'&&to==='src/logic/updates/engine-artifacts.ts'||to===enginePublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/engines.ts')||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
 const modelPublic='src/logic/models/index.ts';
 const modelService='src/logic/models/service/index.ts';
 // 纯模型与有副作用的服务入口分开；引擎和编排的访问权由模块边界进一步收紧。

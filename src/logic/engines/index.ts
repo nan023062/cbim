@@ -9,3 +9,4 @@ export type {ResolvedEngineModel} from './model';
 export {modelRoleSnapshotSchema,modelRolesSelectionSchema,modelRolesSnapshotSchema,modelRolesMatch} from './model-roles';
 export type {ModelRolesSelection,ModelRolesSnapshot,ModelRoleDescriptor} from './model-roles';
 export {additionalRoleOperations} from './rules/model-roles';
+export type {EnginePackageStatus,EnginePackageSettings} from './package-status';

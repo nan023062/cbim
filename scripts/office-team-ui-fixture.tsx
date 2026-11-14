@@ -52,6 +52,8 @@ function data(root='root'){
   if(action==='agent.mainSettings')return {workspaceId:id,instanceId,agentId:'cbim:main',revision:1,selection:{engine:'pi',profileId,modelId:'fixture'}};
   if(action==='models.list')return {profiles:[{id:profileId,name:'隔离模型夹具',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:10000,maxTokens:1000,reasoning:false}],hasKey:false}],secureStorage:true};
   if(action==='loop.enqueue'){fixture.queued.push({id:crypto.randomUUID(),taskId:args.taskId,message:args.message,options:{...args.options,provider:'cbim-'+profileId},status:'pending'});return fixture.queued.at(-1)}
+  if(action==='automation.list')return {version:1,jobs:[],runs:[]};
+  if(action==='automation.catalog')return {agents:[],modules:[],workflows:[],skills:[]};
   if(action==='resources.status')return {source:'local',session:{state:'signedOut'}};
   if(action==='desktop.updates.status')return {currentVersion:'0.1.2',enabled:false,phase:'disabled'};
   if(action==='admission.read')return {kind:'snapshot',snapshot:{cursor:{streamId:'fixture',revision:1},policy:{revision:1,maxConcurrentRuns:4},occupied:[],waiting:[]}};

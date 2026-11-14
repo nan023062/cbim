@@ -364,13 +364,13 @@ note for SoftwareUpdates "../updates/SoftwareUpdates.tsx：只消费更新状态
 
 ## 自动化会话定位
 
-App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。右侧旧自动化条目复用同一工作区视图，不建立第二份配置或调度服务。
+App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会话或新建条目，保留原草稿和附件；不重新运行任务。自动化从右侧扩展区的空页签选择打开；收起或切走停止只读轮询，不停止后台计划，不建立第二份配置或调度服务。
 
 
 ### 异步结果失效边界
 
 RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
-主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
+主/子 Agent 入口由 `showAgentChat` 更新逻辑子 Session 选择，保留该主会话当前的对话/办公室模式。首次进入默认对话；办公室人物的显式入口才返回文字页。选择按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
 
 ## 设置中心与本机外观
 

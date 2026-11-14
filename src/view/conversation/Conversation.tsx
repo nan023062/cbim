@@ -5,7 +5,7 @@
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
- * 作用定位：持有主 Agent 多角色草稿版本的会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
+ * 作用定位：持有主 Agent 多角色草稿版本的会话固定页签入口（对话/办公室），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
  * 导航边界：子会话只切换成员记录，发送仍持有所属主 taskId；成员登记向外壳发布只读投影，不以执行实例创建额外会话。全局运行页与目标审阅仍定位原节点。
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
@@ -37,7 +37,6 @@ import {ConversationTopics} from './ConversationTopics';
 import {conversationTopics} from './conversation-topics';
 import {MemberConversation} from './MemberConversation';
 import {teamConversations,teamConversationKey,type TeamConversation} from '../execution-view/team-conversations';
-import {AutomationView} from '../automation/AutomationView';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
 import {ScopeGoalPanel} from '../tasks/ScopeGoalPanel';
@@ -74,8 +73,8 @@ const api=window.cbim;
 interface HistoryItem {status:string}
 
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
-export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamConversations,conversations,runningTaskIds,onSelectConversation,onRenameConversation,onRemoveConversation,tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,onOpenAutomationRun,active=true,navigation,onNavigationHandled}:{chatNavigation?:number;selectedChild?:string;onAgentChat?:(sessionId?:string)=>void;onTeamConversations?:(key:string,items:TeamConversation[])=>void;conversations:ViewTab[];runningTaskIds:string[];onSelectConversation:(id:string)=>void;onRenameConversation:(id:string,title:string)=>void;onRemoveConversation:(id:string)=>void;tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;onOpenAutomationRun?:(taskId:string,title:string)=>void;active?:boolean;navigation?:RuntimeNavigationRequest;onNavigationHandled?:(requestId:number)=>void}){
-  const [section,setSection]=useState<'chat'|'tasks'|'automation'>('chat');
+export function Conversation({selectedChild,onAgentChat,onTeamConversations,conversations,runningTaskIds,onSelectConversation,onRenameConversation,onRemoveConversation,tab,workspace,onDraft,openView,onBind,openSettings,onAttachments,active=true,navigation,onNavigationHandled}:{selectedChild?:string;onAgentChat?:(sessionId?:string)=>void;onTeamConversations?:(key:string,items:TeamConversation[])=>void;conversations:ViewTab[];runningTaskIds:string[];onSelectConversation:(id:string)=>void;onRenameConversation:(id:string,title:string)=>void;onRemoveConversation:(id:string)=>void;tab:ViewTab;workspace:WorkspaceView;onDraft:(draft:string)=>void;openView:(kind:TabKind)=>void;onBind:(taskId?:string)=>void;openSettings:()=>void;onAttachments:(items:ChatAttachment[])=>void;active?:boolean;navigation?:RuntimeNavigationRequest;onNavigationHandled?:(requestId:number)=>void}){
+  const [section,setSection]=useState<'chat'|'tasks'>('chat');
   const graph=useSessionGraph(workspace.id,tab.taskId,active);
   const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
@@ -85,7 +84,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const [navigationError,setNavigationError]=useState('');
   const handledNavigation=useRef<number|undefined>(undefined);
   function consumeNavigation(){if(navigation){handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId)}}
-  function selectSection(value:'chat'|'tasks'|'automation'){consumeNavigation();setSection(value)}
+  function selectSection(value:'chat'|'tasks'){consumeNavigation();setSection(value)}
   function selectTask(id?:string){consumeNavigation();setSelectedTaskId(id)}
   useEffect(()=>{setSelectedTaskId(undefined);setSelectedTopicId(undefined)},[workspace.id,tab.taskId]);
   // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
@@ -109,8 +108,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const members=useMemo(()=>teamConversations(graph.teamSessions,graph.graph),[graph.teamSessions,graph.graph]);
   const member=members.find(value=>value.session.sessionId===selectedChild);
   useEffect(()=>{onTeamConversations?.(teamConversationKey(workspace.id,workspace.instanceId,tab.taskId),members)},[workspace.id,workspace.instanceId,tab.taskId,members,onTeamConversations]);
-  // 侧栏重复点击相同身份也能从办公室返回；令牌只表达本地导航，不改变任务。
-  useEffect(()=>{if(selectedChild||chatNavigation!==undefined)setSection('chat')},[selectedChild,chatNavigation]);
+  // 侧栏只选择身份；保留当前对话/办公室模式，显式人物入口才切换模式。
   const selectTopic=useCallback((id?:string)=>{setSelectedTopicId(id);graph.selectScope(id)},[graph.selectScope]);
   // 坏旧日志只作为只读问题占位；可续接头由后端确认，不能从过滤后的 runs 猜测。
   const [threadIssues,setThreadIssues]=useState<ConversationThreadView['issues']>([]),[resumeRunId,setResumeRunId]=useState<string>();
@@ -261,10 +259,9 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const queueOperation=async(action:'loop.queueChange'|'loop.queueEdit'|'loop.queueMove',args:Record<string,unknown>)=>{let saved=false;await operate(async()=>{await api.call(...checkedIpcCall(action,{id:workspace.id,taskId:tab.taskId,...args}));saved=true});return saved};
   const queueChange=(queueId:string,action:string)=>void queueOperation('loop.queueChange',{queueId,action});
   const queueContinue=()=>{const taskId=tab.taskId;if(canContinueQueue&&!graph.loading&&taskId&&!stopGate.current.pending({id:workspace.id,taskId}))void operate(async()=>{await api.call('loop.queueContinue',{id:workspace.id,taskId})})};
-  return <div className="chat-page"><nav className="session-tabs" role="tablist" aria-label="会话内容"><button id={'session-chat-'+tab.id} role="tab" aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}>对话</button><button id={'session-tasks-'+tab.id} role="tab" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}>任务视图</button><button id={'session-automation-'+tab.id} role="tab" aria-selected={section==='automation'} aria-controls={'session-automation-panel-'+tab.id} onClick={()=>selectSection('automation')}>自动化</button></nav>
-    <section className="session-task-panel" role="tabpanel" id={'session-automation-panel-'+tab.id} aria-labelledby={'session-automation-'+tab.id} hidden={section!=='automation'}><AutomationView key={workspace.id+':'+workspace.instanceId} workspace={workspace} active={active&&section==='automation'} onOpenRun={onOpenAutomationRun}/></section>
+  return <div className="chat-page"><nav className="session-tabs interaction-modes" role="tablist" aria-label="交互区视图"><button id={'session-chat-'+tab.id} role="tab" aria-label="对话" title={selectedChild?'工作审阅':'对话'} aria-selected={section==='chat'} aria-controls={'session-dialog-'+tab.id} onClick={()=>selectSection('chat')}><Icon name="chat" size={18}/></button><button id={'session-tasks-'+tab.id} role="tab" aria-label="办公室" title="办公室" aria-selected={section==='tasks'} aria-controls={'session-task-panel-'+tab.id} onClick={()=>selectSection('tasks')}><Icon name="team" size={18}/></button></nav>
     <>{navigationError&&<p role="alert" className="shell-alert" data-testid="runtime-navigation-error">{navigationError}</p>}</><AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
-    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView onAgentChat={(sessionId,scopeId)=>{onAgentChat?.(sessionId);selectTopic(scopeId);selectSection('chat')}} active={active} workspaceId={workspace.id} workspaceInstanceId={workspace.instanceId} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={graph.selectedScope?.wait?.interruptionId?undefined:continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={recovery} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
+    {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView selectedAgentSessionId={selectedChild} onAgentChat={(sessionId,scopeId)=>{onAgentChat?.(sessionId);selectTopic(scopeId);selectSection('chat')}} active={active} workspaceId={workspace.id} workspaceInstanceId={workspace.instanceId} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={graph.selectedScope?.wait?.interruptionId?undefined:continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={recovery} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
     <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{member?.name??(tab.customTitle?tab.title:latest?.task.goal.split('\n')[0]||'新对话')}</span><details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><section className="conversation-history" aria-label="对话历史"><h3>历史对话</h3><ConversationEntries items={conversations.map(item=>({id:item.id,title:item.title==='对话'&&!item.customTitle?'新对话':item.title,running:!!item.taskId&&runningTaskIds.includes(item.taskId)}))} selected={tab.id} disabled={busy} onSelect={onSelectConversation} onRename={onRenameConversation} onRemove={onRemoveConversation}/></section><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details></div>
     {(error||pollError||queueError)&&<div className="shell-alert" role="alert">{error||pollError||queueError}</div>}

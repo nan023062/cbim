@@ -1,3 +1,11 @@
+## 交互区改造第 1 步：双态导航与自动化迁移（用户直接授权）
+
+- 需求：默认对话，右上角图标切换办公室；侧栏选中 Agent 保留模式，办公室突出逻辑成员；自动化归右侧扩展区。无对应开放 Issue，不扩大 #65 的旧缺陷范围。
+- 边界：仅 View；App 保留主会话的成员选择，Conversation 保留模式，OfficeScene 只突出身份。自动化继续使用原工作区服务，隐藏停止读取但不停止计划。
+- 验证选择：人物身份/历史投影、任务详情消费者与跨入口定位受影响。`pnpm exec vitest run tests/office-scene.test.ts tests/session-task-view.test.ts tests/runtime-navigation.test.ts --reporter=dot`：3 文件 18 用例通过。`pnpm typecheck`、`pnpm check:architecture` 通过（0 循环/违规）。
+- `node scripts/interaction-area-smoke.mjs`：真实隔离 Electron + App / 内存 IPC，验证初始模式、侧栏保留办公室、成员高亮、主草稿保留、右侧自动化；导航无执行写入、页面异常 0。报告 test-results/office-desktop-1J0IY8/report.json。
+- 同步相关源码注释与 conversation/shell/tasks/automation 的 CONTRACT、架构类图及 View 上层依赖。未运行全量 CI、打包、在线模型或安装升级；未推送/发布。
+
 ## 2026-11-14 C 0.1.17 / R2 设置中心已投放公开通道
 
 [PR #79](https://github.com/nan023062/cbim/pull/79) 已合并 master；准确 head 完整 CI 43582437474 通过（521 文件、3516 通过、0 失败、2 个历史 EXE 前置条件跳过）。候选 43582208639 和公开升级 43584130246 均通过：真实 C 0.1.17 / R1 → R2，普通退出不应用、实际 UI 重启、数据与旧主题保留、新字号保存、无任务重放，0 页面错误。R2 4036781 字节，四个 E 沿用原身份。发布末尾回读短时返回上传前 404，已按远端 ID 核实成功并只读恢复，未重复发布；匿名原地址验签/下载通过。官网、README 和验证记录按真实 C/R 元数据同步，详见 [发布记录](verification/settings-r2-20261114.md)。

@@ -12,6 +12,7 @@
 | --- | --- |
 | [AttachmentMenu.tsx](AttachmentMenu.tsx) | 对话加号菜单，提供附件入口以及 BUG 反馈、需求许愿内置 Skill 入口。 |
 | [brain-status.ts](brain-status.ts) | 将公开运行事件投影为输入框左上角的大脑状态。 |
+| [ChatMessages.tsx](ChatMessages.tsx) | 交互区的用户/主 Agent 聊天正文；只投影公开消息和发送失败，不挂载执行审阅控件。 |
 | [ComposerCard.tsx](ComposerCard.tsx) | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
 | [ComposerPicker.tsx](ComposerPicker.tsx) | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
 | [conversation-activity.ts](conversation-activity.ts) | 将应用级当前运行快照投影为各工作区的活跃主会话 ID。 |
@@ -80,6 +81,16 @@ class N_src_view_conversation_brain_status_ts["brain-status.ts"] {
 ```
 
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+
+### ChatMessages.tsx
+
+```mermaid
+classDiagram
+class N_src_view_conversation_ChatMessages_tsx["ChatMessages.tsx"] {
+  <<component>>
+}
+```
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[MessageCard.tsx](MessageCard.tsx)。
 
 ### ComposerCard.tsx
 
@@ -252,7 +263,7 @@ class N_src_view_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_Conversation_tsx_HistoryItem : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/AgentModelForm.tsx](../components/AgentModelForm.tsx)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ConversationTurn.tsx](ConversationTurn.tsx)、[TopicInterruptionForm.tsx](TopicInterruptionForm.tsx)、[ConversationTopics.tsx](ConversationTopics.tsx)、[conversation-topics.ts](conversation-topics.ts)、[MemberConversation.tsx](MemberConversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[../tasks/ScopeGoalPanel.tsx](../tasks/ScopeGoalPanel.tsx)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/ScopeContinuationForm.tsx](../tasks/ScopeContinuationForm.tsx)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/AgentModelForm.tsx](../components/AgentModelForm.tsx)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ChatMessages.tsx](ChatMessages.tsx)、[TopicInterruptionForm.tsx](TopicInterruptionForm.tsx)、[ConversationTopics.tsx](ConversationTopics.tsx)、[conversation-topics.ts](conversation-topics.ts)、[MemberConversation.tsx](MemberConversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/ScopeContinuationForm.tsx](../tasks/ScopeContinuationForm.tsx)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
 
 ### ConversationEntries.tsx
 
@@ -622,10 +633,13 @@ class N_src_view_conversation_useMessageQueue_ts["useMessageQueue.ts"] {
 
 ```mermaid
 classDiagram
-class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
+class N_src_view_conversation_ChatMessages_tsx["ChatMessages.tsx"] {
   <<component>>
 }
-class N_src_view_conversation_ConversationTurn_tsx["ConversationTurn.tsx"] {
+class N_src_view_conversation_MessageCard_tsx["MessageCard.tsx"] {
+  <<component>>
+}
+class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_TopicInterruptionForm_tsx["TopicInterruptionForm.tsx"] {
@@ -634,19 +648,19 @@ class N_src_view_conversation_TopicInterruptionForm_tsx["TopicInterruptionForm.t
 class N_src_view_conversation_ConversationTopics_tsx["ConversationTopics.tsx"] {
   <<component>>
 }
-class N_src_view_conversation_conversation_topics_ts["conversation-topics.ts"] {
-  <<module>>
-}
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ConversationTurn_tsx : 导入依赖
+N_src_view_conversation_ChatMessages_tsx ..> N_src_view_conversation_MessageCard_tsx : 导入依赖
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ChatMessages_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_TopicInterruptionForm_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ConversationTopics_tsx : 导入依赖
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_topics_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
+}
+class N_src_view_conversation_conversation_topics_ts["conversation-topics.ts"] {
+  <<module>>
 }
 class N_src_view_conversation_MemberConversation_tsx["MemberConversation.tsx"] {
   <<component>>
@@ -657,18 +671,18 @@ class N_src_view_conversation_session_tabs_css["session-tabs.css"] {
 class N_src_view_conversation_useMessageQueue_ts["useMessageQueue.ts"] {
   <<module>>
 }
-class N_src_view_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
-  <<component>>
-}
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_topics_ts : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_MemberConversation_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_session_tabs_css : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_useMessageQueue_ts : 导入依赖
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_UsageStatus_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
+}
+class N_src_view_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_conversation_css["conversation.css"] {
@@ -680,18 +694,18 @@ class N_src_view_conversation_ConversationEntries_tsx["ConversationEntries.tsx"]
 class N_src_view_conversation_ComposerCard_tsx["ComposerCard.tsx"] {
   <<component>>
 }
-class N_src_view_conversation_SendButton_tsx["SendButton.tsx"] {
-  <<component>>
-}
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_UsageStatus_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_css : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ConversationEntries_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ComposerCard_tsx : 导入依赖
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_SendButton_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
+  <<component>>
+}
+class N_src_view_conversation_SendButton_tsx["SendButton.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_AttachmentMenu_tsx["AttachmentMenu.tsx"] {
@@ -703,19 +717,19 @@ class N_src_view_conversation_ComposerPicker_tsx["ComposerPicker.tsx"] {
 class N_src_view_conversation_pasted_images_ts["pasted-images.ts"] {
   <<module>>
 }
-class N_src_view_conversation_conversation_state_ts["conversation-state.ts"] {
-  <<module>>
-}
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_SendButton_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_AttachmentMenu_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ComposerPicker_tsx : 导入依赖
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_pasted_images_ts : 导入依赖
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_state_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_conversation_Conversation_tsx["Conversation.tsx"] {
   <<component>>
+}
+class N_src_view_conversation_conversation_state_ts["conversation-state.ts"] {
+  <<module>>
 }
 class N_src_view_conversation_conversation_stop_ts["conversation-stop.ts"] {
   <<module>>
@@ -729,20 +743,20 @@ class N_src_view_conversation_ConversationEntries_tsx["ConversationEntries.tsx"]
 class N_src_view_conversation_conversation_entries_css["conversation-entries.css"] {
   <<stylesheet>>
 }
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_state_ts : 导入依赖
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_stop_ts : 导入依赖
+N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ThreadHistoryNotice_tsx : 导入依赖
+N_src_view_conversation_ConversationEntries_tsx ..> N_src_view_conversation_conversation_entries_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_conversation_ConversationToolCall_tsx["ConversationToolCall.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_inline_task_state_ts["inline-task-state.ts"] {
   <<module>>
 }
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_conversation_stop_ts : 导入依赖
-N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_ThreadHistoryNotice_tsx : 导入依赖
-N_src_view_conversation_ConversationEntries_tsx ..> N_src_view_conversation_conversation_entries_css : 导入依赖
-N_src_view_conversation_ConversationToolCall_tsx ..> N_src_view_conversation_inline_task_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_view_conversation_ConversationTopics_tsx["ConversationTopics.tsx"] {
   <<component>>
 }
@@ -758,18 +772,18 @@ class N_src_view_conversation_ConversationTurn_tsx["ConversationTurn.tsx"] {
 class N_src_view_conversation_MessageCard_tsx["MessageCard.tsx"] {
   <<component>>
 }
-class N_src_view_conversation_ConversationToolCall_tsx["ConversationToolCall.tsx"] {
-  <<component>>
-}
+N_src_view_conversation_ConversationToolCall_tsx ..> N_src_view_conversation_inline_task_state_ts : 导入依赖
 N_src_view_conversation_ConversationTopics_tsx ..> N_src_view_conversation_conversation_topics_ts : 导入依赖
 N_src_view_conversation_ConversationTopics_tsx ..> N_src_view_conversation_conversation_topics_css : 导入依赖
 N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_MessageCard_tsx : 导入依赖
-N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_ConversationToolCall_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_conversation_ConversationTurn_tsx["ConversationTurn.tsx"] {
+  <<component>>
+}
+class N_src_view_conversation_ConversationToolCall_tsx["ConversationToolCall.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_inline_task_state_ts["inline-task-state.ts"] {
@@ -784,20 +798,20 @@ class N_src_view_conversation_MemberConversation_tsx["MemberConversation.tsx"] {
 class N_src_view_conversation_conversation_topics_css["conversation-topics.css"] {
   <<stylesheet>>
 }
+N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_ConversationToolCall_tsx : 导入依赖
+N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_inline_task_state_ts : 导入依赖
+N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_inline_conversation_css : 导入依赖
+N_src_view_conversation_MemberConversation_tsx ..> N_src_view_conversation_conversation_topics_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_conversation_TopicInterruptionForm_tsx["TopicInterruptionForm.tsx"] {
   <<component>>
 }
 class N_src_view_conversation_topic_interruption_state_ts["topic-interruption-state.ts"] {
   <<module>>
 }
-N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_inline_task_state_ts : 导入依赖
-N_src_view_conversation_ConversationTurn_tsx ..> N_src_view_conversation_inline_conversation_css : 导入依赖
-N_src_view_conversation_MemberConversation_tsx ..> N_src_view_conversation_conversation_topics_css : 导入依赖
-N_src_view_conversation_TopicInterruptionForm_tsx ..> N_src_view_conversation_topic_interruption_state_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_view_conversation_UsageStatus_tsx["UsageStatus.tsx"] {
   <<component>>
 }
@@ -810,15 +824,20 @@ class N_src_view_conversation_usage_ts["usage.ts"] {
 class N_src_view_conversation_usage_css["usage.css"] {
   <<stylesheet>>
 }
+N_src_view_conversation_TopicInterruptionForm_tsx ..> N_src_view_conversation_topic_interruption_state_ts : 导入依赖
+N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_brain_status_ts : 导入依赖
+N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_usage_ts : 导入依赖
+N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_usage_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_conversation_useMessageQueue_ts["useMessageQueue.ts"] {
   <<module>>
 }
 class N_src_view_conversation_queue_sync_ts["queue-sync.ts"] {
   <<module>>
 }
-N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_brain_status_ts : 导入依赖
-N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_usage_ts : 导入依赖
-N_src_view_conversation_UsageStatus_tsx ..> N_src_view_conversation_usage_css : 导入依赖
 N_src_view_conversation_useMessageQueue_ts ..> N_src_view_conversation_queue_sync_ts : 导入依赖
 ```
 
@@ -922,7 +941,7 @@ note for Conversation "已有草稿与附件保留；开放任务只排队"
 
 从成员报告发起的新只读核实周期经 `SessionTaskView` 装配专用表单。主会话只传实际模型与真实开放周期，权限由表单固定 read；核实周期进入 waiting 后，目标补充仍保持 read。普通输入区草稿、附件、模型和权限不被表单改写，历史选择也不改变当前工作对象。
 
-已完成的核实周期另有正式业务新目标入口，`Conversation` 装配唯一 `useScopeReplan`，对话 `ScopeGoalPanel` 与任务根透传同一个视图。它仅共享实际模型身份，表单权限独立默认 ask，execute 必须明确选择。显式条件核验不运行模型，最终创建新业务周期才发送稳定命令；未知命令查询/重试不引用当前聊天输入。旧核实周期仍为只读，新业务目标不清空原草稿、附件或队列，历史选择不会替换真实开放周期或主会话身份。
+已完成的核实周期另有正式业务新目标入口，`Conversation` 装配唯一 `useScopeReplan`，办公室任务根 `ScopeGoalPanel` 使用该视图。它仅共享实际模型身份，表单权限独立默认 ask，execute 必须明确选择。显式条件核验不运行模型，最终创建新业务周期才发送稳定命令；未知命令查询/重试不引用当前聊天输入。旧核实周期仍为只读，新业务目标不清空原草稿、附件或队列，历史选择不会替换真实开放周期或主会话身份。
 
 `UsageStatus.currentRun` 为 null 时明确没有安全运行头，不猜脑状态与上下文；有可信头则只取该轮上下文，即使历史时间排序把它排在较前。`conversationUsage` 仍累计所有可读运行已报告的费用和 token，旧异常 running 时长截于最后已知事件，不把它持续当成后台工作。存在历史问题时费用标为“已知部分”，不声称完整总消耗，也不估算缺失日志。
 
@@ -969,7 +988,7 @@ unknown 提示不再提供勾选ID解锁旧native的入口。普通无未决工�
 
 ### 主对话中的内联执行过程
 
-`ConversationTurn` 按 `transcript` 的事件及明确调用关联排列文字与工具。同一 toolCallId 的申请、启动、更新和结束更新原位置，不把全部工具搬到正文前。Pi 的 HTTP 门禁可能先于 stdout 回复落盘；完整 message 的 toolCallIds 只将本段正文放回其原调用之前，不重排前一段、重写日志或猜测旧记录。交错工具事件不打断同一消息的增量替换。工具参数、原回执和失败由共享 `ToolTimeline` 展示，显式核实由 `tasks/ToolActivity` 组合；轮尾 `WorkStatus` 只显示用时与运行状态。原独立进展框和底部成员动态区已移除，目标补充/审阅控制与完整任务视图保留。
+完整工作记录渲染器 `ConversationTurn` 按 `transcript` 的事件及明确调用关联排列文字与工具。同一 toolCallId 的申请、启动、更新和结束更新原位置，不把全部工具搬到正文前。Pi 的 HTTP 门禁可能先于 stdout 回复落盘；完整 message 的 toolCallIds 只将本段正文放回其原调用之前，不重排前一段、重写日志或猜测旧记录。交错工具事件不打断同一消息的增量替换。工具参数、原回执和失败由共享 `ToolTimeline` 展示，显式核实由 `tasks/ToolActivity` 组合；轮尾 `WorkStatus` 只显示用时与运行状态。原独立进展框和底部成员动态区已移除，目标补充/审阅控制与办公室详情保留；聊天正文使用 ChatMessages。
 
 `inline-task-state` 只关联真实主运行、成功运行回执和严格派发输出：workspace/root/run/call、主实例及图 stream/seq 必须匹配。原工具输出与图上的最新任务状态分开，旧缺证据日志只保留原工具记录；全部任务仍可从任务视图进入。前置“已接收”只取边上实际 resultId，候选仍未验收。成员过程展开才读取、折叠停止观察，不为每个历史任务常驻轮询。系统回注用工具式条目明确标记来源，不生成新的工具日志或用户消息。
 
@@ -1012,7 +1031,7 @@ ConversationTurn 保留真实助手正文，在终态缺少正文时用独立的
 
 ### 指定话题补充
 
-`TopicInterruptionForm` 在主/子对话的明确话题内共享同一主 Session 目标。普通输入仍排队新话题；浏览、切换和重开只读原请求。`TopicInterruptionController` 按办公室/话题/输入版本在发送前冻结原文及模型权限，恢复只查询，未知结果保留并仅允许显式原命令重试；回执须匹配原身份、输入版本与原运行。该表单独立于普通草稿，隐藏会话不可新提交。已有 interruptionId 的等待不装配通用补充表单，防止另造续接命令。
+`TopicInterruptionForm` 仅在主 Agent 明确选择的话题内使用原主 Session 目标，成员审阅没有此操作。普通输入仍排队新话题；浏览、切换和重开只读原请求。`TopicInterruptionController` 按办公室/话题/输入版本在发送前冻结原文及模型权限，恢复只查询，未知结果保留并仅允许显式原命令重试；回执须匹配原身份、输入版本与原运行。该表单独立于普通草稿，隐藏会话不可新提交。已有 interruptionId 的等待不装配通用补充表单，防止另造续接命令。
 
 主列表仅显示话题摘要；目标卡和补充表单随明确选择出现。成员话题选择同步原话题身份，正常等待补充入口同样面向主 Agent；目标卡的历史导航使用同一选择，不混合两个话题。
 
@@ -1024,3 +1043,9 @@ ConversationTurn 保留真实助手正文，在终态缺少正文时用独立的
 对话发送、排队、目标续接、重规划和核实入口复制当前主 Agent 的 modelRoles。相同引擎更换 primary 保留额外角色；更换引擎不会携带原引擎角色。角色编辑界面后续接通，不把此处传播宣称为已提供编辑入口。
 
 对话栏完整引擎/模型入口复用 AgentModelForm，并沿同一个 useMainAgentSettings 保存。选择多模型引擎先补完整草稿，不发送部分设置；旧未指定主选型继续使用原 Pi/默认生成模型，不把新增校验误当必填显式配置。正在执行的快照保持原值。
+
+## 交互区聊天与工作审阅边界
+
+ChatMessages 专用于用户/主 Agent 正文，依据原 transcript 保留流式替换和附件，过滤工具与系统交接。无最终回复只给运行记录提示，不合成回复。ConversationTurn 保留完整过程渲染供工作审阅消费者使用，工具核实入口仍可从办公室原运行 ToolActivity 打开。
+
+MemberConversation 为只读工作审阅，按逻辑会话、频道、任务、运行选取真实记录。展示派发、公开计划/输出、工具输入输出、候选汇报与公开执行说明，不虚构私有推理。查看成员不会改变主频道选择；显式“返回所属主频道补充需求”才选择主 Agent 和频道。外层不挂载成员输入、审批、主模型设置或停止控件；后台任务不因切换而中止。

@@ -47,6 +47,12 @@ try{
  await pane.locator('[data-office-actor="executor-logical"][data-selected="true"]').waitFor();
  await pane.getByRole('tab',{name:'对话',exact:true}).click();
  await pane.locator('.member-conversation').waitFor();
+ assert.equal(await pane.locator('.chat-composer').count(),0);
+ assert.equal(await pane.getByRole('textbox',{name:'对话草稿',exact:true}).count(),0);
+ await pane.getByRole('button',{name:'返回所属主频道补充需求',exact:true}).click();
+ await pane.locator('.conversation-topic-thread').waitFor();
+ assert.equal(await pane.locator('.chat-scroll [data-tool-call-id],.chat-scroll .work-status').count(),0);
+ checks.push('member-read-only-and-explicit-channel-return-chat-has-no-tools');
  await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
  assert.equal(await pane.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'保留主草稿');
  checks.push('two-modes-and-sidebar-keeps-mode-and-main-draft');

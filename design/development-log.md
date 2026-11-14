@@ -1,3 +1,11 @@
+## 交互区改造第 2 步：纯聊天与成员只读工作审阅（用户直接授权）
+
+- 新 ChatMessages 仅渲染用户/主 Agent 的公开消息、附件与明确的缺失回复提示；工具、系统派发和运行计量不混入聊天正文。完整工具核实与恢复继续由办公室原运行详情承接。
+- MemberConversation 按原逻辑 Session 读取任务、公开计划/输出、工具及候选汇报；公开执行说明如实展示，无记录时不补造思考。成员页没有输入、审批、模型编辑或停止；显式返回所属主频道后才允许补充。成员浏览不改主频道选择。
+- 针对消息投影、成员审阅及原工具审阅消费者执行 `pnpm exec vitest run tests/chat-messages.test.ts tests/team-conversation-view.test.ts tests/inline-conversation.test.ts --reporter=dot`：14 用例通过。新增消息测试移除跨模块业务夹具，改为纯数据后单独重跑 2 用例通过；`pnpm check:test-modules` 通过，新增测试唯一登记 view/conversation unit。
+- `pnpm typecheck`、`pnpm check:architecture` 通过。`node scripts/interaction-area-smoke.mjs` 通过：只读成员无输入，返回原主频道，聊天无工具控件，主草稿保留；报告 test-results/office-desktop-wdLPYC/report.json。首次桌面执行遇源码热刷新重建 DOM，源码稳定后重跑通过。
+- 同步 Conversation/MemberConversation/ChatMessages 注释与 conversation CONTRACT/架构类图及 View 上层图。未运行全量 CI、打包或安装验收；未推送/发布。
+
 ## 交互区改造第 1 步：双态导航与自动化迁移（用户直接授权）
 
 - 需求：默认对话，右上角图标切换办公室；侧栏选中 Agent 保留模式，办公室突出逻辑成员；自动化归右侧扩展区。无对应开放 Issue，不扩大 #65 的旧缺陷范围。

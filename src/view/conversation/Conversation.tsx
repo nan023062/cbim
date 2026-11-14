@@ -1,13 +1,13 @@
 /**
  * 所有主会话发送和恢复入口携带同源模型角色，切换主模型保留同引擎附加角色。
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
- * 主对话按持久归属分话题展示文字与工具，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
+ * 主对话按持久归属分话题展示公开聊天正文，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
  * 作用定位：持有主 Agent 多角色草稿版本的会话固定页签入口（对话/办公室），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
- * 导航边界：子会话只切换成员记录，发送仍持有所属主 taskId；成员登记向外壳发布只读投影，不以执行实例创建额外会话。全局运行页与目标审阅仍定位原节点。
+ * 导航边界：子会话是只读工作审阅，没有输入或主会话操作面板；补充需求显式返回所属主频道；成员登记向外壳发布只读投影，不以执行实例创建额外会话。全局运行页与目标审阅仍定位原节点。
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
  * 输入边界：普通发送只创建新话题或排队，不因当前阅读成员/历史或持久等待而补充旧话题；队列受理后才清草稿。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
@@ -31,7 +31,7 @@ import type {AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import type {LoopEngine} from '../../bridge/contracts/engines';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
-import {ConversationTurn} from './ConversationTurn';
+import {ChatMessages} from './ChatMessages';
 import {TopicInterruptionForm} from './TopicInterruptionForm';
 import {ConversationTopics} from './ConversationTopics';
 import {conversationTopics} from './conversation-topics';
@@ -39,7 +39,6 @@ import {MemberConversation} from './MemberConversation';
 import {teamConversations,teamConversationKey,type TeamConversation} from '../execution-view/team-conversations';
 import {SessionTaskView} from '../tasks/SessionTaskView';
 import {useSessionGraph} from '../tasks/useSessionGraph';
-import {ScopeGoalPanel} from '../tasks/ScopeGoalPanel';
 import './session-tabs.css';
 import {MessageQueue} from '../execution-view/MessageQueue';
 import {useMessageQueue} from './useMessageQueue';
@@ -252,7 +251,7 @@ export function Conversation({selectedChild,onAgentChat,onTeamConversations,conv
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const recoveryReason=tab.taskId&&!taskOpen?threadRecoveryReason(currentRun):undefined;
-  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
+  const canSendRequest=!selectedChild&&active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
   const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
@@ -263,22 +262,19 @@ export function Conversation({selectedChild,onAgentChat,onTeamConversations,conv
     <>{navigationError&&<p role="alert" className="shell-alert" data-testid="runtime-navigation-error">{navigationError}</p>}</><AdmissionNotice tickets={admissionState.waiting} error={tab.taskId?admission.error:undefined}/>
     {section==='tasks'&&<section className="session-task-panel" role="tabpanel" id={'session-task-panel-'+tab.id} aria-labelledby={'session-tasks-'+tab.id}><SessionTaskView selectedAgentSessionId={selectedChild} onAgentChat={(sessionId,scopeId)=>{onAgentChat?.(sessionId);selectTopic(scopeId);selectSection('chat')}} active={active} workspaceId={workspace.id} workspaceInstanceId={workspace.instanceId} taskId={tab.taskId} runs={runs} historyIssueCount={threadIssues.length} queued={queued} now={now} busy={busy} stopping={stopping} graph={graph.graph} scopeState={graph} continuation={graph.selectedScope?.wait?.interruptionId?undefined:continuation} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation} recovery={recovery} graphLoading={graph.loading} graphError={graph.error} onRefreshGraph={graph.refresh} selectedTaskId={selectedTaskId} onSelectTask={selectTask} onQueueChange={queueChange} onQueueContinue={queueContinue} onChat={()=>selectSection('chat')} onStop={()=>void stopCurrent()}/><ThreadHistoryNotice issues={threadIssues}/>{pollError&&<p role="alert">{pollError}</p>}</section>}
     <div className="conversation-dialog" hidden={section!=='chat'} role="tabpanel" id={'session-dialog-'+tab.id} aria-labelledby={'session-chat-'+tab.id}>
-    <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{member?.name??(tab.customTitle?tab.title:latest?.task.goal.split('\n')[0]||'新对话')}</span><details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><section className="conversation-history" aria-label="对话历史"><h3>历史对话</h3><ConversationEntries items={conversations.map(item=>({id:item.id,title:item.title==='对话'&&!item.customTitle?'新对话':item.title,running:!!item.taskId&&runningTaskIds.includes(item.taskId)}))} selected={tab.id} disabled={busy} onSelect={onSelectConversation} onRename={onRenameConversation} onRemove={onRemoveConversation}/></section><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details></div>
+    <div className="chat-toolbar"><Icon name="chat" size={15}/><span className="chat-title">{member?.name??(tab.customTitle?tab.title:latest?.task.goal.split('\n')[0]||'新对话')}</span>{!selectedChild&&<details className="chat-menu chat-header-menu" onKeyDown={e=>{if(e.key==='Escape')e.currentTarget.removeAttribute('open')}}><summary aria-label="对话菜单" title="对话菜单">···</summary><div className="chat-menu-content"><button disabled={busy} onClick={()=>{onBind(undefined);setRuns([]);setError('')}}><Icon name="plus" size={15}/>新对话</button><section className="conversation-history" aria-label="对话历史"><h3>历史对话</h3><ConversationEntries items={conversations.map(item=>({id:item.id,title:item.title==='对话'&&!item.customTitle?'新对话':item.title,running:!!item.taskId&&runningTaskIds.includes(item.taskId)}))} selected={tab.id} disabled={busy} onSelect={onSelectConversation} onRename={onRenameConversation} onRemove={onRemoveConversation}/></section><button onClick={()=>openView('knowledge')}>项目架构</button><button onClick={()=>openView('team')}>团队能力</button><button onClick={openSettings}>模型设置</button></div></details>}</div>
     {(error||pollError||queueError)&&<div className="shell-alert" role="alert">{error||pollError||queueError}</div>}
     {history.some(h=>h.status==='unreadable')&&<p role="alert">部分执行记录无法读取，请检查本机任务日志。</p>}
     <div className="chat-scroll" ref={scroll} onScroll={()=>{const e=scroll.current!;follow.current=e.scrollHeight-e.scrollTop-e.clientHeight<80}}>
       {!tab.taskId&&<div className="chat-welcome"><span className="overline">CBIM · 主 Agent</span><h2>有什么可以帮你？</h2><p>聊聊想法，提出问题，或告诉我你想完成的工作。</p></div>}
       {tab.taskId&&!loaded&&!runs.length&&<p role="status">正在读取对话记录…</p>}
       <ThreadHistoryNotice issues={threadIssues}/>
-      {tab.taskId&&!selectedChild&&selectedTopicId&&<ScopeGoalPanel state={{...graph,selectScope:selectTopic}} compact testId="conversation-goal-summary" onSelectTask={viewMember} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
-      {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
-      <div ref={historyContent}>{selectedChild?(member?<MemberConversation key={member.session.sessionId} member={member} graph={graph.graph} scopes={graph.scopes} selectedTopicId={selectedTopicId} onSelectTopic={selectTopic} active={active&&section==='chat'} onSelectTask={viewMember}/>:<p role="status">正在同步成员对话；当前没有可验证的成员身份。</p>):tab.taskId&&<ConversationTopics {...topics} queued={queued} selectedId={selectedTopicId} onSelect={selectTopic} onSelectTask={viewMember} renderRun={run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>}/>}</div>
-      {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&!graph.detailLoading&&!graph.error&&(graph.selectedScope.status==='active'||graph.selectedScope.topicInterruptions?.some(item=>!graph.selectedScope!.continuations?.some(value=>value.continuationId===item.request.commandId)))&&<TopicInterruptionForm key={JSON.stringify([workspace.instanceId,tab.taskId,selectedTopicId,graph.selectedScope.goal?.inputRevision??1])} scope={graph.selectedScope} options={continuationConfig?.options} active={active&&section==='chat'&&!stopping} onRefresh={graph.refresh}/>}
+      <div ref={historyContent}>{selectedChild?(member?<MemberConversation key={member.session.sessionId} member={member} graph={graph.graph} scopes={graph.scopes} selectedTopicId={selectedTopicId} onOpenChannel={scopeId=>{onAgentChat?.(undefined);selectTopic(scopeId)}} active={active&&section==='chat'} onSelectTask={viewMember}/>:<p role="status">正在同步成员对话；当前没有可验证的成员身份。</p>):tab.taskId&&<ConversationTopics {...topics} queued={queued} selectedId={selectedTopicId} onSelect={selectTopic} onSelectTask={viewMember} renderRun={run=><ChatMessages key={run.runId} run={run} workspaceId={workspace.id}/>}/>}</div>
+      {!selectedChild&&selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&!graph.detailLoading&&!graph.error&&(graph.selectedScope.status==='active'||graph.selectedScope.topicInterruptions?.some(item=>!graph.selectedScope!.continuations?.some(value=>value.continuationId===item.request.commandId)))&&<TopicInterruptionForm key={JSON.stringify([workspace.instanceId,tab.taskId,selectedTopicId,graph.selectedScope.goal?.inputRevision??1])} scope={graph.selectedScope} options={continuationConfig?.options} active={active&&section==='chat'&&!stopping} onRefresh={graph.refresh}/>}
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}>重新同步成员动态</button></p>}
-      {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
-      {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
+      {!selectedChild&&questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
     </div>
-    <div className="chat-composer">
+    {!selectedChild&&<div className="chat-composer">
       {modelEditor&&models&&<AgentModelForm models={models} initial={modelEditor.initial} engine={modelEditor.engine} busy={busy||mainAgent.busy} onCancel={()=>setModelEditor(undefined)} onSave={async value=>{if(await mainAgent.save(value,modelEditor.revision)){setPendingEngine(undefined);setModelEditor(undefined);if(taskOpen)setNextTip(Date.now())}}}/>}
       {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&graph.selectedScope.status==='closed'&&!graph.detailLoading&&!graph.error&&<button disabled={!active||busy} onClick={()=>{setFollowupOf(selectedTopicId);input.current?.focus()}}>基于此历史话题新建任务</button>}
       {followupOf&&<p className="composer-next-tip" role="status">新任务关联：{graph.scopes.find(value=>value.scopeId===followupOf)?.objective??graph.scopes.find(value=>value.scopeId===followupOf)?.inputPreview??followupOf}。发送后独立排队，原话题保持结束。<button disabled={busy} onClick={()=>setFollowupOf(undefined)}>取消关联</button></p>}
@@ -309,7 +305,7 @@ export function Conversation({selectedChild,onAgentChat,onTeamConversations,conv
         {dragActive&&<div className="composer-drop-target"><Icon name="folder" size={24}/><b>松开以添加到对话</b><small>文件和文件夹会保存在本机附件快照中</small></div>}
         {attachmentBusy&&<div className="composer-upload-state" role="status"><span className="work-spinner"/>正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
-        {selectedChild&&<p className="composer-next-tip">发送给主 Agent · 当前查看 {member?.name??'成员对话'}</p>}<textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="向主 Agent 发送新任务…" title="Enter 发送新任务或排队，Shift+Enter 换行；补充已有话题请使用话题内入口" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&canSend){e.preventDefault();void send()}}}/>
+        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="向主 Agent 发送新任务…" title="Enter 发送新任务或排队，Shift+Enter 换行；补充已有话题请使用话题内入口" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&canSend){e.preventDefault();void send()}}}/>
         <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(skill)}}/><ComposerPicker label="协作模式" value={collaborationMode} onChange={v=>setCollaborationMode(v as 'auto'|'team')} disabled={busy||taskOpen} options={[
           {value:'auto',label:'自动模式',icon:'sparkles',description:'主 Agent 按目标直接执行，必要时交给已登记的负责岗位；权限和人工验收保持原要求'},
           {value:'team',label:'团队模式',icon:'team',description:'优先按自定义负责岗位分工；未配置负责 Agent 的模块由主 Agent 在原会话执行'},
@@ -324,7 +320,7 @@ export function Conversation({selectedChild,onAgentChat,onTeamConversations,conv
         ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13}/>{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="footer" capacity={selectedModel?.contextWindow}/></div>
-    </div>
+    </div>}
     </div>
   </div>
 }

@@ -91,8 +91,8 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `conversation` → `components`：导入。
-- `conversation` → `shell`：导入。
 - `conversation` → `execution-view`：导入。
+- `conversation` → `shell`：导入。
 - `conversation` → `tasks`：导入。
 - `conversation` → `team`：导入。
 - `conversation` → `foundations`：导入。

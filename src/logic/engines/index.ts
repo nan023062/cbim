@@ -10,3 +10,5 @@ export {modelRoleSnapshotSchema,modelRolesSelectionSchema,modelRolesSnapshotSche
 export type {ModelRolesSelection,ModelRolesSnapshot,ModelRoleDescriptor} from './model-roles';
 export {additionalRoleOperations} from './rules/model-roles';
 export type {EnginePackageStatus,EnginePackageSettings} from './package-status';
+
+export {modelRoleChoices,engineSelectionAvailable} from './rules/model-choices';

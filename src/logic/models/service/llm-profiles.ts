@@ -174,4 +174,13 @@ export class LlmProfiles {
     if(!valid)fail('LLM_RESPONSE','接口没有返回有效文本，请核对接口协议');
     return {ok:true,model:p.model,latencyMs:Date.now()-started,api:p.api,baseUrl:p.baseUrl};
   }
+  /** 用户显式的小样本向量探测；短锁内冻结配置，网络在锁外，不写索引或宣称模型业务验收。 */
+  async testEmbedding(id:string,modelId:string){
+    const operation=await this.withModelOperations([{kind:'embedding',profileId:id,modelId}],async locked=>locked.resolve(0));
+    const p=operation.profile;if(!('kind' in p)||p.kind!=='embedding')fail('LLM_OPERATION','所选模型没有向量能力');
+    const started=Date.now(),body=await this.request(p.baseUrl.replace(/\/$/,'')+'/embeddings',{method:'POST',headers:this.headers(p.api,p.auth,operation.apiKey),body:JSON.stringify({model:p.model,input:['connection test'],encoding_format:'float'})});
+    const vector=body.data?.[0]?.embedding;
+    if(!Array.isArray(body.data)||body.data.length!==1||body.data[0].index!==0||!Array.isArray(vector)||vector.length!==p.dimensions||vector.some((value:unknown)=>typeof value!=='number'||!Number.isFinite(value)))fail('LLM_RESPONSE','接口未返回配置维度的有效向量，请核对模型与维度');
+    return {ok:true,model:p.model,latencyMs:Date.now()-started,api:p.api,baseUrl:p.baseUrl,dimensions:p.dimensions};
+  }
 }

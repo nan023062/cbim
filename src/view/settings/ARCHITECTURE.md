@@ -14,11 +14,12 @@
 | [budget-settings-state.ts](budget-settings-state.ts) | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
+| [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
 | [EngineSettings.tsx](EngineSettings.tsx) | 官方引擎能力列表，展示业务专长、支持接口、已配置可用模型和包管理状态。 |
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按引擎连接测试。 |
+| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
 | [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
 
@@ -112,6 +113,18 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 
 直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
 
+### EmbeddingModels.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
+  <<component>>
+  +EmbeddingModels()
+}
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+
 ### EngineSettings.tsx
 
 ```mermaid
@@ -155,7 +168,7 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
+直接依赖：[EmbeddingModels.tsx](EmbeddingModels.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
 
 ### ProviderConnections.tsx
 
@@ -169,7 +182,7 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
 
 ### SettingsView.tsx
 
@@ -211,44 +224,47 @@ class N_src_view_settings_budget_settings_css["budget-settings.css"] {
 class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
+class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_models_css["models.css"] {
   <<stylesheet>>
 }
-class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
-  <<component>>
-}
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_state_ts : 导入依赖
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_css : 导入依赖
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_EmbeddingModels_tsx : 导入依赖
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_models_css : 导入依赖
-N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
 class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
-  <<component>>
-}
 class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
-  <<component>>
-}
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_EngineSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
@@ -257,6 +273,7 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
   <<component>>
 }
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_GitHubFeedbackSettings_tsx : 导入依赖
 ```
@@ -323,3 +340,5 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
 
 EngineSettings 展示官方业务专长、兼容模型、版本与依赖，查询不激活；安装提交显示的摘要和 revision。错误后刷新真实状态并保留原错误，不自动重试。与模型编辑表单独立，刷新引擎列表不会提交模型草稿。
+
+EmbeddingModels 编辑明确向量端点、输入容量、维度和可选输入价，不填生成输出字段；纯向量供应商允许保存。编辑既有供应商保留 embedding；端点改变清输入中的 Key，保存仍由服务强制凭据重确认。连接预览/测试只选模型能力与接口，不要求用户了解引擎。

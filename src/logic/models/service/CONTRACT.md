@@ -11,3 +11,5 @@ configuration/resolve/test 接受可选 ModelConnectionRequirement，缺省使�
 现有文件格式、默认选择、原子写入与失败语义保持；迁移不重写用户文件。测试使用独立临时目录和加密替身，不加载完整 Application。下一次修改配置并发、保存或探测从 llm-profiles.ts 入手。
 
 withModelOperations 在同一次配置读取和原 SerialQueue 中捕获生成/向量角色。角色分别显式声明供应商、型号和操作类型；公开 profiles 不含凭据，resolve(index) 只解密对应角色一次，回调结束后即使有缓存也拒绝。准备失败或停止不自动重试，不启动网络。此入口为后续 V2 Agent 绑定提供原子准备机制，本步尚未启用引擎多角色 UI 或发送向量请求。
+
+供应商设置的 testEmbedding 在配置短锁内冻结明确向量操作，网络在锁外；只发送小样本，校验返回的维度和有限数值，不保存通过状态、不写知识或索引。通用生成连接测试按接口需求选择，不依赖引擎 ID。

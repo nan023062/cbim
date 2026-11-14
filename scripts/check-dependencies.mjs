@@ -54,7 +54,7 @@ export function allowsModelAccess(from,to){
   if(to===modelPublic)return from.startsWith('src/logic/')||from==='src/bridge/contracts/models.ts';
   return to===modelService&&(from.startsWith('src/bridge/server/')||isService(from));
 }
-const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','DiscoveredModel']);
+const modelBridgeNames=new Set(['EmbeddingModel','EmbeddingConnection','selectProviderConnection','LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','DiscoveredModel']);
 // Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
 const webPublic='src/logic/web/index.ts';
 const webService='src/logic/web/service/index.ts';

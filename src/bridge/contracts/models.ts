@@ -5,7 +5,8 @@
  * 迁移兼容：这是唯一允许重导出 Logic 模型纯入口的桥文件；后续 DTO/预览迁移后退出，不开放服务或任意星号导出。
  */
 export type {LlmDefinition,LlmModel,LlmProfile,LlmSettings,LlmApi,AlternateConnection} from '../../logic/models';
-export {llmApiSchema,connectionSchema,definition} from '../../logic/models';
+export type {EmbeddingModel,EmbeddingConnection} from '../../logic/models';
+export {selectProviderConnection,llmApiSchema,connectionSchema,definition} from '../../logic/models';
 export {providerPresets,identifyProvider} from '../../logic/models';
 export type {DiscoveredModel} from '../../logic/models';
 export {modelStopError} from '../../logic/execution/rules/model-errors';

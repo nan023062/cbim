@@ -559,3 +559,5 @@ dispatch.isolatedExecutionReport显式读取原运行，dispatch.isolatedExecuti
 loop.enqueue 转交明确的 followupOf；IPC 不恢复原话题，执行管理器与派发事务独立核实来源。
 
 settings-handlers 将引擎设置动作交给 Application 的唯一 EnginePackages；开发模式只显示 managed:false，安装动作明确拒绝，不伪造成功。
+
+模型设置的 testConnection 调用模型服务独立接口测试，向量与生成分别派发；旧按引擎诊断继续兼容，设置界面不再依赖它。

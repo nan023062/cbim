@@ -42,8 +42,8 @@ N_src_logic_engines_index_ts ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_rules : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_packages ..> N_src_logic_engines_index_ts : 导入依赖
-N_src_logic_engines_rules ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_catalog : 导入依赖
+N_src_logic_engines_rules ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_service ..> N_src_logic_engines_index_ts : 导入依赖
 ```
 
@@ -69,8 +69,8 @@ class N_src_logic_engines_package_status_ts["package-status.ts"] {
 - `model.ts` → `model-roles.ts`：导入。
 - `package-status.ts` → `catalog`：导入。
 - `packages` → `index.ts`：导入。
-- `rules` → `model-roles.ts`：导入。
 - `rules` → `catalog`：导入。
+- `rules` → `model-roles.ts`：导入。
 - `service` → `index.ts`：导入。
 
 ### model-roles.ts 公开入口
@@ -136,3 +136,5 @@ primary 仍由 Agent 原来的 profileId/modelId 与运行 profile 表达；可�
 packages 服务独立于 model-profiles；Application 持有唯一安装状态。静态声明新增 storageDirectory 和固定依赖种类，制品决定依赖准确摘要。目录不加载包或发起网络；详细恢复、引用与重试语义见 [包管理契约](packages/CONTRACT.md)。
 
 package-status 只投影版本、固定依赖、使用数量及错误，没有路径或凭据；View 通过桥契约访问。
+
+modelRoleChoices / engineSelectionAvailable 是无副作用的多角色可选模型投影，主对话与 Agent 页面共用，不在 View 另维护型号白名单。

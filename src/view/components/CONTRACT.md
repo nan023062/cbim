@@ -20,3 +20,5 @@ state-labels.ts 只提供工作区与工具任务的展示词汇，由外壳和�
 ### 模型选型保留附加角色
 
 EngineModelPicker 同引擎切换 primary 时保留 value.modelRoles；引擎变化清空整个旧选型。此组件当前仍只显示主模型下拉，额外角色的完整编辑在后续界面切片接通。
+
+EngineModelPicker 按官方角色展示额外必填模型，切换引擎清旧角色，同引擎换主模型保留角色。AgentModelForm 将完整草稿一次保存；保存前用共享纯规则验证，取消不提交。

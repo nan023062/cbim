@@ -26,6 +26,9 @@ test('请求目录只承认精确 action，列表与身份读取不接额外私�
   expect(modelActionSchemas['models.test'].parse({id,engine:'claude-code'})).toEqual({id,engine:'claude-code'});
   expect(modelActionSchemas['models.test'].safeParse({id,engine:'other'}).success).toBe(false);
   expect(modelActionSchemas['models.test'].safeParse({id,baseUrl:'https://unexpected.example'}).success).toBe(false);
+  expect(modelActionSchemas['models.testConnection'].parse({id,kind:'embedding',modelId:'vector'})).toEqual({id,kind:'embedding',modelId:'vector'});
+  expect(modelActionSchemas['models.testConnection'].safeParse({id,kind:'generation',modelId:'chat'}).success).toBe(false);
+  expect(modelActionSchemas['models.testConnection'].safeParse({id,kind:'embedding',modelId:'vector',engine:'pi'}).success).toBe(false);
 });
 
 test('实际 IPC 将测试引擎和型号交给同一配置服务',async()=>{

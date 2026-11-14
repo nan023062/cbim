@@ -5,7 +5,7 @@
  * 连接测试显式选择引擎并返回实际协议/地址，不接受临时任意转发目标。
  */
 import {z} from 'zod';
-import {connectionSchema,definition,type LlmSettings} from './models';
+import {connectionSchema,definition,llmApiSchema,type LlmSettings} from './models';
 import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../logic/team/rules/agent-runtime';
 import {loopEngineSchema,type LoopEngine} from './engines';
 import {type LlmApi,type DiscoveredModel} from './models';
@@ -21,6 +21,10 @@ export const modelActionSchemas={
   'models.select':identity,
   'models.remove':identity,
   'models.test':identity.extend({modelId:z.string().min(1).optional(),engine:loopEngineSchema.optional()}).strict(),
+  'models.testConnection':z.discriminatedUnion('kind',[
+    identity.extend({kind:z.literal('generation'),modelId:z.string().min(1).max(160),api:llmApiSchema}).strict(),
+    identity.extend({kind:z.literal('embedding'),modelId:z.string().min(1).max(160)}).strict(),
+  ]),
   'models.discover':discovery,
   'models.discoverDetails':discovery,
 } as const;
@@ -34,6 +38,7 @@ export interface ModelActionResults {
   'models.select':LlmSettings;
   'models.remove':LlmSettings;
   'models.test':{ok:boolean;model:string;latencyMs:number;engine:LoopEngine;api:LlmApi;baseUrl:string};
+  'models.testConnection':{ok:boolean;model:string;latencyMs:number;api:LlmApi|'openai-embeddings';baseUrl:string;dimensions?:number};
   'models.discover':string[];
   'models.discoverDetails':DiscoveredModel[];
 }

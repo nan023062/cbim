@@ -1,3 +1,11 @@
+## 2026-11-14：切片 5b——模型能力表单与多角色选择
+
+- 基线 a575e26a。模型设置提供独立向量接口、输入容量/维度/输入价；既有供应商编辑保留 embedding，纯向量供应商可保存。连接预览与测试改为按模型操作及接口，不要求选择引擎，旧 models.test 契约继续兼容。
+- modelRoleChoices / engineSelectionAvailable 统一模型角色预览；Agent 选择器按能力、协议、型号白名单及启用状态筛选。主对话新增完整配置草稿，复用同一主 Agent 设置入口；多角色一次提交，旧缺省选型继续沿原 Pi/默认模型规则。当前三引擎没有额外必填角色，记忆引擎切片将消费该入口。
+- 精确验证：pnpm exec vitest run tests/provider-connections.test.ts tests/unit/logic/engines/model-choices.test.ts tests/unit/logic/models/embedding-test.test.ts --reporter=dot，6/6。模型服务用隔离 fetch 回执验证真实保存/解析与向量请求、维度错误，不访问外部端点。models-actions、main-agent-settings、owner-model-configuration 三文件 11/11；补充 action schema 后单跑 model-actions -t 请求目录 1/1；dependencies -t 模型 43/43。
+- node scripts/model-capabilities-ui-smoke.mjs：真实 React/Edge 隔离界面 4 项通过，编辑保留向量、容量维度分离、纯向量保存、按操作测试；pageErrors=[]。pnpm typecheck、pnpm check:test-modules（509 文件，156/157/196）和 pnpm check:architecture（1564 文件，7515 边，无环/违规）通过。首次类型检查发现对话选型 null 与旧测试回执字段，均已修正。
+- 同步模型服务、引擎规则、桥契约/IPC、设置、组件及对话的注释/契约/类图。没有调用生产模型、生成正式包或安装发布；多角色真实引擎链路与预算继续在记忆纵向切片验收。
+
 ## 2026-11-14：切片 5a——引擎能力支持列表
 
 - 基线 acd94516。设置新增官方引擎列表，显示业务专长、支持模型范围、已配置可用模型、活动/候选版本、引用与依赖；显式检查、添加/更新、启停和移除。无自定义 URL/路径入口，源码模式明确不管理正式包。

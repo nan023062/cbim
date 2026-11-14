@@ -1312,7 +1312,8 @@
         "unit": [
           "tests/llm.test.ts",
           "tests/owner-model-configuration.test.ts",
-          "tests/unit/logic/models/model-operations.test.ts"
+          "tests/unit/logic/models/model-operations.test.ts",
+          "tests/unit/logic/models/embedding-test.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1504,7 +1505,8 @@
       "tests": {
         "unit": [
           "tests/unit/logic/engines/catalog.test.ts",
-          "tests/unit/logic/engines/model-roles.test.ts"
+          "tests/unit/logic/engines/model-roles.test.ts",
+          "tests/unit/logic/engines/model-choices.test.ts"
         ],
         "contract": [
           "tests/engine-configuration.test.ts"

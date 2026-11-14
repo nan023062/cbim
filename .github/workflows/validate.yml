@@ -3,6 +3,7 @@ name: Validate CBIM
 on:
   pull_request:
     branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   workflow_dispatch:
     inputs:
       scope:
@@ -16,7 +17,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: cbim-validation-${{ github.event.pull_request.number || github.ref }}
+  # PR 中间提交互相取代；手动诊断不能取消同分支正在运行的完整检查。
+  group: cbim-validation-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.scope || 'pull-request' }}
   cancel-in-progress: true
 
 jobs:
@@ -40,6 +42,16 @@ jobs:
         env:
           CBIM_CI_SCOPE: ${{ inputs.scope }}
         run: node scripts/ci-scope.mjs
+
+  deferred:
+    name: Draft PR - release validation not run
+    needs: scope
+    if: needs.scope.outputs.mode == 'deferred'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Explain how to start full validation
+        run: echo 'Draft PR only. Mark ready for review to run the exact head/base checks; workflow_dispatch full remains available.' >> "$GITHUB_STEP_SUMMARY"
 
   # 公共检查只执行一次，与测试分片并行，不成为每片的重复前置步骤。
   static:
@@ -167,7 +179,7 @@ jobs:
   result:
     name: ${{ needs.scope.outputs.mode == 'diagnostic' && 'CBIM diagnostic result' || 'CBIM validation' }}
     needs: [scope, static, windows, light]
-    if: always()
+    if: always() && needs.scope.outputs.mode != 'deferred'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

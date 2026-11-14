@@ -1,3 +1,37 @@
+## 2026-11-14：发布复盘改进——真实升级通过，固定最终完整检查输入
+
+- [PR #76](https://github.com/nan023062/cbim/pull/76) 的隔离在线运行 `43561143963` 通过：六套工具前置 83/83，全新安装/真实 Pi 下载，0.1.15/R1 → R4 → 0.1.16/R1，10 Range/4683509 字节/0 回退，缓存复用、普通退出不安装、十项数据保留/无重放与七个实际 PID 完整关闭。
+- 同一冻结制品的真实在线 DeepSeek 两话题/上下文隔离、六项执行隔离、冷包/公开 E、候选四附件、官网 14 场景及匿名六文件检查均通过。全部事实、两轮原失败及根因边界见 [本轮验证记录](verification/release-tooling-20261114.md)。没有修改产品或公开附件，不重复构建/部署。
+- 本提交仅保存验证记录。草稿阶段已实测只执行 scope/deferred，中间修复未启动/取消全量；转 Ready 后对最终 head/base 运行完整四片。最终 CI、原有跳过、合并与分支回执统一回填 PR，避免为补最终 SHA 再触发一次产品全量。本段是本提交时的历史记录，不作为独立待办清单。
+
+## 2026-11-14：发布复盘改进——核实 Electron 主进程而非启动器 PID
+
+- 第二轮 `43560388037` 的增强错误证据显示：资源重启时观察到的 PID 对应 `C:\Windows\system32\cmd.exe`。实际原因是 Playwright 在 Windows 通过启动器运行 Electron，`application.process().pid` 不能充当桌面主进程身份；上一片的退出竞态回归有价值，但不是这次失败已证实的根因。两轮失败均保留，未启动完整 CI。
+- `ownLaunchedDesktop` 改为在连接仍可用时读取实际 Electron 的 process.pid 和 app.getPath('exe')，核对路径后才建立进程所有者。释放/安装后只使用这份身份；接入失败正常关闭自己的启动实例并保留原异常。
+- 增加真实 Windows Electron 空窗口集成：证明启动器 PID 与主进程不同，使用原生观察脚本正常关闭实际进程；不加载 CBIM Application 或用户数据。进程单元同时禁止读取 launcher PID，拒绝错误 EXE。`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs`：10/10；新增 Windows 脚本 CLI/PID 已不存在分支的精确测试 1/1。正式线上验收仍待新独立 runner。
+
+## 2026-11-14：发布复盘改进——补齐 Windows 枚举后退出竞态
+
+- PR #76 草稿运行 `43559662100` 仅执行 scope/deferred，正式四片和汇总均跳过。首次隔离升级 `43559662857` 前置 80 项、全新安装及原生 Pi 下载通过，但资源 UI 重启后的原生观察器报 PID identity changed，未计为升级成功；失败和 process-lifecycle 保留在本轮 online-attempt1。
+- 新增真实 Windows 回归：先取得自有 Node 的 Process 对象，握手后退出原进程，再读取 Path，稳定得到空值；同时证明活进程错误路径与超时仍失败。原云端失败没有保存 actualPath，不能把本地复现当成它的字段实测。观察器改为在取路径前后核 HasExited，仍严格拒绝活进程路径不符；不 kill、不重试业务或放宽安装成功条件。
+- `pnpm exec vitest run tests/desktop-acceptance-windows.test.mjs`：1/1；首次本机 PowerShell 5.1 将无 BOM 中文脚本注释按本地编码解析失败，改用 ASCII 注释后通过，原失败报告保留。CI 使用验收相同的 PowerShell 7。模块边界 498 文件、依赖 1516 文件/0 循环/违规通过；前置检查加入该真实竞态套件，安装流程仍需新 runner 验证。
+- 记录顺序移到开发日志顶部，清理新增末尾空行；未改产品、冻结制品及公开通道。本轮打包 EXE 在线 DeepSeek 两话题及上下文隔离、六项执行隔离、官网 14 场景、匿名四附件/官网六文件、公开 E 与冷包核验已通过，证据集中于 test-results/release-tooling-20261114 与 office-online-GmK0CD。
+
+## 2026-11-14：发布复盘改进——草稿暂缓全量与安装前置检查
+
+- 按同一次用户直接授权实施第二片。草稿 PR 仅报告 deferred，正式汇总跳过；转 Ready/reopen/synchronize 重新按当前 head/base 差异选正式检查，取消过时同 PR 运行。手动 full 强制全量，runtime-diagnostic 使用独立并发组，不再互相取消。
+- 安装工作流增加已验证五套进程/协议/输入/网络前置检查及原始报告；前置失败不安装。相同 ref/目标/来源/模式/传输要求才去重，候选和在线等不同场景互不取消。正式全量四片、静态检查、完整发现全集核验和未知路径默认全量均保留。
+- `pnpm exec vitest run tests/ci-validation.test.mjs`：35/35，涵盖 draft→ready、未知路径、实际隔离 Git 差异、手动 full、不接受 deferred 为正式通过，以及 workflow 触发和并发约束。相关依赖/测试边界已随上一片同一工作树检查通过；未改产品源码或类型，不重复产品测试、类型和类图生成。
+- 更新 design/task/ci-validation.md 和 cbim-release 三个同内容入口；准备在真实草稿 PR 核 deferred，再跑隔离线上验收，最后固定提交运行完整发布检查。进度/最终云端证据回填本次 PR，不创建无关 Issue，也不覆盖公开 0.1.16 附件。
+
+## 2026-11-14：发布复盘改进——集中管理验收进程生命周期
+
+- 用户直接授权落实发布复盘并重跑完整发布检查；基线 `b8c2823565a2b72d7748e90b7eb564130d32fc91`。查询 `nan023062/cbim` 开放 Issues，仅 #65，与本次工具优化无关，不扩大范围或创建替代清单。
+- `DesktopAcceptanceProcess` 统一 Playwright 启动、原生资源重连及 NSIS 重启窗口的所有权：接入即冻结 PID；普通退出/UI 交接先观察物理退出，只执行一次动作、释放连接，随后核对实际退出。未知动作失败不重放；重复清理共享原 promise，保留首个失败。主脚本仍负责真实版本、目录和数据保留，连接关闭不是安装成功。
+- inspector.close 现在等待真实断开并拒绝挂起求值；中途接入失败释放 inspector/browser，最终记录 process-lifecycle。公开 online 模式增加独立全新安装及固定 Pi 下载验证，之后用原迁移 profile 完成真实旧版升级；冻结制品和公开附件不变。
+- 按影响选择进程所有者单元、真实 Node/inspector 退出集成、输入和被动网络消费者：`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`：5 文件 80/80。`pnpm check:test-modules`：497 文件；`pnpm check:dependencies`：1515 文件、0 循环/违规；验收入口语法和 diff 空白检查通过。尚未将这些局部结果视为真实 Windows 安装、全量 CI 或发布通过。
+- Review 顺序：进程所有者 → 两种调试适配/原生窗口适配 → 主验收场景 → 单元/集成；说明在 design/task/desktop-release.md。改动属于 scripts/tests 工具边界，未改 src，因此不涉及产品类图/契约。
+
 ## 2026-11-14：0.1.16 官网部署与匿名一致性验收完成
 
 - 官网 PR #74 的轻量 CI `43556785303` 通过，真实 14 场景、0 页面错误；正常合并 `1e5a6d7e7a82ddcfc23d3dbd75f46c0e3095e1c5`，develop 快进同步。Pages `43556983147` 在同一 master 提交部署至既有 `https://nan023062.github.io/cbim/`，未切换平台或账号。

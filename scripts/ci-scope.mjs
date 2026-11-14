@@ -17,6 +17,13 @@ export function classifyChanges(paths) {
   return {mode: light ? (needsWebsite ? 'website' : 'docs') : 'full', website: needsWebsite};
 }
 
+/** 草稿只暂缓调度，不改变路径分类；转为 ready 后重新按同一 diff 选择正式检查。 */
+export function pullRequestChecks(paths, draft) {
+  if (typeof draft !== 'boolean') throw Error('Missing pull request draft state');
+  const selected = classifyChanges(paths);
+  return {...selected, mode: draft ? 'deferred' : selected.mode};
+}
+
 /** --name-status -z 保留空格/换行；重命名和复制必须同时纳入源路径和目标路径。 */
 export function parseChangedPaths(raw) {
   const fields = raw.split('\0');
@@ -46,7 +53,7 @@ function main() {
   if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
     const base = event.pull_request.base.sha, head = event.pull_request.head.sha;
     const paths = changedPaths(base, head);
-    result = {...classifyChanges(paths), base, head, paths};
+    result = {...pullRequestChecks(paths, event.pull_request.draft), base, head, paths};
   } else if (process.env.GITHUB_EVENT_NAME === 'workflow_dispatch') {
     const scope = process.env.CBIM_CI_SCOPE || 'full';
     if (!['full', 'runtime-diagnostic'].includes(scope)) throw Error('Unknown manual CI scope');
@@ -54,6 +61,7 @@ function main() {
   } else throw Error('Unsupported CI event');
   fs.appendFileSync(process.env.GITHUB_OUTPUT, Object.entries(result).filter(([key]) => key !== 'paths').map(([key, value]) => `${key}=${value}\n`).join(''));
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## 本次验证范围\n\n模式：${result.mode}；官网浏览器检查：${result.website}。\n\n${result.paths.map(name => '- ' + JSON.stringify(name)).join('\n')}\n`);
+  if(result.mode==='deferred')fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '\n草稿 PR 暂缓正式检查；这不是发布通过。标记 Ready for review 后会重新运行当前 head/base 的检查，也可手动选择 full。\n');
   console.log(JSON.stringify(result));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();

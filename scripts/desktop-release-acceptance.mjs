@@ -6,9 +6,10 @@ import http from 'node:http';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
-import {_electron as electron} from 'playwright-core';
+import {_electron as electron, chromium} from 'playwright-core';
 import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
+import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {parse} from 'yaml';
 
 assert.equal(process.platform, 'win32');
@@ -92,8 +93,8 @@ async function waitPhase(page, phase, interval = 1000) {
     if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(interval);
   } throw Error(`Update timeout: ${phase}`);
 }
-// R 与 C 都由真实 UI 重启；只定位本验收安装路径的新主进程，正常关闭后重新连接检查实际激活结果。
-async function observeRestart(oldPid, requireUpdated, evidenceName) {
+// R 与 C 都由真实 UI 重启；只定位本验收安装路径的新主进程。
+async function findRestart(oldPid, requireUpdated, evidenceName) {
   const quoted = exe.replaceAll("'", "''"); let restarted;
   for (let n = 0; n < 120; n++) {
     const text = ps(`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${quoted}' -and $_.ProcessId -ne ${oldPid} ${requireUpdated ? "-and $_.CommandLine -like '*--updated*'" : ''} -and $_.CommandLine -notlike '*--type=*' } | Select-Object ProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Compress`);
@@ -102,11 +103,54 @@ async function observeRestart(oldPid, requireUpdated, evidenceName) {
   assert.ok(restarted); assert.ok(!Array.isArray(restarted));
   if (requireUpdated) assert.ok(restarted.CommandLine.toLowerCase().includes(userRoot.toLowerCase()));
   await save(evidenceName, restarted);
-  // 冷安装保留启动稳定观察；资源重启在窗口出现后立即正常关闭，再带观测器启动。
-  // 不能额外等 15 秒：旧版会在 10 秒后预下载 C，导致流量发生在未接入的原生进程中。
-  if (requireUpdated) await pause(15000);
-  ps(`$deadline=(Get-Date).AddSeconds(30); do { $p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}') { throw 'Restarted app identity mismatch' }; if ($p.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 } while ((Get-Date) -lt $deadline); if ($p.MainWindowHandle -eq 0) { throw 'Restarted app window timeout' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
   return restarted;
+}
+async function observeRestart(oldPid, requireUpdated, evidenceName) {
+  const restarted=await findRestart(oldPid,requireUpdated,evidenceName),quoted=exe.replaceAll("'","''");
+  await pause(15000);
+  ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
+  return restarted;
+}
+// 原生资源重启后直接接回同一进程：先接主进程网络观测，再接页面，避免下载发生在无人观测的交接窗口。
+async function attachResourceRestart(restarted) {
+  let inspector,browserEndpoint;const deadline=Date.now()+60000;
+  try {
+    while(Date.now()<deadline&&(!inspector||!browserEndpoint)){
+      const ports=JSON.parse(ps(`@(Get-NetTCPConnection -OwningProcess ${restarted.ProcessId} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique) | ConvertTo-Json -Compress`)||'[]');
+      for(const port of Array.isArray(ports)?ports:[ports]){
+        const base=`http://127.0.0.1:${port}`;
+        const targets=await fetch(base+'/json/list',{signal:AbortSignal.timeout(1000)}).then(r=>r.ok?r.json():[]).catch(()=>[]);
+        const target=Array.isArray(targets)?targets.find(item=>item.type==='node'):undefined;
+        if(target&&!inspector){
+          inspector=await connectDesktopInspector(target.webSocketDebuggerUrl);
+          assert.equal(await inspector.evaluate('process.pid'),restarted.ProcessId);
+          assert.equal(await inspector.evaluate("require('electron').app.getPath('exe')"),exe);
+          const evaluate=fn=>inspector.evaluate(`(${fn.toString()})(require('electron'))`);
+          await observeUpdaterNetwork({evaluate});
+          await save('resource-restart-observer',{processId:restarted.ProcessId,attachedAt:new Date().toISOString()});
+        }else if(!target&&!browserEndpoint){
+          const version=await fetch(base+'/json/version',{signal:AbortSignal.timeout(1000)}).then(r=>r.ok?r.json():{}).catch(()=>({}));
+          if(version.webSocketDebuggerUrl?.includes('/devtools/browser/'))browserEndpoint=version.webSocketDebuggerUrl;
+        }
+      }
+      if(!inspector||!browserEndpoint)await pause(100);
+    }
+    assert.ok(inspector&&browserEndpoint,'Restarted desktop debug endpoints not available');
+    const browser=await chromium.connectOverCDP(browserEndpoint);
+    app={
+      evaluate:fn=>inspector.evaluate(`(${fn.toString()})(require('electron'))`),
+      process:()=>({pid:restarted.ProcessId}),
+      async close(){
+        // 使用与 ElectronApplication.close 相同的正常退出入口；先释放调试连接，避免 Node 等待调试器断开。
+        await inspector.evaluate("((app)=>{setImmediate(()=>app.quit())})(require('electron').app);undefined");
+        inspector.close();await browser.close();
+        ps(`$p=Get-Process -Id ${restarted.ProcessId} -ErrorAction SilentlyContinue; if ($p -and -not $p.WaitForExit(30000)) { throw 'Attached desktop normal close timed out' }`);
+      },
+    };
+    const context=browser.contexts()[0],page=context.pages()[0]??await context.waitForEvent('page');
+    page.setDefaultTimeout(30000);page.on('pageerror',error=>errors.push(error.message));
+    await page.getByRole('button',{name:'用户菜单',exact:true}).waitFor();return page;
+  }catch(error){inspector?.close();throw error}
 }
 async function prepareColdUpgrade(page) {
   let ready = await waitPhase(page, 'ready');
@@ -121,8 +165,8 @@ async function prepareColdUpgrade(page) {
     const oldPid = app.process().pid, closed = app.waitForEvent('close',{timeout:60000});
     await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
     await page.getByRole('button',{name:'版本与更新',exact:true}).click(); await closed; app=undefined;
-    const restarted = await observeRestart(oldPid,false,'resource-prelude-restart');
-    page=await launch(); const activated=await status(page);
+    const restarted = await findRestart(oldPid,false,'resource-prelude-restart');
+    page=await attachResourceRestart(restarted); const activated=await status(page);
     assert.equal(activated.currentVersion,previousVersion); assert.equal(activated.currentResourceVersion,target.resourceVersion);
     assert.equal((await app.evaluate(({app})=>app.getPath('userData'))),path.join(userRoot,'desktop'));
     resourcePrelude.push({from:ready.currentResourceVersion,to:activated.currentResourceVersion,codeVersion:previousVersion,normalQuitDidNotApply:true,restarted});

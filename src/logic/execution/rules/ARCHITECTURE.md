@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
+| [engine-adapter.ts](engine-adapter.ts) | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约。 |
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
 | [engine-runtime.ts](engine-runtime.ts) | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现。 |
 | [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
@@ -39,22 +40,25 @@ class N_src_logic_execution_rules_runtime["runtime/"] {
 class N_src_logic_execution_rules_conversation_binding_ts["conversation-binding.ts"] {
   <<module>>
 }
+class N_src_logic_execution_rules_engine_adapter_ts["engine-adapter.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts"] {
   <<module>>
 }
 class N_src_logic_execution_rules_engine_runtime_ts["engine-runtime.ts"] {
   <<module>>
 }
-class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
-  <<module>>
-}
-N_src_logic_execution_rules_runtime ..> N_src_logic_execution_rules_engine_session_ts : 导入依赖
+N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_engine_runtime_ts : 导入依赖
 N_src_logic_execution_rules_runtime ..> N_src_logic_execution_rules_capabilities : 导入依赖
 N_src_logic_execution_rules_runtime ..> N_src_logic_execution_rules_conversation_binding_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_rules_engine_tools_ts["engine-tools.ts"] {
   <<module>>
 }
@@ -70,15 +74,15 @@ class N_src_logic_execution_rules_member_run_ts["member-run.ts"] {
 class N_src_logic_execution_rules_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
-class N_src_logic_execution_rules_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
-  <<module>>
-}
 N_src_logic_execution_rules_index_ts ..> N_src_logic_execution_rules_member_run_ts : 导入依赖
 N_src_logic_execution_rules_index_ts ..> N_src_logic_execution_rules_input_source_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_execution_rules_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_rules_run_failure_ts["run-failure.ts"] {
   <<module>>
 }
@@ -104,6 +108,9 @@ N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_types_ts : 
 - `capabilities` → `member-run.ts`：导入。
 - `capabilities` → `types.ts`：导入。
 - `capabilities` → `engine-tools.ts`：导入。
+- `engine-adapter.ts` → `types.ts`：导入。
+- `engine-adapter.ts` → `engine-tools.ts`：导入。
+- `engine-adapter.ts` → `engine-runtime.ts`：导入。
 - `engine-instructions.ts` → `types.ts`：导入。
 - `engine-instructions.ts` → `engine-tools.ts`：导入。
 - `engine-session.ts` → `types.ts`：导入。
@@ -136,6 +143,17 @@ classDiagram
 class N_src_logic_execution_rules_conversation_binding_ts["conversation-binding.ts"] {
   <<module>>
   +checkedConversationAgentBinding()
+}
+```
+
+
+### engine-adapter.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_engine_adapter_ts["engine-adapter.ts"] {
+  <<module>>
+  +checkedEngineAdapter()
 }
 ```
 
@@ -676,3 +694,7 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 ## 指定话题补充与排空
 
 `UserContinuationSource.interruptionId` 只由可信话题接续生成，必须等于 continuationId/waitId；普通聊天不能提交此来源。它表示已有用户补充在整话题排空后受理，允许引用完整 cancelled 主轮；不放宽未知工具、损坏日志、原生身份或其它系统回注的 completed 要求。
+
+### 官方包运行协议 V1
+
+engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。

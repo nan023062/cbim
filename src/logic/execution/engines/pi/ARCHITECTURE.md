@@ -12,6 +12,7 @@ Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取�
 | --- | --- |
 | [bridge.ts](bridge.ts) | 内部工具的本机临时桥及 Pi 扩展，授权先落盘；目标返工使用独立 custom 消息，不冒充用户输入。 |
 | [engine.ts](engine.ts) | Pi 引擎适配器，负责隔离配置、原生会话校验及事件转换；成员回传、人工决定和目标返工均走可信系统输入。 |
+| [package.ts](package.ts) | Pi 官方包的统一工厂入口，拥有 SDK 版本和进程准备策略。 |
 | [request-budget-bootstrap.ts](request-budget-bootstrap.ts) | 生成早于 Pi 及其 undici 初始化执行的请求转发入口。 |
 | [rpc.ts](rpc.ts) | 大脑 执行层：PiRpc：JSONL 拆包、命令关联、超时与进程结束处理。 |
 | [runtime-config.ts](runtime-config.ts) | 将模型容量和工作预算转换为 Pi 原生运行设置，供每轮隔离进程使用。 |
@@ -108,6 +109,16 @@ N_src_logic_execution_engines_pi_engine_ts_external_AgentEngine <|.. N_src_logic
 
 直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../../rules/types.ts](../../rules/types.ts)、[rpc.ts](rpc.ts)、[bridge.ts](bridge.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../rules/model-errors.ts](../../rules/model-errors.ts)、[runtime-config.ts](runtime-config.ts)、[../../../tools/rules/native-tools.ts](../../../tools/rules/native-tools.ts)、[../../../../core/errors.ts](../../../../core/errors.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[request-budget-bootstrap.ts](request-budget-bootstrap.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
+### package.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_pi_package_ts["package.ts"] {
+  <<module>>
+}
+```
+直接依赖：[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+
 ### request-budget-bootstrap.ts
 
 ```mermaid
@@ -126,13 +137,6 @@ classDiagram
 class N_src_logic_execution_engines_pi_rpc_ts["rpc.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_pi_rpc_ts_PiCommand["PiCommand"] {
-  <<interface>>
-  +command
-  +args
-  +env
-}
-N_src_logic_execution_engines_pi_rpc_ts ..> N_src_logic_execution_engines_pi_rpc_ts_PiCommand : 声明
 class N_src_logic_execution_engines_pi_rpc_ts_PiRpc["PiRpc"] {
   +start()
   +request()
@@ -151,7 +155,7 @@ class N_src_logic_execution_engines_pi_rpc_ts_PiRpc["PiRpc"] {
 N_src_logic_execution_engines_pi_rpc_ts ..> N_src_logic_execution_engines_pi_rpc_ts_PiRpc : 声明
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### runtime-config.ts
 
@@ -189,6 +193,17 @@ N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_bridge_ts : 导入依赖
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_runtime_config_ts : 导入依赖
 N_src_logic_execution_engines_pi_engine_ts ..> N_src_logic_execution_engines_pi_request_budget_bootstrap_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_pi_package_ts["package.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_engines_pi_engine_ts["engine.ts"] {
+  <<module>>
+}
+N_src_logic_execution_engines_pi_package_ts ..> N_src_logic_execution_engines_pi_engine_ts : 导入依赖
 ```
 
 
@@ -358,3 +373,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ### RPC 请求关联边界
 
 PendingRequests 只持有 ID 对应回调和时限。Pi 超时取出单项并拒绝，进程可继续；Codex 超时仍 fail 全部请求并终止进程。坏协议、错误脱敏、发送异常及 close 等待进程/通知排空仍由适配器管理。未知或重复回包仍忽略，收到回包先移除后结算，不自动重送。
+
+### 包工厂
+
+package.ts 导出协议 1 的 Pi 工厂和适配器版本；它保留 SDK 1.5.0 校验、受管入口与开发依赖解析。进程 override 仅是可信测试/开发端口，存在受管包时仍先校验版本。PiCommand 兼容类型来自公共 EngineProcess。

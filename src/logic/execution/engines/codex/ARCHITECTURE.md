@@ -13,6 +13,7 @@ Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses �
 | [binary.ts](binary.ts) | 解析 CBIM 随包的固定 Codex 原生 App Server，不启动用户 PATH 中的客户端。 |
 | [engine.ts](engine.ts) | 通过 Codex App Server 管理进程、线程、轮次和动态工具；目标返工明确为系统反馈，不携带用户图片或新授权。 |
 | [model-proxy.ts](model-proxy.ts) | 将 Codex 的 Responses 请求约束为本轮冻结模型、输出上限和已注册工具目录。 |
+| [package.ts](package.ts) | Codex 官方包的版本化工厂入口。 |
 | [rpc.ts](rpc.ts) | Codex App Server 的双向 JSONL 通信，分别关联宿主请求、原生请求和通知。 |
 | [session.ts](session.ts) | 核实 Codex 实际 rollout 的路径、原生身份、工作区与持久化动态工具目录。 |
 | [tools.ts](tools.ts) | 把 Codex dynamic tool 请求路由到 CBIM 知识/执行工具及已有宿主文件操作。 |
@@ -125,6 +126,16 @@ class N_src_logic_execution_engines_codex_model_proxy_ts["model-proxy.ts"] {
 ```
 
 直接依赖：[../../../models/index.ts](../../../models/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[../transport/request-budget-usage.ts](../transport/request-budget-usage.ts)、[tools.ts](tools.ts)。
+
+### package.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_codex_package_ts["package.ts"] {
+  <<module>>
+}
+```
+直接依赖：[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### rpc.ts
 
@@ -250,8 +261,12 @@ class N_src_logic_execution_engines_codex_model_proxy_ts["model-proxy.ts"] {
 class N_src_logic_execution_engines_codex_tools_ts["tools.ts"] {
   <<module>>
 }
+class N_src_logic_execution_engines_codex_package_ts["package.ts"] {
+  <<module>>
+}
 N_src_logic_execution_engines_codex_engine_ts ..> N_src_logic_execution_engines_codex_session_ts : 导入依赖
 N_src_logic_execution_engines_codex_model_proxy_ts ..> N_src_logic_execution_engines_codex_tools_ts : 导入依赖
+N_src_logic_execution_engines_codex_package_ts ..> N_src_logic_execution_engines_codex_engine_ts : 导入依赖
 ```
 
 
@@ -324,3 +339,7 @@ thread/start 回执可能先给出 ID/路径，再延迟写入原生文件。正
 ### RPC 请求关联边界
 
 PendingRequests 只持有 ID 对应回调和时限。Pi 超时取出单项并拒绝，进程可继续；Codex 超时仍 fail 全部请求并终止进程。坏协议、错误脱敏、发送异常及 close 等待进程/通知排空仍由适配器管理。未知或重复回包仍忽略，收到回包先移除后结算，不自动重送。
+
+### 包工厂
+
+package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；App Server、模型代理、工具调用和实际 Pi 工具依赖仍由现有适配器封装，构造工厂不启动进程。

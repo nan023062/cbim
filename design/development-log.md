@@ -1,3 +1,10 @@
+## 2026-11-14：切片 3a——统一引擎包工厂与独立构建
+
+- 基线 8c302ecf；按用户授权继续运行协议切片。新增 engine-adapter.ts 版本 1 契约，三引擎各自 package.ts 拥有工厂和适配器版本。loop-engine 不直接选择具体构造器，Pi 启动脚本/SDK 校验移入 Pi 包；保留受管版本、开发 override、工具权限、取消与历史规则。主/成员装配传播可选预算角色，primary 缺省不变。
+- build-engine-adapters.mjs 按开发者入口单独生成 adapter.cjs/adapter.json；集成测试真实构建并加载三份产物，构造和关闭不发模型请求。动态构建产物加载登记为源码边，不使用外部豁免隐藏依赖。此步仍保留源码/旧宿主兼容表；生产归档、签名包加载和通用冷壳在后续切片接通。
+- 按工厂和生命周期受影响路径执行 pnpm exec vitest run tests/engine-adapter-package.test.ts tests/loop-engine.test.ts tests/claude-engine.test.ts tests/codex-engine.test.ts tests/engine-inactivity.test.ts tests/engine-runtime-binding.test.ts --reporter=dot：6 文件 30/30；pnpm exec vitest run tests/application-member-pi.test.ts tests/dependencies.test.ts --reporter=dot：170/170，包括真实 Pi 子进程和确定性本地供应商的审批、结果候选、收件回收与重开。无外部模型请求。
+- pnpm typecheck、pnpm check:test-modules（501 文件，151/155/195）、pnpm check:architecture（1538 文件，7438 依赖，无环/无违规）及 diff 检查通过。同步 execution 的 rules/assembly/engines 各相关目录、Application 装配注释及契约类图。未跑全仓、公开 CI、完整桌面安装/升级；继续生产包与生命周期迁移。
+
 ## 2026-11-14：切片 2c——生成/向量逐角色预算
 
 - 基线 59366dc7。预算角色从完整冻结执行快照派生；primary 保留旧形状，额外角色同时保存角色配置 hash 与完整绑定 hash，成员 Store 审计逐字段核容量、身份、价格。向量只有输入容量、维度与输入价格，不假造输出上限；请求 maxOutputTokens=0 仅对向量合法。旧生成账本不补字段、不重算历史。

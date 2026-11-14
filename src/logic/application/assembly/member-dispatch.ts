@@ -126,7 +126,7 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
           permission:run.permission,turnTimeoutMs:run.turnTimeoutMs,onEvent:hooks.onEvent,requestApproval:hooks.requestApproval,requestQuestion:hooks.requestQuestion,
         },{
           memberCheckpointAllowance:memberCheckpointLimit-(task.checkpoints?.length??0),
-          requestBudget:()=>requestBudgets.forRun({rootSessionId:run.binding.rootSessionId,taskId:task.taskId,runId:run.binding.runId,scopeId:task.scopeId,kind:'member'},llm),
+          requestBudget:(_context,role)=>requestBudgets.forRun({rootSessionId:run.binding.rootSessionId,taskId:task.taskId,runId:run.binding.runId,scopeId:task.scopeId,kind:'member'},llm,role),
           storage,member:{directory:runsDirectory,prompt:memberExecutionPrompt(run.prepared,task,run.prerequisites,topicContext),workflowContracts:preparedWorkflowContracts(run.prepared)},onEngineReady:hooks.onEngineReady,
           artifacts:{knowledgeRevision:run.prepared.knowledgeRevision,normalizePath:normalizeArtifact,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},captureFiles:(paths,signal)=>runFiles.captureFiles(paths,signal)},
           manifests:{knowledgeRevision:run.prepared.knowledgeRevision,assertCurrentKnowledge:async()=>{workspace.assert();await recheckDispatchExecutionContext(workspace,run.prepared)},capture:(scopes,signal)=>runManifests.capture(scopes,signal)},

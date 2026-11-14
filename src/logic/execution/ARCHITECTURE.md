@@ -32,8 +32,8 @@ class N_src_logic_execution_platform["platform/"] {
 class N_src_logic_execution_ports["ports/"] {
   <<directory>>
 }
-N_src_logic_execution_assembly ..> N_src_logic_execution_context : 导入依赖
 N_src_logic_execution_assembly ..> N_src_logic_execution_engines : 导入依赖
+N_src_logic_execution_assembly ..> N_src_logic_execution_context : 导入依赖
 ```
 
 ```mermaid
@@ -50,9 +50,9 @@ N_src_logic_execution_storage ..> N_src_logic_execution_rules : 导入依赖
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `admission` → `rules`：导入。
-- `assembly` → `context`：导入。
-- `assembly` → `rules`：导入。
 - `assembly` → `engines`：导入。
+- `assembly` → `rules`：导入。
+- `assembly` → `context`：导入。
 - `context` → `rules`：导入。
 - `engines` → `rules`：导入。
 - `rules` → `ports`：导入。

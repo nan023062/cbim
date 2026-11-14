@@ -11,6 +11,7 @@ Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；
 | 文件 | 当前职责 |
 | --- | --- |
 | [engine.ts](engine.ts) | Claude Code 的 AgentEngine 适配器，管理 SDK 与原生会话；目标返工沿合成系统资料输入，不带入新授权。 |
+| [package.ts](package.ts) | Claude Code 官方包的版本化工厂入口。 |
 | [sdk.ts](sdk.ts) | 从 CBIM 自带资源或开发依赖加载固定版本的 Claude Agent SDK。 |
 | [tools.ts](tools.ts) | Claude 原生工具和内部 SDK 工具适配为 CBIM 授权与回执协议。 |
 
@@ -99,6 +100,16 @@ N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine <|.. N_src_l
 
 直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../run-inactivity.ts](../run-inactivity.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../transport/request-budget-transport.ts](../transport/request-budget-transport.ts)、[sdk.ts](sdk.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[tools.ts](tools.ts)。
 
+### package.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_engines_claude_package_ts["package.ts"] {
+  <<module>>
+}
+```
+直接依赖：[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+
 ### sdk.ts
 
 ```mermaid
@@ -138,8 +149,12 @@ class N_src_logic_execution_engines_claude_sdk_ts["sdk.ts"] {
 class N_src_logic_execution_engines_claude_tools_ts["tools.ts"] {
   <<module>>
 }
+class N_src_logic_execution_engines_claude_package_ts["package.ts"] {
+  <<module>>
+}
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_sdk_ts : 导入依赖
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_tools_ts : 导入依赖
+N_src_logic_execution_engines_claude_package_ts ..> N_src_logic_execution_engines_claude_engine_ts : 导入依赖
 ```
 
 
@@ -185,3 +200,7 @@ SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保�
 ### 凭据文本替换
 
 精确字符串替换使用后端 utility 的 redactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
+
+### 包工厂
+
+package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；SDK 仍由 sdk.ts 按原受管入口与版本校验，工厂不加载 SDK 或发起模型请求。

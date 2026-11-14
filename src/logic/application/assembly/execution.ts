@@ -65,7 +65,7 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
-    requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
+    requestBudget:requestBudgets?({task,runId},role)=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm,role):undefined,
     conversationBinding,
     repositoryTools,
     // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。

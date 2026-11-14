@@ -5,11 +5,14 @@ import path from 'node:path';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {spawn, execFileSync} from 'node:child_process';
+import {spawn, execFile, execFileSync} from 'node:child_process';
+import {promisify} from 'node:util';
+import {fileURLToPath} from 'node:url';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceRetentionChecks} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
+import {DesktopAcceptanceProcess, ownLaunchedDesktop} from './desktop-acceptance-process.mjs';
 import {parse} from 'yaml';
 
 assert.equal(process.platform, 'win32');
@@ -69,7 +72,18 @@ async function recordInstallerCache(stage) {
   const result = {configuredDirectory: config.updaterCacheDirName, entries};
   await save(`installer-cache-${stage}`, result); return result;
 }
-let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [];
+let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [], checkRetries = [], processLifecycle = [];
+// 仅观察已核实安装路径的 PID。已退出返回成功；不按进程名关闭或终止其它进程。
+async function waitForDesktopExit(pid, {signal, timeoutMs}) {
+  const script = fileURLToPath(new URL('./desktop-acceptance-process.ps1', import.meta.url));
+  await promisify(execFile)('pwsh.exe', ['-NoProfile','-NonInteractive','-File',script,
+    '-TargetProcessId',String(pid),'-ExpectedPath',exe,'-TimeoutMilliseconds',String(timeoutMs)],
+    {windowsHide: true, signal, timeout: timeoutMs + 5000});
+}
+function ownProcess(pid, transport) {
+  return new DesktopAcceptanceProcess({pid, transport, waitForExit: waitForDesktopExit,
+    record: event => processLifecycle.push(event)});
+}
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -81,17 +95,33 @@ const server = http.createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const status = page => page.evaluate(() => window.cbim.call('desktop.updates.status'));
 async function launch(profile = userRoot) {
-  app = await electron.launch({executablePath: exe, env: {...env, CBIM_USER_DATA_ROOT: profile}, timeout: 60000});
+  assert.ok(!app, 'Previous desktop connection must be released before launch');
+  const launched = await electron.launch({executablePath: exe, env: {...env, CBIM_USER_DATA_ROOT: profile}, timeout: 60000});
+  try {
+    app = await ownLaunchedDesktop(launched, {executablePath: exe, waitForExit: waitForDesktopExit,
+      record: event => processLifecycle.push(event)});
+  } catch(error) { await launched.close().catch(()=>{}); throw error; }
   if (mode === 'online' && previousUpdateFlow === 'prefetch') await observeUpdaterNetwork(app);
   const page = await app.firstWindow(); page.setDefaultTimeout(30000); page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', {name: '用户菜单', exact: true}).waitFor(); return page;
 }
-async function close() { await app?.close(); app = undefined; }
+async function close() {
+  const current = app;
+  try { await current?.close(); } finally { app = undefined; }
+}
+async function exitAfter(action, reason) {
+  const current = app;
+  try { return await current.exitAfter(action, reason); } finally { app = undefined; }
+}
 async function waitPhase(page, phase, interval = 1000) {
   const deadline = Date.now() + 300_000;
   while (Date.now() < deadline) {
-    const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase});
-    if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(interval);
+    const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase,...(value.error?{error:value.error}:{})});
+    if (value.error) {
+      if(!acceptanceCanAwaitCheckRetry(value,phase))throw Error(value.error);
+      if(checkRetries.at(-1)?.checkedAt!==value.checkedAt){checkRetries.push({version:value.currentVersion,phase:value.phase,checkedAt:value.checkedAt,error:value.error});await save('automatic-check-retries',checkRetries)}
+    } else if (value.phase === phase) return value;
+    await pause(interval);
   } throw Error(`Update timeout: ${phase}`);
 }
 // R 与 C 都由真实 UI 重启；只定位本验收安装路径的新主进程。
@@ -109,12 +139,19 @@ async function findRestart(oldPid, requireUpdated, evidenceName) {
 async function observeRestart(oldPid, requireUpdated, evidenceName) {
   const restarted=await findRestart(oldPid,requireUpdated,evidenceName),quoted=exe.replaceAll("'","''");
   await pause(15000);
-  ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
+  assert.ok(!app);
+  app=ownProcess(restarted.ProcessId, {
+    evaluate(){throw Error('Native installation restart has no debugger')},
+    firstWindow(){throw Error('Native installation restart has no debugger')},
+    quit:async()=>{ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }`)},
+    disconnect:async()=>{},
+  });
+  await close();
   return restarted;
 }
 // 原生资源重启后直接接回同一进程：先接主进程网络观测，再接页面，避免下载发生在无人观测的交接窗口。
 async function attachResourceRestart(restarted) {
-  let inspector,browserEndpoint;const deadline=Date.now()+60000;
+  let inspector,browser,browserEndpoint;const deadline=Date.now()+60000;
   try {
     while(Date.now()<deadline&&(!inspector||!browserEndpoint)){
       const ports=JSON.parse(ps(`@(Get-NetTCPConnection -OwningProcess ${restarted.ProcessId} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort -Unique) | ConvertTo-Json -Compress`)||'[]');
@@ -137,21 +174,25 @@ async function attachResourceRestart(restarted) {
       if(!inspector||!browserEndpoint)await pause(100);
     }
     assert.ok(inspector&&browserEndpoint,'Restarted desktop debug endpoints not available');
-    const browser=await chromium.connectOverCDP(browserEndpoint);
-    app={
+    browser=await chromium.connectOverCDP(browserEndpoint);
+    app=ownProcess(restarted.ProcessId, {
       evaluate:fn=>inspector.evaluate(`(${fn.toString()})(require('electron'))`),
-      process:()=>({pid:restarted.ProcessId}),
-      async close(){
-        // 使用与 ElectronApplication.close 相同的正常退出入口；先释放调试连接，避免 Node 等待调试器断开。
+      async firstWindow(){const context=browser.contexts()[0];return context.pages()[0]??await context.waitForEvent('page')},
+      async quit(){
+        // 使用与 ElectronApplication.close 相同的正常退出入口，由所有者统一释放连接和等待退出。
         await inspector.evaluate("((app)=>{setImmediate(()=>app.quit())})(require('electron').app);undefined");
-        inspector.close();await browser.close();
-        ps(`$p=Get-Process -Id ${restarted.ProcessId} -ErrorAction SilentlyContinue; if ($p -and -not $p.WaitForExit(30000)) { throw 'Attached desktop normal close timed out' }`);
       },
-    };
-    const context=browser.contexts()[0],page=context.pages()[0]??await context.waitForEvent('page');
+      async disconnect(){ try { await inspector.close(); } finally { await browser.close(); } },
+    });
+    const page=await app.firstWindow();
     page.setDefaultTimeout(30000);page.on('pageerror',error=>errors.push(error.message));
     await page.getByRole('button',{name:'用户菜单',exact:true}).waitFor();return page;
-  }catch(error){inspector?.close();throw error}
+  }catch(error){
+    // 连接只完成一半时也必须释放两端；清理异常不能掩盖最初失败。
+    if(app?.pid===restarted.ProcessId)await close().catch(()=>{});
+    else await Promise.allSettled([Promise.resolve().then(()=>inspector?.close()),Promise.resolve().then(()=>browser?.close())]);
+    throw error;
+  }
 }
 async function prepareColdUpgrade(page) {
   let ready = await waitPhase(page, 'ready');
@@ -163,9 +204,8 @@ async function prepareColdUpgrade(page) {
     // 准备资源不会激活；普通退出后仍是原 R，再显式点击旧版侧栏的就绪入口。
     await close(); page = await launch(); assert.equal((await status(page)).currentResourceVersion, ready.currentResourceVersion);
     const again = await waitPhase(page,'ready'); assert.deepEqual(acceptanceReadyTarget(again,previousVersion,version),target);
-    const oldPid = app.process().pid, closed = app.waitForEvent('close',{timeout:60000});
     await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
-    await page.getByRole('button',{name:'版本与更新',exact:true}).click(); await closed; app=undefined;
+    const oldPid = await exitAfter(()=>page.getByRole('button',{name:'版本与更新',exact:true}).click(), 'resource-restart');
     const restarted = await findRestart(oldPid,false,'resource-prelude-restart');
     page=await attachResourceRestart(restarted); const activated=await status(page);
     assert.equal(activated.currentVersion,previousVersion); assert.equal(activated.currentResourceVersion,target.resourceVersion);
@@ -229,8 +269,10 @@ async function verifyFreshEngine(page, profileRoot) {
   const result={engine:'pi',version:descriptor.version,packageSha256:descriptor.package.sha256,filesVerified:descriptor.package.files.length,modelRequests:requests-before,taskId:run.taskId,runId:run.runId};
   await save('fresh-engine',result);return result;
 }
+let acceptanceError;
 try {
-  if (mode === 'candidate') {
+  // 公开复验也先做独立全新安装，复用同一冻结制品；不为重验创建草稿或替换公开附件。
+  {
     await setup(candidate, version);
     const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
     assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
@@ -279,7 +321,7 @@ try {
   const marker = `from-${previousVersion}-to-${version}`;
   await page.evaluate(marker => localStorage.setItem('cbim.release-retention', marker), marker);
   await fs.writeFile(path.join(userRoot, 'acceptance-marker.txt'), marker);
-  let restarted;
+  let restarted,installingPid;
   if (mode === 'candidate') { await close(); await setup(candidate, version); }
   else {
     const cache = path.join(process.env.LOCALAPPDATA, previousCache.configuredDirectory, 'pending', path.basename(candidate));
@@ -317,8 +359,10 @@ try {
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
-      await page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click();
-      await waitPhase(page, 'installing', 100);
+      // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
+      // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
+      installingPid=await exitAfter(()=>page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
+      await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
     } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
     const download = async () => {
@@ -342,10 +386,12 @@ try {
     await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
     await download();
     assert.equal(await sha(cache), expected);
-    if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
+    installingPid=await exitAfter(async()=>{
+      if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
+    }, 'legacy-installer-restart');
     }
-    const previousPid=app.process().pid; app = undefined;
-    restarted = await observeRestart(previousPid,true,'online-restart');
+    // Playwright 在进程关闭后释放底层对象；使用点击前记录的原生 PID，不再访问已销毁连接。
+    restarted = await observeRestart(installingPid,true,'online-restart');
   }
   page = await launch();
   const native = await app.evaluate(({app}) => ({version: app.getVersion(), packaged: app.isPackaged, exe: app.getPath('exe'), userData: app.getPath('userData')}));
@@ -374,11 +420,21 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: true, freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
+  acceptanceError=error;
   let updateState;
-  if (app) { try { const page = await app.firstWindow(); updateState = await status(page); await page.screenshot({path: path.join(root, 'failure.png')}); } catch { /* 保留原失败，诊断不能替代业务结果。 */ } }
+  if (app) { try { const page = await app.firstWindow(); updateState = await status(page); await page.screenshot({path: path.join(root, 'failure.png')}); } catch { /* 保留原失败，诊断不能替代业务结果。 */ }
+    try{await save('failure-network',await readUpdaterNetwork(app))}catch{ /* 旧交互和未接入阶段可能没有网络记录。 */ }
+  }
   await save('failure', {error: String(error), stack: error.stack, phases, requests, pageErrors: errors, updateState}); throw error;
 }
-finally { await close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+finally {
+  try { await close(); }
+  catch(error){ await save('cleanup-failure',{error:String(error)}); if(!acceptanceError)throw error; }
+  finally {
+    server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
+    await save('process-lifecycle',processLifecycle);
+  }
+}

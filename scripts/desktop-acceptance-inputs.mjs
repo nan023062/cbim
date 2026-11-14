@@ -24,6 +24,13 @@ export function acceptanceTransferExpectation(env, {mode, previousUpdateFlow}) {
   return value;
 }
 
+// 已核实 0.1.15 会每分钟自动重试检查；只允许观察这一明确状态，不把下载、校验或安装失败当作成功。
+export function acceptanceCanAwaitCheckRetry(status, requestedPhase) {
+  return status.currentVersion==='0.1.15' && status.enabled===true
+    && ['ready','available','current'].includes(requestedPhase) && ['idle','available'].includes(status.phase)
+    && status.error==='暂时无法检查更新，将在下一分钟自动重试，也可手动检查。';
+}
+
 // 0.1.15 的真实 R1 客户端优先发现已公开 R4；只接受核实过的中间跳转，不把资源就绪当成安装器就绪。
 export function acceptanceReadyTarget(status, previousVersion, version) {
   assert.equal(status.currentVersion, previousVersion); assert.equal(status.phase, 'ready'); assert.ok(!status.error);

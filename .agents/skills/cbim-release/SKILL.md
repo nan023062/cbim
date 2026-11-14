@@ -94,3 +94,9 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 ## 0.1.17 官方引擎包候选验收
 
 验收器已支持实际公开的 previous_version=0.1.16；核对该标签与当前源的更新交互无改动，继续使用原预下载/显式安装流程。目标冷壳的带 adapter 声明 E 使用跨 C 的 engines/packages 缓存，验收从签名初始清单确定路径并逐文件核对；旧无 adapter 格式仍核对原 C 缓存。不手工填充缓存、不跳过真实下载、不把候选覆盖安装报告成公开通道升级。是否通过以本次 runner 回执为准。
+
+## 验收工具修复与全量调度
+
+发布工具修复阶段使用草稿 PR：先完成进程生命周期、真实调试连接、输入及网络统计的定向检查，再独立派发 desktop-acceptance。草稿的 deferred 提示不等于正式验证通过；修复稳定后标记 Ready for review，运行最终 head/base 的完整四片。手动 full 保持可用，诊断与正式全量不互相取消。通过后的证据优先回填 PR，不为记录最终 SHA 再次触发产品全量。具体行为见 [CI 验证范围](../../../design/task/ci-validation.md)。
+
+验收进程由 DesktopAcceptanceProcess 统一持有 PID 和连接；退出动作只发送一次，清理等待真实退出，未知结果不自动重放。online 模式先验全新安装，再从真实旧版走公开升级，适用于不修改现有 Release 的完整复验。新增版本、制品替换和公开投放仍需本次任务授权；实现与回归入口见 [发布说明](../../../design/task/desktop-release.md#验收进程与发布复验)。

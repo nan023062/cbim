@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 export async function connectDesktopInspector(url) {
   const address=new URL(url);
   assert.equal(address.protocol,'ws:');assert.equal(address.hostname,'127.0.0.1');
-  const socket=new WebSocket(url), pending=new Map();let next=0;
+  const socket=new WebSocket(url), pending=new Map();let next=0,closing;
+  const disconnected=new Promise(resolve=>socket.addEventListener('close',resolve,{once:true}));
   const fail=error=>{for(const entry of pending.values()){clearTimeout(entry.timer);entry.reject(error)}pending.clear()};
   socket.addEventListener('close',()=>fail(Error('Desktop inspector disconnected')));
   socket.addEventListener('error',()=>fail(Error('Desktop inspector connection error')));
@@ -31,6 +32,16 @@ export async function connectDesktopInspector(url) {
       if(result.exceptionDetails)throw Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);
       return result.result.value;
     },
-    close(){socket.close()},
+    close(){
+      if(closing)return closing;
+      // 立刻拒绝挂起调用；调用方等待实际断开，才可交接原生进程退出。
+      fail(Error('Desktop inspector disconnected'));socket.close();
+      closing=(async()=>{
+        let timer;
+        try{await Promise.race([disconnected,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Desktop inspector disconnect timeout')),5000)})])}
+        finally{clearTimeout(timer)}
+      })();
+      return closing;
+    },
   };
 }

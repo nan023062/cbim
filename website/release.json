@@ -1,14 +1,11 @@
 {
-  "version": "0.1.15",
-  "tag": "desktop-v0.1.15",
-  "publishedAt": "2026-11-12T12:30:19Z",
+  "version": "0.1.16",
+  "tag": "desktop-v0.1.16",
+  "publishedAt": "2026-11-14T03:06:33Z",
   "repository": "nan023062/cbim",
-  "filename": "CBIM-Setup-0.1.15-x64.exe",
-  "bytes": 111828931,
-  "sha256": "b9a8ecbf29e2a285f2dd963fad5379f306f7c4fba9e11bc35ff9eeefee019a69",
+  "filename": "CBIM-Setup-0.1.16-x64.exe",
+  "bytes": 111930139,
+  "sha256": "4ca66fdb13118b67c6e2f08891b9204fc854dc6dabfb2609c09fa182b670ef39",
   "signed": false,
-  "resourceVersion": 4,
-  "resourcePublishedAt": "2026-11-13T07:57:21Z",
-  "resourceReleaseDate": "2026-11-13",
-  "resourceReleaseUrl": "https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.15"
+  "resourceVersion": 1
 }

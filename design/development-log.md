@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 视图按钮并入内容标题行
+
+用户补充要求删除交互区顶部独占的空白栏，将按钮移入对话区域右上角。基于 0c8f88b5，InteractionModeToggle 现在只渲染一个按钮，Conversation 按当前可见模式装配到主对话、办公室或成员审阅的现有标题行；失效成员身份的占位区域也保留切换入口。SessionTaskView/MemberConversation 仅接收导航插槽，模式仍由 Conversation 拥有；原面板持续挂载，草稿、附件和滚动未迁移。
+
+验证只选择受影响的按钮、办公室及成员审阅：`pnpm exec vitest run tests/interaction-mode-toggle.test.ts tests/session-task-view.test.ts tests/team-conversation-view.test.ts --reporter=dot`：3 文件 7 项通过。`node scripts/interaction-area-smoke.mjs`：10 组隔离 Electron 界面验收通过，新增无独立工具栏、紧凑标题行和三种视图仅一个切换入口的布局断言，覆盖 1440/320px、双主题、频道与主聊天独立草稿/附件/滚动。截图已人工核对，证据 `test-results/office-desktop-sk0x9U/report.json`；使用原 IPC 替身，未调用模型或用户工作区。`pnpm typecheck`、`pnpm check:architecture` 通过。相关 conversation/tasks 源码注释、CONTRACT 与 ARCHITECTURE 同步。完整 CI 随推送重新执行，上一提交的成功不代表本次结果；未打包、安装、合并或发布。
+
 ## 2026-11-15 PR #83 源目录写法兼容复查
 
 等待完整 CI 时复查既有 sources 规则与编辑器，新增回归复现 src/、./src、src/./ 被新读取接口误拒绝。现在先精确匹配已声明来源，再消除源目录中的尾斜杠、./ 与重复分隔符；文件相对路径继续严格校验，声明自身的绝对路径和父级穿越仍拒绝，没有扩大读范围。`pnpm exec vitest run tests/module-source-browser.test.ts --reporter=dot` 最终 11 项通过（新增 4 种合法写法与 1 组拒绝断言）。只改工作区读服务内部，已同步注释、CONTRACT 与 ARCHITECTURE；PR 更新后由最终提交重新执行完整 CI，先前 CI 不作为最终结果。

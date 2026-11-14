@@ -1,9 +1,9 @@
 /**
  * 作用定位：主会话办公室与按需任务详情的自适应布局。
- * 设计原因：办公室与详情各自保持可读宽度；历史折叠不删除任务事实。检查点不显示完成动画，详情在窄视口下移。
+ * 设计原因：办公室标题与导航共用一行，窄屏为标题换行保留按钮位置；办公室与详情各自保持可读宽度；历史折叠不删除任务事实。检查点不显示完成动画，详情在窄视口下移。
  */
 .session-task-view.graph-mode{max-width:none;width:100%;padding:18px;min-width:0;margin:0;container-type:inline-size}
-.session-task-view.graph-mode>header{margin-bottom:14px;align-items:flex-start}
+.session-task-view.graph-mode>header{display:grid;grid-template-columns:minmax(0,1fr) auto;margin-bottom:14px;align-items:start}
 .session-task-view.graph-mode h2{font-size:17px;margin-bottom:6px}
 .task-view-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex-shrink:0}
 .task-view-actions button{font-size:12px;padding:6px 9px}
@@ -31,6 +31,6 @@
 .task-graph-draft{padding:48px 18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
 .task-graph-draft p{font-size:12px;max-width:380px;margin:0 auto 16px}
 @container (max-width:760px){.session-graph-layout.with-detail{grid-template-columns:minmax(0,1fr)}.session-graph-detail{max-height:none}}
-@media(max-width:600px){.session-task-view.graph-mode{padding:12px}.session-task-view.graph-mode>header{flex-wrap:wrap;gap:6px}.task-view-actions{justify-content:flex-start}.session-graph-layout.with-detail{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.session-task-view.graph-mode{padding:12px}.session-task-view.graph-mode>header{gap:6px}.task-view-actions{justify-content:flex-start}.session-graph-layout.with-detail{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.task-state-dot.animated{animation:none}}
 @keyframes task-node-pulse{0%,100%{opacity:.35}50%{opacity:1}}

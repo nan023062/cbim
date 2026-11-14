@@ -1,5 +1,5 @@
 /**
- * 作用定位：以办公室人物/模块工位展示当前主会话，并在选择根或任务后显示对应执行详情。
+ * 作用定位：以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航；选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；默认折叠已完成、已撤销任务，显式展开办公室历史，直接定位历史节点时自动展开。根详情共享目标、审阅与显式补充，历史浏览不改变调度。
  * 职责边界：运行轮次不是派发节点；根审阅中的原任务/新成果只导航本周期真实节点，不新增连线或执行。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态。
  * 文件补偿：当前工作区实例沿真实会话传给成员详情；图身份不签发新的文件操作许可。
@@ -7,7 +7,7 @@
  * 停止入口：使用会话独立的停止在途状态，消息插入或附件准备忙碌时仍可停止。
  */
 import {OfficeScene} from './OfficeScene';
-import {useEffect,useState} from 'react';
+import {useEffect,useState,type ReactNode} from 'react';
 import type {RunSummary,QueuedMessage} from '../../bridge/contracts/execution';
 import type {GraphSnapshot} from '../../bridge/contracts/dispatch';
 import {ToolActivity} from './ToolActivity';
@@ -36,6 +36,8 @@ export function sessionRoot(history:RunSummary[],taskId:string,pending:number,gr
 }
 /** 主会话视图输入；图与日志由外层读取，本组件只过滤展示并转交显式操作。 */
 export interface SessionTaskViewProps {
+  /** 父级提供当前可见视图的切换按钮；缺省时保留独立使用的返回对话入口。 */
+  viewAction?:ReactNode;
   /** 侧栏选中的逻辑 Agent 会话；只突出办公室人物，不借当前任务推断身份。 */
   selectedAgentSessionId?:string;
   workspaceId:string;
@@ -114,7 +116,7 @@ export function SessionTaskView(props:SessionTaskViewProps){
   const error=graph&&!matching?'任务图身份不匹配，请重新同步':graphError;
   const root=taskId?sessionRoot(history,taskId,pending.length,matching,scopeState,props.historyIssueCount):undefined;
   const selectedTask=matching?.tasks.find(task=>task.taskId===selected),rootSelected=Boolean(root&&selected===root.nodeId),hasDetail=rootSelected||Boolean(selectedTask);
-  return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>团队办公室</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · 已读 {history.length} 轮记录{props.historyIssueCount?` · ${props.historyIssueCount} 轮待核实`:''}</p></div><div className="task-view-actions">{onRefreshGraph&&<button onClick={onRefreshGraph} disabled={graphLoading} aria-label="刷新任务图">刷新</button>}<button onClick={onChat}>返回对话</button></div></header>
+  return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>团队办公室</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · 已读 {history.length} 轮记录{props.historyIssueCount?` · ${props.historyIssueCount} 轮待核实`:''}</p></div><div className="task-view-actions">{onRefreshGraph&&<button onClick={onRefreshGraph} disabled={graphLoading} aria-label="刷新任务图">刷新</button>}{props.viewAction??<button onClick={onChat}>返回对话</button>}</div></header>
     {error&&<p role="alert" className="task-graph-error">任务图同步中断：{error}{matching?'。保留上次已确认的图。':''}</p>}
     {graphLoading&&<p role="status" className="task-graph-loading">正在同步任务图…</p>}
     {scopeState&&scopeState.scopes.length>0&&<div className="task-scope-filter"><label>查看话题信息<select aria-label="任务图目标周期" data-testid="task-scope-select" value={scopeState.historyScopeId??''} onChange={event=>scopeState.selectScope(event.target.value||undefined)}><option value="">当前 / 最新目标</option>{[...scopeState.scopes].reverse().map(scope=><option value={scope.scopeId} key={scope.scopeId}>{scope.objective??scope.inputPreview??'旧周期'} · {new Date(scope.createdAt).toLocaleString()}</option>)}</select></label><span data-testid="task-scope-status">{scopeState.selectedGoalView.label}</span><small>已完成、已撤销任务默认折叠；待审阅和待处理任务继续显示。</small></div>}

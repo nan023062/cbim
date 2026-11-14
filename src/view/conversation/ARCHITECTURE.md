@@ -23,7 +23,7 @@
 | [conversation-entries.css](conversation-entries.css) | 历史和侧栏对话条目的共享布局与运行提示。 |
 | [conversation-state.ts](conversation-state.ts) | 把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。 |
 | [conversation-stop.ts](conversation-stop.ts) | 为会话停止操作提供独立于发送/插入锁的在途去重标记。 |
-| [conversation-topics.css](conversation-topics.css) | 话题摘要与阅读区域的响应式排版。 |
+| [conversation-topics.css](conversation-topics.css) | 话题摘要、成员审阅标题与阅读区域的响应式排版。 |
 | [conversation-topics.ts](conversation-topics.ts) | 将主会话公开运行和派发任务投影为话题内容，供群聊导航使用。 |
 | [conversation.css](conversation.css) | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
 | [Conversation.tsx](Conversation.tsx) | 持有主 Agent 多角色草稿版本的会话固定页签入口（对话/办公室），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文；工具证据归办公室与成员工作审阅，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
@@ -33,15 +33,15 @@
 | [ConversationTurn.tsx](ConversationTurn.tsx) | 按真实事件顺序组合一轮主对话的来源、流式文字与内联工具，系统交接不冒充用户或模型调用。 |
 | [inline-conversation.css](inline-conversation.css) | 对应界面的布局与视觉样式。 |
 | [inline-task-state.ts](inline-task-state.ts) | 用原主运行的成功派发回执，将内联工具条目关联到同会话的真实任务节点。 |
-| [InteractionModeToggle.tsx](InteractionModeToggle.tsx) | 交互区右上角的单一视图切换按钮；图标表达当前视图，文字提示目标视图。 |
-| [MemberConversation.tsx](MemberConversation.tsx) | 展示一个长期子 Session 在各话题中的派发、公开输出及工具记录。 |
+| [InteractionModeToggle.tsx](InteractionModeToggle.tsx) | 嵌入当前对话、办公室或成员审阅标题行右侧的单一视图切换按钮；图标表达当前视图，文字提示目标视图。 |
+| [MemberConversation.tsx](MemberConversation.tsx) | 展示一个长期子 Session 在各话题中的派发、公开输出及工具记录，标题行承载父级视图切换。 |
 | [MessageCard.tsx](MessageCard.tsx) | 复用 Cindy ChatBubble 的用户气泡/助手裸正文布局，承载消息时间和复制操作。 |
 | [pasted-images.ts](pasted-images.ts) | 将当前粘贴事件中的图片 File 转为有界上传字节，不读取全局剪贴板。 |
 | [queue-insertion.ts](queue-insertion.ts) | 冻结会话插入动作的主运行身份，共用新草稿入队后插入与已有队列项插入。 |
 | [queue-sync.ts](queue-sync.ts) | 把主进程队列增量合并为稳定的消息数组，供轮询与操作后刷新共同使用。 |
 | [ReadingPane.tsx](ReadingPane.tsx) | 每个聊天/成员审阅窗独立持有滚动位置与跟随末尾状态。 |
 | [SendButton.tsx](SendButton.tsx) | 从 Cindy SendButton 移植发送/停止的固定 28px 按钮和按下动作身份保护。 |
-| [session-tabs.css](session-tabs.css) | 交互区右上角的单按钮两态图标切换与任务记录排版。 |
+| [session-tabs.css](session-tabs.css) | 对话/审阅标题行内的单按钮两态图标切换与任务记录排版。 |
 | [ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx) | 显示主会话中无法读取的历史轮次，并只按后端确认的运行头提供续接记录。 |
 | [topic-interruption-state.ts](topic-interruption-state.ts) | 管理指定话题补充的冻结请求、持久恢复和只读回执查询，独立于聊天草稿及 React。 |
 | [TopicInterruptionForm.tsx](TopicInterruptionForm.tsx) | 当前话题内的显式补充入口，展示冻结原文、全员暂停含义和原请求查询。 |
@@ -1089,7 +1089,7 @@ N_src_view_conversation_useMessageQueue_ts ..> N_src_view_conversation_queue_syn
 
 ### 单按钮切换交互视图
 
-InteractionModeToggle 以当前视图图标及目标视图提示切换；办公室返回成员时称为工作审阅。两块内容保持挂载，草稿、附件、话题及滚动归原会话，切换不触发任务。面板使用独立 region 标签，不再使用双 tab 语义。
+InteractionModeToggle 不创建独立工具栏，由 Conversation 只向当前可见的对话、办公室或成员审阅标题行右侧装配一个按钮；成员身份缺失时仍在占位区域保留切换入口。以当前视图图标及目标视图提示切换；办公室返回成员时称为工作审阅。两块内容保持挂载，草稿、附件、话题及滚动归原会话，切换不触发任务。面板使用独立 region 标签，不再使用双 tab 语义。
 
 ### 办公室成员对话
 

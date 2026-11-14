@@ -1,8 +1,8 @@
 /**
- * 作用定位：展示一个长期子 Session 在各话题中的派发、公开输出及工具记录。
+ * 作用定位：展示一个长期子 Session 在各话题中的派发、公开输出及工具记录，标题行承载父级视图切换。
  * 设计原因：正文仍使用原 task/run 增量流；只观察每位已访问成员的选中轮次，隐藏后降频并保留正文/阅读位置，防止轮询全部历史。本视图只读；补充需求显式导航所属主频道，绝不挂载隐式转发输入框。
  */
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import type {GraphSnapshot,ScopeSummary} from '../../bridge/contracts/dispatch';
 import {useMemberRun} from '../tasks/useMemberRun';
 import {MemberRunTranscript} from '../tasks/MemberRunTranscript';
@@ -11,8 +11,8 @@ import {ToolTimeline} from '../execution-view/ToolTimeline';
 import {memberConversationTasks,type TeamConversation} from '../execution-view/team-conversations';
 import './conversation-topics.css';
 
-/** 选择仅决定读取哪个原运行；切换时 useMemberRun 丢弃上一身份的迟到响应。 */
-export function MemberConversation({member,graph,scopes,active,onSelectTask,selectedTopicId,onOpenChannel}:{member:TeamConversation;graph?:GraphSnapshot;scopes:readonly ScopeSummary[];active:boolean;onSelectTask:(id:string)=>void;selectedTopicId?:string;onOpenChannel?:(id?:string)=>void}){
+/** 选择仅决定读取哪个原运行；切换时 useMemberRun 丢弃上一身份的迟到响应。viewAction 只承载父级导航，不拥有执行状态。 */
+export function MemberConversation({viewAction,member,graph,scopes,active,onSelectTask,selectedTopicId,onOpenChannel}:{viewAction?:ReactNode;member:TeamConversation;graph?:GraphSnapshot;scopes:readonly ScopeSummary[];active:boolean;onSelectTask:(id:string)=>void;selectedTopicId?:string;onOpenChannel?:(id?:string)=>void}){
   const tasks=memberConversationTasks(member.session,graph),topics=scopes.filter(scope=>tasks.some(task=>task.scopeId===scope.scopeId));
   const [choice,setChoice]=useState<string>(),[taskChoice,setTaskChoice]=useState<string>(),[runChoice,setRunChoice]=useState<string>();
   const selected=topics.find(scope=>scope.scopeId===(choice??selectedTopicId))??topics.find(scope=>scope.status!=='closed')??topics.at(-1);
@@ -24,7 +24,7 @@ export function MemberConversation({member,graph,scopes,active,onSelectTask,sele
   const runId=task?.runIds.includes(runChoice??'')?runChoice:task?.runIds.at(-1);
   const {run,loading,error,refresh}=useMemberRun(member.session.workspaceId,member.session.rootSessionId,task?.taskId??'',runId,!!task&&visited.current,active);
   return <section className="member-conversation" aria-label={member.name+' 的工作审阅'}>
-    <header><h3>{member.name}</h3><p>只读工作审阅 · 按所属频道查看任务、工具与公开执行记录。</p>{onOpenChannel&&<button onClick={()=>onOpenChannel(selected?.scopeId)}>返回所属主频道补充需求</button>}</header>
+    <header><div className="member-conversation-heading"><h3>{member.name}</h3>{viewAction}</div><p>只读工作审阅 · 按所属频道查看任务、工具与公开执行记录。</p>{onOpenChannel&&<button onClick={()=>onOpenChannel(selected?.scopeId)}>返回所属主频道补充需求</button>}</header>
     {!!topics.length&&<label>话题<select value={selected?.scopeId??''} onChange={event=>{setChoice(event.target.value);setTaskChoice(undefined);setRunChoice(undefined)}}>{topics.map(scope=><option key={scope.scopeId} value={scope.scopeId}>{scope.status==='closed'?'历史 · ':''}{scope.objective??scope.inputPreview??scope.scopeId}</option>)}</select></label>}
     {!!selectedTasks.length&&<label>派发任务<select value={task?.taskId??''} onChange={event=>{setTaskChoice(event.target.value);setRunChoice(undefined)}}>{selectedTasks.map(task=><option key={task.taskId} value={task.taskId}>{memberTaskLabel(task)} · {task.goal}</option>)}</select></label>}
     {task?<><article className="member-assignment"><strong>{task.requester.name} → {member.name}</strong><p>{task.goal}</p>{!!task.acceptance.length&&<ul>{task.acceptance.map(item=><li key={item.id}>{item.text}</li>)}</ul>}<small>{memberTaskLabel(task)}</small><button onClick={()=>onSelectTask(task.taskId)}>查看任务详情</button></article>

@@ -89,7 +89,7 @@
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
 | [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
 | [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
-| [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，并在选择根或任务后显示对应执行详情。 |
+| [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航；选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话办公室与按需任务详情的自适应布局。 |
 | [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
 | [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实与影响处置入口，供主对话及任务页使用。 |
@@ -2541,6 +2541,7 @@ class N_src_view_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +viewAction
   +selectedAgentSessionId
   +workspaceId
   +workspaceInstanceId
@@ -2556,7 +2557,6 @@ class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskView
   +onQueueContinue
   +onChat
   +onStop
-  +graph
 }
 N_src_view_tasks_SessionTaskView_tsx ..> N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps : 声明
 ```
@@ -2570,6 +2570,7 @@ class N_src_view_tasks_SessionTaskView_tsx["SessionTaskView.tsx"] {
 }
 class N_src_view_tasks_SessionTaskView_tsx_SessionTaskViewProps["SessionTaskViewProps"] {
   <<interface>>
+  +graph
   +graphLoading
   +graphError
   +onRefreshGraph
@@ -3968,6 +3969,10 @@ N_src_view_tasks_useSessionGraph_ts ..> N_src_view_tasks_scope_state_ts : 导入
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 办公室标题导航
+
+SessionTaskView 的 viewAction 接收父级视图切换按钮，与标题和刷新共行；只做导航组合，不持有对话/办公室模式。未提供插槽的独立消费者保留原返回对话入口。
 
 ### 办公室长期对话联合投影
 

@@ -1,3 +1,25 @@
+## 2026-11-14：发布复盘改进——补齐 Windows 枚举后退出竞态
+
+- PR #76 草稿运行 `43559662100` 仅执行 scope/deferred，正式四片和汇总均跳过。首次隔离升级 `43559662857` 前置 80 项、全新安装及原生 Pi 下载通过，但资源 UI 重启后的原生观察器报 PID identity changed，未计为升级成功；失败和 process-lifecycle 保留在本轮 online-attempt1。
+- 新增真实 Windows 回归：先取得自有 Node 的 Process 对象，握手后退出原进程，再读取 Path，稳定得到空值；同时证明活进程错误路径与超时仍失败。原云端失败没有保存 actualPath，不能把本地复现当成它的字段实测。观察器改为在取路径前后核 HasExited，仍严格拒绝活进程路径不符；不 kill、不重试业务或放宽安装成功条件。
+- `pnpm exec vitest run tests/desktop-acceptance-windows.test.mjs`：1/1；首次本机 PowerShell 5.1 将无 BOM 中文脚本注释按本地编码解析失败，改用 ASCII 注释后通过，原失败报告保留。CI 使用验收相同的 PowerShell 7。模块边界 498 文件、依赖 1516 文件/0 循环/违规通过；前置检查加入该真实竞态套件，安装流程仍需新 runner 验证。
+- 记录顺序移到开发日志顶部，清理新增末尾空行；未改产品、冻结制品及公开通道。本轮打包 EXE 在线 DeepSeek 两话题及上下文隔离、六项执行隔离、官网 14 场景、匿名四附件/官网六文件、公开 E 与冷包核验已通过，证据集中于 test-results/release-tooling-20261114 与 office-online-GmK0CD。
+
+## 2026-11-14：发布复盘改进——草稿暂缓全量与安装前置检查
+
+- 按同一次用户直接授权实施第二片。草稿 PR 仅报告 deferred，正式汇总跳过；转 Ready/reopen/synchronize 重新按当前 head/base 差异选正式检查，取消过时同 PR 运行。手动 full 强制全量，runtime-diagnostic 使用独立并发组，不再互相取消。
+- 安装工作流增加已验证五套进程/协议/输入/网络前置检查及原始报告；前置失败不安装。相同 ref/目标/来源/模式/传输要求才去重，候选和在线等不同场景互不取消。正式全量四片、静态检查、完整发现全集核验和未知路径默认全量均保留。
+- `pnpm exec vitest run tests/ci-validation.test.mjs`：35/35，涵盖 draft→ready、未知路径、实际隔离 Git 差异、手动 full、不接受 deferred 为正式通过，以及 workflow 触发和并发约束。相关依赖/测试边界已随上一片同一工作树检查通过；未改产品源码或类型，不重复产品测试、类型和类图生成。
+- 更新 design/task/ci-validation.md 和 cbim-release 三个同内容入口；准备在真实草稿 PR 核 deferred，再跑隔离线上验收，最后固定提交运行完整发布检查。进度/最终云端证据回填本次 PR，不创建无关 Issue，也不覆盖公开 0.1.16 附件。
+
+## 2026-11-14：发布复盘改进——集中管理验收进程生命周期
+
+- 用户直接授权落实发布复盘并重跑完整发布检查；基线 `b8c2823565a2b72d7748e90b7eb564130d32fc91`。查询 `nan023062/cbim` 开放 Issues，仅 #65，与本次工具优化无关，不扩大范围或创建替代清单。
+- `DesktopAcceptanceProcess` 统一 Playwright 启动、原生资源重连及 NSIS 重启窗口的所有权：接入即冻结 PID；普通退出/UI 交接先观察物理退出，只执行一次动作、释放连接，随后核对实际退出。未知动作失败不重放；重复清理共享原 promise，保留首个失败。主脚本仍负责真实版本、目录和数据保留，连接关闭不是安装成功。
+- inspector.close 现在等待真实断开并拒绝挂起求值；中途接入失败释放 inspector/browser，最终记录 process-lifecycle。公开 online 模式增加独立全新安装及固定 Pi 下载验证，之后用原迁移 profile 完成真实旧版升级；冻结制品和公开附件不变。
+- 按影响选择进程所有者单元、真实 Node/inspector 退出集成、输入和被动网络消费者：`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`：5 文件 80/80。`pnpm check:test-modules`：497 文件；`pnpm check:dependencies`：1515 文件、0 循环/违规；验收入口语法和 diff 空白检查通过。尚未将这些局部结果视为真实 Windows 安装、全量 CI 或发布通过。
+- Review 顺序：进程所有者 → 两种调试适配/原生窗口适配 → 主验收场景 → 单元/集成；说明在 design/task/desktop-release.md。改动属于 scripts/tests 工具边界，未改 src，因此不涉及产品类图/契约。
+
 ## 2026-11-14：0.1.16 官网部署与匿名一致性验收完成
 
 - 官网 PR #74 的轻量 CI `43556785303` 通过，真实 14 场景、0 页面错误；正常合并 `1e5a6d7e7a82ddcfc23d3dbd75f46c0e3095e1c5`，develop 快进同步。Pages `43556983147` 在同一 master 提交部署至既有 `https://nan023062.github.io/cbim/`，未切换平台或账号。
@@ -2236,18 +2258,3 @@ A 已通过准确 head 的四片完整 CI（408 文件，2774 通过、0 失败�
 ## 2026-11-12：A/B 已公开，预下载通过，差分缓存缺陷确认
 
 A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 通过、0 失败、2 个历史 EXE 跳过）和候选安装 43154244827 后公开。严格 A→B 差分测试 43155757174 失败，因 NSIS 写入 cbim-assistant-updater 而应用读取 cbim-desktop-updater，真实传输为完整 391409091 字节。显式全量回退场景 43156807720 补齐预下载、正常退出不安装、有效缓存复用、UI 点击后安装及全部数据保留，differentialDownload=false；1 次模型请求、零页面错误。构建配置已改为复用 NSIS 的 AppInfo 目录规则，原回归先失败后通过，37 项制品测试和依赖检查通过；未公开 0.1.12 修复候选另行验证，不改 A/B 原附件。详见 [B 结果](verification/desktop-release-0.1.11-20261112.md) 与 [缓存调查](verification/desktop-update-cache-diagnosis-20261112.md)。
-## 2026-11-14：发布复盘改进——集中管理验收进程生命周期
-
-- 用户直接授权落实发布复盘并重跑完整发布检查；基线 `b8c2823565a2b72d7748e90b7eb564130d32fc91`。查询 `nan023062/cbim` 开放 Issues，仅 #65，与本次工具优化无关，不扩大范围或创建替代清单。
-- `DesktopAcceptanceProcess` 统一 Playwright 启动、原生资源重连及 NSIS 重启窗口的所有权：接入即冻结 PID；普通退出/UI 交接先观察物理退出，只执行一次动作、释放连接，随后核对实际退出。未知动作失败不重放；重复清理共享原 promise，保留首个失败。主脚本仍负责真实版本、目录和数据保留，连接关闭不是安装成功。
-- inspector.close 现在等待真实断开并拒绝挂起求值；中途接入失败释放 inspector/browser，最终记录 process-lifecycle。公开 online 模式增加独立全新安装及固定 Pi 下载验证，之后用原迁移 profile 完成真实旧版升级；冻结制品和公开附件不变。
-- 按影响选择进程所有者单元、真实 Node/inspector 退出集成、输入和被动网络消费者：`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`：5 文件 80/80。`pnpm check:test-modules`：497 文件；`pnpm check:dependencies`：1515 文件、0 循环/违规；验收入口语法和 diff 空白检查通过。尚未将这些局部结果视为真实 Windows 安装、全量 CI 或发布通过。
-- Review 顺序：进程所有者 → 两种调试适配/原生窗口适配 → 主验收场景 → 单元/集成；说明在 design/task/desktop-release.md。改动属于 scripts/tests 工具边界，未改 src，因此不涉及产品类图/契约。
-
-## 2026-11-14：发布复盘改进——草稿暂缓全量与安装前置检查
-
-- 按同一次用户直接授权实施第二片。草稿 PR 仅报告 deferred，正式汇总跳过；转 Ready/reopen/synchronize 重新按当前 head/base 差异选正式检查，取消过时同 PR 运行。手动 full 强制全量，runtime-diagnostic 使用独立并发组，不再互相取消。
-- 安装工作流增加已验证五套进程/协议/输入/网络前置检查及原始报告；前置失败不安装。相同 ref/目标/来源/模式/传输要求才去重，候选和在线等不同场景互不取消。正式全量四片、静态检查、完整发现全集核验和未知路径默认全量均保留。
-- `pnpm exec vitest run tests/ci-validation.test.mjs`：35/35，涵盖 draft→ready、未知路径、实际隔离 Git 差异、手动 full、不接受 deferred 为正式通过，以及 workflow 触发和并发约束。相关依赖/测试边界已随上一片同一工作树检查通过；未改产品源码或类型，不重复产品测试、类型和类图生成。
-- 更新 design/task/ci-validation.md 和 cbim-release 三个同内容入口；准备在真实草稿 PR 核 deferred，再跑隔离线上验收，最后固定提交运行完整发布检查。进度/最终云端证据回填本次 PR，不创建无关 Issue，也不覆盖公开 0.1.16 附件。
-

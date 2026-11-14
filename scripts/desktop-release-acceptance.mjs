@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFile, execFileSync} from 'node:child_process';
 import {promisify} from 'node:util';
+import {fileURLToPath} from 'node:url';
 import {_electron as electron, chromium} from 'playwright-core';
 import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
@@ -73,9 +74,9 @@ async function recordInstallerCache(stage) {
 let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [], checkRetries = [], processLifecycle = [];
 // 仅观察已核实安装路径的 PID。已退出返回成功；不按进程名关闭或终止其它进程。
 async function waitForDesktopExit(pid, {signal, timeoutMs}) {
-  const quoted = exe.replaceAll("'", "''");
-  const script = `$p=Get-Process -ErrorAction Stop | Where-Object Id -eq ${pid}; if ($p) { if ($p.Path -ne '${quoted}') { throw 'Desktop PID identity changed' }; if (-not $p.WaitForExit(${timeoutMs})) { throw 'Desktop native exit timed out' } }`;
-  await promisify(execFile)('pwsh.exe', ['-NoProfile','-NonInteractive','-Command',script],
+  const script = fileURLToPath(new URL('./desktop-acceptance-process.ps1', import.meta.url));
+  await promisify(execFile)('pwsh.exe', ['-NoProfile','-NonInteractive','-File',script,
+    '-TargetProcessId',String(pid),'-ExpectedPath',exe,'-TimeoutMilliseconds',String(timeoutMs)],
     {windowsHide: true, signal, timeout: timeoutMs + 5000});
 }
 function ownProcess(pid, transport) {

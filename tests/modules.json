@@ -1113,11 +1113,11 @@
       }
     },
     "tooling/desktop-acceptance-process": {
-      "roots": ["scripts/desktop-acceptance-process.mjs"],
+      "roots": ["scripts/desktop-acceptance-process.mjs", "scripts/desktop-acceptance-process.ps1"],
       "tests": {
         "unit": ["tests/desktop-acceptance-process.test.mjs"],
         "contract": [],
-        "integration": ["tests/desktop-acceptance-process-integration.test.mjs"]
+        "integration": ["tests/desktop-acceptance-process-integration.test.mjs", "tests/desktop-acceptance-windows.test.mjs"]
       }
     },
     "tooling/desktop-inspector-connection": {

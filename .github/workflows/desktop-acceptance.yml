@@ -56,7 +56,7 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Check acceptance process lifecycle before installing
-        run: pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs --reporter=default --reporter=json --outputFile=test-results/acceptance-preflight.json
+        run: pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-acceptance-windows.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs --reporter=default --reporter=json --outputFile=test-results/acceptance-preflight.json
       - name: Install and verify the exact release artifact
         env:
           GH_TOKEN: ${{ github.token }}

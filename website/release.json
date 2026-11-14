@@ -7,5 +7,11 @@
   "bytes": 111857839,
   "sha256": "e7a3753a348bc9029c3d71532289c5a25ef31cce4a0596f7a4583715628c6102",
   "signed": false,
-  "resourceVersion": 1
+  "resourceVersion": 2,
+  "resourceTag": "runtime-c0.1.17",
+  "resourcePublishedAt": "2026-11-14T10:10:13Z",
+  "resourceDate": "2026-11-14",
+  "resourceBytes": 4036781,
+  "resourceSha256": "8f57c4534047483698c882d734f6f58592fb8713a62005bab1582c77fee1a180",
+  "resourceManifestDigest": "e986920576edf1dc2842ea3d6d1e4b0b5639b763288a7a2a458089d478389ec8"
 }

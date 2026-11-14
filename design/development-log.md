@@ -1,3 +1,11 @@
+## 2026-11-14：切片 2a——向量模型能力与跨角色原子准备
+
+- 用户明确授权依次实施后续步骤；复核独立工作树 1891ce1a 与开放 Issues（仍只有无关 #65），继续在 refactor/engine-model-catalog 推进，未改原 develop 的发布/官网收尾资料。为使第 2 步可逐段 review，先交付模型操作边界，再接 Agent V2 与预算。
+- 生成配置与向量配置分开：embedding 显式保存端点、输入容量、维度与输入价格，纯向量供应商无需假造生成型号/defaultModel。端点共用同一校验；新增向量凭据目标必须重新输入 Key，旧配置缺省和生成快照不补 embedding。
+- LlmProfiles.withModelOperations 在原 SerialQueue 中一次读取并捕获全部角色；公开 profiles 不解密，按角色索引延迟解密，原回调结束后缓存同样失效。未知操作、缺失/禁用型号不回退，不联网或自动重试。此步未接入向量请求、Agent 多角色 UI 或任务调度。
+- 依据模型配置及原引擎快照消费者选择验证：`pnpm exec vitest run tests/unit/logic/models/model-operations.test.ts tests/llm.test.ts tests/owner-model-configuration.test.ts tests/engine-configuration.test.ts --reporter=default`：4 文件 38/38；补充未知操作断言后仅重跑新套件 4/4。首次类型检查发现异构 profile 容器的联合类型定义不匹配，改为模型模块拥有的 ResolvedModelOperation 契约后通过。
+- 最终 `pnpm typecheck`、`pnpm check:test-modules`（497 文件，148/155/194）、`pnpm check:architecture`（1523 文件、7392 依赖、0 循环/违规）及 diff 空白检查通过。同步 models、models/service 文件头、接口语义、契约和类图；新增 endpoint.ts/embedding.ts 及责任单元登记。未跑全仓 CI、SDK 联网或桌面发布验收，继续实施第 2 步剩余绑定与预算。
+
 ## 2026-11-14：切片 1——引擎与模型解耦、官方静态清单
 
 - 来源为用户明确授权“先做引擎与模型解耦和静态清单”；实施前读取开放 Issues，只有无关 #65，未新建或回填无关工单。本步在独立分支 refactor/engine-model-catalog、基线 74019e20 开发，保留原工作树的 0.1.16 发布收尾资料。[完整目标方案](task/domain-agent-loop-engine-architecture.md) 保留后续切片边界，本次不自动实施其余阶段。

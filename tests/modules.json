@@ -1303,7 +1303,8 @@
       "tests": {
         "unit": [
           "tests/llm.test.ts",
-          "tests/owner-model-configuration.test.ts"
+          "tests/owner-model-configuration.test.ts",
+          "tests/unit/logic/models/model-operations.test.ts"
         ],
         "contract": [],
         "integration": []

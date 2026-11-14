@@ -12,4 +12,7 @@ export {selectProviderConnection} from './provider-connections';
 export type {ProviderConnections,SelectedConnection,ModelConnectionRequirement} from './provider-connections';
 export {providerPresets,identifyProvider} from './provider-presets';
 export type {ProviderPreset} from './provider-presets';
-export type {SecretCipher,ResolvedLlm} from './ports';
+export type {SecretCipher,ResolvedLlm,ResolvedModelOperation} from './ports';
+
+export {embeddingModelSchema,embeddingConnectionSchema,embeddingSnapshotSchema} from './embedding';
+export type {EmbeddingModel,EmbeddingConnection,EmbeddingSnapshot,ResolvedEmbedding} from './embedding';

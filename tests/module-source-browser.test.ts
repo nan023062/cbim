@@ -60,3 +60,13 @@ it('请求严格且无写入选项；源绑定本身必须是目录',async()=>{
  f.snapshot.files[0].text=JSON.stringify({sources:[{location:'src/main.ts'}]});
  await expect(f.service.read({...f.input,source:'src/main.ts'})).rejects.toMatchObject({code:'SOURCE_KIND'});
 });
+
+it.each(['src/','./src','src/./','src//./'])('绑定来源保留既有目录写法 %s，文件相对路径仍严格校验',async source=>{
+ const f=await fixture();f.snapshot.files[0].text=JSON.stringify({sources:[{location:source,scope:'app'}]});
+ expect((await f.service.read({...f.input,source,path:'main.ts'})).kind).toBe('text');
+ await expect(f.service.read({...f.input,source,path:'../main.ts'})).rejects.toMatchObject({code:'SOURCE_PATH'});
+});
+
+it('声明中的绝对路径和父级穿越不能借目录规范化放行',async()=>{
+ const f=await fixture();for(const source of ['/src','../src','src/../src']){f.snapshot.files[0].text=JSON.stringify({sources:[{location:source,scope:'app'}]});await expect(f.service.list({...f.input,source})).rejects.toMatchObject({code:'SOURCE_PATH'})}
+});

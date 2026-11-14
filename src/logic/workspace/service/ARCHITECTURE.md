@@ -317,7 +317,7 @@ N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_pat
 
 ### 模块绑定的只读源浏览
 
-ModuleSourceBrowser 的最小端口为 entry/assert/read。每次读取前后核 workspace/instance/revision，从该快照 module.json 验证 sources，不接任意绝对路径。目录/文件逐级拒绝链接与联接，核实真实路径与读取前后身份；.cbim、.git 和 .cbimignore 命中项不公开。目录每次最多检查 2000 项、返回 200 项，offset 仅为当前枚举位置，变动时刷新；正文最多 256 KiB，非 UTF-8/二进制和大文件返回 unsupported。无写入、执行、授权或来源采纳副作用，预览不是不可变证据。源规则归此服务，Bridge 仅配对严格 IPC，View 仅保存查看状态。
+ModuleSourceBrowser 的最小端口为 entry/assert/read。每次读取前后核 workspace/instance/revision，从该快照 module.json 验证 sources，不接任意绝对路径。精确匹配声明后兼容 source 的尾斜杠、./ 和重复分隔符；绝对/父级路径仍拒绝，文件相对路径不放宽。目录/文件逐级拒绝链接与联接，核实真实路径与读取前后身份；.cbim、.git 和 .cbimignore 命中项不公开。目录每次最多检查 2000 项、返回 200 项，offset 仅为当前枚举位置，变动时刷新；正文最多 256 KiB，非 UTF-8/二进制和大文件返回 unsupported。无写入、执行、授权或来源采纳副作用，预览不是不可变证据。源规则归此服务，Bridge 仅配对严格 IPC，View 仅保存查看状态。
 
 ### 当前工作区生命周期
 

@@ -29,7 +29,10 @@ export class ModuleSourceBrowser {
   let definition:{sources?:{location?:string}[]};try{definition=JSON.parse(snapshot.files.find(file=>file.path===input.moduleId+'/module.json')?.text??'null')}catch{fail('SOURCE_MODULE','模块定义无法读取，请刷新架构')}
   const declared=definition&&Array.isArray(definition.sources)&&definition.sources.some(source=>typeof source?.location==='string'&&source.location.replaceAll('\\','/')===input.source);
   if(!declared)fail('SOURCE_BINDING','模块未绑定此源目录，请刷新架构');
-  const relative=[...segments(input.source),...segments(input.path??'',true)].join('/');
+  // 先精确匹配知识中的声明，再兼容既有目录写法；文件相对路径不接受这些别名或父级穿越。
+  if(input.source.startsWith('/'))fail('SOURCE_PATH','模块源绑定不能是绝对路径');
+  const sourceParts=segments(input.source.split('/').filter(part=>part!==''&&part!=='.').join('/'));
+  const relative=[...sourceParts,...segments(input.path??'',true)].join('/');
   const ignored=ignore({ignorecase:true}).add(snapshot.files.find(file=>file.path==='.cbim/.cbimignore')?.text??'');
   if(protectedPath(relative)||ignored.ignores(relative)||ignored.ignores(relative+'/'))fail('SOURCE_IGNORED','此路径不属于可浏览的业务源码范围');
   const root=await fs.realpath(this.workspace.entry.path);
@@ -41,7 +44,7 @@ export class ModuleSourceBrowser {
    return current;
   };
   const target=await checkPath();
-  if(!(await fs.stat(path.join(root,...segments(input.source)))).isDirectory())fail('SOURCE_KIND','模块源绑定必须是目录');
+  if(!(await fs.stat(path.join(root,...sourceParts))).isDirectory())fail('SOURCE_KIND','模块源绑定必须是目录');
   return {target,relative,ignored,checkPath};
  }
  private check(snapshot:Snapshot,input:SourceTarget){

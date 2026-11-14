@@ -12,7 +12,7 @@
 | --- | --- |
 | [architecture-editor.css](architecture-editor.css) | 架构语义表单与导入/提交预览的共用布局。设计原因：在窄扩展区仍以独立对话框展示明确的变更边界，沿用应用主题与键盘表单。 */ |
 | [ArchitectureEditor.tsx](ArchitectureEditor.tsx) | 团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。 |
-| [GovernanceLaunch.tsx](GovernanceLaunch.tsx) | 业务/团队架构的显式一键治理入口，使用主 Agent 已保存的引擎模型启动真实会话。 |
+| [GovernanceLaunch.tsx](GovernanceLaunch.tsx) | 业务/团队架构的显式治理启动控制器及结果提示。 |
 | [knowledge-file-tree.ts](knowledge-file-tree.ts) | 把快照中真实知识文件投影为相对目录树，供业务与团队界面共用。 |
 | [knowledge-files.css](knowledge-files.css) | 对应界面的布局与视觉样式。 |
 | [knowledge-source.css](knowledge-source.css) | 对应界面的布局与视觉样式。 |
@@ -76,6 +76,8 @@ classDiagram
 class N_src_view_knowledge_GovernanceLaunch_tsx["GovernanceLaunch.tsx"] {
   <<component>>
   +governanceWorkflow()
+  +useGovernanceLaunch()
+  +GovernanceStatus()
   +GovernanceLaunch()
 }
 ```
@@ -166,17 +168,13 @@ class N_src_view_knowledge_KnowledgeFileTree_tsx["KnowledgeFileTree.tsx"] {
   <<component>>
 }
 class N_src_view_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction["KnowledgeTreeAction"] {
-  <<interface>>
-  +id
-  +label
-  +icon
-  +disabled
-  +onSelect()
+  <<type>>
+
 }
 N_src_view_knowledge_KnowledgeFileTree_tsx ..> N_src_view_knowledge_KnowledgeFileTree_tsx_KnowledgeTreeAction : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[knowledge-file-tree.ts](knowledge-file-tree.ts)、[knowledge-files.css](knowledge-files.css)、[../components/TreeActions.tsx](../components/TreeActions.tsx)。
 
 ### KnowledgeSourceDetails.tsx
 
@@ -264,6 +262,10 @@ N_src_view_knowledge_KnowledgeSourceDetails_tsx ..> N_src_view_knowledge_knowled
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 架构根菜单治理
+
+useGovernanceLaunch 持有显式启动门禁；TreeActions 关闭不销毁它。结果独立展示，回执未知不自动重发，切换工作区隔离迟到响应。KnowledgeFileTree 的行菜单复用无业务状态的 TreeActions；团队与业务模块各有专门的语义导航。
 
 ### 单一树根与视图图标
 

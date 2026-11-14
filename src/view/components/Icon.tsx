@@ -1,11 +1,14 @@
 /**
  * 作用定位：无业务状态的 SVG 图标组件。
- * 设计原因：各视图复用一致图标语言；架构图的编辑、删除、传输、展开与字号无需文字占位，权限使用手掌和警告。可访问名称由操作按钮提供。
+ * 设计原因：各视图复用一致图标语言，模块、目录、文件和 Agent 各有明确图标；架构图的编辑、删除、传输、展开与字号无需文字占位，权限使用手掌和警告。可访问名称由操作按钮提供。
  */
 import React from 'react';
 type IconName='hand'|'warning'|'sparkles'|'chat'|'flow'|'team'|'knowledge'|'plus'|'folder'|'clock'|'plug'|'search'|'close'|'chevron'|'menu'|'sun'|'moon'|'arrow'|'check'|'settings';
 export function Icon({name,size=18}:{name:IconName|string;size?:number}){
   const paths:Record<string,React.ReactNode>={
+    module:<><path d="m12 2 9 5v10l-9 5-9-5V7l9-5Zm-9 5 9 5 9-5M12 12v10M7 4.8l9 5"/></>,
+    file:<><path d="M5 2h9l5 5v15H5V2Zm9 0v6h5M8 12h8M8 16h6"/></>,
+    agent:<><circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></>,
     more:<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
     edit:<><path d="m4 15 11-11 5 5L9 20H4v-5ZM13 6l5 5"/></>,
     trash:<><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></>,

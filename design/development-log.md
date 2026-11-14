@@ -1,3 +1,11 @@
+## 2026-11-15 团队组织树精简与配置详情
+
+用户直接授权第 2 步：TeamTree 仅显示团队、小组、自定义 Agent，真实 Skill/agent.json/principles.md 及其他资料继续在详情中预览编辑。根大标题说明删除，一键治理进入根菜单，未知回执门禁和结果留在页面，关闭菜单不重发。TreeActions 复用原菜单的键盘和显式回调行为；配置路径仍由所属节点确定，损坏的 Agent 定义有根详情检查入口。
+
+受影响验证：`pnpm exec vitest run tests/team-model.test.ts tests/knowledge-file-tree.test.ts --reporter=dot` 2 文件 10 通过，覆盖组织模型/继承、根菜单边界、跨工作区隔离与菜单行为；类型检查通过。新增隔离 Electron 冒烟已通过团队树隐藏配置、详情正文和 Skill、根治理未知回执不重发的交互断言；完整截图及模块源码联合验收在下一步记录。完整 CI、安装升级未运行。
+
+同步 team/knowledge/components 的源码头注释、CONTRACT 和 ARCHITECTURE。Review 入口：TeamView → TeamTree/TreeActions；TeamView → KnowledgeFilePreview/ArchitectureEditor 保留原知识事务，组织浏览不修改岗位或执行实例。
+
 ## 2026-11-15 交互区精简：移除依赖图、单按钮切换
 
 用户直接授权的四项界面调整，第 1 步；远端开放 Issue #65 与此范围无关。基于 d1964428，View 层移除 DispatchGraph 与专用布局，办公室、历史折叠、原任务详情和后端调度依赖保留。InteractionModeToggle 用一个按钮呈现当前视图与切换目标；隐藏挂载保持主对话/频道草稿、附件和滚动。

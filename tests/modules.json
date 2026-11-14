@@ -1115,6 +1115,14 @@
         "integration": []
       }
     },
+    "tooling/runtime-acceptance-inputs": {
+      "roots": ["scripts/runtime-acceptance-inputs.mjs"],
+      "tests": {
+        "unit": ["tests/runtime-acceptance-inputs.test.mjs"],
+        "contract": [],
+        "integration": []
+      }
+    },
     "tooling/desktop-acceptance-inputs": {
       "roots": [
         "scripts/desktop-acceptance-inputs.mjs"

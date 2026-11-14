@@ -15,7 +15,7 @@ export interface EngineProcess {command:string;args:string[];env?:Record<string,
 /** 每次工厂调用获得独立实例；配置已冻结，端口不能绕过 EngineContext 的权限与持久化顺序。 */
 export interface EngineAdapterOptions {
   runtime?:EngineRuntimePackage;
-  /** 现有 Codex 原生工具依赖；包生命周期迁移后由声明的依赖解析，不能由模型指定。 */
+  /** 开发测试的原生工具依赖兼容入口；受管运行由 runtime.dependencies 的准确身份解析。 */
   nativeToolsRuntime?:EngineRuntimePackage;
   process?:EngineProcess;
   provider:string;model:string;agentHome:string;prompt:string;knowledge:EngineToolsPort;

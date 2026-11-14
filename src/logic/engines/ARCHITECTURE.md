@@ -21,6 +21,9 @@ classDiagram
 class N_src_logic_engines_catalog["catalog/"] {
   <<directory>>
 }
+class N_src_logic_engines_packages["packages/"] {
+  <<directory>>
+}
 class N_src_logic_engines_rules["rules/"] {
   <<directory>>
 }
@@ -33,19 +36,21 @@ class N_src_logic_engines_index_ts["index.ts"] {
 class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
   <<module>>
 }
-class N_src_logic_engines_model_ts["model.ts"] {
-  <<module>>
-}
 N_src_logic_engines_catalog ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_rules : 导入依赖
-N_src_logic_engines_index_ts ..> N_src_logic_engines_model_ts : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
-N_src_logic_engines_model_ts ..> N_src_logic_engines_catalog : 导入依赖
-N_src_logic_engines_model_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
+N_src_logic_engines_packages ..> N_src_logic_engines_index_ts : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_service ..> N_src_logic_engines_index_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_engines_model_ts["model.ts"] {
+  <<module>>
+}
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
@@ -57,6 +62,7 @@ N_src_logic_engines_service ..> N_src_logic_engines_index_ts : 导入依赖
 - `index.ts` → `model-roles.ts`：导入。
 - `model.ts` → `catalog`：导入。
 - `model.ts` → `model-roles.ts`：导入。
+- `packages` → `index.ts`：导入。
 - `rules` → `model-roles.ts`：导入。
 - `rules` → `catalog`：导入。
 - `service` → `index.ts`：导入。
@@ -75,6 +81,7 @@ class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
 ## 子目录导航
 
 - [catalog/](catalog/ARCHITECTURE.md)：开发者在代码中声明官方支持引擎；清单随 Logic 资源发布，声明只读，不支持用户注册或配置覆盖。
+- [packages/](packages/ARCHITECTURE.md)：官方包安装选择、固定依赖与运行引用；制品经冷壳验签，安装成功后原子切换，失败不自动重试。
 - [rules/](rules/ARCHITECTURE.md)：从静态清单派生身份校验、协议约束和兼容接口筛选；只组合通用模型规则，不联网或持有凭据。
 - [service/](service/ARCHITECTURE.md)：EngineModelProfiles 将引擎选型映射为模型协议需求，复用模型服务唯一配置锁和延迟解密；返回引擎快照，不拥有模型存储或引擎安装状态。
 
@@ -117,3 +124,7 @@ class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
 primary 仍由 Agent 原来的 profileId/modelId 与运行 profile 表达；可选 modelRoles={version:2,roles} 只保存额外角色，不复制 primary。角色 ID、能力、必填与可选型号白名单由官方引擎声明拥有；未知角色、错误能力、遗漏必填和未列型号均在读取凭据前拒绝。当前三个代码引擎未声明额外角色。旧记录不补空块，新增空块也属于明确的新快照。
 
 模型层 generationSnapshotSchema 和 embeddingSnapshotSchema 各自校验公开参数；向量没有生成输出容量。一次 withModelOperations 捕获主模型和全部附加角色，公开预览与延迟解析各自复制；调用方修改预览不能改变随后解密的定义。公开快照仅在 modelRoles.roles 保存无密钥配置，解析后的凭据在 ResolvedEngineModel.modelRoles 单独持有，不能落入日志。
+
+### 官方包管理
+
+packages 服务独立于 model-profiles；Application 持有唯一安装状态。静态声明新增 storageDirectory 和固定依赖种类，制品决定依赖准确摘要。目录不加载包或发起网络；详细恢复、引用与重试语义见 [包管理契约](packages/CONTRACT.md)。

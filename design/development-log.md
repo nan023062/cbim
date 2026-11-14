@@ -1,3 +1,11 @@
+## 2026-11-14：切片 4b——独立 E 索引与官方包生命周期
+
+- 基线 8d35b7d3。按“继续依次实施后面的步骤”推进。EngineArtifacts 冷服务只验签、保存发布来源与准确摘要准备；独立 E 索引绑定公钥/平台、单调序号、唯一版本和完整无环依赖，不绑定 C/R。保留旧 C/R 签名仅用于证明历史 E，跨 C 可离线定位原包；清缓存不重置版本序号。
+- Application 持有 EnginePackages，本机安装清单与模型设置分离。先准备完整依赖再原子激活，失败保留旧版和原因；首次使用失败跨重开不自动重下。Codex 固定制品声明的 Pi 摘要，不跟随 Pi 活动版。运行引用直到 close 成功才释放，运行引用/启用依赖阻止移除；移除保留历史缓存。尚未启动的任务遇到已停用引擎明确失败，不换引擎或重新安装。
+- 验证按管理状态、签名来源、恢复包装器、实际构建和边界选择：pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/unit/logic/updates/engine-index.test.ts tests/unit/logic/updates/engine-artifacts.test.ts tests/engine-runtime-binding.test.ts tests/unit/logic/engines/catalog.test.ts --reporter=dot，5 文件 16/16。补充运行 tests/unit/logic/updates/engine-index.test.ts tests/engine-runtime-binding.test.ts tests/runtime-journal.test.ts tests/codex-engine.test.ts tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts tests/dependencies.test.ts，功能 12/12，检查器首次 172/173；发现 Node 文件入口放行过宽后收窄为单个索引存储入口，单独重跑 dependencies 173/173。C/R 真实构建仍无具体引擎或 SDK，C 无静态目录。
+- pnpm typecheck、pnpm check:test-modules（505 文件，154/155/196）及 pnpm check:architecture 通过。同步 Application、bootstrap、engines/packages、目录声明、装配、运行契约与 updates 的注释、契约和类图。类型首次发现新目录相对导入层数错误，已修正。
+- 本切片没有完整安装包、公开签名发布、生产安装、外部模型或全仓回归。独立开发者发布命令和设置界面继续按后续切片接通；未更新无关 Issue。
+
 ## 2026-11-14：切片 3b/4a——正式包加载与跨 C 缓存
 
 - 基线 2cd2a595。正式 R 构建用拒绝回退的模块替代源码兼容表，运行只从可信冷宿主返回的 E 根加载 adapter.cjs，核身份/协议/适配器版本；各 SDK 入口和版本仍分别保留。引擎归档流程包含独立适配器，签名清单校验通用 ID 和声明入口，不再硬编码三种引擎。

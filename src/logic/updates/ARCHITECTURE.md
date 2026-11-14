@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [contracts.ts](contracts.ts) | 正式桌面版本、后台预下载进度与用户确认重启安装的公开 IPC 数据。 |
+| [engine-artifacts.ts](engine-artifacts.ts) | R 引擎管理与 C 制品验证之间的便携窄端口。 |
 
 ## 架构类图
 
@@ -22,12 +23,17 @@ class N_src_logic_updates_service["service/"] {
 class N_src_logic_updates_contracts_ts["contracts.ts"] {
   <<module>>
 }
+class N_src_logic_updates_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
 N_src_logic_updates_service ..> N_src_logic_updates_contracts_ts : 导入依赖
+N_src_logic_updates_service ..> N_src_logic_updates_engine_artifacts_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `service` → `contracts.ts`：导入。
+- `service` → `engine-artifacts.ts`：导入。
 
 ## 子目录导航
 

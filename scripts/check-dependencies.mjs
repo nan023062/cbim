@@ -79,7 +79,8 @@ const moduleBoundaries=[
   // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
   {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/core/utility/index.ts']},
+  {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/platform/node/files/index.ts']},
+  {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts']},
   {sources:['src/view/execution-view/'],allow:['src/view/execution-view/','src/view/components/','src/bridge/contracts/']},
   {sources:['src/view/tasks/'],allow:['src/view/tasks/','src/view/execution-view/','src/view/components/','src/view/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/core/errors.ts','src/core/utility/index.ts','src/core/platform/node/digest.ts']},
@@ -122,7 +123,6 @@ export const externalLoads = [
 export const generatedLoads = [
   {file:'src/logic/execution/assembly/engine-package-loader.ts',expression:'loadAdapter(descriptor.entry)',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'scripts/build-engine-adapters.mjs',expression:'load(file)',source:'src/logic/execution/assembly/engine-adapters.ts'},
-  {file:'tests/engine-adapter-package.test.ts',expression:'load(path.join(destination,descriptor.entry))',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/main.ts'},
 ];
 

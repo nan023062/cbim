@@ -4,4 +4,4 @@
  */
 import {CodexEngine} from './engine';
 import type {EngineAdapter,EngineAdapterOptions} from '../../rules/engine-adapter';
-export const engineAdapter:EngineAdapter=Object.freeze({protocol:1,id:'codex',version:'1.0.0',create:(options:EngineAdapterOptions)=>new CodexEngine(options)});
+export const engineAdapter:EngineAdapter=Object.freeze({protocol:1,id:'codex',version:'1.0.0',create:(options:EngineAdapterOptions)=>new CodexEngine({...options,nativeToolsRuntime:options.runtime?.dependencies?.pi??options.nativeToolsRuntime})});

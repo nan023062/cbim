@@ -1,6 +1,9 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'engine-package-service',prefix:'src/logic/engines/packages/',public:['src/logic/engines/packages/index.ts'],dependencies:['engine-catalog','engine-artifact-contract','engine-runtime-contract','file-foundations','utility-foundations'],external:['zod','node:fs/promises']},
+  {id:'engine-runtime-contract',files:['src/logic/execution/rules/engine-runtime.ts'],public:['src/logic/execution/rules/engine-runtime.ts'],dependencies:[],external:[]},
+  {id:'engine-artifact-contract',files:['src/logic/updates/engine-artifacts.ts'],public:['src/logic/updates/engine-artifacts.ts'],dependencies:[],external:[]},
   {id:'engine-model-service',prefix:'src/logic/engines/service/',public:['src/logic/engines/service/index.ts'],dependencies:['engine-catalog','model-rules','model-service','core-errors'],external:[]},
   {id:'engine-catalog',prefix:'src/logic/engines/',public:['src/logic/engines/index.ts'],dependencies:['model-rules'],external:['zod']},
   {id:'engine-bridge',files:['src/bridge/contracts/engines.ts'],public:['src/bridge/contracts/engines.ts'],dependencies:['engine-catalog'],external:[]},

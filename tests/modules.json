@@ -830,7 +830,9 @@
           "tests/nsis-differential-download.test.ts",
           "tests/nsis-updater.test.ts",
           "tests/release-http.test.ts",
-          "tests/update-restart-profile.test.ts"
+          "tests/update-restart-profile.test.ts",
+          "tests/unit/logic/updates/engine-index.test.ts",
+          "tests/unit/logic/updates/engine-artifacts.test.ts"
         ],
         "contract": [
           "tests/runtime-download.test.ts",
@@ -1507,6 +1509,18 @@
         "contract": [
           "tests/engine-configuration.test.ts"
         ],
+        "integration": []
+      }
+    },
+    "logic/engines/packages": {
+      "roots": [
+        "src/logic/engines/packages/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/engines/packages.test.ts"
+        ],
+        "contract": [],
         "integration": []
       }
     }

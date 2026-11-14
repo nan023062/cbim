@@ -70,8 +70,9 @@ export async function collectEngines(buildRoot:string,output:string):Promise<Eng
     const root=path.join(buildRoot,definition.directory),pkg=JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8'));
     await fs.access(path.join(root,definition.entry));
     const adapter=JSON.parse(await fs.readFile(path.join(root,'adapter.json'),'utf8'));if(adapter.id!==kind||adapter.protocol!==1)throw Error('适配器与引擎归档不一致');
-    result.push({kind,version:pkg.version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+pkg.version+'-win32-x64')});
+    result.push({kind,version:pkg.version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+adapter.version+'-win32-x64')});
   }
+  const codex=result.find(engine=>engine.kind==='codex'),pi=result.find(engine=>engine.kind==='pi');if(codex&&pi)codex.dependencies=[{kind:'pi',identity:pi.package.sha256}];
   return result;
 }
 export async function signRuntimeManifest(manifest:RuntimeManifest,key:Awaited<ReturnType<typeof runtimeSigningKey>>,cold:ColdRuntime){

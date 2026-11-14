@@ -59,3 +59,5 @@ PendingRequests 只持有 ID 对应回调和时限。Pi 超时取出单项并拒
 ### 包工厂
 
 package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；App Server、模型代理、工具调用和实际 Pi 工具依赖仍由现有适配器封装，构造工厂不启动进程。
+
+受管包工厂从 runtime.dependencies.pi 取得已经固定的工具包，执行装配不再另行解析默认 Pi。开发测试仍可注入 nativeToolsRuntime。

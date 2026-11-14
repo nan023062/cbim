@@ -12,6 +12,8 @@
 | --- | --- |
 | [desktop-releases.ts](desktop-releases.ts) | 读取固定 GitHub 仓库中独立 desktop-v 通道的公开稳定发布。 |
 | [desktop-updates.ts](desktop-updates.ts) | 桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。 |
+| [engine-artifacts.ts](engine-artifacts.ts) | 冷壳持有的通用 E 制品服务，保存独立签名索引历史并准备准确摘要的包。 |
+| [engine-index.ts](engine-index.ts) | 独立 E 发布索引的签名、版本和准确依赖闭包验证。 |
 | [nsis-updater.ts](nsis-updater.ts) | electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。 |
 | [release-http.ts](release-http.ts) | 更新子系统读取公开 Release 列表的独立 HTTP 边界。 |
 | [restart-profile.ts](restart-profile.ts) | 恢复安装器显式传回的本机用户目录，供 Main 在初始化任何业务数据之前调用。 |
@@ -95,6 +97,86 @@ N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_d
 ```
 
 直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)。
+
+### engine-artifacts.ts
+
+成员 1/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
+  +list()
+  +check()
+  +prepare()
+  -stateFile
+  -store
+  -seed
+  -signal
+  -fetchIndex
+  -progress
+  -queue
+  -initialized
+  -envelopes
+  -seeds
+  -available
+  -current
+  -head
+}
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
+class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
+  <<external>>
+}
+N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.. N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts
+```
+
+成员 2/2（同名节点为同一声明，跨图合并阅读）。
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
+  -digest
+  -add()
+  -init()
+  -summary()
+}
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
+class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
+  <<external>>
+}
+N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.. N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts
+```
+
+直接依赖：[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../engine-artifacts.ts](../engine-artifacts.ts)、[engine-index.ts](engine-index.ts)、[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-download.ts](runtime-download.ts)。
+
+### engine-index.ts
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
+  <<module>>
+  +verifyEngineIndex()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_engine_index_ts_EngineReleaseIndex["EngineReleaseIndex"] {
+  <<type>>
+
+}
+N_src_logic_updates_service_engine_index_ts ..> N_src_logic_updates_service_engine_index_ts_EngineReleaseIndex : 声明
+```
+
+直接依赖：[runtime-manifest.ts](runtime-manifest.ts)。
 
 ### nsis-updater.ts
 
@@ -198,7 +280,7 @@ class N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost["DesktopRun
   +cacheRoot
   +codeVersion
   +resourceVersion
-  +resolveEngine()
+  +engineArtifacts
   +stopPreparingEngines()
   +updates()
   +confirm()
@@ -206,7 +288,7 @@ class N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost["DesktopRun
 N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost : 声明
 ```
 
-直接依赖：[desktop-updates.ts](desktop-updates.ts)。
+直接依赖：[../engine-artifacts.ts](../engine-artifacts.ts)、[desktop-updates.ts](desktop-updates.ts)。
 
 ### runtime-journal.ts
 
@@ -409,17 +491,58 @@ class N_src_logic_updates_service_release_http_ts["release-http.ts"] {
 class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
+class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
 N_src_logic_updates_service_desktop_releases_ts ..> N_src_logic_updates_service_release_http_ts : 导入依赖
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
-N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
-N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_index_ts : 导入依赖
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
+N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
+N_src_logic_updates_service_engine_index_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
+  <<module>>
+}
 class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
   <<module>>
 }
@@ -435,18 +558,18 @@ class N_src_logic_updates_service_runtime_host_ts["runtime-host.ts"] {
 class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
-  <<module>>
-}
+N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
 N_src_logic_updates_service_runtime_archive_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_download_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
-N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
@@ -461,18 +584,18 @@ class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
 class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
-  <<module>>
-}
+N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
-N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
@@ -484,12 +607,20 @@ class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_runtime_journal_ts["runtime-journal.ts"] {
-  <<module>>
-}
+N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_journal_ts["runtime-journal.ts"] {
+  <<module>>
+}
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_journal_ts : 导入依赖
 ```
 
@@ -547,3 +678,7 @@ NSIS 下载启用 electron-updater 的差分模式：读取新旧 `.exe.blockmap
 签名 E 描述支持通用 ID、可选适配器入口/版本/协议和固定依赖摘要。冷壳只校验通用字段、文件清单与签名，支持名单由 R 静态代码决定。旧清单不补适配器字段，新正式资源不回退内嵌实现。
 
 RuntimeStore 可接收可信旧缓存根：仅找到相同 SHA-256 内容目录且完整验证后复制到新共享缓存，复制后再次验证；坏缓存直接失败，不自动删除、覆盖或下载重试。同一共享根可供不同 C 使用，活动资源及恢复日志仍按 C 隔离。
+
+### 独立 E 发布索引
+
+engine-index 验证 Ed25519、平台、时效、单调发布序号、版本唯一性与准确依赖闭包，不要求 C/R 版本。engine-artifacts 保存签名索引和历史 C/R 的签名来源，仅用旧来源证明 E，不启动旧 R；同版本异包拒绝。查询不下载；prepare 只接受已验签的 kind/identity。缓存与本机激活指针由不同服务负责，失败不换指针、不自动重试。

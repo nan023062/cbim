@@ -702,3 +702,5 @@ engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapter
 ### 通用包地址
 
 EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。
+
+EngineRuntimePackage 可携带准确依赖映射和 retain 引用端口，仅在宿主内存使用；不序列化函数或加载路径到模型。

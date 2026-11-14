@@ -34,6 +34,8 @@ import {AdmissionSettings} from '../runtime/settings/admission-settings';
 import {BudgetSettings} from '../budget/settings/budget-settings';
 import {GitHubFeedback} from '../feedback/service';
 import {createExecutionManager} from './assembly/execution';
+import {EnginePackages} from '../engines/packages';
+import type {EngineArtifactsPort} from '../updates/engine-artifacts';
 import type {EngineRuntimeResolver} from '../execution/rules/engine-runtime';
 import {createMemberServices} from './assembly/member-dispatch';
 import {FileDispatchStore} from '../dispatch/storage/dispatch-store';
@@ -73,6 +75,8 @@ export class Application {
   readonly models:LlmProfiles;
   /** 引擎选型与协议投影独立于模型设置，复用同一个模型服务与设置队列。 */
   readonly engineModels:EngineModelProfiles;
+  /** 正式桌面由 C 注入制品端口；源码开发使用现有适配器，不伪造已安装状态。 */
+  readonly enginePackages?:EnginePackages;
   /** 应用共用公开网页缓存与限速；搜索设置不向模型公开密钥。 */
   readonly webSettings:WebSettings;
   private readonly web:WebService;
@@ -136,9 +140,9 @@ export class Application {
   private stopping=false;private shutdownPromise?:Promise<void>;
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
   get isStopping(){return this.stopping}
-  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport;engineRuntimes?:EngineRuntimeResolver;webBrowser?:BrowserReader}={}) {this.webSettings=new WebSettings(path.join(paths.userRoot,'web-search.json'),secretCipher);this.web=new WebService(this.webSettings,undefined,undefined,platform.webBrowser);this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.engineModels=new EngineModelProfiles(this.models);this.mainAgentSettings=new MainAgentSettings(id=>path.join(paths.project(id),'main-agent.json'),identity=>{this.assertServiceAvailable(identity.workspaceId);this.workspace(identity.workspaceId).assert(identity)},this.engineModels);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
+  constructor(readonly paths:Paths,designRoot:string,secretCipher?:SecretCipher,private readonly platform:{controlledFiles?:ControlledFileTransport;engineRuntimes?:EngineRuntimeResolver;engineArtifacts?:EngineArtifactsPort;webBrowser?:BrowserReader}={}) {if(platform.engineArtifacts)this.enginePackages=new EnginePackages(path.join(paths.userRoot,'engine-installations.json'),platform.engineArtifacts);this.webSettings=new WebSettings(path.join(paths.userRoot,'web-search.json'),secretCipher);this.web=new WebService(this.webSettings,undefined,undefined,platform.webBrowser);this.models=new LlmProfiles(path.join(paths.userRoot,'llm.json'),secretCipher);this.engineModels=new EngineModelProfiles(this.models);this.mainAgentSettings=new MainAgentSettings(id=>path.join(paths.project(id),'main-agent.json'),identity=>{this.assertServiceAvailable(identity.workspaceId);this.workspace(identity.workspaceId).assert(identity)},this.engineModels);this.githubFeedback=new GitHubFeedback(path.join(paths.userRoot,'github-feedback'),secretCipher);this.admissionSettings=new AdmissionSettings(path.join(paths.userRoot,'run-admission.json'),this.admission);this.budgetSettings=new BudgetSettings(path.join(paths.userRoot,'scope-budget.json'));this.catalog=new Catalog(paths);this.rules=new Rules(designRoot);this.resources=new ResourceRepositories(paths);this.repositoryConnections=new RepositoryConnections(path.join(paths.userRoot,'repository-connections.json'),this.resources,id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws});this.chatMaterials=new ChatMaterialImports(id=>{this.assertServiceAvailable(id);const ws=this.workspace(id);ws.assert();return ws},this.repositoryConnections)}
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
-  async init(options:{restore?:boolean}={}){await this.webSettings.init();await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();if(options.restore!==false)await this.restore()}
+  async init(options:{restore?:boolean}={}){await this.enginePackages?.init();await this.webSettings.init();await this.catalog.init();await this.rules.init();await this.resources.init();await this.repositoryConnections.init();await this.admissionSettings.init();await this.budgetSettings.init();if(options.restore!==false)await this.restore()}
   async list(){const data=await this.catalog.read();return {...data,warning:this.catalog.warning,entries:await Promise.all(data.entries.map(async e=>this.running.get(e.id)?.view()||{...e,state:await exists(e.path)?'registered':'missing',tasks:[]}))}}
   workspace(id:string){const ws=this.running.get(id);if(!ws)fail('NOT_RUNNING','工作区未运行，请由用户在桌面打开');return ws}
   /** 只取得已就绪工作区的私有治理服务；不把计划或决定接到模型执行入口。 */
@@ -161,7 +165,7 @@ export class Application {
         try{
           ws.attachDispatchStore(new FileDispatchStore(path.join(this.paths.project(id),'dispatch'),id,monitor.dispatchObserver));
           await ws.open({beforeDispatchLoad:()=>monitor.initializeHistory()});
-          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members,workspaceMembers,moduleOwnerships,controlledFiles,isolatedExecutions,requestBudgets}=createMemberServices(ws,this.engineModels,lease,monitor.dispatchObserver,admission,()=>this.budgetSettings.read(),this.platform.controlledFiles,this.platform.engineRuntimes),execution=createExecutionManager(ws,this.engineModels,lease,()=>this.collaborations.get(id),service,admission,this.repositoryConnections,{service:moduleOwnerships,members:workspaceMembers},requestBudgets,this.githubFeedback,this.web,this.platform.engineRuntimes);
+          const lease=new WorkspaceExecutionLease(),admission=this.bindAdmission(ws,lease),{dispatch:service,members,workspaceMembers,moduleOwnerships,controlledFiles,isolatedExecutions,requestBudgets}=createMemberServices(ws,this.engineModels,lease,monitor.dispatchObserver,admission,()=>this.budgetSettings.read(),this.platform.controlledFiles,(this.enginePackages??this.platform.engineRuntimes)),execution=createExecutionManager(ws,this.engineModels,lease,()=>this.collaborations.get(id),service,admission,this.repositoryConnections,{service:moduleOwnerships,members:workspaceMembers},requestBudgets,this.githubFeedback,this.web,(this.enginePackages??this.platform.engineRuntimes));
           this.dispatchers.set(id,service);this.executions.set(id,execution);this.memberExecutions.set(id,members);this.memberRegistries.set(id,workspaceMembers);this.ownershipRegistries.set(id,moduleOwnerships);this.controlledFileServices.set(id,controlledFiles);this.isolatedExecutionServices.set(id,isolatedExecutions);this.requestBudgetServices.set(id,requestBudgets);
           await monitor.initialize(ws,service,execution,members);
           const collaboration=new AutoCollaboration(ws,service,members,execution,lease,(root,error)=>monitor.collaborationIssue(root,error));

@@ -269,3 +269,5 @@ execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新
 ### 主 Agent 模型角色
 
 聊天未显式选择模型时，从同一主 Agent revision 捕获 engine、primary 和 modelRoles；显式请求完整校验选型，不从新配置偷偷补其他角色。执行准备将角色交给 EngineModelProfiles，公开运行选项保留引用而不保存凭据。
+
+Application 接收可选冷宿主 engineArtifacts 并持有唯一 EnginePackages；正式主/成员执行共用此解析器，源码运行继续使用原源工厂。初始化先校验本机安装清单，模型凭据与包管理状态独立。

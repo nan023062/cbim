@@ -64,6 +64,7 @@ class N_src_logic_file_operations["file-operations/"] {
 class N_src_logic_governance["governance/"] {
   <<directory>>
 }
+N_src_logic_engines ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_governance : 导入依赖
@@ -148,6 +149,7 @@ class N_src_logic_workspace["workspace/"] {
 - `application` → `team`：导入。
 - `application` → `runtime`：导入。
 - `application` → `feedback`：导入。
+- `application` → `updates`：导入。
 - `application` → `execution`：导入。
 - `application` → `dispatch`：导入。
 - `application` → `materials`：导入。
@@ -192,6 +194,8 @@ class N_src_logic_workspace["workspace/"] {
 - `dispatch` → `engines`：导入。
 - `dispatch` → `evidence`：导入。
 - `engines` → `models`：导入。
+- `engines` → `updates`：导入。
+- `engines` → `execution`：导入。
 - `evidence` → `file-operations`：导入。
 - `evidence` → `tools`：导入。
 - `evidence` → `tasks`：导入。

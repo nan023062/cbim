@@ -33,6 +33,8 @@ try{
  const office=()=>active().locator('.session-task-panel:not([hidden]) .office-scene');
  const selectOffice=async title=>{await page.locator('.workspace-conversations').getByRole('button',{name:title,exact:true}).click();await active().getByRole('button',{name:'切换到办公室',exact:true}).click();await office().waitFor()};
  await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
+ await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill('办公室导航保留草稿');
  await selectOffice('象棋研发办公室');
  assert.equal(await active().getByRole('button',{name:'刷新任务图',exact:true}).count(),0);
  assert.equal(await active().getByRole('button',{name:'返回对话',exact:true}).count(),0);
@@ -59,13 +61,32 @@ try{
  checks.push('office-motion-always-enabled-without-extra-refresh-return-or-toggle-controls');
  assert.equal(await office().locator('.office-current-tasks').count(),0);
  assert.equal(await office().getByText(/^当前任务 ·/).count(),0);
+ const memberPage=()=>active().locator('.member-review-pane:not([hidden]) .member-conversation');
  await office().locator('[data-office-actor="executor-logical"]').getByRole('button',{name:'任务详情',exact:true}).click();
- const taskDetail=active().getByTestId('session-graph-detail');
- await taskDetail.locator('.member-detail-goal').getByText('补充规则测试',{exact:true}).waitFor();
- assert.equal(await taskDetail.getByTestId('member-execution-report').getAttribute('data-task-id'),'next-rules');
- await taskDetail.getByRole('button',{name:'关闭任务详情',exact:true}).click();
+ await memberPage().waitFor();
+ assert.equal(await memberPage().getByLabel('派发任务',{exact:true}).inputValue(),'next-rules');
+ assert.equal(await memberPage().getByLabel('话题',{exact:true}).inputValue(),'scope-one');
  assert.equal(await active().getByTestId('session-graph-detail').count(),0);
- checks.push('no-duplicate-current-task-list-and-actor-opens-original-task-detail');
+ assert.equal(await page.getByRole('dialog',{name:'运行记录与核实',exact:true}).count(),0);
+ await memberPage().getByLabel('派发任务',{exact:true}).selectOption('member-1');
+ await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
+ await office().locator('[data-office-actor="executor-logical"]').getByRole('button',{name:'任务详情',exact:true}).click();
+ assert.equal(await memberPage().getByLabel('派发任务',{exact:true}).inputValue(),'next-rules');
+ await memberPage().getByRole('button',{name:'核实执行记录',exact:true}).click();
+ const review=page.getByRole('dialog',{name:'运行记录与核实',exact:true});
+ await review.waitFor();
+ assert.equal(await review.getByTestId('member-execution-report').getAttribute('data-task-id'),'next-rules');
+ await review.getByRole('button',{name:'关闭运行核实',exact:true}).click();
+ await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
+ await office().locator('[data-office-actor="main:root"]').getByRole('button',{name:'调度详情',exact:true}).click();
+ assert.equal(await active().locator('.main-chat-pane').isVisible(),true);
+ assert.equal(await active().locator('.member-review-pane:not([hidden])').count(),0);
+ assert.equal(await active().getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'办公室导航保留草稿');
+ assert.equal(await page.getByRole('dialog',{name:'运行记录与核实',exact:true}).count(),0);
+ await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
+ checks.push('office-detail-links-open-original-agent-chat-and-refocus-task-without-side-panel');
+ checks.push('explicit-member-inspection-retains-original-task-and-main-draft');
+
 
  const capture=async(name,theme,width,height,position='top')=>{
    // Electron's compositor surface follows BrowserWindow, not CDP device emulation.
@@ -103,10 +124,16 @@ try{
  await office().locator('.office-history>summary').click();
  await office().getByRole('button',{name:'规则执行员 · 已撤销的探索任务',exact:true}).waitFor();
  checks.push('narrow-history-expands-with-original-task');
+ await office().getByRole('button',{name:'规则执行员 · 已撤销的探索任务',exact:true}).click();
+ assert.equal(await memberPage().getByLabel('话题',{exact:true}).inputValue(),'history');
+ assert.equal(await memberPage().getByLabel('派发任务',{exact:true}).inputValue(),'historical');
+ await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
+ checks.push('historical-task-opens-original-member-topic-without-new-execution');
  await office().getByRole('button',{name:'打开 规则执行员 的对话',exact:true}).click();
  await active().locator('.member-review-pane:not([hidden]) .member-conversation').waitFor();
  assert.equal(await active().getByRole('textbox',{name:'对话草稿',exact:true}).count(),0);
- await active().locator('.member-review-pane:not([hidden]) .member-conversation select').nth(1).selectOption('member-1');
+ await memberPage().getByLabel('话题',{exact:true}).selectOption('scope-one');
+ await memberPage().getByLabel('派发任务',{exact:true}).selectOption('member-1');
  await active().locator('.member-review-pane:not([hidden])').getByText('规则已实现，测试回执已记录',{exact:true}).first().waitFor();
  await active().getByRole('button',{name:'返回所属主频道补充需求',exact:true}).click();
  await active().getByRole('textbox',{name:'对话草稿',exact:true}).fill('桌面验收：成员窗口的新需求');
@@ -119,7 +146,7 @@ try{
  await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
  await office().getByRole('button',{name:'打开 主 Agent 的对话',exact:true}).click();
  assert.equal(await active().locator('.member-review-pane:not([hidden])').count(),0);
- await active().locator('.conversation-topic-thread').waitFor();
+ await active().locator('.channel-pane:not([hidden]) .conversation-topic-thread').waitFor();
  checks.push('main-head-bubble-returns-to-the-original-topic');
  await desktop.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1280,1200));
  if(await page.getByRole('button',{name:'展开侧栏',exact:true}).count())await page.getByRole('button',{name:'展开侧栏',exact:true}).click();

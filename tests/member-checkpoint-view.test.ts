@@ -6,7 +6,7 @@ import {memberCheckpointView} from '../src/view/tasks/member-checkpoint-state';
 import {MemberCheckpointNotice} from '../src/view/tasks/MemberCheckpointNotice';
 import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {sessionRoot} from '../src/view/tasks/session-task-state';
 import {scopeGoalView} from '../src/view/tasks/scope-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T01:00:00.000Z';

@@ -26,7 +26,7 @@
 | [conversation-topics.css](conversation-topics.css) | 话题摘要、成员审阅标题与阅读区域的响应式排版。 |
 | [conversation-topics.ts](conversation-topics.ts) | 将主会话公开运行和派发任务投影为话题内容，供群聊导航使用。 |
 | [conversation.css](conversation.css) | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
-| [Conversation.tsx](Conversation.tsx) | 持有主 Agent 多角色草稿版本的会话固定页签入口（对话/办公室），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文；工具证据归办公室与成员工作审阅，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
+| [Conversation.tsx](Conversation.tsx) | 持有主 Agent 多角色草稿版本的会话固定页签入口（对话/办公室），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文；工具证据归显式运行核实与成员工作审阅，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
 | [ConversationEntries.tsx](ConversationEntries.tsx) | 侧栏与历史菜单共用的对话条目、重命名和移除入口。 |
 | [ConversationToolCall.tsx](ConversationToolCall.tsx) | 在原工具位置组合其完整执行轨道与已验证派发任务的最新公开状态。 |
 | [ConversationTopics.tsx](ConversationTopics.tsx) | 主 Session 的纯聊天与频道入口列表，以及独立的频道正文投影。 |
@@ -350,7 +350,7 @@ class N_src_view_conversation_Conversation_tsx_HistoryItem["HistoryItem"] {
 N_src_view_conversation_Conversation_tsx ..> N_src_view_conversation_Conversation_tsx_HistoryItem : 声明
 ```
 
-直接依赖：[InteractionModeToggle.tsx](InteractionModeToggle.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/AgentModelForm.tsx](../components/AgentModelForm.tsx)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ChatMessages.tsx](ChatMessages.tsx)、[ChannelPane.tsx](ChannelPane.tsx)、[ReadingPane.tsx](ReadingPane.tsx)、[channel-draft.ts](channel-draft.ts)、[ConversationTopics.tsx](ConversationTopics.tsx)、[conversation-topics.ts](conversation-topics.ts)、[MemberConversation.tsx](MemberConversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
+直接依赖：[InteractionModeToggle.tsx](InteractionModeToggle.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/AgentModelForm.tsx](../components/AgentModelForm.tsx)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../shell/tabs.ts](../shell/tabs.ts)、[../shell/runtime-navigation.ts](../shell/runtime-navigation.ts)、[ChatMessages.tsx](ChatMessages.tsx)、[ChannelPane.tsx](ChannelPane.tsx)、[ReadingPane.tsx](ReadingPane.tsx)、[channel-draft.ts](channel-draft.ts)、[ConversationTopics.tsx](ConversationTopics.tsx)、[conversation-topics.ts](conversation-topics.ts)、[MemberConversation.tsx](MemberConversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[../tasks/SessionTaskView.tsx](../tasks/SessionTaskView.tsx)、[../tasks/SessionTaskReview.tsx](../tasks/SessionTaskReview.tsx)、[../tasks/useSessionGraph.ts](../tasks/useSessionGraph.ts)、[session-tabs.css](session-tabs.css)、[../execution-view/MessageQueue.tsx](../execution-view/MessageQueue.tsx)、[useMessageQueue.ts](useMessageQueue.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[UsageStatus.tsx](UsageStatus.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[conversation.css](conversation.css)、[../team/useMainAgentSettings.ts](../team/useMainAgentSettings.ts)、[ConversationEntries.tsx](ConversationEntries.tsx)、[ComposerCard.tsx](ComposerCard.tsx)、[SendButton.tsx](SendButton.tsx)、[AttachmentMenu.tsx](AttachmentMenu.tsx)、[ComposerPicker.tsx](ComposerPicker.tsx)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[pasted-images.ts](pasted-images.ts)、[conversation-state.ts](conversation-state.ts)、[conversation-stop.ts](conversation-stop.ts)、[../tasks/useScopeContinuation.ts](../tasks/useScopeContinuation.ts)、[../tasks/useExecutionRecovery.ts](../tasks/useExecutionRecovery.ts)、[../tasks/useScopeReplan.ts](../tasks/useScopeReplan.ts)、[../tasks/useHumanDecisions.ts](../tasks/useHumanDecisions.ts)、[../tasks/useHumanContinuation.ts](../tasks/useHumanContinuation.ts)、[ThreadHistoryNotice.tsx](ThreadHistoryNotice.tsx)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission-state.ts](../tasks/admission-state.ts)、[../tasks/AdmissionNotice.tsx](../tasks/AdmissionNotice.tsx)。
 
 ### ConversationEntries.tsx
 
@@ -1087,6 +1087,12 @@ N_src_view_conversation_useMessageQueue_ts ..> N_src_view_conversation_queue_syn
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 按原任务跳转对话
+
+Conversation 将办公室“任务详情”、历史任务和运行管理定位统一解析为原逻辑成员、话题和任务；主 Agent 调度及自执行任务回到主对话。taskConversationTarget 必须核对当前 workspace/root 和正式成员登记，缺失/重复登记明确提示，不根据名称或执行实例合成会话。MemberConversation 的 taskNavigation 使用一次性 requestId 覆盖曾经浏览的任务/话题，消费后允许独立选择；再点同一任务会重新定位，旧读取仍由 useMemberRun 代次隔离。导航不发送、不停止、不清除草稿。
+
+办公室全宽，不再挂载根/成员右侧详情。现有运行核实能力独立按需打开：主对话菜单、成员核实按钮及中断原运行入口共用 SessionTaskReviewDialog；正常任务/调度链接只到对话页。恢复/业务新目标成功后回到原主频道，未知回执仍归原控制器。
+
 ### 单按钮切换交互视图
 
 InteractionModeToggle 不创建独立工具栏，由 Conversation 只向当前可见的对话、办公室或成员审阅标题行右侧装配一个按钮；成员身份缺失时仍在占位区域保留切换入口。以当前视图图标及目标视图提示切换；办公室返回成员时称为工作审阅。两块内容保持挂载，草稿、附件、话题及滚动归原会话。实际模式变化只触发当前任务/目标投影补读，沿原在途合并与身份隔离；不启动、停止或重试任务，未改变模式不额外读取。面板使用独立 region 标签，不再使用双 tab 语义。
@@ -1176,9 +1182,9 @@ note for Conversation "已有草稿与附件保留；开放任务只排队"
 
 主对话轮询及发送后的刷新使用 `loop.threadView`。完整运行仍按真实日志显示，`ThreadHistoryNotice` 为无法读取的轮次提供独立只读问题占位，不伪造 `RunSummary`，不因为某条旧日志损坏而隐藏全部新对话。普通续聊、消息插入和当前脑状态使用后端 `resumeRunId` 指向的运行；无可信头时禁止回退到过滤后 `runs.at(-1)`。当前开放周期仍可以排队与停止。
 
-从成员报告发起的新只读核实周期经 `SessionTaskView` 装配专用表单。主会话只传实际模型与真实开放周期，权限由表单固定 read；核实周期进入 waiting 后，目标补充仍保持 read。普通输入区草稿、附件、模型和权限不被表单改写，历史选择也不改变当前工作对象。
+从成员报告发起的新只读核实周期经 `SessionTaskReview` 装配专用表单。主会话只传实际模型与真实开放周期，权限由表单固定 read；核实周期进入 waiting 后，目标补充仍保持 read。普通输入区草稿、附件、模型和权限不被表单改写，历史选择也不改变当前工作对象。
 
-已完成的核实周期另有正式业务新目标入口，`Conversation` 装配唯一 `useScopeReplan`，办公室任务根 `ScopeGoalPanel` 使用该视图。它仅共享实际模型身份，表单权限独立默认 ask，execute 必须明确选择。显式条件核验不运行模型，最终创建新业务周期才发送稳定命令；未知命令查询/重试不引用当前聊天输入。旧核实周期仍为只读，新业务目标不清空原草稿、附件或队列，历史选择不会替换真实开放周期或主会话身份。
+已完成的核实周期另有正式业务新目标入口，`Conversation` 装配唯一 `useScopeReplan`，显式运行核实中的主根 `ScopeGoalPanel` 使用该视图。它仅共享实际模型身份，表单权限独立默认 ask，execute 必须明确选择。显式条件核验不运行模型，最终创建新业务周期才发送稳定命令；未知命令查询/重试不引用当前聊天输入。旧核实周期仍为只读，新业务目标不清空原草稿、附件或队列，历史选择不会替换真实开放周期或主会话身份。
 
 `UsageStatus.currentRun` 为 null 时明确没有安全运行头，不猜脑状态与上下文；有可信头则只取该轮上下文，即使历史时间排序把它排在较前。`conversationUsage` 仍累计所有可读运行已报告的费用和 token，旧异常 running 时长截于最后已知事件，不把它持续当成后台工作。存在历史问题时费用标为“已知部分”，不声称完整总消耗，也不估算缺失日志。
 
@@ -1270,7 +1276,7 @@ ConversationTurn 保留真实助手正文，在终态缺少正文时用独立的
 
 `TopicInterruptionForm` 仅在主 Agent 明确选择的话题内使用原主 Session 目标，成员审阅没有此操作。普通输入仍排队新话题；浏览、切换和重开只读原请求。`TopicInterruptionController` 按办公室/话题/输入版本在发送前冻结原文及模型权限，恢复只查询，未知结果保留并仅允许显式原命令重试；回执须匹配原身份、输入版本与原运行。该表单独立于普通草稿，隐藏会话不可新提交。已有 interruptionId 的等待不装配通用补充表单，防止另造续接命令。
 
-主聊天展示用户/主 Agent 的公开消息与频道入口。选择频道在中央区域右侧打开子窗，主聊天不被替换。成员话题选择独立保留，只有显式返回主频道才改变主频道选择；目标卡继续在办公室审阅。
+主聊天展示用户/主 Agent 的公开消息与频道入口。选择频道在中央区域右侧打开子窗，主聊天不被替换。成员话题选择独立保留，只有显式返回主频道才改变主频道选择；目标卡通过显式运行核实入口审阅。
 
 结束频道的“发送关联后续任务”显式将该频道自己的正文和附件经 loop.enqueue 发送，携带 followupOf，继续原主 Agent 的队列规则；不改主草稿、不重开旧周期。新频道保留原话题只读入口。
 交互区只有对话和办公室两种模式，右上角图标切换；默认对话。侧栏选择只改变 Agent 身份，保留模式；办公室人物通过原逻辑 Session 与话题显式返回文字页。自动化由右侧 ExtensionArea 持有。团队角色投影统一使用 execution-view/team-conversations，导航不启动、暂停或停止执行。

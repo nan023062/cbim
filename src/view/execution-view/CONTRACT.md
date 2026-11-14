@@ -27,3 +27,7 @@ ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/star
 ### 团队逻辑对话投影
 
 `team-conversations.ts` 供侧栏、成员文字页和办公室共用，不依赖任一业务页面。只接受同工作区/主根的正式 TeamSession；角色的不同执行实例统一到同一人物/导航项，公开任务引用保留原身份，正文仍按原 task/run 读取。`teamConversationKey` 以工作区实例隔离本机动态缓存。该模块只投影，不创建会话或修改执行。
+
+### 原任务的对话定位
+
+taskConversationTarget 只把当前 workspace/root 下唯一任务映射为已登记 TeamSession；主根及主 Agent 自执行回主对话，其他任务必须有唯一同 Agent 的登记。缺记录、跨会话或重复登记抛出明确错误，不能猜名字、复用另一执行实例或偷偷回主 Agent。纯函数只返回 sessionId/scopeId/taskId，页面切换和一次性定位代次由 Conversation/MemberConversation 拥有。

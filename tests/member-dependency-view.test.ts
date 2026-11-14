@@ -6,7 +6,7 @@ import {memberDependencyHistory} from '../src/view/tasks/member-dependency-state
 import {MemberDependencyNotice} from '../src/view/tasks/MemberDependencyNotice';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
 import {MemberActivity} from '../src/view/tasks/MemberActivity';
-import {sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {sessionRoot} from '../src/view/tasks/session-task-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'},member={agentId:'cbim:executor',agentInstanceId:'member-instance',agentSessionId:'member-session',name:'执行者'};

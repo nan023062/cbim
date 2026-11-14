@@ -1,6 +1,12 @@
+### 办公室导航与显式运行核实
+
+SessionTaskView 只装配办公室与用量，不接收停止/恢复控制器。OfficeScene 的任务和调度详情链接交回原 taskId，由 Conversation 按正式 TeamSession 导航到成员工作审阅或主对话，主根保留原选中话题。session-task-state 的 sessionRuns/sessionRoot 保留原工作区、主根、目标及坏日志投影，办公室和核实共用。
+
+SessionTaskReview/SessionTaskReviewDialog 从办公室拆出原完整核实内容。只有对话菜单“查看调度与运行记录”、成员“核实执行记录”和中断“查看原运行”显式打开原生对话框；普通人物导航不打开。原恢复/续接/人工决定/停止控制器仍由 Conversation 持有，关闭只结束展示，不重放命令；Escape/关闭恢复入口焦点。目标审阅引用继续在核实框内切换原任务，不能回到已删除的右侧面板。
+
 ### 办公室标题导航
 
-SessionTaskView 的 viewAction 接收父级唯一视图切换按钮，与标题共行，不再提供独立刷新或返回对话按钮。Conversation 在模式变化时通过原 useSessionGraph.refresh 请求补读，在途请求合并；首次挂载和重新激活继续由原 Hook 负责。只读取当前会话事实，不重启任务或清空草稿。办公室顶部不再重复展示话题下拉、目标状态与历史折叠说明，也不保留对应占位；话题选择仍由对话频道和显式导航传入，话题用量与根/成员详情继续使用原选中身份，历史任务折叠规则不变。
+SessionTaskView 的 viewAction 接收父级唯一视图切换按钮，与标题共行，不再提供独立刷新或返回对话按钮。Conversation 在模式变化时通过原 useSessionGraph.refresh 请求补读，在途请求合并；首次挂载和重新激活继续由原 Hook 负责。只读取当前会话事实，不重启任务或清空草稿。办公室顶部不再重复展示话题下拉、目标状态与历史折叠说明，也不保留对应占位；话题选择仍由对话频道和显式导航传入，话题用量继续使用原选中身份，历史任务折叠规则不变。办公室没有右侧详情面板；人物和历史任务只导航对应对话。
 
 ### 办公室长期对话联合投影
 
@@ -298,7 +304,7 @@ GraphLayout --> GraphContract : 真实节点与连线
 
 ## 主任务停止的独立在途状态
 
-`SessionTaskView.stopping` 只禁用重复停止，区别于发送、队列插入和编辑共用的 `busy`。主根与运行记录中的停止按钮在插入等待期间仍可点击，并调用会话统一的独立停止入口；停止未结束时不继续队列。历史周期选择不改变实际停止目标，组件不自行取消成员或推断停止已经完成。
+`SessionTaskReview.stopping` 只禁用重复停止，区别于发送、队列插入和编辑共用的 `busy`。主根与运行记录中的停止按钮在插入等待期间仍可点击，并调用会话统一的独立停止入口；停止未结束时不继续队列。历史周期选择不改变实际停止目标，组件不自行取消成员或推断停止已经完成。
 ### 安全等待的多来源资料
 
 `ContinuationSourceMenu` 明确区分文件/图片、首层目录清单、URL 指针、实际网页摘录与已授权仓库静态资料。仓库目录必须匹配原工作区、链接器、共享代际及实际 revision，后续页不换版本；资料不是安装或执行操作。已受理历史只显示原 v1/v2 清单、来源与截取事实，不重新读源。
@@ -346,7 +352,7 @@ UseScopeReplan --> EffectObservationController : 明确选定的原处置
 
 查询失败保留已经明确观察到的受理前 rejected 或最终 receipt，同时展示查询错误。unknown 不能因查询错误码升级成 rejected；已有 rejected 也不降为 unknown。重新提交始终需要新预览，不由查询触发。
 
-`ControlledFilePanel` 只从已加载的成员执行报告选择 `cbim_file_write_controlled`，不把旧 native write/edit/bash 推导成有写前备份的操作。`Conversation → SessionTaskView → MemberTaskDetail → MemberExecutionReport` 单独传递当前工作区 `instanceId`，原 task/run/call 保留历史身份；缺当前实例只能查询，不能构造补偿预览。
+`ControlledFilePanel` 只从已加载的成员执行报告选择 `cbim_file_write_controlled`，不把旧 native write/edit/bash 推导成有写前备份的操作。`Conversation → SessionTaskReview → MemberTaskDetail → MemberExecutionReport` 单独传递当前工作区 `instanceId`，原 task/run/call 保留历史身份；缺当前实例只能查询，不能构造补偿预览。
 
 `ControlledFileController` 每主会话共享，挂载、重开和图变化均不调用后端。原操作报告不读当前文件，用户明确预览才检查文件；预览按实例和图时效隔离，实际提交仍由后端重核。工具失败、操作 applied、补偿 applied 各自展示，均不代表业务验收。旧报告读取失败继续保留，跨来源或倒退回包不能抹掉已有事实。
 
@@ -437,7 +443,7 @@ MemberActivityCard 的 inline 形式默认只显示图上的状态、任务和�
 
 ### 运行展示的公共边界
 
-MemberRunTranscript、SessionTaskView 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskView 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。
+MemberRunTranscript、SessionTaskReview 从 execution-view 复用消息、投影与状态。业务面板通过 本目录 ToolActivity 显式组合，SessionTaskReview 传递原 recovery 上下文，成员正文保留原可信主来源判定；选择、刷新和恢复控制不下沉到公共展示。MemberTaskDetail 的操作端口只列执行停止、批准及回答问题；资料准备端口只列导入/取消/来源读取，运行时语义不变。
 
 
 ## 交付审阅阶段展示
@@ -471,7 +477,7 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 联合投影同时核对 followupOf 摘要/详情，防止把新话题错误关联到另一个历史周期。
 ### 办公室展示与往返
 
-`SessionTaskView` 只展示 OfficeScene，依赖图入口、画布和专用布局已移除；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。当前任务经人物卡摘要与“任务详情”按需查看，舞台下方不再重复列出当前任务全文或空列表提示。已完成/撤销任务使用原历史判定，默认收起，直接定位历史任务展开其原详情。
+`SessionTaskView` 只展示 OfficeScene，依赖图入口、画布和专用布局已移除；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。当前任务经人物卡摘要展示，“任务详情”跳转原 Agent 的工作记录页，舞台下方不再重复列出当前任务全文或空列表提示。已完成/撤销任务使用原历史判定，默认收起，点击历史任务导航原成员、话题和任务，不在办公室展开详情。
 
 `OfficeEventTracker` 首次快照只建立基线；当前可见期间新增 task/result/help/checkpoint 身份产生派发或汇报动画。跨办公室、旧/重复序号、切出期间的事实不回放；单人按序播放，队列有界。人物测量工位间位置，往返后回原位，动画没有业务副作用。文字状态取可靠任务事实；正在退出不称已暂停，等待不冒充正在工作。人物动态无单独开关，正常模式始终开启；系统减少动画时仍保留全部内容和导航，不为动画补造任务活动。
 

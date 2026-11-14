@@ -1,3 +1,15 @@
+## 2026-11-15 PR #83 办公室详情直达原 Agent 对话
+
+用户要求删除办公室右侧详情栏，人物“任务详情”和主 Agent“调度详情”直接跳转各自对话。本步基于 01a50cdd，仅调整 View：SessionTaskView 只展示办公室和用量；taskConversationTarget 按 workspace/root/task/正式 TeamSession 唯一登记解析原成员与话题；Conversation 统一办公室、历史任务和运行管理导航；MemberConversation 消费一次性任务定位，即使曾查看另一任务也重新定位此次点击的原任务。没有唯一归属时显示错误，不猜测其他成员或主会话。成员工作记录仍只读，主聊天及频道草稿、附件与执行控制器继续由原会话持有。
+
+边界评估为局部 View 职责拆分：易变的办公室布局不再持有恢复、停止、队列和人工操作入口。原 RootTaskDetail/MemberTaskDetail 完整核实能力迁到 SessionTaskReview，session-task-state 共享原历史过滤和根状态投影，没有第二套任务事实或控制器。只有主对话菜单、成员“核实执行记录”和中断提示“查看原运行”显式打开原生核实对话框；办公室普通点击只导航页面。核实框可见时维持补充资料及回执观察，关闭恢复焦点，不启动或重放任务。导航请求只确认一次。
+
+按变更消费者选择办公室/历史、成员身份与原任务、根目标/重规划/队列、取消/检查点/依赖/求助详情：`pnpm exec vitest run tests/session-task-view.test.ts tests/task-history-view.test.ts tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/office-scene.test.ts tests/scope-goal-view.test.ts tests/scope-replan-view.test.ts tests/queue-insertion-view.test.ts tests/member-cancellation-view.test.ts tests/member-checkpoint-view.test.ts tests/member-dependency-view.test.ts tests/member-help-view.test.ts --reporter=dot`，12 文件 101 项通过。原根详情断言改由实际核实组件承载；前一步已删除的当前任务列表不再断言存在，改验证原 officeScene.current 投影仍保留未完成任务，没有删掉原恢复行为覆盖。新增定位拒绝缺登记、重复登记、跨办公室和不存在任务用例。补齐选择框可访问名称后，team-conversation-view 2 项再次通过。
+
+`node scripts/office-team-desktop-smoke.mjs` 20 组通过：成员详情直达原 next-rules、切换其他任务后再次点击可重新定位、主调度进入主对话并保留草稿、历史任务定位原话题；普通导航不生成右栏或核实框，显式核实仍绑定原任务。保留人物动态、隔离会话、减少动画与桌面/320px 双主题检查；证据 test-results/office-desktop-GdySMf/report.json（导航回调去重后的最终 20 组验收），前次等价桌面截图已核对。首次检查因选择框缺少明确可访问名称、隐藏频道参与严格定位失败，分别补齐名称和可见频道选择器后通过；不是执行任务失败。`node scripts/interaction-area-smoke.mjs` 12 组通过（test-results/office-desktop-I7vQIC/report.json），覆盖直接选择、切换补读、独立草稿/附件/滚动与等待续接；`node scripts/interrupted-chat-ui-smoke.mjs` 5 组通过，原运行核实不发送/清草稿、未知影响仍受控，pageErrors/unexpected/writes 均为空。
+
+`pnpm typecheck`、`pnpm check:test-modules`（525 文件：unit 166 / contract 159 / integration 200）、`pnpm check:architecture`（含依赖检查，1615 文件/7642 依赖，无环）通过。源码注释、conversation/tasks/execution-view 的 CONTRACT 与 ARCHITECTURE 同步；`node scripts/source-architecture.mjs` 最终 134 目录、812 代码/样式文件，0 文档差异。界面验收使用实际 Electron/React 和 Edge/React 的隔离 IPC，不代表真实模型、打包安装或生产工作区验收。未运行本地全量测试及安装/升级，不合并、不发布；推送后以最新提交完整 CI 为准。当前唯一开放 Issue #65 与本需求无关，不关联关闭。
+
 ## 2026-11-15 PR #83 删除办公室重复的当前任务全文列表
 
 用户要求删除舞台下方绿色框中的“当前任务”整块内容。OfficeScene 移除该标题、任务全文按钮列表和空态提示，office-scene.css 清理对应布局/按钮样式；人物卡继续显示原任务摘要和按需详情入口，历史任务仍默认折叠。变化只在 View 展示，office-state 的任务事实、人物/工位/待办投影和执行调度不变，不删除任务记录。

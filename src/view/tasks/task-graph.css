@@ -1,21 +1,15 @@
 /**
- * 作用定位：主会话办公室与按需任务详情的自适应布局。
- * 设计原因：办公室标题与导航共用一行，不保留已移除的话题筛选栏及其空间；窄屏为标题换行保留按钮位置；办公室与详情各自保持可读宽度；历史折叠不删除任务事实。检查点不显示完成动画，详情在窄视口下移。
+ * 作用定位：主会话办公室与显式运行核实对话框的自适应布局。
+ * 设计原因：办公室标题与导航共用一行，不保留已移除的话题筛选栏及其空间；窄屏为标题换行保留按钮位置；办公室全宽展示，运行核实按需使用原生对话框；历史折叠不删除任务事实。检查点不显示完成动画，详情在窄视口下移。
  */
 .session-task-view.graph-mode{max-width:none;width:100%;padding:18px;min-width:0;margin:0;container-type:inline-size}
 .session-task-view.graph-mode>header{display:grid;grid-template-columns:minmax(0,1fr) auto;margin-bottom:14px;align-items:start}
 .session-task-view.graph-mode h2{font-size:17px;margin-bottom:6px}
 .task-view-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex-shrink:0}
 .task-view-actions button{font-size:12px;padding:6px 9px}
-.session-graph-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0;align-items:start}
-.session-graph-layout.with-detail{grid-template-columns:minmax(280px,1fr) minmax(280px,360px)}
 .root-task-detail>[data-testid=scope-stop]{margin-bottom:12px}
 .task-state-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 .task-state-dot.animated{animation:task-node-pulse 1.5s ease-in-out infinite}
-.session-graph-detail{border:1px solid var(--line);border-radius:12px;min-width:0;max-height:78vh;overflow:auto;background:var(--surface)}
-.session-graph-detail>header{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:1;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface)}
-.session-graph-detail>header strong{font-size:12px}
-.session-graph-detail>header button{font-size:11px;padding:5px 8px}
 .root-task-detail{padding:14px;min-width:0}
 .root-task-detail>.session-run{background:var(--bg);padding:12px}
 .root-task-detail h3{font-size:13px}
@@ -28,7 +22,11 @@
 .task-graph-loading{font-size:12px;color:var(--muted);margin:8px 0}
 .task-graph-draft{padding:48px 18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
 .task-graph-draft p{font-size:12px;max-width:380px;margin:0 auto 16px}
-@container (max-width:760px){.session-graph-layout.with-detail{grid-template-columns:minmax(0,1fr)}.session-graph-detail{max-height:none}}
-@media(max-width:600px){.session-task-view.graph-mode{padding:12px}.session-task-view.graph-mode>header{gap:6px}.task-view-actions{justify-content:flex-start}.session-graph-layout.with-detail{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.session-task-view.graph-mode{padding:12px}.session-task-view.graph-mode>header{gap:6px}.task-view-actions{justify-content:flex-start}}
 @media(prefers-reduced-motion:reduce){.task-state-dot.animated{animation:none}}
 @keyframes task-node-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+
+/* 只在显式核实时出现；原生 dialog 管理焦点，不占办公室右侧空间。 */
+.task-review-dialog{width:min(960px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);overflow:auto}
+.task-review-dialog::backdrop{background:rgba(0,0,0,.45)}
+.task-review-dialog>header{display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:1;padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--line)}

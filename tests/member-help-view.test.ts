@@ -6,7 +6,7 @@ import {committedMemberHelp,memberHelpKindLabels} from '../src/view/tasks/member
 import {MemberHelpNotice} from '../src/view/tasks/MemberHelpNotice';
 import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {sessionRoot} from '../src/view/tasks/session-task-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'},member={agentId:'cbim:executor',agentInstanceId:'executor-instance',agentSessionId:'executor-session',name:'默认执行 Agent'};

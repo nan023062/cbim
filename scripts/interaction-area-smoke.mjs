@@ -62,6 +62,30 @@ try{
  await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
  assert.equal(await pane.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'保留主草稿');
  checks.push('agent-name-opens-review-directly-without-expansion-and-keeps-main-draft');
+ // Hold one task read to verify mode changes share the existing in-flight refresh gate.
+ await page.evaluate(()=>{
+  window.fixture.originalReadCall=window.cbim.call;window.fixture.switchReadCount=0;
+  window.cbim.call=async(action,args)=>{
+   if(action==='dispatch.sessionRead'&&args.identity.rootSessionId==='root'){
+    window.fixture.switchReadCount++;
+    if(window.fixture.switchReadCount===1)await new Promise(resolve=>window.fixture.releaseSwitchRead=resolve);
+   }
+   return window.fixture.originalReadCall(action,args);
+  };
+ });
+ await pane.getByRole('button',{name:'切换到办公室',exact:true}).click();
+ await pane.locator('.office-scene').waitFor();
+ await page.waitForFunction(()=>!!window.fixture.releaseSwitchRead);
+ assert.equal(await pane.getByRole('button',{name:'刷新任务图',exact:true}).count(),0);
+ assert.equal(await pane.getByRole('button',{name:'返回对话',exact:true}).count(),0);
+ assert.equal(await pane.getByRole('checkbox',{name:'人物动态',exact:true}).count(),0);
+ await pane.getByRole('button',{name:'切换到对话',exact:true}).click();
+ assert.equal(await page.evaluate(()=>window.fixture.switchReadCount),1,'mode switch does not overlap the held read');
+ await page.evaluate(()=>window.fixture.releaseSwitchRead());
+ await page.waitForFunction(()=>window.fixture.switchReadCount>=2);
+ await page.evaluate(()=>{window.cbim.call=window.fixture.originalReadCall;delete window.fixture.originalReadCall;delete window.fixture.releaseSwitchRead});
+ assert.equal(await pane.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'保留主草稿');
+ checks.push('mode-switch-refreshes-and-coalesces-in-flight-read-without-extra-controls');
  await pane.getByRole('button',{name:'切换到办公室',exact:true}).click();
  await pane.locator('.office-scene').waitFor();
  await assertToggleIn('.session-task-view>header');

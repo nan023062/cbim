@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 去除办公室重复操作
+
+用户要求切换对话/办公室承担刷新和返回能力，并始终启用人物动态。Conversation 在实际模式变化时调用原 useSessionGraph.refresh，沿既有在途合并、身份隔离和增量读取；初次挂载与重新激活仍由 Hook 负责。SessionTaskView 删除独立刷新/返回按钮和失效 onRefreshGraph 入口，仅装配父级唯一切换按钮；未开始会话的“开始对话”引导保留。OfficeScene 删除人物动态开关和可变开关状态，默认按真实工作及新派发/汇报播放，保留系统减少动画、后台不回放、单人物和有界队列语义。变化限定在 View 导航与表现，不改变执行、停止、恢复或队列业务。
+
+按受影响的办公室舞台和标题消费选择 `pnpm exec vitest run tests/session-task-view.test.ts tests/office-scene.test.ts --reporter=dot`，2 文件 10 项通过。`node scripts/interaction-area-smoke.mjs` 12 组通过，增加切换立即补读、在途请求合并、无三个冗余控件及草稿保留验证；证据 `test-results/office-desktop-y5R7yj/report.json`。`node scripts/office-team-desktop-smoke.mjs` 16 组通过，验证真实派发/汇报动态、默认工作动画、历史不回放和系统减少动画，以及桌面/320px 双主题布局；证据 `test-results/office-desktop-fF2bfY/report.json`，最终截图已核对。两组使用实际 Electron/React 与隔离 IPC，未操作用户工作区或真实模型。`pnpm typecheck`、`pnpm check:architecture` 通过，后者含依赖无环检查。源码注释、conversation/tasks 的 CONTRACT/ARCHITECTURE 同步。测试登记及导入不变；完整 CI 随最终提交重新触发，未运行本地全仓测试、打包、安装、合并或发布。开放 Issue #65 与本次用户直接授权无关，不关联关闭。
+
 ## 2026-11-15 PR #83 设置侧栏与首页统一
 
 用户要求设置侧栏与首页采用相同风格、尺寸和布局。两处现在共用 components/sidebar.css 的侧栏内边距、32px 标题/菜单行、30px 圆角搜索框、图标、分组及选中样式；App 通过 --sidebar-width 传递唯一 useSidebarWidth 状态（默认 260px，200～420px），设置接收同一调整手柄，拖动或键盘调整在返回首页后继续有效。清除 shell/settings 的重复视觉声明；设置窄屏仍用分类选择器和搜索，表单按需挂载/草稿/更新控制器不变。此处只改变 View 装配和 CSS，未迁移宽度所有权或业务保存规则。

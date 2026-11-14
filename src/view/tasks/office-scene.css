@@ -1,8 +1,8 @@
 /**
  * 作用定位：主题自适应办公室家具、人物与往返动作；小屏工位逐列重排。
- * 设计原因：名字和状态保持正常字号，人物用主题矢量绘制；动态只改变 transform，减少动画时仍保留完整状态、任务和对话入口。
+ * 设计原因：名字和状态保持正常字号，人物用主题矢量绘制，动态无单独开关；动态只改变 transform，减少动画时仍保留完整状态、任务和对话入口。
  */
-.office-scene{min-width:0;width:100%}.office-scene-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px}.office-scene-bar label{display:flex;align-items:center;gap:5px}.office-scene-note{font-size:12px;line-height:1.6;color:var(--muted)}
+.office-scene{min-width:0;width:100%}.office-scene-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px}.office-scene-note{font-size:12px;line-height:1.6;color:var(--muted)}
 .office-floor{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 22px;padding:64px 20px 28px;min-width:0;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:repeating-linear-gradient(0deg,transparent,transparent 27px,var(--line) 28px),var(--bg)}
 .office-room-sign{position:absolute;top:15px;left:20px;font-weight:700;font-size:12px;letter-spacing:2px}.office-room-sign span{display:block;font-weight:400;color:var(--muted);letter-spacing:0;font-size:11px;margin-top:5px}
 .office-station{min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 8px 14px;box-shadow:0 6px 0 var(--line);text-align:center}.office-station.coordinator{grid-column:1/-1;width:min(100%,300px);justify-self:center;border-top:3px solid var(--accent)}.office-station h3{font-size:13px;margin:0 0 7px;overflow-wrap:anywhere}.office-station.lounge{border-style:dashed}

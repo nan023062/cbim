@@ -12,7 +12,7 @@ it('同一逻辑成员的不同执行实例只显示一人，当前模块与串�
  const graph=officeGraph([current,other]),sessions=[officeSession(),{...officeSession('foreign'),rootSessionId:'other'}];
  const scene=officeScene(graph,sessions,[scope],true);expect(scene.actors).toHaveLength(2);expect(scene.actors[1]).toMatchObject({id:'worker-session',taskId:'one',deskId:'module:module-a',queued:1,working:true});expect(scene.desks.map(value=>value.name)).toEqual(['主 Agent 工位','模块 A']);
  const html=renderToStaticMarkup(createElement(OfficeScene,{graph,sessions,scopes:[scope],mainRunning:true,queued:2,onChat:()=>{},onTask:()=>{}}));
- expect(html.match(/data-office-actor="worker-session"/g)).toHaveLength(1);expect(html).toContain('打开 建模员 的对话');expect(html).toContain('同一 Agent 串行');expect(html).not.toContain('foreign');
+ expect(html.match(/data-office-actor="worker-session"/g)).toHaveLength(1);expect(html).toContain('打开 建模员 的对话');expect(html).toContain('同一 Agent 串行');expect(html).not.toContain('foreign');expect(html).not.toContain('type="checkbox"');expect(html).not.toContain('人物动态');expect(html).toContain('office-person-drawing working');
 });
 it('完成/撤销任务默认折叠，空闲 Agent 的独立会话仍保留',()=>{
  const graph=officeGraph([{...officeTask('old'),status:'cancelled'}]),scene=officeScene(graph,[officeSession()],[scope],false);

@@ -17,7 +17,7 @@ const html=path.join(out,'index.html'),main=path.join(out,'main.cjs');
 await fs.writeFile(html,'<meta name="viewport" content="width=device-width, initial-scale=1"><title>CBIM office desktop acceptance</title><div id="root"></div><script type="module" src="/scripts/office-team-ui-fixture.tsx"></script>');
 await fs.writeFile(main,`const {app,BrowserWindow}=require('electron');
 app.setPath('userData',${JSON.stringify(path.join(out,'profile'))});
-app.whenReady().then(()=>{const window=new BrowserWindow({show:false,width:1280,height:1200,useContentSize:true,title:'CBIM isolated office acceptance',webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});window.loadURL(process.env.CBIM_OFFICE_PREVIEW_URL)});
+app.whenReady().then(()=>{const window=new BrowserWindow({show:false,width:1280,height:1200,useContentSize:true,title:'CBIM isolated office acceptance',webPreferences:{offscreen:true,contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});window.loadURL(process.env.CBIM_OFFICE_PREVIEW_URL)});
 app.on('window-all-closed',()=>app.quit());`);
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});
 let desktop,page;
@@ -32,7 +32,12 @@ try{
  const active=()=>page.locator('.workspace-panel:not([hidden])');
  const office=()=>active().locator('.session-task-panel:not([hidden]) .office-scene');
  const selectOffice=async title=>{await page.locator('.workspace-conversations').getByRole('button',{name:title,exact:true}).click();await active().getByRole('button',{name:'切换到办公室',exact:true}).click();await office().waitFor()};
+ await page.emulateMedia({reducedMotion:'no-preference'});
  await selectOffice('象棋研发办公室');
+ assert.equal(await active().getByRole('button',{name:'刷新任务图',exact:true}).count(),0);
+ assert.equal(await active().getByRole('button',{name:'返回对话',exact:true}).count(),0);
+ assert.equal(await office().getByRole('checkbox',{name:'人物动态',exact:true}).count(),0);
+ assert.ok(await office().locator('.office-person-drawing.working').count()>0);
  assert.deepEqual(await office().locator('[data-office-actor]').evaluateAll(nodes=>nodes.map(n=>n.dataset.officeActor)),['main:root','executor-logical','designer-logical']);
  assert.equal(await office().locator('.office-history').evaluate(node=>node.open),false);
  checks.push('one-person-per-logical-session-and-default-collapsed-history');
@@ -44,9 +49,8 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.office-person.walking').length===0);
  assert.equal(await office().locator('[data-office-actor]').count(),3);
  checks.push('committed-dispatch-and-feedback-move-two-existing-actors-and-return');
- await office().getByRole('checkbox',{name:'人物动态',exact:true}).uncheck();
- assert.equal(await office().locator('.walking,.office-person-drawing.working').count(),0);
- checks.push('motion-toggle-stops-walking-and-working-with-chat-controls-preserved');
+ assert.equal(await office().getByRole('checkbox').count(),0);
+ checks.push('office-motion-always-enabled-without-extra-refresh-return-or-toggle-controls');
 
  const capture=async(name,theme,width,height,position='top')=>{
    // Electron's compositor surface follows BrowserWindow, not CDP device emulation.
@@ -67,6 +71,7 @@ try{
    await page.evaluate(()=>Promise.race([new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))),new Promise(resolve=>setTimeout(resolve,150))]));
    const layout=await office().evaluate(scene=>({viewport:innerWidth,document:[document.documentElement.clientWidth,document.documentElement.scrollWidth],nodes:[scene,...scene.querySelectorAll('.office-floor,.office-station,.office-current-tasks,.office-history')].map(n=>({name:n.className,width:n.clientWidth,scroll:n.scrollWidth})),theme:document.documentElement.dataset.theme}));
    assert.equal(layout.viewport,width);assert.ok(layout.document[1]<=width+1,JSON.stringify(layout));assert.ok(layout.nodes.every(n=>n.scroll<=n.width+1),JSON.stringify(layout));
+   await page.waitForTimeout(200);
    const file=path.join(out,name+'.png');
    const capture=await desktop.evaluate(async({BrowserWindow})=>{const image=await BrowserWindow.getAllWindows()[0].webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});return {size:image.getSize(),png:image.toPNG().toString('base64')}});
    assert.ok(capture.size.width>0&&capture.size.height>0,'Empty native compositor capture');
@@ -111,8 +116,8 @@ try{
  await office().getByText('3 位 Agent · 0 个排队话题',{exact:true}).waitFor();
  checks.push('second-office-has-independent-actors-and-does-not-inherit-first-office-queue');
  await page.emulateMedia({reducedMotion:'reduce'});
- await office().getByText('人物动态（系统减少动画）',{exact:true}).waitFor();
- assert.equal(await office().getByRole('checkbox').isDisabled(),true);
+ await page.waitForFunction(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
+ assert.equal(await office().getByRole('checkbox').count(),0);
  await page.evaluate(()=>window.fixture.phase=5);
  await office().getByText('1 项新派发 · 0 项新汇报',{exact:true}).waitFor();
  assert.equal(await office().locator('.walking,.office-person-drawing.working').count(),0);

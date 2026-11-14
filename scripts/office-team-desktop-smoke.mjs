@@ -57,6 +57,15 @@ try{
  checks.push('committed-dispatch-and-feedback-move-two-existing-actors-and-return');
  assert.equal(await office().getByRole('checkbox').count(),0);
  checks.push('office-motion-always-enabled-without-extra-refresh-return-or-toggle-controls');
+ assert.equal(await office().locator('.office-current-tasks').count(),0);
+ assert.equal(await office().getByText(/^当前任务 ·/).count(),0);
+ await office().locator('[data-office-actor="executor-logical"]').getByRole('button',{name:'任务详情',exact:true}).click();
+ const taskDetail=active().getByTestId('session-graph-detail');
+ await taskDetail.locator('.member-detail-goal').getByText('补充规则测试',{exact:true}).waitFor();
+ assert.equal(await taskDetail.getByTestId('member-execution-report').getAttribute('data-task-id'),'next-rules');
+ await taskDetail.getByRole('button',{name:'关闭任务详情',exact:true}).click();
+ assert.equal(await active().getByTestId('session-graph-detail').count(),0);
+ checks.push('no-duplicate-current-task-list-and-actor-opens-original-task-detail');
 
  const capture=async(name,theme,width,height,position='top')=>{
    // Electron's compositor surface follows BrowserWindow, not CDP device emulation.
@@ -75,7 +84,7 @@ try{
    if(position!=='top')assert.ok(scroll.top>0,'The lower view must actually scroll');
    if(width<600)assert.ok(scroll.max/2<=scroll.height,'Three screenshots must cover the full panel');
    await page.evaluate(()=>Promise.race([new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))),new Promise(resolve=>setTimeout(resolve,150))]));
-   const layout=await office().evaluate(scene=>({viewport:innerWidth,document:[document.documentElement.clientWidth,document.documentElement.scrollWidth],nodes:[scene,...scene.querySelectorAll('.office-floor,.office-station,.office-current-tasks,.office-history')].map(n=>({name:n.className,width:n.clientWidth,scroll:n.scrollWidth})),theme:document.documentElement.dataset.theme}));
+   const layout=await office().evaluate(scene=>({viewport:innerWidth,document:[document.documentElement.clientWidth,document.documentElement.scrollWidth],nodes:[scene,...scene.querySelectorAll('.office-floor,.office-station,.office-history')].map(n=>({name:n.className,width:n.clientWidth,scroll:n.scrollWidth})),theme:document.documentElement.dataset.theme}));
    assert.equal(layout.viewport,width);assert.ok(layout.document[1]<=width+1,JSON.stringify(layout));assert.ok(layout.nodes.every(n=>n.scroll<=n.width+1),JSON.stringify(layout));
    await page.waitForTimeout(200);
    const file=path.join(out,name+'.png');

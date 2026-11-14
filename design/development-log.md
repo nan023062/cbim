@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 删除办公室重复的当前任务全文列表
+
+用户要求删除舞台下方绿色框中的“当前任务”整块内容。OfficeScene 移除该标题、任务全文按钮列表和空态提示，office-scene.css 清理对应布局/按钮样式；人物卡继续显示原任务摘要和按需详情入口，历史任务仍默认折叠。变化只在 View 展示，office-state 的任务事实、人物/工位/待办投影和执行调度不变，不删除任务记录。
+
+选择直接受影响的办公室渲染与历史边界：`pnpm exec vitest run tests/office-scene.test.ts --reporter=dot`，1 文件 6 项通过。`node scripts/office-team-desktop-smoke.mjs` 18 组通过，新增当前任务列表不再存在、点击人物卡仍打开原 next-rules 任务详情、关闭详情正常的检查，保留历史展开、人物动态、会话隔离及桌面/320px 双主题检查；证据 `test-results/office-desktop-Yn03v0/report.json`，最终桌面与窄屏底部截图已核对。实际 Electron/React 使用隔离 IPC，无真实模型或用户项目写入。`pnpm check:architecture` 通过（含依赖检查）；OfficeScene/CSS 注释及 tasks 的 CONTRACT/ARCHITECTURE 同步。公共类型、测试登记与导入未变，不重复类型及本地全仓验证；完整 CI 随最终提交更新。未打包、安装、合并或发布，开放 Issue #65 与本次直接授权范围无关。
+
 ## 2026-11-15 PR #83 删除办公室顶部冗余话题栏
 
 用户要求删除截图绿色框内全部内容。此前已删除办公室/任务依赖图二级按钮，本次移除 SessionTaskView 的话题下拉、目标状态及历史折叠说明整栏，并删除 task-graph.css 对应样式，不保留空容器。变化仅限 View 展示；话题选择继续由对话频道及显式导航传入，办公室用量、根/成员详情和历史折叠沿原身份及规则工作。

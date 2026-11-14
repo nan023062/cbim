@@ -66,9 +66,9 @@
 | [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
 | [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON/CSV/PNG 验证记录，列出验证器、明确条件、文件与当时结论。 |
-| [office-scene.css](office-scene.css) | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排。 |
+| [office-scene.css](office-scene.css) | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排；当前任务正文按需进入详情，不另设列表占位。 |
 | [office-state.ts](office-state.ts) | 把当前办公室已提交任务投影为唯一人物、模块工位及派发/汇报动态。 |
-| [OfficeScene.tsx](OfficeScene.tsx) | 当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影。 |
+| [OfficeScene.tsx](OfficeScene.tsx) | 当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影；当前任务只在人物卡提供摘要和详情入口，不再重复铺开正文列表。 |
 | [output-manifest-state.ts](output-manifest-state.ts) | 完整产物清单的显式列表、选择和复核状态；仅消费 Bridge 公开 DTO。 |
 | [owner-execution-state.ts](owner-execution-state.ts) | 将任务内冻结的负责人绑定投影为只读展示状态，供对话卡片、任务节点与详情共用。 |
 | [owner-execution.css](owner-execution.css) | 任务与目标计划中原岗位绑定的紧凑排版。 |
@@ -4442,7 +4442,7 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 联合投影同时核对 followupOf 摘要/详情，防止把新话题错误关联到另一个历史周期。
 ### 办公室展示与往返
 
-`SessionTaskView` 只展示 OfficeScene，依赖图入口、画布和专用布局已移除；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。已完成/撤销任务使用原历史判定，默认收起，直接定位历史任务展开其原详情。
+`SessionTaskView` 只展示 OfficeScene，依赖图入口、画布和专用布局已移除；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。当前任务经人物卡摘要与“任务详情”按需查看，舞台下方不再重复列出当前任务全文或空列表提示。已完成/撤销任务使用原历史判定，默认收起，直接定位历史任务展开其原详情。
 
 `OfficeEventTracker` 首次快照只建立基线；当前可见期间新增 task/result/help/checkpoint 身份产生派发或汇报动画。跨办公室、旧/重复序号、切出期间的事实不回放；单人按序播放，队列有界。人物测量工位间位置，往返后回原位，动画没有业务副作用。文字状态取可靠任务事实；正在退出不称已暂停，等待不冒充正在工作。人物动态无单独开关，正常模式始终开启；系统减少动画时仍保留全部内容和导航，不为动画补造任务活动。
 

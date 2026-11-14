@@ -1,5 +1,5 @@
 /**
- * 作用定位：当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影。
+ * 作用定位：当前主 Session 的办公室舞台、人物往返和对话导航，工位由真实模块投影；当前任务只在人物卡提供摘要和详情入口，不再重复铺开正文列表。
  * 设计原因：人物动态始终启用并遵循系统减少动画偏好；人物只有一个 DOM 实体，沿已提交派发/汇报移动再回工位；动画结束仅清理本地播放队列，不调用执行接口。窄屏重排和减少动画不改变任务事实；侧栏身份只突出人物，不触发执行或重播动画。
  */
 import {useEffect,useLayoutEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
@@ -60,7 +60,6 @@ export function OfficeScene({graph,sessions,scopes,mainRunning,queued,active=tru
       </section>)}
     </div>
     <p className="office-event-notice" role="status" aria-live="polite">{notice||'等待新的派发与汇报事件；历史记录不重复播放。'}</p>
-    <div className="office-current-tasks"><strong>当前任务 · {scene.current.length}</strong>{!scene.current.length&&<p>当前没有待处理任务</p>}{scene.current.map(task=><button data-task-id={task.taskId} key={task.taskId} onClick={()=>onTask(task.taskId)}>{task.assignee.name} · {task.goal}</button>)}</div>
     {!!scene.history.length&&<details className="office-history" open={scene.history.some(task=>task.taskId===selectedTaskId)}><summary>历史任务 · {scene.history.length}</summary>{scene.history.map(task=><button data-task-id={task.taskId} key={task.taskId} onClick={()=>onTask(task.taskId)}>{task.assignee.name} · {task.goal}</button>)}</details>}
   </section>;
 }

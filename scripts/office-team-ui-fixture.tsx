@@ -45,7 +45,7 @@ function data(root='root'){
   if(action==='dispatch.sessionRead'){
     const seq=fixture.phase+1,cursor={...value.identity,kind:'scopes',streamId:'scopes:graph',seq};
     const summaries=value.scopes.map((scope:any)=>summarizeScope(scope,cursor.streamId,seq));
-    const scope=value.scopes.find((scope:any)=>scope.scopeId===args.scopeId)??value.scope,summary=summaries.find((s:any)=>s.scopeId===scope.scopeId)!;
+    const scope=value.scopes.find((scope:any)=>scope.scopeId===args.selectedScopeId)??value.scope,summary=summaries.find((s:any)=>s.scopeId===scope.scopeId)!;
     return {graph:{mode:'reset',reason:'initial',snapshot:value.graph,cursor:value.graph.cursor},scopes:{mode:'reset',reason:'initial',snapshot:{identity:value.identity,cursor,scopes:summaries},cursor},detail:{mode:'updated',stamp:summary.stamp,scope},teamSessions:value.sessions};
   }
   if(action==='dispatch.executionEvents'){const record=progressMemberRun(args.taskId.replace(/-two$/,''),Math.min(fixture.phase,4));const {events,...run}=args.rootSessionId==='root-two'?otherOffice(record):record;return {mode:'reset',run,cursor:{runId:run.runId,seq:events.length},events,hasMore:false}}

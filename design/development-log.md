@@ -1,3 +1,9 @@
+## 2026-11-14：发布复盘改进——核实 Electron 主进程而非启动器 PID
+
+- 第二轮 `43560388037` 的增强错误证据显示：资源重启时观察到的 PID 对应 `C:\Windows\system32\cmd.exe`。实际原因是 Playwright 在 Windows 通过启动器运行 Electron，`application.process().pid` 不能充当桌面主进程身份；上一片的退出竞态回归有价值，但不是这次失败已证实的根因。两轮失败均保留，未启动完整 CI。
+- `ownLaunchedDesktop` 改为在连接仍可用时读取实际 Electron 的 process.pid 和 app.getPath('exe')，核对路径后才建立进程所有者。释放/安装后只使用这份身份；接入失败正常关闭自己的启动实例并保留原异常。
+- 增加真实 Windows Electron 空窗口集成：证明启动器 PID 与主进程不同，使用原生观察脚本正常关闭实际进程；不加载 CBIM Application 或用户数据。进程单元同时禁止读取 launcher PID，拒绝错误 EXE。`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs`：10/10；新增 Windows 脚本 CLI/PID 已不存在分支的精确测试 1/1。正式线上验收仍待新独立 runner。
+
 ## 2026-11-14：发布复盘改进——补齐 Windows 枚举后退出竞态
 
 - PR #76 草稿运行 `43559662100` 仅执行 scope/deferred，正式四片和汇总均跳过。首次隔离升级 `43559662857` 前置 80 项、全新安装及原生 Pi 下载通过，但资源 UI 重启后的原生观察器报 PID identity changed，未计为升级成功；失败和 process-lifecycle 保留在本轮 online-attempt1。

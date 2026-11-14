@@ -1,5 +1,15 @@
 import assert from 'node:assert/strict';
 
+/** Playwright 的 ChildProcess 在 Windows 上可能是 cmd 启动器，不能当作 Electron 身份。 */
+export async function ownLaunchedDesktop(application, {executablePath, waitForExit, record}) {
+  const identity = await application.evaluate(({app}) => ({pid: process.pid, executablePath: app.getPath('exe')}));
+  assert.equal(identity.executablePath, executablePath, 'Launched desktop executable mismatch');
+  return new DesktopAcceptanceProcess({pid: identity.pid, waitForExit, record, transport: {
+    evaluate: fn => application.evaluate(fn), firstWindow: () => application.firstWindow(),
+    quit: () => application.close(), disconnect: async () => {},
+  }});
+}
+
 /**
  * 验收进程的唯一连接所有者。PID 在接入时冻结，正常退出和 UI 安装交接共用收尾，
  * 避免进程已退出后再从 Playwright 读取身份。这里不判断版本、安装成功或业务状态。

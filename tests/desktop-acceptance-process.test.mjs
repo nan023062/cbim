@@ -1,5 +1,5 @@
 import {it, expect, vi} from 'vitest';
-import {DesktopAcceptanceProcess} from '../scripts/desktop-acceptance-process.mjs';
+import {DesktopAcceptanceProcess, ownLaunchedDesktop} from '../scripts/desktop-acceptance-process.mjs';
 
 function fixture({actionError, exitError, disconnectError} = {}) {
   const order = [], records = [];
@@ -74,4 +74,14 @@ it('retains quit failures instead of reporting a successful cleanup', async () =
   await expect(f.process.close()).rejects.toThrow('quit refused');
   await expect(f.process.close()).rejects.toThrow('quit refused');
   expect(f.transport.quit).toHaveBeenCalledTimes(1);
+});
+
+it('owns the evaluated runtime identity without consulting a launcher or accepting another executable', async () => {
+  const app={evaluate:vi.fn(async()=>({pid:321,executablePath:'desktop.exe'})),
+    process(){throw Error('Launcher PID must never be consulted')},close:vi.fn(),firstWindow:vi.fn()};
+  const waitForExit=vi.fn();
+  const owner=await ownLaunchedDesktop(app,{executablePath:'desktop.exe',waitForExit});
+  await owner.close();expect(owner.pid).toBe(321);
+  expect(waitForExit.mock.calls[0][0]).toBe(321);
+  await expect(ownLaunchedDesktop(app,{executablePath:'other.exe',waitForExit})).rejects.toThrow(/executable mismatch/);
 });

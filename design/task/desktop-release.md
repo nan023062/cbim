@@ -43,7 +43,7 @@
 
 ### 验收进程与发布复验
 
-验收进程统一由 `scripts/desktop-acceptance-process.mjs` 的 `DesktopAcceptanceProcess` 管理。接入时冻结 PID；连接可用时才允许 evaluate/firstWindow。普通 quit、资源 UI 重启、安装 UI 交接共用 `active → stopping → closed/failed`，先观察原生退出、只执行一次动作、释放调试连接，再确认真实 PID 已退出。窗口关闭、调试断开和安装成功是不同事实，新版本和原用户目录仍由主验收脚本核实。
+验收进程统一由 `scripts/desktop-acceptance-process.mjs` 的 `DesktopAcceptanceProcess` 管理。Playwright 启动后由 `ownLaunchedDesktop` 读取实际 Electron 的 process.pid/EXE 并核对身份，不能使用可能属于 cmd 启动器的 application.process().pid；原生接回则验证实际 PID/EXE。接入时冻结 PID；连接可用时才允许 evaluate/firstWindow。普通 quit、资源 UI 重启、安装 UI 交接共用 `active → stopping → closed/failed`，先观察原生退出、只执行一次动作、释放调试连接，再确认真实 PID 已退出。窗口关闭、调试断开和安装成功是不同事实，新版本和原用户目录仍由主验收脚本核实。
 
 失败/未知的 UI 动作不自动重发，重复 cleanup 只等待原操作；释放错误不能覆盖原失败。原生资源重启仍先验证 PID/EXE，再接主进程被动网络观测和页面；中途接入失败也释放已建立连接。`process-lifecycle.json` 记录每个 PID 的交接阶段，供定位失败。该所有者仅属于验收工具，不改变产品进程、下载定时器或状态。
 

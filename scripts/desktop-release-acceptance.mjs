@@ -12,7 +12,7 @@ import {_electron as electron, chromium} from 'playwright-core';
 import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
-import {DesktopAcceptanceProcess} from './desktop-acceptance-process.mjs';
+import {DesktopAcceptanceProcess, ownLaunchedDesktop} from './desktop-acceptance-process.mjs';
 import {parse} from 'yaml';
 
 assert.equal(process.platform, 'win32');
@@ -96,10 +96,10 @@ const status = page => page.evaluate(() => window.cbim.call('desktop.updates.sta
 async function launch(profile = userRoot) {
   assert.ok(!app, 'Previous desktop connection must be released before launch');
   const launched = await electron.launch({executablePath: exe, env: {...env, CBIM_USER_DATA_ROOT: profile}, timeout: 60000});
-  app = ownProcess(launched.process().pid, {
-    evaluate: fn => launched.evaluate(fn), firstWindow: () => launched.firstWindow(),
-    quit: () => launched.close(), disconnect: async () => {},
-  });
+  try {
+    app = await ownLaunchedDesktop(launched, {executablePath: exe, waitForExit: waitForDesktopExit,
+      record: event => processLifecycle.push(event)});
+  } catch(error) { await launched.close().catch(()=>{}); throw error; }
   if (mode === 'online' && previousUpdateFlow === 'prefetch') await observeUpdaterNetwork(app);
   const page = await app.firstWindow(); page.setDefaultTimeout(30000); page.on('pageerror', error => errors.push(error.message));
   await page.getByRole('button', {name: '用户菜单', exact: true}).waitFor(); return page;

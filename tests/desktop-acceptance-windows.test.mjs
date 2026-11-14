@@ -32,6 +32,10 @@ it.skipIf(process.platform!=='win32')('accepts a process that exits after enumer
     child.kill();await exited;watcher.stdin.end('\n');
     expect((await finished)[0],error).toBe(0);
     expect(output).toMatch(/path-after-exit=\r?\n/);
+    // 同时覆盖主验收器实际使用的 -File 参数入口，以及 PID 已不存在的分支。
+    await promisify(execFile)(shell,['-NoProfile','-NonInteractive','-File',helper,
+      '-TargetProcessId',String(child.pid),'-ExpectedPath',process.execPath,'-TimeoutMilliseconds','1000'],
+      {windowsHide:true,timeout:10000});
   }finally{
     if(child.exitCode===null)child.kill();await exited;
     if(watcher?.exitCode===null)watcher.kill();

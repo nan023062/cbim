@@ -20,7 +20,7 @@
 | [ComposerCard.tsx](ComposerCard.tsx) | 从 Cindy ComposerCard 移植的统一输入卡片与内容间距。 |
 | [ComposerPicker.tsx](ComposerPicker.tsx) | Cindy 风格的权限和模型 chip，向上展开可搜索、键盘可操作的选择面板。 |
 | [conversation-activity.ts](conversation-activity.ts) | 将应用级当前运行快照投影为各工作区的活跃主会话 ID。 |
-| [conversation-entries.css](conversation-entries.css) | 历史和侧栏对话条目的共享布局与运行提示。 |
+| [conversation-entries.css](conversation-entries.css) | 历史和侧栏对话、可直接选择的 Agent 条目的共享布局与运行提示。 |
 | [conversation-state.ts](conversation-state.ts) | 把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。 |
 | [conversation-stop.ts](conversation-stop.ts) | 为会话停止操作提供独立于发送/插入锁的在途去重标记。 |
 | [conversation-topics.css](conversation-topics.css) | 话题摘要、成员审阅标题与阅读区域的响应式排版。 |
@@ -1093,7 +1093,7 @@ InteractionModeToggle 不创建独立工具栏，由 Conversation 只向当前�
 
 ### 办公室成员对话
 
-`teamConversations` 用已验证的长期 `TeamSession` 汇总同角色任务，主 Agent 保持主入口；不同执行实例不生成重复人物。缺登记旧数据不合成身份。`ConversationEntries` 在主条目下以成员名称折叠子对话，只允许查看，不创建/改名/删除子 Session。
+`teamConversations` 用已验证的长期 `TeamSession` 汇总同角色任务，主 Agent 保持主入口；不同执行实例不生成重复人物。缺登记旧数据不合成身份。`ConversationEntries` 在主条目下以成员名称直接选择，不再展开二级“查看对话”入口；按钮保留选中状态、执行指示和键盘可达性。沿原回调只切换查看身份，对话模式显示成员工作审阅，办公室模式定位对应成员，不创建/改名/删除子 Session。
 
 `MemberConversation` 从该办公室、角色和选中话题筛选任务，显示主 Agent 派发、成员公开正文、工具及交付候选。一次只挂载一个真实 task/run 的读取，历史轮次可选择；切换身份丢弃迟到响应。输入仍由外层原主 Session 的发送流程处理，界面注明收件人为主 Agent，不能直接启动成员。当前切片不把选择视为插入指令或暂停操作。
 

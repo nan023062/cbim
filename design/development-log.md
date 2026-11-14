@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 侧栏 Agent 直接选择
+
+用户要求删除 Agent 下的展开和二级“查看对话”按钮。ConversationEntries 现在直接以角色名按钮提交原 onSelectChild 身份，保留原选中状态、运行指示和禁用门禁；名称左对齐并在过长时省略。对话模式直接显示该成员只读工作审阅，办公室模式仍定位所选成员；主对话草稿、任务和执行状态不变。
+
+只选择受影响的对话条目与成员审阅契约：`pnpm exec vitest run tests/team-conversation-view.test.ts --reporter=dot` 1 文件 2 项通过；`node scripts/interaction-area-smoke.mjs` 最终 11 组通过，新增直接点击角色、无展开、选中反馈、左对齐、返回后主草稿保留断言。实际 Electron 配合隔离 IPC 替身，证据 `test-results/office-desktop-c6nhwp/report.json`，最终截图已核对；未访问用户工作区或真实模型。`pnpm check:architecture` 通过，源码注释及 conversation 的 CONTRACT/ARCHITECTURE 同步。未改变公共类型、导入或测试登记，不重复本地类型与全仓检查；完整 CI 随最终提交在 PR 中重新运行。未安装、合并或发布。
+
 ## 2026-11-15 PR #83 视图按钮并入内容标题行
 
 用户补充要求删除交互区顶部独占的空白栏，将按钮移入对话区域右上角。基于 0c8f88b5，InteractionModeToggle 现在只渲染一个按钮，Conversation 按当前可见模式装配到主对话、办公室或成员审阅的现有标题行；失效成员身份的占位区域也保留切换入口。SessionTaskView/MemberConversation 仅接收导航插槽，模式仍由 Conversation 拥有；原面板持续挂载，草稿、附件和滚动未迁移。

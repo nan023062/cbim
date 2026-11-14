@@ -1,3 +1,11 @@
+## 2026-11-15 PR #83：0.1.18 发行准备
+
+用户授权 PR 测试通过后发布。当前公开基线为 C0.1.17/R3；实际编译固定启动器的指纹由 9eb8f549e10feaba3c84631b685521dc19e7620a817e4ddd0803cc7639021fb8 变为 c7fba8fe8fb31c73ec2aac6b8bd7fa85f2e530e83e96969ebb76ebb99ac78326，因此本轮提高 C 到 0.1.18，E 未变。沿既有未签名 Windows 发行方式，资源仍使用原 Ed25519 身份；实际安装测试只在隔离 Windows runner 执行。
+
+验收工具核对了 desktop-v0.1.17 的真实代码：后台预下载、侧栏图标显式重启安装；原冷壳先选择同 C 已公开 R3，再选择新版 C。补充严格的 0.1.17 版本输入、R3 中间跳转、图标安装路径和真实升级前后 Pi 安装清单/停用状态/共享缓存文件摘要及修改时间对照；旧版断言保留，不放宽差分、普通退出、缓存复用或无业务重放检查。
+
+选取 tests/desktop-acceptance-inputs.test.mjs 验证明确版本、已核实资源跳转及保留项。初次 81/82 通过，Windows 换行导致中间跳转替换未落地；修正后 pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=json --outputFile=test-results/release-018-inputs.json 全部 82 项通过。node --check scripts/desktop-release-acceptance.mjs、git diff --check 通过。产品已完成的测试见上一步记录；本条是准备记录，不表示候选安装、最终 CI 或公开升级已通过。
+
 ## 2026-11-15 PR #83 引擎详情集中管理与跨版本缓存验收
 
 用户继续要求：引擎设置用完整官方清单下拉选择，选中后才显示详情；所有引擎下载、版本、安装、停启和移除归详情，账户旁更新仅负责 CBIM 应用；应用升级保留引擎安装与缓存。基线 b6395db7，该基线完整 CI 43625019495 已通过；本步独立验证，不将此前 CI 计作当前改动结果。开放 Issue #65 与直接授权范围无关。

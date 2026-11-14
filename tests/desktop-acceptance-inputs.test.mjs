@@ -1,7 +1,21 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
+
+const resourceReady = () => ({currentVersion:'0.1.15',currentResourceVersion:1,phase:'ready',release:{version:'0.1.15',resourceVersion:4,delivery:'resources',tag:'runtime-c0.1.15'}});
+it('requires the verified public R4 hop before treating a newer cold installer as ready',()=>{
+  expect(acceptanceReadyTarget(resourceReady(),'0.1.15','0.1.16')).toEqual({kind:'resources',resourceVersion:4});
+  expect(acceptanceReadyTarget({...resourceReady(),currentResourceVersion:4,release:{version:'0.1.16',delivery:'installer'}},'0.1.15','0.1.16')).toEqual({kind:'installer'});
+  expect(acceptanceReadyTarget({currentVersion:'0.1.14',phase:'ready',release:{version:'0.1.16'}},'0.1.14','0.1.16')).toEqual({kind:'installer'});
+});
+it.each([
+  {phase:'downloading'}, {error:'failed'}, {currentVersion:'0.1.14'}, {currentResourceVersion:4}, {currentResourceVersion:undefined},
+  {release:{...resourceReady().release,version:'0.1.16'}}, {release:{...resourceReady().release,tag:'other'}},
+  {release:{...resourceReady().release,resourceVersion:5}}, {release:{version:'0.1.15'}}, {release:{version:'0.1.16',delivery:'other'}},
+])('rejects stale, unverified, or wrong ready targets: %j',change=>{
+  expect(()=>acceptanceReadyTarget({...resourceReady(),...change},'0.1.15','0.1.16')).toThrow();
+});
 
 it('keeps differential mandatory unless the separate online fallback diagnosis is explicitly selected', () => {
   expect(acceptanceTransferExpectation({}, {mode:'online', previousUpdateFlow:'prefetch'})).toBe('differential');

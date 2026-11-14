@@ -22,3 +22,17 @@ export function acceptanceTransferExpectation(env, {mode, previousUpdateFlow}) {
   if (value === 'full-fallback') assert.ok(mode === 'online' && previousUpdateFlow === 'prefetch', 'Fallback diagnosis requires an online prefetch client');
   return value;
 }
+
+// 0.1.15 的真实 R1 客户端优先发现已公开 R4；只接受核实过的中间跳转，不把资源就绪当成安装器就绪。
+export function acceptanceReadyTarget(status, previousVersion, version) {
+  assert.equal(status.currentVersion, previousVersion); assert.equal(status.phase, 'ready'); assert.ok(!status.error);
+  const release = status.release; assert.ok(release);
+  if (release.delivery === 'resources') {
+    assert.equal(previousVersion, '0.1.15'); assert.equal(release.version, previousVersion);
+    assert.equal(release.tag, 'runtime-c0.1.15'); assert.equal(release.resourceVersion, 4);
+    assert.ok(Number.isSafeInteger(status.currentResourceVersion) && status.currentResourceVersion >= 1 && status.currentResourceVersion < 4);
+    return {kind:'resources',resourceVersion:4};
+  }
+  assert.ok(release.delivery === undefined || release.delivery === 'installer'); assert.equal(release.version, version);
+  return {kind:'installer'};
+}

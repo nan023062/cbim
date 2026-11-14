@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {parse} from 'yaml';
 
@@ -67,7 +67,7 @@ async function recordInstallerCache(stage) {
   const result = {configuredDirectory: config.updaterCacheDirName, entries};
   await save(`installer-cache-${stage}`, result); return result;
 }
-let app, requests = 0, differential, freshEngine; const errors = [], phases = [];
+let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [];
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -91,6 +91,43 @@ async function waitPhase(page, phase, interval = 1000) {
     const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase});
     if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(interval);
   } throw Error(`Update timeout: ${phase}`);
+}
+// R 与 C 都由真实 UI 重启；只定位本验收安装路径的新主进程，正常关闭后重新连接检查实际激活结果。
+async function observeRestart(oldPid, requireUpdated, evidenceName) {
+  const quoted = exe.replaceAll("'", "''"); let restarted;
+  for (let n = 0; n < 120; n++) {
+    const text = ps(`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${quoted}' -and $_.ProcessId -ne ${oldPid} ${requireUpdated ? "-and $_.CommandLine -like '*--updated*'" : ''} -and $_.CommandLine -notlike '*--type=*' } | Select-Object ProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Compress`);
+    if (text) { restarted = JSON.parse(text); break; } await pause(1000);
+  }
+  assert.ok(restarted); assert.ok(!Array.isArray(restarted));
+  if (requireUpdated) assert.ok(restarted.CommandLine.toLowerCase().includes(userRoot.toLowerCase()));
+  await save(evidenceName, restarted); await pause(15000);
+  ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
+  return restarted;
+}
+async function prepareColdUpgrade(page) {
+  let ready = await waitPhase(page, 'ready');
+  const target = acceptanceReadyTarget(ready, previousVersion, version);
+  if (target.kind === 'resources') {
+    await save('resource-prelude-ready', ready);
+    await page.getByRole('button', {name:'版本与更新',exact:true}).hover();
+    await page.screenshot({path:path.join(root,'resource-prelude-ready.png')});
+    // 准备资源不会激活；普通退出后仍是原 R，再显式点击旧版侧栏的就绪入口。
+    await close(); page = await launch(); assert.equal((await status(page)).currentResourceVersion, ready.currentResourceVersion);
+    const again = await waitPhase(page,'ready'); assert.deepEqual(acceptanceReadyTarget(again,previousVersion,version),target);
+    const oldPid = app.process().pid, closed = app.waitForEvent('close',{timeout:60000});
+    await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
+    await page.getByRole('button',{name:'版本与更新',exact:true}).click(); await closed; app=undefined;
+    const restarted = await observeRestart(oldPid,false,'resource-prelude-restart');
+    page=await launch(); const activated=await status(page);
+    assert.equal(activated.currentVersion,previousVersion); assert.equal(activated.currentResourceVersion,target.resourceVersion);
+    assert.equal((await app.evaluate(({app})=>app.getPath('userData'))),path.join(userRoot,'desktop'));
+    resourcePrelude.push({from:ready.currentResourceVersion,to:activated.currentResourceVersion,codeVersion:previousVersion,normalQuitDidNotApply:true,restarted});
+    await save('resource-prelude',resourcePrelude);
+    ready=await waitPhase(page,'ready');
+  }
+  assert.deepEqual(acceptanceReadyTarget(ready,previousVersion,version),{kind:'installer'});
+  return {page,ready};
 }
 async function notes(page) {
   const snapshot = await status(page);
@@ -200,7 +237,8 @@ try {
     const cache = path.join(process.env.LOCALAPPDATA, previousCache.configuredDirectory, 'pending', path.basename(candidate));
     if (previousUpdateFlow === 'prefetch') {
       // 不点检查或下载，也不替换网络：由真实上一安装版的原定时器发现并下载本次公开版本。
-      const ready = await waitPhase(page, 'ready'); assert.equal(ready.release.version, version);
+      const prepared = await prepareColdUpgrade(page); page=prepared.page; const ready=prepared.ready;
+      assert.equal(requests,1,'Resource activation must not replay the completed model request');
       await page.getByRole('button', {name: '查看更新', exact: true}).click();
       const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
       await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
@@ -258,17 +296,8 @@ try {
     assert.equal(await sha(cache), expected);
     if (previousUpdateFlow === 'two-step') await page.getByRole('button', {name: '停止任务并重启安装', exact: true}).click();
     }
-    app = undefined;
-    const quoted = exe.replaceAll("'", "''");
-    for (let n = 0; n < 120; n++) {
-      const text = ps(`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${quoted}' -and $_.CommandLine -like '*--updated*' -and $_.CommandLine -notlike '*--type=*' } | Select-Object ProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Compress`);
-      if (text) { restarted = JSON.parse(text); break; } await pause(1000);
-    }
-    assert.ok(restarted); assert.ok(restarted.CommandLine.toLowerCase().includes(userRoot.toLowerCase()));
-    await save('online-restart', restarted);
-    // 等待自动启动的渲染进程与窗口稳定后正常关闭，再由 Playwright 验证已安装版本和保留数据。
-    await pause(15000);
-    ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
+    const previousPid=app.process().pid; app = undefined;
+    restarted = await observeRestart(previousPid,true,'online-restart');
   }
   page = await launch();
   const native = await app.evaluate(({app}) => ({version: app.getVersion(), packaged: app.isPackaged, exe: app.getPath('exe'), userData: app.getPath('userData')}));
@@ -297,7 +326,7 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;

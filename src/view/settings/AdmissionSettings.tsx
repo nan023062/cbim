@@ -1,6 +1,6 @@
 /**
  * 作用定位：配置应用级 Agent 并发上限，展示真实准入占用与等待数量。
- * 设计原因：设置通过版本化可靠提交才生效；实时数量独立于表单草稿，降低额度不终止现有任务，也不把容量等同费用预算。
+ * 设计原因：设置通过版本化可靠提交才生效；隐藏分类保留草稿并退订实时数量，降低额度不终止现有任务，也不把容量等同费用预算。
  */
 import {useEffect,useState} from 'react';
 import {admissionPolicySchema,type AdmissionPolicy} from '../../bridge/contracts/admission';
@@ -8,8 +8,8 @@ import {useAdmission,refreshAdmission} from '../tasks/useAdmission';
 import '../tasks/admission.css';
 
 /** 本机设置不需要模型参与，不能从页面直接领取或释放执行名额。 */
-export function AdmissionSettings(){
-  const feed=useAdmission(),[policy,setPolicy]=useState<AdmissionPolicy>(),[value,setValue]=useState('4'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+export function AdmissionSettings({active=true}:{active?:boolean}){
+  const feed=useAdmission(active),[policy,setPolicy]=useState<AdmissionPolicy>(),[value,setValue]=useState('4'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
   useEffect(()=>{let alive=true;void window.cbim.call('admission.settings').then(raw=>{const saved=admissionPolicySchema.parse(raw);if(alive){setPolicy(saved);setValue(String(saved.maxConcurrentRuns))}}).catch((error:Error)=>{if(alive)setError(error.message)});return()=>{alive=false}},[]);
   async function reload(){setBusy(true);setError('');setNotice('');try{const next=admissionPolicySchema.parse(await window.cbim.call('admission.settings'));setPolicy(next);setValue(String(next.maxConcurrentRuns));await refreshAdmission()}catch(error){setError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}}
   async function save(){

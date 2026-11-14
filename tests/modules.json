@@ -985,7 +985,9 @@
       ],
       "tests": {
         "unit": [
-          "tests/budget-settings-view.test.ts"
+          "tests/appearance-settings.test.ts",
+          "tests/budget-settings-view.test.ts",
+          "tests/settings-navigation.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1110,6 +1112,14 @@
         "contract": [
           "tests/desktop-signing.test.mjs"
         ],
+        "integration": []
+      }
+    },
+    "tooling/runtime-acceptance-inputs": {
+      "roots": ["scripts/runtime-acceptance-inputs.mjs"],
+      "tests": {
+        "unit": ["tests/runtime-acceptance-inputs.test.mjs"],
+        "contract": [],
         "integration": []
       }
     },

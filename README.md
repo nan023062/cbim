@@ -20,9 +20,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.17](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.17)，**C 0.1.17 / R3**。R3 带来对话/办公室双态交互区、主聊天与频道双窗、独立草稿/附件/阅读状态及成员只读工作审阅；自动化移到右侧扩展区，任务仍由同一主 Agent 协调。[R3 公开资源](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.17)约 4 MB，保留 R2 的九类设置和外观偏好。基础安装包内置 R1，启动后后台准备 R3，点击更新图标重启生效。官方 Pi、Claude Code、Codex 和 Memory 包保持原版本，同一受信包复用缓存；历史或模型声明不兼容时明确停止。Windows 安装包未签名，资源与引擎索引沿用原 Ed25519 签名；详见[基础版本说明](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.17)。
+Windows x64 当前公开桌面版为 [desktop-v0.1.18](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.18)，**C 0.1.18 / R1**。对话和办公室使用单按钮切换，点击 Agent 或任务入口直接查看对应工作记录；团队和业务树精简冗余资料，并提供只读源文件浏览器。设置与首页侧栏统一，引擎使用下拉列表和独立详情，所有引擎状态、下载及管理均在详情完成。
 
-已完成真实 C 0.1.17 / R1 → R3 公开资源升级验收，原数据、旧主题及设置保留，任务无重放；见 [R3 发布验收](design/verification/interaction-r3-20261114.md)。当前版本每分钟检查更新，在后台准备资源或安装包；就绪后由用户显式点击升级，普通退出不会应用。此前已验证真实 **0.1.16 → 0.1.17** 公开差分下载、无全量回退、重开复用缓存，以及原工作区、模型、会话、知识和自动化保留且无重放，见[0.1.17 发布验收](design/verification/desktop-release-0.1.17-20261114.md)。真实生成模型验收为 DeepSeek/Pi；Memory 需要生成模型与向量模型，真实双模型另验。首次使用未安装的引擎需要联网；引擎仅由开发者提供。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+本版更新基础程序，Pi、Claude Code、Codex 和 Memory 引擎包的版本与摘要保持不变；真实 0.1.17 → 0.1.18 公开自动升级已通过，安装器差分传输约 3.05 MB、无全量回退，原数据、安装清单、停用状态及共享缓存保留；结果见 [0.1.18 发布验收](design/verification/desktop-release-0.1.18-20261115.md)。当前版本后台准备更新，用户明确点击后才重启安装，普通退出不应用。Windows 安装包未签名，资源与引擎索引继续由原 Ed25519 身份签名；首次使用未安装引擎需要联网。Memory 的真实生成/向量双模型另验。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 

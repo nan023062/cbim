@@ -101,8 +101,11 @@ async function observeRestart(oldPid, requireUpdated, evidenceName) {
   }
   assert.ok(restarted); assert.ok(!Array.isArray(restarted));
   if (requireUpdated) assert.ok(restarted.CommandLine.toLowerCase().includes(userRoot.toLowerCase()));
-  await save(evidenceName, restarted); await pause(15000);
-  ps(`$p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}' -or $p.MainWindowHandle -eq 0) { throw 'Restarted app identity/window mismatch' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
+  await save(evidenceName, restarted);
+  // 冷安装保留启动稳定观察；资源重启在窗口出现后立即正常关闭，再带观测器启动。
+  // 不能额外等 15 秒：旧版会在 10 秒后预下载 C，导致流量发生在未接入的原生进程中。
+  if (requireUpdated) await pause(15000);
+  ps(`$deadline=(Get-Date).AddSeconds(30); do { $p=Get-Process -Id ${restarted.ProcessId}; if ($p.Path -ne '${quoted}') { throw 'Restarted app identity mismatch' }; if ($p.MainWindowHandle -ne 0) { break }; Start-Sleep -Milliseconds 100 } while ((Get-Date) -lt $deadline); if ($p.MainWindowHandle -eq 0) { throw 'Restarted app window timeout' }; if (-not $p.CloseMainWindow()) { throw 'Normal close refused' }; if (-not $p.WaitForExit(30000)) { throw 'Normal close timed out' }`);
   return restarted;
 }
 async function prepareColdUpgrade(page) {

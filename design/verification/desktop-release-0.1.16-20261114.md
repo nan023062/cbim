@@ -80,4 +80,19 @@
 
 `CBIM_WEBSITE_URL=https://nan023062.github.io/cbim/ node scripts/ci-website-smoke.mjs`：品牌/官网构建与 **14 场景通过、0 页面错误**，包含 320/390/1280、浅色/深色、下载/首页、摘要/下载入口及两个独立单文件页面。原官网证据先移至 `website-before-016/`，新证据另存，未覆盖历史。
 
-官网 PR、实际 Pages 部署与匿名六文件核验待回填；不将本地构建视为线上部署，也不宣称所有用户已升级。
+- [官网 PR #74](https://github.com/nan023062/cbim/pull/74)：head `25d6cfebbfeed3608d6b06ec88d156513ec9a56c`、base `0a12a3d54b4f40111807052df3d47cf3b3898475`，仅官网/README/发布记录；[轻量 CI 43556785303](https://github.com/nan023062/cbim/actions/runs/43556785303) 的对应检查、14 场景与统一汇总通过，未重复产品四片。
+- 2026-11-14T04:30:24Z 正常合并为 `1e5a6d7e7a82ddcfc23d3dbd75f46c0e3095e1c5`，develop 随后快进同步。[Pages 43556983147](https://github.com/nan023062/cbim/actions/runs/43556983147) 在 master 的同一提交构建和部署成功，目标为既有 [CBIM 官网](https://nan023062.github.io/cbim/)。
+- 2026-11-14T04:31:47.488Z 匿名读取六文件，全部 HTTP 200，长度与 SHA-256 与已验证构建逐一一致；一次核对通过。没有切换站点、账号或更新通道。原始回执为 `website-public.json`、`website-deploy.json`、`website-ci.json`。
+
+| 线上文件 | 字节 | SHA-256（本地与线上一致） |
+| --- | ---: | --- |
+| index.html | 24708 | `9233d429f1aa3b9f6076083569af664a9fee46df7e65be4a76a2b8a477890aed` |
+| download.html | 27095 | `a85d5bca52b6260586479f8915cfef62bb1d6b9eb73c7ab02a02c0f5a37e4fd3` |
+| 404.html | 539 | `06b8ac94ad28a0af967784a3c50826dddc01f9590797f6bfe1ab3cda58fb5301` |
+| robots.txt | 77 | `80bccb53399d72efa48a179cb6f2d7e3f0793f878757cdc52fc11d2f30a43bff` |
+| sitemap.xml | 230 | `81f50d16399689577c6daa1be0b0dc56b7b4a2e301fd87333c2145a32362d260` |
+| cbim.png | 15239 | `afb23c3ad63393c556f64838114a26d0091e2d509eee93074bd2f9a422edd67d` |
+
+公开版本说明已补入真实升级结论与运行链接，并读回同一 Release ID/标签、四附件身份和旧 Python latest 未变。自包含报告 `test-results/desktop-public-016-20261114/report.html` 内嵌两张真实升级截图，320/390/900 浅色/深色六种布局通过、无溢出或页面错误。
+
+最后仅补充本次部署与验证事实，不改变网站/产品字节；分支同步及最终记录以关联 PR 的正常合并回执为准。既有其它分支和无关未跟踪 `design/task/domain-agent-loop-engine-architecture.md` 保留，不宣称整个工作树没有用户草稿。未安装到用户生产环境，不宣称所有用户已经升级。

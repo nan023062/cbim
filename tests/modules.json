@@ -1523,6 +1523,20 @@
         "contract": [],
         "integration": []
       }
+    },
+    "tooling/engine-release": {
+      "roots": [
+        "scripts/engine-release.ts",
+        "scripts/sign-engines.ts",
+        "scripts/make-engines.ts"
+      ],
+      "tests": {
+        "unit": [],
+        "contract": [
+          "tests/engine-release.test.ts"
+        ],
+        "integration": []
+      }
     }
   }
 }

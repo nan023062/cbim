@@ -1,3 +1,10 @@
+## 2026-11-14：切片 4c——独立引擎发布候选
+
+- 基线 53e28bdc。make:engines 接受可选官方引擎 ID，只构建目标与声明依赖；输出区分包版本、上游版本、摘要。新增 sign:engines：源码冻结、归档摘要/完整展开文件核实后，以现有冷基础公钥对应私钥签名独立 E 索引；不上传或修改公开通道。
+- 索引合并保留其它引擎与历史准确依赖，同版覆盖、回退序号、错误信任根、未登记引擎和缺依赖拒绝。开发者流程归档在 design/task/engine-package-release.md，先不可变包后公开索引，生产发布仍需实际安装及同 C/R 的 E 更新验收。
+- 选取签名构建与原归档消费者：pnpm exec vitest run tests/engine-release.test.ts tests/runtime-packaging.test.ts --reporter=dot，5/5。pnpm typecheck、pnpm check:test-modules（506 文件，154/156/196）、pnpm check:dependencies（1554 文件，7486 边，无环/违规）通过。仅 scripts、配置、测试和设计记录变更，不修改产品源码类图。
+- 本轮未调用生产私钥、未构建完整 SDK 归档、未上传或发布 E。真实公开发布验证留在发布阶段。
+
 ## 2026-11-14：切片 4b——独立 E 索引与官方包生命周期
 
 - 基线 8d35b7d3。按“继续依次实施后面的步骤”推进。EngineArtifacts 冷服务只验签、保存发布来源与准确摘要准备；独立 E 索引绑定公钥/平台、单调序号、唯一版本和完整无环依赖，不绑定 C/R。保留旧 C/R 签名仅用于证明历史 E，跨 C 可离线定位原包；清缓存不重置版本序号。

@@ -64,9 +64,10 @@ export async function collectResources(viteDirectory:string,target:string,repo=p
   await pruneEmpty(boundary);
 }
 const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'}} as const;
-export async function collectEngines(buildRoot:string,output:string):Promise<EnginePackage[]>{
+export async function collectEngines(buildRoot:string,output:string,kinds:readonly (keyof typeof engineEntries)[]=Object.keys(engineEntries) as (keyof typeof engineEntries)[]):Promise<EnginePackage[]>{
   const result:EnginePackage[]=[];
-  for(const [kind,definition] of Object.entries(engineEntries)){
+  for(const kind of kinds){
+    const definition=engineEntries[kind];if(!definition)throw Error('未登记的引擎构建入口');
     const root=path.join(buildRoot,definition.directory),pkg=JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8'));
     await fs.access(path.join(root,definition.entry));
     const adapter=JSON.parse(await fs.readFile(path.join(root,'adapter.json'),'utf8'));if(adapter.id!==kind||adapter.protocol!==1)throw Error('适配器与引擎归档不一致');

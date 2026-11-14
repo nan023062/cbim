@@ -22,6 +22,11 @@ test('官方引擎包可独立构建并经统一工厂加载，构建不触发 S
       expect(()=>checkedEngineAdapter(adapter,{id:'other'})).toThrow();
       expect(()=>checkedEngineAdapter({...adapter,protocol:2},descriptor)).toThrow();
       expect(()=>checkedEngineAdapter(adapter,{id,version:'2.0.0'})).toThrow();
+      expect(adapter.descriptor?.id).toBe(id);
+      expect(()=>checkedEngineAdapter({...adapter,descriptor:undefined},descriptor)).toThrow('声明');
+      expect(()=>checkedEngineAdapter({...adapter,descriptor:{...adapter.descriptor,supportedApis:[]}},descriptor)).toThrow('声明');
+      expect(()=>checkedEngineAdapter({...adapter,descriptor:{...adapter.descriptor,label:'仅修改显示名',businessTypes:['新的介绍']}},descriptor)).not.toThrow();
+      if(id==='memory')expect(()=>checkedEngineAdapter({...adapter,descriptor:{...adapter.descriptor,additionalModelRoles:[]}},descriptor)).toThrow('声明');
       if(id==='memory'){
         // 自定义 Loop 不需要 node_modules vendor package；测试实际 ZIP/摘要与原生入口元数据。
         await fs.rename(destination,path.join(root,'memory-runtime'));

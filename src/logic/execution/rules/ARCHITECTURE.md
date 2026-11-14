@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
-| [engine-adapter.ts](engine-adapter.ts) | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约。 |
+| [engine-adapter.ts](engine-adapter.ts) | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约，创建前核对包身份与模型/历史声明。 |
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
 | [engine-runtime.ts](engine-runtime.ts) | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现；adapter 与 SDK 入口、版本分别保存。 |
 | [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
@@ -697,7 +697,7 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 
 ### 官方包运行协议 V1
 
-engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。
+engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。正式加载还传入 R 静态声明，比较 E 编译声明中的模型协议、角色、依赖、原生目录与历史格式；缺失或不匹配时拒绝启动，不回退或自动重试。展示名称、角色标签和业务介绍不参与语义比较。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。
 
 ### 通用包地址
 

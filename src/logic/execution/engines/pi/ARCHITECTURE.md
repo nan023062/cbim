@@ -117,7 +117,7 @@ class N_src_logic_execution_engines_pi_package_ts["package.ts"] {
   <<module>>
 }
 ```
-直接依赖：[engine.ts](engine.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
+直接依赖：[engine.ts](engine.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../rules/engine-adapter.ts](../../rules/engine-adapter.ts)。
 
 ### request-budget-bootstrap.ts
 

@@ -14,8 +14,8 @@ export async function buildEngineAdapter(kind,destination){
   await build({configFile:false,root,logLevel:'error',build:{target:'node22',emptyOutDir:false,outDir:destination,minify:false,lib:{entry,formats:['cjs'],fileName:()=> 'adapter.cjs'},rollupOptions:{external:[...builtinModules,...builtinModules.map(name=>'node:'+name),'electron','koffi']}}});
   const load=createRequire(import.meta.url),file=path.resolve(destination,'adapter.cjs');delete load.cache[file];
   const {engineAdapter}=load(file);
-  if(engineAdapter?.id!==kind||engineAdapter.protocol!==1||typeof engineAdapter.create!=='function'||!/^\d+\.\d+\.\d+$/.test(engineAdapter.version))throw Error('独立引擎产物协议不符');
-  const descriptor={id:engineAdapter.id,version:engineAdapter.version,protocol:engineAdapter.protocol,entry:'adapter.cjs'};
+  if(engineAdapter?.id!==kind||engineAdapter.descriptor?.id!==kind||engineAdapter.protocol!==1||typeof engineAdapter.create!=='function'||!/^\d+\.\d+\.\d+$/.test(engineAdapter.version))throw Error('独立引擎产物协议或声明不符');
+  const descriptor={id:engineAdapter.id,version:engineAdapter.version,protocol:engineAdapter.protocol,entry:'adapter.cjs',descriptor:engineAdapter.descriptor};
   await fs.writeFile(path.join(destination,'adapter.json'),JSON.stringify(descriptor,null,2)+'\n');return descriptor;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){

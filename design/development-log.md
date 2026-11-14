@@ -1,3 +1,11 @@
+## 2026-11-14 引擎包声明与资源选型的一致性收尾
+
+四个官方适配器版本提高到 1.1.0，将代码静态能力声明同时编译进 adapter.cjs 并写入 adapter.json，纳入完整归档校验。正式加载在 create 前核对 R/E 的模型协议、额外角色、原生格式与依赖语义；旧包缺声明或不匹配时明确拒绝，不自动下载、回退或启动。显示名称/业务介绍不参与执行语义比较。兼容实现升级可以单独发布 E；模型策略变更需配套 R/E，不改变通用冷壳。这些首次包版本尚未公开发布。
+
+本次变更影响包构建/加载与冷壳隔离，选取 pnpm exec vitest run tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts tests/engine-build-cli.test.ts --reporter=default：3 个套件通过，实际构建四包并加载、构造/关闭；拒绝缺失或不匹配声明，接受纯展示变化；memory 真实 ZIP、tsx 命令入口及新增登记前后冷壳实际构建摘要均覆盖。pnpm typecheck、pnpm check:architecture（1578 文件/7569 依赖，0 环/违规）、pnpm check:test-modules（515 文件）通过。
+
+源码注释、执行契约和受影响类图同步，设计方案的实施状态及独立包发布说明已校准。3c6e311a 上的真实 make:engines memory 已成功生成 1.0.0 本地候选；该候选未发布，因声明变更不再作为最新候选。下一次实际命令须使用本次提交后的干净源码生成 1.1.0 并单独记录回执。本次未运行全量回归、GitHub CI、外部模型或桌面公开升级验收。
+
 
 ## 2026-11-14 独立引擎构建命令的真实入口修正
 

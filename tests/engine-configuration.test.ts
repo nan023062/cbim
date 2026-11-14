@@ -81,19 +81,20 @@ test('旧供应商 engine 可读但不决定新执行；显式读取历史原生
 });
 
 test.each([
-  ['openai-completions',['pi']],['anthropic-messages',['pi','claude-code']],['openai-responses',['pi','codex']],['unknown',[]],
-])('协议 %s 只映射到真实支持的引擎', (api,expected)=>{
+  ['openai-completions',['pi','memory']],['anthropic-messages',['pi','claude-code']],['openai-responses',['pi','codex']],['unknown',[]],
+])('主模型协议 %s 只映射到声明支持的引擎，额外必填角色另行校验', (api,expected)=>{
   expect(loopEngineSchema.options.filter(engine=>engineSupportsApi(engine,api as string))).toEqual(expected);
 });
 
-test('空目录和只有旧模型的目录都可选择三个内置引擎；模型按协议及启用状态筛选',()=>{
+test('空目录和只有旧模型的目录都可选择官方引擎；模型按协议及启用状态筛选',()=>{
   const shared:LlmProfile={...base,id:randomUUID(),hasKey:false};
   const chat:LlmProfile={...base,name:'Chat only',id:randomUUID(),hasKey:false,api:'openai-completions'};
   const disabled:LlmProfile={...base,name:'Disabled',id:randomUUID(),hasKey:false,models:base.models.map(m=>({...m,enabled:false}))};
   for(const profiles of [[],[shared,chat,disabled]]){
     const html=renderToStaticMarkup(createElement(EngineModelPicker,{models:{secureStorage:false,profiles},initialEngine:'claude-code',onChange:()=>{}}));
     expect(html).toMatch(/<option value="pi"[^>]*>Pi<\/option>/);expect(html).toMatch(/<option value="claude-code"[^>]*>Claude Code<\/option>/);expect(html).toMatch(/<option value="codex"[^>]*>Codex<\/option>/);
-    expect(html).not.toMatch(/<option value="(?:pi|claude-code|codex)"[^>]*disabled/);
+    expect(html).toMatch(/<option value="memory"[^>]*>记忆引擎<\/option>/);
+    expect(html).not.toMatch(/<option value="(?:pi|claude-code|codex|memory)"[^>]*disabled/);
     expect(html).not.toContain('Chat only /');expect(html).not.toContain('Disabled /');
     if(profiles.length)expect(html).toContain('Shared provider / Test model');else expect(html).toContain('当前没有与');
   }

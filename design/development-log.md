@@ -1,3 +1,11 @@
+## 2026-11-14 官方引擎架构完整 CI 契约校准
+
+首次完整四片运行 43567438913（ab54c81e）覆盖 515 文件：3456 通过、2 失败、2 条件跳过。两处失败均核实为迁移后的旧断言：core-layer-contracts 未允许仅含静态描述与选型规则的 logic/engines 便携入口，具体适配器仍只允许 execution/assembly；engine-configuration 的 Chat 协议表遗漏已登记 memory。只调整精确入口和预期表，保留向量必填及停用模型拒绝。
+
+明确选择 pnpm exec vitest run tests/core-layer-contracts.test.ts --reporter=default（2 项）及 pnpm exec vitest run tests/engine-configuration.test.ts tests/unit/logic/engines/model-choices.test.ts --reporter=default（17 项），全部通过。未改产品、依赖或构建配置；本次修改为两套测试与本记录，原 0ae674ac 冻结候选保持不变，下一完整 CI 使用此验证提交。候选内 design 副本保持冻结版本，后补开发记录不在旧制品内，不声称所有资源字节与后续仓库完全相同。
+
+同一候选真实 DeepSeek/Pi 主成员双话题验收、只读重开无重放、六项 EXE 隔离和公开 E 下载摘要已通过；隔离安装运行 43568253630 成功，详细报告另存本轮验证记录。候选 Release 445084616 保持 draft，未切换桌面通道或独立 E 索引。
+
 ## 2026-11-14 引擎架构分支推送与安装验收准备
 
 按用户明确要求推送 refactor/engine-model-catalog，远端 ab54c81ed08609906d3c0ec6b4f242e36983a39c；完整 Windows 四片 CI 43567438913 已派发，待真实结果。公开桌面当前为 0.1.16；准备新 C 0.1.17 草稿，沿用已确认的 Windows unsigned 模式和原 Ed25519 身份（只核公钥摘要），不更新公开桌面/资源索引。

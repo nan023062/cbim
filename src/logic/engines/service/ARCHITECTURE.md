@@ -37,6 +37,7 @@ class N_src_logic_engines_service_model_profiles_ts_EngineModelReference["Engine
   +profileId
   +modelId
   +engine
+  +modelRoles
 }
 N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_model_profiles_ts_EngineModelReference : 声明
 class N_src_logic_engines_service_model_profiles_ts_LockedEngineModelConfiguration["LockedEngineModelConfiguration"] {

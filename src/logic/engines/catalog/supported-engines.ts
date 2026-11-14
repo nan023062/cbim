@@ -4,12 +4,15 @@
  * 职责边界：协议兼容表示可以选择，不代表模型工具调用能力、凭据或运行环境已经验证；不属于冷启动框架。
  */
 import type {LlmApi} from '../../models';
+import type {ModelRoleDescriptor} from '../model-roles';
 
 /** 单引擎的便携能力声明；fallbackApi 只在主接口不兼容时使用，不转换模型 ID 或请求。 */
-interface EngineDeclaration {id:string;label:string;businessTypes:readonly string[];supportedApis:readonly LlmApi[];fallbackApi?:LlmApi}
+interface EngineDeclaration {id:string;label:string;businessTypes:readonly string[];supportedApis:readonly LlmApi[];fallbackApi?:LlmApi;additionalModelRoles?:readonly ModelRoleDescriptor[]}
 
 /** 仅开发者通过代码增加引擎；运行时无法修改清单或其中的能力数组。 */
 function declareEngine<const T extends EngineDeclaration>(value:T):Readonly<T>{
+  for(const role of value.additionalModelRoles??[]){if(role.modelIds)Object.freeze(role.modelIds);if(role.kind==='generation'){Object.freeze(role.connection.supportedApis);Object.freeze(role.connection)}Object.freeze(role)}
+  if(value.additionalModelRoles)Object.freeze(value.additionalModelRoles);
   Object.freeze(value.businessTypes);Object.freeze(value.supportedApis);return Object.freeze(value);
 }
 export const supportedEngines=Object.freeze([

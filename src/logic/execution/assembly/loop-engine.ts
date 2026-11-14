@@ -38,7 +38,7 @@ import {mainInstructions,collaborationInstructions} from '../../conversation/run
 import type {ChatPermission} from '../rules/types';
 import {ClaudeCodeEngine} from '../engines/claude/engine';
 import {CodexEngine} from '../engines/codex/engine';
-import type {LoopEngine} from '../../engines';
+import type {LoopEngine,ModelRolesSelection} from '../../engines';
 import {LoopRuntime,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../rules';
 import {PiEngine} from '../engines/pi/engine';
 import type {PiCommand} from '../engines/pi/rpc';
@@ -94,6 +94,8 @@ export interface WorkspaceLoopOptions {
   images?:{type:'image';data:string;mimeType:string}[];
   /** 引擎来自用户模型配置；旧选项缺省 Pi，岗位由冻结模型快照决定。 */
   engine?:LoopEngine;
+  /** 额外模型角色来自 Agent 选型，执行准备时与主模型一起冻结。 */
+  modelRoles?:ModelRolesSelection;
   provider:string;model:string;profileId?:string;
   allowNativeExecution?:boolean;
   permission?:ChatPermission;

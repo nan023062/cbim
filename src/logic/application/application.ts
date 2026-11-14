@@ -1,4 +1,5 @@
 /**
+ * 主 Agent 缺省选型完整携带 V2 角色，显式请求不混入最新角色配置。
  * 目录归属：logic/application；应用与执行服务装配。
 
  * 公开网页服务由应用共用缓存与限速；桌面注入匿名浏览器兜底，Node 消费者仍可独立使用静态服务。
@@ -183,7 +184,7 @@ export class Application {
   /** 默认选择转为独立引擎及明确模型身份，校验协议后仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   async modelOptions(input:any={}){
     if(input?.provider&&input?.model&&!input.profileId)return input;
-    const {profile}=await this.engineModels.resolve(input?.profileId,input?.model,input?.engine);
+    const {profile}=await this.engineModels.resolve(input?.profileId,input?.model,input?.engine,input?.modelRoles);
 
     return {...input,engine:profile.engine??'pi',provider:'cbim-'+profile.id,model:profile.model,profileId:profile.id};
   }
@@ -191,7 +192,7 @@ export class Application {
   async chatOptions(id:string,input:any,attachments:unknown){
     if(!input?.profileId&&!input?.provider&&!input?.model&&!input?.engine){
       const workspace=this.workspace(id),setting=await this.mainAgentSettings.read({workspaceId:id,instanceId:workspace.instanceId});
-      if(setting.selection)input={...input,engine:setting.selection.engine,profileId:setting.selection.profileId,model:setting.selection.modelId};
+      if(setting.selection)input={...input,engine:setting.selection.engine,profileId:setting.selection.profileId,model:setting.selection.modelId,...(setting.selection.modelRoles===undefined?{}:{modelRoles:setting.selection.modelRoles})};
     }
     const options=await this.modelOptions(input);
     const images=await new ChatInputs(this.workspace(id)).images(attachments);

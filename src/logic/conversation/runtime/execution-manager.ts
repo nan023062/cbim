@@ -1,4 +1,5 @@
 /**
+ * 公开运行选项保留 V2 角色引用，缺省历史不补字段。
  * 目录归属：logic/conversation/runtime；主运行与成员执行管理。
 
  * 内部 MainStartup 在真实周期建立后、模型启动前绑定身份和准备首任务；取消贯穿准备，不是公开运行选项。
@@ -16,7 +17,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {mainAgentId} from './main-agent';
 import {z} from 'zod';
-import {loopEngineSchema} from '../../engines';
+import {loopEngineSchema,modelRolesSelectionSchema} from '../../engines';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
 import {fail,Fault} from '../../../core/errors';
 import {safeId} from '../../execution/ports/identity';
@@ -44,7 +45,7 @@ import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanRece
 import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../tasks/rules/human-continue';
 
 /** IPC 允许的模型运行配置；不接受任意子进程命令或环境变量。 */
-export const executionOptions=z.object({engine:loopEngineSchema.optional(),provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
+export const executionOptions=z.object({engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional(),provider:z.string().trim().min(1),model:z.string().trim().min(1),profileId:z.string().uuid().optional(),attachmentIds:z.array(z.string().uuid()).max(12).optional(),allowNativeExecution:z.boolean().default(false),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 type Options=z.infer<typeof executionOptions>;
 /** Main 装配方在真实周期建立后、模型启动前持久绑定或准备首个任务；不接受 IPC/模型提供的回调。 */
 export interface MainStartup {signal:AbortSignal;prepare(input:{task:TaskSpec;runId:string;signal:AbortSignal}):Promise<void>}

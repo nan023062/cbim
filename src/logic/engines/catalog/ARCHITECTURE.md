@@ -28,6 +28,7 @@ class N_src_logic_engines_catalog_supported_engines_ts_EngineDeclaration["Engine
   +businessTypes
   +supportedApis
   +fallbackApi
+  +additionalModelRoles
 }
 N_src_logic_engines_catalog_supported_engines_ts ..> N_src_logic_engines_catalog_supported_engines_ts_EngineDeclaration : 声明
 class N_src_logic_engines_catalog_supported_engines_ts_LoopEngine["LoopEngine"] {
@@ -42,7 +43,7 @@ class N_src_logic_engines_catalog_supported_engines_ts_EngineDescriptor["EngineD
 N_src_logic_engines_catalog_supported_engines_ts ..> N_src_logic_engines_catalog_supported_engines_ts_EngineDescriptor : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../models/index.ts](../../models/index.ts)、[../model-roles.ts](../model-roles.ts)。
 
 
 ## 子目录导航

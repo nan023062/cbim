@@ -10,9 +10,38 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [model-roles.ts](model-roles.ts) | 把官方模型角色声明与用户 V2 选型投影为有序操作引用。 |
 | [model-selection.ts](model-selection.ts) | 官方引擎身份校验及引擎到模型连接需求的纯投影。 |
 
 ## 架构类图
+
+### model-roles.ts
+
+```mermaid
+classDiagram
+class N_src_logic_engines_rules_model_roles_ts["model-roles.ts"] {
+  <<module>>
+  +additionalRoleOperations()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_logic_engines_rules_model_roles_ts["model-roles.ts"] {
+  <<module>>
+}
+class N_src_logic_engines_rules_model_roles_ts_RoleOperation["RoleOperation"] {
+  <<interface>>
+  +slot
+  +profileId
+  +modelId
+  +kind
+  +connection
+}
+N_src_logic_engines_rules_model_roles_ts ..> N_src_logic_engines_rules_model_roles_ts_RoleOperation : 声明
+```
+
+直接依赖：[../model-roles.ts](../model-roles.ts)、[../../models/index.ts](../../models/index.ts)。
 
 ### model-selection.ts
 

@@ -265,6 +265,7 @@ class N_src_logic_workspace["workspace/"] {
 - `team` → `workspace`：导入。
 - `team` → `tasks`：导入。
 - `team` → `execution`：导入。
+- `team` → `models`：导入。
 - `team` → `dispatch`：导入。
 - `team` → `knowledge`：导入。
 - `team` → `evidence`：导入。

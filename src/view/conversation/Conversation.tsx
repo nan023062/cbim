@@ -1,4 +1,5 @@
 /**
+ * 所有主会话发送和恢复入口携带同源模型角色，切换主模型保留同引擎附加角色。
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
  * 主对话按持久归属分话题展示文字与工具，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
  * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
@@ -195,7 +196,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
-      const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
+      const options={engine:chosenEngine,...roleOptions,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
       if(tab.taskId&&!shouldQueue&&(!followupOf||!!skill)&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
       const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([]);setFollowupOf(undefined)}};
@@ -214,6 +215,9 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const selectedProfile=models?.profiles.find(p=>p.id===(selectedPair[0]||models?.selectedId));
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const chosenEngine=pendingEngine??selectedRuntime?.engine??'pi';
+  // 同引擎更换主模型保留其他角色；切换引擎时不能带入旧引擎的额外角色。
+  const modelRoles=chosenEngine===selectedRuntime?.engine?selectedRuntime.modelRoles:undefined;
+  const roleOptions=modelRoles===undefined?{}:{modelRoles};
   const compatibleProfiles=models?.profiles.map(p=>({...p,models:p.models.filter(m=>providerSupportsEngine(chosenEngine,p,m.id))})).filter(p=>p.models.length)??[];
   const defaultProfile=compatibleProfiles.find(p=>p.id===models?.selectedId);
   const defaultModel=defaultProfile?.models.find(m=>m.id===defaultProfile.defaultModel&&m.enabled);
@@ -225,22 +229,22 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     const candidates=profile?.models.filter(m=>m.enabled&&providerSupportsEngine(next,profile,m.id));
     const model=profile===selectedProfile&&selectedModel?.enabled&&candidates?.includes(selectedModel)?selectedModel:candidates?.find(m=>m.id===profile?.defaultModel)??candidates?.[0];
     if(!profile||!model){setPendingEngine(next);return}
-    if(await mainAgent.save({engine:next,profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(await mainAgent.save({engine:next,...(next===chosenEngine?roleOptions:{}),profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
   async function chooseModel(value:string){
     const [profileId,modelId]=value?JSON.parse(value):[defaultProfile?.id,defaultModel?.id];
-    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,...roleOptions,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
   const modelAvailable=!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。
-  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
+  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
   const continuation=useScopeContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh,active);
   const humanContinuation=useHumanContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh);
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
-  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
+  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
   // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
   // 保留全部恢复依赖；当前模型、图或历史选择一旦变化，旧工具卡也必须获得新上下文。
-  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine]);
+  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine,modelRoles]);
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。

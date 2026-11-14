@@ -131,3 +131,21 @@ test('同一 Responses 模型可供 Pi 与 Codex 使用；禁用模型不进入�
     await expect(f.models.configuration(id,'test','codex')).rejects.toMatchObject({code:'LLM_MODEL'});
   }finally{await f.cleanup()}
 });
+
+
+test('V2 角色块跨 Agent 和队列保留，公开预览修改不能污染执行快照；未声明角色在回调前拒绝',async()=>{
+  const f=await fixture();try{
+    const saved=await f.profiles.save({profile:base}),profileId=saved.selectedId!,modelRoles={version:2 as const,roles:{}};
+    const reference={engine:'pi' as const,profileId,modelId:'test',modelRoles};
+    const legacy=await f.models.configuration(profileId,'test','pi'),v2=await f.models.configuration(profileId,'test','pi',modelRoles);
+    expect(legacy).not.toHaveProperty('modelRoles');expect(v2).toEqual({...legacy,modelRoles});
+    expect(workspaceMemberModelSnapshotSchema.parse(v2)).toEqual(v2);
+    expect(workspaceMemberModelHash(v2)).not.toBe(workspaceMemberModelHash(legacy));
+    expect(objectOperation.parse({kind:'agent',action:'update',id:'.cbim/team/test',data:{runtime:reference}}).data).toEqual({runtime:reference});
+    expect(queuedMessageSchema.parse({id:randomUUID(),taskId:randomUUID(),message:'test',status:'pending',options:{engine:'pi',modelRoles,provider:'cbim-'+profileId,profileId,model:'test'}}).options.modelRoles).toEqual(modelRoles);
+    await f.models.withRuntimeConfiguration(reference,async locked=>{locked.profile.name='tampered';expect(locked.resolve().profile).toEqual(v2);expect(locked.resolve().modelRoles).toEqual({})});
+    let called=false;
+    await expect(f.models.withRuntimeConfiguration({...reference,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profileId,modelId:'vec'}}}},async()=>{called=true})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
+    expect(called).toBe(false);
+  }finally{await f.cleanup()}
+});

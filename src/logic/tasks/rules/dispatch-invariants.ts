@@ -1,4 +1,5 @@
 /**
+ * 多角色公开快照逐操作严格校验；密钥与未知字段不能写入运行事实。
  * 候选审阅只允许当前主运行按原版本追加；领取新依赖时必须匹配同结果的接受决定。
  * 每个私有检查点证明和交接信封都绑定自己的原运行，逐段记录不能借用第一段证明。
  * 作用定位：在派发事务提交和日志恢复时校验成员执行、任务图和邮箱的联合约束。
@@ -16,7 +17,7 @@ import {connectionSchema,modelSchema} from '../../models';
 import {teamSessionBusy} from '../../team/rules/team-session';
 import {memberTopicContextSchema} from './member-topic-context';
 import {createMemberTopicContext} from './member-topic-context-rules';
-import {loopEngineSchema} from '../../engines';
+import {loopEngineSchema,modelRolesSnapshotSchema} from '../../engines';
 import {validatePreparedDispatchKnowledge} from './execution-context';
 import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from '../../dispatch/rules/dispatch-storage';
 import type {DispatchRun} from './dispatch-execution';
@@ -66,12 +67,13 @@ function changedTask(mutation:DispatchMutation,ref:GraphIdentity,taskId:string){
 
 /** 使用模型现有规则校验可持久化参数，显式拒绝 apiKey 及其他非公开字段。 */
 function validateModel(model:DispatchRun['model']){
-  valid(Object.keys(model).every(key=>['engine','id','model','name','api','baseUrl','auth','contextWindow','maxTokens','reasoning','vision','outputLimit','thinkingLevel','workingContextWindow','compactionPercent','pricing'].includes(key)),'执行模型参数包含非公开字段');
+  valid(Object.keys(model).every(key=>['modelRoles','engine','id','model','name','api','baseUrl','auth','contextWindow','maxTokens','reasoning','vision','outputLimit','thinkingLevel','workingContextWindow','compactionPercent','pricing'].includes(key)),'执行模型参数包含非公开字段');
   // 缺省 Pi 保留旧日志；明确引擎只能选支持的实现，并与协议能力一致。
   valid(model.engine===undefined||loopEngineSchema.safeParse(model.engine).success,'执行引擎无效');
   valid(model.engine!=='claude-code'||model.api==='anthropic-messages','Claude Code 模型协议无效');
   valid(model.engine!=='codex'||model.api==='openai-responses','Codex 模型协议无效');
-  const {engine:_engine,name,api,baseUrl,auth,id:profileId,model:modelId,...options}=model;
+  const {engine:_engine,modelRoles,name,api,baseUrl,auth,id:profileId,model:modelId,...options}=model;
+  valid(modelRoles===undefined||modelRolesSnapshotSchema.safeParse(modelRoles).success,'额外模型快照无效或包含非公开字段');
   valid(typeof profileId==='string'&&profileId.trim()&&typeof modelId==='string'&&modelId.trim(),'执行模型缺少供应商或模型身份');
   valid(connectionSchema.strict().safeParse({name,api,baseUrl,auth}).success&&modelSchema.safeParse({id:modelId,name:modelId,enabled:true,...options}).success,'执行模型参数无效或包含非公开字段');
 }

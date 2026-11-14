@@ -11,6 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [index.ts](index.ts) | 官方引擎目录、兼容规则和运行选型的便携公共入口。 |
+| [model-roles.ts](model-roles.ts) | V2 额外模型角色的公开引用与冻结快照，供 Agent、岗位和任务共同携带。 |
 | [model.ts](model.ts) | 引擎执行准备后的模型快照契约，供岗位、任务与装配保存公开参数。 |
 
 ## 架构类图
@@ -29,25 +30,47 @@ class N_src_logic_engines_service["service/"] {
 class N_src_logic_engines_index_ts["index.ts"] {
   <<module>>
 }
+class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
+  <<module>>
+}
 class N_src_logic_engines_model_ts["model.ts"] {
   <<module>>
 }
+N_src_logic_engines_catalog ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_rules : 导入依赖
 N_src_logic_engines_index_ts ..> N_src_logic_engines_model_ts : 导入依赖
+N_src_logic_engines_index_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_model_ts ..> N_src_logic_engines_catalog : 导入依赖
+N_src_logic_engines_model_ts ..> N_src_logic_engines_model_roles_ts : 导入依赖
+N_src_logic_engines_rules ..> N_src_logic_engines_model_roles_ts : 导入依赖
 N_src_logic_engines_rules ..> N_src_logic_engines_catalog : 导入依赖
 N_src_logic_engines_service ..> N_src_logic_engines_index_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `catalog` → `model-roles.ts`：导入。
 - `index.ts` → `catalog`：导入。
 - `index.ts` → `rules`：导入。
 - `index.ts` → `model.ts`：导入。
+- `index.ts` → `model-roles.ts`：导入。
 - `model.ts` → `catalog`：导入。
+- `model.ts` → `model-roles.ts`：导入。
+- `rules` → `model-roles.ts`：导入。
 - `rules` → `catalog`：导入。
 - `service` → `index.ts`：导入。
+
+### model-roles.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_logic_engines_model_roles_ts["model-roles.ts"] {
+  <<module>>
+  +modelRolesMatch()
+}
+```
+
 
 ## 子目录导航
 
@@ -83,8 +106,14 @@ N_src_logic_engines_service ..> N_src_logic_engines_index_ts : 导入依赖
 
 ## 当前范围与维护入口
 
-本步完成静态清单和模型职责解耦。具体三引擎适配器仍位于 `execution/engines`，工厂仍位于 `execution/assembly/loop-engine.ts`。独立包构建、已下载清单、通用冷壳、多模型角色与引擎管理 UI 尚未迁移，不能因本清单增加一条记录就宣称新引擎可运行。
+本步完成静态清单和模型职责解耦。具体三引擎适配器仍位于 `execution/engines`，工厂仍位于 `execution/assembly/loop-engine.ts`。多模型角色的引用、快照与执行准备已接通；独立包构建、已下载清单、通用冷壳、逐角色预算与引擎管理 UI 尚未迁移，不能因本清单增加一条记录就宣称新引擎可运行。
 
 清单属于可更新 Logic 资源。冷启动与更新模块禁止依赖此清单，包括类型边；当前旧冷壳的固定三包清单仍待后续整体迁移，本步不改其协议和指纹。
 
 修改业务描述和支持协议从 `catalog/supported-engines.ts` 入手；修改兼容投影从 `rules/model-selection.ts` 入手；修改执行准备从 `service/model-profiles.ts` 入手。新增真正可运行的引擎还需适配器及包发布流程。模型服务和目录不能反向导入引擎模块。
+
+### V2 模型角色绑定
+
+primary 仍由 Agent 原来的 profileId/modelId 与运行 profile 表达；可选 modelRoles={version:2,roles} 只保存额外角色，不复制 primary。角色 ID、能力、必填与可选型号白名单由官方引擎声明拥有；未知角色、错误能力、遗漏必填和未列型号均在读取凭据前拒绝。当前三个代码引擎未声明额外角色。旧记录不补空块，新增空块也属于明确的新快照。
+
+模型层 generationSnapshotSchema 和 embeddingSnapshotSchema 各自校验公开参数；向量没有生成输出容量。一次 withModelOperations 捕获主模型和全部附加角色，公开预览与延迟解析各自复制；调用方修改预览不能改变随后解密的定义。公开快照仅在 modelRoles.roles 保存无密钥配置，解析后的凭据在 ResolvedEngineModel.modelRoles 单独持有，不能落入日志。

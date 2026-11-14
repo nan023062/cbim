@@ -18,6 +18,7 @@
 | [ports.ts](ports.ts) | 模型运行快照与凭据加解密端口。 |
 | [provider-connections.ts](provider-connections.ts) | 供应商到协议需求的纯接口选择规则，供界面筛选、岗位采纳和实际启动共同使用。 |
 | [provider-presets.ts](provider-presets.ts) | 模型设置与接口解析共用的官方供应商地址预设，属于模型配置的纯数据策略。 |
+| [snapshot.ts](snapshot.ts) | 生成模型公开运行快照的纯校验，供引擎角色绑定与岗位历史共同使用。 |
 
 ## 架构类图
 
@@ -61,6 +62,9 @@ class N_src_logic_models_provider_connections_ts["provider-connections.ts"] {
 class N_src_logic_models_provider_presets_ts["provider-presets.ts"] {
   <<module>>
 }
+class N_src_logic_models_snapshot_ts["snapshot.ts"] {
+  <<module>>
+}
 N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_presets_ts : 导入依赖
 ```
 
@@ -75,6 +79,7 @@ N_src_logic_models_provider_connections_ts ..> N_src_logic_models_provider_prese
 - `index.ts` → `provider-presets.ts`：导入。
 - `index.ts` → `ports.ts`：导入。
 - `index.ts` → `embedding.ts`：导入。
+- `index.ts` → `snapshot.ts`：导入。
 - `ports.ts` → `config.ts`：导入。
 - `ports.ts` → `embedding.ts`：导入。
 - `provider-connections.ts` → `config.ts`：导入。
@@ -115,6 +120,17 @@ class N_src_logic_models_provider_presets_ts["provider-presets.ts"] {
 ```
 
 
+### snapshot.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_logic_models_snapshot_ts["snapshot.ts"] {
+  <<module>>
+  +checkGenerationSnapshot()
+}
+```
+
+
 ## 子目录导航
 
 - [service/](service/ARCHITECTURE.md)：LlmProfiles 配置持久化、生成/向量操作公开快照、受控锁内原子选型与延迟解密；index.ts 仅向宿主提供服务，平台加密由端口注入。
@@ -151,3 +167,7 @@ Logic 的规则、引擎、编排与 Bridge 消费模型规则时使用 index.ts
 生成模型仍使用 models/defaultModel；embedding 单独声明 openai-embeddings 端点及向量型号，只含输入 token 上限、维度和可选输入价格，不伪填生成输出字段。向量接口不能从生成协议或品牌猜测。只有向量模型的供应商允许 models=[]、defaultModel=""，但必须至少有一个启用的向量模型；通用生成 resolve 对它明确拒绝，不隐式挑选向量型号。旧供应商缺省 embedding 时不补字段。
 
 同供应商可共用已保存凭据；新建或改变向量端点需重新输入 Key，修改型号/维度/价格不复制凭据。运行生成快照不携带 embedding 配置。端点限制由 endpoint.ts 统一提供，操作字段由 config.ts 与 embedding.ts 分别拥有。
+
+### 公开操作快照
+
+snapshot.ts 持有生成模型的公开历史快照字段和容量约束，embedding.ts 持有向量快照。引擎、岗位可组合它们，但模型模块不依赖引擎或 Team。生成快照保留原字段顺序和历史端点校验，不在旧记录中追加操作类型或引擎身份。

@@ -222,3 +222,7 @@ canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符�
 ## 主岗位控制面
 
 execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新增主工具只复用本机岗位服务和同一 Store，不管理第二份登记。静态 Agent 的模型引用由用户预先配置，主工具无凭据端口、无批准或安装能力。
+
+### 主 Agent 模型角色
+
+聊天未显式选择模型时，从同一主 Agent revision 捕获 engine、primary 和 modelRoles；显式请求完整校验选型，不从新配置偷偷补其他角色。执行准备将角色交给 EngineModelProfiles，公开运行选项保留引用而不保存凭据。

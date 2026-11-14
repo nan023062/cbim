@@ -160,3 +160,18 @@ it('pagination freezes registration order and current diff is not cached behind 
   await expect(f.service.list({...f.identity,offset:1,expectedRegistryCursor:page.registryCursor!})).rejects.toMatchObject({code:'MEMBER_REGISTRY_STALE'});
   await expect(f.service.list({...f.identity,offset:1})).rejects.toMatchObject({code:'MEMBER_INPUT_INVALID'});
 });
+
+
+it('岗位 V2 角色块随采纳冻结，角色配置变化更新原模型指纹',async()=>{
+  const f=await setup(),change=f.register();if(change.kind!=='register')throw Error('fixture');
+  const first=await f.commit(f.command(await f.preview(change))),memberId=first.memberId;
+  const before=await f.service.get({...f.identity,memberId});
+  const modelRoles={version:2 as const,roles:{}};
+  await f.commit(f.command(await f.preview({kind:'update',memberId,expectedRevision:1,patch:{runtimePolicy:{...change.runtimePolicy,modelRoles}},reason:'明确采纳多角色配置'})));
+  const after=await f.service.get({...f.identity,memberId});
+  expect(before.member.runtimePolicy.snapshot).not.toHaveProperty('modelRoles');
+  expect(after.member.runtimePolicy.modelRoles).toEqual(modelRoles);
+  expect(after.member.runtimePolicy.snapshot.modelRoles).toEqual(modelRoles);
+  expect(after.member.runtimePolicy.configurationHash).not.toBe(before.member.runtimePolicy.configurationHash);
+  expect(after.currentDiff.model.status).toBe('same');
+});

@@ -36,6 +36,7 @@ N_src_logic_dispatch_runtime_auto_collaboration_ts ..> N_src_logic_dispatch_runt
 class N_src_logic_dispatch_runtime_auto_collaboration_ts_Options["Options"] {
   <<type>>
   +engine
+  +modelRoles
   +collaborationMode
   +provider
   +model
@@ -484,3 +485,7 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 新话题的 followupOf 只接受同办公室已结束周期，入队和创建时分别核验；openScope 的幂等指纹包含来源。后续话题沿新队列身份创建，原周期不重开、不转移候选或验收。
 
 派发服务装配 OfficeHistoryService 复用原存储与受限 canonical 读取端口。AutoCollaboration 的主运行历史读取加入在途只读集合，整话题暂停等待其结束；读取不置 workRequested，也不驱动调度。不同办公室不可互读。
+
+### 多角色冻结与恢复
+
+负责人配置捕获、正式兜底 policy、自动协作批次和返回模型 hash 均携带完整 modelRoles。完整快照变化阻止旧绑定继续领取；不自动替换模型或重启任务。

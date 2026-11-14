@@ -868,3 +868,7 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 `DispatchScope.followupOf` 保存用户新任务与同主 Session 已结束话题的关联。提交与重放均验证来源存在、已在此前关闭且不能改绑；排队、公开详情与摘要保留该引用，不复制正文，不继承原生线程或旧验收。
 
 `office-history` 定义主 Session → 话题 → 内容引用的只读检索。分页版本按当前公开目录或内容计算，后续页须携带原版本；各类记录保留真实 actor/task/run/inputRevision，不把历史资料变成用户授权。协议不接受工作区路径或任意主根覆盖。
+
+### 多角色公开选型
+
+排队消息、目标续接、自动返回保留可选 V2 modelRoles，重放不回填缺省。成员运行快照的角色块由严格公开操作 schema 校验，拒绝凭据和未知字段；其余原运行状态和历史不可变约束不变。

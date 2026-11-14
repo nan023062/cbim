@@ -1,4 +1,5 @@
 /**
+ * 批次完整捕获额外模型角色，不从后续主 Agent 设置回填。
  * 审阅关口使候选先回主轮；下一批继承未启动待办，批准后沿原任务身份继续，不重复派发。
  * 同一目标累计三次成员异常即停止自动接续；终态图是额度依据，换任务编号、结果回注或验收返工均不能清零。
  * 本主轮显式阻塞或等待先进入统一收尾，不让继承待办覆盖该决定；旧主轮审阅不阻止明确恢复的新执行。
@@ -63,7 +64,7 @@ export interface MainToolContext {
 }
 
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
-type Options={engine?:import('../../engines').LoopEngine;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
+type Options={engine?:import('../../engines').LoopEngine;modelRoles?:import('../../engines').ModelRolesSelection;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
 type Cycle={collaborationMode?:'auto'|'team';task:TaskSpec;scopeId:string;tasks:Set<string>;operations:Set<Promise<unknown>>;mainRuns:Set<string>;workRequested:boolean;stopped:boolean;interrupting?:boolean;readOnly?:boolean;cancelRequested?:boolean;ending?:DispatchScopeOutcome;closing?:Promise<void>;completionSummary?:RunSummary;options?:Options;repairs?:GoalRepairSource[]};
 type Batch={cycle:Cycle;task:TaskSpec;runId:string;options:Options;tasks:string[];calls:Set<string>;settled?:RunSummary;stopped:boolean;failures:Map<string,string>;watched:Set<string>;admissions:Map<string,{taskId?:string;withdraw:()=>void}>;recorded?:boolean;restored?:boolean;repair?:{source:GoalRepairSource;message:string}};
@@ -370,7 +371,7 @@ export class AutoCollaboration {
     // 按实际创建的主 run 计数，暂时占用导致的启动重试不扣额度；模型不能调大限制。
     if(!cycle.mainRuns.has(runId)&&cycle.mainRuns.size>=32)fail('GOAL_CYCLE_LIMIT','本次目标已达到 32 次主调度运行，已停止自动续跑');
     cycle.mainRuns.add(runId);
-    const batch:Batch={cycle,task:structuredClone(task),runId,options:{engine:options.engine,collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:this.preparedTasks.get(runId)??[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
+    const batch:Batch={cycle,task:structuredClone(task),runId,options:{engine:options.engine,...(options.modelRoles===undefined?{}:{modelRoles:structuredClone(options.modelRoles)}),collaborationMode:cycle.collaborationMode,provider:options.provider,model:options.model,profileId:options.profileId,permission,allowNativeExecution:permission!=='read',turnTimeoutMs:options.turnTimeoutMs},tasks:this.preparedTasks.get(runId)??[],calls:new Set(),stopped:false,failures:new Map(),watched:new Set(),admissions:new Map()};
     this.preparedTasks.delete(runId);this.batches.set(runId,batch);
     cycle.options=structuredClone(batch.options);
     const binding=this.toolBinding(batch);

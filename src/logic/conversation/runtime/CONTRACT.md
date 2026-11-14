@@ -111,3 +111,7 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。
 
 主 Agent 指引明确按 `cbim_office_history` 追溯本办公室原话题与内容、分块版本和 followupOf；当前运行窗口可压缩，但完整 canonical 保留。历史资料与旧验收不是本轮新授权，子 Agent 仍只得到当前话题的冻结上下文。
+
+### 多角色发送选项
+
+executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。

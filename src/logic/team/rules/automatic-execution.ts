@@ -4,11 +4,11 @@
  * 职责边界：纯数据契约，不授予工具权限；是否可兜底还须核实可信周期、当前模块与实际模型。
  */
 import {z} from 'zod';
-import {loopEngineSchema} from '../../engines';
+import {loopEngineSchema,modelRolesSelectionSchema} from '../../engines';
 import {projectRootModuleId} from '../../workspace/rules/project-root';
 
 const id=z.string().min(1).max(512),digest=z.string().regex(/^[a-f0-9]{64}$/);
-const model=z.object({profileId:z.string().uuid(),modelId:z.string().min(1).max(160),configurationHash:digest,engine:loopEngineSchema.optional()}).strict();
+const model=z.object({profileId:z.string().uuid(),modelId:z.string().min(1).max(160),configurationHash:digest,engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional()}).strict();
 /** 与始终可查询的项目根共用身份；旧自动委派契约仍仅在无任何正式模块时接受该范围。 */
 export const implicitProjectModuleId=projectRootModuleId;
 export const collaborationModeSchema=z.enum(['auto','team']);

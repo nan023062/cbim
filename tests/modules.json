@@ -1495,7 +1495,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/unit/logic/engines/catalog.test.ts"
+          "tests/unit/logic/engines/catalog.test.ts",
+          "tests/unit/logic/engines/model-roles.test.ts"
         ],
         "contract": [
           "tests/engine-configuration.test.ts"

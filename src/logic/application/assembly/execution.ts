@@ -1,4 +1,5 @@
 /**
+ * 主模型和附加角色交由同一次引擎配置解析，不重新选择单独角色。
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
  * 公开网页端口仅装配主会话，网络前后核实同一工作区实例；搜索每次使用当前已保存设置。
@@ -49,7 +50,7 @@ import type {ModelRequestBudgetService} from '../../budget/runtime/model-request
 export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
-    const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;
+    const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine,options.modelRoles):undefined;
 
     if(llm&&(options.provider!=='cbim-'+llm.profile.id||options.model!==llm.profile.model))throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();

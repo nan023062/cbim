@@ -6,3 +6,6 @@ export {supportedEngines} from './catalog/supported-engines';
 export type {LoopEngine,EngineDescriptor} from './catalog/supported-engines';
 export {loopEngineSchema,engineDescriptor,engineLabel,engineApi,engineSupportsApi,engineModelRequirement,connectionForEngine,providerSupportsEngine} from './rules/model-selection';
 export type {ResolvedEngineModel} from './model';
+export {modelRoleSnapshotSchema,modelRolesSelectionSchema,modelRolesSnapshotSchema,modelRolesMatch} from './model-roles';
+export type {ModelRolesSelection,ModelRolesSnapshot,ModelRoleDescriptor} from './model-roles';
+export {additionalRoleOperations} from './rules/model-roles';

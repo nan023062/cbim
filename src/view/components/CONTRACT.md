@@ -16,3 +16,7 @@ EngineModelPicker 供主 Agent、自定义 Agent 编辑及岗位登记复用。�
 ### 共享状态标签
 
 state-labels.ts 只提供工作区与工具任务的展示词汇，由外壳和任务视图共同消费；标签不作为服务状态机，不从外壳控制器读取状态。
+
+### 模型选型保留附加角色
+
+EngineModelPicker 同引擎切换 primary 时保留 value.modelRoles；引擎变化清空整个旧选型。此组件当前仍只显示主模型下拉，额外角色的完整编辑在后续界面切片接通。

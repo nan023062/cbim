@@ -1,3 +1,10 @@
+## 2026-11-14：切片 2b——Agent V2 角色引用与完整执行快照
+
+- 延续用户“依次实施后面的步骤”授权，基线 8cb0d5f7；本步仍在独立工作树开发，未动原 develop 发布资料。primary 保持原字段唯一事实，V2 modelRoles 只保存额外角色；官方声明控制必填、操作类型和型号范围，不允许用户注册角色或覆盖 primary。
+- EngineModelProfiles 用同一模型短锁捕获全部角色，公开预览修改不能污染实际解密结果；回调结束缓存失效。Agent 设置、岗位采纳、自动兜底、队列、续接、恢复与主对话完整传递角色，公开快照不含凭据。历史字段和指纹不回填。当前代码引擎无额外角色，编辑 UI/向量 IO/逐角色预算留在后续切片。
+- 验证选择依据为新增纯角色规则、配置锁、主设置、岗位及直接消息/执行消费者。执行 pnpm exec vitest run tests/unit/logic/engines/model-roles.test.ts tests/engine-configuration.test.ts tests/main-agent-settings.test.ts tests/workspace-member-service.test.ts tests/workspace-member-core.test.ts tests/owner-execution-service.test.ts tests/member-execution.test.ts tests/message-queue.test.ts tests/scope-continuation.test.ts --reporter=dot：83/83。新增岗位 V2 真事务回归发现 Store 仍把角色变化当同一引用，补齐注册、修改、刷新审计中的角色核对；重跑 workspace-member-service/core 两套 27/27（合计 84 个不同用例）。
+- pnpm typecheck、pnpm check:test-modules（498 文件，149/155/194）、pnpm check:architecture（1527 文件、7404 依赖、0 违规/循环）及 diff 空白检查通过。首次架构检查的服务私有入口已改为公开导出。同步所有受影响源码注释、目录类图和契约；模型快照归模型模块，角色政策归引擎，岗位状态归 Team。未跑全仓、真实模型、桌面安装或公开 CI；继续第 2 步预算与后续包边界。
+
 ## 2026-11-14：切片 2a——向量模型能力与跨角色原子准备
 
 - 用户明确授权依次实施后续步骤；复核独立工作树 1891ce1a 与开放 Issues（仍只有无关 #65），继续在 refactor/engine-model-catalog 推进，未改原 develop 的发布/官网收尾资料。为使第 2 步可逐段 review，先交付模型操作边界，再接 Agent V2 与预算。

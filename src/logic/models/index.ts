@@ -16,3 +16,4 @@ export type {SecretCipher,ResolvedLlm,ResolvedModelOperation} from './ports';
 
 export {embeddingModelSchema,embeddingConnectionSchema,embeddingSnapshotSchema} from './embedding';
 export type {EmbeddingModel,EmbeddingConnection,EmbeddingSnapshot,ResolvedEmbedding} from './embedding';
+export {generationSnapshotFields,generationSnapshotSchema,checkGenerationSnapshot} from './snapshot';

@@ -1,3 +1,11 @@
+## 2026-11-14：办公室真实在线模型与跨话题上下文验收
+
+- 用户直接要求继续在线模型和打包发布验收；本步使用 `d6d5db507df5fba398bf338e73c919add95323e9` 的产品源码，新增 [office-team-online-smoke.mts](../scripts/office-team-online-smoke.mts)。模型为本机已配置的 DeepSeek `deepseek-flash`，真实 Pi 引擎、真实 Electron 编译入口及后端；知识与岗位是隔离验收数据，模型响应不设替身。仅复制加密模型配置及系统加密元数据到临时 profile，结束删除副本，不操作生产工作区。
+- `pnpm exec tsx scripts/office-team-online-smoke.mts` 通过，耗时约 131 秒：主 Agent 真实派发两项只读文件核实任务，第一话题完成后队列自动建立第二话题；两个成员候选均 accept、两个目标均 completed。4 个主回合、2 个成员回合成功，页面错误为 0，两个独立标记分别来自成员实际读取。证据：`test-results/office-online-v2RDiK/report.json`、原始隔离运行日志及截图。不是打包 EXE 或安装器验收。
+- `pnpm exec tsx scripts/office-team-online-smoke.mts --verify-report test-results/office-online-v2RDiK/report.json` 通过；只读复核原事务和 Pi 原生记录，不新增付费请求。一个办公室中的同一角色仅一个逻辑 Session，两话题使用不同原生 Session，成员上下文包含各自文件标记且不含另一话题的结果。额外证据单独写入 `member-context-evidence.json`，原报告不覆盖。
+- `node scripts/check-dependencies.mjs`：1510 文件、7354 依赖、0 循环／违规；本步新增验收脚本的导入边界通过。没有改动产品源码、契约或类图，不重复产品单元测试；后续精确冻结版本的完整 CI 及安装升级验收分别记录。
+- 当前源码实际冷指纹 `c192e18fe4616db92dca948f4d279426313e73d150fb7e90eb7996037f5deac9` 与 C 0.1.15 基础不符，不能仅发布 R5；下一步准备 C 0.1.16 安装候选。用户已明确沿用 Windows 未签名模式，R 清单继续由原 Ed25519 身份签名；授权范围为候选验收，未公开发布、未合并或更新官网。
+
 ## 2026-11-14：补齐办公室浅色／窄屏 Electron 桌面渲染验收
 
 - 用户直接要求推送最新提交并补齐剩余浅色／窄屏验收，无对应新增 Issue；核对当前 Issues 后不扩展到无关工单。产品源码基线 `fea0b8a5eecaa338c6a96af3d1e00655d664f6f7`，本次只修改验收脚本及记录，不修改 `src/`，也不把桌面渲染验收等同于完整程序或发布验收。

@@ -1,3 +1,111 @@
+## 2026-11-15 PR #83：0.1.18 发行准备
+
+用户授权 PR 测试通过后发布。当前公开基线为 C0.1.17/R3；实际编译固定启动器的指纹由 9eb8f549e10feaba3c84631b685521dc19e7620a817e4ddd0803cc7639021fb8 变为 c7fba8fe8fb31c73ec2aac6b8bd7fa85f2e530e83e96969ebb76ebb99ac78326，因此本轮提高 C 到 0.1.18，E 未变。沿既有未签名 Windows 发行方式，资源仍使用原 Ed25519 身份；实际安装测试只在隔离 Windows runner 执行。
+
+验收工具核对了 desktop-v0.1.17 的真实代码：后台预下载、侧栏图标显式重启安装；原冷壳先选择同 C 已公开 R3，再选择新版 C。补充严格的 0.1.17 版本输入、R3 中间跳转、图标安装路径和真实升级前后 Pi 安装清单/停用状态/共享缓存文件摘要及修改时间对照；旧版断言保留，不放宽差分、普通退出、缓存复用或无业务重放检查。
+
+选取 tests/desktop-acceptance-inputs.test.mjs 验证明确版本、已核实资源跳转及保留项。初次 81/82 通过，Windows 换行导致中间跳转替换未落地；修正后 pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=json --outputFile=test-results/release-018-inputs.json 全部 82 项通过。node --check scripts/desktop-release-acceptance.mjs、git diff --check 通过。产品已完成的测试见上一步记录；本条是准备记录，不表示候选安装、最终 CI 或公开升级已通过。
+
+## 2026-11-15 PR #83 引擎详情集中管理与跨版本缓存验收
+
+用户继续要求：引擎设置用完整官方清单下拉选择，选中后才显示详情；所有引擎下载、版本、安装、停启和移除归详情，账户旁更新仅负责 CBIM 应用；应用升级保留引擎安装与缓存。基线 b6395db7，该基线完整 CI 43625019495 已通过；本步独立验证，不将此前 CI 计作当前改动结果。开放 Issue #65 与直接授权范围无关。
+
+事实与边界（C1/L1）：EnginePackages 的安装清单已经位于版本无关的 userRoot，冷宿主 E 缓存已在同一安装/用户身份的共享目录；既有 RuntimeStore 按 SHA-256 与完整文件集合验证复用，不能通过跳过验证实现“免安装”。误导来自 EngineArtifacts.prepare 在缓存校验前也发送准备事件，旧侧栏把该事件当作更新进度。保留安装状态、验签、依赖闭包、激活事务、引用锁和失败不自动重试的稳定机制，不搬迁用户数据或另造缓存系统。
+
+View 的 EngineSettings 只展开选中的官方引擎：状态、当前/可用版本、兼容模型及额外角色、历史缓存和所有包操作在详情；同一制品已安装且无错误时禁用重复安装，移除保留缓存后提供从缓存添加。活动页面轮询本机 engines.settings；复用 AsyncGeneration 隔离旧查询，操作中仍显示进度，切页停轮询但不取消已提交操作，返回保留选择和回执。应用更新按钮忽略旧冷宿主 enginePreparations，应用自己的下载、错误和安装资格不受引擎影响。
+
+Logic 的 EnginePackages 为安装和运行前 prepare 分别登记短期进度，包服务仅新增可选进度回调；旧冷宿主忽略该回调也可继续工作，详情显示准备中而不编造百分比。准备含本地校验，不能据此声称网络下载。运行前准确活动摘要的缓存错误也投影到详情。冷宿主历史字段继续兼容，但 View 不再消费；支持清单不下沉冷壳。
+
+选择直接受影响的包状态/冷制品进度、缓存复用、管理 IPC 与应用更新图标：`pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/unit/logic/updates/engine-artifacts.test.ts tests/runtime-store.test.ts tests/engine-cache-retention.test.ts tests/engine-settings-ipc.test.ts tests/update-button-state.test.ts --reporter=dot`，初轮 21 项通过，新增跨版夹具因误用 .js 作为要求 .cjs 的适配器入口失败；修正真实测试 ZIP 后，`pnpm exec vitest run tests/engine-cache-retention.test.ts --reporter=dot` 1 项通过，共 22 项。没有修改校验器来迁就夹具。
+
+新增契约测试组合真实 EnginePackages、EngineArtifacts、RuntimeStore 与签名 ZIP：更换 C 版本/指纹和 R 号后离线保留原活动摘要、停用状态和安装清单字节；运行和移除后重新添加不新增下载；故意损坏缓存后报错且无自动下载循环。首次下载 1 次，升级后的离线下载器 0 次。这是隔离契约验收，不是实际桌面安装器升级。
+
+`node scripts/settings-center-ui-smoke.mjs` 最终 12 组通过，使用真实 App/React、Edge 与隔离 IPC：完整下拉、单详情、37% 在途进度、切页后完成、迟到旧快照不回退、停启、相同版本按钮禁用、模型草稿与错误保留；旧引擎事件不激活应用更新图标。九类设置含选中后的引擎详情在 320/390/800px 无横向溢出，pageErrors 为空，桌面和 320px 截图已核对；证据 test-results/settings-center/result.json。
+
+`pnpm typecheck`、`pnpm check:test-modules`（526 文件，unit 166 / contract 160 / integration 200）和 `pnpm check:architecture`（134 目录/812 源码样式，1616 文件/7648 依赖，无环，无违规）通过。六个受影响目录的 CONTRACT/ARCHITECTURE 与源码说明同步；新契约测试唯一登记在 logic/engines/packages。未运行全量本地回归、真实外部模型、打包或安装升级；推送后由最新提交完整 CI 验证。未合并、未发布，当前安装版不变。
+
+## 2026-11-15 PR #83 办公室详情直达原 Agent 对话
+
+用户要求删除办公室右侧详情栏，人物“任务详情”和主 Agent“调度详情”直接跳转各自对话。本步基于 01a50cdd，仅调整 View：SessionTaskView 只展示办公室和用量；taskConversationTarget 按 workspace/root/task/正式 TeamSession 唯一登记解析原成员与话题；Conversation 统一办公室、历史任务和运行管理导航；MemberConversation 消费一次性任务定位，即使曾查看另一任务也重新定位此次点击的原任务。没有唯一归属时显示错误，不猜测其他成员或主会话。成员工作记录仍只读，主聊天及频道草稿、附件与执行控制器继续由原会话持有。
+
+边界评估为局部 View 职责拆分：易变的办公室布局不再持有恢复、停止、队列和人工操作入口。原 RootTaskDetail/MemberTaskDetail 完整核实能力迁到 SessionTaskReview，session-task-state 共享原历史过滤和根状态投影，没有第二套任务事实或控制器。只有主对话菜单、成员“核实执行记录”和中断提示“查看原运行”显式打开原生核实对话框；办公室普通点击只导航页面。核实框可见时维持补充资料及回执观察，关闭恢复焦点，不启动或重放任务。导航请求只确认一次。
+
+按变更消费者选择办公室/历史、成员身份与原任务、根目标/重规划/队列、取消/检查点/依赖/求助详情：`pnpm exec vitest run tests/session-task-view.test.ts tests/task-history-view.test.ts tests/team-conversations.test.ts tests/team-conversation-view.test.ts tests/office-scene.test.ts tests/scope-goal-view.test.ts tests/scope-replan-view.test.ts tests/queue-insertion-view.test.ts tests/member-cancellation-view.test.ts tests/member-checkpoint-view.test.ts tests/member-dependency-view.test.ts tests/member-help-view.test.ts --reporter=dot`，12 文件 101 项通过。原根详情断言改由实际核实组件承载；前一步已删除的当前任务列表不再断言存在，改验证原 officeScene.current 投影仍保留未完成任务，没有删掉原恢复行为覆盖。新增定位拒绝缺登记、重复登记、跨办公室和不存在任务用例。补齐选择框可访问名称后，team-conversation-view 2 项再次通过。
+
+`node scripts/office-team-desktop-smoke.mjs` 20 组通过：成员详情直达原 next-rules、切换其他任务后再次点击可重新定位、主调度进入主对话并保留草稿、历史任务定位原话题；普通导航不生成右栏或核实框，显式核实仍绑定原任务。保留人物动态、隔离会话、减少动画与桌面/320px 双主题检查；证据 test-results/office-desktop-GdySMf/report.json（导航回调去重后的最终 20 组验收），前次等价桌面截图已核对。首次检查因选择框缺少明确可访问名称、隐藏频道参与严格定位失败，分别补齐名称和可见频道选择器后通过；不是执行任务失败。`node scripts/interaction-area-smoke.mjs` 12 组通过（test-results/office-desktop-I7vQIC/report.json），覆盖直接选择、切换补读、独立草稿/附件/滚动与等待续接；`node scripts/interrupted-chat-ui-smoke.mjs` 5 组通过，原运行核实不发送/清草稿、未知影响仍受控，pageErrors/unexpected/writes 均为空。
+
+`pnpm typecheck`、`pnpm check:test-modules`（525 文件：unit 166 / contract 159 / integration 200）、`pnpm check:architecture`（含依赖检查，1615 文件/7642 依赖，无环）通过。源码注释、conversation/tasks/execution-view 的 CONTRACT 与 ARCHITECTURE 同步；`node scripts/source-architecture.mjs` 最终 134 目录、812 代码/样式文件，0 文档差异。界面验收使用实际 Electron/React 和 Edge/React 的隔离 IPC，不代表真实模型、打包安装或生产工作区验收。未运行本地全量测试及安装/升级，不合并、不发布；推送后以最新提交完整 CI 为准。当前唯一开放 Issue #65 与本需求无关，不关联关闭。
+
+## 2026-11-15 PR #83 删除办公室重复的当前任务全文列表
+
+用户要求删除舞台下方绿色框中的“当前任务”整块内容。OfficeScene 移除该标题、任务全文按钮列表和空态提示，office-scene.css 清理对应布局/按钮样式；人物卡继续显示原任务摘要和按需详情入口，历史任务仍默认折叠。变化只在 View 展示，office-state 的任务事实、人物/工位/待办投影和执行调度不变，不删除任务记录。
+
+选择直接受影响的办公室渲染与历史边界：`pnpm exec vitest run tests/office-scene.test.ts --reporter=dot`，1 文件 6 项通过。`node scripts/office-team-desktop-smoke.mjs` 18 组通过，新增当前任务列表不再存在、点击人物卡仍打开原 next-rules 任务详情、关闭详情正常的检查，保留历史展开、人物动态、会话隔离及桌面/320px 双主题检查；证据 `test-results/office-desktop-Yn03v0/report.json`，最终桌面与窄屏底部截图已核对。实际 Electron/React 使用隔离 IPC，无真实模型或用户项目写入。`pnpm check:architecture` 通过（含依赖检查）；OfficeScene/CSS 注释及 tasks 的 CONTRACT/ARCHITECTURE 同步。公共类型、测试登记与导入未变，不重复类型及本地全仓验证；完整 CI 随最终提交更新。未打包、安装、合并或发布，开放 Issue #65 与本次直接授权范围无关。
+
+## 2026-11-15 PR #83 删除办公室顶部冗余话题栏
+
+用户要求删除截图绿色框内全部内容。此前已删除办公室/任务依赖图二级按钮，本次移除 SessionTaskView 的话题下拉、目标状态及历史折叠说明整栏，并删除 task-graph.css 对应样式，不保留空容器。变化仅限 View 展示；话题选择继续由对话频道及显式导航传入，办公室用量、根/成员详情和历史折叠沿原身份及规则工作。
+
+按受影响组件选择 `pnpm exec vitest run tests/session-task-view.test.ts --reporter=dot`，1 文件 4 项通过。`node scripts/office-team-desktop-smoke.mjs` 17 组通过：新增整栏及文案不存在、用量入口保留断言，继续验证历史展开、原频道导航、人物动态、办公室隔离与桌面/320px 双主题布局。证据 `test-results/office-desktop-OTWPmv/report.json`；桌面及深色窄屏截图已核对。实际 Electron/React 使用隔离 IPC，未调用真实模型或操作用户项目。`pnpm check:architecture` 通过（含依赖检查），源码注释与 tasks 的 CONTRACT/ARCHITECTURE 已同步。未改变类型、公共接口、测试归属或测试导入，不重复类型检查与本地全仓测试；完整 CI 随新提交重跑。历史制品验收脚本仍使用旧版本任务页导航，未纳入本次现版界面验收。未打包、安装、合并或发布；开放 Issue #65 与本次直接授权范围无关。
+
+## 2026-11-15 PR #83 去除办公室重复操作
+
+用户要求切换对话/办公室承担刷新和返回能力，并始终启用人物动态。Conversation 在实际模式变化时调用原 useSessionGraph.refresh，沿既有在途合并、身份隔离和增量读取；初次挂载与重新激活仍由 Hook 负责。SessionTaskView 删除独立刷新/返回按钮和失效 onRefreshGraph 入口，仅装配父级唯一切换按钮；未开始会话的“开始对话”引导保留。OfficeScene 删除人物动态开关和可变开关状态，默认按真实工作及新派发/汇报播放，保留系统减少动画、后台不回放、单人物和有界队列语义。变化限定在 View 导航与表现，不改变执行、停止、恢复或队列业务。
+
+按受影响的办公室舞台和标题消费选择 `pnpm exec vitest run tests/session-task-view.test.ts tests/office-scene.test.ts --reporter=dot`，2 文件 10 项通过。`node scripts/interaction-area-smoke.mjs` 12 组通过，增加切换立即补读、在途请求合并、无三个冗余控件及草稿保留验证；证据 `test-results/office-desktop-y5R7yj/report.json`。`node scripts/office-team-desktop-smoke.mjs` 16 组通过，验证真实派发/汇报动态、默认工作动画、历史不回放和系统减少动画，以及桌面/320px 双主题布局；证据 `test-results/office-desktop-fF2bfY/report.json`，最终截图已核对。两组使用实际 Electron/React 与隔离 IPC，未操作用户工作区或真实模型。`pnpm typecheck`、`pnpm check:architecture` 通过，后者含依赖无环检查。源码注释、conversation/tasks 的 CONTRACT/ARCHITECTURE 同步。测试登记及导入不变；完整 CI 随最终提交重新触发，未运行本地全仓测试、打包、安装、合并或发布。开放 Issue #65 与本次用户直接授权无关，不关联关闭。
+
+## 2026-11-15 PR #83 设置侧栏与首页统一
+
+用户要求设置侧栏与首页采用相同风格、尺寸和布局。两处现在共用 components/sidebar.css 的侧栏内边距、32px 标题/菜单行、30px 圆角搜索框、图标、分组及选中样式；App 通过 --sidebar-width 传递唯一 useSidebarWidth 状态（默认 260px，200～420px），设置接收同一调整手柄，拖动或键盘调整在返回首页后继续有效。清除 shell/settings 的重复视觉声明；设置窄屏仍用分类选择器和搜索，表单按需挂载/草稿/更新控制器不变。此处只改变 View 装配和 CSS，未迁移宽度所有权或业务保存规则。
+
+验证以实际布局和交互为主：`node scripts/settings-center-ui-smoke.mjs` 10 组通过，逐项比较两处侧栏的计算尺寸/字体/内边距/背景，验证默认260、键盘280、设置拖动320、返回首页同步及默认恢复；覆盖九类设置的搜索、草稿、失败恢复与 320/390/800px 双主题无溢出。浏览器运行真实 App、隔离 IPC 替身，未访问用户配置或外部服务。证据 `test-results/settings-center/result.json`，桌面/双主题截图已核对。共享样式的首页消费者另运行 `node scripts/interaction-area-smoke.mjs`，11 组 Electron 验收通过，证据 `test-results/office-desktop-8w35gq/report.json`。`pnpm typecheck`、`pnpm check:architecture` 通过；本次无业务规则改动，不新增重复实现断言或无关单元。源码说明、components/settings/shell 的 CONTRACT/ARCHITECTURE 和上层 View 类图已同步。完整 CI 随最终提交重新触发；未安装、合并或发布。
+
+## 2026-11-15 PR #83 侧栏 Agent 直接选择
+
+用户要求删除 Agent 下的展开和二级“查看对话”按钮。ConversationEntries 现在直接以角色名按钮提交原 onSelectChild 身份，保留原选中状态、运行指示和禁用门禁；名称左对齐并在过长时省略。对话模式直接显示该成员只读工作审阅，办公室模式仍定位所选成员；主对话草稿、任务和执行状态不变。
+
+只选择受影响的对话条目与成员审阅契约：`pnpm exec vitest run tests/team-conversation-view.test.ts --reporter=dot` 1 文件 2 项通过；`node scripts/interaction-area-smoke.mjs` 最终 11 组通过，新增直接点击角色、无展开、选中反馈、左对齐、返回后主草稿保留断言。实际 Electron 配合隔离 IPC 替身，证据 `test-results/office-desktop-c6nhwp/report.json`，最终截图已核对；未访问用户工作区或真实模型。`pnpm check:architecture` 通过，源码注释及 conversation 的 CONTRACT/ARCHITECTURE 同步。未改变公共类型、导入或测试登记，不重复本地类型与全仓检查；完整 CI 随最终提交在 PR 中重新运行。未安装、合并或发布。
+
+## 2026-11-15 PR #83 视图按钮并入内容标题行
+
+用户补充要求删除交互区顶部独占的空白栏，将按钮移入对话区域右上角。基于 0c8f88b5，InteractionModeToggle 现在只渲染一个按钮，Conversation 按当前可见模式装配到主对话、办公室或成员审阅的现有标题行；失效成员身份的占位区域也保留切换入口。SessionTaskView/MemberConversation 仅接收导航插槽，模式仍由 Conversation 拥有；原面板持续挂载，草稿、附件和滚动未迁移。
+
+验证只选择受影响的按钮、办公室及成员审阅：`pnpm exec vitest run tests/interaction-mode-toggle.test.ts tests/session-task-view.test.ts tests/team-conversation-view.test.ts --reporter=dot`：3 文件 7 项通过。`node scripts/interaction-area-smoke.mjs`：10 组隔离 Electron 界面验收通过，新增无独立工具栏、紧凑标题行和三种视图仅一个切换入口的布局断言，覆盖 1440/320px、双主题、频道与主聊天独立草稿/附件/滚动。截图已人工核对，证据 `test-results/office-desktop-sk0x9U/report.json`；使用原 IPC 替身，未调用模型或用户工作区。`pnpm typecheck`、`pnpm check:architecture` 通过。相关 conversation/tasks 源码注释、CONTRACT 与 ARCHITECTURE 同步。完整 CI 随推送重新执行，上一提交的成功不代表本次结果；未打包、安装、合并或发布。
+
+## 2026-11-15 PR #83 源目录写法兼容复查
+
+等待完整 CI 时复查既有 sources 规则与编辑器，新增回归复现 src/、./src、src/./ 被新读取接口误拒绝。现在先精确匹配已声明来源，再消除源目录中的尾斜杠、./ 与重复分隔符；文件相对路径继续严格校验，声明自身的绝对路径和父级穿越仍拒绝，没有扩大读范围。`pnpm exec vitest run tests/module-source-browser.test.ts --reporter=dot` 最终 11 项通过（新增 4 种合法写法与 1 组拒绝断言）。只改工作区读服务内部，已同步注释、CONTRACT 与 ARCHITECTURE；PR 更新后由最终提交重新执行完整 CI，先前 CI 不作为最终结果。
+
+## 2026-11-15 模块源码浏览与四项界面调整收尾
+
+用户直接授权第 3 步：业务架构只显示模块及 sources 绑定的真实目录/文件，图标区分模块/目录/文件；大标题说明移除，治理入口在根菜单。ModuleSourceTree 按需展开和分页，SourceFilePreview 只读文本；模块配置和 Workflow 保留在详情，损坏的 module.json 仍有根详情修复入口。既有编辑、负责人登记和事务冻结语义继续保留。
+
+架构决策：Logic/workspace 拥有源绑定、路径和读取限制；source-browser 纯契约经 Bridge 配对，ModuleSourceBrowser 只依赖 entry/assert/read 最小端口，无 Application、执行或写入能力。读取前后核知识版本/运行实例，拒绝越界、链接/联接、.cbim/.git 和忽略项；一页最多 200 项、一次检查最多 2000 项、文本最多 256 KiB。View 保存展开/选择状态，迟到结果与旧实例隔离；不是源内容不可变证据。登记了精确的纯契约/服务公开入口，没有放宽分层算法或增加泛文件读写入口。
+
+验证选择与结果：
+- `pnpm exec vitest run tests/module-source-browser.test.ts tests/module-source-tree.test.ts --reporter=dot`：源码服务与树 8 项最终通过；服务原先同步抛校验异常，改为一致的异步拒绝后补跑服务。覆盖分页、只读范围、旧身份/版本、目录联接、二进制/大文件、缺失路径和树循环。
+- `pnpm exec vitest run tests/module-source-browser.test.ts tests/ipc-requests.test.ts --reporter=dot`：当时 25 项通过；随后新增源浏览请求/关闭门禁回归。
+- `pnpm exec vitest run tests/team-model.test.ts tests/ipc-requests.test.ts tests/layer-boundaries.test.ts --reporter=dot`：最终 31 项通过，覆盖团队资料迁移、受理前拒绝与公开入口边界。`pnpm typecheck`、`pnpm check:architecture`、`pnpm check:test-modules` 通过，依赖无环。
+- `pnpm exec tsx scripts/architecture-tree-smoke.mts`：5 组实际 Electron 界面 + 真实 ModuleSourceBrowser/隔离目录验收通过，含配置详情、损坏模块修复入口、治理未知回执门禁、逐层源码与文本预览、迟到响应、1440/320px 与双主题。岗位/治理使用明确替身，不调用真实模型；截图切换为离屏原生渲染，已核实主题颜色和实际截图。最终本地证据 `test-results/architecture-tree-nRe0kG/result.json`。前一步交互区独立草稿/附件/滚动等 9 组验收保持通过。
+
+同步 Logic/workspace、Bridge/contracts/IPC、View/workspace 的注释、契约与类图，以及相关组件/交互样式说明。完整变更范围为 d1964428 起的本分支提交；阅读顺序：source-browser 纯契约 → ModuleSourceBrowser → workspaceIpcHandlers → ModuleSourceTree/SourceFilePreview → WorkspaceView。下一次文件展示变化留在 View，新增源读取规则修改工作区服务，不更改稳定调度或知识事务。已完成代码自查，人工 review 在 PR；全仓回归交给 PR CI，本步未打包、安装、合并或发布。
+
+## 2026-11-15 团队组织树精简与配置详情
+
+用户直接授权第 2 步：TeamTree 仅显示团队、小组、自定义 Agent，真实 Skill/agent.json/principles.md 及其他资料继续在详情中预览编辑。根大标题说明删除，一键治理进入根菜单，未知回执门禁和结果留在页面，关闭菜单不重发。TreeActions 复用原菜单的键盘和显式回调行为；配置路径仍由所属节点确定，损坏的 Agent 定义有根详情检查入口。
+
+受影响验证：`pnpm exec vitest run tests/team-model.test.ts tests/knowledge-file-tree.test.ts --reporter=dot` 2 文件 10 通过，覆盖组织模型/继承、根菜单边界、跨工作区隔离与菜单行为；类型检查通过。新增隔离 Electron 冒烟已通过团队树隐藏配置、详情正文和 Skill、根治理未知回执不重发的交互断言；完整截图及模块源码联合验收在下一步记录。完整 CI、安装升级未运行。
+
+同步 team/knowledge/components 的源码头注释、CONTRACT 和 ARCHITECTURE。Review 入口：TeamView → TeamTree/TreeActions；TeamView → KnowledgeFilePreview/ArchitectureEditor 保留原知识事务，组织浏览不修改岗位或执行实例。
+
+## 2026-11-15 交互区精简：移除依赖图、单按钮切换
+
+用户直接授权的四项界面调整，第 1 步；远端开放 Issue #65 与此范围无关。基于 d1964428，View 层移除 DispatchGraph 与专用布局，办公室、历史折叠、原任务详情和后端调度依赖保留。InteractionModeToggle 用一个按钮呈现当前视图与切换目标；隐藏挂载保持主对话/频道草稿、附件和滚动。
+
+验证选择：办公室/历史/任务详情与按钮为受影响消费者。`pnpm exec vitest run tests/session-task-view.test.ts tests/interaction-mode-toggle.test.ts tests/office-scene.test.ts tests/task-history-view.test.ts tests/member-cancellation-view.test.ts tests/member-checkpoint-view.test.ts tests/member-help-view.test.ts tests/member-dependency-view.test.ts tests/member-dependency-addition-view.test.ts --reporter=dot`：9 文件 57 通过。仅移除旧图专用断言，实际任务卡/详情覆盖保留。`pnpm typecheck`、`pnpm check:architecture`、暂存删除后 `pnpm check:test-modules` 通过。`node scripts/interaction-area-smoke.mjs`：9 组真实 Electron 渲染验收通过，含 320px 双主题、独立草稿附件滚动、未知回执不重放。首次运行受开发热更新影响在附件按钮分离时超时；固定源码复跑通过，并给隐藏窗口的动画帧等待加有界后备。未运行全仓单元、安装或发布验收，完整 CI 留至 PR。
+
+源码头注释、conversation/tasks CONTRACT 与 ARCHITECTURE 同步。Review 入口：Conversation → InteractionModeToggle/SessionTaskView → OfficeScene/MemberTaskDetail；稳定的执行和话题状态没有迁移。
+
 ## 2026-11-14 C 0.1.17 / R3 交互区已投放公开通道
 
 [PR #81](https://github.com/nan023062/cbim/pull/81) 已正常合并 master；最终完整 CI 43608092939 通过（523 文件、3525 通过、2 个既有历史 EXE 前置条件跳过、0 失败）。候选 43608615116 与公开升级 43610142288 均通过，真实 C 0.1.17 / R1 → R3、普通退出不应用、实际 UI 重启、六类数据保留、0 重放和 0 页面错误。资源 4044795 字节，四个 E 与冷包保持原身份。发布末尾回读短时不一致后只读核实远端已更新，原地址匿名验签与真实升级均成功，没有重复发布；具体首次回读原因未直接证实。官网与 README 按真实回执收尾，详见 [R3 发布记录](verification/interaction-r3-20261114.md)。

@@ -1,5 +1,5 @@
 /**
- * 作用定位：话题摘要与阅读区域的响应式排版。
+ * 作用定位：话题摘要、成员审阅标题与阅读区域的响应式排版。
  * 设计原因：用留白、边线和文字层级表达群聊主题，复用应用主题变量，窄屏不依赖横向表格。
  */
 .conversation-topics{width:100%;min-width:0;margin:12px 0 24px}
@@ -14,7 +14,7 @@
 .conversation-topic-thread h3{font-size:18px;line-height:1.5;overflow-wrap:anywhere;margin:16px 0 24px}
 .conversation-topic-tasks>button{display:block;text-align:left;white-space:normal;overflow-wrap:anywhere;width:100%;margin-top:8px}
 @media(max-width:520px){.conversation-topic-card{padding:12px}.conversation-topic-title{font-size:14px}}
-.member-conversation{display:grid;gap:14px;min-width:0}.member-conversation header p{color:var(--muted);font-size:12px}.member-conversation label{display:grid;gap:6px;min-width:0}.member-conversation select{width:100%;min-width:0}.member-assignment,.member-result{padding:14px;border:1px solid var(--border);border-radius:10px;overflow-wrap:anywhere}.member-assignment p,.member-result p{white-space:pre-wrap}.member-assignment small{display:block;color:var(--muted);margin-bottom:8px}
+.member-conversation{display:grid;gap:14px;min-width:0}.member-conversation-heading{display:flex;align-items:flex-start;gap:12px}.member-conversation-heading h3{flex:1;min-width:0;margin:0;overflow-wrap:anywhere}.member-conversation header p{color:var(--muted);font-size:12px}.member-conversation label{display:grid;gap:6px;min-width:0}.member-conversation select{width:100%;min-width:0}.member-assignment,.member-result{padding:14px;border:1px solid var(--border);border-radius:10px;overflow-wrap:anywhere}.member-assignment p,.member-result p{white-space:pre-wrap}.member-assignment small{display:block;color:var(--muted);margin-bottom:8px}
 
 /* 主窗与频道都在交互区内；右侧扩展区不参与此分屏。每个消息区拥有独立滚动容器。 */
 .interaction-chat-layout{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}

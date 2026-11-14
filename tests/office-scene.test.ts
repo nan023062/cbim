@@ -12,12 +12,12 @@ it('同一逻辑成员的不同执行实例只显示一人，当前模块与串�
  const graph=officeGraph([current,other]),sessions=[officeSession(),{...officeSession('foreign'),rootSessionId:'other'}];
  const scene=officeScene(graph,sessions,[scope],true);expect(scene.actors).toHaveLength(2);expect(scene.actors[1]).toMatchObject({id:'worker-session',taskId:'one',deskId:'module:module-a',queued:1,working:true});expect(scene.desks.map(value=>value.name)).toEqual(['主 Agent 工位','模块 A']);
  const html=renderToStaticMarkup(createElement(OfficeScene,{graph,sessions,scopes:[scope],mainRunning:true,queued:2,onChat:()=>{},onTask:()=>{}}));
- expect(html.match(/data-office-actor="worker-session"/g)).toHaveLength(1);expect(html).toContain('打开 建模员 的对话');expect(html).toContain('同一 Agent 串行');expect(html).not.toContain('foreign');
+ expect(html.match(/data-office-actor="worker-session"/g)).toHaveLength(1);expect(html).toContain('打开 建模员 的对话');expect(html).toContain('同一 Agent 串行');expect(html).not.toContain('foreign');expect(html).not.toContain('type="checkbox"');expect(html).not.toContain('人物动态');expect(html).toContain('office-person-drawing working');expect(html).not.toContain('office-current-tasks');expect(html).not.toContain('当前任务 ·');expect(html).toContain('任务详情');
 });
 it('完成/撤销任务默认折叠，空闲 Agent 的独立会话仍保留',()=>{
  const graph=officeGraph([{...officeTask('old'),status:'cancelled'}]),scene=officeScene(graph,[officeSession()],[scope],false);
  expect(scene.current).toEqual([]);expect(scene.history).toHaveLength(1);expect(scene.actors[1]).toMatchObject({state:'空闲',deskId:'lounge'});
- const html=renderToStaticMarkup(createElement(OfficeScene,{graph,sessions:[officeSession()],scopes:[scope],mainRunning:false,queued:0,onChat:()=>{},onTask:()=>{}}));expect(html).toContain('<details class="office-history">');expect(html).toContain('当前没有待处理任务');
+ const html=renderToStaticMarkup(createElement(OfficeScene,{graph,sessions:[officeSession()],scopes:[scope],mainRunning:false,queued:0,onChat:()=>{},onTask:()=>{}}));expect(html).toContain('<details class="office-history">');expect(html).not.toContain('当前没有待处理任务');
 });
 it('可靠等待和正在退出区分，不借迟到 running 显示仍在作业',()=>{
  const graph=officeGraph([{...officeTask('one'),status:'running',activeRunId:'run'}]);

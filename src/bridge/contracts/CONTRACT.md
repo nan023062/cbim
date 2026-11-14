@@ -1,3 +1,7 @@
+### 模块源码读取
+
+ipc-workspace 注册 source.list/source.read，重用 Logic 的严格纯请求及数据类型。必须提供 workspaceId、instanceId、revision、moduleId 和 source；path 相对已声明来源，默认目录根。协议不接受写入选项或绝对路径授权，服务重复核实真实绑定。
+
 ### 长期对话公共身份
 
 `dispatch` 导出纯 `TeamSession` 类型与严格 Schema，供 View 校验联合读取；只有逻辑办公室/角色/Session 标识和创建时间，无原生目录、执行入口或调度权限。

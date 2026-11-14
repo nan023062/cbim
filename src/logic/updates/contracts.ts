@@ -12,7 +12,7 @@ export interface DesktopUpdateStatus {
   currentVersion:string;currentNotes:string;enabled:boolean;
   /** 当前真实装载的 R；旧安装包不伪造资源版本。 */
   currentResourceVersion?:number;
-  /** 首次按需准备的引擎包，与 C/R 安装资格独立；不包含路径、凭据或可执行命令。 */
+  /** 旧冷宿主兼容字段，界面忽略此值；引擎准备由 engines.settings 单独展示，不影响 C/R 更新。 */
   enginePreparations?:{engine:string;version:string;progress?:number;error?:string}[];
   phase:'disabled'|'idle'|'checking'|'current'|'available'|'downloading'|'ready'|'installing';
   release?:DesktopRelease;progress?:number;

@@ -61,11 +61,11 @@ export class EngineArtifacts implements EngineArtifactsPort {
     this.available=available;this.envelopes=envelopes;this.head=checked.index.sequence;this.digest=checked.digest;
     for(const ref of checked.index.current)this.current.set(ref.kind,ref.identity);
   })}
-  /** 只准备已验签的准确版本；并发下载交给 RuntimeStore，失败不会删除已安装包。 */
-  async prepare(kind:string,identity:string){
+  /** 只准备已验签的准确版本；并发下载交给 RuntimeStore，失败不会删除已安装包；回调含本地校验，不能据此宣称发生网络下载。 */
+  async prepare(kind:string,identity:string,onProgress?:(progress:number)=>void){
     const pkg=await this.queue.run(async()=>{await this.init();const found=this.available.get(kind+':'+identity);if(!found?.adapter)throw Error('没有此身份的受信引擎制品');return found});
-    this.progress(kind,pkg.adapter!.version,0);
-    try{const root=await this.store.prepare(pkg.package,this.signal,value=>this.progress(kind,pkg.adapter!.version,value));this.progress(kind,pkg.adapter!.version);return {root,version:pkg.version,entry:path.join(root,pkg.entry),identity:pkg.package.sha256,adapter:{...pkg.adapter!,entry:path.join(root,pkg.adapter!.entry)}}}
+    this.progress(kind,pkg.adapter!.version,0);onProgress?.(0);
+    try{const root=await this.store.prepare(pkg.package,this.signal,value=>{this.progress(kind,pkg.adapter!.version,value);onProgress?.(value)});this.progress(kind,pkg.adapter!.version);return {root,version:pkg.version,entry:path.join(root,pkg.entry),identity:pkg.package.sha256,adapter:{...pkg.adapter!,entry:path.join(root,pkg.adapter!.entry)}}}
     catch(error){this.progress(kind,pkg.adapter!.version,undefined,String(error));throw error}
   }
 }

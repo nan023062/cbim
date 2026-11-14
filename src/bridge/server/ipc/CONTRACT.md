@@ -1,3 +1,7 @@
+### 模块源码适配
+
+workspaceIpcHandlers 为 source.list/source.read 取得既有运行工作区，交给 ModuleSourceBrowser；不在桥接层枚举文件或补猜模块归属。source 请求在应用关闭时拒绝接单；畸形请求在取得工作区前返回 SOURCE_INPUT 可读提示，不展示原始校验 JSON。发送端身份继续由统一入口控制。
+
 ### 粘贴入口
 
 chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明确本地绝对路径，Main 核存在/类型/.cbim后保存快照。两者在退出期间拒绝，发送窗口/Main Frame仍沿桌面入口校验。chat.preview 可返回已验证图片字节；没有通过图片名任意写源文件或按预览字符串读磁盘的入口。

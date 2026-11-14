@@ -18,7 +18,7 @@
 | [governance-handlers.ts](governance-handlers.ts) | 模块治理观察、提案、决定与实施的主进程处理器。 |
 | [loop-handlers.ts](loop-handlers.ts) | 会话、排队、历史与安全续接的主进程处理器。 |
 | [people-handlers.ts](people-handlers.ts) | 岗位登记与模块责任的主进程处理器。 |
-| [request.ts](request.ts) | 主进程 IPC 的运行时请求解析与受理前拒绝，保留旧队列插入的失效运行错误码。 |
+| [request.ts](request.ts) | 主进程 IPC 的运行时请求解析与受理前拒绝；源浏览在退出期间停止接单且畸形参数返回可读提示，保留旧队列插入的失效运行错误码。 |
 | [resources-handlers.ts](resources-handlers.ts) | 资源仓库、共享连接与架构包的主进程处理器。 |
 | [services.ts](services.ts) | 定义 IPC 路由需要的执行审批、静态角色履历、岗位与模块责任、全局监管、配额、桌面资源导入、模块治理和工作区生命周期入口。 |
 | [settings-handlers.ts](settings-handlers.ts) | 模型、准入、预算与反馈账号设置的主进程处理器。 |
@@ -266,7 +266,7 @@ class N_src_bridge_server_ipc_workspace_handlers_ts["workspace-handlers.ts"] {
 }
 ```
 
-直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-workspace.ts](../../contracts/ipc-workspace.ts)、[../../../logic/workspace/service/architecture-service.ts](../../../logic/workspace/service/architecture-service.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
+直接依赖：[services.ts](services.ts)、[../../contracts/ipc-call.ts](../../contracts/ipc-call.ts)、[../../contracts/ipc-workspace.ts](../../contracts/ipc-workspace.ts)、[../../../logic/workspace/service/source-browser.ts](../../../logic/workspace/service/source-browser.ts)、[../../../logic/workspace/service/architecture-service.ts](../../../logic/workspace/service/architecture-service.ts)、[../../../core/errors.ts](../../../core/errors.ts)。
 
 ### 本目录调用边界
 
@@ -414,6 +414,10 @@ N_src_bridge_server_ipc_workspace_handlers_ts ..> N_src_bridge_server_ipc_servic
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 模块源码适配
+
+workspaceIpcHandlers 为 source.list/source.read 取得既有运行工作区，交给 ModuleSourceBrowser；不在桥接层枚举文件或补猜模块归属。source 请求在应用关闭时拒绝接单；畸形请求在取得工作区前返回 SOURCE_INPUT 可读提示，不展示原始校验 JSON。发送端身份继续由统一入口控制。
 
 ### 粘贴入口
 

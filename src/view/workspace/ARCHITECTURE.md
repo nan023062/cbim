@@ -16,8 +16,10 @@
 | [module-ownership.css](module-ownership.css) | 对应界面的布局与视觉样式。 |
 | [ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx) | 显示模块当前负责人、来源观察与有界审计，供责任面板单独审阅。 |
 | [ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx) | 业务架构和项目岗位共用的模块责任控制面，提供岗位选择、登记入口、预览、明确提交和原命令核实。 |
+| [ModuleSourceTree.tsx](ModuleSourceTree.tsx) | 业务模块语义树及其绑定源码目录的按需浏览。 |
+| [SourceFilePreview.tsx](SourceFilePreview.tsx) | 模块源码的只读文本预览，服务端决定范围与字节上限。 |
 | [workspace-view.css](workspace-view.css) | 对应界面的布局与视觉样式。 |
-| [WorkspaceView.tsx](WorkspaceView.tsx) | 业务模块和真实知识文件的目录树、预览编辑与治理入口。 |
+| [WorkspaceView.tsx](WorkspaceView.tsx) | 业务模块与绑定源码的目录树、只读源码预览及配置治理入口。 |
 
 ## 架构类图
 
@@ -255,6 +257,30 @@ N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwn
 
 直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[module-ownership.css](module-ownership.css)。
 
+### ModuleSourceTree.tsx
+
+```mermaid
+classDiagram
+class N_src_view_workspace_ModuleSourceTree_tsx["ModuleSourceTree.tsx"] {
+  <<component>>
+  +ModuleSourceTree()
+}
+```
+
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[../knowledge/knowledge-files.css](../knowledge/knowledge-files.css)。
+
+### SourceFilePreview.tsx
+
+```mermaid
+classDiagram
+class N_src_view_workspace_SourceFilePreview_tsx["SourceFilePreview.tsx"] {
+  <<component>>
+  +SourceFilePreview()
+}
+```
+
+直接依赖：[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)。
+
 ### workspace-view.css
 
 ```mermaid
@@ -274,7 +300,7 @@ class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../knowledge/KnowledgeFileTree.tsx](../knowledge/KnowledgeFileTree.tsx)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[ModuleSourceTree.tsx](ModuleSourceTree.tsx)、[SourceFilePreview.tsx](SourceFilePreview.tsx)、[../../bridge/contracts/ipc-workspace.ts](../../bridge/contracts/ipc-workspace.ts)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[../governance/ModuleGovernancePanel.tsx](../governance/ModuleGovernancePanel.tsx)、[ModuleOwnershipPanel.tsx](ModuleOwnershipPanel.tsx)、[../team/WorkspaceMembers.tsx](../team/WorkspaceMembers.tsx)、[../team/team-model.ts](../team/team-model.ts)、[InlineModuleOwner.tsx](InlineModuleOwner.tsx)、[workspace-view.css](workspace-view.css)。
 
 ### 本目录调用边界
 
@@ -312,13 +338,16 @@ class N_src_view_workspace_module_ownership_css["module-ownership.css"] {
 class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
   <<component>>
 }
-class N_src_view_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+class N_src_view_workspace_ModuleSourceTree_tsx["ModuleSourceTree.tsx"] {
+  <<component>>
+}
+class N_src_view_workspace_SourceFilePreview_tsx["SourceFilePreview.tsx"] {
   <<component>>
 }
 N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipDetail_tsx : 导入依赖
 N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_module_ownership_css : 导入依赖
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx : 导入依赖
-N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_InlineModuleOwner_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleSourceTree_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_SourceFilePreview_tsx : 导入依赖
 ```
 
 ```mermaid
@@ -326,9 +355,17 @@ classDiagram
 class N_src_view_workspace_WorkspaceView_tsx["WorkspaceView.tsx"] {
   <<component>>
 }
+class N_src_view_workspace_ModuleOwnershipPanel_tsx["ModuleOwnershipPanel.tsx"] {
+  <<component>>
+}
+class N_src_view_workspace_InlineModuleOwner_tsx["InlineModuleOwner.tsx"] {
+  <<component>>
+}
 class N_src_view_workspace_workspace_view_css["workspace-view.css"] {
   <<stylesheet>>
 }
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx : 导入依赖
+N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_InlineModuleOwner_tsx : 导入依赖
 N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_workspace_view_css : 导入依赖
 ```
 
@@ -344,6 +381,10 @@ N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_workspace_view_c
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 模块与实际源码浏览
+
+ModuleSourceTree 按 validation.tree 只显示模块，目录来自 sources 绑定。SourceFolder 展开才调用 source.list，单页 200 项、显式加载更多/刷新；知识版本变化重建浏览分支并作废迟到响应。SourceFilePreview 只显示有界 UTF-8 文本，不执行 HTML，不写源码。大文件、二进制、缺失及无权限有独立说明。模块配置与 Workflow 保留在详情，源文件选择不冒充知识路径；编辑草稿仍由原事务保护，实例或知识版本变化只作废源浏览，保留知识编辑器的原冻结请求。宽栏将空间优先留给正文预览，窄栏上下排列。大标题说明移除，根菜单保留一键治理及原模块管理。无法解析为节点的 module.json 从根详情打开修正，不能因树隐藏配置而丢失恢复入口。
 
 ### 去除重复项目根
 
@@ -373,7 +414,7 @@ N_src_view_workspace_WorkspaceView_tsx ..> N_src_view_workspace_workspace_view_c
 
 增删改操作委托共享 `ArchitectureEditor`，通过预览、校验和人工提交更新工作区知识，并显式刷新快照。资源发布/使用委托 `WorkspaceResourceTransfer`；业务模板始终是整套业务架构，不提供单独应用模块或 Workflow 的入口。
 
-业务图不显示动态任务节点。多个主会话共用此静态定义；每个主会话自己的任务派发图由 tasks 目录展示，已派发的运行上下文仍由后端知识版本规则管理。
+业务图不显示动态任务节点。多个主会话共用此静态定义；每个主会话的办公室和任务详情由 tasks 目录展示，已派发的运行上下文仍由后端知识版本规则管理。
 
 模块详情的“知识治理”打开独立 `ModuleGovernancePanel`，固定模块及工作区实例。登记保护、记录观察、精确提案、本机决定和独立实施都委托治理服务；普通编辑入口不能绕过后端知识事务门禁。知识提交后显式刷新静态图，不创建或改变会话任务图。
 

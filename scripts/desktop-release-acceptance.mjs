@@ -244,6 +244,19 @@ async function restoredCatalog(page, id) {
   }
   throw Error('Original workspace did not restore after the update');
 }
+// 读取已安装 Pi 的原共享目录和文件元数据；升级不能重写安装清单或以重新解压掩盖缓存丢失。
+async function retainedEngineSnapshot(page) {
+  const initial=JSON.parse(JSON.parse(await fs.readFile(path.join(install,'resources/runtime-initial.json'),'utf8')).payload);
+  const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor?.adapter);
+  const appData=await app.evaluate(({app})=>app.getPath('appData'));
+  const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(userRoot).toLowerCase()).digest('hex').slice(0,24);
+  const directory=path.join(appData,'CBIM-runtime',identity,'engines','packages',descriptor.package.sha256);
+  const files=[];
+  for(const item of descriptor.package.files){const file=path.join(directory,item.path),stat=await fs.stat(file);assert.equal(stat.size,item.bytes);assert.equal(await sha(file),item.sha256);files.push({path:item.path,bytes:stat.size,sha256:item.sha256,mtimeMs:stat.mtimeMs})}
+  const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
+  const pi=state.items.find(item=>item.kind==='pi');assert.equal(pi?.active?.identity,descriptor.package.sha256);
+  return {identity:descriptor.package.sha256,files,installation:await fs.readFile(path.join(userRoot,'engine-installations.json'),'utf8'),enabled:pi.enabled};
+}
 // 首次冷包必须从真实固定公开源取得 E；不写缓存、不改下载地址、不向客户端传入 GitHub 凭据。
 async function verifyFreshEngine(page, profileRoot) {
   const initial = JSON.parse(JSON.parse(await fs.readFile(path.join(install, 'resources/runtime-initial.json'), 'utf8')).payload);
@@ -318,6 +331,13 @@ try {
     if (summary.status === 'completed') break; if (['failed', 'interrupted', 'cancelled'].includes(summary.status)) throw Error(JSON.stringify(summary)); await pause(500);
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
+  let previousEngine;
+  if(previousVersion==='0.1.17'){
+    const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
+    await page.evaluate(revision=>window.cbim.call('engines.configure',{kind:'pi',revision,action:'disable'}),state.revision);
+    previousEngine=await retainedEngineSnapshot(page);assert.equal(previousEngine.enabled,false);
+    await save('engine-cache-before',previousEngine);
+  }
   const marker = `from-${previousVersion}-to-${version}`;
   await page.evaluate(marker => localStorage.setItem('cbim.release-retention', marker), marker);
   await fs.writeFile(path.join(userRoot, 'acceptance-marker.txt'), marker);
@@ -329,9 +349,16 @@ try {
       // 不点检查或下载，也不替换网络：由真实上一安装版的原定时器发现并下载本次公开版本。
       const prepared = await prepareColdUpgrade(page); page=prepared.page; const ready=prepared.ready;
       assert.equal(requests,1,'Resource activation must not replay the completed model request');
-      await page.getByRole('button', {name: '查看更新', exact: true}).click();
-      const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
-      await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      // 0.1.17 的侧栏图标直接安装；查看就绪时只悬停，不提前授权重启。
+      if(previousVersion==='0.1.17'){
+        await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
+        await page.getByRole('button',{name:'版本与更新',exact:true}).hover();
+        await page.getByRole('tooltip').waitFor();
+      }else{
+        await page.getByRole('button', {name: '查看更新', exact: true}).click();
+        const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
+        await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      }
       await page.screenshot({path: path.join(root, 'prefetch-ready.png')});
       await page.keyboard.press('Escape');
       await pause(3500); assert.equal((await status(page)).phase, 'ready');
@@ -358,10 +385,13 @@ try {
       await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
-      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      if(previousVersion!=='0.1.17')await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      else await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
       // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
       // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
-      installingPid=await exitAfter(()=>page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
+      installingPid=await exitAfter(()=>previousVersion==='0.1.17'
+        ?page.getByRole('button',{name:'版本与更新',exact:true}).click()
+        :page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
       await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
     } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
@@ -398,6 +428,7 @@ try {
   assert.equal(native.version, version); assert.equal(native.packaged, true); assert.equal(native.userData, path.join(userRoot, 'desktop'));
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
+  if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
   const catalog = await restoredCatalog(page,entry.id); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);
@@ -420,7 +451,7 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: true, freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: true, freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, engineInstallationAndCache: previousEngine ? true : 'not-applicable', mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   acceptanceError=error;

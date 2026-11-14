@@ -18,7 +18,9 @@
 | [Icon.tsx](Icon.tsx) | 无业务状态的 SVG 图标组件。 |
 | [repository-scope.css](repository-scope.css) | 对应界面的布局与视觉样式。 |
 | [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
+| [sidebar.css](sidebar.css) | 首页与设置中心共用的侧栏几何、标题、搜索、菜单和调整边缘样式。 |
 | [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
+| [TreeActions.tsx](TreeActions.tsx) | 树节点行尾的显式操作菜单；由宿主绑定真实对象和可用状态。 |
 
 ## 架构类图
 
@@ -122,6 +124,15 @@ class N_src_view_components_RepositoryScopeDetails_tsx["RepositoryScopeDetails.t
 
 直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[repository-scope.css](repository-scope.css)。
 
+### sidebar.css
+
+```mermaid
+classDiagram
+class N_src_view_components_sidebar_css["sidebar.css"] {
+  <<stylesheet>>
+}
+```
+
 ### state-labels.ts
 
 ```mermaid
@@ -130,6 +141,34 @@ class N_src_view_components_state_labels_ts["state-labels.ts"] {
   <<module>>
 }
 ```
+
+### TreeActions.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_TreeActions_tsx["TreeActions.tsx"] {
+  <<component>>
+  +TreeActions()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_components_TreeActions_tsx["TreeActions.tsx"] {
+  <<component>>
+}
+class N_src_view_components_TreeActions_tsx_TreeAction["TreeAction"] {
+  <<interface>>
+  +id
+  +label
+  +icon
+  +disabled
+  +onSelect()
+}
+N_src_view_components_TreeActions_tsx ..> N_src_view_components_TreeActions_tsx_TreeAction : 声明
+```
+
+直接依赖：[Icon.tsx](Icon.tsx)。
 
 ### 本目录调用边界
 
@@ -162,6 +201,17 @@ N_src_view_components_Empty_tsx ..> N_src_view_components_Icon_tsx : 导入依�
 N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repository_scope_css : 导入依赖
 ```
 
+```mermaid
+classDiagram
+class N_src_view_components_TreeActions_tsx["TreeActions.tsx"] {
+  <<component>>
+}
+class N_src_view_components_Icon_tsx["Icon.tsx"] {
+  <<component>>
+}
+N_src_view_components_TreeActions_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
+```
+
 
 ## 子目录导航
 
@@ -174,6 +224,14 @@ N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repos
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 树行操作与身份图标
+
+TreeActions 只持有菜单开闭，业务回调由树宿主按真实节点绑定；Escape 和外部点击关闭菜单，不改变选择。Icon 区分模块、目录、文件与 Agent，不以同一文件夹表达所有业务对象。
+
+### 共享侧栏视觉
+
+sidebar.css 为首页和设置提供同一侧栏内边距、32px 标题/菜单行、30px 圆角搜索框、图标和分组间距、选中样式及调整边缘。它只处理展示，宽度和持久化归外壳 useSidebarWidth；两类导航的业务项、搜索与窄屏内容策略各自保留。
 
 # 通用展示组件
 

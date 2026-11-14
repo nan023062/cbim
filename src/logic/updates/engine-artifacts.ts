@@ -16,5 +16,6 @@ export interface EngineArtifactsPort {
   list():Promise<{current:EngineArtifact[];available:EngineArtifact[]}>;
   /** 仅发现，不下载 E 或切换本机活动版本；失败保留上次可信索引。 */
   check():Promise<void>;
-  prepare(kind:string,identity:string):Promise<PreparedEngineArtifact>;
+  /** 进度包含缓存校验和下载准备，不代表已激活；旧冷宿主可忽略可选回调。 */
+  prepare(kind:string,identity:string,onProgress?:(progress:number)=>void):Promise<PreparedEngineArtifact>;
 }

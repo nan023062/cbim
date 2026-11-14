@@ -15,6 +15,7 @@
 | [main-module-ownership-tools.ts](main-module-ownership-tools.ts) | 把工作区责任服务绑定真实主运行及当前协作周期，提供四项模型窄端口。 |
 | [module-ownerships.ts](module-ownerships.ts) | 桌面与真实主工具共用的模块负责人服务，关系和岗位在唯一 DispatchStore 内裁决。 |
 | [paths.ts](paths.ts) | 本机应用目录、工程身份和知识路径的实际解析。 |
+| [source-browser.ts](source-browser.ts) | 按正式模块的 sources 绑定提供只读目录枚举与文本预览，供可信桌面桥接调用。 |
 | [workspace.ts](workspace.ts) | 管理本机工作区的身份、独占锁、知识监听和维护任务。 |
 
 ## 架构类图
@@ -155,6 +156,34 @@ N_src_logic_workspace_service_paths_ts_external_StoragePaths <|.. N_src_logic_wo
 
 直接依赖：[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../ports/paths.ts](../ports/paths.ts)。
 
+### source-browser.ts
+
+```mermaid
+classDiagram
+class N_src_logic_workspace_service_source_browser_ts["source-browser.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace["SourceBrowserWorkspace"] {
+  <<interface>>
+  +entry
+  +assert()
+  +read()
+}
+N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace : 声明
+class N_src_logic_workspace_service_source_browser_ts_ModuleSourceBrowser["ModuleSourceBrowser"] {
+  +list()
+  +read()
+  -workspace
+  -binding()
+  -check()
+  -finish()
+  -guarded()
+}
+N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_service_source_browser_ts_ModuleSourceBrowser : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../knowledge/rules/types.ts](../../knowledge/rules/types.ts)、[../rules/source-browser.ts](../rules/source-browser.ts)。
+
 ### workspace.ts
 
 成员 1/3（同名节点为同一声明，跨图合并阅读）。
@@ -285,6 +314,10 @@ N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_pat
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 模块绑定的只读源浏览
+
+ModuleSourceBrowser 的最小端口为 entry/assert/read。每次读取前后核 workspace/instance/revision，从该快照 module.json 验证 sources，不接任意绝对路径。精确匹配声明后兼容 source 的尾斜杠、./ 和重复分隔符；绝对/父级路径仍拒绝，文件相对路径不放宽。目录/文件逐级拒绝链接与联接，核实真实路径与读取前后身份；.cbim、.git 和 .cbimignore 命中项不公开。目录每次最多检查 2000 项、返回 200 项，offset 仅为当前枚举位置，变动时刷新；正文最多 256 KiB，非 UTF-8/二进制和大文件返回 unsupported。无写入、执行、授权或来源采纳副作用，预览不是不可变证据。源规则归此服务，Bridge 仅配对严格 IPC，View 仅保存查看状态。
 
 ### 当前工作区生命周期
 

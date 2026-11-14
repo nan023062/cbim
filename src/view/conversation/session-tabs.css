@@ -1,7 +1,11 @@
 /**
- * 作用定位：交互区右上角的对话/办公室图标切换与任务记录排版。
- * 设计原因：隐藏对话面板不卸载输入和运行状态；任务区独立滚动，右侧扩展不参与会话切换。
+ * 作用定位：对话/审阅标题行内的单按钮两态图标切换与任务记录排版。
+ * 设计原因：移除独占空间的视图工具栏，按钮由当前标题行对齐；隐藏对话面板不卸载输入和运行状态；任务区独立滚动，右侧扩展不参与会话切换。
  */
-.session-tabs{display:flex;flex-shrink:0;gap:4px;min-height:44px;border-bottom:1px solid var(--line);padding:0 16px}.session-tabs button{border:0;border-bottom:2px solid transparent;background:transparent;border-radius:0;padding:10px 20px;font-size:14px;color:var(--muted)}.session-tabs button[aria-selected=true]{color:var(--text);border-bottom-color:var(--text)}.conversation-dialog{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}.conversation-dialog[hidden]{display:none!important}.session-task-panel[hidden]{display:none!important}.session-task-panel{flex:1;min-height:0;overflow:auto}.session-task-view{max-width:1000px;margin:0 auto;padding:24px;overflow-wrap:anywhere}.session-task-view>header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.session-task-view h2{font-size:20px;margin:0 0 8px}.session-task-view header p,.session-run>small{color:var(--muted);font-size:12px}.session-run{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}.session-run h3{font-size:14px;margin:0 0 8px}.session-run .work-status-block{margin:12px 0}.session-run details{font-size:12px;margin-top:8px}@media(max-width:600px){.session-task-view{padding:14px}.session-tabs{padding:0 8px}}
+.conversation-dialog{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}.conversation-dialog[hidden]{display:none!important}.session-task-panel[hidden]{display:none!important}.session-task-panel{flex:1;min-height:0;overflow:auto}.session-task-view{max-width:1000px;margin:0 auto;padding:24px;overflow-wrap:anywhere}.session-task-view>header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}.session-task-view h2{font-size:20px;margin:0 0 8px}.session-task-view header p,.session-run>small{color:var(--muted);font-size:12px}.session-run{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}.session-run h3{font-size:14px;margin:0 0 8px}.session-run .work-status-block{margin:12px 0}.session-run details{font-size:12px;margin-top:8px}@media(max-width:600px){.session-task-view{padding:14px}}
 
-.interaction-modes{justify-content:flex-end}.interaction-modes button{display:flex;align-items:center;justify-content:center;padding:10px 14px}
+.interaction-mode-toggle{display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;width:30px;height:30px;margin-left:auto;padding:0;border:0;border-radius:6px;background:transparent;color:var(--muted)}
+.interaction-mode-toggle:hover,.interaction-mode-toggle[aria-pressed=true]{background:var(--hover);color:var(--text)}
+.task-view-actions .interaction-mode-toggle{padding:0}
+.member-review-empty{display:flex;align-items:flex-start;gap:12px;width:100%;padding:12px}
+.member-review-empty p{flex:1;min-width:0;margin:0}

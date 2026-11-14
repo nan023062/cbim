@@ -23,6 +23,8 @@ export class EnginePackages implements EngineRuntimeResolver {
   private readonly queue=new SerialQueue();
   private readonly references=new Map<string,number>();
   private readonly busy=new Set<string>();
+  /** 每次准备独立登记，页面读取不触发下载；并行任务结束只移除自己的进度。 */
+  private readonly preparations=new Set<{kind:string;identity:string;version:string;progress?:number}>();
   /** 一次进程内准备失败被记住；用户显式安装/更新才可重试，普通对话不反复请求网络。 */
   private readonly failures=new Map<string,Error>();
   constructor(private readonly file:string,private readonly artifacts:EngineArtifactsPort){}
@@ -41,9 +43,28 @@ export class EnginePackages implements EngineRuntimeResolver {
     const visit=(value:EngineArtifact)=>{this.trusted(value);const key=value.kind+':'+value.identity;if(visiting.has(key))throw Error('引擎依赖成环');if(visited.has(key))return;visiting.add(key);for(const ref of value.dependencies){const dependency=available.find(item=>item.kind===ref.kind&&item.identity===ref.identity);if(!dependency)throw Error('固定的引擎依赖制品缺失');visit(dependency)}visiting.delete(key);visited.add(key);result.push(value)};
     visit(root);return result;
   }
+  /** 包服务核验和复用既有缓存；安装与真实首次运行都通过此入口报告短期状态。 */
+  private async prepare(artifact:EngineArtifact){
+    const progress:{kind:string;identity:string;version:string;progress?:number}={kind:artifact.kind,identity:artifact.identity,version:artifact.version};
+    this.preparations.add(progress);
+    try{return await this.artifacts.prepare(artifact.kind,artifact.identity,value=>{if(Number.isFinite(value))progress.progress=Math.min(100,Math.max(0,value))})}
+    finally{this.preparations.delete(progress)}
+  }
   async read():Promise<EnginePackageSettings>{
     await this.init();const versions=await this.artifacts.list();
-    const items:EnginePackageStatus[]=supportedEngines.map(descriptor=>{const item=this.state.entries.find(entry=>entry.kind===descriptor.id),find=(id?:string)=>versions.available.find(value=>value.kind===descriptor.id&&value.identity===id);return {kind:descriptor.id,enabled:item?.enabled??true,active:find(item?.active),candidate:versions.current.find(value=>value.kind===descriptor.id),installed:(item?.installed??[]).map(id=>find(id)).filter((value):value is EngineArtifact=>!!value),references:[...this.references].filter(([key])=>key.startsWith(descriptor.id+':')).reduce((sum,[,count])=>sum+count,0),preparing:this.busy.has(descriptor.id),error:item?.error??this.failures.get(descriptor.id)?.message}});
+    const items:EnginePackageStatus[]=supportedEngines.map(descriptor=>{
+      const kind=descriptor.id,item=this.state.entries.find(entry=>entry.kind===kind);
+      const find=(identity?:string)=>versions.available.find(value=>value.kind===kind&&value.identity===identity);
+      const preparation=[...this.preparations].filter(value=>value.kind===kind).at(-1);
+      return {
+        kind,enabled:item?.enabled??true,active:find(item?.active),candidate:versions.current.find(value=>value.kind===kind),
+        installed:(item?.installed??[]).map(identity=>find(identity)).filter((value):value is EngineArtifact=>!!value),
+        references:[...this.references].filter(([key])=>key.startsWith(kind+':')).reduce((sum,[,count])=>sum+count,0),
+        preparing:this.busy.has(kind)||!!preparation,
+        ...(preparation?{preparation:{identity:preparation.identity,version:preparation.version,progress:preparation.progress}}:{}),
+        error:item?.error??this.failures.get(kind)?.message??this.failures.get(kind+':'+item?.active)?.message,
+      };
+    });
     return {managed:true,revision:this.state.revision,items};
   }
   async list(){return (await this.read()).items}
@@ -59,7 +80,7 @@ export class EnginePackages implements EngineRuntimeResolver {
     this.busy.add(kind);
     try{
       const closure=this.closure(candidate,versions.available);
-      for(const dependency of closure){if(dependency.kind!==kind&&this.state.entries.find(item=>item.kind===dependency.kind)?.enabled===false)throw Error('依赖引擎已停用，请先启用 '+dependency.kind);await this.artifacts.prepare(dependency.kind,dependency.identity)}
+      for(const dependency of closure){if(dependency.kind!==kind&&this.state.entries.find(item=>item.kind===dependency.kind)?.enabled===false)throw Error('依赖引擎已停用，请先启用 '+dependency.kind);await this.prepare(dependency)}
       const next=structuredClone(this.state);
       for(const dependency of closure){let item=next.entries.find(item=>item.kind===dependency.kind);if(!item){item={kind:loopEngineSchema.parse(dependency.kind),enabled:true,installed:[]};next.entries.push(item)}if(!item.installed.includes(dependency.identity))item.installed.push(dependency.identity);if(dependency.kind===kind){item.active=dependency.identity;item.enabled=true;delete item.error}}
       await this.save(next);this.failures.delete(kind);for(const dependency of closure)this.failures.delete(dependency.kind+':'+dependency.identity);
@@ -81,7 +102,7 @@ export class EnginePackages implements EngineRuntimeResolver {
     if(!item?.enabled||!item.active)throw Error('引擎尚未启用');
     const identity=item.active,versions=await this.artifacts.list(),artifact=versions.available.find(value=>value.kind===kind&&value.identity===identity);if(!artifact)throw Error('已安装引擎的受信版本记录缺失');
     const closure=this.closure(artifact,versions.available),prepared=new Map<string,EngineRuntimePackage>();
-    for(const dependency of closure){const key=dependency.kind+':'+dependency.identity;if(this.failures.has(key))throw this.failures.get(key);try{prepared.set(key,await this.artifacts.prepare(dependency.kind,dependency.identity))}catch(error){const failure=error instanceof Error?error:Error(String(error));this.failures.set(key,failure);throw failure}}
+    for(const dependency of closure){const key=dependency.kind+':'+dependency.identity;if(this.failures.has(key))throw this.failures.get(key);try{prepared.set(key,await this.prepare(dependency))}catch(error){const failure=error instanceof Error?error:Error(String(error));this.failures.set(key,failure);throw failure}}
     const root=prepared.get(kind+':'+identity)!;
     root.dependencies=Object.fromEntries(closure.filter(value=>value!==artifact).map(value=>[value.kind,prepared.get(value.kind+':'+value.identity)!]));
     root.retain=()=>{

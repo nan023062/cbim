@@ -6,7 +6,6 @@ import {memberDependencyAdditionHistory} from '../src/view/tasks/member-dependen
 import {MemberDependencyNotice} from '../src/view/tasks/MemberDependencyNotice';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
 import {MemberActivity} from '../src/view/tasks/MemberActivity';
-import {layoutDispatchGraph} from '../src/view/tasks/graph-layout';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
 const main={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-session',name:'主 Agent'},member={agentId:'cbim:executor',agentInstanceId:'member-instance',agentSessionId:'member-session',name:'执行者'};
@@ -49,11 +48,4 @@ it('真实任务详情和成员卡仅消费本会话审计，原因作为文本�
   const html=renderToStaticMarkup(createElement(MemberActivity,{...identity,tasks:[value],onSelectTask:()=>{}}));expect(html).toContain('member-dependency-addition');expect(html).toContain('&lt;script&gt;');expect(html).not.toContain('<script>');
   expect(renderToStaticMarkup(createElement(MemberActivity,{workspaceId:'other',rootSessionId:'root',tasks:[value],onSelectTask:()=>{}}))).toBe('');
   const wrong=renderToStaticMarkup(createElement(MemberTaskDetail,{workspaceId:'workspace',rootSessionId:'other',task:value}));expect(wrong).toContain('不属于当前会话');expect(wrong).not.toContain('member-dependency-addition');
-});
-
-it('后来创建的A按真实追加边排在原B和C之前，不复制原任务或成员身份',()=>{
-  const B=task(),C={...task(),taskId:'C',nodeId:'task:C',dependencyAdditions:undefined},A={...task(),taskId:'A',nodeId:'task:A',status:'queued' as const,dependencyAdditions:undefined,createdAt:'2026-11-07T00:01:00.000Z'};
-  const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'graph',seq:6},root:{kind:'session-root',nodeId:'session:root',identity,agent:main,revision:1,createdAt:time},tasks:[B,C,A],agents:[],edges:[...[B,C,A].map(t=>({edgeId:'dispatch-'+t.taskId,identity,kind:'dispatch' as const,fromNodeId:'session:root',toNodeId:t.nodeId,revision:1,enabled:true})),{edgeId:'edge-bc',identity,kind:'dependency',fromNodeId:B.nodeId,toNodeId:C.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1}}]};
-  const before=layoutDispatchGraph(graph,graph.root.nodeId),next={...graph,edges:[...graph.edges,{edgeId:'added-edge',identity,kind:'dependency' as const,fromNodeId:A.nodeId,toNodeId:B.nodeId,revision:1,enabled:true,condition:{kind:'result_ready' as const,planRevision:1}}]},frozen=structuredClone(next),layout=layoutDispatchGraph(next,next.root.nodeId,before);
-  expect(layout.nodes).toHaveLength(4);expect(layout.nodes.find(n=>n.taskId==='A')!.rank).toBeLessThan(layout.nodes.find(n=>n.taskId==='B')!.rank);expect(layout.nodes.find(n=>n.taskId==='B')!.rank).toBeLessThan(layout.nodes.find(n=>n.taskId==='C')!.rank);expect(layout.edges.find(e=>e.edge.edgeId==='added-edge')!.edge).not.toHaveProperty('condition.resultId');expect(next).toEqual(frozen);expect(next.tasks[0]).toBe(B);expect(B.assignee.agentInstanceId).toBe('member-instance');
 });

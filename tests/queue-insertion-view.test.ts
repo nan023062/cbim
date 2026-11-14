@@ -5,7 +5,7 @@ import type {RunSummary,QueueInsertRequest} from '../src/bridge/contracts/execut
 import {captureQueueInsertTarget,enqueueConversationMessage,insertQueuedMessage} from '../src/view/conversation/queue-insertion';
 import {ConversationStopGate} from '../src/view/conversation/conversation-stop';
 import {conversationExecutionState} from '../src/view/conversation/conversation-state';
-import {SessionTaskView} from '../src/view/tasks/SessionTaskView';
+import {SessionTaskReview} from '../src/view/tasks/SessionTaskReview';
 import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
 import type {ScopeSummary} from '../src/bridge/contracts/dispatch';
 import {dispatchApplication} from '../src/bridge/server/ipc/dispatch';
@@ -56,7 +56,7 @@ it('停止有独立在途标记，跨会话和迟到旧结束不能解锁另一�
 it('任务根两处停止按钮不受插入busy阻止，只有重复停止在途才禁用',()=>{
   const summary:ScopeSummary={scopeId:'scope',status:'active',createdAt:'2026-11-07T00:00:00.000Z',hasGoal:false,hasPlan:false,stamp:{scopeId:'scope',streamId:'scopes',seq:1}},view=scopeGoalView(summary);
   const state:ScopeGoalState={scopes:[summary],selectedScopeId:summary.scopeId,openScope:summary,activeScope:summary,selectedGoalView:view,currentGoalView:view,loading:false,detailLoading:false,error:'',selectScope:()=>{}};
-  const render=(stopping:boolean)=>renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:'workspace',taskId:'root',runs:[run()],queued:[],now:0,busy:true,stopping,scopeState:state,selectedTaskId:'session:root',onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+  const render=(stopping:boolean)=>renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:'workspace',taskId:'root',runs:[run()],queued:[],now:0,busy:true,stopping,scopeState:state,selectedTaskId:'session:root',onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
   const available=render(false),pending=render(true);expect(available).toMatch(/<button data-testid="scope-stop">/);expect(available).toContain('<button>停止本次执行</button>');expect(pending).toMatch(/<button data-testid="scope-stop" disabled="">/);expect(pending).toContain('<button disabled="">停止本次执行</button>');
 });
 

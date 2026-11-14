@@ -188,6 +188,7 @@ export const logicalBoundaries = [
       "src/logic/team/rules/workspace-member.ts",
       "src/logic/tools/rules/questions.ts",
       "src/logic/workspace/rules/module-ownership.ts",
+      "src/logic/workspace/rules/source-browser.ts",
       "src/bridge/contracts/agent-history.ts",
       "src/bridge/contracts/chat.ts",
       "src/bridge/contracts/desktop-updates.ts",

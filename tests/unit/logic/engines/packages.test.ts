@@ -10,7 +10,7 @@ async function fixture(){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-engine-manager-')),file=path.join(root,'installed.json');
   const pi=artifact('pi','a'),codex=artifact('codex','b','1.0.0',[{kind:'pi',identity:pi.identity}]);
   const versions={current:[pi,codex],available:[pi,codex]};
-  const prepare=vi.fn(async(kind:string,identity:string)=>{const item=versions.available.find(v=>v.kind===kind&&v.identity===identity)!;return {root:path.join(root,identity),identity,entry:'native',version:item.nativeVersion,adapter:{entry:'adapter.cjs',version:item.version,protocol:1 as const}}});
+  const prepare=vi.fn(async(kind:string,identity:string,_onProgress?:(value:number)=>void)=>{const item=versions.available.find(v=>v.kind===kind&&v.identity===identity)!;return {root:path.join(root,identity),identity,entry:'native',version:item.nativeVersion,adapter:{entry:'adapter.cjs',version:item.version,protocol:1 as const}}});
   const port:EngineArtifactsPort={list:async()=>structuredClone(versions),check:vi.fn(async()=>{}),prepare};
   return {root,file,pi,codex,versions,prepare,port,manager:new EnginePackages(file,port),async cleanup(){if(path.dirname(root)!==os.tmpdir()||!path.basename(root).startsWith('cbim-engine-manager-'))throw Error('cleanup boundary');await fs.rm(root,{recursive:true,force:true})}};
 }
@@ -64,5 +64,22 @@ test('页面必须提交显示的准确版本及当前 revision，过时请求�
     const calls=f.prepare.mock.calls.length;await expect(f.manager.setEnabled('pi',false,false,original.revision)).rejects.toThrow(/刷新/);
     const current=await f.manager.read(),next=artifact('pi','c','1.1.0');f.versions.current=[next];f.versions.available.push(next);
     await expect(f.manager.install('pi',{revision:current.revision,identity:f.pi.identity})).rejects.toThrow(/版本已变化/);expect(f.prepare).toHaveBeenCalledTimes(calls);expect((await f.manager.read()).items[0].enabled).toBe(true);
+  }finally{await f.cleanup()}
+});
+
+test('准备进度只在引擎快照出现，成功前不伪造已安装，完成后保留版本并清除短期进度',async()=>{
+  const f=await fixture();try{
+    const original=f.prepare.getMockImplementation()!;
+    let release!:()=>void,started!:()=>void;
+    const gate=new Promise<void>(resolve=>{release=resolve}),entered=new Promise<void>(resolve=>{started=resolve});
+    f.prepare.mockImplementationOnce(async(kind,identity,onProgress)=>{onProgress?.(37);started();await gate;return original(kind,identity)});
+    const installing=f.manager.install('pi');await entered;
+    const pending=(await f.manager.read()).items[0];
+    expect(pending).toMatchObject({preparing:true,preparation:{identity:f.pi.identity,version:f.pi.version,progress:37}});
+    expect(pending.active).toBeUndefined();release();await installing;
+    const installed=(await f.manager.read()).items[0];
+    expect(installed.active?.identity).toBe(f.pi.identity);expect(installed.preparing).toBe(false);expect(installed.preparation).toBeUndefined();
+    await f.manager.setEnabled('pi',false);const reopened=new EnginePackages(f.file,f.port);
+    expect((await reopened.read()).items[0]).toMatchObject({enabled:false,active:f.pi,installed:[f.pi],preparing:false});
   }finally{await f.cleanup()}
 });

@@ -1,0 +1,21 @@
+/**
+ * 作用定位：首页与设置中心共用的侧栏几何、标题、搜索、菜单和调整边缘样式。
+ * 设计原因：两种导航复用同一视觉规则；宽度由外壳的唯一控制器提供，分类、搜索和业务内容仍由各页面拥有。
+ */
+.sidebar-frame{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:8px 8px 10px;background:var(--sidebar);border-right:1px solid var(--line)}
+.sidebar-top{display:flex;align-items:center;flex-shrink:0;gap:10px;height:32px;margin:0 4px 12px}
+.sidebar-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.primary-nav{display:grid;gap:0;margin-bottom:12px}
+.primary-nav>button{display:flex;align-items:center;justify-content:flex-start;width:100%;height:32px;padding:0 12px;gap:10px;border:0;border-radius:999px;background:transparent;font-size:14px;font-weight:400;text-align:left}
+.primary-nav>button:hover{background:var(--hover)}
+.primary-nav>button.selected{background:var(--selected);font-weight:500}
+.primary-nav>button>svg{width:16px;height:16px;margin:0;flex-shrink:0}
+.primary-nav>button.selected>svg{color:var(--text)}
+.primary-nav>button>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-search{display:flex;align-items:center;flex-shrink:0;gap:8px;height:30px;min-width:0;margin:0 0 18px;padding:0 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.sidebar-search>svg{flex-shrink:0}
+.sidebar-search input{min-width:0;width:100%;padding:0;border:0;background:transparent;font-size:12px;outline-offset:6px}
+.sidebar-label{display:flex;justify-content:space-between;padding:0 12px;margin:0 0 8px;font-size:12px;color:var(--muted)}
+.sidebar-resize{position:absolute;right:-2px;top:0;bottom:0;width:4px;z-index:20;cursor:col-resize;touch-action:none}
+.sidebar-resize:hover,.sidebar-resize:focus-visible{background:var(--muted)}
+.sidebar-resize:focus-visible{outline:0}

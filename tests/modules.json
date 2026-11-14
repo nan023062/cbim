@@ -903,7 +903,8 @@
           "tests/conversation-waiting.test.ts",
           "tests/team-conversation-view.test.ts",
           "tests/queue-insertion-view.test.ts",
-          "tests/queue-sync.test.ts"
+          "tests/queue-sync.test.ts",
+          "tests/interaction-mode-toggle.test.ts"
         ],
         "integration": []
       }
@@ -1036,7 +1037,6 @@
           "tests/scope-replan-view.test.ts",
           "tests/scope-usage-view.test.ts",
           "tests/session-task-view.test.ts",
-          "tests/task-graph-layout.test.ts",
           "tests/task-history-view.test.ts"
         ],
         "contract": [
@@ -1087,7 +1087,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/module-ownership-view.test.ts"
+          "tests/module-ownership-view.test.ts",
+          "tests/module-source-tree.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1558,6 +1559,7 @@
           "tests/unit/logic/engines/packages.test.ts"
         ],
         "contract": [
+          "tests/engine-cache-retention.test.ts",
           "tests/engine-settings-ipc.test.ts"
         ],
         "integration": []
@@ -1587,6 +1589,18 @@
         "unit": [
           "tests/unit/logic/execution/memory-engine.test.ts",
           "tests/unit/logic/execution/memory-protocol.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/workspace/service": {
+      "roots": [
+        "src/logic/workspace/service/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/module-source-browser.test.ts"
         ],
         "contract": [],
         "integration": []

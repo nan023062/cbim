@@ -1,6 +1,6 @@
 /* 静态业务图按扩展栏实际宽度布局；图标操作在节点旁与图内右上角，窄栏不挤压负责人和详情。 */
 .business-management{container-type:inline-size;width:100%;min-width:0;box-sizing:border-box;padding:28px clamp(12px,4%,38px)}
-.business-management .module-canvas{min-width:0}
+.business-management .module-canvas{min-width:0;flex:0 1 40%}.business-management .inspector{width:auto;min-width:0;flex:1}
 .business-management .graph-toolbar{flex-wrap:wrap}
 .business-management .graph-toolbar .inline-search{flex:1;min-width:120px}
 .business-management .graph-toolbar input{min-width:0;width:100%}
@@ -18,4 +18,9 @@
 .inline-owner-status p{margin:0;overflow-wrap:anywhere}
 /* 窄扩展栏将选择和操作分行，避免 select 在 flex 收缩后只剩零宽；缩进不挤占真实操作区域。 */
 @container(max-width:400px){.business-management .module-canvas{padding:10px}.business-management .module-children{margin-left:5px;padding-left:9px}.business-management .module-children>.module-branch>.module-card:before{left:-10px;width:9px}.business-management .module-card-content{gap:6px;padding-right:8px}.business-management .module-card-content>span{min-width:0;overflow-wrap:anywhere}.business-management .module-card-content>svg{flex-shrink:0}.module-card-tools{flex-wrap:wrap;padding:0 8px 8px}.module-owner-inline{flex-basis:100%}.module-icon-actions{margin-left:auto}}
-@container(max-width:650px){.business-management .org-layout{flex-direction:column}.business-management .inspector{width:100%;min-width:0;border-left:0;border-top:1px solid var(--line);padding:20px 0}.business-management .view-heading{flex-wrap:wrap}}
+@container(max-width:650px){.business-management .module-canvas{flex:none}.business-management .org-layout{flex-direction:column}.business-management .inspector{width:100%;min-width:0;border-left:0;border-top:1px solid var(--line);padding:20px 0}.business-management .view-heading{flex-wrap:wrap}}
+
+/* 源文件是纯文本只读预览，长路径与代码在窄扩展栏内换行。 */
+.source-file-preview{min-width:0;overflow-wrap:anywhere}.source-file-preview header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.source-file-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;font-size:12px}.source-file-preview code{overflow-wrap:anywhere}
+
+.source-folder-name[aria-expanded=true]>svg:last-child{transform:rotate(90deg)}

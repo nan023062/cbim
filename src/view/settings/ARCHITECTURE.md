@@ -20,14 +20,14 @@
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 设置中心的用量与预算子页，展示用户显式配置的新目标 Token/费用软限额，与全局并发独立保存。 |
 | [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
-| [EngineSettings.tsx](EngineSettings.tsx) | 官方引擎能力列表，展示业务专长、主模型与额外角色可用模型和包管理状态。 |
+| [EngineSettings.tsx](EngineSettings.tsx) | 选择官方引擎后，集中展示能力、兼容模型、安装版本、实时准备状态及包管理操作。 |
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
 | [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
 | [ResourceSettings.tsx](ResourceSettings.tsx) | 设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。 |
 | [settings-sections.ts](settings-sections.ts) | 设置中心的静态导航、分组与搜索词；仅描述已有设置入口。 |
-| [settings.css](settings.css) | 对应界面的布局与视觉样式。 |
+| [settings.css](settings.css) | 设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */ |
 | [SettingsView.tsx](SettingsView.tsx) | 设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。 |
 | [useAppearance.ts](useAppearance.ts) | 由 App 唯一持有的外观控制器，将本机偏好应用到窗口，并响应系统配色变化。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
@@ -228,7 +228,7 @@ class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
 
 ### GitHubFeedbackSettings.tsx
 
@@ -338,6 +338,7 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"] {
   <<interface>>
+  +sidebarResize
   +section
   +onSectionChange
   +onBack
@@ -348,7 +349,7 @@ class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[EngineSettings.tsx](EngineSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
+直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[EngineSettings.tsx](EngineSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
 
 ### useAppearance.ts
 
@@ -565,7 +566,7 @@ class GitHubFeedbackSettings { <<component>> }
 note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说明页面轮询及本机已连接的完成条件；不展示 Issue 处理结果。"
 ```
 
-`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；窄内容区使用分类下拉和可搜索入口。
+`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；导航与首页共用 components/sidebar.css 的标题、搜索与菜单几何，宽度沿 App 的唯一 useSidebarWidth（默认 260px，范围 200～420px），设置中的调整返回首页后继续生效。只接收外壳提供的调整手柄，不持久化第二份宽度；窄内容区保留分类下拉和可搜索入口，隐藏不适用的拖动边缘。
 
 每个分类首次访问才挂载，之后使用 hidden 保留表单草稿，离开设置中心才卸载。仓库加载失败只显示于 ResourceSettings，不能阻塞其它分类。隐藏运行页退订共享准入快照；GitHub 授权流程在设置中心内换页时继续原有轮询，离开中心时清理。EngineSettings 返回可见分类或完成操作后刷新包与已保存模型，忙碌时不启动额外读取，旧读取在操作/切页时失效。
 
@@ -595,7 +596,9 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
 
-EngineSettings 展示官方业务专长、兼容模型、版本与依赖，查询不激活；安装提交显示的摘要和 revision。错误后刷新真实状态并保留原错误，不自动重试。与模型编辑表单独立，刷新引擎列表不会提交模型草稿。
+EngineSettings 的下拉框来自开发者静态官方清单，初次未选择时不展开详情；选中后只显示该引擎的业务专长、兼容主/额外角色模型、当前与候选版本、启停/安装/使用状态、缓存与依赖。所有引擎操作在详情中，提交显示的摘要与 revision；当前相同制品已安装且无错误时禁用重复安装，移除后仍有候选缓存时显示“从缓存添加”。错误不自动重试。
+
+引擎页活动时每秒读取 engines.settings；读取和切换不联网检查或安装。准备含本地校验和下载，进度不能当作已激活。轮询与操作代际隔离，旧快照不覆盖回执；离开分类停轮询但已提交操作继续，返回保持选择并重新读取模型和安装状态。模型编辑与引擎管理独立，刷新不提交模型草稿。
 
 EmbeddingModels 编辑明确向量端点、输入容量、维度和可选输入价，不填生成输出字段；纯向量供应商允许保存。编辑既有供应商保留 embedding；端点改变清输入中的 Key，保存仍由服务强制凭据重确认。连接预览/测试只选模型能力与接口，不要求用户了解引擎。
 

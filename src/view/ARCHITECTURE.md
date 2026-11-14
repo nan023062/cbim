@@ -107,11 +107,11 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `settings` → `updates`：导入。
 - `settings` → `tasks`：导入。
 - `settings` → `foundations`：导入。
+- `shell` → `components`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `updates`：导入。
 - `shell` → `conversation`：导入。
-- `shell` → `components`：导入。
 - `shell` → `execution-view`：导入。
 - `shell` → `runtime`：导入。
 - `shell` → `team`：导入。

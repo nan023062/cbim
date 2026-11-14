@@ -9,6 +9,7 @@ it.each(['loop.chat','loop.enqueue','loop.resume'] as const)('%s 使用官方静
 });
 
 it.each([
+  ['source.list','SOURCE_INPUT'],['source.read','SOURCE_INPUT'],
   ['workspace.members.commit','MEMBER_INPUT_INVALID'],['workspace.ownerships.commit','OWNERSHIP_INPUT'],
   ['governance.apply','GOVERNANCE_INPUT'],['resources.connection.grant','REPOSITORY_CONNECTION_INPUT'],
   ['dispatch.fileCompensate','FILE_COMPENSATION_PRE_ACCEPT_INPUT'],['dispatch.effectDisposition','EFFECT_PREACCEPT_INPUT_INVALID'],
@@ -30,4 +31,11 @@ it('动态表单经过对应 Schema；不补猜执行身份，也不接受多余
   expect(()=>checkedIpcCall('loop.queueInsert',{id:'w',taskId:'t',queueId:'q'})).toThrow();
   expect(()=>parseIpcRequest('workspace.ownerships.list',{workspaceId:'w',instanceId:'i',actor:{kind:'local_desktop'}})).toThrow();
   expect(parseIpcRequest('loop.answerQuestion',{id:'w',taskId:'t',questionId:'q',answers:[{option:null,other:'说明'}]})).toBeDefined();
+});
+
+it('源浏览保持默认目录参数，拒绝写入字段且退出时不取得工作区',async()=>{
+ const input={workspaceId:'w',instanceId:'i',revision:'r',moduleId:'.cbim/workspace/app',source:'src'};
+ expect(parseIpcRequest('source.list',input)).toEqual({...input,path:'',offset:0});
+ expect(()=>parseIpcRequest('source.read',{...input,write:true})).toThrow();
+ const workspace=vi.fn();await expect(dispatchApplication({isStopping:true,workspace} as unknown as ApplicationServices,'source.read',input)).rejects.toMatchObject({code:'SHUTTING_DOWN'});expect(workspace).not.toHaveBeenCalled();
 });

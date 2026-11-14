@@ -49,9 +49,10 @@ test('malformed definitions and escaping references are reported without loading
 test('team root cannot be edited or deleted and a different workspace snapshot is never displayed',()=>{
   const workspace={id:'w',path:'project',name:'Project',state:'running',tasks:[]};
   const html=renderToStaticMarkup(createElement(TeamView,{workspace,snapshot:fixture()}));
-  expect(html).toContain('团队架构知识文件树');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
+  const navigation=html.slice(html.indexOf('<nav'),html.indexOf('</nav>'));expect(navigation).not.toContain('agent.json');expect(navigation).not.toContain('SKILL.md');expect(navigation).not.toContain('principles.md');expect(html).not.toContain('<h1>');expect(navigation).toContain('一键治理');
+  expect(html).toContain('团队组织树');expect(html).toContain('发布整个团队');expect(html).toContain('历史角色');
   expect(html).not.toContain('CBIM 主 Agent');expect(html).not.toContain('CBIM 默认执行 Agent');expect(html).not.toContain('data-agent-id="cbim:main"');expect(html).not.toContain('data-agent-id="cbim:executor"');
-  const rootRow=html.slice(html.indexOf('data-knowledge-path=".cbim/team"'),html.indexOf('data-knowledge-path=".cbim/team/art"'));
+  const rootRow=html.slice(html.indexOf('data-team-id=".cbim/team"'),html.indexOf('data-team-id=".cbim/team/art"'));
   expect(rootRow).not.toContain('data-tree-action="agent-delete"');expect(rootRow).not.toContain('data-tree-action="agent-edit"');
   expect(html).toContain('data-tree-action="agent-delete"');expect(html).toContain('aria-label="玩法设计师的操作"');
   const isolated=renderToStaticMarkup(createElement(TeamView,{workspace:{...workspace,id:'other'},snapshot:fixture()}));

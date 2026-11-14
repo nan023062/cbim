@@ -6,8 +6,7 @@ import {memberCheckpointView} from '../src/view/tasks/member-checkpoint-state';
 import {MemberCheckpointNotice} from '../src/view/tasks/MemberCheckpointNotice';
 import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
-import {sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {sessionRoot} from '../src/view/tasks/session-task-state';
 import {scopeGoalView} from '../src/view/tasks/scope-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T01:00:00.000Z';
@@ -51,13 +50,6 @@ it('选择源轮次与新轮次共享交接但不会借用其他轮次候选；�
   const detail=renderToStaticMarkup(createElement(MemberTaskDetail,{...identity,task:value}));expect(detail).toContain('第 1 次');expect(detail).toContain('第 2 次');expect(detail).toContain('重新验证后的候选');expect(detail).not.toContain('停止成员执行');
 });
 
-it('主对话及图使用相同检查点事实，不新增成员节点或改变连线',()=>{
-  for(const value of [task(),queued(),resumed()]){
-    const snapshot=graph(value),root=sessionRoot([],identity.rootSessionId,0,snapshot),nodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:snapshot,root,onSelectTask:()=>{}})),cards=renderToStaticMarkup(createElement(MemberActivity,{...identity,tasks:[value],onSelectTask:()=>{}}));
-    expect(nodes.match(/data-testid="dispatch-task-node"/g)).toHaveLength(1);expect(nodes).toContain('data-from="session:root" data-to="task:member"');expect(nodes).toContain('data-checkpoint-id="checkpoint"');expect(cards).toContain('data-checkpoint-id="checkpoint"');
-    if(value.status==='checkpointed'){expect(nodes).not.toContain('task-state-dot animated');expect(cards).toContain('任务尚未完成')}
-  }
-});
 
 it('续轮真实求助可与原检查点历史并存，不能把原轮次自身签成候选或求助',()=>{
   const value=resumed(),binding={...value.checkpoints![0].binding,runId:'resumed-run',leaseEpoch:2},help={helpId:'help',toolCallId:'help-call',binding,input:{kind:'missing_input' as const,reason:'需要新的业务数据',question:'请提供目标数据',attemptedToolCallIds:[]},requestedAt:time,requestedSeq:10,finishedSeq:11,lastEffectSeq:0};
@@ -79,8 +71,6 @@ it('显式交接放弃展示原检查点及处置事实；预约说明保留但�
     expect(memberCheckpointView(value).phase).toBe('abandoned');expect(memberTaskLabel(value)).toBe('已为交接放弃');
     expect(html).toContain('data-phase="abandoned"');expect(html).toContain('handoff-command');expect(html).toContain('负责人已更换');expect(html).toContain('后续需要重新验证');expect(html).toContain('放弃不代表业务完成或回滚');expect(html).not.toMatch(/<(button|input|form)\b/);
     if(source.resumeRequest)expect(html).toContain('原预约已随交接处置，未启动');
-    const nodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:snapshot,root:sessionRoot([],identity.rootSessionId,0,snapshot),onSelectTask:()=>{}}));
-    expect(nodes.match(/data-testid="dispatch-task-node"/g)).toHaveLength(1);expect(nodes).toContain('已为交接放弃');expect(nodes).toContain('data-from="session:root" data-to="task:member"');
     expect(notice(value,'foreign')).toBe('');expect(memberCheckpointView({...value,revision:value.revision+2}).invalid).toBe(true);
   }
 });

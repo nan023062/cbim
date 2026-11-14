@@ -106,7 +106,9 @@ try{
   await go('models','大模型');assert.equal(await page.getByLabel('名称',{exact:true}).inputValue(),'保留的供应商草稿');
   await page.getByRole('button',{name:'保存供应商',exact:true}).click();await page.getByText('保留的供应商草稿',{exact:true}).waitFor();
   await go('engines','引擎');const selector=page.getByRole('combobox',{name:'选择引擎',exact:true});
-  assert.deepEqual(await selector.locator('option').allTextContents(),['请选择引擎','Pi','Claude Code','Codex','记忆引擎']);assert.equal(await page.locator('.engine-detail').count(),0);
+  assert.deepEqual(await selector.locator('option').allTextContents(),['全部引擎','Pi','Claude Code','Codex','记忆引擎']);assert.equal(await page.locator('.engine-detail').count(),0);
+  assert.equal(await selector.inputValue(),'all');await page.getByRole('region',{name:'全部引擎总览',exact:true}).getByRole('heading',{name:'已安装引擎 · 1',exact:true}).waitFor();
+  await page.getByRole('button',{name:'查看 Pi 引擎详情',exact:true}).getByText('当前版本 1.0.0',{exact:true}).waitFor();
   await selector.selectOption('codex');assert.equal(await page.locator('.engine-detail').count(),1);await page.getByRole('article',{name:'Codex 引擎详情',exact:true}).getByRole('button',{name:'下载并安装',exact:true}).waitFor();
   await selector.selectOption('pi');await page.getByText('当前可用模型：保留的供应商草稿 / 可用生成模型',{exact:true}).first().waitFor();
   const pi=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Pi',exact:true})});
@@ -119,6 +121,41 @@ try{
   await pi.getByRole('button',{name:'停用',exact:true}).click();await pi.getByText('安装状态：已安装 · 已停用',{exact:true}).waitFor();await pi.getByRole('button',{name:'启用',exact:true}).click();await pi.getByText('安装状态：已安装 · 已启用',{exact:true}).waitFor();
   await page.screenshot({path:path.join(out,'engine-detail-desktop.png')});
   checks.push('全部官方引擎可选择、单详情管理、安装中轮询进度、切页保持回执、迟到快照隔离、停启状态、同版本不重复安装');
+  await selector.selectOption('all');const overview=page.getByRole('region',{name:'全部引擎总览',exact:true});
+  const overviewItem=label=>overview.getByRole('button',{name:'查看 '+label+' 引擎详情',exact:true});
+  await overviewItem('Pi').getByText('当前版本 1.1.0',{exact:true}).waitFor();
+  const engineActions=()=>page.evaluate(()=>window.fixture.calls.filter(c=>['engines.install','engines.configure','engines.check'].includes(c.action)).length);
+  const beforeOverviewActions=await engineActions();
+  await page.evaluate(()=>{
+    window.engineOverviewBaseline=structuredClone(window.fixture.engines);
+    const items=window.fixture.engines.items,claude=items.find(x=>x.kind==='claude-code'),codex=items.find(x=>x.kind==='codex'),memory=items.find(x=>x.kind==='memory');
+    claude.active=claude.candidate;claude.installed=[claude.active];claude.enabled=false;
+    codex.active=codex.candidate;codex.installed=[codex.active];codex.references=2;
+    memory.installed=[memory.candidate];
+  });
+  await overview.getByRole('heading',{name:'已安装引擎 · 3',exact:true}).waitFor();
+  await overviewItem('Claude Code').getByText('已停用',{exact:true}).waitFor();
+  await overviewItem('Claude Code').getByText('未运行',{exact:true}).waitFor();
+  await overviewItem('Codex').getByText('运行中 · 2 个占用',{exact:true}).waitFor();assert.equal(await overviewItem('记忆引擎').count(),0);
+  await page.evaluate(()=>{
+    const pi=window.fixture.engines.items[0];pi.references=1;pi.preparing=true;pi.preparation={identity:pi.active.identity,version:pi.active.version,progress:61};pi.error='测试：新版本准备失败，已有运行继续';
+  });
+  await overviewItem('Pi').getByText('运行中 · 1 个占用',{exact:true}).waitFor();
+  await overviewItem('Pi').getByText('准备进度 61%',{exact:true}).waitFor();
+  await overviewItem('Pi').getByText('异常：测试：新版本准备失败，已有运行继续',{exact:true}).waitFor();
+  await page.screenshot({path:path.join(out,'engine-overview-desktop.png')});
+  await overviewItem('Codex').focus();await overviewItem('Codex').press('Enter');assert.equal(await selector.inputValue(),'codex');
+  await page.getByRole('article',{name:'Codex 引擎详情',exact:true}).waitFor();assert.equal(await overview.count(),0);
+  await selector.selectOption('all');await go('accounts','账号与连接');await go('engines','引擎');assert.equal(await selector.inputValue(),'all');
+  await page.evaluate(()=>{delete window.fixture.engines.items.find(x=>x.kind==='claude-code').active});
+  await overview.getByRole('heading',{name:'已安装引擎 · 2',exact:true}).waitFor();assert.equal(await overviewItem('Claude Code').count(),0);
+  await page.evaluate(()=>{for(const item of window.fixture.engines.items)delete item.active});
+  await overview.getByText('尚未安装引擎，请在上方选择引擎查看详情。',{exact:true}).waitFor();
+  assert.equal(await engineActions(),beforeOverviewActions);
+  await page.evaluate(()=>{window.fixture.engines=window.engineOverviewBaseline});
+  await overview.getByRole('heading',{name:'已安装引擎 · 1',exact:true}).waitFor();await selector.selectOption('pi');
+  checks.push('默认全部引擎总览、仅列当前安装、运行与准备和错误并列、轮询更新与移除、键盘直达详情、返回保留选择、空列表无安装副作用');
+
   await go('models','大模型');await page.getByRole('button',{name:'编辑',exact:true}).click();await page.getByLabel('名称',{exact:true}).fill('再次保存的供应商');await page.getByRole('button',{name:'保存供应商',exact:true}).click();
   await go('engines','引擎');await page.getByText('当前可用模型：再次保存的供应商 / 可用生成模型',{exact:true}).first().waitFor();
   await pi.getByRole('button',{name:'移除引擎',exact:true}).click();await page.getByRole('alert').filter({hasText:'仍被启用的引擎依赖'}).waitFor();
@@ -156,7 +193,13 @@ try{
   const pages=[['models','大模型'],['engines','引擎'],['accounts','账号与连接'],['appearance','主题与个性化'],['runtime','任务运行'],['budget','用量与预算'],['web','网页与搜索'],['resources','资源仓库'],['about','关于与更新']];
   for(const width of [320,390,800]){
     await page.setViewportSize({width,height:900});
-    for(const [id,label] of pages){await go(id,label);if(id==='engines'){await page.getByRole('combobox',{name:'选择引擎',exact:true}).selectOption('pi');await page.screenshot({path:path.join(out,'engine-detail-'+width+'.png')})}const size=await page.evaluate(()=>({body:document.documentElement.scrollWidth,width:innerWidth,content:document.querySelector('.settings-content').scrollWidth,client:document.querySelector('.settings-content').clientWidth}));assert(size.body<=size.width+1,JSON.stringify({width,id,...size}));assert(size.content<=size.client+1,JSON.stringify({width,id,...size}))}
+    for(const [id,label] of pages){await go(id,label);if(id==='engines'){
+      const engineSelect=page.getByRole('combobox',{name:'选择引擎',exact:true});await engineSelect.selectOption('all');
+      await page.getByRole('region',{name:'全部引擎总览',exact:true}).getByRole('heading',{name:'已安装引擎 · 1',exact:true}).waitFor();
+      const overviewSize=await page.locator('.engine-overview').evaluate(n=>({scroll:n.scrollWidth,client:n.clientWidth}));assert(overviewSize.scroll<=overviewSize.client+1,JSON.stringify({width,...overviewSize}));
+      await page.screenshot({path:path.join(out,'engine-overview-'+width+'.png')});
+      await engineSelect.selectOption('pi');await page.screenshot({path:path.join(out,'engine-detail-'+width+'.png')})
+    }const size=await page.evaluate(()=>({body:document.documentElement.scrollWidth,width:innerWidth,content:document.querySelector('.settings-content').scrollWidth,client:document.querySelector('.settings-content').clientWidth}));assert(size.body<=size.width+1,JSON.stringify({width,id,...size}));assert(size.content<=size.client+1,JSON.stringify({width,id,...size}))}
     await go('appearance','主题与个性化');await page.screenshot({path:path.join(out,'appearance-light-'+width+'.png')});await page.getByRole('button',{name:'深色',exact:true}).click();await page.screenshot({path:path.join(out,'appearance-dark-'+width+'.png')});await page.getByRole('button',{name:'浅色',exact:true}).click();
   }
   checks.push('320、390、800 px 九类设置无横向溢出，深浅色截图');

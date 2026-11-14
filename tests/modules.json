@@ -990,6 +990,7 @@
         "unit": [
           "tests/appearance-settings.test.ts",
           "tests/budget-settings-view.test.ts",
+          "tests/engine-overview-view.test.ts",
           "tests/settings-navigation.test.ts"
         ],
         "contract": [],

@@ -1,3 +1,16 @@
+## 2026-11-15 引擎设置“全部引擎”总览
+
+用户直接授权在引擎设置增加全部已安装引擎的版本与运行状态总览。核对公开 Issues 后无对应开放工单，现有 #65 与此需求无关；基于 0.1.18 发布收尾 4848c3cc，在 feat/engine-settings-overview 独立实现。
+
+改动只归 View/settings：EngineSettings 默认选择“全部引擎”，继续唯一持有只读快照、选中项和活动页轮询；EngineOverview 仅投影官方清单中的 active 安装项并导航到详情。当前安装版本与运行库版本、启停、运行占用、准备进度及错误分别展示，已有运行不被准备或失败覆盖；引用数含依赖占用，不能解释为任务数或当前版本的执行数。历史缓存不视为已安装，安装、移除、更新以及缓存持久化继续由原服务负责。具体引擎详情及其管理操作保持原路径。源码文件头、关键展示语义、settings/CONTRACT.md 与 ARCHITECTURE.md 同步。
+
+受影响单元选择依据：新增纯展示组件负责安装项过滤及组合状态语义，因此仅增加并运行 tests/engine-overview-view.test.ts（归属 view/settings unit，不加载 Application）；已有设置中心 UI 冒烟覆盖默认选择、轮询、详情导航和共享样式的直接消费者。实际验证：
+- pnpm exec vitest run tests/engine-overview-view.test.ts --reporter=default：1 文件、6 项通过，覆盖当前版本/候选隔离、已停用与缓存项、运行/准备/错误并列、空闲及空列表/源码模式。
+- node scripts/settings-center-ui-smoke.mjs：13 组通过，pageErrors 为空。真实 App + 隔离 IPC 在本机 Edge 验证实时安装/移除、键盘进入详情、跨页选择保留、查看无安装/检查副作用，并保留原详情安装、回执与迟到快照验证；320/390/800 px 无横向溢出，人工查看桌面及 320 px 总览截图。产物位于 test-results/settings-center/。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture、git diff --check：均通过；527 测试文件归属有效，134 份架构文档无漂移，依赖无环且无边界违规。
+
+本次只完成受影响单元及界面集成验证；未运行远端全量 CI、打包、真实引擎下载/模型调用或安装升级，未发布新版本。
+
 ## 2026-11-15 0.1.18 正式发布与公开升级
 
 PR #83 的精确 head ad7ebbb7 完整 CI 43627499506 通过（526 文件、3538 通过、2 项历史 EXE 条件跳过），正常合并 b2cc762b。同一冻结候选完成制品校验、6 项打包程序隔离检查及候选安装 43628027303，Release 445508854 / desktop-v0.1.18 已公开。四附件匿名下载摘要一致，资源清单标准地址匿名验签通过，旧 Python latest 保持。

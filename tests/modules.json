@@ -1112,6 +1112,14 @@
         "integration": []
       }
     },
+    "tooling/desktop-acceptance-process": {
+      "roots": ["scripts/desktop-acceptance-process.mjs"],
+      "tests": {
+        "unit": ["tests/desktop-acceptance-process.test.mjs"],
+        "contract": [],
+        "integration": ["tests/desktop-acceptance-process-integration.test.mjs"]
+      }
+    },
     "tooling/desktop-inspector-connection": {
       "roots": [
         "scripts/desktop-inspector-connection.mjs"

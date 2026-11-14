@@ -21,10 +21,10 @@ it('reconnects to a real process, correlates replies, reports errors and release
     await expect(connection.evaluate('(()=>{throw Error("intentional evaluation failure")})()')).rejects.toThrow('intentional evaluation failure');
     expect(await connection.evaluate('6*7')).toBe(42);
     const pending=expect(connection.evaluate('new Promise(()=>{})')).rejects.toThrow('disconnected');
-    connection.close();await pending;
+    await connection.close();await pending;
     connection=await connectDesktopInspector(url);
     expect(await connection.evaluate('process.pid')).toBe(child.pid);
-  }finally{connection?.close();child.kill();await exited}
+  }finally{await connection?.close();child.kill();await exited}
 },20000);
 
 it('rejects non-local endpoints before opening a connection',async()=>{

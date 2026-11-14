@@ -2236,3 +2236,11 @@ A 已通过准确 head 的四片完整 CI（408 文件，2774 通过、0 失败�
 ## 2026-11-12：A/B 已公开，预下载通过，差分缓存缺陷确认
 
 A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 通过、0 失败、2 个历史 EXE 跳过）和候选安装 43154244827 后公开。严格 A→B 差分测试 43155757174 失败，因 NSIS 写入 cbim-assistant-updater 而应用读取 cbim-desktop-updater，真实传输为完整 391409091 字节。显式全量回退场景 43156807720 补齐预下载、正常退出不安装、有效缓存复用、UI 点击后安装及全部数据保留，differentialDownload=false；1 次模型请求、零页面错误。构建配置已改为复用 NSIS 的 AppInfo 目录规则，原回归先失败后通过，37 项制品测试和依赖检查通过；未公开 0.1.12 修复候选另行验证，不改 A/B 原附件。详见 [B 结果](verification/desktop-release-0.1.11-20261112.md) 与 [缓存调查](verification/desktop-update-cache-diagnosis-20261112.md)。
+## 2026-11-14：发布复盘改进——集中管理验收进程生命周期
+
+- 用户直接授权落实发布复盘并重跑完整发布检查；基线 `b8c2823565a2b72d7748e90b7eb564130d32fc91`。查询 `nan023062/cbim` 开放 Issues，仅 #65，与本次工具优化无关，不扩大范围或创建替代清单。
+- `DesktopAcceptanceProcess` 统一 Playwright 启动、原生资源重连及 NSIS 重启窗口的所有权：接入即冻结 PID；普通退出/UI 交接先观察物理退出，只执行一次动作、释放连接，随后核对实际退出。未知动作失败不重放；重复清理共享原 promise，保留首个失败。主脚本仍负责真实版本、目录和数据保留，连接关闭不是安装成功。
+- inspector.close 现在等待真实断开并拒绝挂起求值；中途接入失败释放 inspector/browser，最终记录 process-lifecycle。公开 online 模式增加独立全新安装及固定 Pi 下载验证，之后用原迁移 profile 完成真实旧版升级；冻结制品和公开附件不变。
+- 按影响选择进程所有者单元、真实 Node/inspector 退出集成、输入和被动网络消费者：`pnpm exec vitest run tests/desktop-acceptance-process.test.mjs tests/desktop-acceptance-process-integration.test.mjs tests/desktop-inspector-connection.test.mjs tests/desktop-acceptance-inputs.test.mjs tests/desktop-update-network-evidence.test.mjs`：5 文件 80/80。`pnpm check:test-modules`：497 文件；`pnpm check:dependencies`：1515 文件、0 循环/违规；验收入口语法和 diff 空白检查通过。尚未将这些局部结果视为真实 Windows 安装、全量 CI 或发布通过。
+- Review 顺序：进程所有者 → 两种调试适配/原生窗口适配 → 主验收场景 → 单元/集成；说明在 design/task/desktop-release.md。改动属于 scripts/tests 工具边界，未改 src，因此不涉及产品类图/契约。
+

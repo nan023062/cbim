@@ -96,3 +96,9 @@
   .settings-panel .repository-settings input[type=number]{width:100%;max-width:100%}
   .settings-panel .budget-settings-form,.settings-panel .admission-settings-form{flex-direction:column;align-items:stretch}
 }
+
+/* 引擎只展开当前选择的详情，长版本/模型文本在窄屏内换行。 */
+.engine-selector{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.engine-selector select{width:100%;min-width:0}
+.engine-detail{min-width:0;overflow-wrap:anywhere}
+.engine-detail progress{width:100%}

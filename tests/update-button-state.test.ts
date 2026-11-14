@@ -3,9 +3,10 @@ import {updateButtonState} from '../src/view/updates/update-button-state';
 import type {DesktopUpdateStatus} from '../src/bridge/contracts/desktop-updates';
 const base:DesktopUpdateStatus={currentVersion:'0.1.14',currentNotes:'notes',enabled:true,phase:'idle',release:{version:'0.1.15',tag:'desktop-v0.1.15',notes:'next',publishedAt:'2026-11-12T00:00:00Z'}};
 describe('sidebar update control',()=>{
-  it('shows on-demand engine preparation without granting application installation',()=>{
-    const view=updateButtonState({...base,phase:'current',enginePreparations:[{engine:'pi',version:'1.5.0',progress:45}]});expect(view).toMatchObject({ready:false,active:true,progress:45,canInstall:false});expect(view.engines[0]).toContain('pi 1.5.0');
-    expect(updateButtonState({...base,phase:'current',enginePreparations:[{engine:'codex',version:'0.167.0',error:'下载失败'}]})).toMatchObject({active:false,canInstall:false});
+  it('ignores engine preparation and errors in the application update control',()=>{
+    const view=updateButtonState({...base,phase:'current',enginePreparations:[{engine:'pi',version:'1.5.0',progress:45}]});expect(view).toMatchObject({ready:false,active:false,progress:undefined,canInstall:false});expect(view).not.toHaveProperty('engines');
+    expect(updateButtonState({...base,phase:'current',enginePreparations:[{engine:'codex',version:'0.167.0',error:'下载失败'}]})).toMatchObject({active:false,canInstall:false,error:''});
+    expect(updateButtonState({...base,phase:'downloading',progress:30,enginePreparations:[{engine:'pi',version:'1.0',progress:80}]}).progress).toBe(30);
   });
   it('only a verified ready candidate accepts install',()=>{
     for(const phase of ['disabled','idle','checking','current','available','downloading','installing'] as const)expect(updateButtonState({...base,phase,progress:100}).canInstall).toBe(false);

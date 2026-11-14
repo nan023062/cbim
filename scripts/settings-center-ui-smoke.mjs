@@ -9,22 +9,22 @@ await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'index.html'),'<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script type="module" src="/test-results/settings-center/fixture.tsx"></script></html>');
 await fs.writeFile(path.join(out,'fixture.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
-const artifact=(id,version)=>({kind:'pi',identity:id.repeat(64),version,nativeVersion:'1.5.0',protocol:1,dependencies:[]});
+const artifact=(id,version,kind='pi')=>({kind,identity:id.repeat(64),version,nativeVersion:'1.5.0',protocol:1,dependencies:[]});
 window.fixture={calls:[],resourceFail:false,resourceSaveFail:false,
  models:{secureStorage:true,selectedId:'provider',profiles:[{id:'provider',name:'测试供应商',api:'openai-completions',baseUrl:'http://localhost:12345/v1',auth:'none',defaultModel:'model',models:[{id:'model',name:'可用生成模型',enabled:true,contextWindow:32768,maxTokens:4096}]}]},
- engines:{managed:true,revision:3,items:[{kind:'pi',enabled:true,active:artifact('a','1.0.0'),candidate:artifact('b','1.1.0'),installed:[artifact('a','1.0.0')],references:0,preparing:false}]},
+ engines:{managed:true,revision:3,items:[{kind:'pi',enabled:true,active:artifact('a','1.0.0'),candidate:artifact('b','1.1.0'),installed:[artifact('a','1.0.0')],references:0,preparing:false},...['claude-code','codex','memory'].map((kind,i)=>({kind,enabled:true,candidate:artifact(['c','d','e'][i],'1.0.0',kind),installed:[],references:0,preparing:false}))]},
  resources:{session:{state:'signedOut'},source:'local',config:{mode:'local',location:'C:/CBIM/resources',repositoryId:'local-fixture'}},
  admission:{revision:1,maxConcurrentRuns:4},budget:{revision:1,enabled:false,limits:{}},
  web:{revision:1,enabled:false,hasKey:false,secureStorage:true,browserRobotsPolicy:'allow'},
- updates:{currentVersion:'0.1.17',currentNotes:'设置页验收夹具',enabled:true,phase:'current'},
+ updates:{currentVersion:'0.1.17',currentNotes:'设置页验收夹具',enabled:true,phase:'current',enginePreparations:[{engine:'pi',version:'1.0.0',progress:42}]},
 };
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});
  if(action==='list')return {entries:[]};
  if(action==='runtime.snapshot')return {workspaces:[],runs:[]};
  if(action==='models.list')return structuredClone(f.models);
  if(action==='models.save'){f.models.profiles=[{id:args.id||'provider',...args.profile}];return structuredClone(f.models)}
- if(action==='engines.settings'||action==='engines.check')return structuredClone(f.engines);
- if(action==='engines.install'){assertCandidate(args);f.engines.revision++;f.engines.items[0].active=f.engines.items[0].candidate;return structuredClone(f.engines)}
+ if(action==='engines.settings'||action==='engines.check'){const snapshot=structuredClone(f.engines);if(action==='engines.settings'&&f.delayEngineRead){f.delayEngineRead=false;return new Promise(resolve=>{f.finishEngineRead=()=>resolve(snapshot)})}return snapshot}
+ if(action==='engines.install'){assertCandidate(args);const item=f.engines.items.find(item=>item.kind===args.kind);item.preparing=true;item.preparation={identity:args.identity,version:item.candidate.version,progress:37};return new Promise(resolve=>{f.finishEngineInstall=()=>{f.engines.revision++;item.active=item.candidate;item.installed.push(item.active);item.preparing=false;delete item.preparation;resolve(structuredClone(f.engines))}})}
  if(action==='engines.configure'){if(args.action==='remove')throw Error('仍被启用的引擎依赖');f.engines.revision++;f.engines.items[0].enabled=args.action==='enable';return structuredClone(f.engines)}
  if(action==='resources.status'){if(f.resourceFail)throw Error('测试：仓库暂不可用');return structuredClone(f.resources)}
  if(action==='resources.configure'){if(f.resourceSaveFail)throw Error('测试：目录不可写');f.resources.config.location=args.location;return structuredClone(f.resources)}
@@ -60,6 +60,9 @@ try{
   await page.goto(url);
   const homeSidebar=page.locator('.workspace-sidebar');
   await homeSidebar.waitFor({state:'visible'});
+  const appUpdate=homeSidebar.getByRole('button',{name:'版本与更新',exact:true});await appUpdate.hover();await page.getByRole('tooltip').waitFor();
+  assert.equal(await appUpdate.getAttribute('aria-busy'),'false');assert.equal(await appUpdate.getByRole('progressbar').count(),0);assert.ok(!(await page.getByRole('tooltip').innerText()).includes('pi'));await page.mouse.move(600,500);
+  checks.push('应用更新图标忽略旧宿主的引擎准备信息');
   assert.equal((await homeSidebar.boundingBox()).width,260);
   const homeResize=homeSidebar.getByRole('separator',{name:'调整侧边栏宽度',exact:true});
   await homeResize.focus();await homeResize.press('ArrowRight');await homeResize.press('ArrowRight');
@@ -102,9 +105,20 @@ try{
   checks.push('主题、系统配色与正文字号、代码字号、减少动效生效');
   await go('models','大模型');assert.equal(await page.getByLabel('名称',{exact:true}).inputValue(),'保留的供应商草稿');
   await page.getByRole('button',{name:'保存供应商',exact:true}).click();await page.getByText('保留的供应商草稿',{exact:true}).waitFor();
-  await go('engines','引擎');await page.getByText('当前可用模型：保留的供应商草稿 / 可用生成模型',{exact:true}).first().waitFor();
+  await go('engines','引擎');const selector=page.getByRole('combobox',{name:'选择引擎',exact:true});
+  assert.deepEqual(await selector.locator('option').allTextContents(),['请选择引擎','Pi','Claude Code','Codex','记忆引擎']);assert.equal(await page.locator('.engine-detail').count(),0);
+  await selector.selectOption('codex');assert.equal(await page.locator('.engine-detail').count(),1);await page.getByRole('article',{name:'Codex 引擎详情',exact:true}).getByRole('button',{name:'下载并安装',exact:true}).waitFor();
+  await selector.selectOption('pi');await page.getByText('当前可用模型：保留的供应商草稿 / 可用生成模型',{exact:true}).first().waitFor();
   const pi=page.getByRole('article').filter({has:page.getByRole('heading',{name:'Pi',exact:true})});
-  await pi.getByRole('button',{name:'更新引擎',exact:true}).click();await page.getByText('引擎已准备并启用；正在运行的任务保持原版本。',{exact:true}).waitFor();
+  await page.evaluate(()=>window.fixture.delayEngineRead=true);await pi.getByRole('button',{name:'刷新状态',exact:true}).click();await page.waitForFunction(()=>!!window.fixture.finishEngineRead);
+  await pi.getByRole('button',{name:'更新引擎',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('progress[aria-label="引擎准备进度"]')?.value===37);assert.equal(await selector.isDisabled(),true);
+  await go('accounts','账号与连接');await page.evaluate(()=>window.fixture.finishEngineInstall());await go('engines','引擎');
+  await page.getByText('引擎已准备并启用；正在运行的任务保持原版本。',{exact:true}).waitFor();assert.equal(await selector.isDisabled(),false);assert.equal(await pi.getByRole('button',{name:'已安装当前版本',exact:true}).isDisabled(),true);assert.equal(await pi.getByRole('progressbar').count(),0);
+  await page.evaluate(()=>window.fixture.finishEngineRead());await page.waitForTimeout(100);assert.equal(await pi.getByRole('button',{name:'已安装当前版本',exact:true}).isDisabled(),true);
+  await pi.getByRole('button',{name:'停用',exact:true}).click();await pi.getByText('安装状态：已安装 · 已停用',{exact:true}).waitFor();await pi.getByRole('button',{name:'启用',exact:true}).click();await pi.getByText('安装状态：已安装 · 已启用',{exact:true}).waitFor();
+  await page.screenshot({path:path.join(out,'engine-detail-desktop.png')});
+  checks.push('全部官方引擎可选择、单详情管理、安装中轮询进度、切页保持回执、迟到快照隔离、停启状态、同版本不重复安装');
   await go('models','大模型');await page.getByRole('button',{name:'编辑',exact:true}).click();await page.getByLabel('名称',{exact:true}).fill('再次保存的供应商');await page.getByRole('button',{name:'保存供应商',exact:true}).click();
   await go('engines','引擎');await page.getByText('当前可用模型：再次保存的供应商 / 可用生成模型',{exact:true}).first().waitFor();
   await pi.getByRole('button',{name:'移除引擎',exact:true}).click();await page.getByRole('alert').filter({hasText:'仍被启用的引擎依赖'}).waitFor();
@@ -142,7 +156,7 @@ try{
   const pages=[['models','大模型'],['engines','引擎'],['accounts','账号与连接'],['appearance','主题与个性化'],['runtime','任务运行'],['budget','用量与预算'],['web','网页与搜索'],['resources','资源仓库'],['about','关于与更新']];
   for(const width of [320,390,800]){
     await page.setViewportSize({width,height:900});
-    for(const [id,label] of pages){await go(id,label);const size=await page.evaluate(()=>({body:document.documentElement.scrollWidth,width:innerWidth,content:document.querySelector('.settings-content').scrollWidth,client:document.querySelector('.settings-content').clientWidth}));assert(size.body<=size.width+1,JSON.stringify({width,id,...size}));assert(size.content<=size.client+1,JSON.stringify({width,id,...size}))}
+    for(const [id,label] of pages){await go(id,label);if(id==='engines'){await page.getByRole('combobox',{name:'选择引擎',exact:true}).selectOption('pi');await page.screenshot({path:path.join(out,'engine-detail-'+width+'.png')})}const size=await page.evaluate(()=>({body:document.documentElement.scrollWidth,width:innerWidth,content:document.querySelector('.settings-content').scrollWidth,client:document.querySelector('.settings-content').clientWidth}));assert(size.body<=size.width+1,JSON.stringify({width,id,...size}));assert(size.content<=size.client+1,JSON.stringify({width,id,...size}))}
     await go('appearance','主题与个性化');await page.screenshot({path:path.join(out,'appearance-light-'+width+'.png')});await page.getByRole('button',{name:'深色',exact:true}).click();await page.screenshot({path:path.join(out,'appearance-dark-'+width+'.png')});await page.getByRole('button',{name:'浅色',exact:true}).click();
   }
   checks.push('320、390、800 px 九类设置无横向溢出，深浅色截图');

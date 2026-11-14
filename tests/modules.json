@@ -1559,6 +1559,7 @@
           "tests/unit/logic/engines/packages.test.ts"
         ],
         "contract": [
+          "tests/engine-cache-retention.test.ts",
           "tests/engine-settings-ipc.test.ts"
         ],
         "integration": []

@@ -1,3 +1,21 @@
+## 2026-11-15 PR #83 引擎详情集中管理与跨版本缓存验收
+
+用户继续要求：引擎设置用完整官方清单下拉选择，选中后才显示详情；所有引擎下载、版本、安装、停启和移除归详情，账户旁更新仅负责 CBIM 应用；应用升级保留引擎安装与缓存。基线 b6395db7，该基线完整 CI 43625019495 已通过；本步独立验证，不将此前 CI 计作当前改动结果。开放 Issue #65 与直接授权范围无关。
+
+事实与边界（C1/L1）：EnginePackages 的安装清单已经位于版本无关的 userRoot，冷宿主 E 缓存已在同一安装/用户身份的共享目录；既有 RuntimeStore 按 SHA-256 与完整文件集合验证复用，不能通过跳过验证实现“免安装”。误导来自 EngineArtifacts.prepare 在缓存校验前也发送准备事件，旧侧栏把该事件当作更新进度。保留安装状态、验签、依赖闭包、激活事务、引用锁和失败不自动重试的稳定机制，不搬迁用户数据或另造缓存系统。
+
+View 的 EngineSettings 只展开选中的官方引擎：状态、当前/可用版本、兼容模型及额外角色、历史缓存和所有包操作在详情；同一制品已安装且无错误时禁用重复安装，移除保留缓存后提供从缓存添加。活动页面轮询本机 engines.settings；复用 AsyncGeneration 隔离旧查询，操作中仍显示进度，切页停轮询但不取消已提交操作，返回保留选择和回执。应用更新按钮忽略旧冷宿主 enginePreparations，应用自己的下载、错误和安装资格不受引擎影响。
+
+Logic 的 EnginePackages 为安装和运行前 prepare 分别登记短期进度，包服务仅新增可选进度回调；旧冷宿主忽略该回调也可继续工作，详情显示准备中而不编造百分比。准备含本地校验，不能据此声称网络下载。运行前准确活动摘要的缓存错误也投影到详情。冷宿主历史字段继续兼容，但 View 不再消费；支持清单不下沉冷壳。
+
+选择直接受影响的包状态/冷制品进度、缓存复用、管理 IPC 与应用更新图标：`pnpm exec vitest run tests/unit/logic/engines/packages.test.ts tests/unit/logic/updates/engine-artifacts.test.ts tests/runtime-store.test.ts tests/engine-cache-retention.test.ts tests/engine-settings-ipc.test.ts tests/update-button-state.test.ts --reporter=dot`，初轮 21 项通过，新增跨版夹具因误用 .js 作为要求 .cjs 的适配器入口失败；修正真实测试 ZIP 后，`pnpm exec vitest run tests/engine-cache-retention.test.ts --reporter=dot` 1 项通过，共 22 项。没有修改校验器来迁就夹具。
+
+新增契约测试组合真实 EnginePackages、EngineArtifacts、RuntimeStore 与签名 ZIP：更换 C 版本/指纹和 R 号后离线保留原活动摘要、停用状态和安装清单字节；运行和移除后重新添加不新增下载；故意损坏缓存后报错且无自动下载循环。首次下载 1 次，升级后的离线下载器 0 次。这是隔离契约验收，不是实际桌面安装器升级。
+
+`node scripts/settings-center-ui-smoke.mjs` 最终 12 组通过，使用真实 App/React、Edge 与隔离 IPC：完整下拉、单详情、37% 在途进度、切页后完成、迟到旧快照不回退、停启、相同版本按钮禁用、模型草稿与错误保留；旧引擎事件不激活应用更新图标。九类设置含选中后的引擎详情在 320/390/800px 无横向溢出，pageErrors 为空，桌面和 320px 截图已核对；证据 test-results/settings-center/result.json。
+
+`pnpm typecheck`、`pnpm check:test-modules`（526 文件，unit 166 / contract 160 / integration 200）和 `pnpm check:architecture`（134 目录/812 源码样式，1616 文件/7648 依赖，无环，无违规）通过。六个受影响目录的 CONTRACT/ARCHITECTURE 与源码说明同步；新契约测试唯一登记在 logic/engines/packages。未运行全量本地回归、真实外部模型、打包或安装升级；推送后由最新提交完整 CI 验证。未合并、未发布，当前安装版不变。
+
 ## 2026-11-15 PR #83 办公室详情直达原 Agent 对话
 
 用户要求删除办公室右侧详情栏，人物“任务详情”和主 Agent“调度详情”直接跳转各自对话。本步基于 01a50cdd，仅调整 View：SessionTaskView 只展示办公室和用量；taskConversationTarget 按 workspace/root/task/正式 TeamSession 唯一登记解析原成员与话题；Conversation 统一办公室、历史任务和运行管理导航；MemberConversation 消费一次性任务定位，即使曾查看另一任务也重新定位此次点击的原任务。没有唯一归属时显示错误，不猜测其他成员或主会话。成员工作记录仍只读，主聊天及频道草稿、附件与执行控制器继续由原会话持有。

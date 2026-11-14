@@ -16,7 +16,7 @@ async function fixture(){
   const pi=pkg('1.0.0','a'),next=pkg('1.1.0','b'),times={createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+60000).toISOString(),sourceCommit:'a'.repeat(40),notes:''};
   const seed=(engine:EnginePackage,codeVersion='0.1.0')=>signed({schema:1,codeVersion,coldFingerprint:cold.coldFingerprint,resourceVersion:1,platform:cold.platform,...times,resource:{...pi.package,files:['.vite/build/main.js','.vite/build/preload.js','.vite/renderer/main_window/index.html'].map(path=>({path,bytes:1,sha256:'b'.repeat(64)}))},engines:[engine]} satisfies RuntimeManifest);
   const index=(sequence:number,engine=next)=>signed({schema:1,sequence,platform:cold.platform,...times,current:[{kind:'pi',identity:engine.package.sha256}],releases:[engine]} satisfies EngineReleaseIndex);
-  const prepare=vi.fn(async()=>root),store={cold,prepare} as unknown as RuntimeStore,fetchIndex=vi.fn(async()=>index(1)),file=path.join(root,'index.json');
+  const prepare=vi.fn(async(_pkg?:unknown,_signal?:unknown,onProgress?:(value:number)=>void)=>{onProgress?.(56);onProgress?.(100);return root}),store={cold,prepare} as unknown as RuntimeStore,fetchIndex=vi.fn(async()=>index(1)),file=path.join(root,'index.json');
   return {root,cold,pi,next,pkg,seed,index,store,prepare,fetchIndex,file,service:new EngineArtifacts(file,store,seed(pi),new AbortController().signal,fetchIndex),async cleanup(){if(path.dirname(root)!==os.tmpdir()||!path.basename(root).startsWith('cbim-engine-index-'))throw Error('cleanup boundary');await fs.rm(root,{recursive:true,force:true})}};
 }
 test('发现独立引擎版本不下载，准备只接受签名摘要，重开仍可离线使用历史版本',async()=>{
@@ -38,3 +38,5 @@ test('回退、同序号不同内容、同版本不同摘要拒绝，失败保�
     const reopened=new EngineArtifacts(f.file,f.store,f.seed(f.pi),new AbortController().signal,f.fetchIndex);expect((await reopened.list()).current[0].version).toBe('1.1.0');
   }finally{await f.cleanup()}
 });
+
+test('准备回调提供本地校验/下载合并进度，不改变候选选择',async()=>{const f=await fixture();try{const progress=vi.fn();const before=await f.service.list();await f.service.prepare('pi',f.pi.package.sha256,progress);expect(progress.mock.calls.map(call=>call[0])).toEqual([0,56,100]);expect(await f.service.list()).toEqual(before)}finally{await f.cleanup()}});

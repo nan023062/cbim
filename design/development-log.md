@@ -1,4 +1,10 @@
 
+## 2026-11-14 独立引擎构建命令的真实入口修正
+
+在已冻结 41b4da1e 上执行 pnpm make:engines memory，发现直接构建函数测试未覆盖 tsx 的 CommonJS/ESM 装载：被导入的 build-engine-adapters.mjs 顶层 await 导致 ERR_REQUIRE_ASYNC_MODULE。改为主入口的显式 Promise 收口，仍保留失败 exitCode，不改变构建或签名语义。再次调用已走到预期 RUNTIME_SOURCE_CHANGED 冻结检查，证明装载恢复；必须先提交当前修正，之后再做成功候选验证。
+
+pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：实际 tsx 子进程可装载，并在写入前拒绝未登记引擎；pnpm check:test-modules 通过（515 文件）。同步清理 packages/CONTRACT 中已过时的后续入口描述并生成对应架构文档。仅入口装载及资料变动，未重复产品测试或类型检查。
+
 ## 2026-11-14 引擎架构第 6 步（b）：独立记忆 Loop 与完整应用验证
 
 按继续实施授权，新增 memory 官方包，必填生成/embedding 双模型，真实受控知识读取、带出处语义检索和模型工具决定。知识提交后更新独立向量代际；失败保留已提交事实和调用 ID，不重放。八次模型决定、重复工具阻断、无进展超时及 30 分钟总上限共同限制运行；未知或未结束原生历史拒绝自动续跑。无 SDK 自研运行库与适配器同版，支持独立 ZIP。Forge 改为稳定统一构建入口，后续新增 E 不再修改被冷指纹覆盖的 Forge 清单。

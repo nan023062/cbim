@@ -20,5 +20,6 @@ export async function buildEngineAdapter(kind,destination){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const kind=process.argv[2];if(!kind)throw Error('用法：node scripts/build-engine-adapters.mjs <引擎 ID> [输出目录]');
-  console.log(JSON.stringify(await buildEngineAdapter(kind,path.resolve(process.argv[3]??path.join('build','engine-adapters',kind)))));
+  // 此模块也由 CommonJS tsx/Forge 配置同步加载；顶层 await 会令整个 ESM 图无法被 require。
+  void buildEngineAdapter(kind,path.resolve(process.argv[3]??path.join('build','engine-adapters',kind))).then(result=>console.log(JSON.stringify(result))).catch(error=>{console.error(error.message);process.exitCode=1});
 }

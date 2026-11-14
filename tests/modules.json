@@ -1542,7 +1542,9 @@
         "contract": [
           "tests/engine-release.test.ts"
         ],
-        "integration": []
+        "integration": [
+          "tests/engine-build-cli.test.ts"
+        ]
       }
     },
     "logic/execution/engines/memory": {

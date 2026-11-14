@@ -89,7 +89,7 @@
 | [ScopeGoalPanel.tsx](ScopeGoalPanel.tsx) | 复用展示本轮真实目标、冻结岗位分配、逐项审阅及历史周期，供主对话摘要和任务根详情使用。 |
 | [ScopeReplanForm.tsx](ScopeReplanForm.tsx) | 已完成只读核实周期之后的正式业务新目标表单，复用于对话目标卡和任务根。 |
 | [ScopeUsagePanel.tsx](ScopeUsagePanel.tsx) | 在会话任务视图按需展示所选目标周期的主/成员已报告消耗与逐运行来源。 |
-| [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航；选择根或任务后显示对应执行详情。 |
+| [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航，不重复放置话题筛选与状态说明栏；选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话办公室与按需任务详情的自适应布局。 |
 | [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
 | [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实与影响处置入口，供主对话及任务页使用。 |
@@ -3971,7 +3971,7 @@ N_src_view_tasks_useSessionGraph_ts ..> N_src_view_tasks_scope_state_ts : 导入
 
 ### 办公室标题导航
 
-SessionTaskView 的 viewAction 接收父级唯一视图切换按钮，与标题共行，不再提供独立刷新或返回对话按钮。Conversation 在模式变化时通过原 useSessionGraph.refresh 请求补读，在途请求合并；首次挂载和重新激活继续由原 Hook 负责。只读取当前会话事实，不重启任务或清空草稿。
+SessionTaskView 的 viewAction 接收父级唯一视图切换按钮，与标题共行，不再提供独立刷新或返回对话按钮。Conversation 在模式变化时通过原 useSessionGraph.refresh 请求补读，在途请求合并；首次挂载和重新激活继续由原 Hook 负责。只读取当前会话事实，不重启任务或清空草稿。办公室顶部不再重复展示话题下拉、目标状态与历史折叠说明，也不保留对应占位；话题选择仍由对话频道和显式导航传入，话题用量与根/成员详情继续使用原选中身份，历史任务折叠规则不变。
 
 ### 办公室长期对话联合投影
 

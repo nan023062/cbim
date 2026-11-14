@@ -1,5 +1,5 @@
 /**
- * 作用定位：以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航；选择根或任务后显示对应执行详情。
+ * 作用定位：以办公室人物/模块工位展示当前主会话，标题行承载父级视图导航，不重复放置话题筛选与状态说明栏；选择根或任务后显示对应执行详情。
  * 设计原因：全局项目架构与会话派工分开；默认折叠已完成、已撤销任务，显式展开办公室历史，直接定位历史节点时自动展开。根详情共享目标、审阅与显式补充，历史浏览不改变调度。
  * 职责边界：运行轮次不是派发节点；根审阅中的原任务/新成果只导航本周期真实节点，不新增连线或执行。正式业务重规划与只读核实各有独立控制器，新周期准入取真实开放状态。
  * 文件补偿：当前工作区实例沿真实会话传给成员详情；图身份不签发新的文件操作许可。
@@ -119,7 +119,6 @@ export function SessionTaskView(props:SessionTaskViewProps){
   return <div className="session-task-view graph-mode" data-testid="session-task-view"><header><div><h2>团队办公室</h2><p>当前会话 · {matching?.tasks.length??0} 个派发任务 · 已读 {history.length} 轮记录{props.historyIssueCount?` · ${props.historyIssueCount} 轮待核实`:''}</p></div>{props.viewAction&&<div className="task-view-actions">{props.viewAction}</div>}</header>
     {error&&<p role="alert" className="task-graph-error">任务图同步中断：{error}{matching?'。保留上次已确认的图。':''}</p>}
     {graphLoading&&<p role="status" className="task-graph-loading">正在同步任务图…</p>}
-    {scopeState&&scopeState.scopes.length>0&&<div className="task-scope-filter"><label>查看话题信息<select aria-label="任务图目标周期" data-testid="task-scope-select" value={scopeState.historyScopeId??''} onChange={event=>scopeState.selectScope(event.target.value||undefined)}><option value="">当前 / 最新目标</option>{[...scopeState.scopes].reverse().map(scope=><option value={scope.scopeId} key={scope.scopeId}>{scope.objective??scope.inputPreview??'旧周期'} · {new Date(scope.createdAt).toLocaleString()}</option>)}</select></label><span data-testid="task-scope-status">{scopeState.selectedGoalView.label}</span><small>已完成、已撤销任务默认折叠；待审阅和待处理任务继续显示。</small></div>}
     {taskId&&scopeState?.selectedScopeId&&<details className="office-usage"><summary>话题用量</summary><ScopeUsagePanel key={JSON.stringify([workspaceId,taskId,scopeState.selectedScopeId])} identity={{workspaceId,rootSessionId:taskId,scopeId:scopeState.selectedScopeId}}/></details>}
     {!root?<div className="task-graph-draft"><h3>尚未开始会话</h3><p>发送第一条消息后，这里显示主 Agent；派发成员任务后显示团队任务流程。</p><button onClick={onChat}>开始对话</button></div>:<div className={'session-graph-layout'+(hasDetail?' with-detail':'')}>
       {matching?<OfficeScene selectedAgentSessionId={props.selectedAgentSessionId} key={sessionKey} selectedTaskId={selected} graph={matching} sessions={scopeState?.teamSessions} scopes={scopeState?.scopes??[]} mainRunning={history.some(run=>run.status==='running')} queued={pending.length} active={props.active} onChat={props.onAgentChat??(()=>onChat())} onTask={select}/>:<div className="task-graph-draft"><p>尚未取得办公室成员记录，正在自动同步；也可切换视图重新同步。</p><button onClick={()=>select(root.nodeId)}>查看主 Agent 调度详情</button></div>}

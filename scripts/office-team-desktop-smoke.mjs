@@ -36,6 +36,12 @@ try{
  await selectOffice('象棋研发办公室');
  assert.equal(await active().getByRole('button',{name:'刷新任务图',exact:true}).count(),0);
  assert.equal(await active().getByRole('button',{name:'返回对话',exact:true}).count(),0);
+ assert.equal(await active().locator('.task-scope-filter').count(),0);
+ assert.equal(await active().getByRole('combobox',{name:'任务图目标周期',exact:true}).count(),0);
+ assert.equal(await active().getByText('查看话题信息',{exact:true}).count(),0);
+ assert.equal(await active().getByText('已完成、已撤销任务默认折叠；待审阅和待处理任务继续显示。',{exact:true}).count(),0);
+ await active().locator('.office-usage>summary').getByText('话题用量',{exact:true}).waitFor();
+ checks.push('office-has-no-redundant-topic-filter-or-status-strip-and-retains-usage');
  assert.equal(await office().getByRole('checkbox',{name:'人物动态',exact:true}).count(),0);
  assert.ok(await office().locator('.office-person-drawing.working').count()>0);
  assert.deepEqual(await office().locator('[data-office-actor]').evaluateAll(nodes=>nodes.map(n=>n.dataset.officeActor)),['main:root','executor-logical','designer-logical']);

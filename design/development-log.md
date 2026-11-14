@@ -1,3 +1,9 @@
+## 2026-11-15 PR #83 删除办公室顶部冗余话题栏
+
+用户要求删除截图绿色框内全部内容。此前已删除办公室/任务依赖图二级按钮，本次移除 SessionTaskView 的话题下拉、目标状态及历史折叠说明整栏，并删除 task-graph.css 对应样式，不保留空容器。变化仅限 View 展示；话题选择继续由对话频道及显式导航传入，办公室用量、根/成员详情和历史折叠沿原身份及规则工作。
+
+按受影响组件选择 `pnpm exec vitest run tests/session-task-view.test.ts --reporter=dot`，1 文件 4 项通过。`node scripts/office-team-desktop-smoke.mjs` 17 组通过：新增整栏及文案不存在、用量入口保留断言，继续验证历史展开、原频道导航、人物动态、办公室隔离与桌面/320px 双主题布局。证据 `test-results/office-desktop-OTWPmv/report.json`；桌面及深色窄屏截图已核对。实际 Electron/React 使用隔离 IPC，未调用真实模型或操作用户项目。`pnpm check:architecture` 通过（含依赖检查），源码注释与 tasks 的 CONTRACT/ARCHITECTURE 已同步。未改变类型、公共接口、测试归属或测试导入，不重复类型检查与本地全仓测试；完整 CI 随新提交重跑。历史制品验收脚本仍使用旧版本任务页导航，未纳入本次现版界面验收。未打包、安装、合并或发布；开放 Issue #65 与本次直接授权范围无关。
+
 ## 2026-11-15 PR #83 去除办公室重复操作
 
 用户要求切换对话/办公室承担刷新和返回能力，并始终启用人物动态。Conversation 在实际模式变化时调用原 useSessionGraph.refresh，沿既有在途合并、身份隔离和增量读取；初次挂载与重新激活仍由 Hook 负责。SessionTaskView 删除独立刷新/返回按钮和失效 onRefreshGraph 入口，仅装配父级唯一切换按钮；未开始会话的“开始对话”引导保留。OfficeScene 删除人物动态开关和可变开关状态，默认按真实工作及新派发/汇报播放，保留系统减少动画、后台不回放、单人物和有界队列语义。变化限定在 View 导航与表现，不改变执行、停止、恢复或队列业务。

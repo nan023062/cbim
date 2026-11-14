@@ -5,7 +5,7 @@
  * 接续模型选项保留可选引擎，旧记录缺省沿用 Pi；主轮选型不覆盖成员岗位。
  */
 import {z} from 'zod';
-import {loopEngineSchema} from '../../models';
+import {loopEngineSchema} from '../../engines';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,assertContinuationAttachmentManifest} from './scope-continuation-attachments';
 import {memberPauseSchema} from './member-pause';
 

@@ -1,5 +1,6 @@
 // 应用服务与数据端口的明确入口，纯协议不能加载服务或平台实现。
 export const serviceRoots=[
+  "src/logic/engines/service/",
   "src/logic/application/",
   "src/logic/application/assembly/",
   "src/logic/automation/service/",
@@ -28,6 +29,7 @@ export const serviceRoots=[
 ];
 export const isService=file=>serviceRoots.some(root=>file.startsWith(root));
 export const servicePublicEntries=new Set([
+  "src/logic/engines/service/index.ts",
   "src/logic/application/application.ts",
   "src/logic/application/assembly/execution-admission.ts",
   "src/logic/application/assembly/execution.ts",

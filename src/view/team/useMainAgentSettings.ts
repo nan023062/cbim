@@ -3,7 +3,7 @@
  * 设计原因：后端持有唯一配置，界面不再按会话保存引擎/模型；轮询只同步已保存值，保存期间及工作区切换后的迟到读取不得覆盖新值。
  */
 import {useEffect,useRef,useState} from 'react';
-import {mainAgentSettingsSchema,type MainAgentSettingsView,type AgentModelSelection} from '../../bridge/contracts/models';
+import {mainAgentSettingsSchema,type MainAgentSettingsView,type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 
 export function useMainAgentSettings(workspaceId:string,instanceId?:string,active=true){
   const [value,setValue]=useState<MainAgentSettingsView>(),[error,setError]=useState(''),[busy,setBusy]=useState(false);

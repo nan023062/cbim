@@ -17,7 +17,7 @@ async function setup(){
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
   await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[team.input.moduleId]);
-  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models);
+  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.engineModels);
   const identity={workspaceId:entry.id,rootSessionId:'root-one'};
   const ownerSelection=(await service.owners.discover([team.input.moduleId])).groups[0].selection!;
   const input=(commandId:string,agentId='.cbim/team/dev',rootSessionId=identity.rootSessionId)=>({...identity,rootSessionId,commandId,expectedParentRevision:1,task:{assigneeAgentId:agentId,moduleIds:[team.input.moduleId],ownerSelection,goal:'验证模块行为',acceptance:[{id:'evidence',text:'提交验证证据'}],prerequisites:[]}});

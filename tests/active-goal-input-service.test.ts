@@ -22,7 +22,7 @@ const review=(expectedRevision=2):GoalReviewInput=>({expectedRevision,decision:'
 async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),store=workspace.dispatchStore,directory=store.directory;
   const rootSessionId='active-input-root',runId='active-input-run',identity={workspaceId:entry.id,rootSessionId},task:TaskSpec={mode:'chat',taskId:rootSessionId,workspaceId:entry.id,root:f.a,goal:'原始输入',moduleIds:[],agentId:'cbim:main',acceptance:[]};
-  const journal=new RunJournal(path.join(f.user,'active-input-log'),task,runId),service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async()=>{throw Error('no member')}},undefined,undefined,f.app.models);
+  const journal=new RunJournal(path.join(f.user,'active-input-log'),task,runId),service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async()=>{throw Error('no member')}},undefined,undefined,f.app.engineModels);
   const binding=await service.conversationBinding(task),scope=await service.openScope(identity,'active-input-scope',{message:'原始输入'},runId);
   await journal.init();await journal.append({type:'run.started',data:{task,message:'原始输入',conversationBinding:binding}});
   const prepare=(message='新增要求',queueId:string=randomUUID(),signal=new AbortController().signal)=>service.activeInputs.prepare(identity,scope.scopeId,runId,queueId,{message},signal);
@@ -114,7 +114,7 @@ it('真实关闭unknown后同root新周期仍可规划、派发并持久领取�
     const input=await business(f,scopeId,runId),assigned=await f.service.dispatchTask(input,scopeId),lease=new WorkspaceExecutionLease();
     // 到达 create 之前已真实落盘 claim；此测试只验证领取，不伪造模型或候选执行。
     const create=vi.fn<Awaited<ReturnType<MemberExecutionPorts['prepare']>>['create']>(async()=>{throw Error('test stops after persisted claim')});
-    members=new MemberExecutionManager(f.workspace,f.store,{owners:f.service.owners,acquire:(key,permission,instance)=>lease.acquire(key,permission,instance),prepare:async()=>{throw Error('旧准备端口不能用于实际领取')},withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare:()=>({model:configuration.profile,create})})),inspect:async()=>{throw Error('no model was started')}});
+    members=new MemberExecutionManager(f.workspace,f.store,{owners:f.service.owners,acquire:(key,permission,instance)=>lease.acquire(key,permission,instance),prepare:async()=>{throw Error('旧准备端口不能用于实际领取')},withEngineConfiguration:(reference,_options,use)=>f.app.engineModels.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare:()=>({model:configuration.profile,create})})),inspect:async()=>{throw Error('no model was started')}});
     const receipt=await members.start({...f.identity,taskId:assigned.taskId,commandId:'fresh-claim',expectedRevision:1,options:{permission:'read'}});
     await members.waitForSettlement({...f.identity,taskId:assigned.taskId});
     const stored=await f.store.read(),run=stored.runs!.find(item=>item.binding.runId===receipt.runId)!;

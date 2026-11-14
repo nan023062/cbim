@@ -20,7 +20,7 @@ async function setup(){
   definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
   await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:file,text:json(definition)}]));
   await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[moduleId]);
-  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'addition-root'},scopeId='addition-scope',mainRunId='main-run';
+  const store=workspace.dispatchStore,directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.engineModels),identity={workspaceId:entry.id,rootSessionId:'addition-root'},scopeId='addition-scope',mainRunId='main-run';
   await service.openScope(identity,scopeId,{message:'为先创建的任务补充真实前置'},mainRunId);
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   const workflowSelections=[{moduleId,workflowId:team.input.workflowId}];

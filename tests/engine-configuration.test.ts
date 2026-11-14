@@ -6,8 +6,9 @@ import {randomUUID} from 'node:crypto';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {LlmProfiles} from '../src/logic/models/service';
+import {EngineModelProfiles,type LockedEngineModelConfiguration} from '../src/logic/engines/service';
 import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
-import {engineSupportsApi,loopEngineSchema} from '../src/logic/models';
+import {engineSupportsApi,loopEngineSchema} from '../src/logic/engines';
 import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member-rules';
 import {workspaceMemberModelSnapshotSchema} from '../src/logic/team/rules/workspace-member';
 import {objectOperation} from '../src/logic/knowledge/rules/object-crud';
@@ -15,11 +16,45 @@ import {queuedMessageSchema} from '../src/logic/tasks/rules/queue';
 import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
 
 const base:LlmDefinition={name:'Shared provider',api:'anthropic-messages',auth:'none',baseUrl:'http://127.0.0.1:1',defaultModel:'test',models:[{id:'test',name:'Test model',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]};
-async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-engine-config-'));return {models:new LlmProfiles(path.join(root,'models.json')),filename:path.join(root,'models.json'),cleanup:async()=>{if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-engine-config-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true})}}}
+async function fixture(){const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-engine-config-'));const profiles=new LlmProfiles(path.join(root,'models.json'));return {profiles,models:new EngineModelProfiles(profiles),filename:path.join(root,'models.json'),cleanup:async()=>{if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-engine-config-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true})}}}
+
+test('引擎选型沿用模型配置短锁，捕获后修改不能漂移；回调外即使已有缓存也不能解密',async()=>{
+  const f=await fixture();let release!:()=>void,entered!:()=>void;
+  const gate=new Promise<void>(resolve=>{release=resolve}),ready=new Promise<void>(resolve=>{entered=resolve});
+  try{
+    const saved=await f.profiles.save({profile:base}),id=saved.selectedId!;
+    let escaped!:LockedEngineModelConfiguration,updated=false;
+    const selected=f.models.withRuntimeConfiguration({profileId:id,modelId:'test',engine:'claude-code'},async locked=>{
+      escaped=locked;entered();await gate;
+      expect(updated).toBe(false);expect(locked.profile).toMatchObject({name:base.name,engine:'claude-code'});
+      const first=locked.resolve();expect(locked.resolve()).toBe(first);return first;
+    });
+    await ready;
+    const update=f.profiles.save({id,profile:{...base,name:'New provider name'}}).then(()=>{updated=true});
+    await new Promise<void>(resolve=>setImmediate(resolve));expect(updated).toBe(false);release();
+    const resolved=await selected;await update;
+    expect(resolved.profile.name).toBe(base.name);expect(updated).toBe(true);
+    expect(()=>escaped.resolve()).toThrow(/已结束/);
+    expect((await f.models.configuration(id,'test','claude-code')).name).toBe('New provider name');
+  }finally{release?.();await f.cleanup()}
+});
+
+test('接口不兼容和回调中止都不会自动重试，原模型队列仍可继续使用',async()=>{
+  const f=await fixture();try{
+    const saved=await f.profiles.save({profile:base}),ref={profileId:saved.selectedId!,modelId:'test'};let calls=0;
+    await expect(f.models.withRuntimeConfiguration({...ref,engine:'codex'},async()=>{calls++;})).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+    expect(calls).toBe(0);
+    const stopped=Object.assign(Error('stopped'),{code:'COLLABORATION_STOPPED'});
+    await expect(f.models.withRuntimeConfiguration({...ref,engine:'claude-code'},async()=>{calls++;throw stopped})).rejects.toBe(stopped);
+    expect(calls).toBe(1);
+    await f.profiles.save({id:ref.profileId,profile:{...base,name:'Still usable'}});
+    expect((await f.models.configuration(ref.profileId,ref.modelId)).name).toBe('Still usable');
+  }finally{await f.cleanup()}
+});
 
 test('同一供应商模型可分别解析 Pi 和 Claude；旧 Pi 快照不补字段，选择引擎不改模型文件',async()=>{
   const f=await fixture();try{
-    const saved=await f.models.save({profile:base}),id=saved.selectedId!,bytes=await fs.readFile(f.filename,'utf8');
+    const saved=await f.profiles.save({profile:base}),id=saved.selectedId!,bytes=await fs.readFile(f.filename,'utf8');
     const legacy=await f.models.configuration(id,'test'),pi=await f.models.configuration(id,'test','pi'),claude=await f.models.configuration(id,'test','claude-code');
     expect(Object.hasOwn(legacy,'engine')).toBe(false);expect(workspaceMemberModelSnapshotSchema.parse(legacy)).toEqual(legacy);
     expect(pi).toEqual({...legacy,engine:'pi'});expect(claude).toEqual({...legacy,engine:'claude-code'});
@@ -34,9 +69,9 @@ test('同一供应商模型可分别解析 Pi 和 Claude；旧 Pi 快照不补�
 
 test('旧供应商 engine 可读但不决定新执行；显式读取历史原生选型保持快照字节',async()=>{
   const f=await fixture();try{
-    const saved=await f.models.save({profile:{...base,engine:'claude-code'}}),id=saved.selectedId!;
+    const saved=await f.profiles.save({profile:{...base,engine:'claude-code'}}),id=saved.selectedId!;
     const old=await f.models.configuration(id,'test','claude-code');
-    await f.models.save({id,profile:base});
+    await f.profiles.save({id,profile:base});
     expect(await f.models.configuration(id,'test','claude-code')).toEqual(old);
     expect((await f.models.configuration(id,'test','pi')).engine).toBe('pi');
     expect((await f.models.configuration(id,'test')).engine).toBeUndefined();
@@ -81,7 +116,7 @@ test('Claude 模型选择诊断区分空目录、协议不匹配和已禁用；�
   expect(render([{...compatible,api:'openai-completions'}])).toContain('仅有 OpenAI Chat/Responses 地址时不能直接切换协议');
   expect(render([{...compatible,models:base.models.map(m=>({...m,enabled:false}))}])).toContain('添加或启用模型');
   const f=await fixture();try{
-    const modelId='vendor/qwen-custom-2026',saved=await f.models.save({profile:{...base,defaultModel:modelId,models:[{...base.models[0],id:modelId,name:modelId}]}});
+    const modelId='vendor/qwen-custom-2026',saved=await f.profiles.save({profile:{...base,defaultModel:modelId,models:[{...base.models[0],id:modelId,name:modelId}]}});
     expect(render(saved.profiles)).toContain(modelId);
     expect((await f.models.resolve(saved.selectedId,modelId,'claude-code')).profile.model).toBe(modelId);
   }finally{await f.cleanup()}
@@ -89,10 +124,10 @@ test('Claude 模型选择诊断区分空目录、协议不匹配和已禁用；�
 
 test('同一 Responses 模型可供 Pi 与 Codex 使用；禁用模型不进入任何新执行',async()=>{
   const f=await fixture();try{
-    const saved=await f.models.save({profile:{...base,api:'openai-responses'}}),id=saved.selectedId!;
+    const saved=await f.profiles.save({profile:{...base,api:'openai-responses'}}),id=saved.selectedId!;
     for(const engine of ['pi','codex'] as const){const snapshot=await f.models.configuration(id,'test',engine);expect(snapshot.engine).toBe(engine);expect(workspaceMemberModelSnapshotSchema.parse(snapshot)).toEqual(snapshot)}
     await expect(f.models.configuration(id,'test','claude-code')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
-    await f.models.save({id,profile:{...base,api:'openai-responses',defaultModel:'other',models:[{...base.models[0],enabled:false},{...base.models[0],id:'other'}]}});
+    await f.profiles.save({id,profile:{...base,api:'openai-responses',defaultModel:'other',models:[{...base.models[0],enabled:false},{...base.models[0],id:'other'}]}});
     await expect(f.models.configuration(id,'test','codex')).rejects.toMatchObject({code:'LLM_MODEL'});
   }finally{await f.cleanup()}
 });

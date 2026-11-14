@@ -7,7 +7,8 @@
 import {z} from 'zod';
 import {connectionSchema,definition,type LlmSettings} from './models';
 import {mainAgentIdentitySchema,mainAgentSettingsSchema,type MainAgentSettingsView} from '../../logic/team/rules/agent-runtime';
-import {loopEngineSchema,type LoopEngine,type LlmApi,type DiscoveredModel} from './models';
+import {loopEngineSchema,type LoopEngine} from './engines';
+import {type LlmApi,type DiscoveredModel} from './models';
 
 const identity=z.object({id:z.string().uuid()}).strict();
 const discovery=z.object({id:z.string().uuid().optional(),connection:connectionSchema.strict(),apiKey:z.string().max(16000).optional()}).strict();

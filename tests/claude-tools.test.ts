@@ -7,7 +7,7 @@ import {randomUUID} from 'node:crypto';
 import {ClaudeCodeEngine} from '../src/logic/execution/engines/claude/engine';
 import type {EngineEvent,ToolCall} from '../src/logic/execution/rules/types';
 import type {EngineToolsPort} from '../src/logic/execution/rules/engine-tools';
-import type {ResolvedLlm} from '../src/logic/models';
+import type {ResolvedEngineModel} from '../src/logic/engines';
 import {requestBudgetFixture} from './model-request-budget-fixture';
 import Ajv from 'ajv';
 
@@ -25,7 +25,7 @@ async function fixture(kind:'internal'|'read'|'write'|'bash',allow:boolean|'thro
   const requests:any[]=[],calls:ToolCall[]=[],events:EngineEvent[]=[],invocations:any[]=[];
   const server=http.createServer(async(req,res)=>{let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):{};if(req.url?.includes('count_tokens')){res.setHeader('content-type','application/json');res.end('{"input_tokens":100}');return}requests.push(body);reply(res,requests.length===1?{id,name,input}:undefined)});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const llm:ResolvedLlm={apiKey:'private-test-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl:'http://127.0.0.1:'+(server.address() as any).port,auth:'api-key',model:'claude-test',contextWindow:200000,maxTokens:4096,reasoning:false}};
+  const llm:ResolvedEngineModel={apiKey:'private-test-key',profile:{id:randomUUID(),engine:'claude-code',name:'test',api:'anthropic-messages',baseUrl:'http://127.0.0.1:'+(server.address() as any).port,auth:'api-key',model:'claude-test',contextWindow:200000,maxTokens:4096,reasoning:false}};
   const knowledge:EngineToolsPort={list:async()=>[{name:'cbim_test_read',description:'Read test data',inputSchema:{anyOf:[{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false},{type:'object',properties:{value:{$ref:'#/anyOf/0/properties/value'},preview:{type:'boolean'}},required:['value','preview'],additionalProperties:false}]}}],call:async(name,args,signal,toolCallId)=>{signal.throwIfAborted();invocations.push({name,args,id:toolCallId});return {content:[{type:'text',text:'tool-result'}]}}};
   const budget=settlement?await requestBudgetFixture({tokens:1000000},llm):undefined;let callsBeforeSettlement:number|undefined;
   const engine=new ClaudeCodeEngine({agentHome:path.join(root,'claude'),llm,prompt:'Use the provided tool.',knowledge,allowNativeExecution:true,turnTimeoutMs:20000,

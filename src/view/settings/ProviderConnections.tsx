@@ -4,7 +4,8 @@
  * 职责边界：测试只验证短文本响应，是否支持工具、推理及流式由实际执行和供应商能力决定。
  */
 import {useState} from 'react';
-import {connectionForEngine,engineLabel,identifyProvider,llmApiSchema,loopEngineSchema,providerPresets,providerSupportsEngine,type LlmDefinition,type LlmProfile,type LoopEngine} from '../../bridge/contracts/models';
+import {connectionForEngine,engineLabel,loopEngineSchema,providerSupportsEngine,type LoopEngine} from '../../bridge/contracts/engines';
+import {identifyProvider,llmApiSchema,providerPresets,type LlmDefinition,type LlmProfile} from '../../bridge/contracts/models';
 import type {ModelActionResults} from '../../bridge/contracts/model-actions';
 
 const labels={'openai-completions':'OpenAI Chat Completions','openai-responses':'OpenAI Responses','anthropic-messages':'Anthropic Messages'};

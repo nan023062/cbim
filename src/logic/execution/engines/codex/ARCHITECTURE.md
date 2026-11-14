@@ -112,7 +112,7 @@ class N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine["AgentE
 N_src_logic_execution_engines_codex_engine_ts_external_AgentEngine <|.. N_src_logic_execution_engines_codex_engine_ts_CodexEngine
 ```
 
-直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../models/index.ts](../../../models/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
+直接依赖：[../../../../core/utility/index.ts](../../../../core/utility/index.ts)、[../../rules/types.ts](../../rules/types.ts)、[../../../engines/index.ts](../../../engines/index.ts)、[../../../budget/rules/request-budget.ts](../../../budget/rules/request-budget.ts)、[../../rules/engine-tools.ts](../../rules/engine-tools.ts)、[../../rules/engine-instructions.ts](../../rules/engine-instructions.ts)、[../native-tools.ts](../native-tools.ts)、[binary.ts](binary.ts)、[../../rules/engine-runtime.ts](../../rules/engine-runtime.ts)、[rpc.ts](rpc.ts)、[tools.ts](tools.ts)、[model-proxy.ts](model-proxy.ts)、[session.ts](session.ts)、[../run-inactivity.ts](../run-inactivity.ts)。
 
 ### model-proxy.ts
 

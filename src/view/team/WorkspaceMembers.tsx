@@ -3,7 +3,7 @@
  * 设计原因：登记始终复用同一命令记录与预览校验；业务架构可预选 Agent，只有真实登记受理后才返回 memberId，模型与责任仍分别明确选择和保存。
  * 登记预览展示实际采纳的引擎及模型，候选 Agent 的本机默认选型只传入新登记表单。
  */
-import {engineLabel} from '../../bridge/contracts/models';
+import {engineLabel} from '../../bridge/contracts/engines';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {LlmSettings} from '../../bridge/contracts/models';
@@ -17,7 +17,7 @@ import {KnowledgeSourceSelection} from '../knowledge/KnowledgeSourceDetails';
 import './workspace-members.css';
 
 const failure=(error:unknown)=>error instanceof Error?error.message:String(error);
-export interface WorkspaceMemberAgentOption {id:string;name:string;runtime?:import('../../bridge/contracts/models').AgentModelSelection}
+export interface WorkspaceMemberAgentOption {id:string;name:string;runtime?:import('../../bridge/contracts/agent-settings').AgentModelSelection}
 /** 当前定义只用于明确选择；已登记岗位的正文和版本一律从后端详情读取，不用静态列表补造。 */
 export interface WorkspaceMembersProps {workspace:WorkspaceView;agents:WorkspaceMemberAgentOption[];onClose:()=>void;/** 仅预选能力来源，不自动选模型、预览或提交。 */initialRegistration?:{agentId:string};/** 只通知本次已受理的登记，不把预览、未知或旧命令查询当作新岗位。 */onRegistered?:(memberId:string)=>void;returnLabel?:string}
 export function WorkspaceMembers({workspace,agents,onClose,initialRegistration,onRegistered,returnLabel='返回团队定义'}:WorkspaceMembersProps){

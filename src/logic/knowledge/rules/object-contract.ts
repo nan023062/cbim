@@ -1,11 +1,11 @@
 /**
- * 作用定位：对象编辑的纯数据契约，定义静态知识操作、预览和提交回执。
+ * 作用定位：对象编辑的纯数据契约，定义静态知识操作、预览和提交回执；Agent 执行选型复用 Team 契约。
  * 设计原因：浏览器表单与主进程共享同一 Schema，不加载对象事务、文件系统或 Node.js 哈希实现。
  * 职责边界：结构解析不执行写入；路径、版本、权限和事务校验仍由 ObjectCrud 及知识服务负责。
  */
 import {z} from 'zod';
 import {moduleSections} from '../../workspace/rules/module-outline';
-import {agentModelSelectionSchema} from '../../models';
+import {agentModelSelectionSchema} from '../../team/rules/agent-runtime';
 import type {KnowledgeCommit,Preview} from './types';
 
 export const reservedObjectSlugs=['skills','workflows','references','scripts','assets','archive','node_modules'];

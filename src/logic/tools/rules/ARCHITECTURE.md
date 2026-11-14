@@ -12,7 +12,7 @@
 | --- | --- |
 | [contracts.ts](contracts.ts) | 工具取消、恢复说明及按需契约发现的纯协议，不导入具体领域或执行服务。 |
 | [input-validation.ts](input-validation.ts) | 将工具输入校验转换为不含原参数值的字段说明，供执行前拒绝与历史展示共用。 |
-| [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类。 |
+| [native-tools.ts](native-tools.ts) | 定义当前引擎真实装配的原生工具及可信副作用分类；引擎身份来自官方静态目录。 |
 | [outcome.ts](outcome.ts) | 引擎工具回包的统一结果与下一步说明；独立于具体业务账本。 |
 | [questions.ts](questions.ts) | 结构化提问的严格输入、桌面答案、排他结果与待答快照，供队列、工具包装和证据边界共用。 |
 | [receipt-schema.ts](receipt-schema.ts) | 执行报告与任务工具共用的真实工具回执字段协议。 |

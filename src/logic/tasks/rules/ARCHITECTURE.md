@@ -140,7 +140,7 @@ class N_src_logic_tasks_rules_automatic_return_ts_ReturnScope["ReturnScope"] {
 N_src_logic_tasks_rules_automatic_return_ts ..> N_src_logic_tasks_rules_automatic_return_ts_ReturnScope : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[graph-types.ts](graph-types.ts)、[scope-goal.ts](scope-goal.ts)、[../../engines/index.ts](../../engines/index.ts)。
 
 ### candidate-review.ts
 
@@ -426,7 +426,7 @@ class N_src_logic_tasks_rules_dispatch_execution_ts_DispatchRun["DispatchRun"] {
 N_src_logic_tasks_rules_dispatch_execution_ts ..> N_src_logic_tasks_rules_dispatch_execution_ts_DispatchRun : 声明
 ```
 
-直接依赖：[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../models/index.ts](../../models/index.ts)、[../../tools/rules/policy/types.ts](../../tools/rules/policy/types.ts)、[execution-context.ts](execution-context.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-topic-context.ts](member-topic-context.ts)。
+直接依赖：[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../tools/rules/policy/types.ts](../../tools/rules/policy/types.ts)、[execution-context.ts](execution-context.ts)、[graph-types.ts](graph-types.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-topic-context.ts](member-topic-context.ts)。
 
 ### dispatch-invariants.ts
 
@@ -438,7 +438,7 @@ class N_src_logic_tasks_rules_dispatch_invariants_ts["dispatch-invariants.ts"] {
 }
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[member-topic-context.ts](member-topic-context.ts)、[member-topic-context-rules.ts](member-topic-context-rules.ts)、[execution-context.ts](execution-context.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)、[topic-interruption.ts](topic-interruption.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[candidate-review.ts](candidate-review.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[member-topic-context.ts](member-topic-context.ts)、[member-topic-context-rules.ts](member-topic-context-rules.ts)、[../../engines/index.ts](../../engines/index.ts)、[execution-context.ts](execution-context.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[dispatch-execution.ts](dispatch-execution.ts)、[graph-types.ts](graph-types.ts)、[queued-task-cancel-rules.ts](queued-task-cancel-rules.ts)、[queued-dependency-replacement-invariants.ts](queued-dependency-replacement-invariants.ts)、[queued-dependency-addition-invariants.ts](queued-dependency-addition-invariants.ts)、[queued-dependency-revision-invariants.ts](queued-dependency-revision-invariants.ts)、[member-checkpoint.ts](member-checkpoint.ts)、[member-checkpoint-invariants.ts](member-checkpoint-invariants.ts)、[checkpoint-handoff-invariants.ts](checkpoint-handoff-invariants.ts)、[human-decision-invariants.ts](human-decision-invariants.ts)、[human-continuation-invariants.ts](human-continuation-invariants.ts)、[topic-interruption.ts](topic-interruption.ts)。
 
 ### dispatch-receipt.ts
 
@@ -1896,7 +1896,7 @@ class N_src_logic_tasks_rules_queue_ts_QueueDelta["QueueDelta"] {
 N_src_logic_tasks_rules_queue_ts ..> N_src_logic_tasks_rules_queue_ts_QueueDelta : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)。
 
 ### queued-dependency-addition-invariants.ts
 
@@ -2342,7 +2342,7 @@ class N_src_logic_tasks_rules_scope_continuation_ts_GoalContinuationReceipt["Goa
 N_src_logic_tasks_rules_scope_continuation_ts ..> N_src_logic_tasks_rules_scope_continuation_ts_GoalContinuationReceipt : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[member-pause.ts](member-pause.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[scope-continuation-attachments.ts](scope-continuation-attachments.ts)、[member-pause.ts](member-pause.ts)。
 
 ### scope-goal.ts
 

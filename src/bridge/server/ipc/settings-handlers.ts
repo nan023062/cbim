@@ -34,7 +34,7 @@ return app.githubFeedback.auth.begin(args);},
     'models.save':async args=>{return app.models.save(args);},
     'models.select':async args=>{return app.models.select(args.id);},
     'models.remove':async args=>{return app.models.remove(args.id);},
-    'models.test':async args=>{return app.models.test(args.id,args.modelId,args.engine);},
+    'models.test':async args=>{return app.engineModels.test(args.id,args.modelId,args.engine);},
     'models.discover':async args=>{return app.models.discover(args);},
     'models.discoverDetails':async args=>{return app.models.discoverDetails(args);},
   };

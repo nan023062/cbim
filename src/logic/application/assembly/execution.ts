@@ -18,7 +18,7 @@ import path from 'node:path';
 import type {WebToolsPort} from '../../web';
 import {FileRunStorage} from '../../execution/storage/run-storage';
 import {ChatInputs} from '../../materials/service/chat-inputs';
-import type {LlmProfiles} from '../../models/service';
+import type {EngineModelProfiles} from '../../engines/service';
 import type {Workspace} from '../../workspace/service/workspace';
 import {KernelLock} from '../../../core/platform/node/locking';
 import {guard} from '../../execution/platform/tool-guard';
@@ -46,7 +46,7 @@ import type {ModelRequestBudgetService} from '../../budget/runtime/model-request
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:LlmProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
+export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine):undefined;

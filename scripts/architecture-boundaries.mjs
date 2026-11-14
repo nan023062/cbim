@@ -1,6 +1,9 @@
 // 逻辑边界独立于目录层级。只登记本轮已核实的边界；其他模块继续受物理层和文件无环约束。
 // files 是成员归属，public 是允许跨边界读取的入口；新增私有实现必须登记，不能靠换目录绕过。
 export const logicalBoundaries = [
+  {id:'engine-model-service',prefix:'src/logic/engines/service/',public:['src/logic/engines/service/index.ts'],dependencies:['engine-catalog','model-rules','model-service','core-errors'],external:[]},
+  {id:'engine-catalog',prefix:'src/logic/engines/',public:['src/logic/engines/index.ts'],dependencies:['model-rules'],external:['zod']},
+  {id:'engine-bridge',files:['src/bridge/contracts/engines.ts'],public:['src/bridge/contracts/engines.ts'],dependencies:['engine-catalog'],external:[]},
   {id:'system-secret-cipher',files:['src/core/platform/electron/secrets.ts'],public:['src/core/platform/electron/secrets.ts'],dependencies:['secret-contract'],external:['electron']},
   {id:'material-data',files:['src/logic/materials/contracts.ts'],public:['src/logic/materials/contracts.ts'],dependencies:[],external:[]},
   {id:'workspace-data',files:['src/logic/workspace/contracts.ts'],public:['src/logic/workspace/contracts.ts'],dependencies:['knowledge-data'],external:[]},
@@ -33,7 +36,7 @@ export const logicalBoundaries = [
   },
   {
     id:'model-bridge-compatibility',files:['src/bridge/contracts/models.ts'],public:['src/bridge/contracts/models.ts'],
-    dependencies:['model-rules'],imports:['src/logic/team/rules/agent-runtime.ts','src/logic/execution/rules/model-errors.ts'],external:[],
+    dependencies:['model-rules'],imports:['src/logic/execution/rules/model-errors.ts'],external:[],
   },
   {
     id:'frontend-utility',prefix:'src/view/foundations/utility/',public:['src/view/foundations/utility/index.ts'],
@@ -142,6 +145,7 @@ export const logicalBoundaries = [
       "src/logic/automation/rules/contracts.ts",
       "src/logic/team/rules/agent-runtime.ts",
       "src/bridge/contracts/models.ts",
+      "src/bridge/contracts/engines.ts",
       "src/logic/execution/rules/types.ts",
       "src/bridge/contracts/github-feedback.ts",
       "src/logic/connectors/rules/repository-connection.ts",

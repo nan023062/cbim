@@ -4,7 +4,7 @@ chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明
 
 ### 模型兼容接口测试
 
-settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 LlmProfiles。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
+settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 EngineModelProfiles，由其向 LlmProfiles 传入协议要求。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
 
 ### 网页设置 IPC
 

@@ -180,6 +180,7 @@ class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServic
   +catalog
   +paths
   +models
+  +engineModels
   +webSettings
   +mainAgentSettings
   +resources
@@ -192,7 +193,6 @@ class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServic
   +runtime
   +running
   +isStopping
-  +list()
 }
 N_src_bridge_server_ipc_services_ts ..> N_src_bridge_server_ipc_services_ts_ApplicationServices : 声明
 ```
@@ -206,6 +206,7 @@ class N_src_bridge_server_ipc_services_ts["services.ts"] {
 }
 class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
+  +list()
   +workspace()
   +governance()
   +workspaceMembers()
@@ -221,7 +222,6 @@ class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServic
   +open()
   +stop()
   +remove()
-  +modelOptions()
 }
 N_src_bridge_server_ipc_services_ts ..> N_src_bridge_server_ipc_services_ts_ApplicationServices : 声明
 ```
@@ -235,12 +235,13 @@ class N_src_bridge_server_ipc_services_ts["services.ts"] {
 }
 class N_src_bridge_server_ipc_services_ts_ApplicationServices["ApplicationServices"] {
   <<interface>>
+  +modelOptions()
   +chatOptions()
 }
 N_src_bridge_server_ipc_services_ts ..> N_src_bridge_server_ipc_services_ts_ApplicationServices : 声明
 ```
 
-直接依赖：[../../../logic/web/service/index.ts](../../../logic/web/service/index.ts)、[../../../logic/automation/service/service.ts](../../../logic/automation/service/service.ts)、[../../../logic/workspace/service/catalog.ts](../../../logic/workspace/service/catalog.ts)、[../../../logic/workspace/service/workspace.ts](../../../logic/workspace/service/workspace.ts)、[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)、[../../../logic/team/settings/main-agent-settings.ts](../../../logic/team/settings/main-agent-settings.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../../logic/connectors/service/repository-connections.ts](../../../logic/connectors/service/repository-connections.ts)、[../../../logic/feedback/service/index.ts](../../../logic/feedback/service/index.ts)、[../../../logic/governance/service/module-governance.ts](../../../logic/governance/service/module-governance.ts)、[../../../logic/conversation/runtime/execution-manager.ts](../../../logic/conversation/runtime/execution-manager.ts)、[../../../logic/dispatch/runtime/dispatch-service.ts](../../../logic/dispatch/runtime/dispatch-service.ts)、[../../../logic/team/runtime/member-execution.ts](../../../logic/team/runtime/member-execution.ts)、[../../../logic/history/runtime/agent-history.ts](../../../logic/history/runtime/agent-history.ts)、[../../../logic/runtime/rules/types.ts](../../../logic/runtime/rules/types.ts)、[../../contracts/workspace.ts](../../contracts/workspace.ts)、[../../../logic/runtime/settings/admission-settings.ts](../../../logic/runtime/settings/admission-settings.ts)、[../../../logic/budget/settings/budget-settings.ts](../../../logic/budget/settings/budget-settings.ts)、[../../../logic/team/service/workspace-members.ts](../../../logic/team/service/workspace-members.ts)、[../../../logic/workspace/service/module-ownerships.ts](../../../logic/workspace/service/module-ownerships.ts)、[../../../logic/file-operations/service/controlled-files.ts](../../../logic/file-operations/service/controlled-files.ts)、[../../../logic/file-operations/service/isolated-executions.ts](../../../logic/file-operations/service/isolated-executions.ts)、[../../../logic/materials/service/chat-material-imports.ts](../../../logic/materials/service/chat-material-imports.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)、[../../../logic/budget/runtime/model-request-budget-service.ts](../../../logic/budget/runtime/model-request-budget-service.ts)。
+直接依赖：[../../../logic/web/service/index.ts](../../../logic/web/service/index.ts)、[../../../logic/automation/service/service.ts](../../../logic/automation/service/service.ts)、[../../../logic/workspace/service/catalog.ts](../../../logic/workspace/service/catalog.ts)、[../../../logic/workspace/service/workspace.ts](../../../logic/workspace/service/workspace.ts)、[../../../logic/workspace/service/paths.ts](../../../logic/workspace/service/paths.ts)、[../../../logic/team/settings/main-agent-settings.ts](../../../logic/team/settings/main-agent-settings.ts)、[../../../logic/models/service/index.ts](../../../logic/models/service/index.ts)、[../../../logic/engines/service/index.ts](../../../logic/engines/service/index.ts)、[../../../logic/resources/service/index.ts](../../../logic/resources/service/index.ts)、[../../../logic/connectors/service/repository-connections.ts](../../../logic/connectors/service/repository-connections.ts)、[../../../logic/feedback/service/index.ts](../../../logic/feedback/service/index.ts)、[../../../logic/governance/service/module-governance.ts](../../../logic/governance/service/module-governance.ts)、[../../../logic/conversation/runtime/execution-manager.ts](../../../logic/conversation/runtime/execution-manager.ts)、[../../../logic/dispatch/runtime/dispatch-service.ts](../../../logic/dispatch/runtime/dispatch-service.ts)、[../../../logic/team/runtime/member-execution.ts](../../../logic/team/runtime/member-execution.ts)、[../../../logic/history/runtime/agent-history.ts](../../../logic/history/runtime/agent-history.ts)、[../../../logic/runtime/rules/types.ts](../../../logic/runtime/rules/types.ts)、[../../contracts/workspace.ts](../../contracts/workspace.ts)、[../../../logic/runtime/settings/admission-settings.ts](../../../logic/runtime/settings/admission-settings.ts)、[../../../logic/budget/settings/budget-settings.ts](../../../logic/budget/settings/budget-settings.ts)、[../../../logic/team/service/workspace-members.ts](../../../logic/team/service/workspace-members.ts)、[../../../logic/workspace/service/module-ownerships.ts](../../../logic/workspace/service/module-ownerships.ts)、[../../../logic/file-operations/service/controlled-files.ts](../../../logic/file-operations/service/controlled-files.ts)、[../../../logic/file-operations/service/isolated-executions.ts](../../../logic/file-operations/service/isolated-executions.ts)、[../../../logic/materials/service/chat-material-imports.ts](../../../logic/materials/service/chat-material-imports.ts)、[../../../logic/runtime/rules/admission.ts](../../../logic/runtime/rules/admission.ts)、[../../../logic/budget/runtime/model-request-budget-service.ts](../../../logic/budget/runtime/model-request-budget-service.ts)。
 
 ### settings-handlers.ts
 
@@ -419,7 +420,7 @@ chat.image 严格图片类型/名称/base64上限；chat.paths 为最多12个明
 
 ### 模型兼容接口测试
 
-settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 LlmProfiles。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
+settingsIpcHandlers 将 models.test 的 engine、modelId 与供应商 id 交给 EngineModelProfiles，由其向 LlmProfiles 传入协议要求。实际协议和地址只由已保存配置解析；请求不能注入任意地址或密钥，返回值不含凭据。切换引擎、读取列表不自动测试。
 
 ### 网页设置 IPC
 

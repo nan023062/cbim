@@ -8,7 +8,7 @@ import {constants} from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fail} from '../../../core/errors';
-import type {LoopEngine} from '../../models';
+import type {LoopEngine} from '../../engines';
 
 /** 原生历史含模型消息和图片，采用独立 64 MiB 上限；超限明确拒绝续执行，不能截断作证。 */
 export const nativeSessionByteLimit=64*1024*1024;

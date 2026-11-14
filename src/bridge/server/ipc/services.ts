@@ -14,6 +14,7 @@ import type {Workspace} from '../../../logic/workspace/service/workspace';
 import type {Paths} from '../../../logic/workspace/service/paths';
 import type {MainAgentSettings} from '../../../logic/team/settings/main-agent-settings';
 import type {LlmProfiles} from '../../../logic/models/service';
+import type {EngineModelProfiles} from '../../../logic/engines/service';
 import type {ResourceRepositories} from '../../../logic/resources/service';
 import type {RepositoryConnections} from '../../../logic/connectors/service/repository-connections';
 import type {GitHubFeedback} from '../../../logic/feedback/service';
@@ -39,6 +40,8 @@ export interface ApplicationServices {
   readonly catalog: Catalog;
   readonly paths: Paths;
   readonly models: LlmProfiles;
+  /** 引擎相关连接诊断，调用方不能直接指定地址或凭据。 */
+  readonly engineModels: EngineModelProfiles;
   /** 桌面只管理加密搜索设置；不提供任意网络请求 IPC。 */
   readonly webSettings:WebSettings;
   /** 对话栏和主 Agent 配置页共用角色选型，写入不启动模型。 */

@@ -6,7 +6,8 @@
  * 兼容接口共用本供应商凭据；自动识别只补官方预设，实际运行快照只保留选中的单一接口。
  */
 import {z} from 'zod';
-import {loopEngineSchema} from './engine';
+/** 仅保留旧配置文件可读范围；不是当前引擎目录，新增引擎不扩充此遗留字段。 */
+const legacyProviderEngineSchema=z.enum(['pi','claude-code','codex']);
 const endpoint=z.string().trim().url().refine(value=>{const u=new URL(value);return !u.username&&!u.password&&!u.search&&!u.hash&&(u.protocol==='https:'||u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname))},'接口地址须为 HTTPS，或本机 HTTP；不能包含凭据、查询参数或片段');
 export const llmApiSchema=z.enum(['openai-completions','openai-responses','anthropic-messages']);
 export type LlmApi=z.infer<typeof llmApiSchema>;
@@ -27,7 +28,7 @@ export const modelSchema=z.object({id:z.string().trim().min(1).max(160),name:z.s
   /** USD / 百万 token；缺失表示未知价格，显式全零才表示免费。 */
   pricing:z.object({input:z.number().finite().min(0),output:z.number().finite().min(0),cacheRead:z.number().finite().min(0),cacheWrite:z.number().finite().min(0)}).strict().optional()}).strict().refine(p=>p.maxTokens<=p.contextWindow,'最大输出不能超过上下文窗口').refine(p=>!p.outputLimit||p.maxTokens<=p.outputLimit,'请求输出不能超过供应商声明上限').refine(p=>!p.workingContextWindow||p.workingContextWindow<=p.contextWindow,'工作上下文预算不能超过模型容量');
 /** engine 仅为 0.1.5 文件兼容保留，新设置表单不生成，执行选择不得从此字段推断。 */
-export const definition=connectionSchema.extend({engine:loopEngineSchema.optional(),autoDetect:z.boolean().optional(),alternateConnections:z.array(alternateConnectionSchema).max(2).optional(),models:z.array(modelSchema).min(1).max(200),defaultModel:z.string().min(1)}).strict().superRefine((p,c)=>{
+export const definition=connectionSchema.extend({engine:legacyProviderEngineSchema.optional(),autoDetect:z.boolean().optional(),alternateConnections:z.array(alternateConnectionSchema).max(2).optional(),models:z.array(modelSchema).min(1).max(200),defaultModel:z.string().min(1)}).strict().superRefine((p,c)=>{
 
   const apis=[p.api,...(p.alternateConnections??[]).map(connection=>connection.api)];
   if(new Set(apis).size!==apis.length)c.addIssue({code:'custom',message:'每种接口协议只能配置一个地址'});

@@ -16,7 +16,7 @@ import {connectionSchema,modelSchema} from '../../models';
 import {teamSessionBusy} from '../../team/rules/team-session';
 import {memberTopicContextSchema} from './member-topic-context';
 import {createMemberTopicContext} from './member-topic-context-rules';
-import {loopEngineSchema} from '../../models';
+import {loopEngineSchema} from '../../engines';
 import {validatePreparedDispatchKnowledge} from './execution-context';
 import type {DispatchCommand,DispatchMutation,DispatchState,DispatchMessage} from '../../dispatch/rules/dispatch-storage';
 import type {DispatchRun} from './dispatch-execution';

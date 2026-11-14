@@ -3,7 +3,9 @@
  * 设计原因：与后端共用供应商接口解析，兼容端点及模型范围共同决定可选项；区分未配置、协议不兼容和模型禁用，列表不触发联网。
  */
 import {useState} from 'react';
-import {providerSupportsEngine,engineLabel,loopEngineSchema,type AgentModelSelection,type LlmSettings,type LoopEngine} from '../../bridge/contracts/models';
+import {providerSupportsEngine,engineLabel,loopEngineSchema,type LoopEngine} from '../../bridge/contracts/engines';
+import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
+import {type LlmSettings} from '../../bridge/contracts/models';
 
 export function EngineModelPicker({models,value,onChange,required=false,emptyLabel='使用本机默认配置',initialEngine,modelLabel='Agent 模型'}:{models?:LlmSettings;value?:AgentModelSelection|null;onChange:(value:AgentModelSelection|null)=>void;required?:boolean;emptyLabel?:string;initialEngine?:LoopEngine;modelLabel?:string}){
   const [chosen,setChosen]=useState<LoopEngine|''>(value?.engine??initialEngine??'');

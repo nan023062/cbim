@@ -13,6 +13,7 @@
 | [admission.ts](admission.ts) | 向界面公开全局并发策略、当前占用及准入等待的可序列化契约。 |
 | [agent-history-ipc.ts](agent-history-ipc.ts) | 关联角色历史四个只读 IPC 操作的请求、响应与运行时输入解析。 |
 | [agent-history.ts](agent-history.ts) | 向团队静态节点公开只读的角色 Session 历史协议。 |
+| [agent-settings.ts](agent-settings.ts) | 主 Agent 与自定义 Agent 的执行选型公开契约。 |
 | [architecture.ts](architecture.ts) | 团队/业务架构编辑的桌面 IPC 契约，只公开对象操作、预览差异和提交回执。 |
 | [automation.ts](automation.ts) | 自动化桌面的固定请求、运行时校验与公开返回映射。 |
 | [chat.ts](chat.ts) | 对话附件、执行权限和待审批请求的跨进程契约。 |
@@ -21,6 +22,7 @@
 | [desktop-updates.ts](desktop-updates.ts) | 桌面更新的通信类型和版本展示文本。 |
 | [dispatch.ts](dispatch.ts) | 向桌面消费者公开成员派发、执行增量、主会话图以及独立目标周期摘要/详情，并导出无 IO 的投影校验及归并函数。 |
 | [effect-observation.ts](effect-observation.ts) | 向桌面公开原调用影响观察、明确处置与后续周期关系的纯契约。 |
+| [engines.ts](engines.ts) | 界面使用的官方引擎目录和模型兼容预览契约。 |
 | [execution.ts](execution.ts) | 对话、运行和排队在 IPC 中传递的可序列化类型。 |
 | [github-feedback.ts](github-feedback.ts) | 设置界面的 GitHub 公开连接协议与输入 Schema。 |
 | [governance.ts](governance.ts) | 向业务架构界面公开模块知识治理的纯数据与严格校验协议。 |
@@ -119,6 +121,16 @@ class N_src_bridge_contracts_agent_history_ts["agent-history.ts"] {
 }
 ```
 直接依赖：[../../logic/team/rules/session-history.ts](../../logic/team/rules/session-history.ts)。
+
+### agent-settings.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_agent_settings_ts["agent-settings.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)。
 
 ### architecture.ts
 
@@ -270,6 +282,16 @@ class N_src_bridge_contracts_effect_observation_ts["effect-observation.ts"] {
 }
 ```
 直接依赖：[../../logic/tasks/rules/effect-observation.ts](../../logic/tasks/rules/effect-observation.ts)。
+
+### engines.ts
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_engines_ts["engines.ts"] {
+  <<module>>
+}
+```
+直接依赖：[../../logic/engines/index.ts](../../logic/engines/index.ts)。
 
 ### execution.ts
 
@@ -910,7 +932,7 @@ class N_src_bridge_contracts_model_actions_ts_ModelActionResults["ModelActionRes
 N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_model_actions_ts_ModelActionResults : 声明
 ```
 
-直接依赖：[models.ts](models.ts)、[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)。
+直接依赖：[models.ts](models.ts)、[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)、[engines.ts](engines.ts)。
 
 ### models.ts
 
@@ -920,7 +942,7 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 ```
-直接依赖：[../../logic/models/index.ts](../../logic/models/index.ts)、[../../logic/team/rules/agent-runtime.ts](../../logic/team/rules/agent-runtime.ts)、[../../logic/execution/rules/model-errors.ts](../../logic/execution/rules/model-errors.ts)。
+直接依赖：[../../logic/models/index.ts](../../logic/models/index.ts)、[../../logic/execution/rules/model-errors.ts](../../logic/execution/rules/model-errors.ts)。
 
 ### module-ownership.ts
 
@@ -1270,6 +1292,9 @@ class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
 class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
+class N_src_bridge_contracts_engines_ts["engines.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
   <<module>>
 }
@@ -1279,12 +1304,20 @@ class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
   <<module>>
 }
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
+N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_engines_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
+  <<module>>
+}
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
-N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
 ```
 
@@ -1640,11 +1673,11 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+engines 公开重导出静态 supportedEngines、LoopEngine、engineLabel、loopEngineSchema、engineSupportsApi；agent-settings 公开 AgentModelSelection 与主 Agent 设置契约。models 只提供供应商/模型定义、预设及目录信息。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
-models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
+engines 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
 
 ## 分组关联 IPC 契约
 

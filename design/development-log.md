@@ -1,3 +1,13 @@
+## 2026-11-14：切片 1——引擎与模型解耦、官方静态清单
+
+- 来源为用户明确授权“先做引擎与模型解耦和静态清单”；实施前读取开放 Issues，只有无关 #65，未新建或回填无关工单。本步在独立分支 refactor/engine-model-catalog、基线 74019e20 开发，保留原工作树的 0.1.16 发布收尾资料。[完整目标方案](task/domain-agent-loop-engine-architecture.md) 保留后续切片边界，本次不自动实施其余阶段。
+- Logic 新增 engines：catalog/supported-engines.ts 用只读 TypeScript 静态声明统一 Pi、Claude Code、Codex 的身份、显示名、业务类型和支持协议；枚举和兼容投影从清单派生。模型模块只保留供应商、模型、通用 ModelConnectionRequirement 和凭据服务，AgentModelSelection 归 Team。旧 definition.engine 使用冻结读取 schema，不参与选型、不随未来引擎扩展。
+- EngineModelProfiles 组合原 LlmProfiles，复用唯一配置队列与锁内延迟解密；ResolvedEngineModel 组合可选 engine，旧缺省快照不补字段、不改哈希。Application、主 Agent 设置、岗位/领取、执行装配和 Bridge/View 迁移到对应入口。models.test 的公开请求/回执保持兼容，内部由引擎服务投影。模型模块禁止反向依赖引擎，静态清单禁止加载 SDK/平台，冷启动及更新模块禁止导入新清单。
+- 行为与验证选择：静态目录及通用连接为责任单元；引擎/模型、SSR 选型和历史快照为契约；主 Agent、IPC、岗位与领取为受影响的应用集成。先运行 `pnpm exec vitest run tests/unit/logic/engines/catalog.test.ts tests/unit/logic/models/provider-connections.test.ts tests/engine-configuration.test.ts tests/provider-connections.test.ts tests/llm.test.ts tests/owner-model-configuration.test.ts tests/model-actions.test.ts tests/main-agent-settings.test.ts tests/workspace-member-service.test.ts tests/dependencies.test.ts --reporter=dot`：10 文件、238/238。再核执行装配直接消费者 `pnpm exec vitest run tests/owner-execution-service.test.ts tests/member-execution.test.ts --reporter=default`：2 文件、27/27。共 265/265，保留重复启动、失败上限、停止屏障、原回执复用及恢复不重放断言。
+- 静态验证：`pnpm typecheck` 通过；`pnpm check:test-modules` 通过（496 文件，unit=147 / contract=155 / integration=194）；`pnpm check:architecture` 通过（1520 文件、7381 条依赖、0 循环、0 违规）。首次类型检查用于定位尚未迁移的调用方和测试夹具，迁移后通过；首次依赖检查发现 model-actions 缺少新 engines 桥入口许可，按实际公开契约补齐后通过。
+- 注释与资料同步：新增 engines 四个目录的文件头、接口语义和类图；更新 models/service、Team 选型、Application/assembly、Bridge、执行及 View 消费目录的类图和对应契约。维护入口为 [引擎契约](../src/logic/engines/CONTRACT.md)、[通用模型连接](../src/logic/models/provider-connections.ts)、[引擎模型服务](../src/logic/engines/service/model-profiles.ts)。状态、凭据和恢复仍由原服务拥有，不增重试、调度器或数据迁移。
+- 验证边界：未运行全仓 CI、真实厂商 SDK 联网、桌面安装/升级或打包；现有界面只迁移契约来源，新增引擎管理页面、多模型角色、已下载包清单、通用冷壳及独立引擎发布属于后续切片。本步不等于整套包架构或发布已完成，不改当前安装版本。
+
 ## 2026-11-14：直接连接资源重启进程，连续观测公开冷包下载
 
 - `43550661868` 在新资源窗口刚出现时正常关闭超时，未进入差分统计；前一轮过早缓存与本轮关闭时序证据均保留。改为直接接入同一真实原生进程，不再通过关闭/重开交接资源升级。

@@ -5,7 +5,8 @@
  * 提交前按该供应商的实际兼容接口与型号范围核对，和后端采纳快照保持一致。
  */
 import {EngineModelPicker} from '../components/EngineModelPicker';
-import {providerSupportsEngine,type AgentModelSelection} from '../../bridge/contracts/models';
+import {providerSupportsEngine} from '../../bridge/contracts/engines';
+import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import {useState} from 'react';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import {workspaceMemberChangeInputSchema} from '../../bridge/contracts/workspace-members';

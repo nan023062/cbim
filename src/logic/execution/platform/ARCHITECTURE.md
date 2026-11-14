@@ -37,7 +37,7 @@ class N_src_logic_execution_platform_native_session_files_ts_NativeSessionFiles[
 N_src_logic_execution_platform_native_session_files_ts ..> N_src_logic_execution_platform_native_session_files_ts_NativeSessionFiles : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../engines/index.ts](../../engines/index.ts)。
 
 ### tool-guard.ts
 

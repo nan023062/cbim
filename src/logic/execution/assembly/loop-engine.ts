@@ -38,11 +38,11 @@ import {mainInstructions,collaborationInstructions} from '../../conversation/run
 import type {ChatPermission} from '../rules/types';
 import {ClaudeCodeEngine} from '../engines/claude/engine';
 import {CodexEngine} from '../engines/codex/engine';
-import type {LoopEngine} from '../../models';
+import type {LoopEngine} from '../../engines';
 import {LoopRuntime,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../rules';
 import {PiEngine} from '../engines/pi/engine';
 import type {PiCommand} from '../engines/pi/rpc';
-import type {ResolvedLlm} from '../../models';
+import type {ResolvedEngineModel} from '../../engines';
 import {authorizeRunTool,type RunToolDescriptor} from '../../tools/rules/policy/tool-policy';
 import {progressTool} from '../../evidence/rules/progress-tools';
 import {pinRuntimeEngine} from '../engines/runtime-binding';
@@ -105,7 +105,7 @@ export interface WorkspaceLoopOptions {
   turnTimeoutMs?:number;
   onEvent?(event:StoredEvent):void;
   /** 由主进程解析的 LLM 运行配置，不接受模型工具参数直接提供密钥。 */
-  llm?:ResolvedLlm;
+  llm?:ResolvedEngineModel;
 }
 /** 装配方注入的运行保障；无默认放行策略，缺少实现不能启动执行。 */
 export interface ExecutionServices {

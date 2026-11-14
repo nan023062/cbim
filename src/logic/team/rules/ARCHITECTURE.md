@@ -33,6 +33,11 @@ classDiagram
 class N_src_logic_team_rules_agent_runtime_ts["agent-runtime.ts"] {
   <<module>>
 }
+class N_src_logic_team_rules_agent_runtime_ts_AgentModelSelection["AgentModelSelection"] {
+  <<type>>
+
+}
+N_src_logic_team_rules_agent_runtime_ts ..> N_src_logic_team_rules_agent_runtime_ts_AgentModelSelection : 声明
 class N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView["MainAgentSettingsView"] {
   <<type>>
 
@@ -40,7 +45,7 @@ class N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView["MainAgentSe
 N_src_logic_team_rules_agent_runtime_ts ..> N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)。
 
 ### agent-types.ts
 
@@ -148,7 +153,7 @@ class N_src_logic_team_rules_automatic_execution_ts_AutomaticExecutionBinding["A
 N_src_logic_team_rules_automatic_execution_ts ..> N_src_logic_team_rules_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../../workspace/rules/project-root.ts](../../workspace/rules/project-root.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../workspace/rules/project-root.ts](../../workspace/rules/project-root.ts)。
 
 ### implicit-module-owner.ts
 
@@ -732,7 +737,7 @@ class N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail["Workspac
 N_src_logic_team_rules_workspace_member_ts ..> N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### 本目录调用边界
 

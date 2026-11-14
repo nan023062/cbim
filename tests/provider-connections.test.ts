@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
-import {connectionForEngine,providerSupportsEngine} from '../src/logic/models';
+import {connectionForEngine,providerSupportsEngine} from '../src/logic/engines';
 import {identifyProvider} from '../src/logic/models';
 import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
 import {ProviderConnections,ProviderConnectionTest,connectionTestNotice} from '../src/view/settings/ProviderConnections';

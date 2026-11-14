@@ -21,7 +21,7 @@ import path from 'node:path';
 import type {Workspace} from '../../workspace/service/workspace';
 import {WorkspaceDispatchService} from '../../dispatch/runtime/dispatch-service';
 import type {DispatchObserver} from '../../dispatch/rules/dispatch-storage';
-import type {LlmProfiles} from '../../models/service';
+import type {EngineModelProfiles} from '../../engines/service';
 import type {WorkspaceExecutionLease} from '../../execution/admission/workspace-lease';
 import {MemberExecutionManager,type PreparedEngine} from '../../team/runtime/member-execution';
 import {createWorkspaceLoop} from '../../execution/assembly/loop-engine';
@@ -48,7 +48,7 @@ import {preparedWorkflowContracts} from '../../tasks/rules/execution-context';
 import {nativeToolNames} from '../../tools/rules/native-tools';
 import {WorkspaceMembers} from '../../team/service/workspace-members';
 import {ModuleOwnerships} from '../../workspace/service/module-ownerships';
-import type {ResolvedLlm} from '../../models';
+import type {ResolvedEngineModel} from '../../engines';
 import type {MemberStartOptions} from '../../tasks/rules/member-commands';
 import {workspaceMemberModelHash} from '../../team/rules/workspace-member-rules';
 import {ControlledFiles} from '../../file-operations/service/controlled-files';
@@ -71,7 +71,7 @@ export function createMemberDispatch(workspace:Workspace,observer?:DispatchObser
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
  * workspaceMembers 复用此 store 保存独立岗位审计；只调用 configuration 读取公开配置，不进入 prepare/create 或影响派发选择。
  */
-export function createMemberServices(workspace:Workspace,models:LlmProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy,controlledTransport?:ControlledFileTransport,engineRuntimes?:EngineRuntimeResolver){
+export function createMemberServices(workspace:Workspace,models:EngineModelProfiles,lease:WorkspaceExecutionLease,observer?:DispatchObserver,admission?:WorkspaceAdmission,budgetPolicy?:()=>ScopeBudgetPolicy,controlledTransport?:ControlledFileTransport,engineRuntimes?:EngineRuntimeResolver){
   workspace.assert();
   const directory=path.join(workspace.paths.project(workspace.entry.id),'dispatch');
   const store=workspace.dispatchStore,storage=new FileRunStorage();
@@ -104,7 +104,7 @@ export function createMemberServices(workspace:Workspace,models:LlmProfiles,leas
     return summary;
   }},budgetPolicy,{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),checkManifest:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('human-decision:'+randomUUID(),'read')},acquireMainRead:rootSessionId=>{workspace.assert();return lease.acquireReadWithin('human-evidence:'+randomUUID(),'conversation:'+safeId(rootSessionId))},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('HUMAN_UNAVAILABLE','工作区正在停止，未保存新的人工决定')}},models,{inspect:inspectMember,normalizePath:normalizeArtifact},{inspectMember,observeKnowledge:(reference,signal)=>observeKnowledgeTransaction(workspace,reference,signal),observePersistent:(reference,signal)=>observePersistentWrite(workspace,reference,signal),observeControlled:async(input,signal)=>{signal?.throwIfAborted();const value=await controlledFiles.report(input);signal?.throwIfAborted();return value},normalizePath:normalizeArtifact,observeFiles:(paths,signal)=>artifactFiles.observeFiles(paths,signal),acquireRead:()=>{workspace.assert();return lease.acquire('effect-observation:'+randomUUID(),'read')},acquireMainRead:rootSessionId=>{workspace.assert();return lease.acquireReadWithin('effect-proof:'+randomUUID(),'conversation:'+safeId(rootSessionId))},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('EFFECT_UNAVAILABLE','工作区正在停止，未保存新的处置')}},{...checkpointPorts,acquireRead:()=>{workspace.assert();return lease.acquire('member-pause:'+randomUUID(),'read')},assertCurrent:()=>{workspace.assert();if(admission&&!admission.isCurrent())fail('GOAL_MEMBER_PAUSE_UNAVAILABLE','工作区正在停止，原成员等待未消费')}});
   const requestBudgets=new ModelRequestBudgetService(workspace,requestBudgetStore(store),dispatch.budgets);
-  const prepareEngine=(llm:ResolvedLlm,options:MemberStartOptions):PreparedEngine=>{
+  const prepareEngine=(llm:ResolvedEngineModel,options:MemberStartOptions):PreparedEngine=>{
       return {model:structuredClone(llm.profile),availableTools:nativeToolNames(options.permission!=='read',llm.profile.engine),scopedTools:process.platform==='win32'&&process.arch==='x64'?['cbim_scoped_read',...(options.permission!=='read'?['cbim_scoped_node',...(controlledTransport?['cbim_file_write_controlled']:[])]:[])]:undefined,availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1'],create:async(run,task,hooks)=>{
         workspace.assert();
         if(run.binding.workspaceId!==workspace.entry.id||task.identity.workspaceId!==workspace.entry.id)throw Error('成员运行与工作区身份不匹配');

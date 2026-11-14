@@ -27,7 +27,7 @@ async function setup(){
   const store=workspace.dispatchStore,directory=store.directory,rootSessionId='goal-root',runId='goal-run';
   let summary:RunSummary;
   const memberDirectory=path.join(f.user,'member-log');
-  const service=new WorkspaceDispatchService(workspace,store,{inspectMember:run=>RunJournal.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),inspectMain:async(root,run)=>{expect(root).toBe(rootSessionId);expect(run).toBe(runId);return structuredClone(summary??await RunJournal.read(journal.directory))}},undefined,undefined,f.app.models);
+  const service=new WorkspaceDispatchService(workspace,store,{inspectMember:run=>RunJournal.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),inspectMain:async(root,run)=>{expect(root).toBe(rootSessionId);expect(run).toBe(runId);return structuredClone(summary??await RunJournal.read(journal.directory))}},undefined,undefined,f.app.engineModels);
   const identity={workspaceId:entry.id,rootSessionId},task:TaskSpec={mode:'chat',taskId:rootSessionId,workspaceId:entry.id,root:f.a,goal:'旧会话标题',moduleIds:[],agentId:'cbim:main',acceptance:[]};
   const binding=await service.conversationBinding(task);
   const scope=await service.openScope(identity,'goal-scope',{message:'  本轮维护知识\n',attachmentIds:[]});
@@ -253,7 +253,7 @@ it.each(['stale','rejected'] as const)('真实成员失败必须由后续成功�
         }};
         return new LoopRuntime({storage,directory:f.memberDirectory,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
       }});
-    members=new MemberExecutionManager(f.workspace,f.store,{acquire:()=>()=>{},inspect:run=>storage.read(path.join(f.memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:f.service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
+    members=new MemberExecutionManager(f.workspace,f.store,{acquire:()=>()=>{},inspect:run=>storage.read(path.join(f.memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:f.service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.engineModels.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
     const execute=async(commandId:string)=>{
       const receipt=await f.service.dispatchTask({...f.identity,commandId,expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'验证业务实现',acceptance:[{id:'c1',text:'提供真实证据'}],prerequisites:[]}},f.scope.scopeId);
       await members!.start({...f.identity,taskId:receipt.taskId,commandId:'start-'+commandId,expectedRevision:1,options:{permission:'read'}});

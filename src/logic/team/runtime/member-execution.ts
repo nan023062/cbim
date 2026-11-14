@@ -28,7 +28,7 @@ import {fail} from '../../../core/errors';
 import {hash,json} from '../../../core/platform/node/serialization';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
 import type {LoopRuntime} from '../../execution/rules/runtime/runtime';
-import type {ResolvedLlm} from '../../models';
+import type {ResolvedEngineModel} from '../../engines';
 import type {RunSummary,StoredEvent,ToolCall,ToolDecision,ChatPermission} from '../../execution/rules/types';
 import {publicRunFailure} from '../../execution/rules/run-failure';
 import type {DispatchRun} from '../../tasks/rules/dispatch-execution';
@@ -71,7 +71,7 @@ export interface MemberExecutionPorts {
   /** 同工作区岗位门禁；未装配时不能创建新业务领取，旧运行仍可结算。 */
   owners?:OwnerExecutionService;
   /** 模型短锁先提供公开配置；预算和占用通过后才调用 prepare，不在 Store 中重新排配置队列。 */
-  withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'] & Pick<WorkspaceMemberModelRef,'engine'>,options:MemberStartOptions,use:(locked:{model:ResolvedLlm['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
+  withEngineConfiguration?<T>(model:OwnerExecutionBinding['model'] & Pick<WorkspaceMemberModelRef,'engine'>,options:MemberStartOptions,use:(locked:{model:ResolvedEngineModel['profile'];prepare():PreparedEngine})=>Promise<T>):Promise<T>;
   /** 独立只读文件复核能力，不隐式采集旧日志或运行模型。 */
   artifacts?:Omit<ArtifactReportPorts,'inspect'>;
   /** 完整范围的只读复核与旧选定文件查询独立，不隐式迁移历史。 */
@@ -88,7 +88,7 @@ export interface MemberExecutionPorts {
   acquire(key:string,permission:ChatPermission,agentInstanceId?:string,context?:{task:TaskNode;commandId:string;wait?:ExecutionAdmissionWait}):()=>void;
   /** 仅新命令解析一次模型；公开参数落盘，凭据只由 create 闭包持有，不进入图或日志。 */
   prepare(options:MemberStartOptions):Promise<{
-    model:ResolvedLlm['profile'];
+    model:ResolvedEngineModel['profile'];
     /** 与本轮实际引擎注册参数一致的工具清单；仅能力预检，不能替代权限或批准。 */
     availableTools?:readonly string[];
     /** 范围模式独立能力清单；缺省不能让冻结任务回退原生工具。 */

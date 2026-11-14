@@ -753,7 +753,9 @@
         "src/logic/tasks/runtime/"
       ],
       "tests": {
-        "unit": ["tests/office-history-service.test.ts"],
+        "unit": [
+          "tests/office-history-service.test.ts"
+        ],
         "contract": [
           "tests/command-verification-service.test.ts"
         ],
@@ -1288,7 +1290,6 @@
           "tests/unit/logic/models/provider-connections.test.ts"
         ],
         "contract": [
-          "tests/engine-configuration.test.ts",
           "tests/provider-connections.test.ts"
         ],
         "integration": []
@@ -1484,6 +1485,20 @@
           "tests/budget-settings.test.ts"
         ],
         "contract": [],
+        "integration": []
+      }
+    },
+    "logic/engines": {
+      "roots": [
+        "src/logic/engines/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/engines/catalog.test.ts"
+        ],
+        "contract": [
+          "tests/engine-configuration.test.ts"
+        ],
         "integration": []
       }
     }

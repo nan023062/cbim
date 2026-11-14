@@ -241,6 +241,7 @@ N_src_logic_updates_service_runtime_journal_ts ..> N_src_logic_updates_service_r
 classDiagram
 class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
+  +validateEnginePackage()
   +runtimeRelativePath()
   +validateRuntimeFiles()
   +runtimePackageUrl()
@@ -320,6 +321,7 @@ class N_src_logic_updates_service_runtime_store_ts_RuntimeStore["RuntimeStore"] 
   +readManifest()
   +prepare()
   -download
+  -reuseRoots
   -preparing
   -preparePackage()
 }
@@ -539,3 +541,9 @@ NSIS 下载启用 electron-updater 的差分模式：读取新旧 `.exe.blockmap
 安装包产物位于仓库 `build/desktop-release/<version>/`；用户下载缓存位于 `%LOCALAPPDATA%/cbim-desktop-updater/`，与安装程序目录、用户 `~/.cbim` 及业务工作区分开。重新启动后检查公开版本并重新校验已有缓存，相同包由 electron-updater 复用，成功仍停在 ready；缓存不会在启动或退出时自动安装。
 
 `restart-profile` 在 Main 初始化之前核对重启目录。`packaging/updater/` 中的 NSIS 启动模板将原进程明确配置的 `CBIM_USER_DATA_ROOT` 作为更新重启参数传回，解决 Windows Shell 不继承环境的问题；只传目录、不传凭据，正常安装沿用默认目录。重复、相对、带引号／控制字符或超长参数直接拒绝，不静默打开默认用户数据。
+
+### 引擎与资源缓存分开
+
+签名 E 描述支持通用 ID、可选适配器入口/版本/协议和固定依赖摘要。冷壳只校验通用字段、文件清单与签名，支持名单由 R 静态代码决定。旧清单不补适配器字段，新正式资源不回退内嵌实现。
+
+RuntimeStore 可接收可信旧缓存根：仅找到相同 SHA-256 内容目录且完整验证后复制到新共享缓存，复制后再次验证；坏缓存直接失败，不自动删除、覆盖或下载重试。同一共享根可供不同 C 使用，活动资源及恢复日志仍按 C 隔离。

@@ -7,7 +7,7 @@ import type {DesktopUpdates} from './desktop-updates';
 /** 仅由冷壳构造，所有路径属于已验证的不可变目录；会话和凭据不在这些目录内。 */
 export interface DesktopRuntimeHost {
   assetsRoot:string;cacheRoot:string;codeVersion:string;resourceVersion:number;
-  resolveEngine(kind:'pi'|'claude-code'|'codex'):Promise<{root:string;version:string;entry:string;identity:string}>;
+  resolveEngine(kind:string):Promise<{root:string;version:string;entry:string;identity:string;adapter?:{entry:string;version:string;protocol:1}}>;
   /** 退出/安装排空前取消尚在准备的引擎包，避免等到 will-quit 才取消而阻塞工厂关闭。 */
   stopPreparingEngines():void;
   updates(beforeInstall:()=>Promise<void>,enabled:boolean):DesktopUpdates;

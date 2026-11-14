@@ -38,6 +38,7 @@ import type {ChatPermission} from '../rules/types';
 import type {LoopEngine,ModelRolesSelection} from '../../engines';
 import {LoopRuntime,type TaskSpec,type StoredEvent,type ToolCall,type ToolDecision,type ConversationAgentBinding} from '../rules';
 import type {EngineProcess} from '../rules/engine-adapter';
+import {packagedEngineAdapter} from './engine-package-loader';
 import {sourceEngineAdapter} from './engine-adapters';
 import type {ResolvedEngineModel} from '../../engines';
 import {authorizeRunTool,type RunToolDescriptor} from '../../tools/rules/policy/tool-policy';
@@ -173,7 +174,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const agentHome=path.join(directory,engine==='claude-code'?'claude':engine);
   const managedRuntime=await options.engineRuntimes?.resolveEngine(engine);
   const nativeToolsRuntime=engine==='codex'?await options.engineRuntimes?.resolveEngine('pi'):undefined;
-  const adapter=sourceEngineAdapter(engine);
+  const adapter=managedRuntime?packagedEngineAdapter(engine,managedRuntime):sourceEngineAdapter(engine);
   const executionScope=preparedExecutionScope(services.member?.workflowContracts??[]);
   const permission=options.permission??(options.allowNativeExecution?'execute':'read');
   // 主角色与自定义成员共用真实权限；协作模式只改变分工建议，不改变文件或命令能力。

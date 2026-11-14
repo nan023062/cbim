@@ -461,7 +461,8 @@
           "tests/engine-runtime-loader.test.ts"
         ],
         "integration": [
-          "tests/engine-adapter-package.test.ts"
+          "tests/engine-adapter-package.test.ts",
+          "tests/engine-production-boundary.test.ts"
         ]
       }
     },

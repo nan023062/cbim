@@ -69,7 +69,8 @@ export async function collectEngines(buildRoot:string,output:string):Promise<Eng
   for(const [kind,definition] of Object.entries(engineEntries)){
     const root=path.join(buildRoot,definition.directory),pkg=JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8'));
     await fs.access(path.join(root,definition.entry));
-    result.push({kind:kind as EnginePackage['kind'],version:pkg.version,entry:definition.entry,package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+pkg.version+'-win32-x64')});
+    const adapter=JSON.parse(await fs.readFile(path.join(root,'adapter.json'),'utf8'));if(adapter.id!==kind||adapter.protocol!==1)throw Error('适配器与引擎归档不一致');
+    result.push({kind,version:pkg.version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+pkg.version+'-win32-x64')});
   }
   return result;
 }

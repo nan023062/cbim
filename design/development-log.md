@@ -1,3 +1,10 @@
+## 2026-11-14：切片 3b/4a——正式包加载与跨 C 缓存
+
+- 基线 2cd2a595。正式 R 构建用拒绝回退的模块替代源码兼容表，运行只从可信冷宿主返回的 E 根加载 adapter.cjs，核身份/协议/适配器版本；各 SDK 入口和版本仍分别保留。引擎归档流程包含独立适配器，签名清单校验通用 ID 和声明入口，不再硬编码三种引擎。
+- E 缓存迁出 codeVersion 目录；相同内容在安装/用户身份下共享。旧 C 缓存按精确摘要和完整文件校验迁移，目标再次验证；损坏时明确失败而不自动删除或重下。资源预下载不再隐式更新 E。旧 R 恢复日志仍按 C 隔离，新冷宿主协议需要后续正式冷更，当前用户安装版未动。独立 E 版本通道与添加/移除管理还在下一切片。
+- 精确验证：engine-adapter-package、runtime-manifest、runtime-store、runtime-updates、runtime-packaging 共 5 文件 13/13；engine-production-boundary 1/1 实际构建 R 装配和 C，核产物模块清单没有具体适配器/厂商 SDK，C 也没有支持清单；dependencies 169/169。缓存回归覆盖旧 C 迁移、后续 C 离线命中、坏缓存无重下载。pnpm typecheck、pnpm check:test-modules（502 文件，151/155/196）、pnpm check:architecture（1543 文件，7449 依赖，无环/无违规）通过。
+- 同步 execution/assembly、rules、engines、updates 及 bootstrap 的注释、契约、目录类图和源码加载边；构建测试使用临时目录，无完整安装包、签名发布、外部模型、全仓回归或生产安装验收。
+
 ## 2026-11-14：切片 3a——统一引擎包工厂与独立构建
 
 - 基线 8c302ecf；按用户授权继续运行协议切片。新增 engine-adapter.ts 版本 1 契约，三引擎各自 package.ts 拥有工厂和适配器版本。loop-engine 不直接选择具体构造器，Pi 启动脚本/SDK 校验移入 Pi 包；保留受管版本、开发 override、工具权限、取消与历史规则。主/成员装配传播可选预算角色，primary 缺省不变。

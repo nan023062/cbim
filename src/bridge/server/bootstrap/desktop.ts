@@ -53,20 +53,21 @@ function boot(){
   }
   if(selection.pending)selection.journal.accessData(selection.digest);
   app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('sessionData',path.join(userRoot,'desktop'));
-  const store=new RuntimeStore(cacheRoot,cold),controller=new AbortController();
-  const engines=new Map<string,Promise<{root:string;version:string;entry:string;identity:string}>>();
-  const preparation=new Map<string,{engine:'pi'|'claude-code'|'codex';version:string;progress?:number;error?:string}>();
+  const reuseRoots=fs.existsSync(cacheIdentityRoot)?fs.readdirSync(cacheIdentityRoot,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&/^\d+\.\d+\.\d+$/.test(entry.name)).map(entry=>path.join(cacheIdentityRoot,entry.name)):[];
+  const store=new RuntimeStore(cacheRoot,cold),engineStore=new RuntimeStore(path.join(cacheIdentityRoot,'engines'),cold,undefined,reuseRoots),controller=new AbortController();
+  const engines=new Map<string,Promise<{root:string;version:string;entry:string;identity:string;adapter?:{entry:string;version:string;protocol:1}}>>();
+  const preparation=new Map<string,{engine:string;version:string;progress?:number;error?:string}>();
   const host:DesktopRuntimeHost={assetsRoot:selection.root,cacheRoot:cacheIdentityRoot,codeVersion:cold.codeVersion,resourceVersion:selection.manifest.resourceVersion,
     resolveEngine(kind){
       let existing=engines.get(kind);if(existing)return existing;
       const descriptor=selection.manifest.engines.find(engine=>engine.kind===kind);if(!descriptor)return Promise.reject(Error('此资源版本没有兼容的引擎包'));
       preparation.set(kind,{engine:kind,version:descriptor.version,progress:0});
-      existing=store.prepare(descriptor.package,controller.signal,progress=>preparation.set(kind,{engine:kind,version:descriptor.version,progress})).then(root=>{preparation.delete(kind);return {root,version:descriptor.version,entry:path.join(root,descriptor.entry),identity:descriptor.package.sha256}}).catch(error=>{engines.delete(kind);const message='准备 '+kind+' '+descriptor.version+' 运行包失败：'+String(error)+'。请检查网络和磁盘后重试，原会话数据已保留。';preparation.set(kind,{engine:kind,version:descriptor.version,error:message});throw Error(message)});
+      existing=engineStore.prepare(descriptor.package,controller.signal,progress=>preparation.set(kind,{engine:kind,version:descriptor.version,progress})).then(root=>{preparation.delete(kind);return {root,version:descriptor.version,entry:path.join(root,descriptor.entry),identity:descriptor.package.sha256,...(descriptor.adapter?{adapter:{...descriptor.adapter,entry:path.join(root,descriptor.adapter.entry)}}:{})}}).catch(error=>{engines.delete(kind);const message='准备 '+kind+' '+descriptor.version+' 运行包失败：'+String(error)+'。请检查网络和磁盘后重试，原会话数据已保留。';preparation.set(kind,{engine:kind,version:descriptor.version,error:message});throw Error(message)});
       engines.set(kind,existing);return existing;
     },
     stopPreparingEngines(){controller.abort()},
     updates(beforeInstall,enabled){
-      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>[...engines.keys()]);
+      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>[]);
       return new DesktopUpdates(cold.codeVersion,selection.manifest.notes,enabled,signal=>installer.latest(signal),installer,beforeInstall,selection.manifest.resourceVersion,()=>[...preparation.values()]);
     },
     confirm(){selection.journal.confirm(selection.digest)},

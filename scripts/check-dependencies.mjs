@@ -120,6 +120,7 @@ export const externalLoads = [
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
+  {file:'src/logic/execution/assembly/engine-package-loader.ts',expression:'loadAdapter(descriptor.entry)',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'scripts/build-engine-adapters.mjs',expression:'load(file)',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'tests/engine-adapter-package.test.ts',expression:'load(path.join(destination,descriptor.entry))',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/main.ts'},

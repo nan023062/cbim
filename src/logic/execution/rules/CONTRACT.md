@@ -418,3 +418,7 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 ### 官方包运行协议 V1
 
 engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。
+
+### 通用包地址
+
+EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。

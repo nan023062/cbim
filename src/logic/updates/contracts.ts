@@ -13,7 +13,7 @@ export interface DesktopUpdateStatus {
   /** 当前真实装载的 R；旧安装包不伪造资源版本。 */
   currentResourceVersion?:number;
   /** 首次按需准备的引擎包，与 C/R 安装资格独立；不包含路径、凭据或可执行命令。 */
-  enginePreparations?:{engine:'pi'|'claude-code'|'codex';version:string;progress?:number;error?:string}[];
+  enginePreparations?:{engine:string;version:string;progress?:number;error?:string}[];
   phase:'disabled'|'idle'|'checking'|'current'|'available'|'downloading'|'ready'|'installing';
   release?:DesktopRelease;progress?:number;
   /** 最近一次完成检查的 ISO 时间，包含失败尝试；结果由 phase/error 区分。 */

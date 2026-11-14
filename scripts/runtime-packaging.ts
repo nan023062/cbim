@@ -63,15 +63,17 @@ export async function collectResources(viteDirectory:string,target:string,repo=p
   }
   await pruneEmpty(boundary);
 }
-const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'}} as const;
+const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'},memory:{directory:'memory-runtime',entry:'adapter.cjs'}} as const;
 export async function collectEngines(buildRoot:string,output:string,kinds:readonly (keyof typeof engineEntries)[]=Object.keys(engineEntries) as (keyof typeof engineEntries)[]):Promise<EnginePackage[]>{
   const result:EnginePackage[]=[];
   for(const kind of kinds){
     const definition=engineEntries[kind];if(!definition)throw Error('未登记的引擎构建入口');
-    const root=path.join(buildRoot,definition.directory),pkg=JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8'));
+    const root=path.join(buildRoot,definition.directory);
     await fs.access(path.join(root,definition.entry));
     const adapter=JSON.parse(await fs.readFile(path.join(root,'adapter.json'),'utf8'));if(adapter.id!==kind||adapter.protocol!==1)throw Error('适配器与引擎归档不一致');
-    result.push({kind,version:pkg.version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+adapter.version+'-win32-x64')});
+    // SDK 引擎保持上游版本；自定义 Loop 的运行库与适配器同版，不伪造 vendor package。
+    const version='package' in definition?JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8')).version:adapter.version;
+    result.push({kind,version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+adapter.version+'-win32-x64')});
   }
   const codex=result.find(engine=>engine.kind==='codex'),pi=result.find(engine=>engine.kind==='pi');if(codex&&pi)codex.dependencies=[{kind:'pi',identity:pi.package.sha256}];
   return result;

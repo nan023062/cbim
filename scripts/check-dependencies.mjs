@@ -76,7 +76,9 @@ const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/view/foundations/'],allow:['src/view/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
-  // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
+  // 记忆包仅此存储实现使用公开原子单文件机制，目录权限与正式知识仍由业务边界负责。
+  {sources:['src/logic/execution/engines/memory/storage.ts'],allow:['src/logic/execution/engines/memory/','@domain-public','src/core/platform/node/files/index.ts']},
+  // 其它引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
   {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
   {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/platform/node/files/index.ts']},

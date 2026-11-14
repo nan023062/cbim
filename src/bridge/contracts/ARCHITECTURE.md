@@ -711,7 +711,7 @@ class N_src_bridge_contracts_ipc_loop_ts_LoopIpcResponses["LoopIpcResponses"] {
 N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_ipc_loop_ts_LoopIpcResponses : 声明
 ```
 
-直接依赖：[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tools/rules/policy/types.ts](../../logic/tools/rules/policy/types.ts)、[../../logic/tasks/rules/human-continue.ts](../../logic/tasks/rules/human-continue.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tasks/rules/scope-continuation.ts](../../logic/tasks/rules/scope-continuation.ts)、[../../logic/tasks/rules/topic-interruption.ts](../../logic/tasks/rules/topic-interruption.ts)、[../../logic/tasks/rules/scope-recovery.ts](../../logic/tasks/rules/scope-recovery.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
+直接依赖：[engines.ts](engines.ts)、[ipc-shapes.ts](ipc-shapes.ts)、[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tools/rules/policy/types.ts](../../logic/tools/rules/policy/types.ts)、[../../logic/tasks/rules/human-continue.ts](../../logic/tasks/rules/human-continue.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tasks/rules/scope-continuation.ts](../../logic/tasks/rules/scope-continuation.ts)、[../../logic/tasks/rules/topic-interruption.ts](../../logic/tasks/rules/topic-interruption.ts)、[../../logic/tasks/rules/scope-recovery.ts](../../logic/tasks/rules/scope-recovery.ts)、[../../logic/tasks/rules/scope-replan.ts](../../logic/tasks/rules/scope-replan.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)。
 
 ### ipc-people.ts
 
@@ -1247,18 +1247,21 @@ class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
 class N_src_bridge_contracts_ipc_loop_ts["ipc-loop.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_ipc_resources_ts["ipc-resources.ts"] {
+class N_src_bridge_contracts_engines_ts["engines.ts"] {
   <<module>>
 }
 N_src_bridge_contracts_ipc_desktop_ts ..> N_src_bridge_contracts_desktop_updates_ts : 导入依赖
 N_src_bridge_contracts_ipc_dispatch_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
+N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_engines_ts : 导入依赖
 N_src_bridge_contracts_ipc_loop_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_resources_ts["ipc-resources.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_resources_ts["resources.ts"] {
@@ -1270,21 +1273,18 @@ class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
 class N_src_bridge_contracts_web_ts["web.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_models_ts["models.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_resources_ts ..> N_src_bridge_contracts_resources_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_web_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
-N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_settings_ts["ipc-settings.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_models_ts["models.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_github_feedback_ts["github-feedback.ts"] {
@@ -1296,21 +1296,18 @@ class N_src_bridge_contracts_model_actions_ts["model-actions.ts"] {
 class N_src_bridge_contracts_engines_ts["engines.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_github_feedback_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_model_actions_ts : 导入依赖
 N_src_bridge_contracts_ipc_settings_ts ..> N_src_bridge_contracts_engines_ts : 导入依赖
-N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_ipc_workspace_ts["ipc-workspace.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_shapes_ts["ipc-shapes.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
@@ -1325,21 +1322,18 @@ class N_src_bridge_contracts_models_ts["models.ts"] {
 class N_src_bridge_contracts_engines_ts["engines.ts"] {
   <<module>>
 }
-class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
-  <<module>>
-}
-class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
-  <<module>>
-}
+N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_ipc_shapes_ts : 导入依赖
 N_src_bridge_contracts_ipc_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_models_ts : 导入依赖
 N_src_bridge_contracts_model_actions_ts ..> N_src_bridge_contracts_engines_ts : 导入依赖
-N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
+  <<module>>
+}
+class N_src_bridge_contracts_ipc_call_ts["ipc-call.ts"] {
   <<module>>
 }
 class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
@@ -1348,6 +1342,7 @@ class N_src_bridge_contracts_workspace_view_ts["workspace-view.ts"] {
 class N_src_bridge_contracts_chat_ts["chat.ts"] {
   <<module>>
 }
+N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_ipc_call_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_view_ts : 导入依赖
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入依赖
 ```

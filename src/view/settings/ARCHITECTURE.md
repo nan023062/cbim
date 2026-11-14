@@ -15,7 +15,7 @@
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
 | [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
-| [EngineSettings.tsx](EngineSettings.tsx) | 官方引擎能力列表，展示业务专长、支持接口、已配置可用模型和包管理状态。 |
+| [EngineSettings.tsx](EngineSettings.tsx) | 官方引擎能力列表，展示业务专长、主模型与额外角色可用模型和包管理状态。 |
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |

@@ -48,6 +48,8 @@ Pi 的 CLI、Claude Agent SDK 和 Codex EXE 使用预编译依赖包；用户机
 
 ### 独立工厂制品
 
-pi/claude/codex 各有 package.ts，维护适配器版本 1.0.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
+pi/claude/codex/memory 各有 package.ts，维护适配器版本 1.0.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
 
 运行包包装器保留整个依赖闭包引用，真实 close 成功后释放，stop 或失败关闭不释放。历史 schema 1 的 Pi 工具摘要保持 toolsIdentity，其它依赖按名称固定摘要；不改写旧会话内容。
+
+自定义 memory 包使用同一工厂协议和包引用机制，细节见 [记忆引擎契约](memory/CONTRACT.md)。其自研运行库与适配器同版，不需要厂商 SDK；模型请求、知识权限、工具回执和失败界限均沿宿主注入端口。

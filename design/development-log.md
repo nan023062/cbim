@@ -1,4 +1,21 @@
 
+## 2026-11-14 引擎架构第 6 步（b）：独立记忆 Loop 与完整应用验证
+
+按继续实施授权，新增 memory 官方包，必填生成/embedding 双模型，真实受控知识读取、带出处语义检索和模型工具决定。知识提交后更新独立向量代际；失败保留已提交事实和调用 ID，不重放。八次模型决定、重复工具阻断、无进展超时及 30 分钟总上限共同限制运行；未知或未结束原生历史拒绝自动续跑。无 SDK 自研运行库与适配器同版，支持独立 ZIP。Forge 改为稳定统一构建入口，后续新增 E 不再修改被冷指纹覆盖的 Forge 清单。
+
+接通时发现 IPC 三个聊天入口残留固定三引擎枚举且缺 modelRoles，现全部从静态清单/角色 Schema 派生。主 Agent 完整草稿固定打开时 revision，冲突保留草稿；记忆角色与可用模型在能力列表显示，窄屏表单纵向排列。原生会话指纹根据静态 nativeHistoryFormat 验证 CBIM 格式，不默认套用 Codex。
+
+验证选择及实际命令：
+- pnpm exec vitest run tests/unit/logic/execution/memory-engine.test.ts tests/unit/logic/execution/memory-protocol.test.ts tests/unit/logic/engines/catalog.test.ts tests/unit/logic/engines/model-choices.test.ts：分别验证本包生命周期/双模型/索引复用/权限/写后索引失败/重复调用/八次上限/静默取消，以及协议、目录与角色筛选（17 个相关用例通过，分批显式执行）。
+- pnpm exec vitest run tests/memory-engine-application.test.ts：2 个隔离完整应用场景通过，实际 HTTP、知识事务、工具回执与真实预算账本；供应商为本地受控测试服务。成功场景角色分别结算；写后 embedding 缺 usage 场景记录 interrupted 和 unknown，正式知识保留，原提交只执行一次。初轮期望误写为 failed，按现有未知语义改为 interrupted，未改产品逻辑掩盖失败。
+- pnpm exec vitest run tests/model-json-requests.test.ts tests/native-session-files.test.ts tests/ipc-requests.test.ts：5/11/19 个通过，覆盖新增输入界限、原生格式、发送/排队/续聊完整角色参数。
+- pnpm exec vitest run tests/engine-adapter-package.test.ts tests/engine-production-boundary.test.ts：四包真实独立构建/加载，memory 无厂商依赖 ZIP；R 不含实现，C 不含目录或 SDK，增加 memory 静态声明前后 C 构建字节摘要一致。
+- pnpm exec vitest run tests/dependencies.test.ts -t "concrete engines depend|记忆包仅|引擎目录、模型"：23 个通过。仅 memory/storage 可调用公开原子文件机制，其它适配器不能借此获得平台访问边界。
+- node scripts/memory-engine-ui-smoke.mjs：5 项真实 React/Edge 检查、零 pageErrors；375px 截图已人工查看。第一次夹具缺合法主实例身份，已修正夹具后通过。
+- pnpm typecheck、pnpm check:test-modules（514 文件）、pnpm check:architecture（1577 文件/7562 边，零循环/违规）通过；源码注释、相关契约和受影响架构资料同步。
+
+首版限制：纯文本；最多 128 个 768 字符知识片段；缓存 16 MiB、会话 1 MiB；保留旧索引，不自动清理或迁移未完成原生上下文。未调用外部真实模型、未运行全仓回归、未签名发布/安装生产版本。上述本地证据不等同真实供应商质量或桌面升级验收。
+
 ## 2026-11-14 引擎架构第 6 步（a）：双模型请求与派生索引
 
 按用户继续实施授权，加入非流式生成/向量请求门禁与纯知识索引规则。正式知识不变，完整来源/embedding 配置/维度固定索引代际；失败不改旧代。请求共用单轮停止屏障，预算启用时精确比对角色快照并先结算后交付，无重试。

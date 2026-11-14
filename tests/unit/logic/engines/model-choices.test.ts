@@ -15,3 +15,9 @@ test('旧 primary 选型保持可用，额外未声明角色及被禁用主模�
   expect(engineSelectionAvailable({...value,modelRoles:{version:2,roles:{unknown:{kind:'embedding',profileId:value.profileId,modelId:value.modelId}}}},models)).toBe(false);
   expect(engineSelectionAvailable(value,{...models,profiles:[{...models.profiles[0],models:[{...models.profiles[0].models[0],enabled:false}]}]})).toBe(false);
 });
+test('记忆引擎必填向量角色，纯生成配置不可发送；额外角色不能被主型号代替',()=>{
+  const value={engine:'memory' as const,profileId:models.profiles[0].id,modelId:'shared'};
+  expect(engineSelectionAvailable(value,models)).toBe(false);
+  expect(engineSelectionAvailable({...value,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profileId:value.profileId,modelId:'shared'}}}},models)).toBe(true);
+  expect(engineSelectionAvailable({...value,modelRoles:{version:2,roles:{embedding:{kind:'generation',profileId:value.profileId,modelId:'shared'}}}},models)).toBe(false);
+});

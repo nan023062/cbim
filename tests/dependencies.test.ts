@@ -545,3 +545,10 @@ test('concrete engines depend on domain contracts; only execution assembly may s
     expect(result.ok).toBe(directory==='execution/assembly');
   }
 });
+test('记忆包仅私有存储实现可用原子文件机制，不能扩散到其它适配器',()=>{
+  const target='src/core/platform/node/files/index.ts';
+  for(const from of ['src/logic/execution/engines/memory/storage.ts','src/logic/execution/engines/memory/engine.ts','src/logic/execution/engines/pi/engine.ts']){
+    const spec=path.posix.relative(path.posix.dirname(from),target),result=audit({[from]:`import {atomic} from '${spec}';`,[target]:'export const atomic=()=>{};'});
+    expect(result.ok).toBe(from.endsWith('/memory/storage.ts'));
+  }
+});

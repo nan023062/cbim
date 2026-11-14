@@ -21,7 +21,7 @@
 | [conversation-topics.css](conversation-topics.css) | 话题摘要与阅读区域的响应式排版。 |
 | [conversation-topics.ts](conversation-topics.ts) | 将主会话公开运行和派发任务投影为话题内容，供群聊导航使用。 |
 | [conversation.css](conversation.css) | 对齐 Cindy 的消息列、工作记录折叠行及一体式底部输入框。 |
-| [Conversation.tsx](Conversation.tsx) | 会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
+| [Conversation.tsx](Conversation.tsx) | 持有主 Agent 多角色草稿版本的会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。 |
 | [ConversationEntries.tsx](ConversationEntries.tsx) | 侧栏与历史菜单共用的对话条目、重命名和移除入口。 |
 | [ConversationToolCall.tsx](ConversationToolCall.tsx) | 在原工具位置组合其完整执行轨道与已验证派发任务的最新公开状态。 |
 | [ConversationTopics.tsx](ConversationTopics.tsx) | 主 Session 的群聊话题列表和单话题阅读区域，包含归属明确的调度、回传与任务入口。 |

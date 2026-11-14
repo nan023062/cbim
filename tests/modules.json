@@ -196,7 +196,8 @@
           "tests/workspace-member-tools-pi.test.ts",
           "tests/workspace-navigation.test.ts",
           "tests/workspace-packages.test.ts",
-          "tests/workspace.test.ts"
+          "tests/workspace.test.ts",
+          "tests/memory-engine-application.test.ts"
         ]
       }
     },
@@ -1541,6 +1542,19 @@
         "contract": [
           "tests/engine-release.test.ts"
         ],
+        "integration": []
+      }
+    },
+    "logic/execution/engines/memory": {
+      "roots": [
+        "src/logic/execution/engines/memory/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/unit/logic/execution/memory-engine.test.ts",
+          "tests/unit/logic/execution/memory-protocol.test.ts"
+        ],
+        "contract": [],
         "integration": []
       }
     }

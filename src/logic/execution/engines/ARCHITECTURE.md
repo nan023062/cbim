@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [native-tools.ts](native-tools.ts) | 向宿主托管引擎提供已有文件/命令工具操作，复用 Pi SDK 的独立工具实现而不创建 Pi Loop。 |
-| [run-inactivity.ts](run-inactivity.ts) | 三种引擎共用的无进展计时器；适配器识别原生增量，工具事件复用统一协议。 |
+| [run-inactivity.ts](run-inactivity.ts) | 官方引擎共用的无进展计时器；适配器识别真实增量，工具事件复用统一协议。 |
 | [runtime-binding.ts](runtime-binding.ts) | 在具体引擎之外固定原生会话使用的受管 E 包身份，保存在原 agentHome 的私有旁路记录。 |
 
 ## 架构类图
@@ -24,6 +24,9 @@ class N_src_logic_execution_engines_claude["claude/"] {
 class N_src_logic_execution_engines_codex["codex/"] {
   <<directory>>
 }
+class N_src_logic_execution_engines_memory["memory/"] {
+  <<directory>>
+}
 class N_src_logic_execution_engines_pi["pi/"] {
   <<directory>>
 }
@@ -33,20 +36,18 @@ class N_src_logic_execution_engines_transport["transport/"] {
 class N_src_logic_execution_engines_native_tools_ts["native-tools.ts"] {
   <<module>>
 }
-class N_src_logic_execution_engines_run_inactivity_ts["run-inactivity.ts"] {
-  <<module>>
-}
-N_src_logic_execution_engines_claude ..> N_src_logic_execution_engines_run_inactivity_ts : 导入依赖
 N_src_logic_execution_engines_claude ..> N_src_logic_execution_engines_transport : 导入依赖
 N_src_logic_execution_engines_codex ..> N_src_logic_execution_engines_native_tools_ts : 导入依赖
-N_src_logic_execution_engines_codex ..> N_src_logic_execution_engines_run_inactivity_ts : 导入依赖
 N_src_logic_execution_engines_codex ..> N_src_logic_execution_engines_transport : 导入依赖
+N_src_logic_execution_engines_memory ..> N_src_logic_execution_engines_transport : 导入依赖
 N_src_logic_execution_engines_pi ..> N_src_logic_execution_engines_transport : 导入依赖
-N_src_logic_execution_engines_pi ..> N_src_logic_execution_engines_run_inactivity_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_execution_engines_run_inactivity_ts["run-inactivity.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
   <<module>>
 }
@@ -59,6 +60,8 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
 - `codex` → `native-tools.ts`：导入。
 - `codex` → `run-inactivity.ts`：导入。
 - `codex` → `transport`：导入。
+- `memory` → `transport`：导入。
+- `memory` → `run-inactivity.ts`：导入。
 - `pi` → `transport`：导入。
 - `pi` → `run-inactivity.ts`：导入。
 
@@ -89,6 +92,7 @@ class N_src_logic_execution_engines_runtime_binding_ts["runtime-binding.ts"] {
 
 - [claude/](claude/ARCHITECTURE.md)：Claude Agent SDK 适配、内部工具门禁与真实原生会话生命周期；环境和账号归 CBIM，工具复用上层契约，不提供对外 MCP。原生工具开关只读可信能力的 disableNativeTools 策略，不认识具体业务工具槽位。 SDK 入口可由签名 E 包提供，仍限制适配器支持的版本，账号/历史目录不随缓存迁移。
 - [codex/](codex/ARCHITECTURE.md)：Codex App Server 的受管进程、双向 RPC、真实 thread/turn、Responses 代理与动态工具；固定 CLI 和私有账号目录，内置执行关闭，工具经宿主授权、预算结算及同一回执；宿主原生工具目录按可信能力的 disableNativeTools 策略收窄。 原生 EXE 与 Pi 宿主工具库分别使用可信受管包，不重新编译或借用外部客户端。
+- [memory/](memory/ARCHITECTURE.md)：官方自定义记忆 Loop：生成/向量双模型、受控知识工具、八回合限额与无进展中断；私有会话先同步，未知历史拒绝重放，派生向量缓存按完整代际隔离。
 - [pi/](pi/ARCHITECTURE.md)：Pi 协议、临时桥与运行参数；插入在原生状态查询后复核取消，发送后只凭queued回复确认，不自动重试。工具经一次性gate授权并校验结果；结构验证仅在正式成员有冻结要求及真实端口时公开。受控续执行在启动及加载原生会话后再核冻结证明，回传作为custom数据，不冒充用户授权。 范围模式只注册cbim工具，转发受限读取与隔离Node的原调用身份。 主角色提示要求未配置自定义岗位时自己执行；内置默认执行角色已退役，不能登记后绕过主会话。 受控文件工具仅在真实端口存在时安装，维持桥接容量及调用授权，工具结果和实际文件操作终态分别校验。 CLI 入口由宿主固定包解析；进程、工具门禁与会话验证保持原协议。
 - [transport/](transport/ARCHITECTURE.md)：引擎 HTTP 请求预算与计量适配。通过 Logic budget/rules 的 RequestBudgetPort 预占、结算或记录未知结果；网络实现与稳定模型端口分离，保留各引擎错误和取消语义。
 
@@ -150,6 +154,8 @@ Pi 的 CLI、Claude Agent SDK 和 Codex EXE 使用预编译依赖包；用户机
 
 ### 独立工厂制品
 
-pi/claude/codex 各有 package.ts，维护适配器版本 1.0.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
+pi/claude/codex/memory 各有 package.ts，维护适配器版本 1.0.0，与厂商 SDK 版本分开。scripts/build-engine-adapters.mjs 可按官方 ID 单独生成 adapter.cjs 和 adapter.json；构建结果可在不加载 SDK、不连接模型时实例化与关闭。现有具体适配器继续持有取消、超时续期、原生历史和未知工具行为。源码开发装配使用兼容表；正式构建把适配器写入各自 E 归档，并通过通用加载器读取。
 
 运行包包装器保留整个依赖闭包引用，真实 close 成功后释放，stop 或失败关闭不释放。历史 schema 1 的 Pi 工具摘要保持 toolsIdentity，其它依赖按名称固定摘要；不改写旧会话内容。
+
+自定义 memory 包使用同一工厂协议和包引用机制，细节见 [记忆引擎契约](memory/CONTRACT.md)。其自研运行库与适配器同版，不需要厂商 SDK；模型请求、知识权限、工具回执和失败界限均沿宿主注入端口。

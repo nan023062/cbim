@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [native-session-files.ts](native-session-files.ts) | 在本工作区受管 Pi/Claude Code/Codex 会话目录内核实已关闭的原生上下文，供成员检查点与续执行使用。 |
+| [native-session-files.ts](native-session-files.ts) | 在本工作区受管会话目录内按官方声明的原生格式核实已关闭上下文，供成员检查点与续执行使用。 |
 | [tool-guard.ts](tool-guard.ts) | 对显式知识库访问和部分路径别名做前置拒绝；属于防误操作策略而非 OS 沙箱。 |
 
 ## 架构类图

@@ -15,7 +15,7 @@
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
 | [engine-runtime.ts](engine-runtime.ts) | 执行装配向引擎适配器传递的已解析运行包契约，不包含下载、签名或安装实现；adapter 与 SDK 入口、版本分别保存。 |
 | [engine-session.ts](engine-session.ts) | 主对话续聊或更换引擎时选择可靠原生历史，对无交互启动失败只转交已记录的公开输入。 |
-| [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成引擎无关的目录与调用端口。 |
+| [engine-tools.ts](engine-tools.ts) | 将可信装配注入的能力组装成 SDK 与自定义 Loop 共用的目录与调用端口。 |
 | [index.ts](index.ts) | 大脑执行层：对外重导出 Loop 契约、主对话实例绑定、成员执行绑定、可信回注来源、存储端口与运行时。 |
 | [input-source.ts](input-source.ts) | 定义可信入口提交的成员结果、目标返工反馈、真实用户补充与人工决定系统转交来源。 |
 | [member-run.ts](member-run.ts) | 定义独立成员执行的可信身份与原生会话启动参数，供调度、大脑和运行日志共用。 |

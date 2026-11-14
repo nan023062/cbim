@@ -103,6 +103,7 @@ export const domainPublicEntries=new Set([
   "src/logic/knowledge/rules/ports.ts",
   "src/logic/knowledge/rules/read-models/index.ts",
   "src/logic/knowledge/rules/tool-output-base.ts",
+  "src/logic/knowledge/rules/memory-index.ts",
   "src/logic/knowledge/rules/tool-output-builtins.ts",
   "src/logic/knowledge/rules/tool-output-queries.ts",
   "src/logic/knowledge/rules/tool-output-transactions.ts",

@@ -7,7 +7,7 @@ import type {LlmApi} from '../../models';
 import type {ModelRoleDescriptor} from '../model-roles';
 
 /** 单引擎的便携能力声明；fallbackApi 只在主接口不兼容时使用，不转换模型 ID 或请求。 */
-interface EngineDeclaration {id:string;storageDirectory:string;packageDependencies?:readonly string[];label:string;businessTypes:readonly string[];supportedApis:readonly LlmApi[];fallbackApi?:LlmApi;additionalModelRoles?:readonly ModelRoleDescriptor[]}
+interface EngineDeclaration {id:string;storageDirectory:string;nativeHistoryFormat:'pi'|'claude'|'codex'|'cbim';packageDependencies?:readonly string[];label:string;businessTypes:readonly string[];supportedApis:readonly LlmApi[];fallbackApi?:LlmApi;additionalModelRoles?:readonly ModelRoleDescriptor[]}
 
 /** 仅开发者通过代码增加引擎；运行时无法修改清单或其中的能力数组。 */
 function declareEngine<const T extends EngineDeclaration>(value:T):Readonly<T>{
@@ -17,9 +17,10 @@ function declareEngine<const T extends EngineDeclaration>(value:T):Readonly<T>{
   Object.freeze(value.businessTypes);Object.freeze(value.supportedApis);return Object.freeze(value);
 }
 export const supportedEngines=Object.freeze([
-  declareEngine({id:'pi',storageDirectory:'pi',label:'Pi',businessTypes:['通用任务','代码开发'],supportedApis:['openai-completions','openai-responses','anthropic-messages']}),
-  declareEngine({id:'claude-code',storageDirectory:'claude',label:'Claude Code',businessTypes:['代码开发','代码审查'],supportedApis:['anthropic-messages'],fallbackApi:'anthropic-messages'}),
-  declareEngine({id:'codex',storageDirectory:'codex',packageDependencies:['pi'],label:'Codex',businessTypes:['代码开发','代码审查'],supportedApis:['openai-responses'],fallbackApi:'openai-responses'}),
+  declareEngine({id:'pi',storageDirectory:'pi',nativeHistoryFormat:'pi',label:'Pi',businessTypes:['通用任务','代码开发'],supportedApis:['openai-completions','openai-responses','anthropic-messages']}),
+  declareEngine({id:'claude-code',storageDirectory:'claude',nativeHistoryFormat:'claude',label:'Claude Code',businessTypes:['代码开发','代码审查'],supportedApis:['anthropic-messages'],fallbackApi:'anthropic-messages'}),
+  declareEngine({id:'codex',storageDirectory:'codex',nativeHistoryFormat:'codex',packageDependencies:['pi'],label:'Codex',businessTypes:['代码开发','代码审查'],supportedApis:['openai-responses'],fallbackApi:'openai-responses'}),
+  declareEngine({id:'memory',storageDirectory:'memory',nativeHistoryFormat:'cbim',label:'记忆引擎',businessTypes:['知识库管理','语义检索','摘要与压缩'],supportedApis:['openai-completions'],additionalModelRoles:[{id:'embedding',label:'记忆向量模型',kind:'embedding',required:true}]}),
 ] as const);
 
 export type LoopEngine=typeof supportedEngines[number]['id'];

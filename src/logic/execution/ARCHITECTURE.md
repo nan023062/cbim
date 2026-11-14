@@ -34,6 +34,7 @@ class N_src_logic_execution_ports["ports/"] {
 }
 N_src_logic_execution_assembly ..> N_src_logic_execution_engines : 导入依赖
 N_src_logic_execution_assembly ..> N_src_logic_execution_context : 导入依赖
+N_src_logic_execution_engines ..> N_src_logic_execution_ports : 导入依赖
 ```
 
 ```mermaid
@@ -55,6 +56,7 @@ N_src_logic_execution_storage ..> N_src_logic_execution_rules : 导入依赖
 - `assembly` → `context`：导入。
 - `context` → `rules`：导入。
 - `engines` → `rules`：导入。
+- `engines` → `ports`：导入。
 - `rules` → `ports`：导入。
 - `storage` → `rules`：导入。
 - `storage` → `ports`：导入。

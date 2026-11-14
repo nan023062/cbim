@@ -2,6 +2,11 @@ import {expect,it,vi} from 'vitest';
 import {dispatchApplication} from '../src/bridge/server/ipc/dispatch';
 import type {ApplicationServices} from '../src/bridge/server/ipc/services';
 import {checkedIpcCall,parseIpcRequest} from '../src/bridge/contracts/ipc-call';
+it.each(['loop.chat','loop.enqueue','loop.resume'] as const)('%s 使用官方静态清单并完整保留模型角色',action=>{
+  const modelRoles={version:2,roles:{embedding:{kind:'embedding',profileId:'11111111-1111-4111-8111-111111111111',modelId:'vector'}}};
+  const input={id:'workspace',...(action==='loop.chat'?{}:{taskId:'task'}),...(action==='loop.resume'?{runId:'run'}:{}),message:'continue',options:{engine:'memory',modelRoles}};
+  expect(parseIpcRequest(action,input)).toEqual(input);expect(()=>parseIpcRequest(action,{...input,options:{...input.options,engine:'user-plugin'}})).toThrow();
+});
 
 it.each([
   ['workspace.members.commit','MEMBER_INPUT_INVALID'],['workspace.ownerships.commit','OWNERSHIP_INPUT'],

@@ -5,7 +5,8 @@
 import {engineAdapter as pi} from '../engines/pi/package';
 import {engineAdapter as claude} from '../engines/claude/package';
 import {engineAdapter as codex} from '../engines/codex/package';
+import {engineAdapter as memory} from '../engines/memory/package';
 import {checkedEngineAdapter} from '../rules/engine-adapter';
-const adapters=[pi,claude,codex] as const;
+const adapters=[pi,claude,codex,memory] as const;
 /** 只查开发者静态注册，无默认引擎回退或失败重试。 */
 export function sourceEngineAdapter(id:string){return checkedEngineAdapter(adapters.find(adapter=>adapter.id===id),{id})}

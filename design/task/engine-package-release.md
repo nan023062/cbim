@@ -10,10 +10,13 @@
 
 ```powershell
 pnpm make:engines pi
+pnpm make:engines memory
 pnpm sign:engines <候选目录> <当前runtime-cold.json> <下一发布序号> <说明文件> <上一版latest.json>
 ```
 
 不传引擎 ID 构建全部官方包；传 Codex 时连同它的固定 Pi 依赖构建。同字节依赖仍使用相同摘要，不要求客户端重下。签名私钥沿用 `CBIM_RUNTIME_SIGNING_KEY`，不生成临时生产密钥。首次建立通道可以省略上一版索引；之后必须提供当前公开的已签名索引，避免丢失其他引擎及历史固定依赖。
+
+memory 是自定义 Loop，包内不含厂商 Agent SDK；nativeVersion 与 adapter.version 同版，原生入口就是 adapter.cjs。它与厂商包共同走归档、签名、独立安装和版本不可变校验，不额外设计用户脚本或 npm 安装入口。
 
 签名命令核查 Git 冻结、归档大小/摘要、展开文件清单、版本不可变、依赖闭包、公钥与发布序号。它只生成候选，不上传或启用公开通道。候选输出包含包版本、上游版本、摘要和 `published:false`。
 

@@ -10,7 +10,8 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器。 |
+| [agent-model-form.css](agent-model-form.css) | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
+| [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
 | [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
 | [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
@@ -20,6 +21,15 @@
 | [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
 
 ## 架构类图
+
+### agent-model-form.css
+
+```mermaid
+classDiagram
+class N_src_view_components_agent_model_form_css["agent-model-form.css"] {
+  <<stylesheet>>
+}
+```
 
 ### AgentModelForm.tsx
 
@@ -31,7 +41,7 @@ class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[EngineModelPicker.tsx](EngineModelPicker.tsx)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[EngineModelPicker.tsx](EngineModelPicker.tsx)、[agent-model-form.css](agent-model-form.css)。
 
 ### BrandMark.tsx
 
@@ -131,6 +141,9 @@ class N_src_view_components_AgentModelForm_tsx["AgentModelForm.tsx"] {
 class N_src_view_components_EngineModelPicker_tsx["EngineModelPicker.tsx"] {
   <<component>>
 }
+class N_src_view_components_agent_model_form_css["agent-model-form.css"] {
+  <<stylesheet>>
+}
 class N_src_view_components_Empty_tsx["Empty.tsx"] {
   <<component>>
 }
@@ -144,6 +157,7 @@ class N_src_view_components_repository_scope_css["repository-scope.css"] {
   <<stylesheet>>
 }
 N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_EngineModelPicker_tsx : 导入依赖
+N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_agent_model_form_css : 导入依赖
 N_src_view_components_Empty_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
 N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repository_scope_css : 导入依赖
 ```

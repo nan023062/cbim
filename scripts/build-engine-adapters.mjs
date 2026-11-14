@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {build} from 'vite';
 
 // 开发者源码入口，不读取工作区配置或远端脚本。安装后的加载只使用已验证包清单。
-export const adapterSources=Object.freeze({pi:'pi','claude-code':'claude',codex:'codex'});
+export const adapterSources=Object.freeze({pi:'pi','claude-code':'claude',codex:'codex',memory:'memory'});
 /** 构建可单独加载的 CJS 工厂；SDK 生产依赖由引擎包原有构建流程提供。 */
 export async function buildEngineAdapter(kind,destination){
   const source=adapterSources[kind];if(!source)throw Error('没有已登记的官方引擎构建入口：'+kind);

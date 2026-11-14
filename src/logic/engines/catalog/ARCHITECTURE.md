@@ -25,6 +25,7 @@ class N_src_logic_engines_catalog_supported_engines_ts_EngineDeclaration["Engine
   <<interface>>
   +id
   +storageDirectory
+  +nativeHistoryFormat
   +packageDependencies
   +label
   +businessTypes

@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import {supportedEngines,engineDescriptor,engineModelRequirement,engineSupportsApi,loopEngineSchema,connectionForEngine} from '../../../../src/logic/engines';
 
 test('静态清单统一提供身份、显示名和业务类型；外部不能追加引擎或改变协议',()=>{
-  expect(supportedEngines.map(engine=>engine.id)).toEqual(['pi','claude-code','codex']);
+  expect(supportedEngines.map(engine=>engine.id)).toEqual(['pi','claude-code','codex','memory']);
   expect(loopEngineSchema.options).toEqual(supportedEngines.map(engine=>engine.id));
   expect(new Set(supportedEngines.map(engine=>engine.id)).size).toBe(supportedEngines.length);
   expect(Object.isFrozen(supportedEngines)).toBe(true);

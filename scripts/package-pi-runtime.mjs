@@ -9,6 +9,11 @@ export const packagePiRuntime=async destination=>{await packageRuntime(destinati
 // Claude 的平台二进制及依赖同样独立随包，不复用其他客户端的安装。
 export const packageClaudeRuntime=async destination=>{await packageRuntime(destination,'@anthropic-ai/claude-agent-sdk');await buildEngineAdapter('claude-code',destination)};
 export const packageCodexRuntime=async destination=>{await packageRuntime(destination,'@openai/codex');await buildEngineAdapter('codex',destination)};
+// 自定义领域 Loop 没有第三方 Agent SDK；包只含独立适配器与其静态依赖。
+export const packageMemoryRuntime=async destination=>{await buildEngineAdapter('memory',destination)};
+// 冷包 Forge 配置只调用这个稳定入口，新增 E 不改变被冷指纹覆盖的 Forge 文件。
+export const officialEngineBuilders=Object.freeze({pi:{directory:'pi-runtime',build:packagePiRuntime},'claude-code':{directory:'claude-runtime',build:packageClaudeRuntime},codex:{directory:'codex-runtime',build:packageCodexRuntime},memory:{directory:'memory-runtime',build:packageMemoryRuntime}});
+export async function packageOfficialEngineRuntimes(root){for(const builder of Object.values(officialEngineBuilders))await builder.build(path.join(root,builder.directory))}
 async function packageRuntime(destination,packageName){
   const copied=new Map(),hoisted=new Map();
   const require=createRequire(import.meta.url);

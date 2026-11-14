@@ -25,6 +25,8 @@ export class ModelJsonRequests {
   /** 不猜兼容供应商是否支持 dimensions 参数；按冻结维度验证完整返回后才构建索引。 */
   embed(input:readonly string[]){
     if(!input.length||input.length>64||input.some(text=>!text.length))throw Error('向量输入必须为 1–64 个非空片段');
+    const model=this.llm.modelRoles?.embedding.profile;
+    if(model?.api!=='openai-embeddings'||input.reduce((sum,text)=>sum+Buffer.byteLength(text),0)>model.inputTokens)throw Error('向量输入超过冻结模型的保守输入上限，请缩短查询或片段');
     return this.request('embedding',{input,encoding_format:'float'});
   }
   private async request(role:'primary'|'embedding',payload:Record<string,unknown>):Promise<Record<string,any>>{

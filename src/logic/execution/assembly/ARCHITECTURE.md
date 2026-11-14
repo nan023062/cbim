@@ -27,7 +27,7 @@ class N_src_logic_execution_assembly_engine_adapters_ts["engine-adapters.ts"] {
 }
 ```
 
-直接依赖：[../engines/pi/package.ts](../engines/pi/package.ts)、[../engines/claude/package.ts](../engines/claude/package.ts)、[../engines/codex/package.ts](../engines/codex/package.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)。
+直接依赖：[../engines/pi/package.ts](../engines/pi/package.ts)、[../engines/claude/package.ts](../engines/claude/package.ts)、[../engines/codex/package.ts](../engines/codex/package.ts)、[../engines/memory/package.ts](../engines/memory/package.ts)、[../rules/engine-adapter.ts](../rules/engine-adapter.ts)。
 
 ### engine-package-loader.ts
 

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceRetentionChecks} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {parse} from 'yaml';
@@ -16,6 +16,7 @@ assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
 assert.equal(process.env.GITHUB_REPOSITORY, 'nan023062/cbim');
 const {version, previousVersion, previousUpdateFlow, commit, expected, mode} = acceptanceInputs(process.env);
+const retentionChecks = acceptanceRetentionChecks(previousVersion);
 const transferExpectation = acceptanceTransferExpectation(process.env, {mode, previousUpdateFlow});
 const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-acceptance');
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
@@ -240,7 +241,7 @@ try {
   }
   await setup(old, previousVersion); const previousCache = await recordInstallerCache('previous');
   // 0.1.12 已修正 NSIS 缓存归属；先证明真实安装产生了准确旧包，不能手动补足差分前提。
-  if (['0.1.12', '0.1.13', '0.1.14', '0.1.15'].includes(previousVersion)) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
+  if (retentionChecks.installerCache) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
   let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
@@ -248,7 +249,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15'].includes(previousVersion)) {
+  if (retentionChecks.mainAgentAndAutomation) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};

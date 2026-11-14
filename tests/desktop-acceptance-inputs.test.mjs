@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceRetentionChecks} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
 
@@ -95,3 +95,8 @@ it.each(['candidate','online'])('pins the released 0.1.16 prefetch client for th
   expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.17',previousVersion:'0.1.16',previousUpdateFlow:'prefetch',mode});
   expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
 });
+
+it.each([['0.1.0',false,false],['0.1.6',false,false],['0.1.7',false,true],['0.1.11',false,true],['0.1.12',true,true],['0.1.15',true,true],['0.1.16',true,true]])('retains every existing capability of %s', (version,installerCache,mainAgentAndAutomation)=>{
+  expect(acceptanceRetentionChecks(version)).toEqual({installerCache,mainAgentAndAutomation});
+});
+it.each(['0.1.17','0.2.0'])('rejects an unverified retention source %s', version=>{expect(()=>acceptanceRetentionChecks(version)).toThrow()});

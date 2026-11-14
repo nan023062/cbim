@@ -1,3 +1,9 @@
+## 2026-11-14 安装验收的旧版本能力覆盖修正
+
+回读 43568253630 报告发现：0.1.16 虽通过升级输入校验，但验收器另两处旧版本清单止于 0.1.15，导致主 Agent/自动化显示 not-applicable，且未断言旧安装缓存。该首次成功仅覆盖报告中明确列出的项目，不能视为上述两项通过。
+
+将已核实旧版本作为共同前提，acceptanceRetentionChecks 对其已有能力统一选择旧缓存、主 Agent 配置和自动化保留检查，未核实未来版本仍拒绝。pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs --reporter=default 通过 68 项，包括能力引入边界、0.1.16 完整覆盖及未知版本拒绝。产品与冻结候选不变；重跑同一草稿的隔离安装与完整 CI，旧证据保留。
+
 ## 2026-11-14 官方引擎架构完整 CI 契约校准
 
 首次完整四片运行 43567438913（ab54c81e）覆盖 515 文件：3456 通过、2 失败、2 条件跳过。两处失败均核实为迁移后的旧断言：core-layer-contracts 未允许仅含静态描述与选型规则的 logic/engines 便携入口，具体适配器仍只允许 execution/assembly；engine-configuration 的 Chat 协议表遗漏已登记 memory。只调整精确入口和预期表，保留向量必填及停用模型拒绝。

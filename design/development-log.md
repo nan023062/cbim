@@ -1,3 +1,11 @@
+## 2026-11-15 C 0.1.18 / R2 发布准备
+
+用户授权推送全部引擎总览、PR 检查通过后发布。仓库 nan023062/cbim、账号 nan023062、默认 develop 已核实；master/develop 当前同为 4848c3cc，Python latest 为 327801733 / v1.0.2，公开冷包 C0.1.18/R1。计划复用固定 C 与四个 E，通过递增 R2 发布；须由 make:resources 的真实冷指纹检查确认，不能只按 diff 推定。
+
+核对 desktop-v0.1.18 的 SoftwareUpdateButton：沿用原后台准备与侧栏图标显式安装。runtime 验收仅扩展已核实的 0.1.18 输入，保留未知未来 C 的拒绝；隔离 runner 继续验证真实 C、签名候选、普通退出不激活、原数据和任务不重放、失败恢复。新增真实引擎安装清单/停用状态及缓存逐文件摘要和修改时间的前后对照，以及安装版默认总览、版本/状态、进入详情与启用后刷新；不修改用户客户端、不填充引擎缓存。
+
+选取 tests/runtime-acceptance-inputs.test.mjs 验证本次新增版本与既有输入边界。pnpm exec vitest run tests/runtime-acceptance-inputs.test.mjs --reporter=default：16 项通过；pnpm typecheck 与 git diff --check 通过，原 Ed25519 公钥匹配。新增验收逻辑属于显式隔离安装验证，不以输入单元测试宣称安装通过。产品 6 项及设置中心 13 组验证沿用 6eb31a5d 的实际证据；最终精确 head CI、候选/公开升级将在 PR 回填，尚未发布 R2。
+
 ## 2026-11-15 引擎设置“全部引擎”总览
 
 用户直接授权在引擎设置增加全部已安装引擎的版本与运行状态总览。核对公开 Issues 后无对应开放工单，现有 #65 与此需求无关；基于 0.1.18 发布收尾 4848c3cc，在 feat/engine-settings-overview 独立实现。

@@ -20,9 +20,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.16](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.16)，**C 0.1.16 / R1**，Windows 安装包未签名，资源清单沿用原 Ed25519 签名。本版将 Agent Team 的主子会话、话题排队和上下文隔离连接到办公室场景：每个主会话对应独立办公室，每位成员有一个逻辑子会话；派发和回传归属原话题，完成或撤销的任务默认折叠到历史。普通新输入进入排队，补充原任务须选择话题，由主 Agent 暂停相关执行后重新协调。详见[版本说明](design/releases/desktop-v0.1.16.md)。
+Windows x64 当前公开桌面版为 [desktop-v0.1.17](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.17)，**C 0.1.17 / R1**。引擎与模型设置解耦，官方 Pi、Claude Code、Codex 和 Memory 统一包协议，展示业务专长与可用模型，并支持独立安装、更新、停用和移除。同一受信包复用缓存，历史或模型声明不兼容时明确停止。Windows 安装包未签名，资源与引擎索引沿用原 Ed25519 签名；详见[公开版本说明](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.17)。
 
-当前版本每分钟检查更新，在后台准备资源或安装包；就绪后由用户显式点击升级，普通退出不会应用。已验证真实 **0.1.15/R1 → 公开 R4 → 0.1.16/R1** 路径：先应用旧版资源更新，再通过实际 Range 差分下载新安装包，无全量回退，原工作区、模型、会话、知识及自动化保留且无重放。完整证据与限制见[0.1.16 发布验收](design/verification/desktop-release-0.1.16-20261114.md)。Pi、Claude Code、Codex 继续使用固定独立 E 包，首次使用需联网下载；关闭或离线的客户端需启动并联网。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+当前版本每分钟检查更新，在后台准备资源或安装包；就绪后由用户显式点击升级，普通退出不会应用。已验证真实 **0.1.16 → 0.1.17** 公开差分下载、无全量回退、重开复用缓存，以及原工作区、模型、会话、知识和自动化保留且无重放。完整证据见[0.1.17 发布验收](design/verification/desktop-release-0.1.17-20261114.md)。本轮真实生成模型验收为 DeepSeek/Pi；Memory 需要生成模型与向量模型，真实双模型另验。首次使用未安装的引擎需要联网；引擎仅由开发者提供。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 

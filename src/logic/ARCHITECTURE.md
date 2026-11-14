@@ -168,8 +168,8 @@ class N_src_logic_workspace["workspace/"] {
 - `automation` → `team`：导入。
 - `budget` → `team`：导入。
 - `budget` → `dispatch`：导入。
+- `budget` → `engines`：导入。
 - `budget` → `tasks`：导入。
-- `budget` → `models`：导入。
 - `budget` → `execution`：导入。
 - `budget` → `knowledge`：导入。
 - `connectors` → `tools`：导入。

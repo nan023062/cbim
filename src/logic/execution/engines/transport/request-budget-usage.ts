@@ -4,7 +4,7 @@
  * 设计原因：引擎展示统计可能为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
  * 中断诊断只取已知协议原因，不回显供应商任意错误正文；仍阻断终态和工具，不重试或补造可靠用量。
  */
-import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../../budget/rules/model-request-budget';
+import {requestBudgetUsageSchema,type RequestBudgetUsage,type GenerationBudgetModel} from '../../../budget/rules/model-request-budget';
 import {fail} from '../../../../core/errors';
 
 const integer=(v:unknown):number=>{if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0)throw Error('请求用量缺失或不是安全非负整数');return v};
@@ -31,7 +31,7 @@ export class RequestBudgetUsageStream {
   static readonly frameBytes=8*1024*1024;
   private readonly decoder=new TextDecoder('utf-8',{fatal:true});
   private pending='';private bytes=0;private result?:RequestBudgetUsage;private terminal?:string;private started?:RequestBudgetUsage;private ended=false;private finishSeen=false;
-  constructor(private readonly api:RequestBudgetModel['api']){}
+  constructor(private readonly api:GenerationBudgetModel['api']){}
   /** 返回可立即转发的非终态帧；终态只由 finish 在完整 EOF 后提供。 */
   push(bytes:Uint8Array):string[]{
     this.bytes+=bytes.byteLength;if(this.bytes>RequestBudgetUsageStream.responseBytes)throw Error('请求响应超过受管上限');

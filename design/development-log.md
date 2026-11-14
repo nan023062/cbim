@@ -1,3 +1,10 @@
+## 2026-11-14：切片 2c——生成/向量逐角色预算
+
+- 基线 59366dc7。预算角色从完整冻结执行快照派生；primary 保留旧形状，额外角色同时保存角色配置 hash 与完整绑定 hash，成员 Store 审计逐字段核容量、身份、价格。向量只有输入容量、维度与输入价格，不假造输出上限；请求 maxOutputTokens=0 仅对向量合法。旧生成账本不补字段、不重算历史。
+- 同周期全部角色共享原准入、可靠阶段和未知停止屏障；向量不得报告输出/缓存用量。请求结果未知或结算不可验证时保留预留，重开不释放或重试。生成 SSE 传输明确拒绝向量操作；向量 HTTP 的实际消费留在记忆引擎切片，预算服务不联网。
+- 按受影响规则、服务、传输和原周期消费者运行 pnpm exec vitest run tests/unit/logic/budget/model-role-rules.test.ts tests/unit/logic/budget/model-role-service.test.ts tests/model-request-budget.test.ts tests/model-request-budget-transport.test.ts tests/model-request-budget-usage.test.ts tests/request-budget-ports.test.ts tests/scope-usage-service.test.ts --reporter=dot：7 文件 43/43。覆盖角色价格伪造、完整绑定切换、向量计量、跨角色未知屏障与重开未决。
+- 新公开规则只加入预算服务原精确依赖白名单；服务改为消费无凭据公开预算配置，不依赖引擎服务。检查器 168 个用例先通过，仓库审计发现残留类型 import 后修正并单跑该用例通过（总 169）。最终 pnpm typecheck、pnpm check:test-modules（500 文件，151/155/194）、pnpm check:architecture（1530 文件，7418 依赖，0 循环/违规）通过。同步 budget/rules、budget/runtime、transport 的注释、契约和类图；未跑全仓、SDK、桌面或发布验收。
+
 ## 2026-11-14：切片 2b——Agent V2 角色引用与完整执行快照
 
 - 延续用户“依次实施后面的步骤”授权，基线 8cb0d5f7；本步仍在独立工作树开发，未动原 develop 发布资料。primary 保持原字段唯一事实，V2 modelRoles 只保存额外角色；官方声明控制必填、操作类型和型号范围，不允许用户注册角色或覆盖 primary。

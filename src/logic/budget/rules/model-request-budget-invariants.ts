@@ -1,10 +1,11 @@
 /**
  * 目录归属：logic/budget/rules/budget；请求与周期预算规则。
  * 作用定位：在唯一工作区 Store 提交与重放时核实请求身份、预算预留和不可改写的阶段链。
- * 设计原因：网络 IO 必须在持久事务外；只有精确预留能进入发送意图，终态记录允许停止后结算，但不能改写原预算或夹带业务变化。
+ * 设计原因：网络 IO 必须在持久事务外；只有精确预留能进入发送意图，额外角色核对完整执行绑定及逐字段计价，终态记录允许停止后结算，但不能改写原预算或夹带业务变化。
  */
 import {isDeepStrictEqual as equal} from 'node:util';
 import {fail} from '../../../core/errors';
+import {requestBudgetModelFor} from './model-request-configuration';
 import {workspaceMemberModelHash} from '../../team/rules/workspace-member-rules';
 import type {DispatchState,DispatchMutation,DispatchCommand} from '../../dispatch/rules/dispatch-storage';
 import {modelRequestBudgetChangeSchema,modelRequestBudgetLimits,type RequestBudgetIntent} from './model-request-budget';
@@ -19,7 +20,10 @@ function live(state:DispatchState,intent:RequestBudgetIntent){
   else{
     const task=state.graphs.find(g=>g.identity.rootSessionId===b.rootSessionId)?.tasks.find(t=>t.taskId===b.taskId),run=state.runs?.find(r=>r.binding.runId===b.runId);
     check(task?.scopeId===scope.scopeId&&task.activeRunId===b.runId&&task.status==='running'&&run?.status==='running'&&run.binding.workspaceId===b.workspaceId&&run.binding.rootSessionId===b.rootSessionId&&run.binding.taskId===b.taskId,'成员请求缺少当前实际领取的运行');
-    check(intent.model.configurationHash===workspaceMemberModelHash(run.model as Parameters<typeof workspaceMemberModelHash>[0]),'成员请求不能换用其它模型或计价');
+    if(intent.model.role){
+      let expected;try{expected=requestBudgetModelFor(run.model,intent.model.role.slot)}catch{check(false,'成员请求角色不属于原执行快照')}
+      check(equal(intent.model,expected),'成员请求角色、完整绑定或价格与原执行快照不一致');
+    }else check(intent.model.configurationHash===workspaceMemberModelHash(run.model as Parameters<typeof workspaceMemberModelHash>[0]),'成员请求不能换用其它模型或计价');
   }return scope;
 }
 /** 附录每次只保存一条事件和对应窄回执；旧缺省保留，任何请求历史都不因新事务被删除。 */

@@ -94,7 +94,7 @@ const moduleBoundaries=[
   {sources:['src/logic/budget/rules/model-request-budget-storage.ts'],allow:['src/logic/budget/rules/scope-budget.ts','src/logic/budget/rules/model-request-budget.ts']},
   {sources:['src/logic/execution/rules/engine-tools.ts'],allow:[]},
   {sources:['src/logic/execution/rules/index.ts'],allow:['src/logic/execution/rules/types.ts','src/logic/execution/rules/storage.ts','src/logic/execution/rules/runtime/runtime.ts','src/logic/execution/rules/member-run.ts','src/logic/execution/rules/input-source.ts','src/logic/execution/rules/conversation-binding.ts']},
-  {sources:['src/logic/budget/runtime/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/logic/budget/runtime/scope-budget-service.ts']},
+  {sources:['src/logic/budget/runtime/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/model-request-configuration.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/logic/budget/runtime/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/knowledge-data.ts']},

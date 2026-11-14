@@ -205,7 +205,9 @@
         "src/logic/budget/rules/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/unit/logic/budget/model-role-rules.test.ts"
+        ],
         "contract": [
           "tests/scope-usage-metering.test.ts"
         ],
@@ -693,7 +695,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/scope-usage-service.test.ts"
+          "tests/scope-usage-service.test.ts",
+          "tests/unit/logic/budget/model-role-service.test.ts"
         ],
         "contract": [],
         "integration": []

@@ -95,7 +95,7 @@ export const logicalBoundaries = [
     id:'request-budget-service', files:['src/logic/budget/runtime/model-request-budget-service.ts'],
     public:['src/logic/budget/runtime/model-request-budget-service.ts'],
     dependencies:['core-errors','pure-foundation','request-budget-port','model-rules'],
-    imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts'],external:['node:crypto'],
+    imports:['src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/model-request-configuration.ts','src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts'],external:['node:crypto'],
   },
   {
     id:'engine-tool-registry', files:['src/logic/execution/rules/engine-tools.ts'],

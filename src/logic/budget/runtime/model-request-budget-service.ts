@@ -2,16 +2,15 @@
  * 目录归属：logic/budget/runtime；预算准入与统计服务。
  * 作用定位：通过专用预算端口保存每个真实主/成员请求的预留、发送意图和终态，不读取或改写其它调度领域。
  * 设计原因：准入决定必须在同一事务读取全部预留，不能先读余额再独立扣减；内存主运行占位防止历史 run 冒充当前执行。
- * 职责边界：只返回后端可信端口，不发网络、不接受模型传入身份；重开和查询只读历史，不释放未决消耗。
+ * 职责边界：只返回后端可信端口，不发网络、不接受模型传入身份；重开和查询只读历史，不释放未决消耗；所有角色共享原周期停止屏障。
  */
 import {randomUUID} from 'node:crypto';
 import {fail} from '../../../core/errors';
 import type {RequestBudgetStore,RequestBudgetState,RequestBudgetAdmission} from '../rules/model-request-budget-storage';
-import {requestBudgetBindingSchema,requestBudgetModelSchema,requestBudgetQuerySchema,requestBudgetUsageSchema,type RequestBudgetBinding,type RequestBudgetIntent,type ModelRequestBudgetChange} from '../rules/model-request-budget';
-import {requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetCost,requestBudgetDecision,requestBudgetCommand,requestBudgetReceipt} from '../rules/model-request-budget-rules';
-import type {ResolvedLlm} from '../../models';
+import {requestBudgetBindingSchema,requestBudgetQuerySchema,requestBudgetUsageSchema,type RequestBudgetBinding,type RequestBudgetIntent,type ModelRequestBudgetChange} from '../rules/model-request-budget';
+import {requestBudgetInputCapacity,requestBudgetRecords,requestBudgetReport,requestBudgetReservation,requestBudgetCost,requestBudgetDecision,requestBudgetCommand,requestBudgetReceipt} from '../rules/model-request-budget-rules';
 import type {RequestBudgetPort,RequestBudgetTicket,RequestUnknownReason} from '../rules/request-budget';
-import {workspaceMemberModelHash} from '../../team/rules/workspace-member-rules';
+import {requestBudgetModelFor,type RequestBudgetExecutionModel} from '../rules/model-request-configuration';
 
 type Owner={entry:{id:string};instanceId:string;assert():void};
 /** 每个活动工作区仅一份；实例代际来自工作区所有权，不从磁盘请求或页面输入恢复。 */
@@ -20,19 +19,19 @@ export class ModelRequestBudgetService {
   private readonly stoppedScopes=new Set<string>();
   constructor(private readonly owner:Owner,private readonly store:RequestBudgetStore,private readonly budgets:RequestBudgetAdmission){}
   /** 主工厂已解析配置但尚未消费等待时调用；没有当前周期表示新目标，由其首次请求独立核验。 */
-  async preflight(rootSessionId:string,scopeId:string|undefined,llm:ResolvedLlm|undefined):Promise<void>{
+  async preflight(rootSessionId:string,scopeId:string|undefined,llm:RequestBudgetExecutionModel|undefined):Promise<void>{
     if(!scopeId)return;this.owner.assert();const state=await this.store.readBudget(),scope=state.scopes?.find(s=>s.scopeId===scopeId&&s.rootSessionId===rootSessionId);
     if(!scope?.budget?.policy.enabled||scope.budget.policy.enforcement!=='request')return;
     if(!llm)fail('MODEL_REQUEST_CONFIGURATION','逐请求预算缺少已解析模型，原等待保留');this.budgets.preflightRequest(state,scope,llm.profile);
   }
   /** 在真实 run 已登记之后装配；成员可以处于 starting，但 reserve/issue 必须等领取 running 落盘。 */
-  async forRun(input:{rootSessionId:string;taskId:string;runId:string;kind:'main'|'member';scopeId?:string},llm?:ResolvedLlm):Promise<RequestBudgetPort|undefined>{
+  async forRun(input:{rootSessionId:string;taskId:string;runId:string;kind:'main'|'member';scopeId?:string},llm?:RequestBudgetExecutionModel,role='primary'):Promise<RequestBudgetPort|undefined>{
     this.owner.assert();const state=await this.store.readBudget();
     const scope=input.kind==='main'?state.scopes?.find(s=>s.rootSessionId===input.rootSessionId&&s.runTracking?.mainRunIds.includes(input.runId)):state.scopes?.find(s=>s.scopeId===input.scopeId&&s.rootSessionId===input.rootSessionId);
     if(!scope?.budget?.policy.enabled||scope.budget.policy.enforcement!=='request')return;
     if(!llm)fail('MODEL_REQUEST_CONFIGURATION','逐请求预算缺少已解析的可信模型，未启动模型请求');
-    const p=llm.profile,binding=requestBudgetBindingSchema.parse({...input,scopeId:scope.scopeId,workspaceId:this.owner.entry.id,ownerInstanceId:this.owner.instanceId});
-    const model=requestBudgetModelSchema.parse({profileId:p.id,modelId:p.model,configurationHash:workspaceMemberModelHash(p),api:p.api,contextWindow:p.contextWindow,maxTokens:p.maxTokens,...(p.pricing?{pricing:p.pricing}:{})});
+    const binding=requestBudgetBindingSchema.parse({...input,scopeId:scope.scopeId,workspaceId:this.owner.entry.id,ownerInstanceId:this.owner.instanceId});
+    const model=requestBudgetModelFor(llm.profile,role);
     const policyRevision=scope.budget.policy.revision;
     return {model:structuredClone(model),reserve:async request=>{
       this.assertLive(binding);
@@ -66,6 +65,6 @@ export class ModelRequestBudgetService {
       const change={...next,requestId:intent.requestId,revision:revision+1,recordedAt:new Date().toISOString()} as ModelRequestBudgetChange;
       try{await this.store.transactBudget(requestBudgetCommand(change),async()=>{if(change.phase==='issuing'){this.assertLive(intent.binding);if(this.stoppedScopes.has(intent.binding.scopeId))fail('MODEL_REQUEST_UNVERIFIED','本周期已有未核实请求')}return {modelRequestBudgetChanges:[change],receipt:requestBudgetReceipt(change)}});revision++;phase=change.phase==='issuing'?'issuing':'terminal'}catch(error){if(phase==='issuing'||change.phase==='issuing')this.stoppedScopes.add(intent.binding.scopeId);throw error}finally{busy=false}
     };
-    return {requestId:intent.requestId,issue:()=>save({phase:'issuing'}),assertSend:()=>{this.assertLive(intent.binding);if(phase!=='issuing'||this.stoppedScopes.has(intent.binding.scopeId))fail('MODEL_REQUEST_UNVERIFIED','原请求已停止或有待核实消耗')},report:usage=>{const verified=requestBudgetUsageSchema.parse(usage);if(verified.input+verified.cacheRead+verified.cacheWrite>intent.model.contextWindow||verified.output>intent.maxOutputTokens)this.stoppedScopes.add(intent.binding.scopeId);return save({phase:'reported',usage:verified,estimatedCostUsd:requestBudgetCost(intent.model,verified)} as ModelRequestBudgetChange)},unknown:(reason:RequestUnknownReason)=>{this.stoppedScopes.add(intent.binding.scopeId);return save({phase:'unknown',reason} as ModelRequestBudgetChange)},notSent:reason=>save({phase:'not_sent',reason} as ModelRequestBudgetChange)};
+    return {requestId:intent.requestId,issue:()=>save({phase:'issuing'}),assertSend:()=>{this.assertLive(intent.binding);if(phase!=='issuing'||this.stoppedScopes.has(intent.binding.scopeId))fail('MODEL_REQUEST_UNVERIFIED','原请求已停止或有待核实消耗')},report:usage=>{const verified=requestBudgetUsageSchema.parse(usage);let cost:number|undefined;try{cost=requestBudgetCost(intent.model,verified)}catch(error){this.stoppedScopes.add(intent.binding.scopeId);throw error}if(verified.input+verified.cacheRead+verified.cacheWrite>requestBudgetInputCapacity(intent.model)||verified.output>intent.maxOutputTokens)this.stoppedScopes.add(intent.binding.scopeId);return save({phase:'reported',usage:verified,estimatedCostUsd:cost} as ModelRequestBudgetChange)},unknown:(reason:RequestUnknownReason)=>{this.stoppedScopes.add(intent.binding.scopeId);return save({phase:'unknown',reason} as ModelRequestBudgetChange)},notSent:reason=>save({phase:'not_sent',reason} as ModelRequestBudgetChange)};
   }
 }

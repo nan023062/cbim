@@ -5,6 +5,8 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 test.each([
+  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/budget/rules/model-request-configuration.ts',true],
+  ['src/logic/budget/runtime/model-request-budget-service.ts','src/logic/engines/service/index.ts',false],
   ['src/logic/team/rules/agent-runtime.ts','src/logic/engines/index.ts',true],
   ['src/logic/application/application.ts','src/logic/engines/service/index.ts',true],
   ['src/logic/engines/service/model-profiles.ts','src/logic/models/service/index.ts',true],

@@ -20,7 +20,8 @@
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
 | [BudgetSettings.tsx](BudgetSettings.tsx) | 设置中心的用量与预算子页，展示用户显式配置的新目标 Token/费用软限额，与全局并发独立保存。 |
 | [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
-| [EngineSettings.tsx](EngineSettings.tsx) | 选择官方引擎后，集中展示能力、兼容模型、安装版本、实时准备状态及包管理操作。 |
+| [EngineOverview.tsx](EngineOverview.tsx) | 设置页的已安装引擎总览，按官方清单展示当前版本、启停和实时运行占用。 |
+| [EngineSettings.tsx](EngineSettings.tsx) | 默认总览全部已安装引擎，选择具体引擎后集中展示能力、模型、版本、实时状态及包管理操作。 |
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
@@ -218,6 +219,18 @@ class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
 
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
 
+### EngineOverview.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_EngineOverview_tsx["EngineOverview.tsx"] {
+  <<component>>
+  +EngineOverview()
+}
+```
+
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)。
+
 ### EngineSettings.tsx
 
 ```mermaid
@@ -228,7 +241,7 @@ class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)。
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[EngineOverview.tsx](EngineOverview.tsx)。
 
 ### GitHubFeedbackSettings.tsx
 
@@ -431,6 +444,12 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 class N_src_view_settings_budget_settings_css["budget-settings.css"] {
   <<stylesheet>>
 }
+class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_EngineOverview_tsx["EngineOverview.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
@@ -440,21 +459,21 @@ class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
 class N_src_view_settings_models_css["models.css"] {
   <<stylesheet>>
 }
-class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
-  <<component>>
-}
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_css : 导入依赖
+N_src_view_settings_EngineSettings_tsx ..> N_src_view_settings_EngineOverview_tsx : 导入依赖
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_EmbeddingModels_tsx : 导入依赖
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_models_css : 导入依赖
-N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
+class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
 class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
@@ -463,18 +482,18 @@ class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
 class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
-  <<component>>
-}
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_EngineSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
@@ -486,18 +505,18 @@ class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
 class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
-  <<component>>
-}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ResourceSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AccountSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
@@ -509,17 +528,20 @@ class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
 class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
-class N_src_view_settings_settings_css["settings.css"] {
-  <<stylesheet>>
-}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AboutSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_sections_ts : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_settings_css["settings.css"] {
+  <<stylesheet>>
+}
 class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
@@ -529,6 +551,7 @@ class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
 class N_src_view_settings_appearance_css["appearance.css"] {
   <<stylesheet>>
 }
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
 N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_state_ts : 导入依赖
 N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_css : 导入依赖
 ```
@@ -596,7 +619,7 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
 
-EngineSettings 的下拉框来自开发者静态官方清单，初次未选择时不展开详情；选中后只显示该引擎的业务专长、兼容主/额外角色模型、当前与候选版本、启停/安装/使用状态、缓存与依赖。所有引擎操作在详情中，提交显示的摘要与 revision；当前相同制品已安装且无错误时禁用重复安装，移除后仍有候选缓存时显示“从缓存添加”。错误不自动重试。
+EngineSettings 的下拉框在开发者静态官方清单前提供“全部引擎”，默认进入总览。EngineOverview 只展示具有 active 选择的已安装引擎；仅有 installed 历史缓存的已移除引擎不列入。总览展示当前安装版本和运行库版本，并分别显示启停、运行占用、准备进度与错误；references 包含依赖占用，不等同于任务数，准备或错误不能遮盖已有运行。点击总览条目只切换到对应详情，不检查远端更新或安装。选中具体引擎后只显示该引擎的业务专长、兼容主/额外角色模型、当前与候选版本、启停/安装/使用状态、缓存与依赖。所有引擎操作在详情中，提交显示的摘要与 revision；当前相同制品已安装且无错误时禁用重复安装，移除后仍有候选缓存时显示“从缓存添加”。错误不自动重试。
 
 引擎页活动时每秒读取 engines.settings；读取和切换不联网检查或安装。准备含本地校验和下载，进度不能当作已激活。轮询与操作代际隔离，旧快照不覆盖回执；离开分类停轮询但已提交操作继续，返回保持选择并重新读取模型和安装状态。模型编辑与引擎管理独立，刷新不提交模型草稿。
 

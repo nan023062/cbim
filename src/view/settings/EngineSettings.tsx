@@ -1,5 +1,5 @@
 /**
- * 作用定位：选择官方引擎后，集中展示能力、兼容模型、安装版本、实时准备状态及包管理操作。
+ * 作用定位：默认总览全部已安装引擎，选择具体引擎后集中展示能力、模型、版本、实时状态及包管理操作。
  * 设计原因：所有引擎操作留在自己的详情页；轮询只读本机状态，切页停止轮询，不自动检查远端或重复安装。
  * 状态边界：AsyncGeneration 只隔离迟到快照；提交冻结的候选摘要与 revision；在途刷新不能覆盖操作回执，已有安装与缓存归后端持久化。
  */
@@ -7,11 +7,12 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {modelRoleChoices,supportedEngines,providerSupportsEngine,engineDescriptor,type LoopEngine,type EnginePackageSettings} from '../../bridge/contracts/engines';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import {AsyncGeneration} from '../foundations/utility';
+import {EngineOverview} from './EngineOverview';
 const api=window.cbim;
 
 /** 页面只持有选择和只读快照；安装、依赖锁、原子启用与缓存复用继续由 EnginePackages 管理。 */
 export function EngineSettings({active=true}:{active?:boolean}){
-  const [selected,setSelected]=useState<LoopEngine|''>(''),[state,setState]=useState<EnginePackageSettings>(),[models,setModels]=useState<LlmSettings>();
+  const [selected,setSelected]=useState<LoopEngine|'all'>('all'),[state,setState]=useState<EnginePackageSettings>(),[models,setModels]=useState<LlmSettings>();
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[readError,setReadError]=useState(''),[notice,setNotice]=useState('');
   const alive=useRef(false),reading=useRef<symbol|undefined>(undefined),acting=useRef(false),generation=useRef(new AsyncGeneration());
   const reload=useCallback(async(includeModels=false)=>{
@@ -35,15 +36,16 @@ export function EngineSettings({active=true}:{active?:boolean}){
     catch(error:any){generation.current.advance();setError(error.message)}
     finally{acting.current=false;setBusy(false)}
   }
-  const descriptor=selected?engineDescriptor(selected):undefined,item=state?.items.find(item=>item.kind===selected);
+  const descriptor=selected!=='all'?engineDescriptor(selected):undefined,item=state?.items.find(item=>item.kind===selected);
   const available=descriptor&&models?models.profiles.flatMap(profile=>profile.models.filter(model=>model.enabled&&providerSupportsEngine(descriptor.id,profile,model.id)).map(model=>profile.name+' / '+(model.name||model.id))):[];
   const installed=!!item?.active,sameVersion=!!item?.active&&item.active.identity===item.candidate?.identity;
   const preparing=!!item?.preparing,blocked=busy||preparing||!state?.managed;
   return <section className="repository-settings" aria-label="引擎能力支持列表">
-    <label className="engine-selector">选择引擎<select aria-label="选择引擎" value={selected} disabled={busy} onChange={event=>{setSelected(event.target.value as LoopEngine|'');setError('');setNotice('')}}>
-      <option value="">请选择引擎</option>{supportedEngines.map(engine=><option key={engine.id} value={engine.id}>{engine.label}</option>)}
+    <label className="engine-selector">选择引擎<select aria-label="选择引擎" value={selected} disabled={busy} onChange={event=>{setSelected(event.target.value as LoopEngine|'all');setError('');setNotice('')}}>
+      <option value="all">全部引擎</option>{supportedEngines.map(engine=><option key={engine.id} value={engine.id}>{engine.label}</option>)}
     </select></label>
     {!state&&!error&&!readError&&<p role="status">正在读取引擎列表…</p>}
+    {selected==='all'&&<EngineOverview state={state} onSelect={kind=>{setSelected(kind);setError('');setNotice('')}}/>}
     {descriptor&&<article className="model-row engine-detail" aria-label={descriptor.label+' 引擎详情'}>
       <h2>{descriptor.label}</h2><p>擅长：{descriptor.businessTypes.join('、')}</p>
       <p>支持模型范围：{descriptor.supportedApis.join(' / ')} 兼容的生成模型</p>

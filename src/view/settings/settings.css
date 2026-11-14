@@ -97,8 +97,21 @@
   .settings-panel .budget-settings-form,.settings-panel .admission-settings-form{flex-direction:column;align-items:stretch}
 }
 
-/* 引擎只展开当前选择的详情，长版本/模型文本在窄屏内换行。 */
+/* 具体引擎只展开当前选择的详情，长版本/模型文本在窄屏内换行；全部引擎使用下方总览布局。 */
 .engine-selector{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
 .engine-selector select{width:100%;min-width:0}
 .engine-detail{min-width:0;overflow-wrap:anywhere}
 .engine-detail progress{width:100%}
+
+/* 总览与详情共用页面快照；总览只提供导航，窄屏改为纵向条目，不用横向滚动表格。 */
+.engine-overview h2{font-size:15px;margin:0 0 12px}
+.engine-overview-list{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.settings-panel .engine-overview-item{width:100%;display:grid;grid-template-columns:minmax(80px,1fr) minmax(110px,1fr) minmax(140px,1.4fr);align-items:center;gap:12px;padding:14px;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.engine-overview-item>strong,.engine-overview-version,.engine-overview-state{min-width:0}
+.engine-overview-version,.engine-overview-state{display:flex;flex-direction:column;gap:4px}
+.engine-overview-item small{font-size:12px;color:var(--muted)}
+.engine-overview-error{grid-column:1/-1;color:var(--danger);font-size:12px}
+@container(max-width:600px){
+  .settings-panel .engine-overview-item{grid-template-columns:minmax(0,1fr);gap:8px}
+  .engine-overview-state{flex-direction:row;flex-wrap:wrap;gap:4px 12px}
+}

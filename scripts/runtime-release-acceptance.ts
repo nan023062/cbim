@@ -72,6 +72,20 @@ async function main(){
     await fs.writeFile(path.join(workspace,'retained.txt'),'R1 business data');await page.evaluate(()=>{localStorage.setItem('runtime-retention','R1');localStorage.setItem('cbim.theme','light')});
     const task=await page.evaluate(id=>window.cbim.call('loop.chat',{id,message:'Record completed acceptance task',options:{permission:'read',turnTimeoutMs:60000}}),entry.id);
     await until(()=>page.evaluate(args=>window.cbim.call('loop.inspect',args),{id:entry.id,taskId:task.taskId,runId:task.runId}),v=>v.status==='completed');assert.equal(requests,1);
+    // C 0.1.18 已核实使用跨 C 的官方 E 缓存；真实下载完成后保存安装记录和逐文件证据，不手填缓存。
+    const engineSnapshot=async()=>{
+      const descriptor=initial.manifest.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor?.adapter);
+      const directory=path.join(native.appData,'CBIM-runtime',identity,'engines','packages',descriptor.package.sha256),files=[];
+      for(const item of descriptor.package.files){const file=path.join(directory,item.path),stat=await fs.stat(file);assert.equal(stat.size,item.bytes);assert.equal(await hash(file),item.sha256);files.push({path:item.path,bytes:stat.size,sha256:item.sha256,mtimeMs:stat.mtimeMs})}
+      const state=await page.evaluate(()=>window.cbim.call('engines.settings')),pi=state.items.find(item=>item.kind==='pi');assert.equal(pi?.active?.identity,descriptor.package.sha256);
+      return {files,installation:await fs.readFile(path.join(user,'engine-installations.json'),'utf8'),enabled:pi.enabled,version:pi.active.version,nativeVersion:pi.active.nativeVersion};
+    };
+    let retainedEngine:Awaited<ReturnType<typeof engineSnapshot>>|undefined;
+    if(coldVersion==='0.1.18'){
+      const settings=await page.evaluate(()=>window.cbim.call('engines.settings'));
+      await page.evaluate(revision=>window.cbim.call('engines.configure',{kind:'pi',revision,action:'disable'}),settings.revision);
+      retainedEngine=await engineSnapshot();assert.equal(retainedEngine.enabled,false);await save('engine-cache-before',retainedEngine);
+    }
     if(mode==='candidate'){
       await close();
       const store=new RuntimeStore(cache,cold,async(pkg,target,_signal,progress)=>{const file=path.join(downloads,pkg.name);assert.equal(await hash(file),pkg.sha256);await fs.copyFile(file,target);progress(100)});
@@ -108,6 +122,21 @@ async function main(){
       await page.getByRole('button',{name:'返回工作空间',exact:true}).click();
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('cbim.appearance.v1')!).textSize),17);
     }
+    if(coldVersion==='0.1.18'){
+      const after=await engineSnapshot();assert.deepEqual(after,retainedEngine,'R update must retain disabled installation and every cached engine file');await save('engine-cache-after',after);
+      await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'主题与个性化',exact:true}).click();
+      await page.getByRole('navigation',{name:'设置分类',exact:true}).getByRole('button',{name:'引擎',exact:true}).click();
+      const selector=page.getByRole('combobox',{name:'选择引擎',exact:true}),overview=page.getByRole('region',{name:'全部引擎总览',exact:true});
+      assert.equal(await selector.inputValue(),'all');await overview.getByRole('heading',{name:'已安装引擎 · 1',exact:true}).waitFor();
+      const pi=overview.getByRole('button',{name:'查看 Pi 引擎详情',exact:true});
+      await pi.getByText('当前版本 '+after.version,{exact:true}).waitFor();await pi.getByText('运行库 '+after.nativeVersion,{exact:true}).waitFor();
+      await pi.getByText('已停用',{exact:true}).waitFor();await pi.getByText('未运行',{exact:true}).waitFor();await page.screenshot({path:path.join(root,'engine-overview.png')});
+      await pi.click();assert.equal(await selector.inputValue(),'pi');
+      const detail=page.getByRole('article',{name:'Pi 引擎详情',exact:true});await detail.getByRole('button',{name:'启用',exact:true}).click();
+      await detail.getByText('安装状态：已安装 · 已启用',{exact:true}).waitFor();await selector.selectOption('all');await pi.getByText('空闲',{exact:true}).waitFor();
+      assert.deepEqual((await engineSnapshot()).files,after.files,'Viewing and enabling must reuse the same cached files');assert.equal(requests,1);
+      await page.getByRole('button',{name:'返回工作空间',exact:true}).click();
+    }
     await close();
     const recoveryChecks:string[]=[];
     if(mode==='candidate'){
@@ -120,7 +149,7 @@ async function main(){
       await fs.writeFile(target,original);const afterState=path.join(root,'after-data-state'),afterJournal=new RuntimeJournal(afterState,{digest:initial.digest,resourceVersion:1});afterJournal.authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});afterJournal.accessData(expected);
       assert.throws(()=>selectBootResources(cold,testCache,path.join(install,'resources/bundled-resources'),path.join(install,'resources/runtime-initial.json'),afterState),/RESOURCE_RECOVERY_REQUIRED/);recoveryChecks.push('after-data unconfirmed launch refuses downgrade');
     }
-    await save('report',{success:true,mode,source,digest:expected,resourceVersion:checked.manifest.resourceVersion,coldVersion,coldInstallerSha256:await hash(installer),resourceSha256:checked.manifest.resource.sha256,resourceBytes:checked.manifest.resource.bytes,native,retained:{workspace:true,knowledge:true,models:true,completedTask:true,businessFile:true,localStorage:true,noReplay:true},requests,pageErrors:errors,recoveryChecks,limitations:mode==='candidate'?'Signed candidate staged by harness; public discovery/UI apply tested separately. Failure branches use actual package with selector, not native recovery dialog.':'Real anonymous public channel and UI apply; deterministic localhost model validates retention, not model quality.',completedAt:new Date().toISOString()});
+    await save('report',{success:true,mode,source,digest:expected,resourceVersion:checked.manifest.resourceVersion,coldVersion,coldInstallerSha256:await hash(installer),resourceSha256:checked.manifest.resource.sha256,resourceBytes:checked.manifest.resource.bytes,native,retained:{workspace:true,knowledge:true,models:true,completedTask:true,businessFile:true,localStorage:true,noReplay:true,engineInstallationAndCache:!!retainedEngine},engineOverviewVerified:coldVersion==='0.1.18',requests,pageErrors:errors,recoveryChecks,limitations:mode==='candidate'?'Signed candidate staged by harness; public discovery/UI apply tested separately. Failure branches use actual package with selector, not native recovery dialog.':'Real anonymous public channel and UI apply; deterministic localhost model validates retention, not model quality.',completedAt:new Date().toISOString()});
   }catch(error){await save('failure',{error:String(error),stack:error instanceof Error?error.stack:undefined,requests,errors});if(app)await page!.screenshot({path:path.join(root,'failure.png')}).catch(()=>{});throw error}
   finally{try{await close()}finally{await save('process-lifecycle',processLifecycle);server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}}
 }

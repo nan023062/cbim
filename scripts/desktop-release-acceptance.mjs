@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawn, execFileSync} from 'node:child_process';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {parse} from 'yaml';
@@ -68,7 +68,7 @@ async function recordInstallerCache(stage) {
   const result = {configuredDirectory: config.updaterCacheDirName, entries};
   await save(`installer-cache-${stage}`, result); return result;
 }
-let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [];
+let app, requests = 0, differential, freshEngine; const errors = [], phases = [], resourcePrelude = [], checkRetries = [];
 const server = http.createServer(async (req, res) => {
   for await (const _ of req) { /* consume the deterministic model request */ }
   requests++;
@@ -89,8 +89,12 @@ async function close() { await app?.close(); app = undefined; }
 async function waitPhase(page, phase, interval = 1000) {
   const deadline = Date.now() + 300_000;
   while (Date.now() < deadline) {
-    const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase});
-    if (value.error) throw Error(value.error); if (value.phase === phase) return value; await pause(interval);
+    const value = await status(page); phases.push({version: value.currentVersion, phase: value.phase,...(value.error?{error:value.error}:{})});
+    if (value.error) {
+      if(!acceptanceCanAwaitCheckRetry(value,phase))throw Error(value.error);
+      if(checkRetries.at(-1)?.checkedAt!==value.checkedAt){checkRetries.push({version:value.currentVersion,phase:value.phase,checkedAt:value.checkedAt,error:value.error});await save('automatic-check-retries',checkRetries)}
+    } else if (value.phase === phase) return value;
+    await pause(interval);
   } throw Error(`Update timeout: ${phase}`);
 }
 // R 与 C 都由真实 UI 重启；只定位本验收安装路径的新主进程。
@@ -140,6 +144,7 @@ async function attachResourceRestart(restarted) {
     app={
       evaluate:fn=>inspector.evaluate(`(${fn.toString()})(require('electron'))`),
       process:()=>({pid:restarted.ProcessId}),
+      async firstWindow(){const context=browser.contexts()[0];return context.pages()[0]??await context.waitForEvent('page')},
       async close(){
         // 使用与 ElectronApplication.close 相同的正常退出入口；先释放调试连接，避免 Node 等待调试器断开。
         await inspector.evaluate("((app)=>{setImmediate(()=>app.quit())})(require('electron').app);undefined");
@@ -147,7 +152,7 @@ async function attachResourceRestart(restarted) {
         ps(`$p=Get-Process -Id ${restarted.ProcessId} -ErrorAction SilentlyContinue; if ($p -and -not $p.WaitForExit(30000)) { throw 'Attached desktop normal close timed out' }`);
       },
     };
-    const context=browser.contexts()[0],page=context.pages()[0]??await context.waitForEvent('page');
+    const page=await app.firstWindow();
     page.setDefaultTimeout(30000);page.on('pageerror',error=>errors.push(error.message));
     await page.getByRole('button',{name:'用户菜单',exact:true}).waitFor();return page;
   }catch(error){inspector?.close();throw error}
@@ -373,11 +378,13 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: mode === 'candidate', freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   let updateState;
-  if (app) { try { const page = await app.firstWindow(); updateState = await status(page); await page.screenshot({path: path.join(root, 'failure.png')}); } catch { /* 保留原失败，诊断不能替代业务结果。 */ } }
+  if (app) { try { const page = await app.firstWindow(); updateState = await status(page); await page.screenshot({path: path.join(root, 'failure.png')}); } catch { /* 保留原失败，诊断不能替代业务结果。 */ }
+    try{await save('failure-network',await readUpdaterNetwork(app))}catch{ /* 旧交互和未接入阶段可能没有网络记录。 */ }
+  }
   await save('failure', {error: String(error), stack: error.stack, phases, requests, pageErrors: errors, updateState}); throw error;
 }
 finally { await close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

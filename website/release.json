@@ -7,11 +7,11 @@
   "bytes": 111909112,
   "sha256": "f07265f45f7d93bf796379d9181dc06c032a3ac1489043a611dfa27c0615f5a8",
   "signed": false,
-  "resourceVersion": 1,
+  "resourceVersion": 2,
   "resourceTag": "runtime-c0.1.18",
-  "resourcePublishedAt": "2026-11-14T18:56:19Z",
+  "resourcePublishedAt": "2026-11-14T22:43:46Z",
   "resourceDate": "2026-11-15",
-  "resourceBytes": 4056988,
-  "resourceSha256": "fdb73bbaa5e201d559a2d0adc9c0636dcdf0f8f994a53081a54a4288056297de",
-  "resourceManifestDigest": "dea449a762075ea49d08c1e199ede4f3edfe3f56972f1c192d1e8bba57ed9964"
+  "resourceBytes": 4063828,
+  "resourceSha256": "e9f620b30e6313215e63d2a1e4045531dc0ca3c5dc33b8f223a568c494ebf705",
+  "resourceManifestDigest": "2b818b63ededa4a365029876225b2437df08446f2d2436baa122be5821c0f040"
 }

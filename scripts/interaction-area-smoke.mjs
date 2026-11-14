@@ -32,20 +32,20 @@ try{
 
  const pane=page.locator('.workspace-panel:not([hidden])');
  await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
- await pane.getByRole('tab',{name:'对话',exact:true}).waitFor();
+ await pane.getByRole('button',{name:'切换到办公室',exact:true}).waitFor();
  assert.equal(await pane.getByRole('tab',{name:'自动化',exact:true}).count(),0);
- assert.equal(await pane.getByRole('tab',{name:'对话',exact:true}).getAttribute('aria-selected'),'true');
+ assert.equal(await pane.getByTestId('interaction-mode-toggle').getAttribute('aria-pressed'),'false');
  await pane.getByRole('textbox',{name:'对话草稿',exact:true}).fill('保留主草稿');
- await pane.getByRole('tab',{name:'办公室',exact:true}).click();
+ await pane.getByRole('button',{name:'切换到办公室',exact:true}).click();
  await pane.locator('.office-scene').waitFor();
  await page.locator('.workspace-conversations').getByRole('button',{name:'象棋研发办公室',exact:true}).click();
- assert.equal(await pane.getByRole('tab',{name:'办公室',exact:true}).getAttribute('aria-selected'),'true');
+ assert.equal(await pane.getByTestId('interaction-mode-toggle').getAttribute('aria-pressed'),'true');
  const children=page.locator('.workspace-conversations .conversation-child').first();
  await children.locator('summary').click();
  await children.getByRole('button',{name:/查看 规则执行员/}).click();
- assert.equal(await pane.getByRole('tab',{name:'办公室',exact:true}).getAttribute('aria-selected'),'true');
+ assert.equal(await pane.getByTestId('interaction-mode-toggle').getAttribute('aria-pressed'),'true');
  await pane.locator('[data-office-actor="executor-logical"][data-selected="true"]').waitFor();
- await pane.getByRole('tab',{name:'对话',exact:true}).click();
+ await pane.getByRole('button',{name:/切换到(对话|工作审阅)/}).click();
  await pane.locator('.member-review-pane:not([hidden]) .member-conversation').waitFor();
  assert.equal(await pane.locator('.chat-composer').isVisible(),false);
  assert.equal(await pane.getByRole('textbox',{name:'对话草稿',exact:true}).count(),0);
@@ -88,9 +88,9 @@ try{
  await page.waitForFunction(()=>document.querySelector('.main-chat-pane .chat-scroll')?.scrollHeight>3000);
  const mainScroll=mainChat.locator('.chat-scroll'),channelScroll=channel().getByLabel('频道消息',{exact:true});
  await mainScroll.evaluate(node=>node.scrollTop=120);await channelScroll.evaluate(node=>node.scrollTop=360);
- await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ await page.evaluate(()=>Promise.race([new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))),new Promise(resolve=>setTimeout(resolve,150))]));
  assert.equal(await mainScroll.evaluate(node=>node.scrollTop),120);assert.equal(await channelScroll.evaluate(node=>node.scrollTop),360);
- await pane.getByRole('tab',{name:'办公室',exact:true}).click();await pane.getByRole('tab',{name:'对话',exact:true}).click();
+ await pane.getByRole('button',{name:'切换到办公室',exact:true}).click();await pane.getByRole('button',{name:/切换到(对话|工作审阅)/}).click();
  assert.equal(await mainScroll.evaluate(node=>node.scrollTop),120);assert.equal(await channelScroll.evaluate(node=>node.scrollTop),360);
  assert.equal(await channel().getByRole('textbox',{name:'频道草稿',exact:true}).inputValue(),'频道 A 独立草稿');
  await channel().getByRole('button',{name:'关闭频道',exact:true}).click();await mainChat.locator('[data-topic-id="scope-one"]').click();
@@ -100,7 +100,7 @@ try{
   await desktop.evaluate(({BrowserWindow},{width,height})=>BrowserWindow.getAllWindows()[0].setContentSize(width,height),{width,height});
   await page.waitForFunction(width=>innerWidth===width,width);await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);
   if(width<600&&await page.getByRole('button',{name:'收起侧栏',exact:true}).count())await page.getByRole('button',{name:'收起侧栏',exact:true}).click();
-  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await page.evaluate(()=>Promise.race([new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))),new Promise(resolve=>setTimeout(resolve,150))]));
   assert.equal(await mainChat.isVisible(),true);assert.equal(await channel().isVisible(),true);
   const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,panes:[...document.querySelectorAll('.workspace-panel:not([hidden]) .main-chat-pane,.workspace-panel:not([hidden]) .channel-pane:not([hidden])')].map(n=>({client:n.clientWidth,scroll:n.scrollWidth}))}));
   assert.ok(layout.scroll<=width+1,JSON.stringify(layout));assert.ok(layout.panes.every(n=>n.scroll<=n.client+1),JSON.stringify(layout));

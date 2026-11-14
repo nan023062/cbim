@@ -54,7 +54,7 @@
 
 记录展示原前置、新前置、采用的 run/result、原因和后端时间，后续成员执行不隐藏历史。历史审计不证明现在仍可执行、原任务成功或业务验收通过，不提供恢复/批准按钮。主对话与详情先核对工作区和主会话身份；compact 仅省略旧记录展示，不丢弃节点数据。
 
-任务图沿用真实 enabled 边布局：退役边不绘制，原失败或求助节点仍在，新依赖按真实端点绘制。前端不迁移任务、实例或会话身份，不因审计存在改变运行状态或替代最终目标审阅。
+办公室保留真实任务与依赖调整记录，依赖关系继续由后端调度管理。前端不迁移任务、实例或会话身份，不因审计存在改变运行状态或替代最终目标审阅。
 
 ### 周期冻结软限额
 
@@ -78,11 +78,11 @@
 
 ### 主会话任务派发图的增量消费契约
 
-状态：`SessionTaskView` 默认显示真实主会话根与尚需处理的任务节点；已完成、已撤销任务折叠到“历史任务”。`DispatchGraph` 绘制可选择节点及有向派发/依赖连线，`graph-layout.ts` 计算稳定 DAG 布局。点击根后展开 `ScopeGoalPanel` 的真实周期目标、计划、审阅与受阻原因，以及队列和执行轮次；点击业务任务打开 `MemberTaskDetail`。运行轮次或普通问答不会被自动转换为派发任务。
+状态：SessionTaskView 只展示办公室与选中任务的详情；完成和撤销任务仍由办公室历史入口折叠。主根详情保留目标、计划、审阅、队列和执行轮次，派发与依赖事实仍来自后端。
 
 `taskHistoryView` 只派生展示分类：没有 activeRunId 的 cancelled 节点进入历史；result_ready 须带当前计划的真实候选，且同事件流周期经 `scopeGoalView` 判定为 completed，才能折叠。拒绝的候选、单独的主 Agent 接受记录、缺少完成依据的旧记录，以及失败、受阻、等待、检查点均不冒充完成。当前策略保护后端任务与周期状态，折叠不删除数据、签发验收或启动执行。
 
-“历史任务（数量）”默认收起，展开后在同一画布恢复全部原节点与边。直接定位历史节点时自动展开并沿原入口显示详情；主动收起时关闭历史节点详情，切换会话恢复默认。折叠时只绘制两端均可见的原边，不补造跨越历史的依赖；当前节点与历史之间的启用关联显示数量，展开可核对。`DispatchGraph` 在过滤前仍检查完整图的重复节点、循环和缺失端点，不能用折叠掩盖坏拓扑。全部任务折叠时保留主根与历史入口，明确当前无待处理任务，不显示“尚未派发”。
+办公室的历史列表默认收起，定位历史任务展开原任务详情，不提供依赖图画布。
 
 #### 归属与显示内容
 
@@ -132,7 +132,7 @@
 
 #### 成员求助交接
 
-`member-help-state` 只投影后端安全结算后保存的 `TaskNode.help`：节点必须 blocked、没有活动运行和交付候选，求助的 workspace/root/task/agent/instance/session/plan 必须匹配节点，run 必须已登记。普通受阻、取消、失败、结果未知或工具返回的 staged 文字不会被补造成求助交接。主对话的内联 `MemberActivityCard` 和任务节点 `DispatchGraph` 共用该投影，显示“需要主调度协助”；图仍是原任务节点与既有派发连线，不添加结果反向边或假候选。
+`member-help-state` 只投影后端安全结算后保存的 `TaskNode.help`：节点必须 blocked、没有活动运行和交付候选，求助的 workspace/root/task/agent/instance/session/plan 必须匹配节点，run 必须已登记。普通受阻、取消、失败、结果未知或工具返回的 staged 文字不会被补造成求助交接。主对话内联成员卡与任务详情共用该投影，显示“需要主调度协助”，不产生新任务或改变后端依赖。
 
 `MemberHelpNotice` 同时服务成员动态与 `MemberTaskDetail`，只读显示求助种类、原因、待主调度处理的问题、已尝试工具引用及记录时间。明确本轮成员执行已结束、求助已交接，后续由主调度重新安排；这是交接记录，不推断当前仍在等待、原成员已恢复、问题已解决或得到人工批准。工具引用不等于执行成功或验收证据。详情只展示所选 run 对应的求助，不能从另一轮借用；组件独立于成员正文读取，日志加载失败不会隐藏已提交交接。此组件没有执行、恢复旧成员、改变权限或批准按钮，也不新增轮询和后端请求。
 
@@ -234,8 +234,6 @@ AgentGraphView 是当前图的局部状态和任务引用，不泄露其他根�
 ```mermaid
 classDiagram
 class SessionTaskView { <<component>> }
-class DispatchGraph { <<component>> }
-class GraphLayout { <<module>> }
 class MemberTaskDetail { <<component>> }
 class MemberActivity { <<component>> }
 class MemberHelpNotice { <<component>> }
@@ -255,16 +253,13 @@ class ScopeReplanController { <<module>> }
 class UseScopeReplan { <<module>> }
 class SessionReadProjection { <<module>> }
 class GraphContract { <<bridge boundary>> }
-SessionTaskView --> DispatchGraph : 当前会话流程图
 SessionTaskView --> MemberTaskDetail : 按需成员详情
 MemberTaskDetail --> MemberHelpNotice : 所选轮次的已结算求助
 MemberActivity --> MemberHelpNotice : 主对话只读交接摘要
 MemberHelpNotice --> MemberHelpState : 节点与运行绑定核对
-DispatchGraph --> MemberHelpState : 已交接状态与原因
 MemberTaskDetail --> MemberCancellationNotice : 无运行的撤销记录
 MemberActivity --> MemberCancellationNotice : 主对话只读撤销摘要
 MemberCancellationNotice --> MemberCancellationState : 冻结节点与记录核对
-DispatchGraph --> MemberCancellationState : 已撤销状态原因与时间
 MemberTaskDetail --> MemberExecutionReport : 所选轮次只读核实
 MemberExecutionReport --> ExecutionReportController : 显式读取与同基线分页
 SessionTaskView --> ScopeGoalPanel : 复用选中目标详情
@@ -277,7 +272,6 @@ ScopeGoalPanel --> ScopeReplanForm : 核实后独立业务新目标
 ScopeReplanForm --> UseScopeReplan : 共享条件与明确提交
 UseScopeReplan --> ScopeReplanController : 来源隔离与稳定请求
 SessionReadProjection --> GraphContract : 同屏障图与目标增量
-DispatchGraph --> GraphLayout : 稳定拓扑坐标
 GraphLayout --> GraphContract : 真实节点与连线
 ```
 
@@ -465,7 +459,6 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 
 ### 图布局算法边界
 
-layoutDispatchGraph 组合前端 rankDirectedGraph。重复节点在原位置检查，拓扑错误映射为原任务文案；enabled 边选择、上一帧同层顺序、卡片坐标与跨层侧绕路径不下沉。新增卡片样式只改布局，拓扑层级不认识 GraphSnapshot。
 
 等待目标的补充表单明确提示：只有该入口继续当前话题，普通聊天发送仍创建排队的新任务；补充原文不代表人工验收。队列是否继续由后端真实状态决定，界面不自动调用 queueContinue 越过暂停。
 
@@ -474,7 +467,7 @@ layoutDispatchGraph 组合前端 rankDirectedGraph。重复节点在原位置检
 联合投影同时核对 followupOf 摘要/详情，防止把新话题错误关联到另一个历史周期。
 ### 办公室展示与往返
 
-`SessionTaskView` 默认展示 `OfficeScene`，依赖图继续可切换；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。已完成/撤销任务使用原历史判定，默认收起，直接定位历史任务展开其原详情。
+`SessionTaskView` 只展示 OfficeScene，依赖图入口、画布和专用布局已移除；话题用量默认折叠。`officeScene` 只消费联合校验后的当前主根任务、话题与逻辑 TeamSession。每个角色只有一个人物；执行实例不产生分身，同角色待办显示队列数量，工位取真实当前任务的模块，空闲角色保留在协作休息区。已完成/撤销任务使用原历史判定，默认收起，直接定位历史任务展开其原详情。
 
 `OfficeEventTracker` 首次快照只建立基线；当前可见期间新增 task/result/help/checkpoint 身份产生派发或汇报动画。跨办公室、旧/重复序号、切出期间的事实不回放；单人按序播放，队列有界。人物测量工位间位置，往返后回原位，动画没有业务副作用。文字状态取可靠任务事实；正在退出不称已暂停，等待不冒充正在工作。减少动画/关闭动态仍保留全部内容和导航。
 

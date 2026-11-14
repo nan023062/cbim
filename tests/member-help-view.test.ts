@@ -6,7 +6,6 @@ import {committedMemberHelp,memberHelpKindLabels} from '../src/view/tasks/member
 import {MemberHelpNotice} from '../src/view/tasks/MemberHelpNotice';
 import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
 import {sessionRoot} from '../src/view/tasks/SessionTaskView';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
@@ -44,14 +43,4 @@ it('选择另一运行轮次不显示旧求助；没有尝试工具时如实呈�
   const otherRun={...value,runIds:['member-run','other-run']};expect(renderToStaticMarkup(createElement(MemberTaskDetail,{...identity,task:otherRun}))).not.toContain('data-testid="member-help"');
   value.help!.input.attemptedToolCallIds=[];const html=renderToStaticMarkup(createElement(MemberHelpNotice,{task:value}));expect(html).toContain('没有登记尝试工具引用');expect(html).toContain('工具引用不是成功证明');expect(html).not.toContain('<button');expect(html).not.toContain('<input');
   expect(Object.keys(memberHelpKindLabels)).toEqual(['missing_input','dependency','permission','capability','scope']);
-});
-
-it('主对话与任务节点使用同一help事实，公开正文或图刷新前后不改变节点拓扑',()=>{
-  const value=task(),snapshot=graph(value),root=sessionRoot([],identity.rootSessionId,0,snapshot);
-  const cards=renderToStaticMarkup(createElement(MemberActivity,{...identity,tasks:[value],onSelectTask:()=>{}}));
-  const nodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:snapshot,root,onSelectTask:()=>{}}));
-  for(const html of [cards,nodes]){expect(html).toContain('需要主调度协助');expect(html).toContain('data-help-id="help"');expect(html).toContain('缺少真实验收数据')}
-  expect(nodes).toContain('data-status="blocked"');expect(nodes.match(/data-testid="dispatch-task-node"/g)).toHaveLength(1);expect(nodes).toContain('data-from="session:root" data-to="task:member"');
-  expect(cards).not.toContain('尚未开始执行');expect(cards).not.toContain('恢复成员');
-  const normal={...value,help:undefined},normalNodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:graph(normal),root,onSelectTask:()=>{}}));expect(normalNodes).toContain('需要处理');expect(normalNodes).not.toContain('data-help-id');
 });

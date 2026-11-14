@@ -6,7 +6,6 @@ import {committedMemberCancellation,memberCancellationLabel} from '../src/view/t
 import {MemberCancellationNotice} from '../src/view/tasks/MemberCancellationNotice';
 import {MemberActivity,memberTaskLabel} from '../src/view/tasks/MemberActivity';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
 import {sessionRoot} from '../src/view/tasks/SessionTaskView';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
@@ -47,13 +46,6 @@ it('撤销记录必须匹配冻结的scope、节点版本与时间，运行、�
   for(const changed of variants){expect(committedMemberCancellation(changed)).toBeUndefined();expect(renderToStaticMarkup(createElement(MemberCancellationNotice,{task:changed}))).toBe('')}
 });
 
-it('主对话、图节点和详情共用撤销事实，保留目标、连线和真实cancelled状态',()=>{
-  const value=task(),snapshot=graph(value),root=sessionRoot([],identity.rootSessionId,0,snapshot);
-  const card=renderToStaticMarkup(createElement(MemberActivity,{...identity,tasks:[value],onSelectTask:()=>{}})),nodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:snapshot,root,onSelectTask:()=>{}})),detail=renderToStaticMarkup(createElement(MemberTaskDetail,{...identity,task:value}));
-  for(const html of [card,nodes,detail]){expect(html).toContain(memberCancellationLabel);expect(html).toContain('前置任务缺少验收数据');expect(html).toContain('验收页面功能');expect(html).toContain('data-cancel-id="cancel-command"');expect(html).toContain('dateTime="'+time+'"')}
-  expect(nodes).toContain('data-status="cancelled"');expect(nodes.match(/data-testid="dispatch-task-node"/g)).toHaveLength(1);expect(nodes).toContain('data-from="session:root" data-to="task:queued"');expect(card).not.toContain('尚未开始执行');
-  const ordinary={...value,cancelledBeforeStart:undefined},oldNodes=renderToStaticMarkup(createElement(DispatchGraph,{graph:graph(ordinary),root,onSelectTask:()=>{}}));expect(oldNodes).toContain('已停止');expect(oldNodes).not.toContain('data-cancel-id');expect(oldNodes).not.toContain(memberCancellationLabel);
-});
 
 it('其他会话的撤销记录不进入当前成员卡或详情，原始原因按文本输出',()=>{
   const value=task();value.cancelledBeforeStart!.reason='<script>不能执行</script>';

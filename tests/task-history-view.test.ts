@@ -3,7 +3,6 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {GraphSnapshot,ScopeSummary,TaskNode} from '../src/bridge/contracts/dispatch';
 import {taskHistoryView} from '../src/view/tasks/task-history-state';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
 import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
 import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
 
@@ -51,25 +50,7 @@ it('候选获主 Agent 接受仍需等目标可靠完成，拒绝的候选不能
   member.candidateReview.decision='reject';expect(taskHistoryView(input,[done]).tasks).toEqual([]);
 });
 
-it('折叠不补造穿越历史的依赖，展开原图恢复真实连线；原数据保持不变',()=>{
-  const input=graph([task('old','result_ready'),{...task('current','waiting'),scopeId:'active'}]);
-  input.edges.push({edgeId:'depends-on-old',identity,fromNodeId:'task:old',toNodeId:'task:current',kind:'dependency',condition:{kind:'result_ready',planRevision:1},enabled:true,revision:1});
-  const before=JSON.stringify(input),archived=taskHistoryView(input,[done]),root=sessionRoot([],identity.rootSessionId,0,input);
-  expect(archived.relatedEdgeCount).toBe(1);expect(render(input)).toContain('任务依赖图');
-  const props={graph:input,root,onSelectTask:()=>{}};
-  const collapsed=renderToStaticMarkup(createElement(DispatchGraph,{...props,hiddenTaskIds:archived.taskIds}));
-  expect(collapsed).toContain('data-task-id="current"');expect(collapsed).not.toContain('data-task-id="old"');expect(collapsed).not.toContain('data-kind="dependency"');
-  const expanded=renderToStaticMarkup(createElement(DispatchGraph,props));expect(expanded).toContain('data-task-id="old"');expect(expanded).toContain('data-from="task:old" data-to="task:current"');
-  expect(JSON.stringify(input)).toBe(before);
-});
 
-it('折叠不能遮蔽完整图的循环或缺少端点',()=>{
-  const input=graph([task('old','cancelled'),task('current','waiting')]);
-  const props={graph:input,root:sessionRoot([],identity.rootSessionId,0,input),onSelectTask:()=>{},hiddenTaskIds:new Set(['old'])};
-  input.edges.push({edgeId:'invalid',identity,fromNodeId:'missing',toNodeId:'task:old',kind:'dispatch',enabled:true,revision:1});
-  expect(renderToStaticMarkup(createElement(DispatchGraph,props))).toContain('缺少端点');
-  input.edges.at(-1)!.fromNodeId='task:old';expect(renderToStaticMarkup(createElement(DispatchGraph,props))).toContain('循环');
-});
 
 it('全部折叠时保留主根和历史入口，直接定位历史任务自动展开原节点与详情',()=>{
   const input=graph([task('old','cancelled')]);

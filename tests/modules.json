@@ -903,7 +903,8 @@
           "tests/conversation-waiting.test.ts",
           "tests/team-conversation-view.test.ts",
           "tests/queue-insertion-view.test.ts",
-          "tests/queue-sync.test.ts"
+          "tests/queue-sync.test.ts",
+          "tests/interaction-mode-toggle.test.ts"
         ],
         "integration": []
       }
@@ -1036,7 +1037,6 @@
           "tests/scope-replan-view.test.ts",
           "tests/scope-usage-view.test.ts",
           "tests/session-task-view.test.ts",
-          "tests/task-graph-layout.test.ts",
           "tests/task-history-view.test.ts"
         ],
         "contract": [

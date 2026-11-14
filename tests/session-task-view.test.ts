@@ -7,7 +7,7 @@ const run=(taskId:string,workspaceId='w'):RunSummary=>({task:{taskId,workspaceId
 test('root details distinguish delivery candidate from acceptance and show recorded steps only when selected',()=>{
  const item=run('current');item.taskProgress={version:3,goal:'交付示例',reason:'新增要求',acceptance:['验证可运行'],state:'awaiting_review',steps:[{id:'one',title:'实现及验证',owner:'主 Agent',state:'reported_done',evidence:['receipt-id']}],delivery:{summary:'已准备候选',limitations:['触屏未验证']}};
  const props={workspaceId:'w',taskId:'current',runs:[item],queued:[],now:0,busy:false,onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}};
- const defaultHtml=renderToStaticMarkup(createElement(SessionTaskView,props));expect(defaultHtml).toContain('dispatch-root-node');expect(defaultHtml).not.toContain('receipt-id');expect(defaultHtml).not.toContain('root-task-detail');expect(defaultHtml).not.toContain('dispatch-task-node');
+ const defaultHtml=renderToStaticMarkup(createElement(SessionTaskView,props));expect(defaultHtml).toContain('查看主 Agent 调度详情');expect(defaultHtml).not.toContain('任务依赖图');expect(defaultHtml).not.toContain('receipt-id');expect(defaultHtml).not.toContain('root-task-detail');expect(defaultHtml).not.toContain('dispatch-task-node');
  const html=renderToStaticMarkup(createElement(SessionTaskView,{...props,selectedTaskId:'session:current',onSelectTask:()=>{}}));
  expect(html).toContain('交付待审阅');expect(html).toContain('尚未业务验收');expect(html).toContain('receipt-id');expect(html).toContain('触屏未验证');
 });

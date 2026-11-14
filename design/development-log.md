@@ -1,3 +1,11 @@
+## 2026-11-15 交互区精简：移除依赖图、单按钮切换
+
+用户直接授权的四项界面调整，第 1 步；远端开放 Issue #65 与此范围无关。基于 d1964428，View 层移除 DispatchGraph 与专用布局，办公室、历史折叠、原任务详情和后端调度依赖保留。InteractionModeToggle 用一个按钮呈现当前视图与切换目标；隐藏挂载保持主对话/频道草稿、附件和滚动。
+
+验证选择：办公室/历史/任务详情与按钮为受影响消费者。`pnpm exec vitest run tests/session-task-view.test.ts tests/interaction-mode-toggle.test.ts tests/office-scene.test.ts tests/task-history-view.test.ts tests/member-cancellation-view.test.ts tests/member-checkpoint-view.test.ts tests/member-help-view.test.ts tests/member-dependency-view.test.ts tests/member-dependency-addition-view.test.ts --reporter=dot`：9 文件 57 通过。仅移除旧图专用断言，实际任务卡/详情覆盖保留。`pnpm typecheck`、`pnpm check:architecture`、暂存删除后 `pnpm check:test-modules` 通过。`node scripts/interaction-area-smoke.mjs`：9 组真实 Electron 渲染验收通过，含 320px 双主题、独立草稿附件滚动、未知回执不重放。首次运行受开发热更新影响在附件按钮分离时超时；固定源码复跑通过，并给隐藏窗口的动画帧等待加有界后备。未运行全仓单元、安装或发布验收，完整 CI 留至 PR。
+
+源码头注释、conversation/tasks CONTRACT 与 ARCHITECTURE 同步。Review 入口：Conversation → InteractionModeToggle/SessionTaskView → OfficeScene/MemberTaskDetail；稳定的执行和话题状态没有迁移。
+
 ## 2026-11-14 C 0.1.17 / R3 交互区已投放公开通道
 
 [PR #81](https://github.com/nan023062/cbim/pull/81) 已正常合并 master；最终完整 CI 43608092939 通过（523 文件、3525 通过、2 个既有历史 EXE 前置条件跳过、0 失败）。候选 43608615116 与公开升级 43610142288 均通过，真实 C 0.1.17 / R1 → R3、普通退出不应用、实际 UI 重启、六类数据保留、0 重放和 0 页面错误。资源 4044795 字节，四个 E 与冷包保持原身份。发布末尾回读短时不一致后只读核实远端已更新，原地址匿名验签与真实升级均成功，没有重复发布；具体首次回读原因未直接证实。官网与 README 按真实回执收尾，详见 [R3 发布记录](verification/interaction-r3-20261114.md)。

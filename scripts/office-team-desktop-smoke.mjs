@@ -31,7 +31,7 @@ try{
  assert.equal(new URL(page.url()).hostname,'127.0.0.1');
  const active=()=>page.locator('.workspace-panel:not([hidden])');
  const office=()=>active().locator('.session-task-panel:not([hidden]) .office-scene');
- const selectOffice=async title=>{await page.locator('.workspace-conversations').getByRole('button',{name:title,exact:true}).click();await active().getByRole('tab',{name:'办公室',exact:true}).click();await office().waitFor()};
+ const selectOffice=async title=>{await page.locator('.workspace-conversations').getByRole('button',{name:title,exact:true}).click();await active().getByRole('button',{name:'切换到办公室',exact:true}).click();await office().waitFor()};
  await selectOffice('象棋研发办公室');
  assert.deepEqual(await office().locator('[data-office-actor]').evaluateAll(nodes=>nodes.map(n=>n.dataset.officeActor)),['main:root','executor-logical','designer-logical']);
  assert.equal(await office().locator('.office-history').evaluate(node=>node.open),false);
@@ -64,7 +64,7 @@ try{
    },position);
    if(position!=='top')assert.ok(scroll.top>0,'The lower view must actually scroll');
    if(width<600)assert.ok(scroll.max/2<=scroll.height,'Three screenshots must cover the full panel');
-   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+   await page.evaluate(()=>Promise.race([new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))),new Promise(resolve=>setTimeout(resolve,150))]));
    const layout=await office().evaluate(scene=>({viewport:innerWidth,document:[document.documentElement.clientWidth,document.documentElement.scrollWidth],nodes:[scene,...scene.querySelectorAll('.office-floor,.office-station,.office-current-tasks,.office-history')].map(n=>({name:n.className,width:n.clientWidth,scroll:n.scrollWidth})),theme:document.documentElement.dataset.theme}));
    assert.equal(layout.viewport,width);assert.ok(layout.document[1]<=width+1,JSON.stringify(layout));assert.ok(layout.nodes.every(n=>n.scroll<=n.width+1),JSON.stringify(layout));
    const file=path.join(out,name+'.png');
@@ -96,7 +96,7 @@ try{
  assert.equal(writes.length,1);assert.equal(writes[0].action,'loop.enqueue');assert.equal(writes[0].args.taskId,'root');
  assert.equal(writes[0].args.message,'桌面验收：成员窗口的新需求');
  checks.push('member-review-is-read-only-and-explicit-main-return-retains-original-task-routing');
- await active().getByRole('tab',{name:'办公室',exact:true}).click();
+ await active().getByRole('button',{name:'切换到办公室',exact:true}).click();
  await office().getByRole('button',{name:'打开 主 Agent 的对话',exact:true}).click();
  assert.equal(await active().locator('.member-review-pane:not([hidden])').count(),0);
  await active().locator('.conversation-topic-thread').waitFor();

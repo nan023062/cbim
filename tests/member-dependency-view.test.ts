@@ -6,8 +6,6 @@ import {memberDependencyHistory} from '../src/view/tasks/member-dependency-state
 import {MemberDependencyNotice} from '../src/view/tasks/MemberDependencyNotice';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
 import {MemberActivity} from '../src/view/tasks/MemberActivity';
-import {layoutDispatchGraph} from '../src/view/tasks/graph-layout';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
 import {sessionRoot} from '../src/view/tasks/SessionTaskView';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-07T00:00:00.000Z';
@@ -41,11 +39,4 @@ it('主对话和详情隔离其他会话，原因按文本输出而不执行HTML
   const card=renderToStaticMarkup(createElement(MemberActivity,{...identity,tasks:[value],onSelectTask:()=>{}}));expect(card).toContain('member-dependency-replacement');expect(card).toContain('&lt;script&gt;');expect(card).not.toContain('<script>');
   expect(renderToStaticMarkup(createElement(MemberActivity,{workspaceId:'other',rootSessionId:'root',tasks:[value],onSelectTask:()=>{}}))).toBe('');
   const detail=renderToStaticMarkup(createElement(MemberTaskDetail,{workspaceId:'other',rootSessionId:'root',task:value}));expect(detail).toContain('不属于当前会话');expect(detail).not.toContain('member-dependency-replacement');
-});
-
-it('图保留原失败节点，只绘制当前启用前置并保持待办实例身份',()=>{
-  const B=task(),A={...task(),taskId:'A',nodeId:'task:A',status:'blocked' as const,dependencyReplacements:undefined},A2={...task(),taskId:'A2',nodeId:'task:A2',status:'result_ready' as const,dependencyReplacements:undefined};
-  const graph:GraphSnapshot={version:1,identity,cursor:{...identity,streamId:'graph',seq:6},root:{kind:'session-root',nodeId:'session:root',identity,agent:main,revision:1,createdAt:time},tasks:[A,B,A2],agents:[],edges:[...[A,B,A2].map(t=>({edgeId:'dispatch-'+t.taskId,identity,kind:'dispatch' as const,fromNodeId:'session:root',toNodeId:t.nodeId,revision:1,enabled:true})),{edgeId:'old-edge',identity,kind:'dependency',fromNodeId:A.nodeId,toNodeId:B.nodeId,revision:2,enabled:false,condition:{kind:'result_ready',planRevision:1}},{edgeId:'new-edge',identity,kind:'dependency',fromNodeId:A2.nodeId,toNodeId:B.nodeId,revision:1,enabled:true,condition:{kind:'result_ready',planRevision:1,resultId:'A2-result'}}]};
-  const before=structuredClone(graph),layout=layoutDispatchGraph(graph,graph.root.nodeId),root=sessionRoot([],'root',0,graph),html=renderToStaticMarkup(createElement(DispatchGraph,{graph,root,onSelectTask:()=>{}}));
-  expect(layout.nodes).toHaveLength(4);expect(layout.edges.some(x=>x.edge.edgeId==='old-edge')).toBe(false);expect(html).toContain('data-from="task:A2" data-to="task:B"');expect(html).not.toContain('data-from="task:A" data-to="task:B"');expect(html).toContain('data-status="blocked"');expect(graph).toEqual(before);expect(B.assignee.agentInstanceId).toBe('member-instance');
 });

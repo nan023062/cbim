@@ -1,3 +1,9 @@
+## 2026-11-14：修复冷包中空目录与签名文件清单不一致
+
+- 首个候选冻结于 `a2fdce3a7f07083fbe7218ad449f38aec8c4dc4d`，目录 `build/desktop-release/0.1.16/unsigned-20261114-094417-9c19e1db`。R/E 制品验证和 NSIS 生成已完成，最终 `verify-cold-payload` 因“资源目录包含多余内容”失败；此候选不发布，回执与现场保留。
+- 实际比对发现 `design/skills/` 迁出后留下多个空目录，`collectResources` 递归复制目录，但签名清单及 ZIP 只登记文件，因此冷包携带了无法由文件清单证明存在的目录。修复 [runtime-packaging.ts](../scripts/runtime-packaging.ts)，仅在新建的资源制品边界内移除空目录，拒绝链接、不改源码目录，不放宽启动器的严格校验。没有修改 `src/`、产品状态或类图。
+- `pnpm exec vitest run tests/runtime-packaging.test.ts`：3/3，新增回归覆盖多级空目录移除、声明文件字节保留、源码空目录保持原状及冷启动器不混入 R；选择该文件是因为修复属于资源收集和制品身份。导入变化后运行 `pnpm check:test-modules`：494 文件边界通过。完整 CI [43542347851](https://github.com/nan023062/cbim/actions/runs/43542347851) 针对首个冻结提交仍在执行，不能作为本次修复后的完整通过证据；重新冻结及打包后另核准确信息。
+
 ## 2026-11-14：冻结 0.1.16 未签名安装候选输入
 
 - 沿用户已确认的未签名方式，版本提高到 0.1.16，补充 [版本说明](releases/desktop-v0.1.16.md)。当前公开桌面仍为 0.1.15；旧 Python latest 为 `327801733 / v1.0.2`。本步仅准备候选，公开通道、旧附件和官网不变。

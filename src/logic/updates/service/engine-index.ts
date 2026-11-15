@@ -2,13 +2,18 @@
  * 作用定位：独立 E 发布索引的签名、版本和准确依赖闭包验证。
  * 设计原因：E 的发布序号不依赖 C/R 版本；公钥与平台仍由冷壳固定，索引只能提供制品，不能扩大 R 的静态支持名单。
  */
-import {createPublicKey,verify} from 'node:crypto';
+import {createHash,createPublicKey,verify} from 'node:crypto';
 import {z} from 'zod';
 import {enginePackageSchema,validateEnginePackage,runtimeManifestDigest,type EnginePackage,type ColdRuntime} from './runtime-manifest';
 
 const reference=z.object({kind:z.string().regex(/^[a-z][a-z0-9-]{0,47}$/),identity:z.string().regex(/^[a-f0-9]{64}$/)}).strict();
 const indexSchema=z.object({schema:z.literal(1),sequence:z.number().int().positive().max(Number.MAX_SAFE_INTEGER),platform:z.literal('win32-x64'),createdAt:z.string().datetime(),expiresAt:z.string().datetime(),sourceCommit:z.string().regex(/^[a-f0-9]{40}$/),notes:z.string().max(30000),current:z.array(reference).min(1).max(64),releases:z.array(enginePackageSchema).min(1).max(256)}).strict();
 export type EngineReleaseIndex=z.infer<typeof indexSchema>;
+/** 新冷壳按 SPKI 身份隔离远程 E 索引；同钥跨 C 共用，换钥不覆盖旧客户端的 latest.json。 */
+export function engineIndexAsset(publicKey:string){
+  const key=createPublicKey(publicKey);if(key.asymmetricKeyType!=='ed25519')throw Error('引擎索引公钥类型无效');
+  return `latest-${createHash('sha256').update(key.export({type:'spki',format:'der'})).digest('hex')}.json`;
+}
 /** 历史已接纳索引允许离线过期；签名和结构每次重开均复核。 */
 export function verifyEngineIndex(raw:unknown,cold:Pick<ColdRuntime,'publicKey'|'platform'>,installed=false){
   const envelope=z.object({payload:z.string().max(12*1024*1024),signature:z.string().regex(/^[A-Za-z0-9+/]{86}==$/)}).strict().parse(raw);

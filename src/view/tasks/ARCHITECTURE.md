@@ -563,7 +563,7 @@ class N_src_view_tasks_ContinuationSourceMenu_tsx["ContinuationSourceMenu.tsx"] 
 }
 ```
 
-直接依赖：[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[useScopeContinuation.ts](useScopeContinuation.ts)。
 
 ### controlled-file-state.ts
 
@@ -710,7 +710,7 @@ class N_src_view_tasks_ControlledFilePanel_tsx["ControlledFilePanel.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/controlled-files.ts](../../bridge/contracts/controlled-files.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useControlledFiles.ts](useControlledFiles.ts)、[controlled-file.css](controlled-file.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/controlled-files.ts](../../bridge/contracts/controlled-files.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useControlledFiles.ts](useControlledFiles.ts)、[controlled-file.css](controlled-file.css)。
 
 ### effect-observation-state.ts
 
@@ -895,7 +895,7 @@ class N_src_view_tasks_EffectObservationPanel_tsx["EffectObservationPanel.tsx"] 
 }
 ```
 
-直接依赖：[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[effect-observation-state.ts](effect-observation-state.ts)、[useEffectObservation.ts](useEffectObservation.ts)、[effect-recovery-state.ts](effect-recovery-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[effect-observation.css](effect-observation.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/effect-observation.ts](../../bridge/contracts/effect-observation.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[effect-observation-state.ts](effect-observation-state.ts)、[useEffectObservation.ts](useEffectObservation.ts)、[effect-recovery-state.ts](effect-recovery-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[effect-observation.css](effect-observation.css)。
 
 ### execution-report-state.ts
 
@@ -966,7 +966,7 @@ class N_src_view_tasks_ExecutionRecoveryForm_tsx["ExecutionRecoveryForm.tsx"] {
 }
 ```
 
-直接依赖：[useExecutionRecovery.ts](useExecutionRecovery.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)。
 
 ### graph-state.ts
 
@@ -1255,7 +1255,7 @@ class N_src_view_tasks_HumanContinuationForm_tsx["HumanContinuationForm.tsx"] {
 }
 ```
 
-直接依赖：[useHumanContinuation.ts](useHumanContinuation.ts)、[HumanDecisionPanel.tsx](HumanDecisionPanel.tsx)、[human-continuation.css](human-continuation.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useHumanContinuation.ts](useHumanContinuation.ts)、[HumanDecisionPanel.tsx](HumanDecisionPanel.tsx)、[human-continuation.css](human-continuation.css)。
 
 ### HumanDecisionPanel.tsx
 
@@ -1267,7 +1267,7 @@ class N_src_view_tasks_HumanDecisionPanel_tsx["HumanDecisionPanel.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)、[useHumanDecisions.ts](useHumanDecisions.ts)、[ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx)、[human-decisions.css](human-decisions.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/human-decisions.ts](../../bridge/contracts/human-decisions.ts)、[useHumanDecisions.ts](useHumanDecisions.ts)、[ArtifactTransitionProofs.tsx](ArtifactTransitionProofs.tsx)、[human-decisions.css](human-decisions.css)。
 
 ### IsolatedExecutionPanel.tsx
 
@@ -1279,7 +1279,7 @@ class N_src_view_tasks_IsolatedExecutionPanel_tsx["IsolatedExecutionPanel.tsx"] 
 }
 ```
 
-直接依赖：[../../bridge/contracts/isolated-executions.ts](../../bridge/contracts/isolated-executions.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/isolated-executions.ts](../../bridge/contracts/isolated-executions.ts)。
 
 ### member-activity.css
 
@@ -1522,7 +1522,7 @@ class N_src_view_tasks_MemberActivity_tsx["MemberActivity.tsx"] {
 }
 ```
 
-直接依赖：[member-review-state.ts](member-review-state.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
+直接依赖：[member-review-state.ts](member-review-state.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[member-help-state.ts](member-help-state.ts)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[member-checkpoint-state.ts](member-checkpoint-state.ts)、[member-cancellation-state.ts](member-cancellation-state.ts)、[member-activity.css](member-activity.css)。
 
 ### MemberArtifactReport.tsx
 
@@ -1621,7 +1621,7 @@ class N_src_view_tasks_MemberExecutionReport_tsx_external_ExecutionReportState["
 N_src_view_tasks_MemberExecutionReport_tsx_external_ExecutionReportState <|-- N_src_view_tasks_MemberExecutionReport_tsx_ExecutionReportView
 ```
 
-直接依赖：[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useExecutionReport.ts](useExecutionReport.ts)、[execution-report-state.ts](execution-report-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[MemberArtifactReport.tsx](MemberArtifactReport.tsx)、[MemberOutputManifest.tsx](MemberOutputManifest.tsx)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[ControlledFilePanel.tsx](ControlledFilePanel.tsx)、[IsolatedExecutionPanel.tsx](IsolatedExecutionPanel.tsx)、[effect-recovery-state.ts](effect-recovery-state.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[execution-report.css](execution-report.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[useExecutionReport.ts](useExecutionReport.ts)、[execution-report-state.ts](execution-report-state.ts)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[ExecutionRecoveryForm.tsx](ExecutionRecoveryForm.tsx)、[MemberArtifactReport.tsx](MemberArtifactReport.tsx)、[MemberOutputManifest.tsx](MemberOutputManifest.tsx)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[ControlledFilePanel.tsx](ControlledFilePanel.tsx)、[IsolatedExecutionPanel.tsx](IsolatedExecutionPanel.tsx)、[effect-recovery-state.ts](effect-recovery-state.ts)、[../components/RepositoryScopeDetails.tsx](../components/RepositoryScopeDetails.tsx)、[execution-report.css](execution-report.css)。
 
 ### MemberHelpNotice.tsx
 
@@ -1701,7 +1701,7 @@ class N_src_view_tasks_MemberTaskDetail_tsx["MemberTaskDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[member-review-state.ts](member-review-state.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/dispatch.ts](../../bridge/contracts/dispatch.ts)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../../bridge/contracts/chat.ts](../../bridge/contracts/chat.ts)、[../execution-view/QuestionCard.tsx](../execution-view/QuestionCard.tsx)、[useMemberRun.ts](useMemberRun.ts)、[MemberRunTranscript.tsx](MemberRunTranscript.tsx)、[MemberExecutionReport.tsx](MemberExecutionReport.tsx)、[MemberHelpNotice.tsx](MemberHelpNotice.tsx)、[MemberCancellationNotice.tsx](MemberCancellationNotice.tsx)、[MemberDependencyNotice.tsx](MemberDependencyNotice.tsx)、[MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx)、[MemberValidationPanel.tsx](MemberValidationPanel.tsx)、[OwnerExecutionDetails.tsx](OwnerExecutionDetails.tsx)、[OwnerExecutionInspection.tsx](OwnerExecutionInspection.tsx)、[useExecutionRecovery.ts](useExecutionRecovery.ts)、[member-review-state.ts](member-review-state.ts)、[MemberActivity.tsx](MemberActivity.tsx)、[member-activity.css](member-activity.css)。
 
 ### MemberValidationPanel.tsx
 
@@ -2285,7 +2285,7 @@ class N_src_view_tasks_RequestBudgetPanel_tsx["RequestBudgetPanel.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)、[request-budget-state.ts](request-budget-state.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/scope-budget.ts](../../bridge/contracts/scope-budget.ts)、[request-budget-state.ts](request-budget-state.ts)。
 
 ### scope-goal.css
 
@@ -2462,7 +2462,7 @@ class N_src_view_tasks_ScopeContinuationForm_tsx["ScopeContinuationForm.tsx"] {
 }
 ```
 
-直接依赖：[useScopeContinuation.ts](useScopeContinuation.ts)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[ContinuationSourceMenu.tsx](ContinuationSourceMenu.tsx)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useScopeContinuation.ts](useScopeContinuation.ts)、[../execution-view/ComposerAttachments.tsx](../execution-view/ComposerAttachments.tsx)、[ContinuationSourceMenu.tsx](ContinuationSourceMenu.tsx)。
 
 ### ScopeGoalPanel.tsx
 
@@ -2506,7 +2506,7 @@ class N_src_view_tasks_ScopeReplanForm_tsx["ScopeReplanForm.tsx"] {
 }
 ```
 
-直接依赖：[useScopeReplan.ts](useScopeReplan.ts)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[effect-observation-state.ts](effect-observation-state.ts)、[scope-replan.css](scope-replan.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useScopeReplan.ts](useScopeReplan.ts)、[EffectObservationPanel.tsx](EffectObservationPanel.tsx)、[effect-observation-state.ts](effect-observation-state.ts)、[scope-replan.css](scope-replan.css)。
 
 ### ScopeUsagePanel.tsx
 

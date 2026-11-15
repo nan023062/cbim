@@ -1,12 +1,15 @@
 /**
  * 作用定位：编辑当前工作区自动化，Agent/模块/Workflow/Skill 来自后端有效目录。
- * 设计原因：表单只保存显式配置，不启动模型；权限独立可见，日程固定时区，草稿不随后台轮询覆盖。
+ * 设计原因：表单只保存显式配置，不启动模型；权限独立可见，日程固定时区，草稿不随后台轮询覆盖；取消编辑前核对是否有未保存修改。
  */
+import {Icon} from '../components/Icon';
 import {useState} from 'react';
 import type {AutomationCatalog,AutomationDefinition,AutomationSchedule} from '../../bridge/contracts/automation';
 
 export function AutomationEditor({initial,catalog,busy,onSave,onCancel}:{initial:AutomationDefinition;catalog:AutomationCatalog;busy:boolean;onSave:(value:AutomationDefinition)=>void;onCancel:()=>void}){
  const [value,setValue]=useState(initial),[error,setError]=useState('');
+ const changed=JSON.stringify(value)!==JSON.stringify(initial);
+ function cancel(){if(!changed||confirm('放弃尚未保存的自动化设置？'))onCancel()}
  const patch=(part:Partial<AutomationDefinition>)=>setValue(old=>({...old,...part}));
  const executor=value.executor,agentId=executor.kind==='main'?'cbim:main':catalog.agents.find(a=>a.memberId===executor.memberId)?.agentId;
  const skills=catalog.skills.filter(s=>s.agentIds.includes(agentId??'')),schedule=value.schedule;
@@ -37,6 +40,6 @@ export function AutomationEditor({initial,catalog,busy,onSave,onCancel}:{initial
    {schedule.kind==='once'&&<label>本地时间<input type="datetime-local" required value={localOnce} onChange={e=>{const date=new Date(e.target.value);if(Number.isFinite(date.getTime()))patch({schedule:{...schedule,at:date.toISOString()}})}}/></label>}
    <label className="automation-check"><input type="checkbox" checked={value.enabled} onChange={e=>patch({enabled:e.target.checked})}/>启用计划</label>
   </fieldset>
-  {error&&<p role="alert">{error}</p>}<div className="automation-actions"><button type="submit" disabled={busy}>保存任务</button><button type="button" disabled={busy} onClick={onCancel}>取消</button></div>
+  {error&&<p role="alert">{error}</p>}<div className="automation-actions automation-save"><button className="solid-button" type="submit" disabled={busy}><Icon name="confirm" size={16}/>{busy?'正在保存…':'保存任务'}</button><button type="button" disabled={busy} onClick={cancel}><Icon name="close" size={16}/>取消</button><small>{changed?'有未保存的修改':'保存只更新配置，不立即运行'}</small></div>
  </form>;
 }

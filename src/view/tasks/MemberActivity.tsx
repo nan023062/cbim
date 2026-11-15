@@ -7,6 +7,7 @@ import {useState} from 'react';
 import {memberReviewStage} from './member-review-state';
 import type {TaskNode} from '../../bridge/contracts/dispatch';
 import {Icon} from '../components/Icon';
+import {stateIconNames} from '../components/state-labels';
 import {useMemberRun} from './useMemberRun';
 import {MemberRunTranscript} from './MemberRunTranscript';
 import {MemberHelpNotice} from './MemberHelpNotice';
@@ -35,10 +36,10 @@ export function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,
     <MemberDependencyNotice task={task} compact/>
     <MemberCheckpointNotice task={task} compact/>
     {run?<div className={'member-card-stream'+(expanded?' expanded':'')}><MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} compact={!expanded} active={active}/></div>:!cancellation&&<p className="member-muted">{loading?'正在读取成员动态…':latest?'尚未读取该轮公开执行记录。':task.status==='cancelled'?'没有登记的执行轮次，取消状态本身不能证明未执行。':task.waitReason||'任务已派发，尚未开始执行。'}</p>}
-    {error&&<p className="member-error" role="alert">{error}<button onClick={()=>void refresh()}>重试读取</button></p>}
+    {error&&<p className="member-error" role="alert">{error}<button onClick={()=>void refresh()}><Icon name="retry" size={16}/>重试读取</button></p>}
   </>;
   if(inline)return <div className="inline-member" data-member-task-id={task.taskId}>
-    <div className="inline-member-heading"><span>{task.assignee.name} · </span><span className={'member-state '+task.status}>{memberTaskLabel(task)}{task.status==='result_ready'?' · 尚未验收':''}</span><button onClick={()=>onSelectTask(task.taskId)}>查看任务详情</button></div>
+    <div className="inline-member-heading"><span>{task.assignee.name} · </span><span className={'member-state '+task.status}><Icon name={stateIconNames[task.status]??'info'} size={16}/>{memberTaskLabel(task)}{task.status==='result_ready'?' · 尚未验收':''}</span><button onClick={()=>onSelectTask(task.taskId)}><Icon name="inspect" size={16}/>查看任务详情</button></div>
     <p className="inline-member-goal">{task.goal}</p>
     {memberReviewStage(task)&&<p className="inline-member-note">{memberReviewStage(task)!.description}</p>}
     {task.waitReason&&<p className="inline-member-note">{task.waitReason}</p>}
@@ -47,7 +48,7 @@ export function MemberActivityCard({workspaceId,rootSessionId,task,onSelectTask,
     {expanded&&<div className="inline-member-body">{body}</div>}
   </div>;
   return <article className="member-activity-card" aria-label={'成员任务 · '+task.assignee.name}>
-    <header><span className="member-avatar"><Icon name="team" size={17}/></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state '+task.status}>{task.status==='running'&&<span className="work-spinner"/>}{memberTaskLabel(task)}</span></header>
+    <header><span className="member-avatar"><Icon name="team" size={17}/></span><div><strong>{task.assignee.name}</strong><span className="member-role-caption">执行 Agent</span></div><span className={'member-state '+task.status}><Icon name={stateIconNames[task.status]??'info'} size={16}/>{memberTaskLabel(task)}</span></header>
     <p className="member-task-goal">{task.goal}</p>{body}
     <footer>{run&&<button aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'收起过程':'展开过程'}</button>}<button onClick={()=>onSelectTask(task.taskId)}>查看任务详情 <Icon name="chevron" size={13}/></button></footer>
   </article>;
@@ -57,5 +58,5 @@ export function MemberActivity({workspaceId,rootSessionId,tasks,onSelectTask,onV
   const local=tasks.filter(task=>task.identity.workspaceId===workspaceId&&task.identity.rootSessionId===rootSessionId);
   if(!local.length)return null;
   const latest=[...local].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.taskId.localeCompare(a.taskId)).slice(0,3);
-  return <section className="member-activity" aria-label="团队成员执行动态"><div className="member-activity-heading"><span><Icon name="team" size={16}/>成员动态 · {local.length} 项任务</span><button onClick={()=>onViewAll?onViewAll():onSelectTask(latest[0].taskId)}>查看全部任务</button></div>{latest.map(task=><MemberActivityCard key={[workspaceId,rootSessionId,task.taskId].join(':')} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} onSelectTask={onSelectTask} active={active}/>)}</section>;
+  return <section className="member-activity" aria-label="团队成员执行动态"><div className="member-activity-heading"><span><Icon name="team" size={16}/>成员动态 · {local.length} 项任务</span><button onClick={()=>onViewAll?onViewAll():onSelectTask(latest[0].taskId)}><Icon name="inspect" size={16}/>查看全部任务</button></div>{latest.map(task=><MemberActivityCard key={[workspaceId,rootSessionId,task.taskId].join(':')} workspaceId={workspaceId} rootSessionId={rootSessionId} task={task} onSelectTask={onSelectTask} active={active}/>)}</section>;
 }

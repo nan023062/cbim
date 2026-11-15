@@ -3,6 +3,7 @@
  * 设计原因：条件预览只核对真实来源、模块和继承约束；新目标及执行权限由用户另行明确提交，不能把核实完成当作旧业务验收或人工批准。
  * 处置关联：新来源须先明确选择新业务修复处置；切换处置使预览失效，旧无关联核实仍按原协议读取。
  */
+import {Icon} from '../components/Icon';
 import type {ScopeReplanView} from './useScopeReplan';
 import {EffectObservationPanel} from './EffectObservationPanel';
 import {effectSelectionKey} from './effect-observation-state';
@@ -37,10 +38,10 @@ export function ScopeReplanForm({state}:{state:ScopeReplanView}){
     {phase==='accepted'&&attempt?.error&&<p role="alert">{attempt.error}；保留上次受理回执。</p>}
     {state.pending&&<p role="status">正在确认本次业务请求…</p>}
     <div className="scope-replan-actions">
-      {(!attempt||phase==='rejected')&&<><button data-testid="scope-replan-preview" disabled={!state.canPreview} onClick={()=>void state.preview()}>核验新任务条件</button><button data-testid="scope-replan-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}>创建新业务任务</button></>}
-      {(phase==='accepted'||phase==='unknown'||phase==='submitting')&&<button data-testid="scope-replan-query" disabled={state.pending} onClick={()=>void state.query()}>查询创建状态</button>}
-      {phase==='unknown'&&<button data-testid="scope-replan-retry" disabled={state.pending} onClick={()=>void state.retry()}>原请求重试</button>}
-      {phase==='accepted'&&<button data-testid="scope-replan-view" onClick={state.showCreated}>查看新目标</button>}
+      {(!attempt||phase==='rejected')&&<><button data-testid="scope-replan-preview" disabled={!state.canPreview} onClick={()=>void state.preview()}><Icon name="search" size={16}/>核验新任务条件</button><button data-testid="scope-replan-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}><Icon name="add" size={16}/>创建新业务任务</button></>}
+      {(phase==='accepted'||phase==='unknown'||phase==='submitting')&&<button data-testid="scope-replan-query" disabled={state.pending} onClick={()=>void state.query()}><Icon name="search" size={16}/>查询创建状态</button>}
+      {phase==='unknown'&&<button data-testid="scope-replan-retry" disabled={state.pending} onClick={()=>void state.retry()}><Icon name="retry" size={16}/>原请求重试</button>}
+      {phase==='accepted'&&<button data-testid="scope-replan-view" onClick={state.showCreated}><Icon name="inspect" size={16}/>查看新目标</button>}
     </div>
     {attempt&&<details><summary>请求与核实来源</summary><p>命令 <code>{attempt.request.commandId}</code></p><p>来源周期 <code>{attempt.request.source.inspectionScopeId}</code></p><p>条件依据 <code>{attempt.request.source.expectedBasis}</code></p></details>}
   </section>;

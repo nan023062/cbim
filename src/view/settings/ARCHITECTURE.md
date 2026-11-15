@@ -253,7 +253,7 @@ class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
 
 ### models.css
 
@@ -351,6 +351,7 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"] {
   <<interface>>
+  +onDirtyChange
   +sidebarResize
   +section
   +onSectionChange
@@ -403,7 +404,7 @@ class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
 
 ### 本目录调用边界
 
@@ -574,6 +575,8 @@ N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_css : �
 WebSettings 显示浏览器 robots 策略（默认允许读正文、可选遵守规则）、Brave Search API 开关与密码输入；明确查询词发送给供应商。策略不依赖搜索密钥，可在安全存储不可用时保存。保存成功清空密钥输入，移除密钥同时关闭搜索；无安全存储时禁填密钥。版本冲突刷新配置摘要，保留未成功保存的密钥输入；不提供密钥读取或测试搜索自动调用。
 
 # 设置界面
+
+设置中心按已访问分类保留表单，以来源键合并模型、并发、预算、网页、GitHub 反馈和资源目录的未保存布尔标记。外壳返回/离开与窗口关闭先提示；不向外壳传递输入或凭据。表单保存后按实际返回版本清除自身标记，卸载退订。目录、并发和预算显式重新读取会先保护草稿；取消离开不继续切换工作区。外观设置仍即时持久化，不充当未提交表单。
 
 版本与更新由用户栏图标、设置中心“关于与更新”和独立 [updates](../updates/ARCHITECTURE.md) 详情展示。App 持有唯一更新控制器；设置页只读取同一状态或显式检查，日志入口打开原模态框，不重建轮询、不卸载表单。重启安装仍由原详情显式触发。
 

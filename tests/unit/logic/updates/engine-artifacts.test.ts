@@ -24,7 +24,7 @@ test('发现独立引擎版本不下载，准备只接受签名摘要，重开�
     expect((await f.service.list()).current[0].version).toBe('1.0.0');await f.service.check();expect(f.prepare).not.toHaveBeenCalled();
     expect((await f.service.list()).current[0].version).toBe('1.1.0');await expect(f.service.prepare('pi','d'.repeat(64))).rejects.toThrow(/受信/);
     await f.service.prepare('pi',f.pi.package.sha256);expect(f.prepare).toHaveBeenCalledOnce();
-    const reopened=new EngineArtifacts(f.file,f.store,f.seed(f.next,'0.2.0'),new AbortController().signal,async()=>{throw Error('offline')});
+    const reopened=new EngineArtifacts(f.file,{...f.store,cold:{...f.cold,codeVersion:'0.2.0'}} as RuntimeStore,f.seed(f.next,'0.2.0'),new AbortController().signal,async()=>{throw Error('offline')});
     expect((await reopened.list()).available.map(item=>item.version)).toEqual(['1.0.0','1.1.0']);await reopened.prepare('pi',f.pi.package.sha256);
   }finally{await f.cleanup()}
 });
@@ -40,3 +40,29 @@ test('回退、同序号不同内容、同版本不同摘要拒绝，失败保�
 });
 
 test('准备回调提供本地校验/下载合并进度，不改变候选选择',async()=>{const f=await fixture();try{const progress=vi.fn();const before=await f.service.list();await f.service.prepare('pi',f.pi.package.sha256,progress);expect(progress.mock.calls.map(call=>call[0])).toEqual([0,56,100]);expect(await f.service.list()).toEqual(before)}finally{await f.cleanup()}});
+
+test('换钥只授权显式历史身份的本地来源，远程旧签名与旧身份启动来源仍拒绝',async()=>{
+  const old=await fixture(),fresh=await fixture();try{
+    await old.service.check();
+    const signal=new AbortController().signal,keys=[old.cold.publicKey];
+    await expect(new EngineArtifacts(old.file,fresh.store,fresh.seed(fresh.pi),signal).list()).rejects.toThrow(/签名/);
+    const migrated=new EngineArtifacts(old.file,fresh.store,fresh.seed(fresh.pi),signal,async()=>old.index(2),undefined,keys);
+    expect((await migrated.list()).available.map(item=>item.version)).toEqual(['1.0.0','1.1.0']);
+    await migrated.prepare('pi',old.next.package.sha256);expect(fresh.prepare).toHaveBeenCalledOnce();
+    const bytes=await fs.readFile(old.file,'utf8');
+    await expect(migrated.check()).rejects.toThrow(/签名/);expect(await fs.readFile(old.file,'utf8')).toBe(bytes);
+    await expect(new EngineArtifacts(old.file,fresh.store,old.seed(old.pi),signal,undefined,undefined,keys).list()).rejects.toThrow(/签名/);
+    const reopened=new EngineArtifacts(old.file,fresh.store,fresh.seed(fresh.pi),signal,undefined,undefined,keys);
+    expect(await reopened.list()).toEqual(await migrated.list());
+  }finally{await old.cleanup();await fresh.cleanup()}
+});
+
+test.each(['seeds','indexes'] as const)('历史 %s 篡改仍失败且不重写证据',async field=>{
+  const old=await fixture(),fresh=await fixture();try{
+    await old.service.check();const raw=JSON.parse(await fs.readFile(old.file,'utf8'));
+    const payload=JSON.parse(raw[field][0].payload);payload.notes='tampered';raw[field][0].payload=JSON.stringify(payload);
+    const bytes=JSON.stringify(raw);await fs.writeFile(old.file,bytes);
+    const migrated=new EngineArtifacts(old.file,fresh.store,fresh.seed(fresh.pi),new AbortController().signal,undefined,undefined,[old.cold.publicKey]);
+    await expect(migrated.list()).rejects.toThrow(/签名/);expect(await fs.readFile(old.file,'utf8')).toBe(bytes);
+  }finally{await old.cleanup();await fresh.cleanup()}
+});

@@ -13,7 +13,8 @@ test('user bubble and assistant bare surface keep copy and real timestamp access
 test('work header distinguishes awaiting authorization, running, failed and stopped from durable events',()=>{
   const run={status:'running',events:[{type:'run.started',time:'2026-11-06T00:00:00Z',data:{}},{type:'tool.proposed',data:{id:'write1',name:'write',input:{path:'game.html'}}}]} as RunSummary;
   const render=()=>renderToStaticMarkup(createElement(WorkStatus,{run,now:Date.parse('2026-11-06T00:00:12Z')}));
-  expect(render()).toContain('等待授权 · 写入文件');expect(render()).toContain('work-spinner');
+  // 统一状态图标保持静止，实时反馈由折叠区之外的状态文字和活动点承担。
+  expect(render()).toContain('等待授权 · 写入文件');expect(render()).toContain('work-live-dot');expect(render()).toContain('role="status"');
   run.events.push({version:1,seq:3,taskId:'t',runId:'r',workspaceId:'w',type:'tool.finished',time:'2026-11-06T00:00:13Z',data:{id:'write1',name:'write',isError:true,result:'disk full'}});run.status='failed';
   const failed=render();expect(failed).toContain('执行失败');expect(failed).toContain('disk full');
   // 失败动作在折叠轨道之外保持可见，但不再显示运行中的呼吸点。

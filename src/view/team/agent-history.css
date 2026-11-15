@@ -10,13 +10,13 @@
 .agent-history-search input{min-width:0;flex:1}
 .agent-history-roles,.agent-history-runs{display:grid;gap:7px}
 .agent-history-roles>button,.agent-history-runs>button,.agent-history-sessions>button{display:grid;text-align:left;gap:3px;white-space:normal;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent;overflow-wrap:anywhere}
-.agent-history-roles>button small,.agent-history-sessions>button small,.agent-history-runs>button small{color:var(--muted);font-size:11px}
+.agent-history-roles>button small,.agent-history-sessions>button small,.agent-history-runs>button small{color:var(--muted);font-size:12px}
 .agent-history-layout{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(260px,1.3fr);gap:18px;align-items:start}
 .agent-history-sessions{display:grid;gap:7px;max-height:620px;overflow:auto;padding-right:3px}
 .agent-history-session-content{border-left:1px solid var(--line);padding-left:18px;min-width:0}
 .agent-history-session-content h3,.agent-history-session-content h4{overflow-wrap:anywhere}
 .agent-history-sessions>button.selected,.agent-history-runs>button.selected{background:var(--hover);border-color:var(--muted)}
-.agent-session-history code,.agent-history-identity dd{overflow-wrap:anywhere;font-size:11px;white-space:normal}
+.agent-session-history code,.agent-history-identity dd{overflow-wrap:anywhere;font-size:12px;white-space:normal}
 .agent-history-identity{margin:12px 0;color:var(--muted)}
 .agent-history-identity dl{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;row-gap:6px}
 .agent-history-identity dd{margin:0;color:var(--text)}

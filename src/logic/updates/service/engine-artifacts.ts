@@ -1,13 +1,13 @@
 /**
  * 作用定位：冷壳持有的通用 E 制品服务，保存独立签名索引历史并准备准确摘要的包。
- * 设计原因：R 消费可用制品而不持有下载信任根；查询不激活，序号回退、同版异包及坏缓存不触发降级或自动重试。
+ * 设计原因：R 消费可用制品而不持有下载信任根；冷壳显式授权的历史公钥仅验证本地 E 来源，不授权新下载索引或旧 R 启动。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {atomic} from '../../../core/platform/node/files';
 import {SerialQueue} from '../../../core/utility';
 import type {EngineArtifactsPort,EngineArtifact} from '../engine-artifacts';
-import {verifyEngineIndex} from './engine-index';
+import {engineIndexAsset,verifyEngineIndex} from './engine-index';
 import {verifyRuntimeManifest,type EnginePackage,type SignedRuntimeManifest} from './runtime-manifest';
 import type {RuntimeStore} from './runtime-store';
 import {downloadRuntimeManifest} from './runtime-download';
@@ -21,7 +21,14 @@ export class EngineArtifacts implements EngineArtifactsPort {
   private available=new Map<string,EnginePackage>();
   private current=new Map<string,string>();
   private head=0;private digest='';
-  constructor(private readonly stateFile:string,private readonly store:RuntimeStore,private readonly seed:SignedRuntimeManifest,private readonly signal:AbortSignal,private readonly fetchIndex=()=>downloadRuntimeManifest('runtime-engines','latest.json',signal),private readonly progress:(kind:string,version:string,progress?:number,error?:string)=>void=()=>{}){}
+  /** historicalKeys 由可信冷宿主固定，不能来自用户状态或网络；只用于重验已保存的历史来源。 */
+  constructor(private readonly stateFile:string,private readonly store:RuntimeStore,private readonly seed:SignedRuntimeManifest,private readonly signal:AbortSignal,private readonly fetchIndex=()=>downloadRuntimeManifest('runtime-engines',engineIndexAsset(store.cold.publicKey),signal),private readonly progress:(kind:string,version:string,progress?:number,error?:string)=>void=()=>{},private readonly historicalKeys:readonly string[]=[]){}
+  private verifyHistory<T>(verify:(publicKey:string)=>T):T{
+    try{return verify(this.store.cold.publicKey)}catch(error){
+      for(const key of this.historicalKeys){try{return verify(key)}catch{}}
+      throw error;
+    }
+  }
   private add(packages:readonly EnginePackage[],target:Map<string,EnginePackage>){
     for(const pkg of packages){
       if(!pkg.adapter)continue;
@@ -32,6 +39,8 @@ export class EngineArtifacts implements EngineArtifactsPort {
   }
   private async init(){
     if(this.initialized)return;
+    // 当前启动来源始终必须使用当前身份；历史公钥不能将旧签名提升为新资源授权。
+    verifyRuntimeManifest(this.seed,this.store.cold,{installed:true});
     const available=new Map<string,EnginePackage>(),current=new Map<string,string>();
     let raw:{schema:1;indexes:SignedRuntimeManifest[];seeds:SignedRuntimeManifest[]}={schema:1,indexes:[],seeds:[]};
     try{const stat=await fs.lstat(this.stateFile);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>128*1024*1024)throw Error('本机引擎索引无效');raw=JSON.parse(await fs.readFile(this.stateFile,'utf8'))}catch(error:any){if(error.code!=='ENOENT')throw error}
@@ -39,13 +48,13 @@ export class EngineArtifacts implements EngineArtifactsPort {
     const seeds=raw.seeds.some(value=>value.payload===this.seed.payload)?raw.seeds:[...raw.seeds,this.seed];
     if(seeds.length>128)throw Error('引擎来源保留数量达到上限');
     for(const envelope of seeds){
-      // 旧 C/R 签名只用于证明历史 E 的来源，绝不用于启动旧资源；信任根和平台仍是当前冷壳。
+      // 旧 C/R 只证明历史 E 来源；平台和允许的历史身份仍由当前冷壳限定，绝不启动旧资源。
       const metadata=JSON.parse(envelope.payload);
-      const checked=verifyRuntimeManifest(envelope,{...this.store.cold,codeVersion:metadata.codeVersion,coldFingerprint:metadata.coldFingerprint},{installed:true});this.add(checked.manifest.engines,available);
+      const checked=this.verifyHistory(publicKey=>verifyRuntimeManifest(envelope,{...this.store.cold,publicKey,codeVersion:metadata.codeVersion,coldFingerprint:metadata.coldFingerprint},{installed:true}));this.add(checked.manifest.engines,available);
       if(envelope.payload===this.seed.payload)for(const pkg of checked.manifest.engines)if(pkg.adapter)current.set(pkg.kind,pkg.package.sha256);
     }
     let head=0,digest='';
-    for(const envelope of raw.indexes){const checked=verifyEngineIndex(envelope,this.store.cold,true);if(checked.index.sequence<=head)throw Error('本机引擎索引序号无效');this.add(checked.index.releases,available);for(const ref of checked.index.current)current.set(ref.kind,ref.identity);head=checked.index.sequence;digest=checked.digest}
+    for(const envelope of raw.indexes){const checked=this.verifyHistory(publicKey=>verifyEngineIndex(envelope,{...this.store.cold,publicKey},true));if(checked.index.sequence<=head)throw Error('本机引擎索引序号无效');this.add(checked.index.releases,available);for(const ref of checked.index.current)current.set(ref.kind,ref.identity);head=checked.index.sequence;digest=checked.digest}
     if(seeds.length!==raw.seeds.length)await atomic(this.stateFile,JSON.stringify({schema:1,seeds,indexes:raw.indexes}));
     this.seeds=seeds;this.available=available;this.current=current;this.head=head;this.digest=digest;this.envelopes=raw.indexes;this.initialized=true;
   }

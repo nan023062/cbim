@@ -108,7 +108,7 @@ class N_src_view_resources_RepositoryConnections_tsx_Connection["Connection"] {
 N_src_view_resources_RepositoryConnections_tsx ..> N_src_view_resources_RepositoryConnections_tsx_Connection : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[repository-connection-state.ts](repository-connection-state.ts)、[repository-connections.css](repository-connections.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/repository-connections.ts](../../bridge/contracts/repository-connections.ts)、[repository-connection-state.ts](repository-connection-state.ts)、[repository-connections.css](repository-connections.css)。
 
 ### resource-application.ts
 
@@ -163,7 +163,7 @@ class N_src_view_resources_ResourceRepositoryView_tsx_Draft["Draft"] {
 N_src_view_resources_ResourceRepositoryView_tsx ..> N_src_view_resources_ResourceRepositoryView_tsx_Draft : 声明
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[RepositoryConnections.tsx](RepositoryConnections.tsx)、[resource-application.ts](resource-application.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[WorkspaceResourceTransfer.tsx](WorkspaceResourceTransfer.tsx)、[RepositoryConnections.tsx](RepositoryConnections.tsx)、[resource-application.ts](resource-application.ts)。
 
 ### workspace-transfer.css
 
@@ -221,7 +221,7 @@ class N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransf
 N_src_view_resources_WorkspaceResourceTransfer_tsx ..> N_src_view_resources_WorkspaceResourceTransfer_tsx_WorkspaceResourceTransferProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)、[resource-application.ts](resource-application.ts)、[../knowledge/architecture-editor.css](../knowledge/architecture-editor.css)、[workspace-transfer.css](workspace-transfer.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)、[resource-application.ts](resource-application.ts)、[../knowledge/architecture-editor.css](../knowledge/architecture-editor.css)、[workspace-transfer.css](workspace-transfer.css)。
 
 ### 本目录调用边界
 
@@ -282,6 +282,8 @@ N_src_view_resources_WorkspaceResourceTransfer_tsx ..> N_src_view_resources_work
 
 # 资源仓库界面契约
 
+三类资源列表、编辑器、连接与工作区应用使用统一操作图标、控件和可读字号。连接、登记、预览和应用保留各自按钮及完整文字，不把安装、授权、使用折叠为同一个动作。
+
 ## 工作区资源仓库连接
 
 `RepositoryConnections` 仅出现在链接器页。用户明确选择已就绪工作区，先预览并登记当前已共享仓库的静态定义，再独立点击允许只读连接。两步回执分别显示，不把知识提交视为授权，也不自动开启服务或让静态文本资源执行。
@@ -310,3 +312,9 @@ N_src_view_resources_WorkspaceResourceTransfer_tsx ..> N_src_view_resources_work
 WorkspaceResourceTransfer 不再要求登记真人维护人；整套业务导入后按需配置岗位负责人及源目录。替换 Team 的旧人员文件保留但不影响有效性，实际覆盖范围仍由受控预览展示。
 
 仓库连接提交从原待确认请求的 commit/grant/revoke 联合构造固定 IPC 动作；保存前态、首次明确拒绝和未知结果核实保持。
+
+## 列表状态与模态
+
+ResourceRepositoryView 在来源尚未返回时显示读取中；读取失败、未配置、空仓库和筛选无结果分别呈现。筛选有 aria-pressed 和清除入口。编辑定义及选择应用目标复用 ModalFrame 原生焦点边界；Escape 与关闭按钮共用 busy 和脏稿检查。资源包正文只读、预览事务和授权边界不变。
+
+WorkspaceResourceTransfer 同样使用 ModalFrame；选择、审阅、回执三个阶段来自实际 preview/result，不用计时器推进。切换资源或目标仍清除旧预览，只有后端返回成功回执才进入结果阶段；关闭不撤销已发生的操作。

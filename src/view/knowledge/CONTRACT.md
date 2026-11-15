@@ -4,6 +4,8 @@ useGovernanceLaunch 持有显式启动门禁；TreeActions 关闭不销毁它。
 
 ### 单一树根与视图图标
 
+文件预览与架构编辑中的关闭、编辑、移除和添加源目录也复用公共 Icon；表单边框、焦点和字号由统一界面规则提供，布局与知识事务仍属于本目录。
+
 每棵树只保留业务模块/团队架构一个根，展开和折叠全部在树右上角用图标显示，title和aria-label提供提示。操作仅更新本地closed集合；根的行尾菜单持续可用，搜索时仍展开匹配祖先，不把折叠当知识修改。
 
 ### 目录行尾操作
@@ -39,3 +41,9 @@ ArchitectureEditor 使用与主 Agent 相同的 AgentModelSelection 和 provider
 KnowledgeFileTree 从当前工作区快照构建真实目录/文件树，折叠只影响查看。KnowledgeFilePreview 显示实际正文与快照格式诊断；编辑器固定打开版本，350ms 延迟完整事务预览，新输入立即作废旧预览，迟到响应丢弃，只有结构通过可提交。发送后的原请求锁定，未知结果不能换 ID 自动重发。派生 registry 只读。原高级 KnowledgeTools 页面已删除。
 
 GovernanceLaunch 明确点击后通过 loop.chat 启动对应团队/业务架构治理工作流，使用主 Agent 保存选型和 ask 权限；真实 taskId 回交 Shell，未知启动不自动重试。
+
+## 架构编辑模态边界
+
+ArchitectureEditor 使用 ModalFrame 管理原生焦点范围与返回。Escape 和显式关闭共用既有草稿确认，busy 时不关闭；预览和提交的版本、对象及 IPC 不改变。
+
+KnowledgeFilePreview 的 FileEditor 采用同一模态边界；Escape 复用脏稿及原提交事实确认，saving 时保持打开。原请求锁定和事务身份不变；焦点机制不重新创建预览或重发写入。

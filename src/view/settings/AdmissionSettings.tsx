@@ -1,4 +1,5 @@
 /**
+ * 草稿仅上报未保存标记，离开检查由设置外壳持有；不传递敏感输入。
  * 作用定位：配置应用级 Agent 并发上限，展示真实准入占用与等待数量。
  * 设计原因：设置通过版本化可靠提交才生效；隐藏分类保留草稿并退订实时数量，降低额度不终止现有任务，也不把容量等同费用预算。
  */
@@ -8,10 +9,12 @@ import {useAdmission,refreshAdmission} from '../tasks/useAdmission';
 import '../tasks/admission.css';
 
 /** 本机设置不需要模型参与，不能从页面直接领取或释放执行名额。 */
-export function AdmissionSettings({active=true}:{active?:boolean}){
+export function AdmissionSettings({active=true,onDirtyChange}:{active?:boolean;onDirtyChange?:(dirty:boolean)=>void}){
   const feed=useAdmission(active),[policy,setPolicy]=useState<AdmissionPolicy>(),[value,setValue]=useState('4'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
+  const unsaved=!!policy&&value!==String(policy.maxConcurrentRuns);
+  useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false)},[unsaved,onDirtyChange]);
   useEffect(()=>{let alive=true;void window.cbim.call('admission.settings').then(raw=>{const saved=admissionPolicySchema.parse(raw);if(alive){setPolicy(saved);setValue(String(saved.maxConcurrentRuns))}}).catch((error:Error)=>{if(alive)setError(error.message)});return()=>{alive=false}},[]);
-  async function reload(){setBusy(true);setError('');setNotice('');try{const next=admissionPolicySchema.parse(await window.cbim.call('admission.settings'));setPolicy(next);setValue(String(next.maxConcurrentRuns));await refreshAdmission()}catch(error){setError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}}
+  async function reload(){if(unsaved&&!confirm('刷新会放弃未保存的并发设置，继续吗？'))return;setBusy(true);setError('');setNotice('');try{const next=admissionPolicySchema.parse(await window.cbim.call('admission.settings'));setPolicy(next);setValue(String(next.maxConcurrentRuns));await refreshAdmission()}catch(error){setError(error instanceof Error?error.message:String(error))}finally{setBusy(false)}}
   async function save(){
     if(!policy||busy)return;setBusy(true);setError('');setNotice('');
     try{const next=admissionPolicySchema.parse(await window.cbim.call('admission.configure',{revision:policy.revision,maxConcurrentRuns:Number(value)}));setPolicy(next);setValue(String(next.maxConcurrentRuns));setNotice('已保存。新运行按此上限领取名额；正在执行的任务继续运行。');await refreshAdmission()}

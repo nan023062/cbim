@@ -13,14 +13,19 @@
 | [agent-model-form.css](agent-model-form.css) | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
 | [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
 | [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
+| [DeferredView.tsx](DeferredView.tsx) | 页面入口的延迟模块装配，提供局部加载与失败重试，不负责业务导航。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
 | [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |
-| [Icon.tsx](Icon.tsx) | 无业务状态的 SVG 图标组件。 |
+| [Icon.tsx](Icon.tsx) | 全界面共用的 24px 线性图标，覆盖操作、状态、导航和角色。 |
+| [interface.css](interface.css) | 所有产品页面共用的主题、控件、排版和反馈动效。 |
+| [InterfaceHelp.tsx](InterfaceHelp.tsx) | 窗口级操作说明、可聚焦和可悬停的 Tooltip；只读取已渲染控件的说明。 |
+| [ModalFrame.tsx](ModalFrame.tsx) | View 层模态容器，为编辑与预览提供原生焦点约束和关闭后焦点返回。 |
 | [repository-scope.css](repository-scope.css) | 对应界面的布局与视觉样式。 |
 | [RepositoryScopeDetails.tsx](RepositoryScopeDetails.tsx) | 在主对话工具详情与执行核实报告中展示可信回执的资源仓库范围。 |
 | [sidebar.css](sidebar.css) | 首页与设置中心共用的侧栏几何、标题、搜索、菜单和调整边缘样式。 |
 | [state-labels.ts](state-labels.ts) | 界面工作区与工具任务状态的中文标签。 |
 | [TreeActions.tsx](TreeActions.tsx) | 树节点行尾的显式操作菜单；由宿主绑定真实对象和可用状态。 |
+| [ViewTabs.tsx](ViewTabs.tsx) | 同一页面内的可访问视图切换，统一图标、选中语义与键盘导航。 |
 
 ## 架构类图
 
@@ -53,6 +58,34 @@ class N_src_view_components_BrandMark_tsx["BrandMark.tsx"] {
   <<component>>
   +BrandMark()
 }
+```
+
+
+### DeferredView.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_DeferredView_tsx["DeferredView.tsx"] {
+  <<component>>
+  +deferredView()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_components_DeferredView_tsx["DeferredView.tsx"] {
+  <<component>>
+}
+class N_src_view_components_DeferredView_tsx_ViewLoadBoundary["ViewLoadBoundary"] {
+  +state
+  +getDerivedStateFromError()
+  +render()
+}
+N_src_view_components_DeferredView_tsx ..> N_src_view_components_DeferredView_tsx_ViewLoadBoundary : 声明
+class N_src_view_components_DeferredView_tsx_external_Component["Component (外部契约)"] {
+  <<external>>
+}
+N_src_view_components_DeferredView_tsx_external_Component <|-- N_src_view_components_DeferredView_tsx_ViewLoadBoundary
 ```
 
 
@@ -90,16 +123,36 @@ class N_src_view_components_Icon_tsx["Icon.tsx"] {
 }
 ```
 
+
+### interface.css
+
 ```mermaid
 classDiagram
-class N_src_view_components_Icon_tsx["Icon.tsx"] {
-  <<component>>
+class N_src_view_components_interface_css["interface.css"] {
+  <<stylesheet>>
 }
-class N_src_view_components_Icon_tsx_IconName["IconName"] {
-  <<type>>
+```
 
+### InterfaceHelp.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_InterfaceHelp_tsx["InterfaceHelp.tsx"] {
+  <<component>>
+  +InterfaceHelp()
 }
-N_src_view_components_Icon_tsx ..> N_src_view_components_Icon_tsx_IconName : 声明
+```
+
+直接依赖：[Icon.tsx](Icon.tsx)。
+
+### ModalFrame.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_ModalFrame_tsx["ModalFrame.tsx"] {
+  <<component>>
+  +ModalFrame()
+}
 ```
 
 
@@ -170,6 +223,33 @@ N_src_view_components_TreeActions_tsx ..> N_src_view_components_TreeActions_tsx_
 
 直接依赖：[Icon.tsx](Icon.tsx)。
 
+### ViewTabs.tsx
+
+```mermaid
+classDiagram
+class N_src_view_components_ViewTabs_tsx["ViewTabs.tsx"] {
+  <<component>>
+  +ViewTabs()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_components_ViewTabs_tsx["ViewTabs.tsx"] {
+  <<component>>
+}
+class N_src_view_components_ViewTabs_tsx_ViewTab["ViewTab"] {
+  <<interface>>
+  +id
+  +label
+  +icon
+  +count
+}
+N_src_view_components_ViewTabs_tsx ..> N_src_view_components_ViewTabs_tsx_ViewTab : 声明
+```
+
+直接依赖：[Icon.tsx](Icon.tsx)。
+
 ### 本目录调用边界
 
 ```mermaid
@@ -189,27 +269,35 @@ class N_src_view_components_Empty_tsx["Empty.tsx"] {
 class N_src_view_components_Icon_tsx["Icon.tsx"] {
   <<component>>
 }
+class N_src_view_components_InterfaceHelp_tsx["InterfaceHelp.tsx"] {
+  <<component>>
+}
+N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_EngineModelPicker_tsx : 导入依赖
+N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_agent_model_form_css : 导入依赖
+N_src_view_components_Empty_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
+N_src_view_components_InterfaceHelp_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_components_RepositoryScopeDetails_tsx["RepositoryScopeDetails.tsx"] {
   <<component>>
 }
 class N_src_view_components_repository_scope_css["repository-scope.css"] {
   <<stylesheet>>
 }
-N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_EngineModelPicker_tsx : 导入依赖
-N_src_view_components_AgentModelForm_tsx ..> N_src_view_components_agent_model_form_css : 导入依赖
-N_src_view_components_Empty_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
-N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repository_scope_css : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_view_components_TreeActions_tsx["TreeActions.tsx"] {
   <<component>>
 }
 class N_src_view_components_Icon_tsx["Icon.tsx"] {
   <<component>>
 }
+class N_src_view_components_ViewTabs_tsx["ViewTabs.tsx"] {
+  <<component>>
+}
+N_src_view_components_RepositoryScopeDetails_tsx ..> N_src_view_components_repository_scope_css : 导入依赖
 N_src_view_components_TreeActions_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
+N_src_view_components_ViewTabs_tsx ..> N_src_view_components_Icon_tsx : 导入依赖
 ```
 
 
@@ -234,6 +322,12 @@ TreeActions 只持有菜单开闭，业务回调由树宿主按真实节点绑�
 sidebar.css 为首页和设置提供同一侧栏内边距、32px 标题/菜单行、30px 圆角搜索框、图标和分组间距、选中样式及调整边缘。它只处理展示，宽度和持久化归外壳 useSidebarWidth；两类导航的业务项、搜索与窄屏内容策略各自保留。
 
 # 通用展示组件
+
+## 统一视觉与延迟入口
+
+Icon 使用统一的 24px / 1.75px 线性图形，同时保留当前引擎与树操作图标；名称来自调用者，不推断运行状态。InterfaceHelp 提供延迟提示及只读操作说明，不读取表单值。ModalFrame 使用原生 dialog 并在关闭时恢复入口焦点。界面 CSS 由 view/styles.ts 统一加载，业务布局之后应用 interface.css；最后统一侧栏标题/搜索/菜单为 36/36/38px，触屏控件至少 44px。
+
+deferredView 在模块作用域定义，首次挂载调用 loader；显示局部 status，加载或渲染失败显示 alert 和显式重试。重试仅重建此页，可能丢失该页内部草稿，不刷新整个应用或自动重放业务操作。成功页面正常重绘与隐藏不重建；浏览器缓存的失败模块未必可通过重试恢复。
 
 `Icon` 的垂直三点、编辑笔与删除桶是无状态矢量标识，工作区菜单和两处对话条目共用，不引入外壳或运行依赖。架构卡片图标按钮自带 title 与 aria-label，图标本身对辅助技术隐藏。
 

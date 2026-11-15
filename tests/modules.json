@@ -876,7 +876,9 @@
         "src/view/components/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/deferred-view.test.ts"
+        ],
         "contract": [
           "tests/repository-tools-view.test.ts"
         ],
@@ -1076,7 +1078,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/update-button-state.test.ts"
+          "tests/update-button-state.test.ts",
+          "tests/software-updates-view.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1602,6 +1605,18 @@
       "tests": {
         "unit": [
           "tests/module-source-browser.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "view/diagnostics": {
+      "roots": [
+        "src/view/diagnostics/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/diagnostics-view.test.ts"
         ],
         "contract": [],
         "integration": []

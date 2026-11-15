@@ -35,7 +35,7 @@ class N_src_view_automation_AutomationEditor_tsx["AutomationEditor.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)。
 
 ### AutomationView.tsx
 

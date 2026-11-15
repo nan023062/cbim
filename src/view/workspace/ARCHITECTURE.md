@@ -250,12 +250,13 @@ class N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps["M
   +initialMemberId
   +memberId
   +onClose
+  +onDirtyChange
   +registration
 }
 N_src_view_workspace_ModuleOwnershipPanel_tsx ..> N_src_view_workspace_ModuleOwnershipPanel_tsx_ModuleOwnershipPanelProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[module-ownership.css](module-ownership.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/module-ownership.ts](../../bridge/contracts/module-ownership.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../team/workspace-member-state.ts](../team/workspace-member-state.ts)、[module-ownership-state.ts](module-ownership-state.ts)、[ModuleOwnershipDetail.tsx](ModuleOwnershipDetail.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[module-ownership.css](module-ownership.css)。
 
 ### ModuleSourceTree.tsx
 
@@ -388,6 +389,8 @@ ModuleSourceTree 按 validation.tree 只显示模块，目录来自 sources 绑�
 
 ### 去除重复项目根
 
+模块责任及工作区操作采用公共 Icon：查询回执与再次发送保持不同图形和完整文字，主题、焦点和辅助字号与团队视图一致。选择原模块、预览版本和权限条件保持原流程。
+
 业务架构去掉树上方工作区名加“项目根”的重复按钮，业务模块为唯一可见根，空项目的新建/模板等入口仍在根行菜单。内置projectRootModuleId语义、默认执行和数据结构不变。
 
 ### 文件树操作入口
@@ -458,3 +461,15 @@ ModuleOwnershipCommands 组合前端 SubscriptionSet 管理本实例监听器，
 ### 本地记录存储边界
 
 命令控制器组合前端 JsonRecordStorage，仍使用原键、紧凑 JSON 字节与 2 MiB 上限。基础库仅解析/序列化和调用存储；条数、记录身份、回执匹配、坏数据保留与禁写、内存发布和未知请求恢复保持原顺序，不自动重送。
+
+## 项目范围提示
+
+BusinessArchitecture 在搜索前展示项目名、实际路径及当前快照中的模块数量。范围条不登记负责人或触发执行，选树节点与原知识草稿保护保持不变。
+
+## 模块详情分区
+
+BusinessArchitecture 保留唯一模块树，模块责任、知识正文、目录与流程分区保持挂载，切换不丢知识草稿。顶部创建/模板和详情动作复用原节点回调。ModuleOwnershipPanel 按准备、预览、确认展示责任变更，切换模块及返回前确认未保存选择；accepted 才清除草稿标记。只登记责任，不转移现有运行；外壳关闭页面的保护仍由外壳负责。
+
+## 跨页面草稿保护
+
+模块责任面板向所属扩展页上报脏稿标记；登记岗位与责任子页复用同一来源回调，不改变预览和原请求核实。

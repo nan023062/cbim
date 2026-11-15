@@ -16,7 +16,7 @@
 .repository-connection-result ul{padding-left:20px;margin:8px 0}
 .repository-connection-result li{margin:7px 0;overflow-wrap:anywhere}
 .repository-connection-preview{border:1px solid var(--line);border-radius:8px;padding:14px;margin-top:14px}
-.repository-connection-preview pre{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}
+.repository-connection-preview pre{max-height:220px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
 .repository-connection-preview dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;font-size:12px}
 .repository-connection-preview dd{margin:0;overflow-wrap:anywhere}
 @media(max-width:600px){.repository-connections{padding:12px}.repository-connections>header{flex-wrap:wrap}.repository-connection-preview dl{display:block}.repository-connection-preview dd{margin:4px 0 10px}}

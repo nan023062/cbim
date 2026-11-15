@@ -117,13 +117,13 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -signal
   -fetchIndex
   -progress
+  -historicalKeys
   -queue
   -initialized
   -envelopes
   -seeds
   -available
   -current
-  -head
 }
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
 class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
@@ -140,7 +140,9 @@ class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
+  -head
   -digest
+  -verifyHistory()
   -add()
   -init()
   -summary()
@@ -160,6 +162,7 @@ N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort <|.
 classDiagram
 class N_src_logic_updates_service_engine_index_ts["engine-index.ts"] {
   <<module>>
+  +engineIndexAsset()
   +verifyEngineIndex()
 }
 ```
@@ -681,8 +684,12 @@ RuntimeStore 可接收可信旧缓存根：仅找到相同 SHA-256 内容目录�
 
 ### 独立 E 发布索引
 
+0.1.19 起的新冷壳请求 `runtime-engines/latest-<当前公钥 SPKI DER SHA-256>.json`，同一签名身份跨 C 共用，换钥另建通道；旧客户端使用的 `latest.json` 保持原签名身份和字节。不得把新钥索引覆盖到旧地址。历史已接纳序号仍保留，新通道首次发布序号必须高于所有兼容历史索引；本次从旧序号 1 迁移到新序号 2。
+
 engine-index 验证 Ed25519、平台、时效、单调发布序号、版本唯一性与准确依赖闭包，不要求 C/R 版本。engine-artifacts 保存签名索引和历史 C/R 的签名来源，仅用旧来源证明 E，不启动旧 R；同版本异包拒绝。查询不下载；prepare 只接受已验签的 kind/identity。缓存与本机激活指针由不同服务负责，失败不换指针、不自动重试。
 
 ### 引擎详情的进度端口
+
+冷壳签名身份轮换时，EngineArtifacts 仅对本机保存的历史 seeds/indexes 使用宿主显式固定的历史公钥；当前启动 seed 和远程 check 始终只接受当前公钥。历史验签仍执行完整平台、结构、依赖及版本冲突检查，失败不覆盖原文件。旧身份只证明 E 来源，不授权启动旧 R，也不改变已接纳索引序号。密钥名单不得从用户状态或网络推导。此兼容用于身份更换，不表示已撤销或泄露的身份仍应继续被信任。
 
 EngineArtifacts.prepare 通过可选第三参报告 0–100 的准备进度，包括本地文件校验；不将回调次数视为下载次数。EnginePackages 将其归到准确引擎/版本，应用更新图标忽略旧 enginePreparations 字段。旧冷宿主可忽略可选回调，资源层仍显示准备中而不编造百分比；缓存身份、验签、完整文件验证与跨 C 共享路径不变。

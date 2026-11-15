@@ -3,7 +3,7 @@ import React,{useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {TeamView} from '../src/view/team/TeamView';
 import {BusinessArchitecture} from '../src/view/workspace/WorkspaceView';
-import '../src/view/shell/shell.css';
+import '../src/view/styles';
 const snapshot=await fetch('/fixture/snapshot').then(r=>r.json());
 const state=(window as any).treeFixture={calls:[],delay:false,pending:[],unexpected:[]};
 const identity={workspaceId:snapshot.workspaceId,instanceId:snapshot.instanceId};

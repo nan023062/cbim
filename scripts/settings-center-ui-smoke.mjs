@@ -8,7 +8,7 @@ const root=process.cwd(),out=path.join(root,'test-results/settings-center');
 await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'index.html'),'<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script type="module" src="/test-results/settings-center/fixture.tsx"></script></html>');
 await fs.writeFile(path.join(out,'fixture.tsx'),String.raw`
-import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
+import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/styles';
 const artifact=(id,version,kind='pi')=>({kind,identity:id.repeat(64),version,nativeVersion:'1.5.0',protocol:1,dependencies:[]});
 window.fixture={calls:[],resourceFail:false,resourceSaveFail:false,
  models:{secureStorage:true,selectedId:'provider',profiles:[{id:'provider',name:'测试供应商',api:'openai-completions',baseUrl:'http://localhost:12345/v1',auth:'none',defaultModel:'model',models:[{id:'model',name:'可用生成模型',enabled:true,contextWindow:32768,maxTokens:4096}]}]},
@@ -68,7 +68,8 @@ try{
   await homeResize.focus();await homeResize.press('ArrowRight');await homeResize.press('ArrowRight');
   await page.waitForFunction(()=>document.querySelector('.workspace-sidebar').getBoundingClientRect().width===280);
   const homeMetrics=await sidebarMetrics('.workspace-sidebar');
-  assert.equal(homeMetrics.heading.height,32);assert.equal(homeMetrics.search.height,30);assert.equal(homeMetrics.menu.height,32);
+  // 统一交互尺寸仍须在首页与设置中一致，不能仅放宽为“至少可点击”。
+  assert.equal(homeMetrics.heading.height,36);assert.equal(homeMetrics.search.height,36);assert.equal(homeMetrics.menu.height,38);
   await page.screenshot({path:path.join(out,'home-sidebar-desktop.png')});
   const openSettings=async()=>{await page.getByRole('button',{name:'用户菜单',exact:true}).click();await page.getByRole('menuitem',{name:'设置',exact:true}).click();await page.locator('.settings-navigation').waitFor({state:'visible'})};
   await openSettings();

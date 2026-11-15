@@ -1,11 +1,12 @@
 /**
+ * 草稿仅上报未保存标记，离开检查由设置外壳持有；不传递敏感输入。
  * 作用定位：设置页的自定义供应商、连接表单与模型目录编辑器。
  * 设计原因：提供逐模型视觉能力开关和目录同步；沿用 Cindy 的供应商→连接→模型组织方式；模型获取、加密与测试交给主进程，读取供应商元数据并显式同步已有模型，缺失容量要求填写；界面区分真实容量、工作预算、思考意图和可选 USD 计价，仅保留编辑期间的凭据。
  * 供应商只维护连接与统一模型目录；执行引擎在对话或 Agent 中独立选择，同一模型可供兼容引擎共用。
  * 接口预设、兼容地址和按接口测试由 ProviderConnections 提供；改接口清空输入中的凭据，保存后才可测试实际配置。
  */
 import {EmbeddingModels} from './EmbeddingModels';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 
 import type {LlmDefinition,LlmModel,LlmProfile,LlmSettings} from '../../bridge/contracts/models';
 import './models.css';
@@ -15,12 +16,15 @@ const api=window.cbim;
 const empty=():LlmDefinition=>({name:'',api:'openai-completions',baseUrl:'',auth:'api-key',models:[],defaultModel:''});
 const newModel=(id:string,info?:DiscoveredModel):LlmModel=>({id,name:info?.name||id,enabled:true,contextWindow:info?.contextWindow??0,maxTokens:Math.min(info?.maxOutputTokens??4096,16384,info?.contextWindow??16384),outputLimit:info?.maxOutputTokens,vision:info?.vision,reasoning:info?.reasoning??false});
 /** 草稿独立于已保存配置；取消清空凭据，测试连接明确使用已保存版本。 */
-export function ModelSettings(){
+export function ModelSettings({onDirtyChange}:{onDirtyChange?:(dirty:boolean)=>void}={}){
+  const baseline=useRef('');
   const [state,setState]=useState<LlmSettings>(),[editing,setEditing]=useState(false),[id,setId]=useState<string>(),[draft,setDraft]=useState(empty),[key,setKey]=useState('');
   const [modelId,setModelId]=useState(''),[found,setFound]=useState<DiscoveredModel[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[removeId,setRemoveId]=useState<string>();
+  const unsaved=editing&&(JSON.stringify(draft)!==baseline.current||!!key||!!modelId);
+  useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false)},[unsaved,onDirtyChange]);
   useEffect(()=>{void api.call('models.list').then(setState).catch((e:Error)=>setError(e.message))},[]);
   async function perform(work:()=>Promise<void>){setBusy(true);setError('');setNotice('');try{await work()}catch(e:any){setError(e.message)}finally{setBusy(false)}}
-  function open(p?:LlmProfile){setId(p?.id);setDraft(p?{name:p.name,api:p.api,baseUrl:p.baseUrl,auth:p.auth,autoDetect:p.autoDetect,alternateConnections:p.alternateConnections?structuredClone(p.alternateConnections):undefined,models:p.models.map(m=>({...m})),defaultModel:p.defaultModel,...(p.embedding?{embedding:structuredClone(p.embedding)}:{})}:empty());setKey('');setFound([]);setModelId('');setEditing(true);setError('');setNotice('')}
+  function open(p?:LlmProfile){setId(p?.id);const initial=p?{name:p.name,api:p.api,baseUrl:p.baseUrl,auth:p.auth,autoDetect:p.autoDetect,alternateConnections:p.alternateConnections?structuredClone(p.alternateConnections):undefined,models:p.models.map(m=>({...m})),defaultModel:p.defaultModel}:empty();baseline.current=JSON.stringify(initial);setDraft(initial);setKey('');setFound([]);setModelId('');setEditing(true);setError('');setNotice('')}
   function add(value:string){setDraft(d=>({...d,models:[...d.models,newModel(value,found.find(m=>m.id===value))],defaultModel:d.defaultModel||value}));setModelId('')}
   function updateModel(index:number,patch:Partial<LlmModel>){setDraft(d=>({...d,models:d.models.map((m,i)=>i===index?{...m,...patch}:m)}))}
   // 删除型号同时清理显式接口引用；清空限定列表后需用户重新选择或取消限制，不能静默扩大到全部型号。

@@ -1,9 +1,10 @@
 /**
+ * 草稿仅上报未保存标记，离开检查由设置外壳持有；不传递敏感输入。
  * 作用定位：设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。
  * 设计原因：导航复用首页侧栏样式和外壳传入的宽度调整入口；首次访问才挂载表单，访问后隐藏保留草稿与授权轮询；仓库失败不阻塞模型、外观等其它设置。
  * 生命周期：离开设置中心才卸载全部表单；搜索只筛选入口，不提交或清空当前页面。
  */
-import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import '../components/sidebar.css';
 import {Icon} from '../components/Icon';
 import {ModelSettings} from './ModelSettings';
@@ -20,6 +21,8 @@ import type {AppearanceController} from './useAppearance';
 import type {SoftwareUpdateController} from '../updates/useSoftwareUpdates';
 import './settings.css';
 export interface SettingsViewProps {
+  /** 仅向外壳汇总未保存状态，不传递表单内容或凭据。 */
+  onDirtyChange?:(dirty:boolean)=>void;
   /** 外壳的共享宽度调整入口；不在设置页创建第二份布局状态。 */
   sidebarResize?:ReactNode;
   section:SettingsSectionId;
@@ -30,21 +33,25 @@ export interface SettingsViewProps {
   onOpenUpdates:()=>void;
 }
 /** 导航状态由外壳持有，支持账号菜单和资源页面直达；不重新创建更新或外观控制器。 */
-export function SettingsView({sidebarResize,section,onSectionChange,onBack,appearance,updates,onOpenUpdates}:SettingsViewProps){
+export function SettingsView({onDirtyChange,sidebarResize,section,onSectionChange,onBack,appearance,updates,onOpenUpdates}:SettingsViewProps){
+  const drafts=useRef(new Set<string>());
+  const report=useCallback((key:string,value:boolean)=>{value?drafts.current.add(key):drafts.current.delete(key);onDirtyChange?.(drafts.current.size>0)},[onDirtyChange]);
+  const reporters=useMemo(()=>Object.fromEntries(['models','runtime','budget','web','accounts','resources'].map(key=>[key,(value:boolean)=>report(key,value)])),[report]);
+  useEffect(()=>()=>onDirtyChange?.(false),[onDirtyChange]);
   const [query,setQuery]=useState(''),[visited,setVisited]=useState<SettingsSectionId[]>([section]);
   const content=useRef<HTMLDivElement>(null);
   const found=findSettingsSections(query),active=settingsSections.find(item=>item.id===section)!;
   useEffect(()=>{setVisited(old=>old.includes(section)?old:[...old,section]);content.current?.scrollTo(0,0)},[section]);
   function open(id:SettingsSectionId){onSectionChange(id);setQuery('')}
   function panel(id:SettingsSectionId){switch(id){
-    case 'models':return <ModelSettings/>;
+    case 'models':return <ModelSettings onDirtyChange={reporters.models}/>;
     case 'engines':return <EngineSettings active={section==='engines'}/>;
-    case 'accounts':return <AccountSettings/>;
+    case 'accounts':return <AccountSettings onDirtyChange={reporters.accounts}/>;
     case 'appearance':return <AppearanceSettings appearance={appearance}/>;
-    case 'runtime':return <AdmissionSettings active={section==='runtime'}/>;
-    case 'budget':return <BudgetSettings/>;
-    case 'web':return <WebSettings/>;
-    case 'resources':return <ResourceSettings/>;
+    case 'runtime':return <AdmissionSettings onDirtyChange={reporters.runtime} active={section==='runtime'}/>;
+    case 'budget':return <BudgetSettings onDirtyChange={reporters.budget}/>;
+    case 'web':return <WebSettings onDirtyChange={reporters.web}/>;
+    case 'resources':return <ResourceSettings onDirtyChange={reporters.resources}/>;
     case 'about':return <AboutSettings updates={updates} onOpenUpdates={onOpenUpdates}/>;
   }}
   return <div className="settings-center"><div className="settings-layout">

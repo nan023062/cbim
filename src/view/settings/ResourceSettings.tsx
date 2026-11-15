@@ -1,17 +1,20 @@
 /**
+ * 草稿仅上报未保存标记，离开检查由设置外壳持有；不传递敏感输入。
  * 作用定位：设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。
  * 设计原因：仓库读取独立于其它设置，失败可重试；切换分类保留草稿，不自动开启共享或读取令牌。
  */
 import {useEffect,useState} from 'react';
 import type {RepositoryStatus} from '../../bridge/contracts/resources';
 const api=window.cbim;
-export function ResourceSettings(){
+export function ResourceSettings({onDirtyChange}:{onDirtyChange?:(dirty:boolean)=>void}={}){
   const [status,setStatus]=useState<RepositoryStatus>(),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(true);
   const [localPath,setLocalPath]=useState('');
   const [lan,setLan]=useState(false),[port,setPort]=useState(0),[connection,setConnection]=useState<{url:string;host:string;port:number;token:string}>();
 
   useEffect(()=>{let alive=true;void api.call('resources.status').then(s=>{if(alive){setStatus(s);setError(s.error||'');if(s.config?.mode==='local')setLocalPath(s.config.location)}}).catch((e:Error)=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setBusy(false)});return()=>{alive=false}},[]);
-  async function reload(){setBusy(true);setError('');try{const s=await api.call('resources.status');setStatus(s);setError(s.error||'');if(s.config?.mode==='local')setLocalPath(s.config.location)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
+  const unsaved=!!status&&status.session.state==='signedOut'&&localPath!==(status.config?.mode==='local'?status.config.location:'');
+  useEffect(()=>{onDirtyChange?.(unsaved);return()=>onDirtyChange?.(false)},[unsaved,onDirtyChange]);
+  async function reload(){if(unsaved&&!confirm('重新读取会放弃未保存的目录，继续吗？'))return;setBusy(true);setError('');try{const s=await api.call('resources.status');setStatus(s);setError(s.error||'');if(s.config?.mode==='local')setLocalPath(s.config.location)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function configure(){setBusy(true);setError('');setNotice('');try{const s=await api.call('resources.configure',{mode:'local',location:localPath});setStatus(s);setConnection(undefined);setNotice('已更新：链接器、人才市场、业务模板统一使用此仓库。')}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function sharing(start:boolean){setBusy(true);setError('');try{setStatus(start?await api.call('resources.share',{lan,port}):await api.call('resources.stopSharing'));setConnection(undefined)}catch(e:any){setError(e.message)}finally{setBusy(false)}}
   async function showConnection(){setError('');try{setConnection(await api.call('resources.connection'))}catch(e:any){setError(e.message)}}

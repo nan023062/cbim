@@ -2,6 +2,7 @@
  * 作用定位：展示原调用状态、当前文件、原控制面/知识事务、原治理/责任记录、受控写/补偿阶段、本机处置和后续独立周期关系。
  * 设计原因：用户可以核实影响并明确决定下一步，但这些观察不能覆盖旧失败、签署业务验收或自动启动修复。主与成员共用面板，身份不互相伪装。
  */
+import {Icon} from '../components/Icon';
 import {useState} from 'react';
 import type {EffectObservationInput,EffectDispositionRecord} from '../../bridge/contracts/effect-observation';
 import type {ExecutionReport} from '../../bridge/contracts/dispatch';
@@ -67,15 +68,15 @@ export function EffectObservationPanel({identity,anchor,context}:{identity:Effec
         <h4>记录明确处置</h4><p>保存本机决定，不启动模型或授权写入；未知影响和原记录保留。</p>
         <label>下一步<select aria-label="异常处置" data-testid="effect-decision" disabled={locked||pending} value={draft?.decision??'inspect_more'} onChange={e=>controller.edit(identity,draft?.reason??'',e.target.value as EffectDecision)}>{Object.entries(decisions).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label>
         <label>处置理由<textarea aria-label="处置理由" data-testid="effect-reason" maxLength={4096} readOnly={locked||pending} value={draft?.reason??''} onChange={e=>controller.edit(identity,e.target.value,draft?.decision??'inspect_more')}/></label>
-        {!locked&&<button data-testid="effect-save" disabled={!fresh||!draft?.reason.trim()||!controller.available||pending} onClick={()=>void controller.submit(identity)}>保存处置</button>}
-        {attempt&&<><p role="status">{attempt.phase==='accepted'?'本机处置已保存':attempt.phase==='submitting'?'正在保存处置…':attempt.phase==='rejected'?'本次请求尚未受理，可重新核实并修改草稿。':'保存结果尚未确认，仅查询原命令。'}</p>{attempt.error&&<p role="alert">{attempt.error}</p>}<button data-testid="effect-query" disabled={pending} onClick={()=>void controller.query(identity,attempt.request.commandId)}>查询原处置命令</button>{attempt.phase==='accepted'&&<button data-testid="effect-prepare" disabled={pending} onClick={()=>controller.prepare(identity)}>记录新的处置</button>}</>}
+        {!locked&&<button data-testid="effect-save" disabled={!fresh||!draft?.reason.trim()||!controller.available||pending} onClick={()=>void controller.submit(identity)}><Icon name="confirm" size={16}/>保存处置</button>}
+        {attempt&&<><p role="status">{attempt.phase==='accepted'?'本机处置已保存':attempt.phase==='submitting'?'正在保存处置…':attempt.phase==='rejected'?'本次请求尚未受理，可重新核实并修改草稿。':'保存结果尚未确认，仅查询原命令。'}</p>{attempt.error&&<p role="alert">{attempt.error}</p>}<button data-testid="effect-query" disabled={pending} onClick={()=>void controller.query(identity,attempt.request.commandId)}><Icon name="search" size={16}/>查询原处置命令</button>{attempt.phase==='accepted'&&<button data-testid="effect-prepare" disabled={pending} onClick={()=>controller.prepare(identity)}>记录新的处置</button>}</>}
       </div>
     </>}
-    <div className="effect-actions"><button title="只读、不重跑、不写库" data-testid="effect-history-load" disabled={read?.loading} onClick={()=>void controller.list(identity)}>读取处置历史（只读）</button>{selected&&<button data-testid="effect-relations-load" disabled={read?.loading} onClick={()=>void controller.relations(identity)}>查看后续任务状态</button>}</div>
+    <div className="effect-actions"><button title="只读、不重跑、不写库" data-testid="effect-history-load" disabled={read?.loading} onClick={()=>void controller.list(identity)}><Icon name="inspect" size={16}/>读取处置历史（只读）</button>{selected&&<button data-testid="effect-relations-load" disabled={read?.loading} onClick={()=>void controller.relations(identity)}><Icon name="inspect" size={16}/>查看后续任务状态</button>}</div>
     {read?.list&&<div data-testid="effect-history">{read.list.records.length?read.list.records.map(item=><button key={item.dispositionId} data-disposition-id={item.dispositionId} disabled={controller.isPending(item.dispositionId)} onClick={()=>void controller.query(identity,item.dispositionId)}>{decisions[item.decision]} · {new Date(item.recordedAt).toLocaleString()} · 第{item.revision}次</button>):<p>此来源尚无已保存处置。</p>}</div>}
     {selected&&<EffectDispositionSummary record={selected}/>}
     {selected&&<ExecutionRecoveryForm state={creation}/>}
-    {read?.relations&&read.relations.identity.dispositionId===selected?.dispositionId&&<div data-testid="effect-relations"><h4>由本处置关联的后续周期</h4>{read.relations.links.length?read.relations.links.map(link=><article key={link.scopeId}><strong>{link.kind==='inspection'?'独立只读核实':'独立业务修复'}</strong><p>{link.status==='closed'?({completed:'新目标已结束',failed:'新任务失败',cancelled:'新任务已停止',interrupted:'新任务中断'}[link.outcome!]):link.status==='waiting'?'等待补充':'新任务进行中'} · {link.taskIds.length} 个任务节点</p><code>{link.scopeId}</code>{context&&<button onClick={()=>context.showScope(link.scopeId)}>查看新周期</button>}</article>):<p>尚无关联周期；保存处置不会自动创建任务。</p>}<p>新任务的结果不改变原工具的成功、失败或未知状态。</p></div>}
+    {read?.relations&&read.relations.identity.dispositionId===selected?.dispositionId&&<div data-testid="effect-relations"><h4>由本处置关联的后续周期</h4>{read.relations.links.length?read.relations.links.map(link=><article key={link.scopeId}><strong>{link.kind==='inspection'?'独立只读核实':'独立业务修复'}</strong><p>{link.status==='closed'?({completed:'新目标已结束',failed:'新任务失败',cancelled:'新任务已停止',interrupted:'新任务中断'}[link.outcome!]):link.status==='waiting'?'等待补充':'新任务进行中'} · {link.taskIds.length} 个任务节点</p><code>{link.scopeId}</code>{context&&<button onClick={()=>context.showScope(link.scopeId)}><Icon name="inspect" size={16}/>查看新周期</button>}</article>):<p>尚无关联周期；保存处置不会自动创建任务。</p>}<p>新任务的结果不改变原工具的成功、失败或未知状态。</p></div>}
   </section>;
 }
 

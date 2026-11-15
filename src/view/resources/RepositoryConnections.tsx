@@ -5,6 +5,7 @@
  * 提交操作名由已保存的连接动作形成，失败与未知仍沿原回执流程处理。
  * IPC 边界：连接提交与回执查询按具体Schema形成操作元组。
  */
+import {Icon} from '../components/Icon';
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import type {WorkspaceView,Snapshot} from '../../bridge/contracts/workspace';
@@ -123,19 +124,19 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
   }
   const blocked=busy||!!pending||storageError,sharing=!!list?.sharing;
   return <section className="repository-connections" data-testid="repository-connections">
-    <header><div><h2>工作区仓库连接</h2><p>连接当前已共享的资源仓库。允许只读连接后，主 Agent 可按任务读取目录和资料，内容会进入本工作区所选模型的上下文。授权和连接在每轮开始时固定，运行中不会自动换源；撤销会阻止后续读取和迟到结果。</p></div><button disabled={busy} onClick={()=>void refresh()}>刷新连接状态</button></header>
-    {!status?.sharing&&<p>请先在设置中启动仓库共享。<button disabled={blocked} onClick={onSettings}>前往仓库设置</button></p>}
+    <header><div><h2>工作区仓库连接</h2><p>连接当前已共享的资源仓库。允许只读连接后，主 Agent 可按任务读取目录和资料，内容会进入本工作区所选模型的上下文。授权和连接在每轮开始时固定，运行中不会自动换源；撤销会阻止后续读取和迟到结果。</p></div><button disabled={busy} onClick={()=>void refresh()}><Icon name="refresh" size={16}/>刷新连接状态</button></header>
+    {!status?.sharing&&<p>请先在设置中启动仓库共享。<button disabled={blocked} onClick={onSettings}><Icon name="openExternal" size={16}/>前往仓库设置</button></p>}
     <label>目标工作区<select data-testid="connection-workspace" aria-label="连接目标工作区" disabled={busy} value={workspaceId} onChange={event=>void select(event.target.value)}><option value="">选择已就绪工作区</option>{workspaces.map(workspace=><option key={workspace.id} value={workspace.id} disabled={workspace.state!=='running'}>{workspace.name}{workspace.state!=='running'?'（未就绪）':''}</option>)}</select></label>
     {error&&<p role="alert" data-testid="connection-error">{error}</p>}
     {notice&&<p role="status">{notice}</p>}
     {busy&&<p role="status">正在处理连接请求…</p>}
-    {pending&&<div className="repository-connection-preview"><p>原{pending.action==='commit'?'登记':pending.action==='grant'?'授权':'撤销'}命令尚未确认，请先核实结果。原请求已保存在本机，切换页面不会重发。</p><div className="resource-actions"><button disabled={busy} onClick={()=>void inspectPending()}>查询原命令回执</button><button disabled={busy||list?.identity.instanceId!==pending.input.instanceId} onClick={()=>void submit(pending)}>重试原请求</button>{list&&list.identity.instanceId!==pending.input.instanceId&&<button disabled={busy} onClick={()=>void resolveUnaccepted()}>核实未受理并解除</button>}</div>{list&&list.identity.instanceId!==pending.input.instanceId&&<p>工作区实例已更换，旧命令不能重新提交。只有明确证明未受理，才可解除本机待确认记录。</p>}</div>}
+    {pending&&<div className="repository-connection-preview"><p>原{pending.action==='commit'?'登记':pending.action==='grant'?'授权':'撤销'}命令尚未确认，请先核实结果。原请求已保存在本机，切换页面不会重发。</p><div className="resource-actions"><button disabled={busy} onClick={()=>void inspectPending()}><Icon name="search" size={16}/>查询原命令回执</button><button disabled={busy||list?.identity.instanceId!==pending.input.instanceId} onClick={()=>void submit(pending)}><Icon name="retry" size={16}/>重试原请求</button>{list&&list.identity.instanceId!==pending.input.instanceId&&<button disabled={busy} onClick={()=>void resolveUnaccepted()}><Icon name="search" size={16}/>核实未受理并解除</button>}</div>{list&&list.identity.instanceId!==pending.input.instanceId&&<p>工作区实例已更换，旧命令不能重新提交。只有明确证明未受理，才可解除本机待确认记录。</p>}</div>}
     {list&&<>
       <div className="repository-connection-list">{list.connections.map(row=><article className="repository-connection-card" key={row.connectorId} data-testid="connection-card" data-connector-id={row.connectorId}>
         <header><h3>{row.name||row.connectorId}</h3><span className="subtle-badge">{labels[row.status]}</span></header><small>{row.connectorId}</small>{row.repositoryId&&<small>仓库 {row.repositoryId} · 授权版本 {row.grantRevision}</small>}
-        <div className="resource-actions">{row.provider==='resource_repository_v1'&&row.definitionHash&&row.repositoryId&&row.status!=='ready'&&<button data-testid="connection-grant" disabled={blocked||!sharing||list.sharing?.repositoryId!==row.repositoryId} onClick={()=>void authorize(row,'grant')}>允许只读连接</button>}
-          {row.grant?.enabled&&<button data-testid="connection-revoke" disabled={blocked} onClick={()=>void authorize(row,'revoke')}>撤销访问</button>}
-          {row.provider==='resource_repository_v1'&&<button data-testid="connection-check" disabled={blocked||row.status!=='ready'} onClick={()=>void check(row)}>核验连接</button>}
+        <div className="resource-actions">{row.provider==='resource_repository_v1'&&row.definitionHash&&row.repositoryId&&row.status!=='ready'&&<button data-testid="connection-grant" disabled={blocked||!sharing||list.sharing?.repositoryId!==row.repositoryId} onClick={()=>void authorize(row,'grant')}><Icon name="connector" size={16}/>允许只读连接</button>}
+          {row.grant?.enabled&&<button data-testid="connection-revoke" disabled={blocked} onClick={()=>void authorize(row,'revoke')}><Icon name="stop" size={16}/>撤销访问</button>}
+          {row.provider==='resource_repository_v1'&&<button data-testid="connection-check" disabled={blocked||row.status!=='ready'} onClick={()=>void check(row)}><Icon name="search" size={16}/>核验连接</button>}
         </div>
         {checks[row.connectorId]&&<div className="repository-connection-result" data-testid="connection-result"><b>HTTP 只读核验通过</b><small>{new Date(checks[row.connectorId].checkedAt).toLocaleString()} · {checks[row.connectorId].itemCount} 项资源</small><small>内容版本 {checks[row.connectorId].revision}</small><ul>{checks[row.connectorId].items.map(item=><li key={item.id}><b>{item.name}</b>{item.summary&&<span> — {item.summary}</span>}</li>)}</ul>{checks[row.connectorId].truncated&&<p>仅显示前 20 项摘要。</p>}<p>这是本次读取结果，未导入资源，也未启动 Agent；后续状态请重新核验。</p></div>}
       </article>)}</div>
@@ -144,11 +145,11 @@ export function RepositoryConnections({onSettings}:{onSettings:()=>void}){
         <label>链接器名称<input aria-label="链接器名称" disabled={blocked||!!preview} value={name} maxLength={100} onChange={event=>setName(event.target.value)}/></label>
         <label>链接器标识<input aria-label="链接器标识" disabled={blocked||!!preview} value={slug} maxLength={80} onChange={event=>setSlug(event.target.value)}/></label>
         <p>只保存仓库身份，不保存地址或令牌。已有同名定义会在预览中显示变化。</p>
-        <button data-testid="connection-preview" disabled={blocked||!sharing||!!preview||!name.trim()||!/^[A-Za-z0-9_-]+$/.test(slug)} onClick={()=>void prepare()}>预览登记</button>
+        <button data-testid="connection-preview" disabled={blocked||!sharing||!!preview||!name.trim()||!/^[A-Za-z0-9_-]+$/.test(slug)} onClick={()=>void prepare()}><Icon name="inspect" size={16}/>预览登记</button>
         {preview&&<div className="repository-connection-preview" data-testid="connection-preview-result"><h3>登记预览</h3><dl><dt>名称</dt><dd>{preview.definition.name}</dd><dt>仓库</dt><dd>{preview.repositoryId}</dd><dt>知识变更</dt><dd>{preview.changes.length} 项</dd></dl>
           {preview.validation.issues.map((issue,index)=><p key={index}>{issue.severity==='error'?'错误':'提示'}：{issue.message}</p>)}
           <details><summary>查看定义变更</summary><pre>{preview.diff}</pre></details><p>登记只修改链接器知识，不授予访问权限。</p>
-          <div className="resource-actions"><button data-testid="connection-commit" disabled={blocked||!preview.validation.structural} onClick={()=>void commit()}>确认登记定义</button><button disabled={blocked} onClick={()=>setPreview(undefined)}>取消预览</button></div>
+          <div className="resource-actions"><button data-testid="connection-commit" disabled={blocked||!preview.validation.structural} onClick={()=>void commit()}><Icon name="confirm" size={16}/>确认登记定义</button><button disabled={blocked} onClick={()=>setPreview(undefined)}><Icon name="close" size={16}/>取消预览</button></div>
         </div>}
       </details>
     </>}

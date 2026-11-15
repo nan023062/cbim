@@ -590,7 +590,7 @@ class N_src_view_conversation_ThreadHistoryNotice_tsx["ThreadHistoryNotice.tsx"]
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)。
 
 ### topic-interruption-state.ts
 

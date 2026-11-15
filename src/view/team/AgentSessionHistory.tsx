@@ -3,6 +3,7 @@
  * 契约边界：角色、Session、轮次及事件从各自 IPC 操作推导输入输出，正文和状态复用共享运行展示。
  * 设计原因：角色可被复用、改名或删除，历史必须保留原身份与配置版本；此页面只读归档，不把多实例历史拼成模型上下文，不提供恢复、审批或执行按钮。
  */
+import {Icon} from '../components/Icon';
 import {useEffect,useRef,useState} from 'react';
 import type {AgentHistoryRole,AgentHistoryRun,AgentHistorySession,AgentHistoryRoles} from '../../bridge/contracts/agent-history';
 import type {RunSummary} from '../../bridge/contracts/execution';
@@ -38,9 +39,9 @@ export function AgentSessionHistory({workspaceId,initialAgentId,currentDefinitio
   const archived=roles.find(role=>role.agentId===selected),name=archived?.name??currentDefinitions[selected]??selected;
   const needle=filter.trim().toLocaleLowerCase(),shown=roles.filter(role=>(role.name+' '+role.agentId).toLocaleLowerCase().includes(needle));
   return <section className="agent-session-history" aria-label="Agent 执行历史" data-testid="agent-session-history">
-    <header className="agent-history-heading"><div><p className="overline">只读履历</p><h2>{selected?name+' · 执行历史':'历史角色'}</h2></div><button data-testid="history-back" onClick={onClose}>返回团队定义</button></header>
+    <header className="agent-history-heading"><div><p className="overline">只读履历</p><h2>{selected?name+' · 执行历史':'历史角色'}</h2></div><button data-testid="history-back" onClick={onClose}><Icon name="undo" size={16}/>返回团队定义</button></header>
     <p className="agent-history-note">按静态角色检索独立 Session，不合并模型上下文。历史不会因执行实例释放或角色删除而消失；运行结束不等于业务验收。</p>
-    <div className="agent-history-toolbar"><button onClick={()=>setSelected('')}>浏览历史角色</button><button disabled={loading} onClick={()=>setRevision(value=>value+1)}>刷新角色索引</button></div>
+    <div className="agent-history-toolbar"><button onClick={()=>setSelected('')}><Icon name="inspect" size={16}/>浏览历史角色</button><button disabled={loading} onClick={()=>setRevision(value=>value+1)}><Icon name="refresh" size={16}/>刷新角色索引</button></div>
     {error&&<p role="alert">{error}</p>}<Diagnostics items={diagnostics}/>
     {!selected?<><label className="agent-history-search">搜索历史角色<input value={filter} onChange={event=>setFilter(event.target.value)} placeholder="角色名称或 ID"/></label>
       {loading&&<p role="status">正在读取历史角色…</p>}
@@ -56,12 +57,12 @@ export function AgentSessionHistory({workspaceId,initialAgentId,currentDefinitio
 function AgentSessions({workspaceId,agentId}:{workspaceId:string;agentId:string}){
   const sessions=useHistorySessions({workspaceId,agentId},true),[chosen,setChosen]=useState('');
   const selected=sessions.page?.items.find(session=>session.sessionId===chosen);
-  return <><div className="agent-history-toolbar"><h3>Session 记录</h3><button disabled={sessions.loading} onClick={()=>void sessions.refresh()}>刷新 Session</button></div>
+  return <><div className="agent-history-toolbar"><h3>Session 记录</h3><button disabled={sessions.loading} onClick={()=>void sessions.refresh()}><Icon name="refresh" size={16}/>刷新 Session</button></div>
     {sessions.error&&<p role="alert">{sessions.error}</p>}<Diagnostics items={sessions.page?.diagnostics??[]}/>
     <div className="agent-history-layout"><aside className="agent-history-sessions" aria-label="Agent Session 列表">
       {sessions.page?.items.map(session=><button className={chosen===session.sessionId?'selected':''} key={session.sessionId} aria-pressed={chosen===session.sessionId} onClick={()=>setChosen(session.sessionId)} data-testid="agent-history-session" data-session-id={session.sessionId}><strong>{session.title}</strong><small>{session.kind==='conversation'?'主对话通道':session.kind==='task'?'业务任务通道':'旧记录分组 · 未绑定通道'} · {session.runCount} 次运行</small><span>{statusNames[session.status]}</span><small>{time(session.updatedAt)}</small></button>)}
       {sessions.loading&&<p role="status">正在读取 Session…</p>}{!sessions.loading&&!sessions.error&&!sessions.page?.items.length&&<p>该角色尚无执行历史。</p>}
-      {sessions.page?.nextCursor&&<button disabled={sessions.loading} onClick={()=>void sessions.more()}>加载更多 Session</button>}
+      {sessions.page?.nextCursor&&<button disabled={sessions.loading} onClick={()=>void sessions.more()}><Icon name="next" size={16}/>加载更多 Session</button>}
     </aside><div className="agent-history-session-content">{selected?<SessionRuns key={selected.sessionId} session={selected}/>:<p className="agent-history-empty">选择一个 Session 查看独立运行记录。</p>}</div></div>
   </>;
 }
@@ -71,11 +72,11 @@ function SessionRuns({session}:{session:AgentHistorySession}){
   const selected=runs.page?.items.find(run=>historyRunKey(run)===chosen);
   return <section aria-label="Session 执行轮次"><h3>{session.title}</h3><p className="agent-history-note">记录时角色：{session.agentName} · {time(session.startedAt)} 起</p>
     <details className="agent-history-identity"><summary>Session 归属</summary><dl><dt>历史分组 ID</dt><dd><code>{session.sessionId}</code></dd><dt>实例 ID</dt><dd>{session.agentInstanceId??'未绑定'}</dd><dt>运行通道 ID</dt><dd>{session.agentSessionId??'未绑定；旧记录分组不是运行通道'}</dd><dt>所属主会话</dt><dd>{session.rootSessionId??'未记录'}</dd></dl></details>
-    <div className="agent-history-toolbar"><h4>运行轮次</h4><button disabled={runs.loading} onClick={()=>void runs.refresh()}>刷新轮次</button></div>
+    <div className="agent-history-toolbar"><h4>运行轮次</h4><button disabled={runs.loading} onClick={()=>void runs.refresh()}><Icon name="refresh" size={16}/>刷新轮次</button></div>
     {runs.error&&<p role="alert">{runs.error}</p>}<Diagnostics items={runs.page?.diagnostics??[]}/>
     <div className="agent-history-runs">{runs.page?.items.map(run=><button key={historyRunKey(run)} className={chosen===historyRunKey(run)?'selected':''} aria-pressed={chosen===historyRunKey(run)} onClick={()=>setChosen(historyRunKey(run))} data-testid="agent-history-run" data-run-id={run.runId} data-task-id={run.taskId}><strong>{run.goal}</strong><span>{statusNames[run.status]}</span><small>{time(run.startedAt)} · {run.moduleIds.length} 个模块</small><code>{run.runId}</code></button>)}</div>
     {runs.loading&&<p role="status">正在读取运行轮次…</p>}{!runs.loading&&!runs.error&&!runs.page?.items.length&&<p>此 Session 尚无可读取的运行。</p>}
-    {runs.page?.nextCursor&&<button disabled={runs.loading} onClick={()=>void runs.more()}>加载更多轮次</button>}
+    {runs.page?.nextCursor&&<button disabled={runs.loading} onClick={()=>void runs.more()}><Icon name="next" size={16}/>加载更多轮次</button>}
     {selected?<SelectedRun key={historyRunKey(selected)} record={selected}/>:<p className="agent-history-empty">选择一个轮次后读取公开消息、工具与计划证据。</p>}
   </section>;
 }

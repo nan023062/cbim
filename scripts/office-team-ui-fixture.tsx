@@ -1,7 +1,7 @@
 // Renderer-only inspection fixture, not a backend/model acceptance test. Every IPC stays in memory.
 import React from 'react';
 import {createRoot} from 'react-dom/client';
-import '../src/view/shell/shell.css';
+import '../src/view/styles';
 import {progressFixture,progressMemberRun,progressIdentity,progressTime} from '../tests/conversation-progress-fixture';
 import {inlineMainRuns} from '../tests/inline-conversation-fixture';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';

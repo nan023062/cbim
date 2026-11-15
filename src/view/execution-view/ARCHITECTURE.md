@@ -90,7 +90,7 @@ class N_src_view_execution_view_MessageQueue_tsx["MessageQueue.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[message-queue.css](message-queue.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[message-queue.css](message-queue.css)。
 
 ### QuestionCard.tsx
 
@@ -317,6 +317,8 @@ N_src_view_execution_view_WorkStatus_tsx ..> N_src_view_execution_view_ToolTimel
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
 ### 图片附件预览
+
+WorkStatus 的运行、失败、中断、停止分别使用语义图标；completed 显示 history 和“本轮结束”，不显示验收成功。停止和中断的文字仍由真实 RunSummary 决定；不再用持续旋转暗示可测量进度。队列保存/取消/继续沿用公共图标及原回调，拖动手柄使用 grip 替代字符图形，保留原拖动协议。
 
 ComposerAttachments 对已保存图片读取 chat.preview，卡片显示40px缩略图，弹窗展示原图、来源和采集说明；移除仅改变待发送选择，不删除源文件。图片使用固定MIME的data URI，不加载原路径/外部URL，字节不写入草稿持久化。异步预览在卸载或换工作区后失效；坏快照显示失败，不伪造图片。
 

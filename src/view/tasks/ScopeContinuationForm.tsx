@@ -2,6 +2,7 @@
  * 作用定位：目标卡片中的显式正文与多来源补充入口，展示共享附件、冻结请求、查询及同命令重试。
  * 设计原因：补充原目标独立于普通聊天队列；选择资料只保存草稿，点击“补充并继续”才受理，未知结果不能替换正文或附件，也不代表人工批准。
  */
+import {Icon} from '../components/Icon';
 import type {ScopeContinuationView} from './useScopeContinuation';
 import {ComposerAttachments} from '../execution-view/ComposerAttachments';
 import {ContinuationSourceMenu} from './ContinuationSourceMenu';
@@ -23,9 +24,9 @@ export function ScopeContinuationForm({state}:{state:ScopeContinuationView}){
     {phase==='accepted'&&<p role="status" data-testid="scope-continuation-accepted">{attempt?.receipt?.scopeStatus==='closed'?'补充已受理，目标周期已结束。':'补充已受理；执行状态以当前目标和任务视图为准。'}</p>}
     {state.pending&&<p role="status">正在确认本次补充…</p>}
     <div className="scope-continuation-actions">
-      {state.editable&&(!attempt||phase==='rejected')&&<button data-testid="scope-continuation-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}>补充并继续</button>}
-      {(phase==='unknown'||phase==='accepted'||phase==='submitting')&&<button data-testid="scope-continuation-query" disabled={state.pending} onClick={()=>void state.query()}>查询提交状态</button>}
-      {phase==='unknown'&&state.canRetry&&<button data-testid="scope-continuation-retry" disabled={state.pending} onClick={()=>void state.retry()}>原请求重试</button>}
+      {state.editable&&(!attempt||phase==='rejected')&&<button data-testid="scope-continuation-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}><Icon name="play" size={16}/>补充并继续</button>}
+      {(phase==='unknown'||phase==='accepted'||phase==='submitting')&&<button data-testid="scope-continuation-query" disabled={state.pending} onClick={()=>void state.query()}><Icon name="search" size={16}/>查询提交状态</button>}
+      {phase==='unknown'&&state.canRetry&&<button data-testid="scope-continuation-retry" disabled={state.pending} onClick={()=>void state.retry()}><Icon name="retry" size={16}/>原请求重试</button>}
     </div>
     {attempt&&<details><summary>本次提交标识</summary><code>{attempt.request.commandId}</code></details>}
   </div>;

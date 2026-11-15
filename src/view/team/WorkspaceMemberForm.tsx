@@ -1,9 +1,11 @@
 /**
+ * 表单按输入、核对预览、确认保存三步呈现；预览不等同提交，取消交由父面板保护未保存输入。
  * 作用定位：项目岗位登记、元信息编辑、明确采纳及状态变更的表单。
  * 设计原因：业务架构入口只预选仍可见的 Agent，模型必须明确选择；编辑名称不顺带采纳能力或重写模型，所有选择先交 Main 预览，界面不拼造采纳正文和操作者。
  * 登记时预选静态 Agent 的明确 runtime；引擎独立保存，模型按协议兼容性级联，切换 Agent 清除旧选择，编辑岗位仅显式变更模型。
  * 提交前按该供应商的实际兼容接口与型号范围核对，和后端采纳快照保持一致。
  */
+import {Icon} from '../components/Icon';
 import {EngineModelPicker} from '../components/EngineModelPicker';
 import {providerSupportsEngine} from '../../bridge/contracts/engines';
 import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
@@ -29,6 +31,7 @@ export function WorkspaceMemberForm({kind,member,agents,initialAgentId,models,ta
     await onPreview(workspaceMemberChangeInputSchema.parse(input));
   }catch(cause){setError(cause instanceof Error?cause.message:String(cause))}}
   return <form className="workspace-member-form" onSubmit={event=>{event.preventDefault();void prepare()}}><h3>{register?'登记项目岗位':kind==='update'?'修改岗位':kind==='adopt'?'明确采纳新版本':nextState==='retired'?'退休岗位':nextState==='suspended'?'暂停岗位':'启用岗位'}</h3>
+    <p className="inline-note">1. 填写变更 → 2. 核对预览 → 3. 确认保存。预览不会修改岗位。</p>
     <fieldset disabled={disabled}>
       {register&&<label>静态 Agent<select aria-label="静态 Agent" value={agent} onChange={event=>change(()=>{setAgent(event.target.value);setModel(agents.find(item=>item.id===event.target.value)?.runtime??null)})}><option value="">请选择专业能力</option>{agents.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       {editable&&<><label>岗位名称<input aria-label="岗位名称" value={name} maxLength={100} onChange={event=>change(()=>setName(event.target.value))}/></label><label>岗位职责<textarea aria-label="岗位职责" value={position} maxLength={500} onChange={event=>change(()=>setPosition(event.target.value))}/></label><label>岗位适配说明<textarea aria-label="岗位适配说明" value={instructions} maxLength={8000} onChange={event=>change(()=>setInstructions(event.target.value))}/></label><label>参考知识 ID（每行一项）<textarea aria-label="参考知识 ID" value={references} onChange={event=>change(()=>setReferences(event.target.value))}/></label>
@@ -36,7 +39,7 @@ export function WorkspaceMemberForm({kind,member,agents,initialAgentId,models,ta
       {kind==='adopt'&&<p>仅重新采纳{target==='capability'?'原静态 Agent 的工作原则及可用 Skill':'当前岗位已选择的供应商/模型配置'}，另一侧保持原版本。</p>}
       {kind==='state'&&<p>{nextState==='retired'?'退休后不能恢复或复用此岗位身份；历史记录保留。':'只改变登记状态，不启动或停止现有任务；能力和模型当前差异仍需单独核实。'}</p>}
       <label>变更原因<textarea aria-label="变更原因" value={reason} maxLength={2000} onChange={event=>change(()=>setReason(event.target.value))}/></label>
-      <button type="submit" data-testid="workspace-member-preview">预览变更</button>
-    </fieldset>{error&&<p role="alert">{error}</p>}<button type="button" disabled={disabled} onClick={onClose}>取消编辑</button>
+      <button className="solid-button" type="submit" data-testid="workspace-member-preview"><Icon name="inspect" size={16}/>预览变更</button>
+    </fieldset>{error&&<p role="alert">{error}</p>}<button type="button" disabled={disabled} onClick={onClose}><Icon name="close" size={16}/>取消编辑</button>
   </form>;
 }

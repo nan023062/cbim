@@ -332,7 +332,7 @@ try {
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
   let previousEngine;
-  if(previousVersion==='0.1.17'){
+  if(['0.1.17','0.1.18'].includes(previousVersion)){
     const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
     await page.evaluate(revision=>window.cbim.call('engines.configure',{kind:'pi',revision,action:'disable'}),state.revision);
     previousEngine=await retainedEngineSnapshot(page);assert.equal(previousEngine.enabled,false);
@@ -349,8 +349,8 @@ try {
       // 不点检查或下载，也不替换网络：由真实上一安装版的原定时器发现并下载本次公开版本。
       const prepared = await prepareColdUpgrade(page); page=prepared.page; const ready=prepared.ready;
       assert.equal(requests,1,'Resource activation must not replay the completed model request');
-      // 0.1.17 的侧栏图标直接安装；查看就绪时只悬停，不提前授权重启。
-      if(previousVersion==='0.1.17'){
+      // 0.1.17/0.1.18 的侧栏图标直接安装；查看就绪时只悬停，不提前授权重启。
+      if(['0.1.17','0.1.18'].includes(previousVersion)){
         await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
         await page.getByRole('button',{name:'版本与更新',exact:true}).hover();
         await page.getByRole('tooltip').waitFor();
@@ -385,11 +385,11 @@ try {
       await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
-      if(previousVersion!=='0.1.17')await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      if(!['0.1.17','0.1.18'].includes(previousVersion))await page.getByRole('button', {name: '查看更新', exact: true}).click();
       else await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
       // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
       // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
-      installingPid=await exitAfter(()=>previousVersion==='0.1.17'
+      installingPid=await exitAfter(()=>['0.1.17','0.1.18'].includes(previousVersion)
         ?page.getByRole('button',{name:'版本与更新',exact:true}).click()
         :page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
       await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
@@ -429,6 +429,12 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
   if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
+  // 真实新客户端匿名检查 E 通道，覆盖换钥后的来源验证；发现版本不能更改原安装/停用选择。
+  if(version==='0.1.19'){
+    const checked=await page.evaluate(()=>window.cbim.call('engines.check'));
+    if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page),previousEngine);
+    await save('engine-channel-after',{checked:true,items:checked.items.map(item=>({kind:item.kind,enabled:item.enabled}))});
+  }
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
   const catalog = await restoredCatalog(page,entry.id); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);

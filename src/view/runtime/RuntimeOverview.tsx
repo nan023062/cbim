@@ -1,9 +1,12 @@
 /**
- * 作用定位：全局只读运行总览，集中显示周期、人员、任务、准入等待及已报告消耗。
+ * 分类面板共享同一快照与筛选；切换保留列表展开量，不改变运行或统计口径。
+ * 作用定位：全局只读运行总览，集中显示周期、Agent 实例、任务、准入等待及已报告消耗。
  * 设计原因：应用统计和列表筛选分开，缺失计量不冒充零；原会话操作交由外壳按真实身份核实。
  * 职责边界：这里只读内存游标，不读业务正文、不启动模型，也没有恢复或修改权限入口。
  */
-import {useCallback,useMemo,useRef,useState,type ReactNode} from 'react';
+import {Icon} from '../components/Icon';
+import {ViewTabs} from '../components/ViewTabs';
+import {useCallback,useMemo,useRef,useState,useId,type ReactNode} from 'react';
 import type {RuntimeMember,RuntimeSnapshot} from '../../bridge/contracts/runtime';
 import {tokenCount} from '../../bridge/contracts/usage';
 import {useAdmission} from '../tasks/useAdmission';
@@ -29,6 +32,8 @@ export function RuntimeMetrics({data}:{data:RuntimeSnapshot}){return <>
 /** 组件卸载即退订；文档隐藏时连共享准入订阅也暂停，保留最近已确认数据。 */
 export function RuntimeOverview({onOpen}:{onOpen:RuntimeOpen}){
   const visible=useRuntimeVisibility(),state=useRuntime(visible),admission=useAdmission(visible),[workspaceId,setWorkspaceId]=useState(''),[filter,setFilter]=useState<RuntimeFilter>('all'),data=state.data;
+  const [section,setSection]=useState('tasks'),sectionId=useId();
+  const panel=(name:string)=>({className:'view-panel',role:'tabpanel',id:sectionId+'-panel-'+name,'aria-labelledby':sectionId+'-tab-'+name,hidden:section!==name});
   // 外壳仍会刷新工作区列表；稳定回调和定位对象让未变行无需随父层重新渲染。
   const latestOpen=useRef(onOpen);latestOpen.current=onOpen;
   const openTarget=useCallback((target:RuntimeNavigationTarget)=>latestOpen.current(target),[]);
@@ -37,18 +42,19 @@ export function RuntimeOverview({onOpen}:{onOpen:RuntimeOpen}){
   const workspace=(key:string)=>data?.workspaces.find(w=>w.workspaceId===key)?.name??key;
   const canOpen=(key:string)=>data?.workspaces.some(w=>w.workspaceId===key&&w.availability==='ready')??false;
   return <section className="runtime-overview" data-testid="runtime-overview" data-runtime-revision={data?.cursor.revision} data-runtime-stream={data?.cursor.streamId}>
-    <header className="runtime-header"><div><h1>运行管理</h1><p>查看整个应用的人员活动与任务压力，返回原会话处理。</p></div><button onClick={()=>void refreshRuntime()}>刷新运行状态</button></header>
+    <header className="runtime-header"><div><h1>运行管理</h1><p>查看整个应用的本地 Agent 活动与任务压力，返回原会话处理。</p></div><button onClick={()=>void refreshRuntime()}><Icon name="refresh" size={16}/>刷新运行状态</button></header>
     {state.error&&<p role="alert">{state.error}{data?'；保留上次快照，可能已过期。':''}</p>}{!visible&&<p role="status">页面隐藏，读取已暂停。</p>}
     {!data?<p role="status">{state.error?'暂未取得可信运行数据。':'正在读取运行状态…'}</p>:<>
       <RuntimeMetrics data={data}/>
-      <div className="runtime-filters"><label>工作区<select aria-label="筛选运行工作区" value={workspaceId} onChange={e=>setWorkspaceId(e.target.value)}><option value="">全部工作区</option>{data.workspaces.map(w=><option key={w.workspaceId} value={w.workspaceId}>{w.name}</option>)}{workspaceId&&!data.workspaces.some(w=>w.workspaceId===workspaceId)&&<option value={workspaceId}>原工作区已不可用</option>}</select></label><label>状态<select aria-label="筛选运行状态" value={filter} onChange={e=>setFilter(e.target.value as RuntimeFilter)}><option value="all">全部记录</option><option value="current">当前活动与待办</option><option value="attention">等待或需要处理</option></select></label><small>筛选下方列表；上方统计始终为全局。准入是另一份当前进程快照。</small></div>
-      <RowSection title="调度周期" items={data.scopes.filter(s=>includes(s)&&runtimeScopeMatches(s,filter))} render={s=><RuntimeScopeRow key={s.workspaceId+':'+s.scopeId} value={s} workspace={workspace(s.workspaceId)} canOpen={canOpen(s.workspaceId)} onOpen={openTarget}/>}/>
+      <div className="runtime-filters"><label>工作区<select aria-label="筛选运行工作区" value={workspaceId} onChange={e=>setWorkspaceId(e.target.value)}><option value="">全部工作区</option>{data.workspaces.map(w=><option key={w.workspaceId} value={w.workspaceId}>{w.name}</option>)}{workspaceId&&!data.workspaces.some(w=>w.workspaceId===workspaceId)&&<option value={workspaceId}>原工作区已不可用</option>}</select></label><label>状态<select aria-label="筛选运行状态" value={filter} onChange={e=>setFilter(e.target.value as RuntimeFilter)}><option value="all">全部记录</option><option value="current">当前活动与待办</option><option value="attention">等待或需要处理</option></select></label>{(workspaceId||filter!=='all')&&<button onClick={()=>{setWorkspaceId('');setFilter('all')}}><Icon name="close" size={16}/>清除筛选</button>}<small>筛选下方列表；上方统计始终为全局。准入是另一份当前进程快照。</small></div>
+      <ViewTabs id={sectionId} label="运行记录分类" value={section} onChange={setSection} tabs={[{id:'tasks',label:'目标与任务',icon:'goal'},{id:'members',label:'成员实例',icon:'team'},{id:'usage',label:'运行与用量',icon:'history'},{id:'workspaces',label:'项目与队列',icon:'folder'}]}/>
+      <div {...panel('tasks')}><RowSection title="调度周期" items={data.scopes.filter(s=>includes(s)&&runtimeScopeMatches(s,filter))} render={s=><RuntimeScopeRow key={s.workspaceId+':'+s.scopeId} value={s} workspace={workspace(s.workspaceId)} canOpen={canOpen(s.workspaceId)} onOpen={openTarget}/>}/>
       <RowSection title="执行任务" items={data.tasks.filter(t=>t.source==='dispatch'&&includes(t)&&runtimeTaskMatches(t,filter))} render={t=><RuntimeTaskRow key={runtimeTaskKey(t)} value={t} workspace={workspace(t.workspaceId)} canOpen={canOpen(t.workspaceId)} onOpen={openTarget}/>}/>
       <section className="runtime-section"><h2>准入等待</h2>{admission.error&&<p role="alert">{admission.error}；准入数据可能已过期。</p>}{admission.data?<><p>名额已占 {admission.data.occupied.length} / {admission.data.policy.maxConcurrentRuns} · 等待 {admission.data.waiting.length}。票据不是已启动运行。</p>{admission.data.waiting.filter(includes).map(t=><RuntimeAdmissionRow key={t.ticketId} value={t} workspace={workspace(t.workspaceId)} canOpen={canOpen(t.workspaceId)} onOpen={openTarget}/>)}</>:<p>准入数据尚未读取，不代表没有排队。</p>}</section>
-      <RowSection title="成员实例" items={data.members.filter(m=>includes(m)&&runtimeMemberMatches(m,filter))} render={m=><RuntimeMemberRow key={m.workspaceId+':'+m.agentInstanceId} value={m} workspace={workspace(m.workspaceId)} target={memberTargets.get(m)} canOpen={canOpen(m.workspaceId)} onOpen={openTarget}/>}/>
-      <RowSection title="主会话轮次" items={data.tasks.filter(t=>t.source==='loop'&&includes(t)&&runtimeTaskMatches(t,filter))} render={t=><RuntimeTaskRow key={runtimeTaskKey(t)} value={t} workspace={workspace(t.workspaceId)} canOpen={canOpen(t.workspaceId)} onOpen={openTarget}/>}/>
+      </div><div {...panel('members')}><RowSection title="成员实例" items={data.members.filter(m=>includes(m)&&runtimeMemberMatches(m,filter))} render={m=><RuntimeMemberRow key={m.workspaceId+':'+m.agentInstanceId} value={m} workspace={workspace(m.workspaceId)} target={memberTargets.get(m)} canOpen={canOpen(m.workspaceId)} onOpen={openTarget}/>}/>
+      </div><div {...panel('usage')}><RowSection title="主会话轮次" items={data.tasks.filter(t=>t.source==='loop'&&includes(t)&&runtimeTaskMatches(t,filter))} render={t=><RuntimeTaskRow key={runtimeTaskKey(t)} value={t} workspace={workspace(t.workspaceId)} canOpen={canOpen(t.workspaceId)} onOpen={openTarget}/>}/>
       <RowSection title="逐运行消耗" items={data.runs.filter(r=>includes(r)&&(filter==='all'||(filter==='current'?r.status==='running':r.status==='failed'||r.status==='interrupted')))} render={r=><RuntimeRunRow key={runtimeRunKey(r)} value={r} workspace={workspace(r.workspaceId)} canOpen={canOpen(r.workspaceId)} onOpen={openTarget}/>}/>
-      <section className="runtime-section"><h2>工作区与用户消息队列</h2><p className="runtime-secondary">消息队列与执行任务、准入等待分别统计，不相加为任务数。待发送信封 {data.pressure.pendingOutbox}。</p>{data.workspaces.filter(includes).map(w=><article key={w.workspaceId} className="runtime-row" data-testid="runtime-workspace-row" data-workspace-id={w.workspaceId}><strong>{w.name} · {runtimeAvailability[w.availability]}</strong><p>排队消息 {w.queue.pending} · 暂停消息 {w.queue.paused} · 已领取/插入中 {w.queue.inserting}</p>{w.issues.map(issue=><p key={issue.source} role="status">{issue.message} <small>({issue.source})</small></p>)}</article>)}</section>
-    </>}
+      </div><div {...panel('workspaces')}><section className="runtime-section"><h2>工作区与用户消息队列</h2><p className="runtime-secondary">消息队列与执行任务、准入等待分别统计，不相加为任务数。待发送信封 {data.pressure.pendingOutbox}。</p>{data.workspaces.filter(includes).map(w=><article key={w.workspaceId} className="runtime-row" data-testid="runtime-workspace-row" data-workspace-id={w.workspaceId}><strong>{w.name} · {runtimeAvailability[w.availability]}</strong><p>排队消息 {w.queue.pending} · 暂停消息 {w.queue.paused} · 已领取/插入中 {w.queue.inserting}</p>{w.issues.map(issue=><p key={issue.source} role="status">{issue.message} <small>({issue.source})</small></p>)}</article>)}</section>
+    </div></>}
   </section>;
 }

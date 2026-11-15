@@ -15,4 +15,8 @@
 .automation-prompt{white-space:pre-wrap;overflow-wrap:anywhere}
 .automation-run{border-top:1px solid var(--line);padding-block:12px;overflow-wrap:anywhere}
 .automation-run>div{display:flex;gap:12px;flex-wrap:wrap}
+.automation-list button.selected{background:var(--selected);border-color:var(--control-line)}
+.automation-list small{display:flex;align-items:center;gap:6px;color:var(--muted);opacity:1}
+.automation-save{position:sticky;bottom:0;padding:12px 0;background:var(--surface);border-top:1px solid var(--line);align-items:center}
+.automation-history-filter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-block:12px}
 @media(max-width:900px){.automation-layout{grid-template-columns:minmax(0,1fr)}.automation-list{max-height:220px;overflow:auto}}

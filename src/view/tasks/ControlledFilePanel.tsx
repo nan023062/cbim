@@ -2,6 +2,7 @@
  * 作用定位：在成员原调用下分别显示工具结果、受控文件操作和独立补偿状态。
  * 设计原因：真实 before 只留在后端；用户先看当前文件核对与恢复摘要，再明确提交，未知只查原命令，不把补偿当成业务验收。
  */
+import {Icon} from '../components/Icon';
 import {controlledFileWriteToolName} from '../../bridge/contracts/controlled-files';
 import type {ControlledFileReportInput,ControlledFilePhase,FileCompensationReceipt} from '../../bridge/contracts/controlled-files';
 import type {ExecutionReport} from '../../bridge/contracts/dispatch';
@@ -35,7 +36,7 @@ export function ControlledFilePanel({identity,instanceId,anchor,toolStatus}:{ide
       </div>
       {operation.phase==='applied'?<div className="file-compensation-form">
         <h4>显式恢复写前内容</h4><p>只恢复原文件默认数据流。文件须仍是同一对象、当前字节与原写后一致，且原周期已关闭；实际提交时会再次核对。</p>
-        <button data-testid="file-compensation-preview" disabled={!instanceId||read?.loading||pending} onClick={()=>instanceId&&void controller.preview(identity,instanceId)}>预览文件补偿</button>
+        <button data-testid="file-compensation-preview" disabled={!instanceId||read?.loading||pending} onClick={()=>instanceId&&void controller.preview(identity,instanceId)}><Icon name="inspect" size={16}/>预览文件补偿</button>
         {!instanceId&&<p role="status">当前工作区实例尚未就绪，仅可查询原操作。</p>}
         {preview&&<div data-testid="file-compensation-preview-result" data-eligible={preview.eligible}>
           <p>当前文件：{{matches:'与原写后字节一致',changed:'字节已变化',missing:'文件缺失',unverifiable:'不可核实'}[preview.observed.state]}</p>
@@ -44,14 +45,14 @@ export function ControlledFilePanel({identity,instanceId,anchor,toolStatus}:{ide
           {preview.limitations.length>0&&<details><summary>恢复范围与限制</summary><ul>{preview.limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></details>}
           {!fresh&&<p role="status" data-testid="file-compensation-stale">{preview.eligible?'当前预览已过期，请重新预览后提交。':'当前条件不允许补偿；原结果保留，可通过异常核实安排新修复。'}</p>}
           <label>补偿理由<textarea data-testid="file-compensation-reason" aria-label="文件补偿理由" readOnly={locked||pending} maxLength={4096} value={draft?.reason??''} onChange={e=>controller.edit(identity,e.target.value)}/></label>
-          {!locked&&<button data-testid="file-compensation-submit" disabled={!fresh||!draft?.reason.trim()||!controller.available||pending} onClick={()=>instanceId&&void controller.submit(identity,instanceId)}>确认恢复写前内容</button>}
+          {!locked&&<button data-testid="file-compensation-submit" disabled={!fresh||!draft?.reason.trim()||!controller.available||pending} onClick={()=>instanceId&&void controller.submit(identity,instanceId)}><Icon name="confirm" size={16}/>确认恢复写前内容</button>}
         </div>}
       </div>:<p data-testid="file-compensation-not-supported">本片仅允许对已可靠应用的受控写入补偿；准备、未结算或未知操作须先核实，不能自动恢复。</p>}
     </>}
     {attempts.length>0&&<div className="file-compensation-history" data-testid="file-compensation-history"><h4>原补偿命令</h4>{attempts.map(item=><article key={item.request.commandId} data-command-id={item.request.commandId} data-state={item.state}>
       {item.receipt?<CompensationReceipt receipt={item.receipt}/>:<><p role="status">{item.state==='sending'?'正在提交补偿…':item.state==='rejected'?'该请求尚未进入写入流程。':'补偿结果尚未确认，仅查询原命令。'}</p><code>{item.request.commandId}</code></>}
-      {item.error&&<p role="alert">{item.error}</p>}<button data-testid="file-compensation-query" disabled={controller.isPending(item.request.commandId)} onClick={()=>void controller.query(identity,item.request.commandId)}>查询原补偿命令</button>
-      {item.request.commandId===draft?.commandId&&item.receipt?.phase==='not_applied'&&<button data-testid="file-compensation-prepare" disabled={pending} onClick={()=>controller.prepare(identity)}>准备新的补偿请求</button>}
+      {item.error&&<p role="alert">{item.error}</p>}<button data-testid="file-compensation-query" disabled={controller.isPending(item.request.commandId)} onClick={()=>void controller.query(identity,item.request.commandId)}><Icon name="search" size={16}/>查询原补偿命令</button>
+      {item.request.commandId===draft?.commandId&&item.receipt?.phase==='not_applied'&&<button data-testid="file-compensation-prepare" disabled={pending} onClick={()=>controller.prepare(identity)}><Icon name="add" size={16}/>准备新的补偿请求</button>}
     </article>)}</div>}
     {ledger?.state==='recorded'&&ledger.compensations.some(v=>!known.has(v.commandId))&&<div className="controlled-actions" data-testid="file-compensation-server-history"><h4>已保存补偿历史</h4>{ledger.compensations.filter(v=>!known.has(v.commandId)).map(item=><button key={item.commandId} data-command-id={item.commandId} disabled={controller.isPending(item.commandId)} onClick={()=>void controller.query(identity,item.commandId)}>{phaseLabels[item.phase]} · {new Date(item.preparedAt).toLocaleString()}</button>)}</div>}
   </section>;

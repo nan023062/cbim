@@ -38,7 +38,6 @@ N_src_logic_application ..> N_src_logic_conversation : 导入依赖
 N_src_logic_application ..> N_src_logic_connectors : 导入依赖
 N_src_logic_application ..> N_src_logic_agents : 导入依赖
 N_src_logic_automation ..> N_src_logic_conversation : 导入依赖
-N_src_logic_conversation ..> N_src_logic_agents : 导入依赖
 ```
 
 ```mermaid
@@ -192,7 +191,6 @@ class N_src_logic_workspace["workspace/"] {
 - `conversation` → `knowledge`：导入。
 - `conversation` → `execution`：导入。
 - `conversation` → `tasks`：导入。
-- `conversation` → `agents`：导入。
 - `dispatch` → `team`：导入。
 - `dispatch` → `tasks`：导入。
 - `dispatch` → `workspace`：导入。
@@ -219,12 +217,12 @@ class N_src_logic_workspace["workspace/"] {
 - `evidence` → `governance`：导入。
 - `execution` → `runtime`：导入。
 - `execution` → `tools`：导入。
+- `execution` → `agents`：导入。
 - `execution` → `engines`：导入。
 - `execution` → `web`：导入。
 - `execution` → `workspace`：导入。
 - `execution` → `knowledge`：导入。
 - `execution` → `conversation`：导入。
-- `execution` → `agents`：导入。
 - `execution` → `evidence`：导入。
 - `execution` → `tasks`：导入。
 - `execution` → `file-operations`：导入。

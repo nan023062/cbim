@@ -2847,3 +2847,21 @@ A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 �
 ### 0.1.21 发布门禁未通过（2026-11-15）
 
 PR #96 已提交并转为草稿。候选构建、校验、EXE 隔离六场景及真实 Windows 候选安装通过；完整回归发现旧业务验证/派发集成消费者尚未迁移。当前源码最小复现 9 失败、6 通过，不能删除断言或恢复旧 Team 模式来放行。已暂停合并与发布；未发布 R/E 索引或切换官网。详见 [实际验证记录](verification/desktop-v0.1.21-20261115.md)。
+
+
+### #94：执行循环与调度收敛（2026-11-15）
+
+来源：用户明确要求 AgentExecutionLoop 并入 LoopRuntime，调度复用 execution 现有机制。基线 76d87a58；在 release/agent-0.1.21 工作树实施，原工作树未跟踪品牌及架构草稿未改动。C3 专项治理、L2 跨模块认知交付：问题是主/子循环包装重复持有 started/closed/stopFailure，以及本根 reserved 与全局运行准入两套并发状态。依据实际调用链读取 agents、execution/runtime 与 admission、application/assembly/agent-calls、conversation/runtime 管理器及其消费者测试。
+
+实施：删除 agents/loop.ts 及旧包装测试，把原行为验证迁入真实 LoopRuntime 套件。主与子直接调用 Runtime.start，现有 Runtime 持有信号、日志、工具授权和引擎收尾；主会话管理器及调用协调器在 done 后 close，不重复维护生命周期。AgentCallScheduler 从 agents 移至 execution/assembly，保留调用身份、深度、问答及取消树，移除 reserved、本根并发限制；prepare 继续复用唯一 GlobalRunAdmission，capacity 仅显示其权威快照。关闭未知仍保留实际许可，仅重试排空，不重放运行。Agent 对象和便携协议保持独立，不恢复旧 Team 入口。
+
+保护的稳定机制：LoopRuntime、全局准入、根预算和历史读取。新增调用路由策略只修改 execution 调用协调器，具体引擎选择留在应用装配；无需再维护一套 Agent 循环。此次不迁移旧业务验证/派发集成，原 #94 发布阻塞仍存在。候选 6541c41d 不含本次源码，不得作为本次重构发布制品。
+
+验证选择：调用协调单元检查去重、深度、问答与排空；装配契约使用真实 Runtime/GlobalRunAdmission，仅替换外部引擎，核对跨模型与父占用计数；主会话显式恢复用实际 SDK 和确定性本地 HTTP 响应，未调用在线模型服务。实际命令：
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts tests/agent-call-exchange.test.ts tests/agent-request-budget.test.ts：40 项通过。
+- 移动公开入口和登记模块后，pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts tests/dependencies.test.ts tests/agent-history-assembly.test.ts：216 项通过，含依赖检测器 178 项；重复执行仅针对修改过的套件。
+- pnpm exec vitest run tests/conversation-retry.test.ts：2 项通过，真实 Codex HTTP 400 后同对话分别重试 Codex/Pi，旧日志保持。
+- 合计去重行为验证 46 项、依赖规则 178 项通过。pnpm typecheck 通过；pnpm check:test-modules 通过，537 文件（unit174/contract163/integration200）。
+- pnpm check:architecture 核对所有受影响类图与类型依赖；初次发现新增精确入口未登记，补登记并删除旧入口后复查。未放宽层级规则。
+
+同步维护 agents、execution/assembly、execution/rules/runtime、application/assembly、conversation/runtime 的注释、CONTRACT 和类图及父目录导航；设计只更新对应封装说明。单元职责登记同步更新，无完整 Application 单元夹具。未运行全量 CI、构建、安装或发布；既有旧业务集成失败不计为本次通过，PR 保持草稿。review 从 application/assembly/agent-calls.ts → execution/assembly/agent-call-scheduler.ts → execution/rules/runtime/runtime.ts → conversation/runtime/execution-manager.ts 阅读。

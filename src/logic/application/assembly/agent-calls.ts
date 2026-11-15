@@ -1,10 +1,11 @@
 /**
- * 作用定位：把独立 Agent、循环与调度器装配到工作区真实引擎、准入和请求账本。
- * 设计原因：保持调度系统与 Application/SDK 单向依赖；根运行持工作区租约，后代只在独占工具交接中执行。
+ * 作用定位：把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。
+ * 设计原因：复用 execution 的运行生命周期和全局准入，避免重复循环和本根并发账本；根运行持工作区租约，后代只在独占工具交接中执行。
  * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；求助只交给直接调用方。
  */
 import {randomUUID} from 'node:crypto';
-import {Agent,AgentExecutionLoop,AgentCallScheduler,type AgentToolContext} from '../../agents';
+import {Agent,type AgentToolContext} from '../../agents';
+import {AgentCallScheduler} from '../../execution/assembly/agent-call-scheduler';
 import {AgentConstraintError} from '../../agents/contracts';
 import {fail} from '../../../core/errors';
 import {createWorkspaceLoop,type WorkspaceLoopOptions,type ExecutionServices} from '../../execution/assembly/loop-engine';
@@ -39,7 +40,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(!rootRunId)fail('AGENT_ROOT_NOT_STARTED','根运行尚未受理，不能调用模型');
     let result=requestBudgetsByRole.get(role);if(!result){result=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId,kind:'main'},llm,role)??Promise.resolve(undefined);requestBudgetsByRole.set(role,result)}return result;
   };
-  const scheduler=new AgentCallScheduler({maxDepth:8,maxConcurrent:32},{list:async()=>{
+  const scheduler=new AgentCallScheduler({maxDepth:8},{capacity:()=>{const usage=admission?.manager.snapshot();return {current:usage?.occupied.length??0,limit:usage?.policy.maxConcurrentRuns??0}},list:async()=>{
     workspace.assert();if(!members)return {items:[],reason:'当前宿主没有已配置的 Agent 目录'};
     const items:{id:string;name:string;model:{engine:string;profileId:string;modelId:string};available:boolean;reason?:string}[]=[];
     let offset=0,cursor:Awaited<ReturnType<WorkspaceMembers['list']>>['registryCursor']|undefined;
@@ -92,8 +93,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
         acquireLease:async()=>{workspace.assert();if(closed||request.signal.aborted)fail('AGENT_CALL_CANCELLED','调用已停止');return ()=>{}},
         authorizeNative:input.authorizeNative,
       });
-      const loop=new AgentExecutionLoop(agent,{start:(message,signal,beforeRun)=>child.runtime.start(childTask,message,undefined,undefined,{signal,beforeRun:({runId})=>beforeRun(runId)}),stop:()=>child.runtime.stop(childTaskId),close:async()=>{await child.runtime.close();childAlive=false}});
-      return {agent,loop,release:permit.release};
+      return {agent,task:childTask,runtime:child.runtime,release:()=>{childAlive=false;permit.release()}};
     }catch(error){permit.release();throw error}
   }});
   const finish=async(summary?:RunSummary)=>{

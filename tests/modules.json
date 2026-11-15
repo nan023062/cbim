@@ -8,8 +8,6 @@
       "tests": {
         "unit": [
           "tests/agent-object.test.ts",
-          "tests/agent-call-scheduler.test.ts",
-          "tests/agent-execution-loop.test.ts",
           "tests/agent-call-exchange.test.ts"
         ],
         "contract": [],
@@ -1638,6 +1636,18 @@
       "tests": {
         "unit": [
           "tests/diagnostics-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/execution/assembly": {
+      "roots": [
+        "src/logic/execution/assembly/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/agent-call-scheduler.test.ts"
         ],
         "contract": [],
         "integration": []

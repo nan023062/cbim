@@ -1,5 +1,5 @@
 /**
- * 统一 Agent 路径：实际 agentTools 装配时使用独立调度器和统一对话指令；主/子对象共用 LoopRuntime，旧派发仅供历史协议。下述 Auto/Team 与成员专用说明均指旧派发路径。
+ * 统一 Agent 路径：实际 agentTools 装配时使用 execution 调用协调器和统一对话指令；主/子对象共用 LoopRuntime，旧派发仅供历史协议。下述 Auto/Team 与成员专用说明均指旧派发路径。
  * 知识参数在 proposed 前由当前绑定实例规范化，日志与授权保留生效身份；其它工具不补身份。
  * 目录归属：logic/execution/assembly；Loop 与业务能力装配。
 
@@ -117,7 +117,7 @@ export interface ExecutionServices {
   agent?:Agent;
   /** 根 Agent 对象保留完整主工具权限；与子 Agent 的角色标记分开。 */
   rootAgent?:Agent;
-  /** 独立调度器提供的真实递归工具，未装配则不声明支持。 */
+  /** execution 协调器提供的真实递归工具，未装配则不声明支持。 */
   agentTools?(context:AgentToolContext):AgentToolsBinding;
   agentCall?(taskId:string,runId:string):AgentCallReference;
   /** 成员冻结命令的真实执行端口，沿用运行时 command 授权。 */

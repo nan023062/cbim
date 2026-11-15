@@ -1,29 +1,29 @@
 /**
- * 作用定位：独立 Agent 调度系统，拥有调用关系、递归准入、结果回传和后代停止。
- * 设计原因：调度通过窄端口创建对象和循环，不依赖主调度、Application 或具体引擎。
+ * 作用定位：execution 内的递归调用协调，拥有父子关联、深度限制、结果回传和后代取消。
+ * 设计原因：直接复用 LoopRuntime；全局准入和根预算由既有执行装配提供，不自建循环或并发账本。
  * 职责边界：根工作区租约由宿主保留，子进程额度由 prepare 的真实准入控制；费用走根请求账本。
  */
 import {z} from 'zod';
-import {Agent} from './agent';
-import {AgentCallExchange} from './exchange';
-import {questionResultSchema} from '../tools/rules/questions';
+import type {Agent} from '../../agents/agent';
+import {AgentCallExchange} from '../../agents/exchange';
+import {questionResultSchema} from '../../tools/rules/questions';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {AgentExecutionLoop} from './loop';
-import type {RunSummary} from '../execution/rules/types';
-import type {AgentCallReference,AgentCallContext,AgentCallLimits,AgentToolContext,AgentToolsBinding} from './contracts';
-import {AgentConstraintError} from './contracts';
-import {jsonToolResult,type ToolResult} from '../tools/rules/results';
+import type {LoopRuntime} from '../rules/runtime/runtime';
+import type {TaskSpec} from '../rules/types';
+import type {RunSummary} from '../rules/types';
+import type {AgentCallReference,AgentCallContext,AgentCallLimits,AgentToolContext,AgentToolsBinding} from '../../agents/contracts';
+import {AgentConstraintError,agentCallToolName,agentListToolName,agentReplyToolName} from '../../agents/contracts';
+import {jsonToolResult,type ToolResult} from '../../tools/rules/results';
 
 export interface AgentSchedulerPorts {
+  /** 仅展示现有 execution 准入服务的快照，不在协调器中另建额度。 */
+  capacity?():{current:number;limit:number};
   /** 只读已登记能力目录；目录可见不自动授予执行权限。 */
   list?():Promise<unknown>;
   /** 必须取得真实子执行名额，冻结目标定义/权限/模型，失败不得开始运行。 */
-  prepare(input:{agentId:string;message:string;parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference;requestQuestion(input:unknown,signal:AbortSignal):Promise<unknown>}):Promise<{agent:Agent;loop:AgentExecutionLoop;release():void}>;
+  prepare(input:{agentId:string;message:string;parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference;requestQuestion(input:unknown,signal:AbortSignal):Promise<unknown>}):Promise<{agent:Agent;task:TaskSpec;runtime:Pick<LoopRuntime,'start'|'close'>;release():void}>;
 }
 const callInput=z.object({agentId:z.string().min(1).max(512),message:z.string().trim().min(1).max(100000)}).strict();
-export const agentCallToolName='cbim_agent_call';
-export const agentListToolName='cbim_agent_list';
-export const agentReplyToolName='cbim_agent_reply';
 const replyInput=z.object({callId:z.string().min(1),questionId:z.string().min(1),result:questionResultSchema}).strict();
 function errorResult(code:string,message:string,detail:Record<string,unknown>={}):ToolResult{return {...jsonToolResult(agentCallToolName,{error:{code,message,...detail}}),isError:true}}
 /** 单根运行共享调度器；调用键含父运行，避免不同 Agent 的原生工具 ID 碰撞。 */
@@ -34,9 +34,8 @@ export class AgentCallScheduler {
   private readonly stranded=new Map<string,Awaited<ReturnType<AgentSchedulerPorts['prepare']>>>();
   private readonly replyHistory=new Map<string,AgentCallExchange>();
   private closed=false;
-  private reserved=0;
   constructor(private readonly limits:AgentCallLimits,private readonly ports:AgentSchedulerPorts){
-    if(!Number.isSafeInteger(limits.maxDepth)||limits.maxDepth<0||!Number.isSafeInteger(limits.maxConcurrent)||limits.maxConcurrent<1)throw Error('Agent 调用限额无效');
+    if(!Number.isSafeInteger(limits.maxDepth)||limits.maxDepth<0)throw Error('Agent 调用限额无效');
     this.limits=Object.freeze({...limits});
   }
   /** 每个循环取得自己的工具绑定；停止只取消该调用者的直属调用，AbortSignal 继续向后代传播。 */
@@ -62,10 +61,9 @@ export class AgentCallScheduler {
         if(existing)return existing.input===input?existing.result:errorResult('AGENT_CALL_CONFLICT','原调用身份已用于不同指令');
         if(this.closed||signal.aborted)return errorResult('AGENT_CALL_CANCELLED','调用已停止',{started:false});
         if(depth+1>this.limits.maxDepth)return errorResult('AGENT_DEPTH_LIMIT','递归深度超过限制',{limit:this.limits.maxDepth,current:depth,requested:depth+1,unit:'depth',started:false});
-        if(this.reserved>=this.limits.maxConcurrent)return errorResult('AGENT_CONCURRENCY_LIMIT','Agent 执行并发已达上限',{limit:this.limits.maxConcurrent,current:this.reserved,requested:1,unit:'process',started:false});
         try{context.assertExclusive(id)}catch(error){return errorResult('AGENT_CALL_BUSY',error instanceof Error?error.message:String(error),{started:false})}
-        // 同步预留早于任何 await，父工具批次在整个子运行中封住新操作。
-        this.reserved++;pending++;
+        // 执行额度仅由 prepare 使用全局准入服务领取；这里仅跟踪父工具批次。
+        pending++;
         const controller=new AbortController(),abort=()=>controller.abort(signal.reason);signal.addEventListener('abort',abort,{once:true});
         let reference:AgentCallReference|undefined;
         const exchange=new AgentCallExchange(async(phase,questionId,questions,answer)=>{
@@ -74,7 +72,7 @@ export class AgentCallScheduler {
           return jsonToolResult(agentCallToolName,{status:'waiting',callId:id,questionId,questions,agentCall:reference,nextStep:'用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent'});
         });
         // 原循环关闭后先撤销活动占用，再交回父引擎，避免父收尾看到已结束的子调用。
-        const clearActive=()=>{signal.removeEventListener('abort',abort);this.reserved--;pending--;this.activeCalls.delete(key)};
+        const clearActive=()=>{signal.removeEventListener('abort',abort);pending--;this.activeCalls.delete(key)};
         const done=this.execute(context,depth,id,parsed.data,controller.signal,exchange,ref=>{reference=ref}).then(async result=>{
           if(exchange.yielded&&reference)await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,agentCallState:result.isError?'failed':'completed',result,isError:result.isError===true}});
           return result;
@@ -89,16 +87,18 @@ export class AgentCallScheduler {
     const ref=(taskId:string,runId:string):AgentCallReference=>({version:1,workspaceId:context.task.workspaceId,callerTaskId:context.task.taskId,callerRunId:context.runId,toolCallId:id,taskId,runId});
     try{
       signal.throwIfAborted();prepared=await this.ports.prepare({...input,parent:{task:context.task,runId:context.runId,depth},signal,reference:ref,requestQuestion:(input,questionSignal)=>exchange.ask(input,AbortSignal.any([signal,questionSignal]))});signal.throwIfAborted();
-      const summary=await prepared.loop.run(input.message,signal,async runId=>{reference=ref(prepared!.agent.conversation.taskId,runId);onReference(reference);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,concurrent:this.reserved,maxConcurrent:this.limits.maxConcurrent}}})});
+      const run=await prepared.runtime.start(prepared.task,input.message,undefined,undefined,{signal,beforeRun:async({runId})=>{reference=ref(prepared!.agent.conversation.taskId,runId);onReference(reference);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,...this.capacity()}}})}});
+      const summary=await run.done;
       const output={agentCall:reference,status:summary.status,summary:this.message(summary),unresolvedTools:summary.unresolvedTools};
       return {...jsonToolResult(agentCallToolName,output),...(summary.status!=='completed'||summary.unresolvedTools.length?{isError:true}:{})};
     }catch(error){const failure=error as {code?:string;message?:string};return errorResult(failure.code??(signal.aborted?'AGENT_CALL_CANCELLED':'AGENT_CALL_FAILED'),failure.message??String(error),{started:!!reference,...(error instanceof AgentConstraintError?error.constraint:{}),...(reference?{agentCall:reference}: {})})}
-    finally{if(prepared){try{await prepared.loop.close();prepared.release()}catch(error){this.stranded.set(context.runId+':'+id,prepared);throw error}}}
+    finally{if(prepared){try{await prepared.runtime.close();prepared.release()}catch(error){this.stranded.set(context.runId+':'+id,prepared);throw error}}}
   }
+  private capacity(){const usage=this.ports.capacity?.();return usage?{concurrent:usage.current,maxConcurrent:usage.limit}:{}}
   private message(run:RunSummary):string {
     const messages=run.events.filter(event=>event.type==='message').map(event=>typeof event.data.text==='string'?event.data.text:typeof event.data.content==='string'?event.data.content:'').filter(Boolean);
     return messages.join('\n\n').slice(-100000)||'执行已结束，详细过程见调用记录；没有可提取的公开文字回复。';
   }
-  private async drain(prefix=''){for(const [key,value] of this.stranded){if(!key.startsWith(prefix))continue;await value.loop.close();value.release();this.stranded.delete(key)}}
+  private async drain(prefix=''){for(const [key,value] of this.stranded){if(!key.startsWith(prefix))continue;await value.runtime.close();value.release();this.stranded.delete(key)}}
   async close(){this.closed=true;const active=[...this.activeCalls.values()];for(const item of active)item.controller.abort();await Promise.allSettled(active.map(item=>item.done));await this.drain()}
 }

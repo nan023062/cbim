@@ -126,3 +126,6 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 ### 多角色发送选项
 
 executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。
+
+
+统一 Agent 主轮直接使用 LoopRuntime.start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。

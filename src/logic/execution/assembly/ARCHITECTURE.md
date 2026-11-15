@@ -10,12 +10,47 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-call-scheduler.ts](agent-call-scheduler.ts) | execution 内的递归调用协调，拥有父子关联、深度限制、结果回传和后代取消。 |
 | [engine-adapters.ts](engine-adapters.ts) | 当前源码/旧包的官方适配器装配表，所有实现均通过同一版本协议取得工厂。 |
 | [engine-package-loader.ts](engine-package-loader.ts) | 从冷宿主已验证的不可变包路径加载统一引擎工厂。 |
 | [loop-engine.ts](loop-engine.ts) | 调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。 |
 | [packaged-engine-adapters.ts](packaged-engine-adapters.ts) | 正式 R 构建替换源码兼容表，禁止回退到内嵌具体引擎。 |
 
 ## 架构类图
+
+### agent-call-scheduler.ts
+
+```mermaid
+classDiagram
+class N_src_logic_execution_assembly_agent_call_scheduler_ts["agent-call-scheduler.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts["AgentSchedulerPorts"] {
+  <<interface>>
+  +capacity()
+  +list()
+  +prepare()
+}
+N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts : 声明
+class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
+  +bind()
+  +close()
+  -limits
+  -ports
+  -attempts
+  -activeCalls
+  -stranded
+  -replyHistory
+  -closed
+  -execute()
+  -capacity()
+  -message()
+  -drain()
+}
+N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
+```
+
+直接依赖：[../../agents/agent.ts](../../agents/agent.ts)、[../../agents/exchange.ts](../../agents/exchange.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/runtime/runtime.ts](../rules/runtime/runtime.ts)、[../rules/types.ts](../rules/types.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### engine-adapters.ts
 
@@ -190,7 +225,7 @@ N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly
 
 ## 知识参数默认值装配
 
-新 Agent 工具装配经 ExecutionServices.agentTools 明确提供；仅此路径使用统一主／执行指令并不装配旧派发工具。根 Agent 对象保留主会话已有可用知识、网页和反馈授权，子对象只获得冻结指令、同权限工具与递归能力。`WorkspaceLoop.agent` 给主执行管理器和子调度使用同一 AgentExecutionLoop 驱动。旧未装配入口保留原运行协议，不能仅依据角色名开启递归。
+新 Agent 工具装配经 ExecutionServices.agentTools 明确提供；仅此路径使用统一主／执行指令并不装配旧派发工具。根 Agent 对象保留主会话已有可用知识、网页和反馈授权，子对象只获得冻结指令、同权限工具与递归能力。`WorkspaceLoop.agent` 给主执行管理器和子调度使用同一 LoopRuntime 运行机制。旧未装配入口保留原运行协议，不能仅依据角色名开启递归。
 
 统一 Agent 工具列表不套用旧 Team 的业务工具过滤；工具可见性不提供授权，执行仍通过 Runtime 的本轮权限、审批和原服务写入检查。
 
@@ -216,3 +251,8 @@ loop-engine 不直接选择具体构造器，也不解析 Pi SDK 路径；通过
 生产 build 通过 packagedEngineBuild 将源码兼容表替换为拒绝回退的入口；loop-engine 对受管包只调用 engine-package-loader，按冷宿主给出的不可变根、适配器入口、版本和协议核对，并比较 E 编译声明与 R 静态模型/历史约束。旧 E 缺声明或不匹配时明确要求匹配版本，不启动、下载或重试。该动态加载登记实际源码依赖，不作为外部依赖豁免。开发直接运行源码时才使用兼容表。
 
 引擎原生目录来自 R 静态声明的 storageDirectory，历史 Claude 目录保持 claude。装配不按引擎名称追加依赖；管理服务返回固定闭包，具体包选择自己声明的依赖。
+
+
+## 递归调用协调
+
+agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答复与取消树，直接调用已准备 Runtime.start 并等待 done；finally 经 Runtime.close 确认排空后才释放已有全局准入许可。关闭失败保留原句柄，只重试排空，不重放任务。并发来自 execution/admission，预算来自根请求账本；协调器不另存 reserved 或本根额度，capacity 仅显示权威快照。Agent 对象继续归 agents，不迁入具体引擎。

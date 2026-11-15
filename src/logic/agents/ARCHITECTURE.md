@@ -13,9 +13,7 @@
 | [agent.ts](agent.ts) | Logic 中独立 Agent 对象，冻结能力、运行选型和权限，并引用真实对话身份。 |
 | [contracts.ts](contracts.ts) | Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。 |
 | [exchange.ts](exchange.ts) | 单次 Agent 调用内的问答暂停和结果交接，不创建新 Agent 或执行循环。 |
-| [index.ts](index.ts) | 向业务装配公开 Agent 对象、单次循环和调度器，不导出 Application 或具体引擎。 |
-| [loop.ts](loop.ts) | 独立 Agent 执行循环的生命周期封装，由装配注入已有 LoopRuntime/引擎驱动。 |
-| [scheduler.ts](scheduler.ts) | 独立 Agent 调度系统，拥有调用关系、递归准入、结果回传和后代停止。 |
+| [index.ts](index.ts) | 向业务装配公开 Agent 对象与调用契约，不导出 Application 或具体引擎。 |
 
 ## 架构类图
 
@@ -78,7 +76,6 @@ N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentCallCon
 class N_src_logic_agents_contracts_ts_AgentCallLimits["AgentCallLimits"] {
   <<interface>>
   +maxDepth
-  +maxConcurrent
 }
 N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentCallLimits : 声明
 class N_src_logic_agents_contracts_ts_AgentToolContext["AgentToolContext"] {
@@ -160,70 +157,7 @@ class N_src_logic_agents_index_ts["index.ts"] {
   <<module>>
 }
 ```
-直接依赖：[agent.ts](agent.ts)、[loop.ts](loop.ts)、[scheduler.ts](scheduler.ts)、[contracts.ts](contracts.ts)。
-
-### loop.ts
-
-```mermaid
-classDiagram
-class N_src_logic_agents_loop_ts["loop.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_loop_ts_AgentLoopDriver["AgentLoopDriver"] {
-  <<interface>>
-  +start()
-  +stop()
-  +close()
-}
-N_src_logic_agents_loop_ts ..> N_src_logic_agents_loop_ts_AgentLoopDriver : 声明
-class N_src_logic_agents_loop_ts_AgentExecutionLoop["AgentExecutionLoop"] {
-  +agent
-  +start()
-  +run()
-  +stop()
-  +close()
-  -driver
-  -started
-  -closed
-  -stopFailure
-}
-N_src_logic_agents_loop_ts ..> N_src_logic_agents_loop_ts_AgentExecutionLoop : 声明
-```
-
-直接依赖：[agent.ts](agent.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)。
-
-### scheduler.ts
-
-```mermaid
-classDiagram
-class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_scheduler_ts_AgentSchedulerPorts["AgentSchedulerPorts"] {
-  <<interface>>
-  +list()
-  +prepare()
-}
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_scheduler_ts_AgentSchedulerPorts : 声明
-class N_src_logic_agents_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
-  +bind()
-  +close()
-  -limits
-  -ports
-  -attempts
-  -activeCalls
-  -stranded
-  -replyHistory
-  -closed
-  -reserved
-  -execute()
-  -message()
-  -drain()
-}
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_scheduler_ts_AgentCallScheduler : 声明
-```
-
-直接依赖：[agent.ts](agent.ts)、[exchange.ts](exchange.ts)、[../tools/rules/questions.ts](../tools/rules/questions.ts)、[loop.ts](loop.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)、[contracts.ts](contracts.ts)、[../tools/rules/results.ts](../tools/rules/results.ts)。
+直接依赖：[agent.ts](agent.ts)、[contracts.ts](contracts.ts)。
 
 ### 本目录调用边界
 
@@ -235,50 +169,11 @@ class N_src_logic_agents_index_ts["index.ts"] {
 class N_src_logic_agents_agent_ts["agent.ts"] {
   <<module>>
 }
-class N_src_logic_agents_loop_ts["loop.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
-  <<module>>
-}
 class N_src_logic_agents_contracts_ts["contracts.ts"] {
   <<module>>
 }
 N_src_logic_agents_index_ts ..> N_src_logic_agents_agent_ts : 导入依赖
-N_src_logic_agents_index_ts ..> N_src_logic_agents_loop_ts : 导入依赖
-N_src_logic_agents_index_ts ..> N_src_logic_agents_scheduler_ts : 导入依赖
 N_src_logic_agents_index_ts ..> N_src_logic_agents_contracts_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_agents_loop_ts["loop.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_agent_ts["agent.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_exchange_ts["exchange.ts"] {
-  <<module>>
-}
-N_src_logic_agents_loop_ts ..> N_src_logic_agents_agent_ts : 导入依赖
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_agent_ts : 导入依赖
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_exchange_ts : 导入依赖
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_loop_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
-  <<module>>
-}
-class N_src_logic_agents_contracts_ts["contracts.ts"] {
-  <<module>>
-}
-N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依赖
 ```
 
 
@@ -294,15 +189,15 @@ N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依�
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
-# Agent、执行循环与调度系统
+# Agent 对象与调用协议
 
 ## 职责与单向依赖
 
 `Agent` 冻结专业指令、权限、无凭据模型选择与对话引用，不保存第二份消息正文。主 Agent 与执行 Agent 是相对调用角色；Application 以同一对象和循环协议装配。
 
-`AgentExecutionLoop` 接收单运行驱动端口，负责一次启动、停止和真实关闭。驱动由现有 `LoopRuntime` 和具体引擎装配，不重新实现 SDK 模型循环。`start` 供主执行管理器使用，`run` 供调度器等待子结果；两者共享同一生命周期。
+主与子 Agent 都直接使用 execution 的 `LoopRuntime.start/stop/close`；此目录不再拥有运行循环。Runtime 负责工具授权、日志、取消、引擎关闭和真实排空，调用者仅负责在 done 后关闭所拥有的 Runtime。
 
-`AgentCallScheduler` 仅依赖对象、循环及窄执行契约，通过 `prepare` 取得真实子运行。它持有本根调用的身份去重、深度/本地进程上限、取消和回传，不依赖 `AutoCollaboration`、Application 或具体引擎。`contracts.ts` 是 Runtime/Bridge 的便携契约入口，不能通过聚合出口加载调度实现。
+`execution/assembly/AgentCallScheduler` 仅协调调用身份、深度、暂停答复和直接结果路由，通过 prepare 取得已获全局准入的 task/runtime/release；不另存本根并发计数。此目录的 contracts 是 Runtime/Bridge 的便携协议入口，不导出调度实现。
 
 ## 工具与记录
 
@@ -313,7 +208,7 @@ N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依�
 
 ## 约束与停止
 
-根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。本地额度在任何 await 前同步预留。真实进程全局准入由 prepare 必须另外领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
+根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。真实进程全局准入由 prepare 使用 execution/admission 同步领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
 
 调用前 `assertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝。直属调用均在等待答复时只放行目录、答复和向上求助工具，写操作与新子调用仍被拒绝。根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
 
@@ -321,7 +216,7 @@ N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依�
 
 ## 当前支持范围
 
-Application 的 `agent-calls.ts` 采用深度 8、本根子进程数上限 32；实际全局并发遵守用户原有设置，父进程仍计入资源。所有数值在工具详情或拒绝结果中说明。
+Application 的 `agent-calls.ts` 采用深度 8；并发只有 execution/admission 的用户全局设置一份权威状态，父进程仍计入资源。所有数值在工具详情或拒绝结果中说明。
 
 子调用使用已登记、未变更岗位自己的冻结引擎、模型和凭据，不继承根进程启动覆盖；不同模型分别冻结价格并向根请求账本申请和结算。agentRun 记录请求的实际子 task/run，但不改变根作用域授权。缺模型、配置变化或缺所需价格均拒绝，不静默改投。启用旧运行汇总预算时仍返回 `AGENT_BUDGET_MODE_UNSUPPORTED`；预算关闭时仍受深度和真实并发约束。
 

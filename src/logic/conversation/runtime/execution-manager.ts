@@ -41,7 +41,6 @@ import {assertContinuationAttachmentManifest,type ContinuationAttachmentManifest
 import {recoveryRequestSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../tasks/rules/scope-recovery';
 import type {FreshContext} from '../../tasks/rules/fresh-context';
 import type {ExecutionAdmissionWait,ExecutionLaunchContext} from '../../execution/admission/admission-wait';
-import {AgentExecutionLoop} from '../../agents/loop';
 import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../tasks/rules/scope-replan';
 import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../tasks/rules/human-continue';
 
@@ -323,13 +322,9 @@ export class WorkspaceExecutionManager {
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       const startOrdinary=(beforeRun:(context:{runId:string})=>Promise<void>)=>{
         const prepared=loop!;
-        if(!prepared.unifiedAgentTools)return prepared.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun});
-        if(!prepared.agent)fail('AGENT_OBJECT_UNAVAILABLE','统一执行缺少已冻结 Agent 对象');
-        const executionLoop=new AgentExecutionLoop(prepared.agent,{
-          start:(input,signal,notify)=>prepared.runtime.start(task,input,resume,source,{signal,beforeRun:({runId})=>notify(runId)}),
-          stop:()=>prepared.runtime.stop(task.taskId),close:()=>prepared.runtime.close(),
-        });
-        return executionLoop.start(message,controller.signal,runId=>beforeRun({runId}));
+        if(prepared.unifiedAgentTools&&!prepared.agent)fail('AGENT_OBJECT_UNAVAILABLE','统一执行缺少已冻结 Agent 对象');
+        // 主与子运行都直接使用 Runtime 的启动、取消和收尾，不另设循环生命周期。
+        return prepared.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun});
       };
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();

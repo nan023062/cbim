@@ -25,3 +25,6 @@ createEngine 仍在 beforeRun 后执行，因为周期工具依赖已登记身�
 ## 原调用暂停的运行门禁
 
 assertQuestionWait 要求唯一已授权问题工具且无其他在途操作。直属调用全部等待时仅放行调度器指定的答复、目录、向上求助；其他工具拒绝。引擎回合结束仍有活动子调用则以 AGENT_REPLY_REQUIRED 中断，并沿原停止路径排空，不将问题中间回包当成完成。
+
+
+主 Agent 与递归执行 Agent 直接共用 LoopRuntime，调用者传入同一 AbortSignal 和 beforeRun。Runtime 唯一持有真实运行取消、工具授权、日志及引擎收尾；上层在 done 后关闭所拥有实例，关闭后禁止再次启动。不另建 Agent 循环类或重复启动状态。

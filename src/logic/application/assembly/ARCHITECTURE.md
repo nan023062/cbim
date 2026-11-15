@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-calls.ts](agent-calls.ts) | 把独立 Agent、循环与调度器装配到工作区真实引擎、准入和请求账本。 |
+| [agent-calls.ts](agent-calls.ts) | 把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。 |
 | [execution-admission.ts](execution-admission.ts) | 把应用级并发准入与本工作区文件/实例租约组合为主轮和成员轮共用的同步领取入口。 |
 | [execution.ts](execution.ts) | 主进程执行装配，将工作区、已解析模型、原生锁与平台访问策略注入调度引擎。 |
 | [member-dispatch.ts](member-dispatch.ts) | 为已运行工作区装配成员派发、大脑执行、目标审阅、岗位及模块负责人服务；复用工作区恢复前创建的唯一 DispatchStore，来源、责任、岗位与执行保持独立审计投影。 |
@@ -50,7 +50,7 @@ class N_src_logic_application_assembly_agent_calls_ts_AgentCallAssemblyInput["Ag
 N_src_logic_application_assembly_agent_calls_ts ..> N_src_logic_application_assembly_agent_calls_ts_AgentCallAssemblyInput : 声明
 ```
 
-直接依赖：[../../agents/index.ts](../../agents/index.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[execution-admission.ts](execution-admission.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../budget/runtime/model-request-budget-service.ts](../../budget/runtime/model-request-budget-service.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)。
+直接依赖：[../../agents/index.ts](../../agents/index.ts)、[../../execution/assembly/agent-call-scheduler.ts](../../execution/assembly/agent-call-scheduler.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../workspace/service/workspace.ts](../../workspace/service/workspace.ts)、[../../team/service/workspace-members.ts](../../team/service/workspace-members.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[execution-admission.ts](execution-admission.ts)、[../../dispatch/runtime/dispatch-service.ts](../../dispatch/runtime/dispatch-service.ts)、[../../budget/runtime/model-request-budget-service.ts](../../budget/runtime/model-request-budget-service.ts)、[../../budget/rules/request-budget.ts](../../budget/rules/request-budget.ts)。
 
 ### execution-admission.ts
 
@@ -173,7 +173,7 @@ N_src_logic_application_assembly_member_dispatch_ts ..> N_src_logic_application_
 
 ## 统一 Agent 工具执行
 
-可信 `ExecutionLaunchContext.executionModel` 选择新调用模型，公开运行选项不能自行改协议。`agent-calls.ts` 独立装配 Agent 对象、AgentExecutionLoop 与 AgentCallScheduler；主与子使用同一生命周期协议。新主运行只建立无 goal 的预算作用域、持有真实主运行并在终态关闭；不由旧 AutoCollaboration 同时推进。
+可信 `ExecutionLaunchContext.executionModel` 选择新调用模型，公开运行选项不能自行改协议。`agent-calls.ts` 组合 Agent 对象、execution 的 AgentCallScheduler 与 LoopRuntime；主与子直接使用同一 Runtime 生命周期，prepare 只通过现有 GlobalRunAdmission 领取真实许可。新主运行只建立无 goal 的预算作用域、持有真实主运行并在终态关闭；不由旧 AutoCollaboration 同时推进。
 
 根工作区租约在子调用中保留，子独立领取 GlobalRunAdmission 名额。Runtime 先核实父工具批次独占并阻止父并发工具，后代排空才释放根。子 Agent 使用冻结岗位指令与自己的引擎、模型、凭据和价格端口；账本作用域仍归根，agentRun 只标记实际子请求来源。捕获配置时再次核实哈希，不继承根 process 覆盖。未确认配置、旧非逐请求预算和缺少真实准入均明确拒绝，不降权限或绕过计量。子问题端口经 Runtime 独占核验，只交给调度器中的直接调用方；回复续跑同一 child runtime。详见 [Agent 契约](../../agents/CONTRACT.md)。
 

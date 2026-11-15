@@ -4,9 +4,13 @@
  */
 import type {EngineEvent,RunSummary,TaskSpec} from '../execution/rules/types';
 import type {EngineCapability} from '../execution/rules/engine-tools';
+export const agentCallToolName='cbim_agent_call';
+export const agentListToolName='cbim_agent_list';
+export const agentReplyToolName='cbim_agent_reply';
 export interface AgentCallReference {version:1;workspaceId:string;callerTaskId:string;callerRunId:string;toolCallId:string;taskId:string;runId:string}
 export interface AgentCallContext {task:TaskSpec;runId:string;depth:number}
-export interface AgentCallLimits {maxDepth:number;maxConcurrent:number}
+/** 调用协议只限定深度；真实并发和预算由 execution 准入与根账本持有。 */
+export interface AgentCallLimits {maxDepth:number}
 export interface AgentToolContext {task:TaskSpec;runId:string;assertExclusive(id:string):void;assertQuestionWait?():void;emit(event:EngineEvent):Promise<void>}
 export interface AgentToolsBinding {capability:EngineCapability;active():boolean;allowsWhileWaiting?(name:string):boolean;stop():Promise<void>}
 export interface AgentLifecycle {beforeRun(runId:string):Promise<void>;settled(summary?:RunSummary):Promise<void>;failed(error:unknown):Promise<void>}

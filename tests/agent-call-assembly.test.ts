@@ -113,6 +113,7 @@ it.each([['different-model','AGENT_MODEL_UNAVAILABLE'],['changed-model-capture',
   expect(f.events).toHaveLength(1);expect(fake.engine).toHaveBeenCalledTimes(1);expect(f.results).toHaveLength(1);
   const wire=f.results[0] as {content:{type:string;text:string}[];isError?:boolean};expect(wire.isError).toBe(true);
   expect(JSON.parse(wire.content[0].text)).toMatchObject({error:{code,started:false}});
+  if(mode==='capacity')expect(JSON.parse(wire.content[0].text).error).toMatchObject({current:1,limit:1,requested:1,unit:'process'});
   expect(f.admission.snapshot().occupied).toHaveLength(1);expect(f.forRun).toHaveBeenCalledTimes(1);
 });
 

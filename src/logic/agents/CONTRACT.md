@@ -1,12 +1,12 @@
-# Agent、执行循环与调度系统
+# Agent 对象与调用协议
 
 ## 职责与单向依赖
 
 `Agent` 冻结专业指令、权限、无凭据模型选择与对话引用，不保存第二份消息正文。主 Agent 与执行 Agent 是相对调用角色；Application 以同一对象和循环协议装配。
 
-`AgentExecutionLoop` 接收单运行驱动端口，负责一次启动、停止和真实关闭。驱动由现有 `LoopRuntime` 和具体引擎装配，不重新实现 SDK 模型循环。`start` 供主执行管理器使用，`run` 供调度器等待子结果；两者共享同一生命周期。
+主与子 Agent 都直接使用 execution 的 `LoopRuntime.start/stop/close`；此目录不再拥有运行循环。Runtime 负责工具授权、日志、取消、引擎关闭和真实排空，调用者仅负责在 done 后关闭所拥有的 Runtime。
 
-`AgentCallScheduler` 仅依赖对象、循环及窄执行契约，通过 `prepare` 取得真实子运行。它持有本根调用的身份去重、深度/本地进程上限、取消和回传，不依赖 `AutoCollaboration`、Application 或具体引擎。`contracts.ts` 是 Runtime/Bridge 的便携契约入口，不能通过聚合出口加载调度实现。
+`execution/assembly/AgentCallScheduler` 仅协调调用身份、深度、暂停答复和直接结果路由，通过 prepare 取得已获全局准入的 task/runtime/release；不另存本根并发计数。此目录的 contracts 是 Runtime/Bridge 的便携协议入口，不导出调度实现。
 
 ## 工具与记录
 
@@ -17,7 +17,7 @@
 
 ## 约束与停止
 
-根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。本地额度在任何 await 前同步预留。真实进程全局准入由 prepare 必须另外领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
+根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。真实进程全局准入由 prepare 使用 execution/admission 同步领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
 
 调用前 `assertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝。直属调用均在等待答复时只放行目录、答复和向上求助工具，写操作与新子调用仍被拒绝。根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
 
@@ -25,7 +25,7 @@
 
 ## 当前支持范围
 
-Application 的 `agent-calls.ts` 采用深度 8、本根子进程数上限 32；实际全局并发遵守用户原有设置，父进程仍计入资源。所有数值在工具详情或拒绝结果中说明。
+Application 的 `agent-calls.ts` 采用深度 8；并发只有 execution/admission 的用户全局设置一份权威状态，父进程仍计入资源。所有数值在工具详情或拒绝结果中说明。
 
 子调用使用已登记、未变更岗位自己的冻结引擎、模型和凭据，不继承根进程启动覆盖；不同模型分别冻结价格并向根请求账本申请和结算。agentRun 记录请求的实际子 task/run，但不改变根作用域授权。缺模型、配置变化或缺所需价格均拒绝，不静默改投。启用旧运行汇总预算时仍返回 `AGENT_BUDGET_MODE_UNSUPPORTED`；预算关闭时仍受深度和真实并发约束。
 

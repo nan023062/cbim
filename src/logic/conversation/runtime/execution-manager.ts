@@ -170,7 +170,8 @@ export class WorkspaceExecutionManager {
         enteredRuntime=true;
         const input={message:entry.message,...(entry.options.attachmentIds?{attachmentIds:[...entry.options.attachmentIds]}:{})};
         const send=(token?:ScopeActiveInputToken)=>active!.loop.runtime.steer(taskId,entry.message,images,{expectedRunId,signal:controller.signal,...(token?{activeInput:{token,attachmentIds:input.attachmentIds}}:{})});
-        if(this.collaboration?.insertActiveInput)await this.collaboration.insertActiveInput(taskId,expectedRunId,id,input,controller.signal,send);
+        if(active!.loop.agentLifecycle?.insertInput)await active!.loop.agentLifecycle.insertInput(expectedRunId,id,input,controller.signal,send);
+        else if(this.collaboration?.insertActiveInput)await this.collaboration.insertActiveInput(taskId,expectedRunId,id,input,controller.signal,send);
         else await send();
         // 原生 queued 和接受日志均已确认。这里不再按迟到 stop 撤销消费，保存失败只能保持未知。
         await q.complete(id);
@@ -344,7 +345,8 @@ export class WorkspaceExecutionManager {
       }}):await startOrdinary(async({runId}:{runId:string})=>{
         if(loop!.unifiedAgentTools){
           controller.signal.throwIfAborted();
-          await loop!.agentLifecycle!.beforeRun(runId);
+          const topic=automaticQueue?(await this.queue()).list(task.taskId).find(item=>item.id===automaticQueue):undefined;
+          await loop!.agentLifecycle!.beforeRun(runId,{message,attachmentIds:options.attachmentIds,...(topic?{scopeId:topic.id,followupOf:topic.followupOf}:{})});
           controller.signal.throwIfAborted();
           return;
         }

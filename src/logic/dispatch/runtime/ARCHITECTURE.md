@@ -489,3 +489,8 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 ### 多角色冻结与恢复
 
 负责人配置捕获、正式兜底 policy、自动协作批次和返回模型 hash 均携带完整 modelRoles。完整快照变化阻止旧绑定继续领取；不自动替换模型或重启任务。
+
+
+## 根运行插入回执
+
+旧协调器的 insertActiveInput 复用 ScopeActiveInputService.send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。

@@ -30,7 +30,9 @@ it('编排仅在 execution/assembly 选择具体引擎，不直接取得应用�
       const target=path.resolve(path.dirname(file),match[1]).replaceAll('\\','/');
       // engines 的便携公开入口仅含静态描述与选型规则；具体适配器仍限制在 execution/assembly。
       const pure=['core/utility','core/errors','core/json','core/platform/node/serialization','logic/models','logic/engines','logic/web','logic/feedback'].some(p=>target===root+'/'+p);
-      expect(pure||/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(target)||orchestration(target)||(assembly&&target.startsWith(root+'/logic/execution/engines/')),`${file}: ${match[1]}`).toBe(true);
+      // 递归装配仅引用已登记的 Agent 值对象、问答协调和契约；不开放整个目录。
+      const agentBoundary=assembly&&(target===root+'/logic/agents'||['agent','exchange','contracts'].some(name=>target===root+'/logic/agents/'+name));
+      expect(pure||agentBoundary||/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(target)||orchestration(target)||(assembly&&target.startsWith(root+'/logic/execution/engines/')),`${file}: ${match[1]}`).toBe(true);
     }
   }
 });

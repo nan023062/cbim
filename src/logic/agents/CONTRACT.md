@@ -34,3 +34,8 @@ Application 的 `agent-calls.ts` 采用深度 8；并发只有 execution/admissi
 等待及续跑通过原工具的 tool.updated 展示。未答复就结束父模型回合触发 AGENT_REPLY_REQUIRED 并停止排空原子树。停止、错题、跨调用者和迟到答案均不重建执行；当前等待对象只存在于进程内，重启后的未知调用不自动恢复。
 
 旧单层派发及其检查点、知识验收等仍用于无新协议标记的历史恢复，不能删除旧读取路径或给旧日志补造新调用身份。后续增加持久等待恢复时须扩展恢复契约；模型捕获留在装配账本，问答交接留在 exchange，不能把逻辑堆入 Agent 对象。
+
+
+## 根运行插入回执
+
+AgentLifecycle 在根运行受理前接收本轮正文与可选队列 scopeId/followupOf；insertInput 仅声明可信回执端口，事务仍由 tasks/runtime 的 ScopeActiveInputService 持有。

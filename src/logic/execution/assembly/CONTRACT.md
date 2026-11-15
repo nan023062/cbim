@@ -47,3 +47,8 @@ cbim_agent_result_check 仅接受当前父运行已经完成的原 callId；从�
 humanDecision 通过原父运行的 tool.updated 可靠追加，绑定 callerTaskId/callerRunId/callId/reviewToolCallId、原始证明、当前核验和用户实际回答。保存后在同工具中等待第二张“继续处理意见”问题卡，此时模型不会收到返回值，子运行不会重启。明确继续仅授权处理意见；负面决定或“只保存”使本运行的新 cbim_agent_call 返回 AGENT_HUMAN_DECISION_REQUIRED。原 callId 的幂等读取仍返回原结果，不重放。新的用户执行指令进入下一运行后重新核实，不复用本轮授权。
 
 同一评审工具 ID 只消费一次，重复身份更换 callId 拒绝；子 Agent 和跨调用者的候选不能请求直接人工评审。停止会取消等待，已可靠保存的意见保留在 canonical，重启仅展示日志，不自动恢复问题卡/模型/旧调用。新协议不使用旧 scope-goal 的 humanContinue：继续在当前普通工具内完成；中断后的新指令由主对话原入口受理，不伪造历史目标等待。
+
+
+### 统一主会话归档
+
+officeHistory 是可信主装配可选的只读归档工具，与统一 Agent 工具并存；目录、参数描述及实际调用使用同一实例。未装配时不可调用，子循环不继承。

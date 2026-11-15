@@ -88,22 +88,7 @@ export class AutoCollaboration {
     const cycle=this.cycles.get(rootSessionId);
     if(!cycle)return send().then(()=>{}); // 未装配业务周期的独立聊天仍保持旧轻量行为。
     if(this.closed||cycle.stopped||!cycle.mainRuns.has(runId))return Promise.reject(Object.assign(Error('原主运行已经停止插入，消息仍保留在队列'),{code:'QUEUE_INSERT_STOPPED'}));
-    const fixed=structuredClone(input),identity=this.identity(cycle);
-    const operation=(async()=>{
-      const prepared=await this.dispatch.activeInputs.prepare(identity,cycle.scopeId,runId,queueId,fixed,signal);
-      if(!prepared.fresh){if(prepared.record.status==='accepted')return;fail('QUEUE_INSERT_UNKNOWN','原插入已有记录，请核实原运行，不能再次发送')}
-      let receipt:ScopeActiveInputSendReceipt|undefined;
-      try{receipt=await send(prepared.token)}catch(error){
-        const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
-        try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:rejected?'rejected':'unknown',reason:rejected?'原生发送前已停止或原运行失效':'原生发送或接受日志未能确认，不能自动重发'})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结算记录未能确认，原尝试保留，请核实后处理')}
-        throw error;
-      }
-      // queued 后不再检查 signal；目标记录失败也不能伪装 rejected，原 pending 会阻止成功关闭。
-      if(!receipt)fail('QUEUE_INSERT_UNKNOWN','原生接收缺少可信日志依据，原尝试保留待核实');
-      try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:'accepted',input:fixed,receipt})}
-      catch{fail('QUEUE_INSERT_UNKNOWN','原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')}
-    })();
-    return this.track(cycle,operation);
+    return this.track(cycle,this.dispatch.activeInputs.send(this.identity(cycle),cycle.scopeId,runId,queueId,input,signal,send));
   }
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());

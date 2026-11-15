@@ -147,6 +147,7 @@ class N_src_logic_workspace["workspace/"] {
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
 - `agents` → `tools`：导入。
+- `agents` → `tasks`：导入。
 - `agents` → `execution`：导入。
 - `application` → `web`：导入。
 - `application` → `automation`：导入。
@@ -168,9 +169,9 @@ class N_src_logic_workspace["workspace/"] {
 - `application` → `resources`：导入。
 - `application` → `connectors`：导入。
 - `application` → `tasks`：导入。
+- `application` → `tools`：导入。
 - `application` → `agents`：导入。
 - `application` → `governance`：导入。
-- `application` → `tools`：导入。
 - `application` → `evidence`：导入。
 - `automation` → `workspace`：导入。
 - `automation` → `conversation`：导入。

@@ -2939,3 +2939,26 @@ S7 认知与 review：阅读 agent-calls → agent-business → agent-call-sched
 受影响单元选择外观偏好和话题投影：`pnpm exec vitest run tests/appearance-settings.test.ts` 9/9、`pnpm exec vitest run tests/conversation-topics.test.ts` 7/7；`pnpm typecheck`、`pnpm check:architecture` 通过。设置/页面目录/完整 App/递归 Agent/引擎菜单专项通过，产生 276 张截图与单文件索引。具体命令、覆盖页面、截图修复和未覆盖状态见 [实施验收记录](verification/ui-typography-implementation-20261116.md)。
 
 验证仅涵盖真实前端组件和隔离数据；未运行本轮全仓 CI、打包安装或升级验收，未合并或发布。
+
+
+## 2026-11-16 · #94 新 Agent 输入回执与归档迁移修复
+
+基线 56eb2ca2，用户要求修复发布 CI。最新 CI 43735372529 仍失败；已下载的 shard 2/4 分别有 48/42 项失败，另两片缺完整报告，不能声称总数只有 90。此前 43731516597 的三个完整分片有 133 项失败，本步不将旧报告当作本轮全量结果。
+
+S1–S3（C2/L2）：精读 conversation/execution-manager → application/agent-calls → tasks/scope-active-input-service 与 dispatch/auto-collaboration，以及只读 office-history 工具和真实 Pi 夹具。新根没有旧 cycle，原队列插入会绕过 prepare/resolve；根周期未登记本轮输入及队列身份；未知回执导致成功关闭被拒绝后周期悬空；归档工具只挂在旧协调器。稳定的持久事务、原生日志核证及读取限制保留，变化限制在可信装配和生命周期。
+
+S4–S5：将旧协调器内的发送事务移至 ScopeActiveInputService.send，新旧消费者共用；AgentLifecycle 接收本轮正文/附件与可选队列身份，并提供插入端口。根收尾等待插入结算，GOAL_* 完成拒绝记录 blocked、failed 封存并向调用方抛出，队列暂停，unknown 不自动重发。原生 completed 与业务失败分别保留。OfficeHistoryTools 在统一主运行单独装配，固定 workspace/rootSession，子运行不继承；不恢复旧 Team 工具。旧自动直接执行测试移除 goal_plan/review 脚本，保留真实文件、副作用、权限、精确工具日志和重启不重放断言。
+
+S6 实际验证（同一文件可能因实际后续改动补跑，以下按用例去重共 83 项通过）：
+
+- pnpm exec vitest run tests/unified-tool-policy.test.ts tests/core-layer-contracts.test.ts tests/automatic-execution-pi.test.ts：分别 7、2、2 项通过；最初旧工具目录和静态边界断言失败，迁移后通过。
+- pnpm exec vitest run tests/queue-insert.test.ts tests/queue-insertion-pi.test.ts tests/scope-active-input-core.test.ts --reporter=default --reporter=json --outputFile=build/agent-input-repair-v2.json：21 通过、1 失败（回执 unknown 周期未关闭）。首次挂起运行已取消，不算通过。
+- pnpm exec vitest run tests/queue-insertion-pi.test.ts tests/agent-call-assembly.test.ts tests/execution-collaboration.test.ts --reporter=default --reporter=json --outputFile=build/agent-input-repair-v3.json：5 项插入与 14 项装配全部通过；生命周期 17 通过、1 因新增真实输入参数失败。更新该参数断言后该套件 18 项全部通过（build/agent-queue-context.json）。
+- pnpm exec vitest run tests/office-history-pi.test.ts tests/unified-tool-policy.test.ts tests/core-layer-contracts.test.ts --reporter=default --reporter=json --outputFile=build/agent-history-repair.json：10 项通过，原归档集成未改断言。
+- pnpm exec vitest run tests/loop-engine.test.ts tests/office-history-tools.test.ts tests/office-history-service.test.ts --reporter=default --reporter=json --outputFile=build/agent-history-boundaries.json：17 项通过，覆盖工具装配、只读身份与归档边界。
+- pnpm typecheck：最终通过。pnpm check:architecture：135 目录零差异，1654 文件/7841 依赖、零环零违规。git diff --check 通过（仅换行提示）。没有新增/移动测试或改变归属。
+- 新 Pi 集成使用真实 Application/Pi SDK、临时文件和本机确定性模型服务，不是在线模型或桌面安装验收。
+
+剩余实测失败：tests/queued-task-cancel-pi.test.ts 3 项仍依赖旧 goal_plan/dispatch_cancel/持久等待图，未删除或跳过，需按递归调用与新用户输入语义迁移。其他旧业务、派工、预算、检查点集成尚未完成迁移，本步不宣称全量 CI 通过。未重建候选、未合并、未公开发布；旧 0.1.21 草稿制品不是本次源码。
+
+S7 review：从 AgentLifecycle → execution-manager → agent-calls → ScopeActiveInputService.send 阅读；OfficeHistoryTools 只读限制未改。同步六个源码目录的 CONTRACT/ARCHITECTURE 与 Logic 父图，接口注释说明状态归属和失败含义。后续引擎仍复用同一 send 事务，不增加第二个输入账本。完整 diff 从 56eb2ca2 起；人工 review 尚未发生。

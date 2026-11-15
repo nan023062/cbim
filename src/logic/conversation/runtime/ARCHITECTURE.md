@@ -482,3 +482,8 @@ executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢�
 ### 递归调用等待时的普通补充
 
 resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运行接收排队输入；不启动第二个运行、不核实未决工具、不将补充提前混入子结果。排队保存发送时的权限及模型选项，原运行安全完成后才由既有 pump 处理；停止仍暂停队列。历史未决工具没有活跃身份时继续返回 RECOVERY_INSPECTION_REQUIRED，reconciledToolIds 不签发恢复许可。已有更新轮次仍拒绝 STALE_RUN。
+
+
+## 根运行插入回执
+
+新 Agent 运行的队列插入通过 AgentLifecycle.insertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。

@@ -3,10 +3,12 @@
  * 设计原因：复用 execution 的运行生命周期和全局准入，避免重复循环和本根并发账本；根运行持工作区租约，后代只在独占工具交接中执行。
  * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；子求助交给直接调用方，人工评审只使用根对话原用户队列。
  */
+import {OfficeHistoryTools} from '../../tools/runtime/office-history-tools';
 import {prepareAgentBusiness} from './agent-business';
 import {randomUUID} from 'node:crypto';
 import {Agent,type AgentToolContext} from '../../agents';
 import {AgentCallScheduler} from '../../execution/assembly/agent-call-scheduler';
+import type {AgentLifecycle} from '../../agents/contracts';
 import {AgentConstraintError} from '../../agents/contracts';
 import {fail} from '../../../core/errors';
 import {createWorkspaceLoop,type WorkspaceLoopOptions,type ExecutionServices} from '../../execution/assembly/loop-engine';
@@ -33,9 +35,16 @@ export interface AgentCallAssemblyInput {
 export function createAgentCallAssembly(input:AgentCallAssemblyInput){
   const {workspace,task,options,llm,storage,members,admission,dispatch,requestBudgets}=input;
   const rootAgent=new Agent({id:task.agentId??'cbim:main',name:'主 Agent',instructions:'',permission:options.permission??(options.allowNativeExecution?'execute':'read'),...(llm?{model:{engine:options.engine??llm.profile.engine??'pi',profileId:llm.profile.id,modelId:llm.profile.model}}:{})},{workspaceId:workspace.entry.id,taskId:task.taskId});
-  const scopeId=randomUUID(),identity={workspaceId:rootAgent.conversation.workspaceId,rootSessionId:rootAgent.conversation.taskId};
+  let scopeId:string=randomUUID();const identity={workspaceId:rootAgent.conversation.workspaceId,rootSessionId:rootAgent.conversation.taskId};
   let rootRunId:string|undefined,releaseBudget:(()=>void)|undefined,opened=false,closed=false;
   let unsupportedBudget=false;
+  // 收尾先等待原生插入回执完成；不能在 prepared 与 resolve 之间封存同一周期。
+  const inputs=new Set<Promise<void>>();
+  const insertInput:NonNullable<AgentLifecycle['insertInput']>=(runId,queueId,input,signal,send)=>{
+    if(closed||runId!==rootRunId||!dispatch)fail('QUEUE_INSERT_STALE','原 Agent 运行已结束或缺少持久输入服务');
+    const operation=dispatch.activeInputs.send(identity,scopeId,runId,queueId,input,signal,send);
+    inputs.add(operation);return operation.finally(()=>inputs.delete(operation));
+  };
   const requestBudgetsByRole=new Map<string,Promise<RequestBudgetPort|undefined>>();
   const budget=(_context:unknown,role='primary')=>{
     if(!rootRunId)fail('AGENT_ROOT_NOT_STARTED','根运行尚未受理，不能调用模型');
@@ -100,13 +109,45 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     }catch(error){permit.release();throw error}
   }});
   const finish=async(summary?:RunSummary)=>{
-    if(closed)return;await scheduler.close();
-    try{if(opened&&dispatch)await dispatch.closeScope(identity,scopeId,summary?.status==='completed'&&!summary.unresolvedTools.length?'completed':summary?.status==='cancelled'?'cancelled':summary?.status==='interrupted'||summary?.unresolvedTools.length?'interrupted':'failed',summary);closed=true}
-    finally{releaseBudget?.();releaseBudget=undefined}
+    if(closed)return;await scheduler.close();await Promise.allSettled([...inputs]);
+    try{
+      if(opened&&dispatch){
+        const outcome=summary?.status==='completed'&&!summary.unresolvedTools.length?'completed':summary?.status==='cancelled'?'cancelled':summary?.status==='interrupted'||summary?.unresolvedTools.length?'interrupted':'failed';
+        try{await dispatch.closeScope(identity,scopeId,outcome,summary)}
+        catch(error){
+          // 原生运行结束不代表输入核证通过；保留未知回执，封存为失败并把原因交回对话。
+          if(outcome!=='completed'||!(error as {code?:string})?.code?.startsWith('GOAL_'))throw error;
+          await dispatch.goals.block(identity,scopeId,error instanceof Error?error.message:String(error));
+          await dispatch.closeScope(identity,scopeId,'failed',summary);
+          closed=true;
+          throw error;
+        }
+      }
+      closed=true;
+    }finally{releaseBudget?.();releaseBudget=undefined}
   };
   return {
     rootAgent,
+    officeHistory:dispatch?new OfficeHistoryTools(identity,(query,signal)=>{workspace.assert();if(closed||!rootRunId)fail('AGENT_ROOT_CLOSED','原主运行已经结束');return dispatch.history.read(identity,query,signal)}):undefined,
     agentTools:(context:AgentToolContext)=>scheduler.bind(context),requestBudget:budget,
-    agentLifecycle:{beforeRun:async(runId:string)=>{if(rootRunId&&rootRunId!==runId)fail('AGENT_ROOT_CONFLICT','根运行已经绑定');rootRunId=runId;if(dispatch){releaseBudget=dispatch.budgets.holdMain(runId);const scope=await dispatch.openScope(identity,scopeId,undefined,runId);unsupportedBudget=!!scope.budget?.policy.enabled&&scope.budget.policy.enforcement!=='request';opened=true}},settled:finish,failed:async(_error:unknown)=>finish()},
+    agentLifecycle:{
+      insertInput,
+      beforeRun:async(runId:string,context?:Parameters<AgentLifecycle['beforeRun']>[1])=>{
+        if(rootRunId&&rootRunId!==runId)fail('AGENT_ROOT_CONFLICT','根运行已经绑定');
+        rootRunId=runId;
+        scopeId=context?.scopeId??scopeId;
+        if(dispatch){
+          releaseBudget=dispatch.budgets.holdMain(runId);
+          const scope=await dispatch.openScope(identity,scopeId,{
+            message:context?.message??task.goal,
+            ...(context?.attachmentIds?{attachmentIds:context.attachmentIds}:{}),
+          },runId,undefined,context?.followupOf);
+          unsupportedBudget=!!scope.budget?.policy.enabled&&scope.budget.policy.enforcement!=='request';
+          opened=true;
+        }
+      },
+      settled:finish,
+      failed:async(_error:unknown)=>finish(),
+    },
   };
 }

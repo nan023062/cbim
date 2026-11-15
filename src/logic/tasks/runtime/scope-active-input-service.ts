@@ -20,6 +20,21 @@ function check(value:unknown,code:string,message:string):asserts value{if(!value
 /** token 只能由本服务创建；fresh 不持久化，重查绝不重新取得发送权。 */
 export interface PreparedActiveInput {record:ScopeActiveInput;token:ScopeActiveInputToken;fresh:boolean}
 export class ScopeActiveInputService {
+  /** 发送沿原持久意图完成结算；原生回执不明保留 unknown，已接受后停止不得反悔。新旧运行共用此边界。 */
+  async send(identity:GraphIdentity,scopeId:string,runId:string,queueId:string,input:ScopeActiveInputPayload,signal:AbortSignal,send:(token:ScopeActiveInputToken)=>Promise<ScopeActiveInputSendReceipt|undefined>):Promise<void>{
+    const fixed=structuredClone(input),prepared=await this.prepare(identity,scopeId,runId,queueId,fixed,signal);
+    if(!prepared.fresh){if(prepared.record.status==='accepted')return;fail('QUEUE_INSERT_UNKNOWN','原插入已有记录，请核实原运行，不能再次发送')}
+    let receipt:ScopeActiveInputSendReceipt|undefined;
+    try{receipt=await send(prepared.token)}catch(error){
+      const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+      try{await this.resolve(identity,prepared.token,{status:rejected?'rejected':'unknown',reason:rejected?'原生发送前已停止或原运行失效':'原生发送或接受日志未能确认，不能自动重发'})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结算记录未能确认，原尝试保留，请核实后处理')}
+      throw error;
+    }
+    if(!receipt)fail('QUEUE_INSERT_UNKNOWN','原生接收缺少可信日志依据，原尝试保留待核实');
+    try{await this.resolve(identity,prepared.token,{status:'accepted',input:fixed,receipt})}
+    catch{fail('QUEUE_INSERT_UNKNOWN','原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')}
+  }
+
   constructor(private readonly owner:Owner,private readonly store:DispatchStore){}
   private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
     this.owner.assert();check(state.workspaceId===identity.workspaceId&&identity.workspaceId===this.owner.entry.id,'GOAL_ACTIVE_INPUT_IDENTITY','补充不属于当前工作区');

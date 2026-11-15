@@ -24,7 +24,7 @@ test('统一 Agent 根运行只使用独立生命周期，不触发旧协调器'
   try{
     const run=await f.manager.chat('通过统一工具执行',options);
     expect(f.factory.mock.calls[0][2].executionModel).toBe('agent-tools-v1');
-    expect(lifecycle.beforeRun).toHaveBeenCalledWith(run.runId);
+    expect(lifecycle.beforeRun).toHaveBeenCalledWith(run.runId,{message:'通过统一工具执行',attachmentIds:undefined});
     expect(f.starting).not.toHaveBeenCalled();
     f.runs[0].finish('completed');
     await vi.waitFor(()=>expect(lifecycle.settled).toHaveBeenCalledWith(expect.objectContaining({runId:run.runId,status:'completed'})));

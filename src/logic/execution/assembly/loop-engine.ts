@@ -10,7 +10,7 @@
  * 范围模式注册须具备冻结声明和实际端口；旧native被拒绝，原文件写在审批前核范围，所有操作仍沿原read/ask/execute。
  * 检查点剩余额度只接可信成员服务；主会话和公开运行选项不能补造或覆盖额度。
  * 受控文件边界：正式成员和实际平台端口共同决定写入及删除/移动能力；后者以 v1 严格选择冻结要求，主调度和 Node 缺省工厂无旁路，业务写始终受原权限约束。
- * 作用定位：将工作区知识、权限和工具注入 LoopRuntime；业务 Agent 同时取得冻结 Workflow 指引及产物验证能力。
+ * 作用定位：将工作区知识、权限和工具注入 LoopRuntime；业务 Agent 同时取得冻结 Workflow 指引及产物验证能力，主 Agent 的人工评审沿原工具门禁。
  * 设计原因：工具纯分类只做一次，交给成员 Workflow 计划门禁和既有授权共用；Auto/Team 主会话按本轮权限直接工作。选定文件、完整清单、检查点与 产物验证仅向正式成员注入，完整清单及验证还须冻结声明和真实端口，单任务入口不能绕过。
  * 仓库边界：仅主会话使用已捕获只读端口；发现、分类、调用各走独立适配器，资料不是指令，成员不因装配参数获得外部读取能力。
  * 治理边界：只有真实主绑定和独立 per-run 工厂可注册四项治理工具；私有待办不扩大知识写或业务执行权。
@@ -214,7 +214,7 @@ export async function createWorkspaceLoop(paths:Paths,owner:KnowledgeWorkspace,o
   const describeTool=(call:ToolCall):RunToolDescriptor=>{
     owner.assert();
     // 委派本身不授予业务写权限；子循环继承不扩大权限，并逐工具走相同授权策略。
-    if([agentCallToolName,agentListToolName,agentReplyToolName,'cbim_agent_result_check'].includes(call.name)&&services.agentTools)return {effects:['read'],native:false,contractVersion:1};
+    if([agentCallToolName,agentListToolName,agentReplyToolName,'cbim_agent_result_check','cbim_agent_result_review'].includes(call.name)&&services.agentTools)return {effects:['read'],native:false,contractVersion:1};
     if(call.name.startsWith('cbim_scoped_')){if(!services.member||!executionScope||!services.scopedExecution)fail('EXECUTION_SCOPE_UNAVAILABLE','本轮未装配范围工具');if(call.name===scopedReadToolName){const input=scopedReadInputSchema.parse(call.input);if(!executionScopeCovers(executionScope.read,input.path))fail('EXECUTION_SCOPE_DENIED','读取超出冻结范围');return {effects:['read'],native:false,contractVersion:1}}if(call.name===scopedNodeToolName){const input=scopedNodeInputSchema.parse(call.input);if(!executionScope.node||input.files.some(file=>!executionScopeCovers(executionScope.read,file)))fail('EXECUTION_SCOPE_DENIED','执行超出冻结范围');return {effects:['command'],native:false,contractVersion:1}}fail('EXECUTION_SCOPE_UNAVAILABLE','未注册的范围工具')}
     if(executionScope&&nativeToolDescriptor(call.name))fail('EXECUTION_SCOPE_NATIVE','范围模式禁止原生文件与命令工具');
     if(call.name===controlledFileWriteToolName){if(!services.member||!services.controlledFiles)fail('CONTROLLED_PLATFORM_UNSUPPORTED','本轮未装配受控写入');const input=controlledFileWriteInputSchema.parse(call.input);if(executionScope&&!executionScopeCovers(executionScope.write,input.path))fail('EXECUTION_SCOPE_DENIED','写入超出冻结范围');return {effects:['business-write'],native:false,scope:{kind:'workspace',workspaceId:workspace.id}}}

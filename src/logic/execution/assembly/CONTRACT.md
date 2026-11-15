@@ -39,3 +39,11 @@ agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答�
 AgentCallScheduler.prepare 可以返回可信 launch 及只读 verify。带 launch 调用同一个 LoopRuntime.startMember，beforeRun 仍将真实子 task/run 关联父工具；普通调用沿 start。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
 
 cbim_agent_result_check 仅接受当前父运行已经完成的原 callId；从闭包取得原身份与验证器，模型不能提交路径或证明。外部文件变化返回 WORKFLOW_VALIDATION_STALE；不能据此重放子运行。调用图深度、全局准入、预算、停止及排空逻辑不变。业务 Agent 暴露原产物证据工具及递归求助，旧终止交接/检查点工具仅保留给旧运行。
+
+### 人工意见也是原调用上的工具
+
+只有深度 0 且具备真实宿主问题队列的 Agent 公开 cbim_agent_result_review。参数只有原 callId，模型不能提交决定、文件证明或“用户已批准”。工具重新核实原交付，无法复核时只提供 reject/request_evidence；accept 在用户回答后再次检查当前字节，失败不保存接受记录。
+
+humanDecision 通过原父运行的 tool.updated 可靠追加，绑定 callerTaskId/callerRunId/callId/reviewToolCallId、原始证明、当前核验和用户实际回答。保存后在同工具中等待第二张“继续处理意见”问题卡，此时模型不会收到返回值，子运行不会重启。明确继续仅授权处理意见；负面决定或“只保存”使本运行的新 cbim_agent_call 返回 AGENT_HUMAN_DECISION_REQUIRED。原 callId 的幂等读取仍返回原结果，不重放。新的用户执行指令进入下一运行后重新核实，不复用本轮授权。
+
+同一评审工具 ID 只消费一次，重复身份更换 callId 拒绝；子 Agent 和跨调用者的候选不能请求直接人工评审。停止会取消等待，已可靠保存的意见保留在 canonical，重启仅展示日志，不自动恢复问题卡/模型/旧调用。新协议不使用旧 scope-goal 的 humanContinue：继续在当前普通工具内完成；中断后的新指令由主对话原入口受理，不伪造历史目标等待。

@@ -2883,3 +2883,21 @@ S6 验证范围与实际结果：
 - 前期失败包括夹具仍期待旧协议、真实缺省引擎哈希问题、新断言将 validator 误写入 requirement，以及测试替身未给缺省 Pi 的真实 kind；逐项修正，未恢复旧 Team，也未删减文件验证安全断言。最终结果以本节列明的范围为准。
 
 S7 认知与 review：阅读 agent-calls → agent-business → agent-call-scheduler → LoopRuntime，再看 json-validation-pi/provider 的真实工具请求；完整 diff 从 17f032c7 起。同步这三个源码目录的 CONTRACT、文件头/接口说明及类图和父导航。未运行完整 CI、构建、桌面或安装升级验收；旧人工目标决策和其他未迁移集成不在本次通过声明内。0.1.21 旧候选未包含本次修改，不合并、不发布。
+
+### #94：六项人工决策迁移到原 Agent 调用（2026-11-15）
+
+用户授权：迁移剩余六项旧人工决策测试，通过后更新 PR 并申请评审。基线 c39a8b58；C3/L2，复用前次已核实的执行/证据边界，精读 AgentCallScheduler、主运行问题端口、QuestionQueue、原人工目标集成及验证夹具。旧 scope-goal/humanContinue 依赖派发图与持久目标等待，不符合连续主对话的普通工具调用模型。
+
+实施：根 Agent 的 cbim_agent_result_review 只接收本根已验证交付的 callId，重新核验当前文件，通过真实原问题队列收集用户决定。文件变化或无法复核只提供 reject/request_evidence；输入文字“接受”也不能覆盖允许集；展示之后的 accept 还要再次复核。决定先通过原 tool.updated 可靠追加，保存原调用/运行身份、原字节证明、当前核验和真实答案；然后在同一工具内等待明确“继续处理意见”。负面决定或只保存不允许本运行新建子调用，返回 AGENT_HUMAN_DECISION_REQUIRED，原调用的幂等结果仍可读。停止/close 取消并排空评审等待，已保存记录保留，不重放提问或执行。
+
+协议迁移边界：不创建旧图目标、人工服务或独立页面；旧人决策 API 的重复提交回执改为原工具 ID 的结果去重，问题卡重复提交明确拒绝。旧 humanContinue 改为同工具中的显式继续；中断后只保留 canonical 历史，重启不自动恢复等待，后续需要新的用户指令。测试不再虚构旧 scope/图任务，保留文件变化拒绝接受、精确原证明、保存意见时不推进模型/子运行、重复/跨任务答案拒绝、显式继续仍不重跑子 Agent及重启历史不重放。中断后不原地恢复旧目标周期是新链路的明确语义，不宣称迁移了旧持久 goal 服务。
+
+实际验证：
+- pnpm exec vitest run tests/json-validation-pi.test.ts -t 'preserves real negative' --bail=1：六项通过，JSON/CSV/PNG × reject/request_evidence，真实 Application、Pi SDK、本地确定性模型、实际文件与公开问题命令，无在线模型。首轮因继续答案漏填契约要求的 other 字段失败，补正确请求后通过，未放宽产品校验。
+- 共享调用目录/夹具变化，运行 pnpm exec vitest run tests/json-validation-pi.test.ts -t 'validates actual'：此前九项全部通过。该文件 15 项已在两个明确选择中全部覆盖，无删项/跳过声明。
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts：最终 31 项通过（17 单元、14 装配契约），新增人工保存/继续、接受竞态、关闭排空、原身份幂等、跨调用者和子 Agent 拒绝、typed accept 拒绝；已有跨模型/求助及全局准入覆盖保留。
+- pnpm typecheck、pnpm check:test-modules 通过（537 文件，unit174/contract163/integration200）。
+- pnpm check:architecture 通过，1649 文件、7821 依赖、零环、零违规；增加评审取消字段后再次生成并检查类图，零差异。未修改边界规则或测试归属。
+- 共 46 项受影响行为验证通过。未运行完整 CI、桌面、构建或安装升级验收，不能以此批准合并/发布。
+
+职责与 review：本步保持 QuestionQueue、LoopRuntime、原文件证据规则稳定，人工工具的身份/去重/负面门禁由 execution 调用协调器持有，可信用户端口在 application 装配；没有新增第二个调度/消息状态源。源码头、两个装配目录的 CONTRACT/ARCHITECTURE 同步。阅读 agent-calls 的 requestReview → agent-call-scheduler.review → json-validation-pi 人工六项，完整 diff 从 c39a8b58 起。用户已要求转为可评审；指定评审者尚待用户名，仓库当前只列出 PR 作者 nan023062，GitHub 不允许作者评审自身。PR/GitHub 更新结果另记录于 #94，当前制品仍过时，未合并/发布。

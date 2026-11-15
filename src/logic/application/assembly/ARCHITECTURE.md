@@ -224,3 +224,7 @@ N_src_logic_application_assembly_member_dispatch_ts ..> N_src_logic_application_
 TaskNode/DispatchRun 在本装配中仅是既有知识冻结及 canonical 验证器所需的私有输入投影，不写入 DispatchStore，不代表旧派发已发生。真实副作用与结算事实来自 LoopRuntime 的原始日志。再次核验读取同一 taskId/runId 的 canonical 和当前文件；不重启模型、不修改旧证据、不声明人工验收。原知识变化拒绝核验。需要隔离执行而尚未装配的平台能力明确拒绝启动，不降级到普通命令。
 
 模型配置捕获使用 workspaceMemberEngine 的原缺省值；实际执行可默认 Pi，但不得把 engine 字段补进既有采纳快照而改变其哈希。业务递归不能省略业务上下文或扩大父模块范围。旧人工目标决策与持久检查点流程仍属历史协议，未在本次九项文件验证迁移中改写。
+
+### 主 Agent 人工评审
+
+agent-calls 仅把本根对话已捕获的 requestQuestion 注入 requestReview；这是原用户问题队列，不创建另一个消息或协作服务。子工具目录不公开直接评审，子求助仍面向直接调用方。人工决定由调度工具写入原运行日志，既有 AgentCallAssembly 生命周期负责关闭，不恢复旧人工目标服务。

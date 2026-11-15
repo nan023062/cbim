@@ -138,3 +138,64 @@ it('returns a business verification failure instead of completed when model exec
  expect(value).toMatchObject({isError:true});expect(result(value)).toMatchObject({error:{code:'WORKFLOW_EVIDENCE_INVALID',started:true}});
  expect(result(value)).not.toHaveProperty('status','completed');expect(child.release).toHaveBeenCalledTimes(1);
 });
+
+async function reviewFixture(requestReview:NonNullable<AgentSchedulerPorts['requestReview']>){
+ const events:EngineEvent[]=[],child=prepared('B');let stale=false;
+ const verify=vi.fn(async()=>{if(stale)throw Object.assign(Error('changed'),{code:'WORKFLOW_VALIDATION_STALE'});return {state:'verified',taskId:'B',runId:'B-run',files:[{relativePath:'out.json',sha256:'original'}]}});
+ const prepare=vi.fn(async()=>({...child,verify}));
+ const scheduler=new AgentCallScheduler({maxDepth:2},{prepare,requestReview}),tools=scheduler.bind(context('root',events)).capability.tools;
+ const signal=new AbortController().signal;
+ const original=await tools.call('cbim_agent_call',{agentId:'B',message:'work'},signal,'original');
+ return {scheduler,tools,events,prepare,verify,original,stale:()=>{stale=true}};
+}
+it('records negative human feedback before a separate continuation and blocks automatic child reexecution',async()=>{
+ let continueReview!:(value:unknown)=>void;
+ const request=vi.fn(async(input:any)=>request.mock.calls.length===1?{answers:[{question:input.questions[0].question,answer:'不接受此成果',supplement:'keep original evidence'}]}:new Promise(resolve=>{continueReview=value=>resolve({answers:[{question:input.questions[0].question,answer:value}]})}));
+ const f=await reviewFixture(request);f.stale();const signal=new AbortController().signal;
+ const pending=f.tools.call('cbim_agent_result_review',{callId:'original'},signal,'review');
+ await vi.waitFor(()=>expect(request).toHaveBeenCalledTimes(2));
+ expect(f.events.find(e=>e.data.humanDecision)?.data.humanDecision).toMatchObject({decision:'reject',allowedDecisions:['reject','request_evidence'],original:{files:[{sha256:'original'}]},current:{code:'WORKFLOW_VALIDATION_STALE'}});
+ expect(f.prepare).toHaveBeenCalledTimes(1);
+ continueReview('继续处理意见');const receipt=await pending;
+ expect(result(receipt)).toMatchObject({continued:true,executionAuthorized:false,record:{decision:'reject'}});
+ expect(await f.tools.call('cbim_agent_result_review',{callId:'original'},signal,'review')).toEqual(receipt);
+ expect(result(await f.tools.call('cbim_agent_call',{agentId:'B',message:'rework'},signal,'new')).error.code).toBe('AGENT_HUMAN_DECISION_REQUIRED');
+ expect(await f.tools.call('cbim_agent_call',{agentId:'B',message:'work'},signal,'original')).toEqual(f.original);
+ expect(f.prepare).toHaveBeenCalledTimes(1);expect(request).toHaveBeenCalledTimes(2);
+});
+it('rechecks bytes after an accept choice and never stores acceptance for a changed candidate',async()=>{
+ let f:Awaited<ReturnType<typeof reviewFixture>>;
+ const request=vi.fn(async(input:any)=>{f.stale();return {answers:[{question:input.questions[0].question,answer:'接受此成果'}]}});
+ f=await reviewFixture(request);
+ const value=await f.tools.call('cbim_agent_result_review',{callId:'original'},new AbortController().signal,'review');
+ expect(result(value)).toMatchObject({error:{code:'WORKFLOW_VALIDATION_STALE'}});
+ expect(f.events.some(e=>e.data.humanDecision)).toBe(false);expect(request).toHaveBeenCalledTimes(1);expect(f.prepare).toHaveBeenCalledTimes(1);
+});
+it('stopping after a saved decision keeps its audit fact and never repeats the question or child run',async()=>{
+ const request=vi.fn(async(input:any,signal:AbortSignal)=>{
+   if(request.mock.calls.length===1)return {answers:[{question:input.questions[0].question,answer:'要求补充证据'}]};
+   return new Promise(resolve=>signal.addEventListener('abort',()=>resolve({cancelled:true}),{once:true}));
+ });
+ const f=await reviewFixture(request),controller=new AbortController();
+ const pending=f.tools.call('cbim_agent_result_review',{callId:'original'},controller.signal,'review');
+ await vi.waitFor(()=>expect(request).toHaveBeenCalledTimes(2));await f.scheduler.close();
+ const receipt=await pending;expect(receipt).toMatchObject({isError:true});
+ expect(f.events.filter(e=>e.data.humanDecision)).toHaveLength(1);
+ expect(await f.tools.call('cbim_agent_result_review',{callId:'original'},new AbortController().signal,'review')).toEqual(receipt);
+ expect(f.prepare).toHaveBeenCalledTimes(1);expect(request).toHaveBeenCalledTimes(2);
+});
+it('does not expose direct user reviews to child Agents or permit foreign candidate identities',async()=>{
+ const request=vi.fn(),f=await reviewFixture(request),signal=new AbortController().signal;
+ const child=f.scheduler.bind(context('child'),1).capability.tools;
+ expect((await child.list()).some(tool=>tool.name==='cbim_agent_result_review')).toBe(false);
+ expect(result(await child.call('cbim_agent_result_review',{callId:'original'},signal,'review')).error.code).toBe('AGENT_REVIEW_UNAVAILABLE');
+ expect(result(await f.tools.call('cbim_agent_result_review',{callId:'foreign'},signal,'review')).error.code).toBe('AGENT_REVIEW_UNAVAILABLE');
+ expect(request).not.toHaveBeenCalled();
+});
+
+it('does not turn a typed accept into approval when only negative decisions are available',async()=>{
+ const request=vi.fn(async(input:any)=>({answers:[{question:input.questions[0].question,answer:'接受此成果'}]}));
+ const f=await reviewFixture(request);f.stale();
+ expect(result(await f.tools.call('cbim_agent_result_review',{callId:'original'},new AbortController().signal,'review')).error.code).toBe('AGENT_REVIEW_INPUT');
+ expect(f.events.some(e=>e.data.humanDecision)).toBe(false);expect(request).toHaveBeenCalledTimes(1);
+});

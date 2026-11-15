@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createHash,randomUUID} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
@@ -12,11 +12,8 @@ import {prepareDispatchExecutionContext} from '../src/logic/execution/context/ex
 import {resolveDispatchModules} from '../src/logic/execution/context/dispatch-context';
 import type {DispatchRun} from '../src/logic/tasks/rules/dispatch-execution';
 import type {TaskNode} from '../src/logic/tasks/rules/graph-types';
-import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {memberWorkflowFiles,validateMemberWorkflow} from '../src/logic/team/runtime/member-workflow';
-import {humanDecisionPreviewSchema,humanDecisionReceiptSchema} from '../src/logic/tasks/rules/human-decisions';
-import {humanContinuationReceiptSchema,type HumanContinuationRequest} from '../src/logic/tasks/rules/human-continue';
-import {jsonValidationProvider,jsonValidationFixture,type JsonValidationMode} from './json-validation-provider';
+import {jsonValidationProvider,jsonValidationFixture} from './json-validation-provider';
 import {seedJsonValidation,jsonValidationRecords,jsonValidationLogBytes} from './json-validation-fixture';
 import {csvValidationData} from './csv-validation-data';
 import {seedCsvValidation} from './csv-validation-fixture';
@@ -107,22 +104,60 @@ it.each(formats.flatMap(format=>(['complete','changed','stop']as const).map(mode
   finally{provider.releaseAll();await app.shutdown();await f.cleanup();await provider.close()}
 },120000);
 
+
 it.each(formats.flatMap(format=>(['reject','request_evidence']as const).map(decision=>({...format,decision}))))('preserves real negative human decisions after $kind bytes change ($decision)',async({kind,data,seed,decision})=>{
   const payload=(value:string)=>kind==='PNG'?Buffer.from(value,'base64'):Buffer.from(value);
-  const f=await fixture(),provider=await jsonValidationProvider('human-negative',data);let app=f.app;
+  const f=await fixture(),provider=await jsonValidationProvider('human-negative',data,true);let app=f.app;
   try{
-    provider.releaseRepair();provider.releaseReview();const {entry}=await seed(app,f.a,provider),started=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),records=()=>jsonValidationRecords(f.user,entry.id),graphIdentity={workspaceId:entry.id,rootSessionId:started.taskId},graph=()=>app.dispatch('dispatch.graphSnapshot',{identity:graphIdentity}),file=path.join(f.a,data.file);
-    const until=async(condition:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await condition()},{timeout:45000,interval:30});expect(provider.errors,JSON.stringify(provider.errors)).toEqual([])};
-    await until(async()=>{expect((await records()).scopes[0].status).toBe('waiting');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});const waiting=await records(),scope=waiting.scopes[0],originalGraph=await graph(),task=originalGraph.tasks[0],identity={...graphIdentity,scopeId:scope.scopeId},baselines=[{taskId:task.taskId,runId:task.result!.runId,baselineId:provider.state.freshCapture.baseline.baselineId}];expect(provider.main).toHaveLength(6);expect(provider.member).toHaveLength(16);expect(await fs.readFile(file)).toEqual(payload(data.good));
-    await fs.writeFile(file,payload(data.changed));const bytes=await jsonValidationLogBytes(f.user,entry.id),preview=humanDecisionPreviewSchema.parse(await app.dispatch('dispatch.humanPreview',{...identity,criterionId:data.humanId,baselines}));expect(preview.basis).toBeTruthy();expect(preview.allowedDecisions).toEqual(['reject','request_evidence']);expect(preview.candidates[0].selected?.files).toEqual([expect.objectContaining({relativePath:data.file,state:'changed',expected:{byteLength:payload(data.good).length,sha256:createHash('sha256').update(payload(data.good)).digest('hex')},observed:{byteLength:payload(data.changed).length,sha256:createHash('sha256').update(payload(data.changed)).digest('hex')}})]);
-    const request={...identity,criterionId:data.humanId,baselines,commandId:randomUUID(),expectedDecisionRevision:preview.decisionRevision,expectedBasis:preview.basis!,decision,comment:'当前真实产物已变化，明确记录'+decision+'；保存不授权旧成果通过或自动继续。'};
-    await expect(app.dispatch('dispatch.humanDecide',{...request,commandId:randomUUID(),decision:'accept'})).rejects.toThrow();expect(await records()).toEqual(waiting);
-    const receipt=humanDecisionReceiptSchema.parse(await app.dispatch('dispatch.humanDecide',request));expect(humanDecisionReceiptSchema.parse(await app.dispatch('dispatch.humanDecide',request))).toEqual(receipt);expect(receipt.record).toMatchObject({decision,proof:{source:{waitId:scope.wait!.waitId},allowedDecisions:['reject','request_evidence']}});const decided=await records();expect(decided.scopes[0].humanDecisions?.records).toEqual([receipt.record]);expect(decided.scopes[0].status).toBe('waiting');expect(decided.scopes[0].goal).toEqual(scope.goal);expect(decided.scopes[0].wait).toEqual(scope.wait);expect(await graph()).toEqual(originalGraph);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);expect(provider.main).toHaveLength(6);expect(provider.member).toHaveLength(16);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(decided);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);expect(provider.main).toHaveLength(6);
-    const profileId=(await app.models.list()).selectedId!,continuationRequest:HumanContinuationRequest={...identity,waitId:scope.wait!.waitId,expectedGoalRevision:scope.goal!.revision,expectedInputRevision:scope.goal!.inputRevision??1,expectedDecisionRevision:receipt.decisionRevision,commandId:randomUUID(),decisionIds:[receipt.record.decisionId],options:{profileId,provider:'cbim-'+profileId,model:data.model,permission:'execute',turnTimeoutMs:60000}},continued=humanContinuationReceiptSchema.parse(await app.dispatch('loop.humanContinue',continuationRequest));
-    expect(continued.continuation).toMatchObject({kind:'human_decisions',decisionIds:[receipt.record.decisionId],inputRevision:2});expect(continued.continuation).not.toHaveProperty('input');await until(async()=>{expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
-    const saved=await records();expect(saved.scopes[0].outcome).toBe('failed');expect(saved.scopes[0].goal?.review?.decision).toBe('blocked');expect(saved.scopes[0].goal?.input).toEqual(scope.goal?.input);expect(saved.scopes[0].humanDecisions).toEqual(decided.scopes[0].humanDecisions);expect(saved.scopes[0].continuations).toEqual([continued.continuation]);expect(await graph()).toEqual({...originalGraph,cursor:{...originalGraph.cursor,seq:originalGraph.cursor.seq+1},agents:originalGraph.agents.map((agent:GraphSnapshot['agents'][number])=>agent.agentInstanceId===task.assignee.agentInstanceId?{...agent,revision:agent.revision+1}:agent)});expect(saved.members.find(member=>member.agentInstanceId===task.assignee.agentInstanceId)?.lifecycle).toBe('released');expect(provider.main).toHaveLength(10);expect(provider.member).toHaveLength(16);expect(await fs.readFile(file)).toEqual(payload(data.changed));
-    const newBytes=await jsonValidationLogBytes(f.user,entry.id);for(const [name,value]of Object.entries(bytes))if(name.endsWith('events.jsonl')||name.startsWith('dispatch/'))expect(newBytes[name]).toBe(value);const finalBytes=newBytes;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(saved);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(finalBytes);expect(humanContinuationReceiptSchema.parse(await app.dispatch('loop.humanContinue',continuationRequest)).continuation).toEqual(continued.continuation);expect(provider.main).toHaveLength(10);expect(provider.member).toHaveLength(16);expect(provider.errors).toEqual([]);
-  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/${kind.toLowerCase()}-validation-human-${decision}-failure.json`,JSON.stringify({error:String(error),actual:(error as {actual?:unknown}).actual,expected:(error as {expected?:unknown}).expected,requests:{main:provider.main.length,member:provider.member.length},providerErrors:provider.errors,state:provider.state,lastMain:provider.main.at(-1)?.messages,lastMember:provider.member.at(-1)?.messages},null,2));throw error}
+    provider.releaseRepair();const {entry}=await seed(app,f.a,provider);
+    const started=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}});
+    const records=()=>jsonValidationRecords(f.user,entry.id),file=path.join(f.a,data.file);
+    const rootDir=path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,started.runId);
+    const readRoot=()=>new FileRunStorage().read(rootDir);
+    const questions=()=>app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId}) as Promise<import('../src/logic/tools/rules/questions').PendingQuestion[]>;
+    const until=async(condition:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await condition()},{timeout:45000,interval:30});expect(provider.errors).toEqual([])};
+    await until(()=>expect(provider.state.readyForReview).toBe(true));
+    expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(16);expect(await fs.readFile(file)).toEqual(payload(data.good));
+    const originalProof=structuredClone(provider.state.call.verification),child=provider.state.call.agentCall;
+    const childDir=path.join(f.user,entry.id,'loop-engine','tasks',child.taskId,child.runId),childBefore=await fs.readFile(path.join(childDir,'events.jsonl'),'utf8');
+    await fs.writeFile(file,payload(data.changed));provider.releaseReview();
+    await until(async()=>expect(await questions()).toHaveLength(1));
+    const question=(await questions())[0];
+    expect(question.questions[0].options.map(option=>option.label)).toEqual(['不接受此成果','要求补充证据']);
+    expect(question.questions[0].question).toContain('不能接受旧证据');
+    const answer={id:entry.id,taskId:started.taskId,questionId:question.id,answers:[{option:decision==='reject'?0:1,other:'当前文件已变化；仅保存意见，不授权重放'}]};
+    const beforeInvalid=(await readRoot()).events;
+    await expect(app.dispatch('loop.answerQuestion',{...answer,answers:[{option:2,other:''}]})).rejects.toThrow();
+    await expect(app.dispatch('loop.answerQuestion',{...answer,taskId:'wrong-task'})).rejects.toThrow();
+    expect(await questions()).toEqual([question]);expect((await readRoot()).events).toEqual(beforeInvalid);
+    await app.dispatch('loop.answerQuestion',answer);
+    await expect(app.dispatch('loop.answerQuestion',answer)).rejects.toThrow();
+    await until(async()=>{const list=await questions();expect(list).toHaveLength(1);expect(list[0].id).not.toBe(question.id)});
+    const savedRoot=await readRoot(),record=savedRoot.events.find(e=>e.type==='tool.updated'&&e.data.phase==='decision_saved')!.data.humanDecision as any;
+    expect(record).toMatchObject({version:1,callerTaskId:started.taskId,callerRunId:started.runId,callId:'json-agent-call',reviewToolCallId:'json-human-review',decision,current:{state:'unverified',code:'WORKFLOW_VALIDATION_STALE'},allowedDecisions:['reject','request_evidence'],original:originalProof});
+    expect(record.original.files).toEqual([provider.state.passed.validation.artifact]);
+    expect(record.original.files[0].sha256).toBe(createHash('sha256').update(payload(data.good)).digest('hex'));
+    expect(record.original.files[0].sha256).not.toBe(createHash('sha256').update(await fs.readFile(file)).digest('hex'));
+    expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(16);
+    expect(savedRoot.events.some(e=>e.type==='tool.finished'&&e.data.id==='json-human-review')).toBe(false);
+    expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBefore);
+    const continuation=(await questions())[0];
+    await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:started.taskId,questionId:continuation.id,answers:[{option:0,other:''}]});
+    await until(async()=>{expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+    expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(16);
+    expect(provider.state.humanReview).toMatchObject({record,continued:true,executionAuthorized:false});
+    expect(provider.state.noReplay).toMatchObject({error:{code:'AGENT_HUMAN_DECISION_REQUIRED',started:false}});
+    const root=await readRoot();expect(root.events.filter(e=>e.data.humanDecision)).toHaveLength(1);
+    expect(root.events.filter(e=>e.data.agentCall)).toHaveLength(1);
+    expect(root.events.some(e=>e.type==='tool.finished'&&e.data.id==='json-human-no-replay'&&e.data.isError)).toBe(true);
+    expect(await fs.readFile(path.join(childDir,'events.jsonl'),'utf8')).toBe(childBefore);
+    expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toHaveLength(0);
+    const bytes=await jsonValidationLogBytes(f.user,entry.id),saved=await records(),stat=await fs.stat(file);
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+    expect(await questions()).toEqual([]);expect(await records()).toEqual(saved);expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
+    expect((await readRoot()).events).toEqual(root.events);expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(16);
+    await expect(app.dispatch('loop.answerQuestion',answer)).rejects.toThrow();
+    expect((await fs.stat(file)).mtimeMs).toBe(stat.mtimeMs);expect(await fs.readFile(file)).toEqual(payload(data.changed));expect(provider.errors).toEqual([]);
+  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/agent-human-${kind}-${decision}.json`,JSON.stringify({error:String(error),providerErrors:provider.errors,state:provider.state,lastMain:provider.main.at(-1)?.messages},null,2));throw error}
   finally{provider.releaseAll();await app.shutdown();await f.cleanup();await provider.close()}
 },120000);

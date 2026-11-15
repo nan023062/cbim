@@ -1,7 +1,7 @@
 /**
  * 作用定位：把 Agent 对象与 execution 的调用协调器、LoopRuntime 装配到工作区真实引擎、准入和请求账本。
  * 设计原因：复用 execution 的运行生命周期和全局准入，避免重复循环和本根并发账本；根运行持工作区租约，后代只在独占工具交接中执行。
- * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；求助只交给直接调用方。
+ * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；子求助交给直接调用方，人工评审只使用根对话原用户队列。
  */
 import {prepareAgentBusiness} from './agent-business';
 import {randomUUID} from 'node:crypto';
@@ -41,7 +41,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(!rootRunId)fail('AGENT_ROOT_NOT_STARTED','根运行尚未受理，不能调用模型');
     let result=requestBudgetsByRole.get(role);if(!result){result=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId,kind:'main'},llm,role)??Promise.resolve(undefined);requestBudgetsByRole.set(role,result)}return result;
   };
-  const scheduler=new AgentCallScheduler({maxDepth:8},{capacity:()=>{const usage=admission?.manager.snapshot();return {current:usage?.occupied.length??0,limit:usage?.policy.maxConcurrentRuns??0}},list:async()=>{
+  const scheduler=new AgentCallScheduler({maxDepth:8},{requestReview:options.requestQuestion,capacity:()=>{const usage=admission?.manager.snapshot();return {current:usage?.occupied.length??0,limit:usage?.policy.maxConcurrentRuns??0}},list:async()=>{
     workspace.assert();if(!members)return {items:[],reason:'当前宿主没有已配置的 Agent 目录'};
     const items:{id:string;name:string;model:{engine:string;profileId:string;modelId:string};available:boolean;reason?:string}[]=[];
     let offset=0,cursor:Awaited<ReturnType<WorkspaceMembers['list']>>['registryCursor']|undefined;

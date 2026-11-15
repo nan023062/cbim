@@ -1,10 +1,17 @@
 import {test,expect} from 'vitest';
 import {generateKeyPairSync,sign} from 'node:crypto';
-import {verifyEngineIndex,type EngineReleaseIndex} from '../../../../src/logic/updates/service/engine-index';
+import {engineIndexAsset,verifyEngineIndex,type EngineReleaseIndex} from '../../../../src/logic/updates/service/engine-index';
 const pair=generateKeyPairSync('ed25519'),cold={publicKey:pair.publicKey.export({type:'spki',format:'pem'}).toString(),platform:'win32-x64' as const};
 const pkg=(kind='pi',id='a')=>({kind,version:'1.5.0',entry:'adapter.cjs',adapter:{entry:'adapter.cjs',version:'1.0.0',protocol:1 as const},package:{tag:'runtime-engines',name:kind+'.zip',bytes:100,sha256:id.repeat(64),files:[{path:'adapter.cjs',bytes:1,sha256:'b'.repeat(64)}]}});
 const index=():EngineReleaseIndex=>({schema:1,sequence:1,platform:cold.platform,createdAt:new Date().toISOString(),expiresAt:new Date(Date.now()+60000).toISOString(),sourceCommit:'a'.repeat(40),notes:'',current:[{kind:'pi',identity:'a'.repeat(64)}],releases:[pkg()]});
 const envelope=(value:unknown)=>{const payload=JSON.stringify(value);return {payload,signature:sign(null,Buffer.from(payload),pair.privateKey).toString('base64')}};
+
+test('索引地址绑定公钥 DER 身份，换行表示不变、换钥分离且不覆盖旧通道',()=>{
+  const name=engineIndexAsset(cold.publicKey);expect(name).toMatch(/^latest-[a-f0-9]{64}\.json$/);
+  expect(engineIndexAsset(cold.publicKey.replaceAll('\n','\r\n'))).toBe(name);
+  expect(engineIndexAsset(generateKeyPairSync('ed25519').publicKey.export({format:'pem',type:'spki'}).toString())).not.toBe(name);
+  expect(()=>engineIndexAsset(generateKeyPairSync('ec',{namedCurve:'prime256v1'}).publicKey.export({format:'pem',type:'spki'}).toString())).toThrow(/类型/);
+});
 test('独立 E 索引只绑定公钥与平台，不要求 C/R 版本；离线已接纳版本不受过期影响',()=>{
   expect(verifyEngineIndex(envelope(index()),cold).index.sequence).toBe(1);
   const expired={...index(),createdAt:'2020-01-01T00:00:00Z',expiresAt:'2020-01-02T00:00:00Z'};

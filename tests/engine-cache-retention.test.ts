@@ -1,13 +1,14 @@
 import {it,expect,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {generateKeyPairSync,sign} from 'node:crypto';
 import {runtimeFixture,digest} from './runtime-fixture';
 import {archiveDirectory} from '../scripts/runtime-packaging';
 import {RuntimeStore} from '../src/logic/updates/service/runtime-store';
 import {EngineArtifacts} from '../src/logic/updates/service/engine-artifacts';
 import {EnginePackages} from '../src/logic/engines/packages';
 
-it('CBIM 更换冷版本和资源后，原安装/停用选择及引擎缓存离线复用，不重复下载或写入安装清单',async()=>{
+it.each([false,true])('CBIM 更换冷版本和资源（换钥=%s）后，原安装/停用选择及引擎缓存离线复用',async rotate=>{
   const f=await runtimeFixture();try{
     const userRoot=path.join(f.root,'user'),cacheRoot=path.join(f.root,'shared-engines');
     const stateFile=path.join(userRoot,'engine-installations.json'),indexFile=path.join(userRoot,'engine-index.json');
@@ -21,9 +22,11 @@ it('CBIM 更换冷版本和资源后，原安装/停用选择及引擎缓存离�
     const installed=await old.read(),bytes=await fs.readFile(stateFile,'utf8');
     const original=await old.resolveEngine('pi');expect(download).toHaveBeenCalledOnce();
     const offline=vi.fn(async()=>{throw Error('离线不得下载')});
-    const cold={...f.cold,codeVersion:'0.3.0',coldFingerprint:digest('next-cold')};
+    const pair=generateKeyPairSync('ed25519');
+    const cold={...f.cold,codeVersion:'0.3.0',coldFingerprint:digest('next-cold'),publicKey:rotate?pair.publicKey.export({type:'spki',format:'pem'}).toString():f.cold.publicKey};
     const updated={...manifest,codeVersion:cold.codeVersion,coldFingerprint:cold.coldFingerprint,resourceVersion:2};
-    const artifacts=new EngineArtifacts(indexFile,new RuntimeStore(cacheRoot,cold,offline),f.envelope(updated),signal,offline);
+    const payload=JSON.stringify(updated),seed=rotate?{payload,signature:sign(null,Buffer.from(payload),pair.privateKey).toString('base64')}:f.envelope(updated);
+    const artifacts=new EngineArtifacts(indexFile,new RuntimeStore(cacheRoot,cold,offline),seed,signal,offline,undefined,rotate?[f.cold.publicKey]:[]);
     const reopened=new EnginePackages(stateFile,artifacts);
     expect(await reopened.read()).toEqual(installed);
     const reused=await reopened.resolveEngine('pi');

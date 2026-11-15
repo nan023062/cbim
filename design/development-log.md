@@ -1,3 +1,10 @@
+## 2026-11-15：换钥升级的引擎来源兼容修复（#89）
+
+- 原 8db77b84 候选的全新安装、真实 Pi 下载/执行通过，但候选升级 run 43690888838 在新版读取历史引擎来源时报签名无效；失败草稿未公开。原源码完整 CI 43690801879 通过，不能作为修复后提交的证据。
+- Logic 的 EngineArtifacts 保留来源与索引序号，冷 Bridge 固定既有历史公钥，仅验证本地 E 来源；当前 seed 与远程索引只接受新钥。新 E 通道按 SPKI 摘要命名，旧 latest.json 不变。旧公钥已验证公开 0.1.18/R2 签名，未取得或使用旧私钥。
+- 选取制品服务单元、索引签名/地址单元、签名工具单元及引擎缓存消费者契约，覆盖离线复用、停用、未授权密钥、旧钥远程拒绝和记录篡改。实际命令：`pnpm exec vitest run tests/unit/logic/updates/engine-artifacts.test.ts tests/unit/logic/updates/engine-index.test.ts tests/engine-cache-retention.test.ts tests/engine-release.test.ts --reporter=json --outputFile=test-results/c019-key-channel-tests.json`；结果 4 文件 13 项通过。首次本地历史迁移 2 文件 8 项通过；新增通道边界后才扩展复验。
+- 同步 bootstrap/updates 注释、契约及类图。架构/依赖、测试归属和类型检查结果见本次 PR；修改后的完整 CI、重建制品、候选和公开升级验收仍须执行，不能用单元结果代替。验收器补充新版真实匿名 E 检查和检查后原状态保持。
+
 ## 2026-11-15：0.1.19 新资源签名身份冻结
 
 - 用户授权新身份与候选构建，当前阶段不公开发布。私钥生成在仓库外受限目录，随机签名/验签自检通过，文件访问仅当前用户与 SYSTEM；User 环境变量仅记录路径。

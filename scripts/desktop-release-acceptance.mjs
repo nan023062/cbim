@@ -429,6 +429,12 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
   if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
+  // 真实新客户端匿名检查 E 通道，覆盖换钥后的来源验证；发现版本不能更改原安装/停用选择。
+  if(version==='0.1.19'){
+    const checked=await page.evaluate(()=>window.cbim.call('engines.check'));
+    if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page),previousEngine);
+    await save('engine-channel-after',{checked:true,items:checked.items.map(item=>({kind:item.kind,enabled:item.enabled}))});
+  }
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
   const catalog = await restoredCatalog(page,entry.id); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);

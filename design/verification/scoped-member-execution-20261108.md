@@ -43,4 +43,4 @@
 已同步 4 个新源码和 20 个已有源码的中文定位／接口／关键边界说明；brain、brain/pi、policy、tasks、tools、workspace、main、main/platform、scheduler-engine/execution 共 9 份 CONTRACT，以及上述目录和 core 父层共 10 份 ARCHITECTURE。依赖仍由 main 注入平台端口，core 不导入 Win32；生成器只更新实际职责说明。
 
 支持 Windows x64 的本地普通文件。只读正文限完整 UTF-8 1 MiB，输入快照最多 64 文件／总 8 MiB；既有受控写只修改已存在文件。本片没有任意 shell、新文件通用创建、其它语言执行器、网络程序或其它 OS 的隔离保证。固定 registryRead 和 Windows 授予 LPAC 的系统资源仍存在；输出收集大小检查不是磁盘硬配额。冻结路径权限不等于冻结实时内容，每次调用保存实际字节和哈希。
-宿主崩溃的 Job 收束已有 Step53 证据，但残留资源不能只凭临时 owner.json 或 PID 自动清理；R12-B2 需要可信持久来源、原执行身份和显式清理。命令退出零不是专业验证通过，R09-C 随后实施。见[本片计划](../task/scoped-member-execution.md)、[R12 矩阵](../task/execution-isolation-support.md)和[剩余交付](../task/remaining-deliveries.md)。第 1–8 组继续，第 9 组只保留计划；独立本地提交，不推送。
+宿主崩溃的 Job 收束已有 Step53 证据，但残留资源不能只凭临时 owner.json 或 PID 自动清理；R12-B2 需要可信持久来源、原执行身份和显式清理。命令退出零不是专业验证通过，R09-C 随后实施。见[本片计划](../task/scoped-member-execution.md)、[R12 矩阵](../task/execution-isolation-support.md)和[剩余交付](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/task/remaining-deliveries.md)。第 1–8 组继续，第 9 组只保留计划；独立本地提交，不推送。

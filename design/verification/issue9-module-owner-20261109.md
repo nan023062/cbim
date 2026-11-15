@@ -2,7 +2,7 @@
 
 > 导航维护说明（2026-11-14）：正文保留当时的路径、结论与验证边界；可点击源码链接已更新到当前归属，仅供导航，不作为历史版本证据。未留存的阶段入口另行注明，不伪造源码或制品归档。
 
-日期：2026-11-09。范围：[Issue #9](https://github.com/nan023062/cbim/issues/9)；源码修复及本地 Windows 桌面验收完成，正式版本尚未发布。当前进度见[开发路线图](../tool-architecture-roadmap.md)，完成事实见[开发记录](../development-log.md)。
+日期：2026-11-09。范围：[Issue #9](https://github.com/nan023062/cbim/issues/9)；源码修复及本地 Windows 桌面验收完成，正式版本尚未发布。当前进度见[开发路线图](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/tool-architecture-roadmap.md)，完成事实见[开发记录](../development-log.md)。
 
 ## 根因与实际行为
 

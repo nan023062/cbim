@@ -1,6 +1,6 @@
 # 安全等待的多来源资料快照
 
-Step29 / R01，承接 `6276347`。状态：已完成，真实检查与桌面证据见[验证报告](../verification/waiting-source-snapshots-20261107.md)。实时进度仍以 [roadmap](../tool-architecture-roadmap.md) 为准。
+Step29 / R01，承接 `6276347`。状态：已完成，真实检查与桌面证据见[验证报告](../verification/waiting-source-snapshots-20261107.md)。实时进度仍以 [GitHub Issues](https://github.com/nan023062/cbim/issues) 为准。
 
 ## 本步目标
 

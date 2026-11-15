@@ -1,6 +1,6 @@
 # 受控来源代次与明确采纳
 
-Step32 / R02-C 前置，承接 `2f4cb66`。状态：已完成，2026-11-08完成最终桌面验收。Step31 已完成责任控制面；本片为实际负责人派发提供可信来源身份，尚不切换任务路由。实时进度见[roadmap](../tool-architecture-roadmap.md)，证据见[验证报告](../verification/knowledge-source-lifecycle-20261107.md)。
+Step32 / R02-C 前置，承接 `2f4cb66`。状态：已完成，2026-11-08完成最终桌面验收。Step31 已完成责任控制面；本片为实际负责人派发提供可信来源身份，尚不切换任务路由。实时进度见[GitHub Issues](https://github.com/nan023062/cbim/issues)，证据见[验证报告](../verification/knowledge-source-lifecycle-20261107.md)。
 
 ## 可交付行为
 

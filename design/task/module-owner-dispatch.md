@@ -1,6 +1,6 @@
 # 模块负责人进入正式派发与领取
 
-Step33 / R02-C，接续已提交的 Step32 `7048d3d`。状态：2026-11-08 完成本片实现、回归修正及最终 EXE 验收，见[报告](../verification/module-owner-dispatch-20261108.md)；当前进度以[路线图](../tool-architecture-roadmap.md)为准。[岗位登记](workspace-member-registration.md)、[责任控制面](module-ownership-control.md)和[来源采纳](knowledge-source-lifecycle.md)分别提供既有基础，本片已将其接入实际计划、派发和领取。独立的模块负责人索引设计修改继续由其原任务保留，本计划不代为打包提交。
+Step33 / R02-C，接续已提交的 Step32 `7048d3d`。状态：2026-11-08 完成本片实现、回归修正及最终 EXE 验收，见[报告](../verification/module-owner-dispatch-20261108.md)；当前进度以[GitHub Issues](https://github.com/nan023062/cbim/issues)为准。[岗位登记](workspace-member-registration.md)、[责任控制面](module-ownership-control.md)和[来源采纳](knowledge-source-lifecycle.md)分别提供既有基础，本片已将其接入实际计划、派发和领取。独立的模块负责人索引设计修改继续由其原任务保留，本计划不代为打包提交。
 
 ## 本片完成条件
 

@@ -1,6 +1,6 @@
 # 单模块负责人控制面
 
-Step31 / R02-A2/B，承接 `f70a968`。状态：已完成本片验证。完成 Step30 的稳定岗位登记后，为实际模块设置唯一项目岗位负责人；实时进度见[roadmap](../tool-architecture-roadmap.md)。
+Step31 / R02-A2/B，承接 `f70a968`。状态：已完成本片验证。完成 Step30 的稳定岗位登记后，为实际模块设置唯一项目岗位负责人；实时进度见[GitHub Issues](https://github.com/nan023062/cbim/issues)。
 
 ## 本步结果
 

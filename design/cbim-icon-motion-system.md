@@ -1,6 +1,6 @@
 # CBIM 图标、动效与提示系统
 
-日期：2026-11-15。状态：设计规范与 v0.4 原型实现，尚未迁移到产品源码。
+日期：2026-11-15。性质：设计规范与 v0.4 原型母版。后续产品界面实施见 [实施验证](verification/ux-interface-20261115.md) 和 [继续验证](verification/ux-completion-20261115.md)；完整桌面验收仍有 [未完成项](verification/ux-desktop-20261115.md)，原型覆盖不等于产品验收通过。
 
 关联：[UX 主方案](cbim-ux-system-proposal.md) · [图标与反馈预览](cbim-ux-prototype.html#icons) · [办公室全过程](cbim-ux-prototype.html#office) · [SVG sprite](cbim-icon-sprite.svg)。
 

@@ -1,6 +1,6 @@
 # 冻结范围的成员隔离执行
 
-日期：2026-11-08。Step54 / R12-B1，承接本地提交 `e1a410c`。全局进度由 roadmap 维护。
+日期：2026-11-08。Step54 / R12-B1，承接本地提交 `e1a410c`。本方案保留当时范围；当前开发进度见 [GitHub Issues](https://github.com/nan023062/cbim/issues)。
 
 ## 本片目标
 

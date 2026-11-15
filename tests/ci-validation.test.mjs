@@ -34,7 +34,7 @@ describe('change routing', () => {
     [['website/index.html','website/release.json','README.md'],'website',true],
     [['src/a.ts','website/index.html'],'full',true],
     [['design/runtime/common-rules.md'],'full',false],
-    [['design/business/module-spec.md'],'full',false],
+    [['assets/business/module-spec.md'],'full',false],
     [['design/task/task-loop.md'],'full',false],
     [['assets/branding/cbim.png'],'full',true],
     [['scripts/ci-website-smoke.mjs'],'full',true],

@@ -57,7 +57,7 @@
 | 目录 | 内容 |
 | --- | --- |
 | [capability/](capability/README.md) | Team/Agent 领域定义及 Schema |
-| [business/](business/README.md) | Workspace/Module 领域定义及 Schema |
+| [business/](business/README.md) | Module 设计说明与旧格式参考；运行规范及 Schema 见 assets/business |
 | [task/](task/README.md) | 任务、执行和架构评估规范及关联方案 |
 | [connector/](connector/README.md) | 链接器定义与引用边界 |
 | [memory/](memory/memory-spec.md) | 产品记忆机制说明 |

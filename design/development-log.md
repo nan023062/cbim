@@ -1,3 +1,10 @@
+## 2026-11-15：业务模块设计与运行资源拆分（#92）
+
+- 用户授权将 design/business 中运行必需文件分离：module-spec.md 与 module.schema.json 迁至 assets/business；base-module.md、README 与仅供迁移识别的 module.legacy.schema.json 保留。
+- Rules 从 designRoot 同级 assets/business 加载当前 Schema；Builtins 保留 module-spec/module-schema ID、只读/摘要/越界检查，更新实际来源；collectResources 将 assets/business 纳入 R 文件清单。未加入旧格式自动回退。
+- 同步规范相对链接、设计导航、模块治理契约、知识规则注释与架构类图。
+- 按受影响行为选择 pnpm exec vitest run tests/rules.test.ts tests/builtins.test.ts tests/runtime-packaging.test.ts tests/ci-validation.test.mjs：4 文件 44 项通过，分别覆盖结构规则、真实知识工具读取与引用解析、打包精确清单与内容、CI 资源分类。
+- pnpm check:architecture、pnpm check:test-modules、git diff --check 通过。未运行全量回归、桌面打包与安装升级；留待候选包集成阶段。
 ## 2026-11-15：品牌资源目录迁移（#91）
 
 - 正式品牌资源移至 assets/branding/，同步 View SVG、开发态窗口 PNG、Forge/NSIS、官网、favicon、生成/验收工具、CI 与文档。打包态仍为 resources/branding/，保持既有资源包兼容。

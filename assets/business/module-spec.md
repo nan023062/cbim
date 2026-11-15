@@ -1,6 +1,6 @@
 # Module 定义与维护规范
 
-> 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../runtime/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
+> 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../../design/runtime/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
 
 新增、修改模块定义或核实模块契约时按需读取。项目实例、索引位置与实际工作范围由调用方提供；本规范不组织执行者路由。
 
@@ -176,7 +176,7 @@ overview 不再兼容旧四节或文末另列结构图的格式；旧实例必�
 
 已有文件级 source 迁移时，改为其所在文件夹并合并同目录条目，同步 overview 的 source 节点与结构图，再检查全部模块的目录重复及包含关系。发现跨模块归属冲突时先确认唯一维护方，不机械替换路径或扩大职责。路径类型以实际文件系统或可靠工程证据为准，不凭扩展名判断，带点的目录仍可作为 source。此规则仅限制 sources.location，知识链接、依赖契约和来源证据仍可引用具体文件。
 
-本规范和 module.schema.json 定义目标格式。尚未迁移的旧实例仍可通过 [旧格式 Schema](module.legacy.schema.json) 单独检查，仅用于迁移期识别和验证旧资料，不能据此声明符合新设计。
+本规范和 module.schema.json 定义目标格式。尚未迁移的旧实例仍可通过 [旧格式 Schema](../../design/business/module.legacy.schema.json) 单独检查，仅用于迁移期识别和验证旧资料，不能据此声明符合新设计。
 
 迁移需逐模块保全已有有效知识：将旧知识归并进 overview 五节，将旧流程按独立工作流拆入 workflows/<工作流名>/workflow.md 并更新引用与锚点，替换入站和出站引用，更新 JSON 字段、id、直属 children 与派生索引。历史依据保留在既有证据位置，不能删除有效知识来凑齐格式。
 
@@ -201,4 +201,4 @@ summary 必须由负责维护的 AI 成员 结合整体模块体系、目标完�
 
 ## connectors 列表
 
-connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [连接器声明规范](../connector/connector-spec.md) 引用资源仓库或兼容的旧插件声明，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。
+connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [连接器声明规范](../../design/connector/connector-spec.md) 引用资源仓库或兼容的旧插件声明，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。

@@ -107,3 +107,7 @@ Builtins 增加 team-architecture-governance 和 business-architecture-governanc
 ## 派生记忆索引
 
 memory-index 只接收已授权的完整知识搜索快照。分块保留 path/hash/字符偏移与原文；代际 key 绑定完整来源、工作区、revision、embedding 公开配置摘要、维度和分块策略。最多 128 个 768 字符片段，超限拒绝而非静默截断。新代所有向量数量、维度及有限非零值通过后才形成可查询副本；旧代不被原地修改。索引不保存凭据、不读正式知识文件、不持有写权限，检索命中是带出处资料，不是新的指令或知识提交。
+
+## 模块运行资源
+
+Rules 以注入的 designRoot 的同级 assets/business/module.schema.json 加载当前模块 Schema；Builtins 对 module-spec/module-schema 使用同一资源目录，保持只读 ID、版本摘要和路径越界检查。资源包同时携带 design 与 assets/business，不依赖仓库外的开发路径。design/business 只保留设计说明和旧格式参考；当前校验不回退到旧 Schema。

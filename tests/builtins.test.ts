@@ -18,6 +18,7 @@ it('内部知识工具发现并读取治理流程、规范及解析引用，校�
       const r=await call('cbim_builtin_read',{id:entry.id,expectedVersion:entry.version});
       expect(hash(r.text)).toBe(entry.version);expect(r.readOnly).toBe(true);expect(r.source).not.toContain(f.temp);
     }
+    for(const [id,file] of [['module-spec','module-spec.md'],['module-schema','module.schema.json']])expect(await call('cbim_builtin_read',{id})).toMatchObject({source:'assets/business/'+file,readOnly:true});
     const skill=await call('cbim_builtin_read',{id:catalog.entryId});expect(skill.text).toContain('cbim_knowledge_preview');
     expect(skill.references.every((r:any)=>r.status==='available')).toBe(true);
     for(const id of ['agent-spec','module-spec']){

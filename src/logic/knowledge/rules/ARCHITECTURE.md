@@ -10,12 +10,12 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [builtins.ts](builtins.ts) | Builtins：白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
+| [builtins.ts](builtins.ts) | Builtins：从 design 与 assets/business 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。 |
 | [knowledge-queries.ts](knowledge-queries.ts) | 只读知识查询门面，取得快照并组合团队与业务模块读取模型。 |
 | [knowledge-refresh.ts](knowledge-refresh.ts) | 按原身份、版本与请求 ID 刷新派生知识索引，独立于只读领域查询。 |
 | [knowledge-write-input.ts](knowledge-write-input.ts) | 知识提交工具与后端原事务核实共用的输入解析和原引用构造。 |
 | [knowledge-write-observation.ts](knowledge-write-observation.ts) | 原知识事务的有界公开观察协议，供后端与界面共同校验，只有纯 Schema 依赖。 |
-| [knowledge.ts](knowledge.ts) | Logic 知识规则：校验领域结构、专业正文和引用，并派生注册索引。 |
+| [knowledge.ts](knowledge.ts) | Logic 知识规则（模块 Schema 来自同级 assets/business）：校验领域结构、专业正文和引用，并派生注册索引。 |
 | [memory-index.ts](memory-index.ts) | 正式知识的派生向量索引规则，固定来源版本、向量模型和分块策略，提供可重建的代际与检索。 |
 | [object-contract.ts](object-contract.ts) | 对象编辑的纯数据契约，定义静态知识操作、预览和提交回执；Agent 执行选型复用 Team 契约。 |
 | [object-crud.ts](object-crud.ts) | Core 对象治理：规划 Agent/Module/Skill/Workflow 变更，按计划提交受控事务。 |
@@ -328,3 +328,7 @@ Builtins 增加 team-architecture-governance 和 business-architecture-governanc
 ## 派生记忆索引
 
 memory-index 只接收已授权的完整知识搜索快照。分块保留 path/hash/字符偏移与原文；代际 key 绑定完整来源、工作区、revision、embedding 公开配置摘要、维度和分块策略。最多 128 个 768 字符片段，超限拒绝而非静默截断。新代所有向量数量、维度及有限非零值通过后才形成可查询副本；旧代不被原地修改。索引不保存凭据、不读正式知识文件、不持有写权限，检索命中是带出处资料，不是新的指令或知识提交。
+
+## 模块运行资源
+
+Rules 以注入的 designRoot 的同级 assets/business/module.schema.json 加载当前模块 Schema；Builtins 对 module-spec/module-schema 使用同一资源目录，保持只读 ID、版本摘要和路径越界检查。资源包同时携带 design 与 assets/business，不依赖仓库外的开发路径。design/business 只保留设计说明和旧格式参考；当前校验不回退到旧 Schema。

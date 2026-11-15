@@ -24,6 +24,8 @@ it('resource collection omits empty retired directories without changing source 
     const repo=path.join(f.root,'collection-repo'),compiled=path.join(f.root,'compiled'),target=path.join(f.root,'collected');
     const source={
       'design/guide.md':'current guide',
+      'assets/business/module.schema.json':'module schema',
+      'assets/business/module-spec.md':'module standard',
       'docs/01.md':'concept',
       'legal/license.txt':'license',
     };
@@ -34,7 +36,7 @@ it('resource collection omits empty retired directories without changing source 
     await fs.writeFile(path.join(compiled,'build/main.js'),'business');
     await fs.writeFile(path.join(compiled,'build/desktop.js'),'cold');
     await collectResources(compiled,target,repo);
-    expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js','design/guide.md','docs/01.md','legal/license.txt','package.json']);
+    expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js','assets/business/module-spec.md','assets/business/module.schema.json','design/guide.md','docs/01.md','legal/license.txt','package.json']);
     await expect(fs.stat(path.join(target,'design/retired'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'.vite/renderer'))).rejects.toMatchObject({code:'ENOENT'});
     expect((await fs.stat(path.join(repo,'design/retired/scripts'))).isDirectory()).toBe(true);

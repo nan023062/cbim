@@ -1,8 +1,8 @@
 # CBIM Assistant
 
-<img src="branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
+<img src="assets/branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
 
-本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](assets/branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 

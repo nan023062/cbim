@@ -11,7 +11,7 @@
 | 文件 | 当前职责 |
 | --- | --- |
 | [application.ts](application.ts) | 为业务 Application 增加类型化 IPC 分发入口。 |
-| [main.ts](main.ts) | 本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
+| [main.ts](main.ts) | 本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。 |
 
 ## 架构类图
 

@@ -1,3 +1,9 @@
+## 2026-11-15：品牌资源目录迁移（#91）
+
+- 正式品牌资源移至 assets/branding/，同步 View SVG、开发态窗口 PNG、Forge/NSIS、官网、favicon、生成/验收工具、CI 与文档。打包态仍为 resources/branding/，保持既有资源包兼容。
+- 同步 BrandMark/main 文件头、相关架构图及契约。本步只迁移目录，未替换图形或改版本。
+- 验证：pnpm check:brand；pnpm exec vitest run tests/ci-validation.test.mjs（35 项通过）；pnpm check:architecture（0 循环/0 违规）；pnpm check:test-modules；pnpm build:website；pnpm exec vite build --config vite.renderer.config.ts；git diff --check，均通过。
+- 未执行全量回归、Windows 安装/升级或新图标视觉验收；不能据此声称 0.1.20 已交付。dist 为未提交的前端构建产物。
 ## 2026-11-15：0.1.19 公开发行与真实升级
 
 - PR #88 正常合并到 master；冻结 1c498878 的未签名安装包已公开，固定新的资源签名公钥。旧失败候选保留为 rejected 草稿；未改旧版本附件、资源/引擎通道或 Python latest。

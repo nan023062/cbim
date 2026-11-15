@@ -12,7 +12,7 @@ const safePath = name => typeof name === 'string' && name.length > 0 && !name.in
 /** 接收 git diff 的所有新旧路径。空变更或无法分类的路径不能获得轻量豁免。 */
 export function classifyChanges(paths) {
   const valid = paths.length > 0 && paths.every(safePath);
-  const needsWebsite = paths.some(name => typeof name === 'string' && (website(name) || name.startsWith('branding/') || websiteInputs.has(name)));
+  const needsWebsite = paths.some(name => typeof name === 'string' && (website(name) || name.startsWith('assets/branding/') || websiteInputs.has(name)));
   const light = valid && paths.every(name => document(name) || website(name));
   return {mode: light ? (needsWebsite ? 'website' : 'docs') : 'full', website: needsWebsite};
 }

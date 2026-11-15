@@ -23,7 +23,7 @@ try{
   const script="Add-Type -AssemblyName System.Drawing; $brandIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($env:CBIM_BRAND_TEST_EXE); try { $brandIcon.ToBitmap().Save($env:CBIM_BRAND_TEST_ICON, [System.Drawing.Imaging.ImageFormat]::Png) } finally { $brandIcon.Dispose() }";
   const extraction=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(script,'utf16le').toString('base64')],{windowsHide:true,encoding:'utf8',env:{...process.env,CBIM_BRAND_TEST_EXE:executable,CBIM_BRAND_TEST_ICON:iconPath}});
   assert.equal(extraction.status,0,extraction.stderr);const actualIcon=await fs.readFile(iconPath);
-  const ico=await fs.readFile('branding/cbim.ico');const count=ico.readUInt16LE(4);assert.equal(count,7);
+  const ico=await fs.readFile('assets/branding/cbim.ico');const count=ico.readUInt16LE(4);assert.equal(count,7);
   const match=await app.evaluate(({nativeImage},{ico,actual})=>{
     const bytes=Buffer.from(ico,'base64'),actualImage=nativeImage.createFromBuffer(Buffer.from(actual,'base64')),size=actualImage.getSize();
     const count=bytes.readUInt16LE(4);let target;
@@ -39,7 +39,7 @@ try{
   }
   assert.deepEqual(errors,[]);
   const packaged=path.join(path.dirname(executable),'resources/branding');
-  for(const name of ['cbim-mark.svg','cbim.png','cbim.ico'])assert.equal(createHash('sha256').update(await fs.readFile(path.join(packaged,name))).digest('hex'),createHash('sha256').update(await fs.readFile(path.join('branding',name))).digest('hex'));
+  for(const name of ['cbim-mark.svg','cbim.png','cbim.ico'])assert.equal(createHash('sha256').update(await fs.readFile(path.join(packaged,name))).digest('hex'),createHash('sha256').update(await fs.readFile(path.join('assets/branding',name))).digest('hex'));
   await fs.writeFile(path.join(output,'desktop-report.json'),JSON.stringify({passed:true,executable,identity,marks,match,errors},null,2));
   console.log(JSON.stringify({passed:true,executable,match,errors}));
 }finally{await app.close()}

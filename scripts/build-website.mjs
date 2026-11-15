@@ -20,7 +20,7 @@ export async function buildWebsite(){
   await verifyBrandAssets();
   const output=path.join(root,'build/website');await fs.mkdir(output,{recursive:true});
   const release=JSON.parse(await fs.readFile(path.join(root,'website/release.json'),'utf8')),links=releaseLinks(release);
-  const svg=await fs.readFile(path.join(root,'branding/cbim-mark.svg'),'utf8');
+  const svg=await fs.readFile(path.join(root,'assets/branding/cbim-mark.svg'),'utf8');
   const brand=svg.replace('<svg ','<svg aria-hidden="true" focusable="false" ');
   let base;
   if(process.env.CBIM_WEBSITE_URL){base=new URL(process.env.CBIM_WEBSITE_URL);if(base.protocol!=='https:'||base.username||base.password||base.search||base.hash)throw Error('CBIM_WEBSITE_URL 必须为真实公开 HTTPS 站点根地址。');if(!base.pathname.endsWith('/'))base.pathname+='/' }
@@ -33,7 +33,7 @@ export async function buildWebsite(){
     const html=template.replace(/\{\{(\w+)\}\}/g,(_,key)=>{if(key==='seo')return seo;if(!(key in values))throw Error('未知网站变量：'+key);return ['styles','brand'].includes(key)?values[key]:escape(values[key])});
     await fs.writeFile(path.join(output,page),html);
   }
-  await fs.copyFile(path.join(root,'branding/cbim.png'),path.join(output,'cbim.png'));
+  await fs.copyFile(path.join(root,'assets/branding/cbim.png'),path.join(output,'cbim.png'));
   await fs.writeFile(path.join(output,'404.html'),`<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>页面未找到 · CBIM Assistant</title><body style="font:16px/1.8 system-ui;max-width:560px;margin:15vh auto;padding:24px"><h1>没有找到这个页面</h1><p>你可以返回产品首页，或前往下载页查看当前桌面版本。</p><a href="${escape(base?base.href:'./index.html')}">CBIM Assistant 首页</a> · <a href="${escape(base?new URL('download.html',base).href:'./download.html')}">下载与更新日志</a></body></html>`);
   await fs.writeFile(path.join(output,'robots.txt'),'User-agent: *\nAllow: /\n'+(base?`Sitemap: ${new URL('sitemap.xml',base).href}\n`:''));
   if(base)await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(page=>`<url><loc>${escape(new URL(page==='index.html'?'./':page,base).href)}</loc></url>`).join('')+'</urlset>');

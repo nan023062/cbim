@@ -36,7 +36,7 @@ describe('change routing', () => {
     [['design/runtime/common-rules.md'],'full',false],
     [['design/business/module-spec.md'],'full',false],
     [['design/task/task-loop.md'],'full',false],
-    [['branding/cbim.png'],'full',true],
+    [['assets/branding/cbim.png'],'full',true],
     [['scripts/ci-website-smoke.mjs'],'full',true],
     [['.github/workflows/validate.yml'],'full',false],
     [['package.json','pnpm-lock.yaml'],'full',false],

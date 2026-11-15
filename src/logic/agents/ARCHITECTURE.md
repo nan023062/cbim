@@ -12,6 +12,7 @@
 | --- | --- |
 | [agent.ts](agent.ts) | Logic 中独立 Agent 对象，冻结能力、运行选型和权限，并引用真实对话身份。 |
 | [contracts.ts](contracts.ts) | Agent 调用的便携身份、工具绑定和生命周期契约，供 Runtime 与 Bridge 使用。 |
+| [exchange.ts](exchange.ts) | 单次 Agent 调用内的问答暂停和结果交接，不创建新 Agent 或执行循环。 |
 | [index.ts](index.ts) | 向业务装配公开 Agent 对象、单次循环和调度器，不导出 Application 或具体引擎。 |
 | [loop.ts](loop.ts) | 独立 Agent 执行循环的生命周期封装，由装配注入已有 LoopRuntime/引擎驱动。 |
 | [scheduler.ts](scheduler.ts) | 独立 Agent 调度系统，拥有调用关系、递归准入、结果回传和后代停止。 |
@@ -85,6 +86,7 @@ class N_src_logic_agents_contracts_ts_AgentToolContext["AgentToolContext"] {
   +task
   +runId
   +assertExclusive()
+  +assertQuestionWait()
   +emit()
 }
 N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentToolContext : 声明
@@ -99,6 +101,7 @@ class N_src_logic_agents_contracts_ts_AgentToolsBinding["AgentToolsBinding"] {
   <<interface>>
   +capability
   +active()
+  +allowsWhileWaiting()
   +stop()
 }
 N_src_logic_agents_contracts_ts ..> N_src_logic_agents_contracts_ts_AgentToolsBinding : 声明
@@ -121,6 +124,33 @@ N_src_logic_agents_contracts_ts_external_Error <|-- N_src_logic_agents_contracts
 ```
 
 直接依赖：[../execution/rules/types.ts](../execution/rules/types.ts)、[../execution/rules/engine-tools.ts](../execution/rules/engine-tools.ts)。
+
+### exchange.ts
+
+```mermaid
+classDiagram
+class N_src_logic_agents_exchange_ts["exchange.ts"] {
+  <<module>>
+}
+class N_src_logic_agents_exchange_ts_AgentCallExchange["AgentCallExchange"] {
+  +yielded
+  +waiting()
+  +wait()
+  +ask()
+  +reply()
+  +finish()
+  +fail()
+  -publish
+  -frame
+  -pending
+  -replies
+  -sequence
+  -ended
+}
+N_src_logic_agents_exchange_ts ..> N_src_logic_agents_exchange_ts_AgentCallExchange : 声明
+```
+
+直接依赖：[../tools/rules/questions.ts](../tools/rules/questions.ts)、[../tools/rules/results.ts](../tools/rules/results.ts)。
 
 ### index.ts
 
@@ -183,6 +213,7 @@ class N_src_logic_agents_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
   -attempts
   -activeCalls
   -stranded
+  -replyHistory
   -closed
   -reserved
   -execute()
@@ -192,7 +223,7 @@ class N_src_logic_agents_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
 N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_scheduler_ts_AgentCallScheduler : 声明
 ```
 
-直接依赖：[agent.ts](agent.ts)、[loop.ts](loop.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)、[contracts.ts](contracts.ts)、[../tools/rules/results.ts](../tools/rules/results.ts)。
+直接依赖：[agent.ts](agent.ts)、[exchange.ts](exchange.ts)、[../tools/rules/questions.ts](../tools/rules/questions.ts)、[loop.ts](loop.ts)、[../execution/rules/types.ts](../execution/rules/types.ts)、[contracts.ts](contracts.ts)、[../tools/rules/results.ts](../tools/rules/results.ts)。
 
 ### 本目录调用边界
 
@@ -230,12 +261,23 @@ class N_src_logic_agents_agent_ts["agent.ts"] {
 class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
   <<module>>
 }
-class N_src_logic_agents_contracts_ts["contracts.ts"] {
+class N_src_logic_agents_exchange_ts["exchange.ts"] {
   <<module>>
 }
 N_src_logic_agents_loop_ts ..> N_src_logic_agents_agent_ts : 导入依赖
 N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_agent_ts : 导入依赖
+N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_exchange_ts : 导入依赖
 N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_loop_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_agents_scheduler_ts["scheduler.ts"] {
+  <<module>>
+}
+class N_src_logic_agents_contracts_ts["contracts.ts"] {
+  <<module>>
+}
 N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依赖
 ```
 
@@ -273,7 +315,7 @@ N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依�
 
 根深度为 0，子调用加 1；深度等于上限可以执行，超出拒绝。本地额度在任何 await 前同步预留。真实进程全局准入由 prepare 必须另外领取，不用父等待规避进程计数。具体限制和支持范围由装配固定，不能由模型参数改变。
 
-调用前 `assertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝，根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
+调用前 `assertExclusive` 核实父工具批次只有当前已授权调用；子执行期间父新工具被 Runtime 拒绝。直属调用均在等待答复时只放行目录、答复和向上求助工具，写操作与新子调用仍被拒绝。根工作区独占租约持续至后代真实排空。停止通过 AbortSignal 沿调用传播，不影响无关调用树。
 
 关闭失败保留 stranded 与全局占用。Runtime 收尾 drain 重试关闭原循环，不重放工具；未确认退出前不得释放根租约。进程内 attempts 只用于当前执行去重，重启后的未知执行仍由原持久日志拒绝重放。
 
@@ -281,8 +323,10 @@ N_src_logic_agents_scheduler_ts ..> N_src_logic_agents_contracts_ts : 导入依�
 
 Application 的 `agent-calls.ts` 采用深度 8、本根子进程数上限 32；实际全局并发遵守用户原有设置，父进程仍计入资源。所有数值在工具详情或拒绝结果中说明。
 
-首片仅支持已登记、未变更、与根使用相同冻结模型配置的 Agent，避免共用根请求账本却按不同价格计费。不同模型返回 `AGENT_MODEL_UNSUPPORTED`，不静默改投。启用逐请求预算时子树共用根账本；启用旧运行汇总预算时返回 `AGENT_BUDGET_MODE_UNSUPPORTED`，避免漏计子运行。预算关闭时仍受深度和真实并发约束。
+子调用使用已登记、未变更岗位自己的冻结引擎、模型和凭据，不继承根进程启动覆盖；不同模型分别冻结价格并向根请求账本申请和结算。agentRun 记录请求的实际子 task/run，但不改变根作用域授权。缺模型、配置变化或缺所需价格均拒绝，不静默改投。启用旧运行汇总预算时仍返回 `AGENT_BUDGET_MODE_UNSUPPORTED`；预算关闭时仍受深度和真实并发约束。
 
-同调用暂停并由父回答尚未接通；执行 Agent 调问题工具会返回 `AGENT_QUESTION_UNSUPPORTED`，应将问题作为公开结果返回调用方，不直接向用户提问。这个限制不是目标产品已全部实现的声明。
+`AgentCallExchange` 持有原调用的单题等待与答复去重。执行 Agent 的问题工具通过可信端口暂停原循环；父 cbim_agent_call 返回 waiting、callId、questionId 和严格问题结构。父以 cbim_agent_reply({callId,questionId,result}) 答复，等待原子运行的新问题或终态；不新建 task/run。执行父级可继续向上求助，只有根使用用户提问端口。答复身份按直接调用方 run 校验，答案先记录再消费；同答案返回原回包，不同答案拒绝。
 
-旧单层派发及其检查点、知识验收等仍用于无新协议标记的历史恢复，不能删除旧读取路径或给旧日志补造新调用身份。后续扩展多模型、父子答复和持久调度时，应分别修改装配账本、交互端口与恢复契约，不把逻辑堆入 Agent 对象。
+等待及续跑通过原工具的 tool.updated 展示。未答复就结束父模型回合触发 AGENT_REPLY_REQUIRED 并停止排空原子树。停止、错题、跨调用者和迟到答案均不重建执行；当前等待对象只存在于进程内，重启后的未知调用不自动恢复。
+
+旧单层派发及其检查点、知识验收等仍用于无新协议标记的历史恢复，不能删除旧读取路径或给旧日志补造新调用身份。后续增加持久等待恢复时须扩展恢复契约；模型捕获留在装配账本，问答交接留在 exchange，不能把逻辑堆入 Agent 对象。

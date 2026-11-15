@@ -1,3 +1,14 @@
+## 2026-11-15：#94 跨模型递归与原调用暂停求助
+
+- 来源：[Issue #94](https://github.com/nan023062/cbim/issues/94)，基线 4ceb9b5b；用户授权继续跨模型递归及同调用暂停求助，并补专项测试。沿 Agent 调度、模型捕获、请求预算、Runtime 门禁及工具时间线核实本步范围，保留原品牌和领域引擎草稿。
+- Application 装配为每个子调用捕获自身引擎、模型、凭据与冻结价格，复核岗位配置哈希，清除根 process 覆盖；缺配置和变化不降级为根模型。各模型独立 RequestBudgetPort，共享根作用域已用及预留额度；agentRun 只记录实际子 task/run，不授予额度。发送前同时核实根与子生命周期，迟到真实用量仍保留。旧运行汇总预算仍拒绝递归。
+- AgentCallExchange 独立封装原调用单题暂停、先记录再消费与答复去重；Scheduler 的 cbim_agent_reply 只允许直接父级按原 callId/questionId 回答。原子 task/run、引擎和循环不变。C→B→A 可逐层转问，只有根使用用户端口。等待期间禁止父写操作和新子调用；未答复结束回合触发中断并停止排空，停止后的迟到答案不恢复。清理活动占用早于结果回传，避免父引擎收尾误判。
+- View 按原 tool.updated 显示等待调用方答复、执行中和终态，中间 tool.finished 不误标完成；答复仍是普通工具。同步 runtime/business-execution、runtime/common-rules、task/task-loop 运行指令；源码注释和 agents、application/assembly、budget/rules、budget/runtime、conversation/runtime、execution/assembly、execution/rules/runtime、view/execution-view 的契约及 8 份类图同步。
+- 专项选择依据：调度器验证身份、取消和去重，真实装配串联验证多层调用与运行恢复，预算契约验证独立价格和共同额度，时间线验证暂停状态。执行 `pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts`，21 项通过；补充配置捕获变化和跨引擎暂停后执行 `pnpm exec vitest run tests/agent-call-assembly.test.ts -t 'changed-model-capture|cross-model-question'`，2 项通过、11 项未重跑。执行 `pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-call-view.test.ts`，3 项通过；替身边界修正及发送前门禁补充后 `pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-request-budget.test.ts`，6 项通过。以上按不同用例去重共 30 项。
+- 直接消费者与登记规则：`pnpm exec vitest run tests/execution-collaboration.test.ts tests/model-request-budget.test.ts tests/request-budget-ports.test.ts tests/inline-conversation.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`，195 项通过。原预算应用集成覆盖保留，新预算测试仅组合账本不变量与服务，不加载完整 Application。新增 3 份套件登记 unit/contract，测试边界检查曾发现 exchange 测试引用另一模块结果函数，改为纯数据替身后 `pnpm check:test-modules` 通过（509 文件）。
+- `pnpm typecheck`、`pnpm check:architecture`（1547 文件、7524 依赖、0 循环/违规）及 `git diff --check` 通过。初次问答装配测试缺少替身父引擎答复分支，补齐后通过；不将该次失败隐藏为首次即通过。
+- 验证边界：装配用真实 Runtime、调度、文件日志和准入，外部 Pi/Claude Code/Codex 引擎及凭据解析端口为明确替身；不等于真实在线 SDK 验收。未运行完整 CI、桌面安装、打包、合并或发布。暂停对象当前仅进程内有效，重启后的未知等待不自动重建；保留旧历史读取，不宣称旧协议全部退出。下一次调整问答改 exchange/scheduler，模型冻结改 assembly，额度改 budget；Agent 对象及循环生命周期保持独立。
+
 ## 2026-11-15：#95 对话引擎下拉菜单统一安装与更新
 
 - 来源：[Issue #95](https://github.com/nan023062/cbim/issues/95)，用户要求移除设置引擎分页、独立安装界面，将所有支持引擎及安装/更新/环形进度移入对话菜单。基线 `911347b7`，查询全部开放 Issues（上限 200，实际 2 项）后独立登记；当前源码 SettingsView 无引擎分页，不虚构删除。实际旧入口是首次执行自动准备与侧栏 E 进度，现统一到 EnginePicker，应用 C/R 更新保留。

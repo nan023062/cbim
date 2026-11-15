@@ -11,3 +11,7 @@ loop-engine 仅对 KnowledgeTools.has 命中的当前注册知识工具提供 no
 ## 冻结引擎与启动预检
 
 createWorkspaceLoop 将模型与引擎配置核实后确定的 engine 作为 RuntimeOptions.engineKind 注入，主与成员装配均不能遗漏。该声明只用于运行受理前核实历史可转交性；实际适配器和周期工具仍在 beforeRun 之后创建。Runtime 会复核实际 kind 与声明一致，不能在预检后静默改换引擎。
+
+## 递归求助端口
+
+loop-engine 将 cbim_agent_reply 登记为读效果工具，实际答复权仍由调度器校验。子 Agent 的 cbim_ask_user_question 指令与注入端口只面向直接调用方，主 Agent 保留用户问题端口；工具名称共用不代表交互对象相同。

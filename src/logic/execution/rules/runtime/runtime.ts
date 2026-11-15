@@ -310,7 +310,9 @@ export class LoopRuntime {
       };
       let stopping=false;
       let stopFailure:unknown;
-      const agentTools=this.options.agentTools?.({task,runId,emit:async event=>{await emit(event,true)},assertExclusive:id=>{
+      const agentTools=this.options.agentTools?.({task,runId,emit:async event=>{await emit(event,true)},assertQuestionWait:()=>{
+        const ids=[...pendingTools];if(stopping||ids.length!==1||calls.get(ids[0])?.call.name!=='cbim_ask_user_question'||[...activeCalls].some(id=>id!==ids[0]))fail('AGENT_QUESTION_BUSY','必须等待其他工具完成后才能向调用方求助');
+      },assertExclusive:id=>{
         if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('AGENT_CALL_BUSY','存在其他在途工具或审批，不能交接 Agent 调用');
       }});
       const memberHelpTools=member?new MemberHelpTools(member.binding,{
@@ -421,7 +423,7 @@ export class LoopRuntime {
             try{if(this.options.normalizeToolInput)call.input=structuredClone(this.options.normalizeToolInput(structuredClone(call)))}catch(error){normalizationError=error}
             repeatedFailures.proposed(call);
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
-            const scopedReason=agentTools?.active()?'AGENT_CALL_ACTIVE: 当前工具正在等待执行 Agent，不能并发操作父运行':executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
+            const scopedReason=agentTools?.active()&&!agentTools.allowsWhileWaiting?.(call.name)?'AGENT_CALL_ACTIVE: 当前工具正在等待执行 Agent，不能并发操作父运行':executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
             const transitionReason=scopedReason??artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
             const validationReason=controlledReason??codeChecks?.guard(call.name,call.id,call.input,[...activeCalls])??(!codeChecks&&call.name===codeCheckToolName?'本轮未装配代码检查':undefined)??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
@@ -473,6 +475,7 @@ export class LoopRuntime {
           if(!stopping&&memberResume)await this.options.assertMemberResumeInputs!();
           if(control?.signal.aborted)await stop();
           result=stopping?{status:'cancelled' as const}:await engine.run(message);
+          if(!stopping&&agentTools?.active())fail('AGENT_REPLY_REQUIRED','仍有未答复的子调用，已停止原子树；不能报告本轮完成');
         }catch(error){
           failure=error;
         }finally{

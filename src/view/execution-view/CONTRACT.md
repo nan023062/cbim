@@ -31,3 +31,7 @@ ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/star
 ### 团队逻辑对话投影
 
 `team-conversations.ts` 供侧栏、成员文字页和办公室共用，不依赖任一业务页面。只接受同工作区/主根的正式 TeamSession；角色的不同执行实例统一到同一人物/导航项，公开任务引用保留原身份，正文仍按原 task/run 读取。`teamConversationKey` 以工作区实例隔离本机动态缓存。该模块只投影，不创建会话或修改执行。
+
+## 同调用问答状态
+
+ToolTimeline 根据原工具的 agentCallState 显示等待调用方答复、执行中、已完成或执行未完成。waiting 的中间 tool.finished 不覆盖暂停状态；后续 tool.updated 的终态结束同一卡片。cbim_agent_reply 以普通工具显示“答复执行 Agent”，不新增频道或层级。

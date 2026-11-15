@@ -5,6 +5,9 @@
  */
 import {z} from 'zod';
 import {Agent} from './agent';
+import {AgentCallExchange} from './exchange';
+import {questionResultSchema} from '../tools/rules/questions';
+import {zodToJsonSchema} from 'zod-to-json-schema';
 import {AgentExecutionLoop} from './loop';
 import type {RunSummary} from '../execution/rules/types';
 import type {AgentCallReference,AgentCallContext,AgentCallLimits,AgentToolContext,AgentToolsBinding} from './contracts';
@@ -15,18 +18,21 @@ export interface AgentSchedulerPorts {
   /** 只读已登记能力目录；目录可见不自动授予执行权限。 */
   list?():Promise<unknown>;
   /** 必须取得真实子执行名额，冻结目标定义/权限/模型，失败不得开始运行。 */
-  prepare(input:{agentId:string;message:string;parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference}):Promise<{agent:Agent;loop:AgentExecutionLoop;release():void}>;
+  prepare(input:{agentId:string;message:string;parent:AgentCallContext;signal:AbortSignal;reference:(taskId:string,runId:string)=>AgentCallReference;requestQuestion(input:unknown,signal:AbortSignal):Promise<unknown>}):Promise<{agent:Agent;loop:AgentExecutionLoop;release():void}>;
 }
 const callInput=z.object({agentId:z.string().min(1).max(512),message:z.string().trim().min(1).max(100000)}).strict();
 export const agentCallToolName='cbim_agent_call';
 export const agentListToolName='cbim_agent_list';
+export const agentReplyToolName='cbim_agent_reply';
+const replyInput=z.object({callId:z.string().min(1),questionId:z.string().min(1),result:questionResultSchema}).strict();
 function errorResult(code:string,message:string,detail:Record<string,unknown>={}):ToolResult{return {...jsonToolResult(agentCallToolName,{error:{code,message,...detail}}),isError:true}}
 /** 单根运行共享调度器；调用键含父运行，避免不同 Agent 的原生工具 ID 碰撞。 */
 export class AgentCallScheduler {
   private readonly attempts=new Map<string,{input:string;result:Promise<ToolResult>}>();
-  private readonly activeCalls=new Map<string,{controller:AbortController;done:Promise<ToolResult>}>();
+  private readonly activeCalls=new Map<string,{controller:AbortController;done:Promise<ToolResult>;exchange:AgentCallExchange}>();
   /** 退出未确认仍保留真实占用；后续只重试排空，不重放工作。 */
   private readonly stranded=new Map<string,Awaited<ReturnType<AgentSchedulerPorts['prepare']>>>();
+  private readonly replyHistory=new Map<string,AgentCallExchange>();
   private closed=false;
   private reserved=0;
   constructor(private readonly limits:AgentCallLimits,private readonly ports:AgentSchedulerPorts){
@@ -37,9 +43,18 @@ export class AgentCallScheduler {
   bind(context:AgentToolContext,depth=0):AgentToolsBinding {
     let pending=0;
     const prefix=context.runId+':';
-    return {active:()=>pending>0||[...this.stranded.keys()].some(key=>key.startsWith(prefix)),stop:async()=>{const active=[...this.activeCalls].filter(([key])=>key.startsWith(prefix)).map(([,value])=>value);for(const item of active)item.controller.abort();await Promise.allSettled(active.map(item=>item.done));await this.drain(prefix)},capability:{id:'agent-call',instructions:['调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'],tools:{
-      list:async()=>[...(this.ports.list?[{name:agentListToolName,description:'读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。',inputSchema:{type:'object',properties:{},additionalProperties:false}}]:[]),{name:agentCallToolName,description:'调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。',inputSchema:{type:'object',properties:{agentId:{type:'string',description:'已登记岗位的 memberId'},message:{type:'string',description:'给该 Agent 的指令和必要上下文'}},required:['agentId','message'],additionalProperties:false}}],
+    return {allowsWhileWaiting:(name)=>{const active=[...this.activeCalls].filter(([key])=>key.startsWith(prefix));return active.length>0&&active.every(([,call])=>call.exchange.waiting())&&[agentReplyToolName,agentListToolName,'cbim_ask_user_question'].includes(name)},active:()=>pending>0||[...this.stranded.keys()].some(key=>key.startsWith(prefix)),stop:async()=>{const active=[...this.activeCalls].filter(([key])=>key.startsWith(prefix)).map(([,value])=>value);for(const item of active)item.controller.abort();await Promise.allSettled(active.map(item=>item.done));await this.drain(prefix)},capability:{id:'agent-call',instructions:['调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'],tools:{
+      list:async()=>[{name:agentReplyToolName,description:'回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。',inputSchema:zodToJsonSchema(replyInput) as Record<string,unknown>},...(this.ports.list?[{name:agentListToolName,description:'读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。',inputSchema:{type:'object',properties:{},additionalProperties:false}}]:[]),{name:agentCallToolName,description:'调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。',inputSchema:{type:'object',properties:{agentId:{type:'string',description:'已登记岗位的 memberId'},message:{type:'string',description:'给该 Agent 的指令和必要上下文'}},required:['agentId','message'],additionalProperties:false}}],
       call:async(name,args,signal,id)=>{
+        if(name===agentReplyToolName){
+          if(!id||signal.aborted||this.closed)return errorResult('AGENT_CALL_CANCELLED','答复调用已停止');
+          const parsed=replyInput.safeParse(args);if(!parsed.success)return errorResult('AGENT_REPLY_INPUT','答复必须包含原 callId、questionId 和严格答案');
+          try{context.assertExclusive(id);const entry=this.activeCalls.get(prefix+parsed.data.callId);
+            const cache=this.replyHistory.get(prefix+parsed.data.callId);const exchange=entry?.exchange??cache;
+            if(!exchange)return errorResult('AGENT_CALL_IDENTITY','原调用不属于当前调用者或已丢失，不重建执行');
+            const abort=()=>entry?.controller.abort(signal.reason);signal.addEventListener('abort',abort,{once:true});try{return await exchange.reply(parsed.data.questionId,parsed.data.result)}finally{signal.removeEventListener('abort',abort)}
+          }catch(error){return errorResult((error as {code?:string}).code??'AGENT_REPLY_FAILED',error instanceof Error?error.message:String(error))}
+        }
         if(name===agentListToolName&&this.ports.list){if(Object.keys(args).length)return errorResult('AGENT_LIST_INPUT','Agent 目录不接受身份或权限参数');signal.throwIfAborted();return jsonToolResult(agentListToolName,await this.ports.list())}
         if(name!==agentCallToolName||!id)return errorResult('AGENT_CALL_IDENTITY','缺少已授权工具调用身份');
         const parsed=callInput.safeParse(args);if(!parsed.success)return errorResult('AGENT_CALL_INPUT','需要有效 agentId 和 message，不能传入调用方或权限字段');
@@ -52,17 +67,29 @@ export class AgentCallScheduler {
         // 同步预留早于任何 await，父工具批次在整个子运行中封住新操作。
         this.reserved++;pending++;
         const controller=new AbortController(),abort=()=>controller.abort(signal.reason);signal.addEventListener('abort',abort,{once:true});
-        const result=this.execute(context,depth,id,parsed.data,controller.signal).finally(()=>{signal.removeEventListener('abort',abort);this.reserved--;pending--;this.activeCalls.delete(key)});
-        this.attempts.set(key,{input,result});this.activeCalls.set(key,{controller,done:result});return result;
+        let reference:AgentCallReference|undefined;
+        const exchange=new AgentCallExchange(async(phase,questionId,questions,answer)=>{
+          if(!reference)throw Error('子运行身份尚未登记');
+          await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,agentCallState:phase,questionId,...(questions?{questions}:{}),...(answer?{answer}:{})}});
+          return jsonToolResult(agentCallToolName,{status:'waiting',callId:id,questionId,questions,agentCall:reference,nextStep:'用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent'});
+        });
+        // 原循环关闭后先撤销活动占用，再交回父引擎，避免父收尾看到已结束的子调用。
+        const clearActive=()=>{signal.removeEventListener('abort',abort);this.reserved--;pending--;this.activeCalls.delete(key)};
+        const done=this.execute(context,depth,id,parsed.data,controller.signal,exchange,ref=>{reference=ref}).then(async result=>{
+          if(exchange.yielded&&reference)await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,agentCallState:result.isError?'failed':'completed',result,isError:result.isError===true}});
+          return result;
+        }).then(result=>{clearActive();exchange.finish(result);return result},error=>{clearActive();exchange.fail(error);throw error});
+        void done.catch(()=>{});
+        const result=exchange.wait();this.attempts.set(key,{input,result});this.replyHistory.set(key,exchange);this.activeCalls.set(key,{controller,done,exchange});return result;
       },
     }}};
   }
-  private async execute(context:AgentToolContext,depth:number,id:string,input:z.infer<typeof callInput>,signal:AbortSignal):Promise<ToolResult>{
+  private async execute(context:AgentToolContext,depth:number,id:string,input:z.infer<typeof callInput>,signal:AbortSignal,exchange:AgentCallExchange,onReference:(ref:AgentCallReference)=>void):Promise<ToolResult>{
     let prepared:Awaited<ReturnType<AgentSchedulerPorts['prepare']>>|undefined,reference:AgentCallReference|undefined;
     const ref=(taskId:string,runId:string):AgentCallReference=>({version:1,workspaceId:context.task.workspaceId,callerTaskId:context.task.taskId,callerRunId:context.runId,toolCallId:id,taskId,runId});
     try{
-      signal.throwIfAborted();prepared=await this.ports.prepare({...input,parent:{task:context.task,runId:context.runId,depth},signal,reference:ref});signal.throwIfAborted();
-      const summary=await prepared.loop.run(input.message,signal,async runId=>{reference=ref(prepared!.agent.conversation.taskId,runId);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,concurrent:this.reserved,maxConcurrent:this.limits.maxConcurrent}}})});
+      signal.throwIfAborted();prepared=await this.ports.prepare({...input,parent:{task:context.task,runId:context.runId,depth},signal,reference:ref,requestQuestion:(input,questionSignal)=>exchange.ask(input,AbortSignal.any([signal,questionSignal]))});signal.throwIfAborted();
+      const summary=await prepared.loop.run(input.message,signal,async runId=>{reference=ref(prepared!.agent.conversation.taskId,runId);onReference(reference);await context.emit({type:'tool.updated',data:{id,name:agentCallToolName,agentCall:reference,limits:{depth:depth+1,maxDepth:this.limits.maxDepth,concurrent:this.reserved,maxConcurrent:this.limits.maxConcurrent}}})});
       const output={agentCall:reference,status:summary.status,summary:this.message(summary),unresolvedTools:summary.unresolvedTools};
       return {...jsonToolResult(agentCallToolName,output),...(summary.status!=='completed'||summary.unresolvedTools.length?{isError:true}:{})};
     }catch(error){const failure=error as {code?:string;message?:string};return errorResult(failure.code??(signal.aborted?'AGENT_CALL_CANCELLED':'AGENT_CALL_FAILED'),failure.message??String(error),{started:!!reference,...(error instanceof AgentConstraintError?error.constraint:{}),...(reference?{agentCall:reference}: {})})}

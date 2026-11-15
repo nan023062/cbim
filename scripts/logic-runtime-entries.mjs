@@ -3,6 +3,7 @@ export const engineRoot='src/logic/execution/engines/';
 export const orchestrationRoots=[
   "src/logic/agents/loop.ts",
   "src/logic/agents/scheduler.ts",
+  "src/logic/agents/exchange.ts",
   "src/logic/agents/index.ts",
   "src/logic/execution/admission/",
   "src/logic/execution/assembly/",
@@ -24,6 +25,7 @@ export const runtimePublicEntries=new Set([
   "src/logic/agents/index.ts",
   "src/logic/agents/loop.ts",
   "src/logic/agents/scheduler.ts",
+  "src/logic/agents/exchange.ts",
   "src/logic/automation/runtime/scheduler.ts",
   "src/logic/budget/runtime/model-request-budget-service.ts",
   "src/logic/budget/runtime/scope-budget-service.ts",

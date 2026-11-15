@@ -9,7 +9,8 @@
         "unit": [
           "tests/agent-object.test.ts",
           "tests/agent-call-scheduler.test.ts",
-          "tests/agent-execution-loop.test.ts"
+          "tests/agent-execution-loop.test.ts",
+          "tests/agent-call-exchange.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -711,7 +712,9 @@
         "unit": [
           "tests/scope-usage-service.test.ts"
         ],
-        "contract": [],
+        "contract": [
+          "tests/agent-request-budget.test.ts"
+        ],
         "integration": []
       }
     },
@@ -924,7 +927,8 @@
           "tests/knowledge-tool-view.test.ts",
           "tests/markdown.test.ts",
           "tests/run-view.test.ts",
-          "tests/team-conversations.test.ts"
+          "tests/team-conversations.test.ts",
+          "tests/agent-call-view.test.ts"
         ],
         "contract": [
           "tests/inline-conversation.test.ts"

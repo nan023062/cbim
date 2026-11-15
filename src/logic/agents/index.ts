@@ -4,5 +4,5 @@
  */
 export {Agent,type AgentDefinition,type AgentConversation} from './agent';
 export {AgentExecutionLoop,type AgentLoopDriver} from './loop';
-export {AgentCallScheduler,agentCallToolName,agentListToolName,type AgentSchedulerPorts} from './scheduler';
+export {AgentCallScheduler,agentCallToolName,agentListToolName,agentReplyToolName,type AgentSchedulerPorts} from './scheduler';
 export type {AgentCallReference,AgentCallLimits,AgentToolContext,AgentToolsBinding,AgentLifecycle} from './contracts';

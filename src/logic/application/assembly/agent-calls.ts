@@ -1,7 +1,7 @@
 /**
  * 作用定位：把独立 Agent、循环与调度器装配到工作区真实引擎、准入和请求账本。
  * 设计原因：保持调度系统与 Application/SDK 单向依赖；根运行持工作区租约，后代只在独占工具交接中执行。
- * 支持边界：首片只允许与根相同冻结模型的已登记 Agent，确保共用原逐请求计费端口；不静默改投模型。
+ * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；求助只交给直接调用方。
  */
 import {randomUUID} from 'node:crypto';
 import {Agent,AgentExecutionLoop,AgentCallScheduler,type AgentToolContext} from '../../agents';
@@ -13,6 +13,7 @@ import type {WorkspaceMembers} from '../../team/service/workspace-members';
 import {workspaceMemberModelHash} from '../../team/rules/workspace-member-rules';
 import {workspaceMemberEngine} from '../../team/rules/workspace-member';
 import type {ResolvedLlm} from '../../models';
+import type {LlmProfiles} from '../../models/service';
 import type {TaskSpec,RunSummary} from '../../execution/rules/types';
 import type {RunStorage} from '../../execution/rules/storage';
 import type {WorkspaceAdmission} from './execution-admission';
@@ -23,6 +24,7 @@ import type {RequestBudgetPort} from '../../budget/rules/request-budget';
 export interface AgentCallAssemblyInput {
   workspace:Workspace;task:TaskSpec;options:WorkspaceLoopOptions;llm?:ResolvedLlm;storage:RunStorage;
   members?:WorkspaceMembers;admission?:WorkspaceAdmission;dispatch?:WorkspaceDispatchService;requestBudgets?:ModelRequestBudgetService;
+  models?:Pick<LlmProfiles,'withRuntimeConfiguration'>;
   authorizeNative:ExecutionServices['authorizeNative'];
 }
 /** 新运行专属装配，不读取最新 scope 推断归属；旧模型入口不会调用此函数。 */
@@ -45,7 +47,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
       const page=await members.list({workspaceId:workspace.entry.id,instanceId:workspace.instanceId,offset,...(cursor?{expectedRegistryCursor:cursor}:{})});cursor=page.registryCursor;
       for(const item of page.items){
         const detail=await members.get({workspaceId:workspace.entry.id,instanceId:workspace.instanceId,memberId:item.memberId}),policy=detail.member.runtimePolicy,model={engine:workspaceMemberEngine(policy)??'pi',profileId:policy.profileId,modelId:policy.modelId};
-        const reason=item.state!=='active'?'Agent 已暂停或退役':detail.currentDiff.capability.status!=='same'||detail.currentDiff.model.status!=='same'?'配置变化，需要先核实采纳':!llm||policy.configurationHash!==workspaceMemberModelHash(llm.profile)?'当前调用根与目标模型配置不同，尚不支持该递归调用':unsupportedBudget?'当前预算模式不能可靠计量子调用':undefined;
+        const reason=item.state!=='active'?'Agent 已暂停或退役':detail.currentDiff.capability.status!=='same'||detail.currentDiff.model.status!=='same'?'配置变化，需要先核实采纳':unsupportedBudget?'当前预算模式不能可靠计量子调用':undefined;
         items.push({id:item.memberId,name:item.name,model,available:!reason,...(reason?{reason}:{})});
       }
       if(page.nextOffset===undefined)break;offset=page.nextOffset;
@@ -61,7 +63,13 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(detail.member.state!=='active')fail('AGENT_UNAVAILABLE','目标 Agent 已暂停或退役');
     if(detail.currentDiff.capability.status!=='same'||detail.currentDiff.model.status!=='same')fail('AGENT_CONFIGURATION_CHANGED','目标 Agent 配置已变化，请先核实并采纳配置');
     const policy=detail.member.runtimePolicy;
-    if(!llm||policy.profileId!==llm.profile.id||policy.modelId!==llm.profile.model||(workspaceMemberEngine(policy)??'pi')!==(options.engine??llm.profile.engine??'pi')||policy.configurationHash!==workspaceMemberModelHash(llm.profile))fail('AGENT_MODEL_UNSUPPORTED','当前递归执行要求目标 Agent 与调用根使用相同冻结模型配置；未切换目标模型、未启动调用');
+    const engine=workspaceMemberEngine(policy)??'pi';
+    const childLlm=input.models?await input.models.withRuntimeConfiguration({profileId:policy.profileId,modelId:policy.modelId,engine},async captured=>{
+      if(workspaceMemberModelHash(captured.profile)!==policy.configurationHash)fail('AGENT_CONFIGURATION_CHANGED','目标模型配置已变化，未启动子运行');
+      await requestBudgets?.preflight(task.taskId,scopeId,{profile:captured.profile,apiKey:''});
+      request.signal.throwIfAborted();return captured.resolve();
+    }):llm;
+    if(!childLlm||childLlm.profile.id!==policy.profileId||childLlm.profile.model!==policy.modelId||workspaceMemberModelHash(childLlm.profile)!==policy.configurationHash)fail('AGENT_MODEL_UNAVAILABLE','目标模型不能按冻结配置解析，未替换为根模型');
     request.signal.throwIfAborted();
     const childTaskId=randomUUID(),definition=detail.member.adoption.configuration;
     const agent=new Agent({id:detail.member.memberId,name:detail.member.name,permission:rootAgent.definition.permission,model:{engine:workspaceMemberEngine(policy)??'pi',profileId:policy.profileId,modelId:policy.modelId},instructions:[definition.principles,detail.member.adaptation.instructions,...definition.effectiveSkills.map(skill=>skill.content)].filter(Boolean).join('\n\n')},{workspaceId:workspace.entry.id,taskId:childTaskId});
@@ -72,12 +80,19 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(permit.kind!=='granted'){const usage=admission.manager.snapshot();throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT','当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用',{current:usage.occupied.length,requested:1,limit:usage.policy.maxConcurrentRuns,unit:'process'})}
     try{
       const childTask:TaskSpec={...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
-      const child=await createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images:[],attachmentIds:[],requestQuestion:async()=>{fail('AGENT_QUESTION_UNSUPPORTED','当前引擎不能在此调用内向父 Agent 暂停提问；请将具体问题作为结果返回调用方，不直接询问用户')}},{
-        storage,agent,agentCall:request.reference,agentTools:context=>scheduler.bind(context,request.parent.depth+1),requestBudget:budget,
+      let childContext:AgentToolContext|undefined,childBudget:Promise<RequestBudgetPort|undefined>|undefined,childAlive=true;
+      const assertChild=()=>{workspace.assert();if(closed||!childAlive||request.signal.aborted)fail('AGENT_CALL_CANCELLED','原子调用已结束，不能发送新请求')};
+      const child=await createWorkspaceLoop(workspace.paths,workspace,{...options,engine,llm:childLlm,profileId:policy.profileId,model:policy.modelId,provider:'cbim-'+policy.profileId,process:undefined,images:[],attachmentIds:[],requestQuestion:async(args,signal)=>{
+        if(!childContext)fail('AGENT_CALL_NOT_STARTED','子调用尚未受理');
+        childContext.assertQuestionWait?.();return request.requestQuestion(args,signal);
+      }},{
+        storage,agent,agentCall:request.reference,agentTools:context=>{childContext=context;return scheduler.bind(context,request.parent.depth+1)},requestBudget:context=>{
+          assertChild();return childBudget??=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId!,kind:'main',agentRun:{taskId:childTaskId,runId:context.runId}},childLlm,assertChild)??Promise.resolve(undefined);
+        },
         acquireLease:async()=>{workspace.assert();if(closed||request.signal.aborted)fail('AGENT_CALL_CANCELLED','调用已停止');return ()=>{}},
         authorizeNative:input.authorizeNative,
       });
-      const loop=new AgentExecutionLoop(agent,{start:(message,signal,beforeRun)=>child.runtime.start(childTask,message,undefined,undefined,{signal,beforeRun:({runId})=>beforeRun(runId)}),stop:()=>child.runtime.stop(childTaskId),close:()=>child.runtime.close()});
+      const loop=new AgentExecutionLoop(agent,{start:(message,signal,beforeRun)=>child.runtime.start(childTask,message,undefined,undefined,{signal,beforeRun:({runId})=>beforeRun(runId)}),stop:()=>child.runtime.stop(childTaskId),close:async()=>{await child.runtime.close();childAlive=false}});
       return {agent,loop,release:permit.release};
     }catch(error){permit.release();throw error}
   }});

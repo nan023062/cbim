@@ -118,3 +118,7 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 `agentToolInstructions(root/called)` 面向已经装配真实 `cbim_agent_call` 的执行工厂：root 与用户交互，called 向直接调用方反馈；递归调用使用普通工具返回，深度／并发／预算错误不能被指令绕过。知识读写及 read/ask/execute 边界保持。该函数本身不授予能力，不能仅注入指令便声称端口已接通。
 
 旧周期恢复仍使用历史 `mainInstructions`／`collaborationInstructions`，在旧调度消费者退出前不删除其协议说明。新路径不得同时追加旧“结束主轮等待派发”指令；运行工厂拥有选择权，界面模式不决定执行权限。
+
+## 新递归协议的求助
+
+新 Agent 协议提示要求收到 waiting 后使用 cbim_agent_reply 答复原 callId/questionId，不用新建 Agent 调用替代续跑。执行 Agent 问直接调用方，可逐层向上转问；只有根向用户提问。该分支不改变以上旧协议历史恢复指令。

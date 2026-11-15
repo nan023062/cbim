@@ -4,6 +4,7 @@
  * 设计原因：计量遥测只在输入框状态区显示，不重复插入工具轨道；采用 Cindy 的工具生命周期展示方式，避免每个事件显示一份重复 JSON；
  * 动作名称与实时预览共用，原始结果与真实回执分别保留；仓库范围只取运行授权或回执。主命令核实按原运行/调用独立展示，不覆盖原失败或触发重试。
  * 失败提示：展示运行记录中的下一步；熔断说明使用真实 message，不渲染 undefined，不自动查询或重试。
+ * Agent 求助：中间工具回包不表示子执行完成；原调用的等待、续跑与终态以 agentCallState 为准。
  * 控制边界：仅消费运行投影和调用方提供的操作／详情插槽；详情只在展开后挂载，不查询或启动执行。
  */
 import {toolLabel} from './tool-labels';
@@ -25,8 +26,9 @@ function outputText(result:unknown):string{
 /** 单调用模式只筛选原日志，不混入其他调用或全局状态；展开不执行工具。 */
 export function ToolTimeline({run,renderControls,renderDetails,toolCallId}:{run:RunSummary;renderControls?:(call:{id:string;name:string;attention:boolean})=>ReactNode;renderDetails?:(toolCallId:string)=>ReactNode;toolCallId?:string}){
   const [opened,setOpened]=useState<Record<string,boolean>>({});
-  const calls=new Map<string,{name:string;state:string;input:unknown;result?:unknown;error?:boolean;finished?:boolean;scope?:unknown;receipt?:unknown;nextStep?:string;denied?:boolean;allowed?:boolean}>();
+  const calls=new Map<string,{name:string;state:string;agentState?:string;input:unknown;result?:unknown;error?:boolean;finished?:boolean;scope?:unknown;receipt?:unknown;nextStep?:string;denied?:boolean;allowed?:boolean}>();
   for(const e of run.events){if(!e.type.startsWith('tool.')||toolCallId!==undefined&&e.data.id!==toolCallId)continue;const id=String(e.data.id);const call=calls.get(id)||{name:String(e.data.name||'工具'),state:'',input:{}};
+    if(typeof e.data.agentCallState==='string')call.agentState=e.data.agentCallState;
     call.state=states[e.type]||e.type;if(e.data.input)call.input=e.data.input;
     if(e.type==='tool.allowed'||e.type==='tool.denied')call.scope=e.data.scope;
     if(e.data.receipt&&typeof e.data.receipt==='object'&&'scope' in e.data.receipt){call.receipt=e.data.receipt;call.scope=e.data.receipt.scope}
@@ -36,7 +38,8 @@ export function ToolTimeline({run,renderControls,renderDetails,toolCallId}:{run:
     if(e.type==='tool.denied')call.denied=true;
     if(['tool.allowed','tool.started','tool.updated'].includes(e.type))call.allowed=true;
     call.error=e.type==='tool.denied'||e.data.isError===true;
-    call.finished=e.type==='tool.finished';
+    call.finished=call.agentState?['completed','failed'].includes(call.agentState):e.type==='tool.finished';
+    if(call.agentState)call.state=({waiting:'等待调用方答复',running:'执行中',completed:'已完成',failed:'执行未完成'} as Record<string,string>)[call.agentState]??call.state;
     if(call.error&&e.type==='tool.finished')call.state='执行失败';calls.set(id,call);
   }
   return <div className="chat-activity">{[...calls].map(([id,c])=>{

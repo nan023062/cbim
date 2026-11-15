@@ -7,8 +7,8 @@ import type {EngineCapability} from '../execution/rules/engine-tools';
 export interface AgentCallReference {version:1;workspaceId:string;callerTaskId:string;callerRunId:string;toolCallId:string;taskId:string;runId:string}
 export interface AgentCallContext {task:TaskSpec;runId:string;depth:number}
 export interface AgentCallLimits {maxDepth:number;maxConcurrent:number}
-export interface AgentToolContext {task:TaskSpec;runId:string;assertExclusive(id:string):void;emit(event:EngineEvent):Promise<void>}
-export interface AgentToolsBinding {capability:EngineCapability;active():boolean;stop():Promise<void>}
+export interface AgentToolContext {task:TaskSpec;runId:string;assertExclusive(id:string):void;assertQuestionWait?():void;emit(event:EngineEvent):Promise<void>}
+export interface AgentToolsBinding {capability:EngineCapability;active():boolean;allowsWhileWaiting?(name:string):boolean;stop():Promise<void>}
 export interface AgentLifecycle {beforeRun(runId:string):Promise<void>;settled(summary?:RunSummary):Promise<void>;failed(error:unknown):Promise<void>}
 /** 可信准入失败的数值快照；只携带约束，不携带模型正文或凭据。 */
 export class AgentConstraintError extends Error {

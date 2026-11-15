@@ -82,3 +82,34 @@ describe('AgentCallScheduler',()=>{
     child.close.mockResolvedValue();await scheduler.close();expect(child.release).toHaveBeenCalledTimes(1);expect(prepare).toHaveBeenCalledTimes(1);
   });
 });
+it('pauses inside one child run, routes answers only from its caller and deduplicates repeated replies',async()=>{
+ const events:EngineEvent[]=[],answers:unknown[]=[];let child:ReturnType<typeof prepared>;
+ const prepare=vi.fn(async(input:Parameters<AgentSchedulerPorts['prepare']>[0])=>{
+   child=prepared('B',async()=>{answers.push(await input.requestQuestion({questions:[{question:'Which branch?',options:[{label:'A'},{label:'B'}]}]},input.signal));return summary('B')});return child;
+ });
+ const scheduler=new AgentCallScheduler({maxDepth:3,maxConcurrent:3},{prepare}),binding=scheduler.bind(context('A',events)),tools=binding.capability.tools,signal=new AbortController().signal;
+ const waiting=result(await tools.call('cbim_agent_call',{agentId:'B',message:'work'},signal,'original'));
+ expect(waiting).toMatchObject({status:'waiting',callId:'original',questionId:'1',agentCall:{taskId:'B',runId:'B-run'}});
+ expect(binding.active()).toBe(true);expect(child!.release).not.toHaveBeenCalled();
+ expect(binding.allowsWhileWaiting?.('write')).toBe(false);expect(binding.allowsWhileWaiting?.('cbim_ask_user_question')).toBe(true);
+ const reply={callId:'original',questionId:'1',result:{answers:[{question:'Which branch?',answer:'A'}]}};
+ expect(result(await scheduler.bind(context('foreign')).capability.tools.call('cbim_agent_reply',reply,signal,'reply')).error.code).toBe('AGENT_CALL_IDENTITY');
+ const bad=await tools.call('cbim_agent_reply',{...reply,result:{answers:[{question:'Other?',answer:'A'}]}},signal,'wrong');expect(bad).toMatchObject({isError:true});expect(answers).toEqual([]);
+ const done=await tools.call('cbim_agent_reply',reply,signal,'reply');
+ expect(result(done)).toMatchObject({status:'completed',agentCall:{taskId:'B',runId:'B-run',toolCallId:'original'}});
+ expect(await tools.call('cbim_agent_reply',reply,signal,'repeat')).toEqual(done);expect(prepare).toHaveBeenCalledTimes(1);expect(answers).toHaveLength(1);
+ expect(result(await tools.call('cbim_agent_reply',{...reply,result:{answers:[{question:'Which branch?',answer:'B'}]}},signal,'conflict')).error.code).toBe('AGENT_REPLY_CONFLICT');
+ expect(events.filter(e=>e.data.agentCallState).map(e=>e.data.agentCallState)).toEqual(['waiting','running','completed']);
+ expect(child!.release).toHaveBeenCalledTimes(1);
+});
+it('stopping a question aborts the original wait and rejects late replies without restarting the child',async()=>{
+ let child:ReturnType<typeof prepared>;
+ const prepare=vi.fn(async(input:Parameters<AgentSchedulerPorts['prepare']>[0])=>{
+   child=prepared('B',async()=>{await input.requestQuestion({questions:[{question:'Continue?',options:[{label:'Yes'},{label:'No'}]}]},new AbortController().signal);return summary('B')});return child;
+ });
+ const scheduler=new AgentCallScheduler({maxDepth:2,maxConcurrent:2},{prepare}),binding=scheduler.bind(context()),signal=new AbortController().signal;
+ const waiting=result(await binding.capability.tools.call('cbim_agent_call',{agentId:'B',message:'work'},signal,'call'));expect(waiting.status).toBe('waiting');
+ await binding.stop();
+ const late=await binding.capability.tools.call('cbim_agent_reply',{callId:'call',questionId:'1',result:{answers:[{question:'Continue?',answer:'Yes'}]}},signal,'late');
+ expect(late).toMatchObject({isError:true});expect(prepare).toHaveBeenCalledTimes(1);expect(child!.release).toHaveBeenCalledTimes(1);expect(binding.active()).toBe(false);
+});

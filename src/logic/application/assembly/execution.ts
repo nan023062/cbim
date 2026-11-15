@@ -67,7 +67,7 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     const authorizeNative:import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative']=async call=>{
       workspace.assert();const mapped=call.name==='find'?'Glob':call.name;const reason=guard({name:mapped,input:call.input},workspace.entry.path);return {allow:!reason,reason};
     };
-    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative}):undefined;
+    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
     ...agentCalls,

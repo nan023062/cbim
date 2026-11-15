@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks, assertUnsignedNotice} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const retryCheck={currentVersion:'0.1.15',enabled:true,phase:'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};
 it.each(['idle','available'])('observes the real automatic check retry from %s without treating it as ready',phase=>{
@@ -140,3 +140,6 @@ it.each(['candidate','online'])('accepts verified 0.1.19 source for 0.1.20 (%s)'
 it('does not invent an unpublished 0.1.19 resource prelude',()=>{
   expect(()=>acceptanceReadyTarget({currentVersion:'0.1.19',currentResourceVersion:1,phase:'ready',release:{delivery:'resources',version:'0.1.19',tag:'runtime-c0.1.19',resourceVersion:2}},'0.1.19','0.1.20')).toThrow();
 });
+
+it.each(['安装包未签名，发布者未验证','Windows 安装包未做代码签名，发布者未验证'])('accepts explicit unsigned disclosure: %s',text=>expect(()=>assertUnsignedNotice(text)).not.toThrow());
+it.each(['已签名','发布者已验证',''])('rejects absent unsigned disclosure: %s',text=>expect(()=>assertUnsignedNotice(text)).toThrow());

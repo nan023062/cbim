@@ -9,7 +9,7 @@ import {spawn, execFile, execFileSync} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks, assertUnsignedNotice} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {DesktopAcceptanceProcess, ownLaunchedDesktop} from './desktop-acceptance-process.mjs';
@@ -222,7 +222,7 @@ async function notes(page) {
   const snapshot = await status(page);
   if (snapshot.currentResourceVersion !== undefined) {
     assert.equal(snapshot.currentVersion, version); assert.equal(snapshot.currentResourceVersion, 1);
-    assert.match(snapshot.currentNotes, /未签名/);
+    assertUnsignedNotice(snapshot.currentNotes);
     const icon = page.getByRole('button', {name: '版本与更新', exact: true}); await icon.hover();
     const tooltip = page.getByRole('tooltip'); await tooltip.waitFor();
     assert.ok((await tooltip.innerText()).includes(`C ${version} · R 1`));
@@ -233,7 +233,7 @@ async function notes(page) {
   const title = await combined.count() ? '版本与更新' : '最近一次更新';
   await page.getByRole('menuitem', {name: title, exact: true}).click();
   const dialog = page.getByRole('dialog', {name: title, exact: true}); await dialog.waitFor();
-  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
+  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assertUnsignedNotice(await dialog.innerText());
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }
 // 新版先显示窗口再恢复工程；等待真实生命周期就绪，不用测试主动打开来掩盖恢复失败。

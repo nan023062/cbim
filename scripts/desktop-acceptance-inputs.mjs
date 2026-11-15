@@ -52,3 +52,6 @@ export function acceptanceRetentionChecks(previousVersion) {
   const patch=Number(previousVersion.split('.')[2]);
   return {installerCache:patch>=12,mainAgentAndAutomation:patch>=7};
 }
+
+// 文字只核对披露；安装器与 EXE 的实际 NotSigned 状态仍由 Windows 独立校验。
+export function assertUnsignedNotice(text){assert.match(text,/(?:未签名|未做代码签名)/)}

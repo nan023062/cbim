@@ -2978,3 +2978,13 @@ S7 review：从 AgentLifecycle → execution-manager → agent-calls → ScopeAc
 pnpm exec vitest run tests/member-help-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-help-migration.json：前三项通过；unknown-log 首次误期望可读 interrupted，但真实记录按设计拒绝读取。改为断言 RUN_LOG_INVALID 与原父工具错误后，pnpm exec vitest run tests/member-help-pi.test.ts -t unknown-log --reporter=default --reporter=json --outputFile=build/recursive-help-unknown.json 选中一项通过。合计四项通过，无永久 skip，未减掉原写不重放、租约、损坏证据限制。产品代码未修改，测试入口未变。
 
 后续源码核实：prepareAgentBusiness 当前只装配采集、验证、清单、代码检查；scope 隔离明确拒绝，controlled-files 的运行核验、报告与补偿仍依赖旧 DispatchState 的 run/task/member 事实。不能只替换测试工具名或放宽断言让六项受控文件集成转绿；必须迁移真实身份与恢复边界。此项仍是发布阻塞，不声明全部完成。
+
+
+## 2026-11-16 · #94 全局并发三项迁移
+
+global-admission-pi 改为父/子真实进程共用准入：两个工作区的父进程已启动时降为额度 1，不终止既有运行；新的主请求 CAPACITY_BUSY，子工具 AGENT_CONCURRENCY_LIMIT，未启动子引擎且没有延后派工票。增加额度不自动重试；只有用户明确新一轮输入才启动子调用，父+子恰计两个占用。覆盖正常完成、停止原子树、运行中重启后的无重放及两工作区文件隔离。旧 FIFO 单元/契约及 global-runtime 夹具保留原 provider；新增 recursiveAdmissionProvider 只用于新的集成语义，不重用旧派发身份。
+
+pnpm exec vitest run tests/global-admission-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-admission-migration.json：3/3 通过。前两组 7 项的 pnpm check:test-modules、pnpm typecheck 均通过。测试没有永久 skip 或分类降级；本步未改产品源码。实时完整 CI 43741771038 仍运行中，不把本机三个场景当成全量通过。
+
+
+同批 global-runtime-view-pi 也已迁移：同一实际 Application 的两个根及一个递归子运行均进入全局监管，3 个活动运行与真实准入一致；原 scope/任务身份、只读 cursor no-op、停止原树、重启后的历史恢复与日志字节不重写均验证。pnpm exec vitest run tests/global-runtime-view-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-runtime-view.json：1/1 通过。全局准入与监管共 4 项通过；不把子调用伪装成旧 dispatch 图任务。本批原 provider 保留仅供尚未迁移的历史夹具，不构成正式新运行入口。

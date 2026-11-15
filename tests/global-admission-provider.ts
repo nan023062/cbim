@@ -52,3 +52,43 @@ export async function globalAdmissionProvider(){
   const releaseAll=()=>{for(const project of Object.values(projects)){project.mainGate.release();project.memberGate.release()}};
   return {url:`http://127.0.0.1:${address.port}/v1`,projects,sequence,errors,bind:(key:AdmissionProject,agentId:string,moduleId:string,selection?:OwnerExecutionSelection)=>Object.assign(projects[key],{agentId,moduleId,ownerSelection:selection?structuredClone(selection):undefined}),releaseMain:(key:AdmissionProject)=>projects[key].mainGate.release(),releaseMember:(key:AdmissionProject)=>projects[key].memberGate.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }
+
+/** Recursive admission rejects at the tool boundary; parent processes continue consuming real capacity. */
+export async function recursiveAdmissionProvider(){
+ const keys:AdmissionProject[]=['a','b'],sequence:string[]=[],errors:string[]=[];
+ const projects=Object.fromEntries(keys.map(key=>[key,{main:[] as Request[],member:[] as Request[],memberId:'',mainGate:gate(),memberGate:gate(),freshTurns:0,initialTurns:0}])) as Record<AdmissionProject,{main:Request[];member:Request[];memberId:string;mainGate:ReturnType<typeof gate>;memberGate:ReturnType<typeof gate>;freshTurns:number;initialTurns:number}>;
+ const server=http.createServer(async(req,res)=>{
+  try{
+   let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request;
+   const key=keys.find(k=>globalAdmissionFixture.model(k)===body.model);assert.ok(key);
+   const project=projects[key],root=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review');
+   const requests=root?project.main:project.member;requests.push(body);sequence.push(key+':'+(root?'root':'child')+':'+requests.length);
+   const fresh=JSON.stringify(body.messages.filter(m=>m.role==='user').at(-1)?.content).includes('GLOBAL_RETRY');
+   const turn=root?(fresh?project.freshTurns++:project.initialTurns++):requests.length-1;
+   if(root&&!fresh&&turn===0)await project.mainGate.promise;
+   if(!root&&turn===0)await project.memberGate.promise;
+   if(res.destroyed)return;
+   res.writeHead(200,{'Content-Type':'text/event-stream'});
+   const emit=(delta:unknown,finish_reason:string|null)=>res.write('data: '+JSON.stringify({id:'admission-recursive',object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
+   const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]},null);emit({},'tool_calls')};
+   const reply=(text:string)=>{emit({role:'assistant',content:text},null);emit({},'stop')};
+   if(root){
+    const id=fresh?'fresh-call':'limited-call';
+    if(turn===0)tool(id,'cbim_agent_call',{agentId:project.memberId,message:globalAdmissionFixture.memberGoal(key)});
+    else{
+     const message=body.messages.filter(m=>m.role==='tool'&&m.tool_call_id===id).at(-1);assert.ok(message);
+     const value=JSON.parse(String(message.content));
+     if(fresh){assert.equal(value.status,'completed');assert.ok(value.summary.includes(globalAdmissionFixture.fact(key)));reply('Read '+globalAdmissionFixture.fact(key))}
+     else{assert.equal(value.error.code,'AGENT_CONCURRENCY_LIMIT');assert.equal(value.error.limit,1);assert.equal(value.error.started,false);reply('Capacity rejected. No child was started.')}
+    }
+   }else if(turn===0)tool('child-read','read',{path:globalAdmissionFixture.file});
+   else{assert.ok(JSON.stringify(body.messages).includes(globalAdmissionFixture.fact(key)));reply(globalAdmissionFixture.fact(key))}
+   res.end('data: [DONE]\n\n');
+  }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('fixture error')}
+ });
+ await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error('no port');
+ return {projects,sequence,errors,url:'http://127.0.0.1:'+address.port+'/v1',
+ bind:(key:AdmissionProject,_agent:string,_module:string,selection?:OwnerExecutionSelection)=>{assert.ok(selection);projects[key].memberId=selection.memberId},
+ releaseMain:(key:AdmissionProject)=>projects[key].mainGate.release(),releaseMember:(key:AdmissionProject)=>projects[key].memberGate.release(),
+ close:async()=>{for(const key of keys){projects[key].mainGate.release();projects[key].memberGate.release()}server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+}

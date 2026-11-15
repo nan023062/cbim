@@ -2,15 +2,15 @@
 
 <img src="branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
 
-面向 AI 原生团队的桌面工作空间。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
 [引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/logic/execution/engines/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
-界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
+界面采用工作区侧栏与主会话区：中间切换对话与办公室视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
 
-**CBIM 是面向单人或少数人使用的本地 AI Native 团队开发工具。** Agent 团队在具有业务架构、岗位责任和知识的工作区中分工协作，首要目标是贯通“目标 → 分工 → 开发 → 自动 review/验证 → 返工 → 交付 → 知识沉淀”。工作区网络先表达本地业务关系；当前不建设 Cindy 接入、联网协作或大型团队平台。
+**CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用。** 用户组织 Agent 在具有业务架构、岗位责任和知识的工作区中执行任务与交接；不建设独立账号、多人邀请、在线状态或协作服务。工程团队协作未来通过插件和连接器接入 P4、Git、飞书等工具，多端定位不代表已实现完整同步或远程能力。
 
 执行引擎由独立适配器接入；工具、MCP、连接器和插件属于能力或业务扩展。已有模型服务、反馈和更新可能使用网络，因此“本地优先”不等于已经支持完全离线运行。
 
@@ -20,9 +20,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.18](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.18)，当前资源为 **[C 0.1.18 / R2](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.18)**。引擎设置默认显示“全部引擎”，集中查看已安装引擎的版本、启停、运行占用、准备进度和异常；点击条目进入详情管理。对话/办公室单按钮切换、精简团队与业务树、源文件浏览器继续保留。
+Windows x64 当前公开桌面版为 [desktop-v0.1.19](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.19)，内置资源为 **[C 0.1.19 / R1](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.19)**。统一图标、状态、表单、帮助提示和明暗主题，改善窄窗口与减少动效体验；页面按需加载，保留未保存输入提示、独立频道草稿及 Agent 工作记录。
 
-本次只发布约 4.06 MB 的资源更新，0.1.18 基础安装器及 Pi、Claude Code、Codex、Memory 四个引擎包保持不变；已有安装、停用状态与共享缓存继续保留，详情见 [R2 发布验收](design/verification/runtime-c0.1.18-r2-20261115.md)。客户端后台准备更新，用户明确点击侧栏图标后才短重启应用，普通退出不应用；更早版本先按原通道升级基础程序，历史结果见 [0.1.18 安装升级记录](design/verification/desktop-release-0.1.18-20261115.md)。Windows 基础安装包未签名，资源与引擎索引继续由原 Ed25519 身份签名；首次使用未安装引擎需要联网。Memory 的真实生成/向量双模型另验。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 

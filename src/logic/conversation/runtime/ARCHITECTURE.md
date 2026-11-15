@@ -213,7 +213,7 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
 
-直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../models/index.ts](../../models/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)。
+直接依赖：[message-queue.ts](message-queue.ts)、[approvals.ts](approvals.ts)、[questions.ts](questions.ts)、[main-agent.ts](main-agent.ts)、[../../models/index.ts](../../models/index.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/ports/identity.ts](../../execution/ports/identity.ts)、[../../execution/rules/storage.ts](../../execution/rules/storage.ts)、[../../execution/rules/index.ts](../../execution/rules/index.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/input-source.ts](../../execution/rules/input-source.ts)、[../../execution/assembly/loop-engine.ts](../../execution/assembly/loop-engine.ts)、[../../execution/context/team-workflow.ts](../../execution/context/team-workflow.ts)、[../../knowledge/rules/read-models/index.ts](../../knowledge/rules/read-models/index.ts)、[../../tasks/rules/topic-interruption.ts](../../tasks/rules/topic-interruption.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-continuation.ts](../../tasks/rules/scope-continuation.ts)、[../../tasks/rules/scope-active-input.ts](../../tasks/rules/scope-active-input.ts)、[../../tasks/rules/scope-active-input-rules.ts](../../tasks/rules/scope-active-input-rules.ts)、[../../tasks/rules/scope-goal.ts](../../tasks/rules/scope-goal.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../../tasks/rules/scope-continuation-attachments.ts](../../tasks/rules/scope-continuation-attachments.ts)、[../../tasks/rules/scope-recovery.ts](../../tasks/rules/scope-recovery.ts)、[../../tasks/rules/fresh-context.ts](../../tasks/rules/fresh-context.ts)、[../../execution/admission/admission-wait.ts](../../execution/admission/admission-wait.ts)、[../../agents/loop.ts](../../agents/loop.ts)、[../../tasks/rules/scope-replan.ts](../../tasks/rules/scope-replan.ts)、[../../tasks/rules/human-continue.ts](../../tasks/rules/human-continue.ts)。
 
 ### main-agent.ts
 
@@ -221,6 +221,7 @@ N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversati
 classDiagram
 class N_src_logic_conversation_runtime_main_agent_ts["main-agent.ts"] {
   <<module>>
+  +agentToolInstructions()
   +collaborationInstructions()
   +mainInstructions()
 }
@@ -459,3 +460,10 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。
 
 主 Agent 指引明确按 `cbim_office_history` 追溯本办公室原话题与内容、分块版本和 followupOf；当前运行窗口可压缩，但完整 canonical 保留。历史资料与旧验收不是本轮新授权，子 Agent 仍只得到当前话题的冻结上下文。
+### 统一 Agent 工具路径与旧运行兼容
+
+`WorkspaceExecutionManager` 只从新用户请求与已核实 `run.started.executionModel` 选择工厂的可信 `ExecutionLaunchContext.executionModel`；公开运行选项不提供该字段。真实装配返回 `unifiedAgentTools` 时，启动、失败与结算仅交给独立 `agentLifecycle`，不再通知旧 AutoCollaboration 推进同一运行。旧日志、系统回注、恢复与内部正式启动协议维持原协调路径，不能在恢复时暗中替换状态所有者。
+
+`agentToolInstructions(root/called)` 面向已经装配真实 `cbim_agent_call` 的执行工厂：root 与用户交互，called 向直接调用方反馈；递归调用使用普通工具返回，深度／并发／预算错误不能被指令绕过。知识读写及 read/ask/execute 边界保持。该函数本身不授予能力，不能仅注入指令便声称端口已接通。
+
+旧周期恢复仍使用历史 `mainInstructions`／`collaborationInstructions`，在旧调度消费者退出前不删除其协议说明。新路径不得同时追加旧“结束主轮等待派发”指令；运行工厂拥有选择权，界面模式不决定执行权限。

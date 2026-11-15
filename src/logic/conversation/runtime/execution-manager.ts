@@ -40,6 +40,7 @@ import {assertContinuationAttachmentManifest,type ContinuationAttachmentManifest
 import {recoveryRequestSchema,recoveryRequestSource,type RecoveryRequest,type RecoveryLookup,type RecoveryReceipt} from '../../tasks/rules/scope-recovery';
 import type {FreshContext} from '../../tasks/rules/fresh-context';
 import type {ExecutionAdmissionWait,ExecutionLaunchContext} from '../../execution/admission/admission-wait';
+import {AgentExecutionLoop} from '../../agents/loop';
 import {replanRequestSchema,type ReplanRequest,type ReplanLookup,type ReplanReceipt} from '../../tasks/rules/scope-replan';
 import {humanContinuationRequestSchema,type HumanContinuationRequest,type HumanContinuationLookup,type HumanContinuationReceipt} from '../../tasks/rules/human-continue';
 
@@ -308,13 +309,27 @@ export class WorkspaceExecutionManager {
       }
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','附件准备期间已收到停止请求');
-      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
+      // 新用户对话使用统一调用系统；旧日志与正式旧协议接续保持原所有者，不在恢复时偷偷迁移。
+      const previousModel=resume?(await this.inspect(task.taskId,resume.runId)).events[0]?.data.executionModel:undefined;
+      const executionModel=!source&&!fresh&&!startup&&(!resume||previousModel==='agent-tools-v1')?'agent-tools-v1':'legacy';
+      loop=await this.factory({...options,allowNativeExecution:options.permission?options.permission!=='read':options.allowNativeExecution,mode:task.mode,requestQuestion:(args,signal)=>this.questions.ask(task.taskId,args,signal),requestApproval:call=>this.approvalQueue.request(task.taskId,call),onEvent:event=>{for(const listener of this.listeners)try{listener(event)}catch{/* observers are not transactions */}}},structuredClone(task),{executionModel,requestId:source?.kind==='member-results'||source?.kind==='goal-repair'?source.continuationId:randomUUID(),scopeId:admissionWait?.scopeId??human?.scopeId??continuation?.scopeId??recovery?.commandId??replan?.commandId,wait:admissionWait,signal:controller.signal,...(preparedInput?{preparedInputImages:preparedInput.images}:{})});
+      if(loop.unifiedAgentTools&&(executionModel!=='agent-tools-v1'||!loop.agentLifecycle))fail('AGENT_LIFECYCLE_UNAVAILABLE','统一 Agent 调用缺少可信生命周期，未开始执行');
       controller.signal.throwIfAborted();
       if((this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
       if(((source?.kind==='member-results'||source?.kind==='goal-repair')||automaticQueue)&&this.resultContinuationStopped.has(task.taskId))fail('COLLABORATION_STOPPED','本会话已停止自动协作，请显式继续对话');
       if(automaticQueue&&this.queueAdvanceStopped.has(task.taskId))fail('QUEUE_INSERT_UNKNOWN','旧队列插入或保存结果未确认，请先核实原运行记录，勿自动重发');
       if(!source&&!automaticQueue&&!fresh)this.resultContinuationStopped.delete(task.taskId);
       if(this.closing||(this.stopVersions.get(task.taskId)??0)!==stopVersion)fail('COLLABORATION_STOPPED','启动期间已收到停止请求');
+      const startOrdinary=(beforeRun:(context:{runId:string})=>Promise<void>)=>{
+        const prepared=loop!;
+        if(!prepared.unifiedAgentTools)return prepared.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun});
+        if(!prepared.agent)fail('AGENT_OBJECT_UNAVAILABLE','统一执行缺少已冻结 Agent 对象');
+        const executionLoop=new AgentExecutionLoop(prepared.agent,{
+          start:(input,signal,notify)=>prepared.runtime.start(task,input,resume,source,{signal,beforeRun:({runId})=>notify(runId)}),
+          stop:()=>prepared.runtime.stop(task.taskId),close:()=>prepared.runtime.close(),
+        });
+        return executionLoop.start(message,controller.signal,runId=>beforeRun({runId}));
+      };
       const run=fresh?await loop.runtime.startFreshMain(task,message,{signal:controller.signal,knownRunIds:()=>this.collaboration?.recoveryRunIds?.(task.taskId)??Promise.resolve([]),beforeRun:async context=>{
         controller.signal.throwIfAborted();
         releaseBudget=this.collaboration?.holdMain?.(context.runId);
@@ -329,7 +344,13 @@ export class WorkspaceExecutionManager {
         controller.signal.throwIfAborted();
         await (await this.queue()).pause(task.taskId,recovery?'已创建只读核实周期；原排队消息保留暂停，核实结束后可明确继续':'已创建新的业务目标；原排队消息保留暂停，目标结束后可明确继续');
         controller.signal.throwIfAborted();this.resultContinuationStopped.delete(task.taskId);
-      }}):await loop.runtime.start(task,message,resume,source,{signal:controller.signal,beforeRun:async({runId}:{runId:string})=>{
+      }}):await startOrdinary(async({runId}:{runId:string})=>{
+        if(loop!.unifiedAgentTools){
+          controller.signal.throwIfAborted();
+          await loop!.agentLifecycle!.beforeRun(runId);
+          controller.signal.throwIfAborted();
+          return;
+        }
         // Runtime 已取得全局及工作区租约；此刻才打开普通目标，容量拒绝不会留下假的失败周期。
         controller.signal.throwIfAborted();
         releaseBudget=this.collaboration?.holdMain?.(runId);
@@ -349,7 +370,7 @@ export class WorkspaceExecutionManager {
         controller.signal.throwIfAborted();
         this.resultContinuationStopped.delete(task.taskId);
         }
-      }});
+      });
       const active:{runId:string;isMain:boolean;loop:typeof loop;settled?:Promise<void>}={runId:run.runId,isMain:task.mode==='chat'&&task.agentId===mainAgentId,loop};
       this.active.set(task.taskId,active);
       const runningLoop=loop;
@@ -359,12 +380,21 @@ export class WorkspaceExecutionManager {
         releaseBudget?.();releaseBudget=undefined;
         if(this.active.get(task.taskId)?.runId===run.runId)this.active.delete(task.taskId);
         if(!this.closing)await this.serial(async()=>{
-          try{this.collaboration?.settled(structuredClone(task),structuredClone(options),summary)}catch{await (await this.queue()).pause(task.taskId,'协作结算未能确认，请核实后继续');return}
+          try{
+            if(runningLoop.unifiedAgentTools)await runningLoop.agentLifecycle!.settled(summary);
+            else this.collaboration?.settled(structuredClone(task),structuredClone(options),summary);
+          }catch{await (await this.queue()).pause(task.taskId,'执行结算未能确认，请核实后继续');return}
           if(summary?.status==='completed')await this.pump(task.taskId);else if(!this.topicInterruptions.has(task.taskId))await (await this.queue()).pause(task.taskId,'上一轮已停止或失败，请确认后继续队列');
         });
       }).catch(()=>{});
       return {workspaceId:task.workspaceId,taskId:task.taskId,runId:run.runId};
-    }catch(error){try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}const code=(error as {code?:string})?.code;if(((!continuation&&!human&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);throw error}
+    }catch(error){
+      try{await loop?.runtime.close()}finally{releaseBudget?.();releaseBudget=undefined}
+      const code=(error as {code?:string})?.code;
+      if(loop?.unifiedAgentTools)await loop.agentLifecycle?.failed(error);
+      else if(((!continuation&&!human&&!fresh)||accepted)&&(accepted||preparingScope||code!=='CAPACITY_WAITING'&&code!=='CAPACITY_BUSY'))await this.collaboration?.startFailed?.(task,source,error);
+      throw error;
+    }
     finally{startup?.signal.removeEventListener('abort',cancelStartup);if(this.pendingLaunches.get(task.taskId)===controller)this.pendingLaunches.delete(task.taskId)}
   }
   /** 用户明确提交一个新只读核实目标；旧源记录不恢复，观察只是用户陈述，稳定请求先查已提交事实。 */

@@ -293,7 +293,7 @@ class N_src_bridge_contracts_execution_ts_PublicValidationResult["PublicValidati
 N_src_bridge_contracts_execution_ts ..> N_src_bridge_contracts_execution_ts_PublicValidationResult : 声明
 ```
 
-直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)、[../../logic/tools/rules/input-validation.ts](../../logic/tools/rules/input-validation.ts)、[../../logic/tools/rules/scope-schema.ts](../../logic/tools/rules/scope-schema.ts)、[../../logic/evidence/rules/validation.ts](../../logic/evidence/rules/validation.ts)。
+直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/agents/contracts.ts](../../logic/agents/contracts.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)、[../../logic/tools/rules/input-validation.ts](../../logic/tools/rules/input-validation.ts)、[../../logic/tools/rules/scope-schema.ts](../../logic/tools/rules/scope-schema.ts)、[../../logic/evidence/rules/validation.ts](../../logic/evidence/rules/validation.ts)。
 
 ### github-feedback.ts
 
@@ -1684,3 +1684,6 @@ execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的
 公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。
 
 loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 scope 覆盖参数，真实新 scope 仍由持久队列身份创建。
+### Agent 工具记录引用
+
+`execution.ts` 公开 Logic 的 `AgentCallReference` 类型，保存工作区、调用者运行、工具调用与被调用运行的明确关联。它只是公开日志定位，不是执行许可；界面展开须核对父工具身份和子运行记录，查询失败不能调用执行入口重试。

@@ -11,8 +11,8 @@
 | [文档 1：通用项目架构设计规范与原则](project-architecture-standard.md) | 设计与开发的强制约束：十二条原则、依赖、契约及维护交付 |
 | [文档 2：架构治理规范与治理流程](architecture-governance-process.md) | 治理的标准流程、分级、迁移与验收；附 CBIM G01–G09 方案基线，不维护实时进度 |
 | [四份概念设计](../README.md#设计文档) | `docs/` 仅保留 01–04，说明理念与目标流程 |
-| [本地 AI 团队开发：核心模型与运行规则](team-workspace-network.md) | 面向单人/少数人的自动开发闭环及完成判据；当前不建设 Cindy 接入、联网协作或大型团队能力；目标不等于已实现 |
-| [CBIM UX 与风格系统提案](cbim-ux-system-proposal.md) · [可切换界面原型](cbim-ux-prototype.html) | 目标、办公室、话题、团队责任与交付证据的体验设计；自包含原型仅使用示例数据，不代表产品已经实现 |
+| [Agent 与 Team 产品模型](team-workspace-network.md) · [产品需求](agent-tool-product-requirements.md) · [UX 设计](agent-tool-ux-design.md) · [工程交接](agent-tool-engineering.md) | 统一 Agent 对话、递归工具调用与调用内限额；取代旧频道中心和团队聊天模式；目标不等于已实现 |
+| [CBIM UX 与风格系统提案](cbim-ux-system-proposal.md) · [可切换界面原型](cbim-ux-prototype.html) | 连续对话、普通工具与递归 Agent 调用的体验设计；自包含原型仅使用示例数据，不代表产品已经实现 |
 | [全界面 UX 与统一设计语言](cbim-complete-ux-design.md) · [42 页评审原型](cbim-complete-ux-prototype.html) | 补齐 34 个原有操作面的逐页布局、动作、恢复与窄屏设计；共用规范及 7 个新增提案单列，默认优先展示原有界面 |
 | [图标、动效与提示系统](cbim-icon-motion-system.md) · [图标目录](cbim-ux-prototype.html#icons) | CBIM Outline 母版、状态与操作映射、动效和 Tooltip 规范，含可导出的 SVG sprite |
 | [源码整体架构](../src/ARCHITECTURE.md) | 当前模块边界、依赖与数据流，须结合实际源码核实 |
@@ -49,6 +49,8 @@
 旧 roadmap 占位、R01–R20 剩余交付清单和 Cindy 岗位开发管线方案已退出维护；开发入口统一使用上方项目 Skill 和 Issues。历史记录需要这些原文时链接到固定 Git 提交，不再保留一套过期的本地接续指令。2026-11-15 清理前原文可用 `git show 14bf63f0a3b1adf90d5293f9df70f81a7f2535f4:<原仓库相对路径>` 查阅；更早清理的文档仍按其记录中的提交定位。
 
 ## 资料维护边界
+
+Agent／Team 的新旧设计边界见 [设计替换范围](agent-tool-design-replacement.md)：当前需求和 UX 已切换到统一工具调用模型；历史证据保留当时事实，真实运行规范随对应源码迁移同步更新。
 
 - 产品运行规范、Schema 及被实际代码读取的文档继续保留；不能因文件较旧或链接少而删除。
 - 关联方案保留设计理由和支持边界；带 Step／日期的实施记录不作为当前行为说明，现状以 `src/` 契约及实际代码为准。

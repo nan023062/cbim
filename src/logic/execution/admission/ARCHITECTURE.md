@@ -34,6 +34,7 @@ N_src_logic_execution_admission_admission_wait_ts ..> N_src_logic_execution_admi
 class N_src_logic_execution_admission_admission_wait_ts_ExecutionLaunchContext["ExecutionLaunchContext"] {
   <<interface>>
   +requestId
+  +executionModel
   +scopeId
   +wait
   +signal
@@ -164,3 +165,11 @@ N_src_logic_execution_admission_workspace_lease_ts ..> N_src_logic_execution_adm
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### Agent 执行模型的可信选择
+
+`ExecutionLaunchContext.executionModel` 仅供管理器与产品工厂传递已核实的新调用／旧恢复选择，不进入可序列化聊天选项。旧调用缺省保持原行为；实际启用新调度由工厂装配确认，模式标记本身不授予能力或并发额度。

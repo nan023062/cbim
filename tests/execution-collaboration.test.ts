@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import {Agent} from '../src/logic/agents/agent';
 import type {ExecutionCollaboration} from '../src/logic/conversation/runtime/execution-manager';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../src/logic/execution/rules/types';
@@ -14,6 +15,35 @@ import type {ExecutionLaunchContext,ExecutionAdmissionWait} from '../src/logic/e
 import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
 
 const options={provider:'test',model:'model-one',permission:'ask' as const,allowNativeExecution:true};
+
+test('统一 Agent 根运行只使用独立生命周期，不触发旧协调器',async()=>{
+  const f=await fixture();
+  const lifecycle={beforeRun:vi.fn(async()=>{}),settled:vi.fn(async()=>{}),failed:vi.fn(async()=>{})};
+  const original=f.factory.getMockImplementation()!;
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  try{
+    const run=await f.manager.chat('通过统一工具执行',options);
+    expect(f.factory.mock.calls[0][2].executionModel).toBe('agent-tools-v1');
+    expect(lifecycle.beforeRun).toHaveBeenCalledWith(run.runId);
+    expect(f.starting).not.toHaveBeenCalled();
+    f.runs[0].finish('completed');
+    await vi.waitFor(()=>expect(lifecycle.settled).toHaveBeenCalledWith(expect.objectContaining({runId:run.runId,status:'completed'})));
+    expect(f.settled).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
+  }finally{await f.cleanup()}
+});
+
+test('统一 Agent 受理失败归原生命周期，不能调用旧失败清理',async()=>{
+  const f=await fixture();const refusal=new Error('budget denied');
+  const lifecycle={beforeRun:vi.fn(async()=>{throw refusal}),settled:vi.fn(async()=>{}),failed:vi.fn(async()=>{})};
+  const original=f.factory.getMockImplementation()!;
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  try{
+    await expect(f.manager.chat('拒绝前不得派发',options)).rejects.toThrow('budget denied');
+    expect(lifecycle.failed).toHaveBeenCalledWith(refusal);
+    expect(f.starting).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
+    expect(f.runs[0].message).toBeUndefined();
+  }finally{await f.cleanup()}
+});
 const source=(continuationId='continuation-one',messageIds=['result-one'],taskIds=['member-task-one']):RunInputSource=>({kind:'member-results',continuationId,messageIds,taskIds});
 
 function occupied(admission:GlobalRunAdmission){

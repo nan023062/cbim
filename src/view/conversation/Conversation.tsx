@@ -1,14 +1,14 @@
 /**
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
- * 主对话按持久归属分话题展示文字与工具，成员状态关联原派发；主列表只展示摘要，完成及撤销归入折叠历史，打开话题不改变执行。
- * 新对话默认 Auto，旧无模式偏好的历史对话保持 Team；当前目标期间禁用模式切换，下一目标仍可在同一对话改选。
+ * 主对话连续展示全部真实消息和工具调用；旧话题归属仅用于兼容恢复，不再作为正文导航门槛。
+ * Agent/Team 不再是聊天模式；旧协作选项不从输入框修改，新发送使用统一的自动执行入口。
  * 历史菜单与侧栏共用本机条目和运行观察，改名／移除由外壳负责，不改原任务目标或日志。
  * 文件补偿：向成员详情传递当前工作区实例，历史运行身份不替代新操作的当前实例校验。
  * 作用定位：会话固定页签入口（对话/本会话任务/当前工作区自动化），默认主 Agent 普通对话、启动与继续大脑、展示流式 Markdown 正文和按生命周期合并的工具证据，移植 Cindy 输入组件并适配上下文附件、权限审批及本次运行全部通过、结构化选项提问、持久化消息队列及任务用时、生成速度、价值和上下文计量。
  * 设计原因：主运行、开放周期和准入等待分开。配额不足保留首轮草稿，已受理协作使用只读票据提示；无实际占用时停止工作动画和等待期间计时。目标补充、核实与业务重规划仍使用各自可靠意图，不因容量等待重放旧任务。 人工决定草稿和未知请求在两处目标卡共享，记录与任务恢复分离。 人工决定接续与文本补充分开，共享意图但不共享自动启动权。
- * 导航边界：子会话只切换成员记录，发送仍持有所属主 taskId；成员登记向外壳发布只读投影，不以执行实例创建额外会话。全局运行页与目标审阅仍定位原节点。
+ * 导航边界：旧子会话只读展示成员记录，不显示用户输入框；返回主 Agent 后恢复原草稿。全局运行页与目标审阅仍定位原节点。
  * 异常边界：unknown 不凭勾选调用标识续接旧 native；显式影响核实和新周期共用真实主会话上下文。
- * 输入边界：普通发送只创建新话题或排队，不因当前阅读成员/历史或持久等待而补充旧话题；队列受理后才清草稿。
+ * 输入边界：当前等待的补充通过可靠原请求转交；进行中消息仍使用后端已支持队列，受理后才清草稿。
  * 资料边界：切到其他会话时本组件可能只被隐藏；必须把 active 传给补充控制器，撤销未完成的资料导入并隔离迟到回包。
  * Skill 入口：加号菜单发送只需一句描述、补充自愿的独立引导请求，沿用当前模型、权限和排队规则；不发送或清空已有草稿与附件。
  * 输入边界：草稿仍即时上交外壳；历史轮次按运行、恢复上下文及实际计时变化更新，键入不重复解析未变正文。
@@ -17,7 +17,7 @@
  * IPC 边界：发送前冻结原任务和运行，审批绑定审批自身任务；动态队列输入逐操作核实。
  * 中断恢复：空闲会话缺少原生文件或执行事实待核实时，在输入区解释阻断并导航恢复选项，保留旧草稿和附件。
  * 模型切换沿供应商兼容接口解析；同一型号可跨引擎保留选择，限制型号的接口不会放行目录中其他模型。
- * 补充只从话题明确入口提交；未知补充回执沿原控制器查询，不由普通输入自动重发。
+ * 补充沿唯一控制器保存身份与回执；未知提交仍只查询原请求，不由普通输入自动重发。
  */
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -29,8 +29,6 @@ import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
 import {ConversationTurn} from './ConversationTurn';
 import {TopicInterruptionForm} from './TopicInterruptionForm';
-import {ConversationTopics} from './ConversationTopics';
-import {conversationTopics} from './conversation-topics';
 import {MemberConversation} from './MemberConversation';
 import {teamConversations,teamConversationKey,type TeamConversation} from '../execution-view/team-conversations';
 import {AutomationView} from '../automation/AutomationView';
@@ -76,8 +74,6 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const admission=useAdmission(active),admissionState=sessionAdmission(admission.error?undefined:admission.data,workspace.id,tab.taskId);
   const [selectedTaskId,setSelectedTaskId]=useState<string>();
   const [selectedTopicId,setSelectedTopicId]=useState<string>();
-  // 只有历史话题按钮可设置关联；普通浏览和 Skill 调用不借用此目标。
-  const [followupOf,setFollowupOf]=useState<string>();
   const [navigationError,setNavigationError]=useState('');
   const handledNavigation=useRef<number|undefined>(undefined);
   function consumeNavigation(){if(navigation){handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId)}}
@@ -101,7 +97,6 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     handledNavigation.current=navigation.requestId;onNavigationHandled?.(navigation.requestId);
   },[active,navigation,workspace.id,workspace.instanceId,tab.taskId,graph.loading,graph.error,graph.graph,graph.scopes,graph.selectScope,onNavigationHandled]);
   const [models,setModels]=useState<LlmSettings>(),[runs,setRuns]=useState<RunSummary[]>([]),[history,setHistory]=useState<HistoryItem[]>([]);
-  const topics=useMemo(()=>conversationTopics({workspaceId:workspace.id,rootSessionId:tab.taskId??''},graph.scopes,runs,graph.graph),[workspace.id,tab.taskId,graph.scopes,runs,graph.graph]);
   const members=useMemo(()=>teamConversations(graph.teamSessions,graph.graph),[graph.teamSessions,graph.graph]);
   const member=members.find(value=>value.session.sessionId===selectedChild);
   useEffect(()=>{onTeamConversations?.(teamConversationKey(workspace.id,workspace.instanceId,tab.taskId),members)},[workspace.id,workspace.instanceId,tab.taskId,members,onTeamConversations]);
@@ -119,9 +114,8 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const [pendingEngine,setPendingEngine]=useState<LoopEngine>();
   const selectedRuntime=mainAgent.value?.selection;
   const selection=selectedRuntime?JSON.stringify([selectedRuntime.profileId,selectedRuntime.modelId]):'';
-  // 模式只用于新目标，进行中与持久等待冻结原模式，避免给已派发任务换规则。
-  const [collaborationMode,setCollaborationMode]=useState<'auto'|'team'>(()=>readPreference().collaborationMode==='auto'?'auto':readPreference().collaborationMode==='team'||tab.taskId?'team':'auto');
-  useEffect(()=>{try{localStorage.setItem(preferenceKey,JSON.stringify({permission,collaborationMode}))}catch{}},[preferenceKey,permission,collaborationMode]);
+  // 只保存输入区真实权限偏好；旧模式偏好不再决定新会话行为。
+  useEffect(()=>{try{localStorage.setItem(preferenceKey,JSON.stringify({permission}))}catch{}},[preferenceKey,permission]);
   const [attachmentBusy,setAttachmentBusy]=useState(false),[dragActive,setDragActive]=useState(false);
   const dragDepth=useRef(0),importing=useRef(false);
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[pollError,setPollError]=useState(''),[loaded,setLoaded]=useState(false);
@@ -160,6 +154,8 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const stopping=!!tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId});
   // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
   const currentRun=threadResumeRun(runs,resumeRunId),latest=currentRun??runs.at(-1),{mainRunning,executing,taskOpen,waiting,canContinueQueue,shouldQueue}=conversationExecutionState(currentRun,graph.openScope,queued.length);
+  // 主输入始终补充当前等待，而不是用户此前浏览的历史周期；选择仅供兼容控制器读取准确版本。
+  useEffect(()=>{if(!selectedChild&&section==='chat'&&graph.waitingScope&&graph.selectedScopeId!==graph.waitingScope.scopeId)selectTopic(graph.waitingScope.scopeId)},[selectedChild,section,graph.waitingScope?.scopeId,graph.selectedScopeId,selectTopic]);
   useEffect(()=>{if(!executing||admissionState.waitingOnly)return;const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[executing,admissionState.waitingOnly]);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
   useEffect(()=>{if(!active)return;let cancelled=false;void api.call('models.list').then(x=>{if(!cancelled)setModels(x)}).catch((e:Error)=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[workspace.id,active,mainAgent.value?.revision]);
@@ -194,15 +190,19 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
-      const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode};
-      if(tab.taskId&&!shouldQueue&&(!followupOf||!!skill)&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
+      const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode:'auto' as const};
+      if(waiting&&!skill){
+        await continuation.submitInput(message,sentAttachments);
+        onDraft('');onAttachments([]);return;
+      }
+      if(tab.taskId&&!shouldQueue&&!resumeRunId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       // 即使离开页面，旧回调也只更新原工作区页签；历史可找回已启动任务。
-      const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([]);setFollowupOf(undefined)}};
+      const accepted=(result:{taskId:string})=>{onBind(result.taskId);if(!skill){onDraft('');onAttachments([])}};
       const taskId=tab.taskId,runId=resumeRunId;
-      const queued=!!taskId&&(shouldQueue||!skill&&!!followupOf);
+      const queued=!!taskId&&shouldQueue;
       if(taskId&&!queued&&!runId)throw Error('当前执行记录不可安全续接，请先核实任务记录。');
       let result:{taskId:string};
-      if(taskId&&(shouldQueue||!skill&&followupOf)){result=await api.call('loop.enqueue',{id:workspace.id,taskId,...(!skill&&followupOf?{followupOf}:{}),message,attachments:sentAttachments.map(a=>a.id),options});accepted(result)}
+      if(taskId&&shouldQueue){result=await api.call('loop.enqueue',{id:workspace.id,taskId,message,attachments:sentAttachments.map(a=>a.id),options});accepted(result)}
       else if(taskId&&runId)result=await api.call('loop.resume',{id:workspace.id,taskId,runId,message,attachments:sentAttachments.map(a=>a.id),options});
       else result=await api.call('loop.chat',{id:workspace.id,message,attachments:sentAttachments.map(a=>a.id),options});
       if(!queued)accepted(result);
@@ -244,8 +244,8 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
   const recoveryReason=tab.taskId&&!taskOpen?threadRecoveryReason(currentRun):undefined;
-  const canSendRequest=active&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
-  const canSend=canSendRequest&&(!!tab.draft?.trim()||attachments.length>0);
+  const canSendRequest=active&&!selectedChild&&loaded&&!pollError&&!graph.loading&&!busy&&!stopping&&!attachmentBusy&&modelAvailable&&!recoveryReason;
+  const canSend=canSendRequest&&(!waiting||continuation.editable)&&(!!tab.draft?.trim()||attachments.length>0);
   // 标题只展示用户首行目标，避免把附加参考资料和内部标记放进导航。
 
   const queueOperation=async(action:'loop.queueChange'|'loop.queueEdit'|'loop.queueMove',args:Record<string,unknown>)=>{let saved=false;await operate(async()=>{await api.call(...checkedIpcCall(action,{id:workspace.id,taskId:tab.taskId,...args}));saved=true});return saved};
@@ -263,25 +263,22 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
       {!tab.taskId&&<div className="chat-welcome"><span className="overline">CBIM · 主 Agent</span><h2>有什么可以帮你？</h2><p>聊聊想法，提出问题，或告诉我你想完成的工作。</p></div>}
       {tab.taskId&&!loaded&&!runs.length&&<p role="status">正在读取对话记录…</p>}
       <ThreadHistoryNotice issues={threadIssues}/>
-      {tab.taskId&&!selectedChild&&selectedTopicId&&<ScopeGoalPanel state={{...graph,selectScope:selectTopic}} compact testId="conversation-goal-summary" onSelectTask={viewMember} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/>}
+      {tab.taskId&&!selectedChild&&waiting&&<details className="chat-context"><summary>当前执行状态与恢复记录</summary><ScopeGoalPanel state={{...graph,selectScope:selectTopic}} compact testId="conversation-goal-summary" onSelectTask={viewMember} replan={replan} humanDecisions={humanDecisions} humanContinuation={humanContinuation}/></details>}
       {latest?.task.workflowContext&&<details className="chat-context"><summary>任务上下文 · {latest.task.goal.slice(0,80)}</summary><p>模块：{latest.task.moduleIds.join('、')}<br/>Agent：{latest.task.agentId}<br/>Workflow：{latest.task.workflowContext?.workflowId}<br/>责任人：{latest.task.responsiblePerson||'未指定'}</p><ul>{latest.task.acceptance.map((a,i)=><li key={i}>{a}</li>)}</ul></details>}
-      <div ref={historyContent}>{selectedChild?(member?<MemberConversation key={member.session.sessionId} member={member} graph={graph.graph} scopes={graph.scopes} selectedTopicId={selectedTopicId} onSelectTopic={selectTopic} active={active&&section==='chat'} onSelectTask={viewMember}/>:<p role="status">正在同步成员对话；当前没有可验证的成员身份。</p>):tab.taskId&&<ConversationTopics {...topics} queued={queued} selectedId={selectedTopicId} onSelect={selectTopic} onSelectTask={viewMember} renderRun={run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>}/>}</div>
-      {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&!graph.detailLoading&&!graph.error&&(graph.selectedScope.status==='active'||graph.selectedScope.topicInterruptions?.some(item=>!graph.selectedScope!.continuations?.some(value=>value.continuationId===item.request.commandId)))&&<TopicInterruptionForm key={JSON.stringify([workspace.instanceId,tab.taskId,selectedTopicId,graph.selectedScope.goal?.inputRevision??1])} scope={graph.selectedScope} options={continuationConfig?.options} active={active&&section==='chat'&&!stopping} onRefresh={graph.refresh}/>}
+      <div ref={historyContent}>{selectedChild?(member?<MemberConversation key={member.session.sessionId} member={member} graph={graph.graph} scopes={graph.scopes} selectedTopicId={selectedTopicId} onSelectTopic={selectTopic} active={active&&section==='chat'} onSelectTask={viewMember}/>:<p role="status">正在同步执行对话；当前没有可验证的 Agent 身份。</p>):runs.map(run=><ConversationTurn key={run.runId} run={run} workspaceId={workspace.id} now={run.status==='running'?now:0} recovery={recovery} active={active&&section==='chat'} onSelectTask={viewMember}/>)}</div>
+      {!selectedChild&&selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&!graph.detailLoading&&!graph.error&&graph.selectedScope.topicInterruptions?.some(item=>!graph.selectedScope!.continuations?.some(value=>value.continuationId===item.request.commandId))&&<TopicInterruptionForm key={JSON.stringify([workspace.instanceId,tab.taskId,selectedTopicId,graph.selectedScope.goal?.inputRevision??1])} scope={graph.selectedScope} options={continuationConfig?.options} active={active&&section==='chat'&&!stopping} onRefresh={graph.refresh}/>}
       {graph.error&&<p role="alert">{graph.error} <button onClick={graph.refresh}><Icon name="refresh" size={16}/>重新同步成员动态</button></p>}
-      {questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
+      {!selectedChild&&questions.map(q=><QuestionCard key={q.id} request={q} onAnswer={async answers=>{await api.call('loop.answerQuestion',{id:workspace.id,taskId:q.taskId,questionId:q.id,answers})}}/>)}
       {currentRun&&!mainRunning&&currentRun.unresolvedTools.length>0&&<div className="chat-reconcile" data-testid="unresolved-tools-notice"><h3>原操作结果尚未确认</h3><p>展开原工具记录，明确核实当前影响并保存处置。需要继续调查时创建独立只读核实任务；原记录保留，勾选调用标识不能恢复原运行。</p><ul>{currentRun.unresolvedTools.map(id=><li key={id}><code>{id}</code></li>)}</ul></div>}
     </div>
-    <div className="chat-composer">
-      {selectedTopicId&&graph.selectedScope?.scopeId===selectedTopicId&&graph.selectedScope.status==='closed'&&!graph.detailLoading&&!graph.error&&<button disabled={!active||busy} onClick={()=>{setFollowupOf(selectedTopicId);input.current?.focus()}}><Icon name="add" size={16}/>基于此历史话题新建任务</button>}
-      {followupOf&&<p className="composer-next-tip" role="status">新任务关联：{graph.scopes.find(value=>value.scopeId===followupOf)?.objective??graph.scopes.find(value=>value.scopeId===followupOf)?.inputPreview??followupOf}。发送后独立排队，原话题保持结束。<button disabled={busy} onClick={()=>setFollowupOf(undefined)}><Icon name="close" size={16}/>取消关联</button></p>}
+    {selectedChild?<div className="chat-composer"><p>执行 Agent 对话为只读。输入来自调用方 Agent，结果返回调用方。</p><button onClick={()=>onAgentChat?.(undefined)}><Icon name="undo" size={16}/>返回主 Agent 对话</button></div>:<div className="chat-composer">
       {loaded&&!pollError&&!graph.loading&&recoveryReason&&<ThreadRecoveryNotice reason={recoveryReason} disabled={!active||busy||stopping||attachmentBusy} onInspect={()=>{graph.selectScope(undefined);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}} onNewConversation={()=>onBind(undefined)}/>}
       {taskOpen&&!!nextTip&&<p className="composer-next-tip" role="status">附件随下次发送；引擎、模型和权限修改在下一轮执行生效。</p>}
-      {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">当前话题等待补充；普通发送会排队为新任务。需要补充时，请打开该话题的“补充并继续”。
-        {graph.selectedScopeId!==graph.waitingScope?.scopeId&&<button disabled={busy} onClick={()=>selectTopic(graph.waitingScope?.scopeId)}><Icon name="openExternal" size={16}/>打开等待中的话题</button>}
+      {waiting&&<p className="composer-next-tip" role="status" data-testid="conversation-waiting">主 Agent 正在等待补充。下方发送将继续当前目标，不另建任务。
         {graph.detailLoading&&'正在读取等待目标…'}
-        {!!queued.length&&' 队列不会自动越过等待中的话题。'}
+        {!!queued.length&&' 已有队列保留，等待本次补充处理。'}
       </p>}
-      {!graph.selectedScope?.wait?.interruptionId&&selectedTopicId&&continuation.scopeId===selectedTopicId&&(continuation.editable||continuation.error||continuation.record&&(waiting||['unknown','submitting','rejected'].includes(continuation.record.attempt?.phase??'')))&&<ScopeContinuationForm state={continuation}/>}
+      {!graph.selectedScope?.wait?.interruptionId&&continuation.record&&continuation.scopeId===graph.waitingScope?.scopeId&&<details className="chat-context" open={!!continuation.error||['unknown','rejected'].includes(continuation.record.attempt?.phase??'')}><summary>已保存的补充与提交状态</summary><ScopeContinuationForm state={continuation}/></details>}
       {approvals.map(a=><div className="chat-approval" key={a.id}><b>允许本次 {a.name} 操作？</b><pre>{JSON.stringify(a.input,null,2)}</pre><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true})})}><Icon name="confirm" size={16}/>允许一次</button><button disabled={busy} title="仅允许当前这次执行中的后续操作；结束或停止后自动恢复确认，知识库保护不变" onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:true,allowAll:true})})}><Icon name="confirm" size={16}/>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate(async()=>{await api.call('loop.approve',{id:workspace.id,taskId:a.taskId,approvalId:a.id,allow:false})})}><Icon name="close" size={16}/>拒绝</button></div>)}
 
       <UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="above" waitingApproval={approvals.length>0||questions.length>0} activity={admissionState.waitingOnly?{label:'正在等待执行资格',active:false,tone:'neutral',waitingSince:admissionState.waitingSince}:graph.currentGoalView.phase!=='none'?{...graph.currentGoalView,active:executing,waitingSince:graph.waitingScope?.wait?.createdAt}:undefined}/>
@@ -301,11 +298,8 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
         {dragActive&&<div className="composer-drop-target"><Icon name="folder" size={24}/><b>松开以添加到对话</b><small>文件和文件夹会保存在本机附件快照中</small></div>}
         {attachmentBusy&&<div className="composer-upload-state" role="status"><span className="work-spinner"/>正在准备附件…</div>}
         <ComposerAttachments items={attachments} workspaceId={workspace.id} disabled={busy||attachmentBusy} onRemove={id=>onAttachments(attachments.filter(a=>a.id!==id))}/>
-        {selectedChild&&<p className="composer-next-tip">发送给主 Agent · 当前查看 {member?.name??'成员对话'}</p>}<textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder="向主 Agent 发送新任务…" title="Enter 发送新任务或排队，Shift+Enter 换行；补充已有话题请使用话题内入口" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&canSend){e.preventDefault();void send()}}}/>
-        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(skill)}}/><ComposerPicker label="协作模式" value={collaborationMode} onChange={v=>setCollaborationMode(v as 'auto'|'team')} disabled={busy||taskOpen} options={[
-          {value:'auto',label:'自动模式',icon:'sparkles',description:'主 Agent 按目标直接执行，必要时交给已登记的负责岗位；权限和人工验收保持原要求'},
-          {value:'team',label:'团队模式',icon:'team',description:'优先按自定义负责岗位分工；未配置负责 Agent 的模块由主 Agent 在原会话执行'},
-        ]}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
+        <textarea ref={input} aria-label="对话草稿" disabled={busy} value={tab.draft||''} onChange={e=>onDraft(e.target.value)} placeholder={waiting?'补充要求，继续当前目标…':'向主 Agent 发送指令…'} title="Enter 发送，Shift+Enter 换行；执行期间的消息按实际引擎能力处理" onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&canSend){e.preventDefault();void send()}}}/>
+        <div className="chat-controls"><div className="chat-controls-left"><AttachmentMenu workspaceId={workspace.id} disabled={busy||attachmentBusy} attachmentsFull={attachments.length>=12} skillsDisabled={!canSendRequest} onBusy={setAttachmentBusy} onAdd={addAttachments} onSkill={skill=>{if(canSendRequest)void send(skill)}}/><ComposerPicker label="执行权限" value={permission} onChange={v=>{setPermission(v as ChatPermission);if(taskOpen)setNextTip(Date.now())}} disabled={busy} warning={permission==='execute'} options={[
           {value:'read',label:'只读访问',icon:'knowledge',description:'只查看、分析和预览，不修改业务文件或正式知识，不执行命令'},
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
@@ -313,10 +307,10 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
         <div className="chat-controls-right"><ComposerPicker label="Loop 引擎" value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel="选择引擎" onChange={value=>void chooseEngine(value)} options={loopEngineSchema.options.map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           ...(defaultModel?[{value:'',label:defaultModel.name||defaultModel.id,description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
           ...(compatibleProfiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
-        ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} queued={shouldQueue} onClick={()=>void send()}/>}</div></div>
+        ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} continuing={waiting} queued={shouldQueue&&!waiting} onClick={()=>void send()}/>}</div></div>
       </ComposerCard>
       <div className="chat-footer"><span><Icon name="folder" size={13}/>{workspace.name}</span><UsageStatus runs={runs} currentRun={currentRun??null} historyIncomplete={threadIssues.length>0} now={now} placement="footer" capacity={selectedModel?.contextWindow}/></div>
-    </div>
+    </div>}
     </div>
   </div>
 }

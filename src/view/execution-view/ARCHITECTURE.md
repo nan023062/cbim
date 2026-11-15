@@ -10,6 +10,8 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-call-details.css](agent-call-details.css) | 对应界面的布局与视觉样式。 |
+| [AgentCallDetails.tsx](AgentCallDetails.tsx) | 按真实 Agent 工具调用引用读取执行对话，并在同一种工具轨道中逐次展开子调用。 |
 | [ComposerAttachments.tsx](ComposerAttachments.tsx) | 按 Cindy ThumbnailStrip 的 56px 卡片、类型标识和角落移除按钮展示草稿附件。 |
 | [knowledge-tool-view.css](knowledge-tool-view.css) | 对应界面的布局与视觉样式。 |
 | [knowledge-tool-view.ts](knowledge-tool-view.ts) | 从已结束的原知识调用中提取预览诊断或已提交回执，供工具轨道和工作摘要展示。 |
@@ -27,6 +29,29 @@
 | [WorkStatus.tsx](WorkStatus.tsx) | 移植 Cindy WorkGroupBlock 的用时和结果；主对话只显示行尾状态，成员详情仍可折叠查看执行轨道。 |
 
 ## 架构类图
+
+### agent-call-details.css
+
+```mermaid
+classDiagram
+class N_src_view_execution_view_agent_call_details_css["agent-call-details.css"] {
+  <<stylesheet>>
+}
+```
+
+### AgentCallDetails.tsx
+
+```mermaid
+classDiagram
+class N_src_view_execution_view_AgentCallDetails_tsx["AgentCallDetails.tsx"] {
+  <<component>>
+  +agentCallReference()
+  +assertAgentCallRun()
+  +AgentCallDetails()
+}
+```
+
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[transcript.ts](transcript.ts)、[MarkdownMessage.tsx](MarkdownMessage.tsx)、[ToolTimeline.tsx](ToolTimeline.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[agent-call-details.css](agent-call-details.css)。
 
 ### ComposerAttachments.tsx
 
@@ -235,6 +260,29 @@ class N_src_view_execution_view_WorkStatus_tsx["WorkStatus.tsx"] {
 
 ```mermaid
 classDiagram
+class N_src_view_execution_view_AgentCallDetails_tsx["AgentCallDetails.tsx"] {
+  <<component>>
+}
+class N_src_view_execution_view_transcript_ts["transcript.ts"] {
+  <<module>>
+}
+class N_src_view_execution_view_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
+  <<component>>
+}
+class N_src_view_execution_view_ToolTimeline_tsx["ToolTimeline.tsx"] {
+  <<component>>
+}
+class N_src_view_execution_view_agent_call_details_css["agent-call-details.css"] {
+  <<stylesheet>>
+}
+N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_transcript_ts : 导入依赖
+N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_MarkdownMessage_tsx : 导入依赖
+N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_ToolTimeline_tsx : 导入依赖
+N_src_view_execution_view_AgentCallDetails_tsx ..> N_src_view_execution_view_agent_call_details_css : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_execution_view_MarkdownMessage_tsx["MarkdownMessage.tsx"] {
   <<component>>
 }
@@ -327,7 +375,9 @@ ComposerAttachments 对已保存图片读取 chat.preview，卡片显示40px缩�
 
 本目录承接主对话、成员详情和团队履历的真实公共消费者。transcript 只投影公开日志；MarkdownMessage 保留流式修复、受控链接和复制；WorkStatus 与 ToolTimeline 只显示传入运行事实，回合结束不代表业务目标验收。
 
-WorkStatus 接收可选 activityDetails，ToolTimeline 接收按原调用 ID 的 renderControls。任务领域在 tasks/ToolActivity 组合命令核实、影响观察及恢复上下文；共享层不导入任务状态或页面，不查询或启动恢复。主对话负责组合任务域控制，成员履历默认只读轨道，无伪造主来源的核实入口。
+WorkStatus 接收可选 activityDetails；ToolTimeline 接收按原调用 ID 的 renderControls 和 renderDetails，由 tasks/ToolActivity 组合既有命令核实、影响观察及恢复上下文。ToolTimeline 只在展开时挂载详情，不拥有查询或恢复权。成员正文默认只读，不伪造缺少来源的核实入口。
+
+AgentCallDetails 是独立的只读查询边界：仅接受 cbim_agent_call 的 tool.updated 或 tool.finished 中宿主持久引用，核对工作区、父 task/run 和工具 ID；loop.inspect 返回后再次核对目标 task/run 与首个 run.started 的相同引用。缺失、冲突或异源身份不拼接。查询重试不执行 Agent；每个已展开视图串行读取，运行结束或详情关闭停止轮询，迟到响应失效。递归调用复用同一工具详情，不沿旧派发图猜测关系；原生 dialog 保持手机全宽，返回调用方恢复焦点与原阅读位置，不提供执行 Agent 输入框。
 
 QuestionCard、ComposerAttachments 和 MessageQueue 只保持已有展示和显式交互：本地选择不提交，附件预览仅显式读取已保存快照，排队操作由调用方回调执行。原 CSS 类名、事件顺序、身份核对、错误展示和原始回执保留。
 

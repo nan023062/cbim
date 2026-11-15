@@ -1,3 +1,25 @@
+## 2026-11-15：#94 独立 Agent、执行循环与递归调度首片实现
+
+- 来源：[Issue #94](https://github.com/nan023062/cbim/issues/94)，用户授权替换产品源码并明确要求三种独立系统封装。基线 `06509c1b`；沿主输入、运行受理、引擎装配、工具执行、子运行记录与只读展示核查，未宣称全仓逐行审计。原品牌素材及领域引擎草稿不纳入提交。
+- Logic 新增 `Agent` 冻结身份、权限、模型与对话引用；`AgentExecutionLoop` 独立管理一次启动、停止与关闭，复用既有 Runtime/SDK；`AgentCallScheduler` 通过注入端口持有调用关系、深度、并发、去重、取消及直接结果回传。三者单向依赖，Application 只装配真实工作区、准入、预算和引擎。
+- 新普通会话使用 `agent-tools-v1`，主与子共用对象/循环。`cbim_agent_list` 读取真实配置，`cbim_agent_call` 使用可信调用身份；父工具与子日志双向可核对。根持工作区租约，所有实际进程领取全局名额；退出未确认保留占用，不重放工作。引擎历史预检移到受理前，避免超限先创建旧目标。
+- View 恢复主连续对话，移除输入框模式切换；Agent 调用像普通工具逐层查看，历史只读，320px 详情全宽，读失败只重查。运行指令同步统一模型，旧无标记历史仍走原恢复路径。
+- 验证按变化选择：`pnpm exec vitest run tests/runtime-continuation.test.ts tests/runtime-failed-retry.test.ts tests/runtime-fresh-main.test.ts tests/engine-session.test.ts` 38 项通过；对象/循环/调度/真实装配及消费者使用 `pnpm exec vitest run tests/agent-object.test.ts tests/agent-execution-loop.test.ts tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/execution-collaboration.test.ts tests/main-history-context.test.ts` 40 项通过，包含真实三层调用（外部 Pi 引擎替身）、父身份区分、根预算、权限与准入拒绝、取消和关闭失败保留占用。
+- `pnpm typecheck` 通过。`pnpm check:architecture` 最初发现新组件公开入口未登记，修正后 0 循环、0 违规。`pnpm check:test-modules` 通过，505 文件（unit=153、contract=156、integration=196）。架构检测器专项 `tests/dependencies.test.ts` 151 项、`tests/source-architecture.test.ts` 4 项通过；`tests/layer-boundaries.test.ts` 初次发现新增出口文件头缺设计原因，补齐后 2 项通过。同步全部修改源码注释、相关 CONTRACT 及 11 个目录架构文档（含新增 agents）。
+- 浏览器专项：`$env:CBIM_UI_ROOT='C:\XDTWorkspace\cbim-ai'; node scripts/agent-call-ui-smoke.mjs` 和 `node scripts/waiting-chat-ui-smoke.mjs` 通过，报告位于忽略的 `test-results/agent-call-ui-report.json`、`waiting-chat-ui-report.json`；包含递归只读、身份错配拒绝、320px 返回保留草稿、原等待续接与未知回执防重。页面异常为空，详情交互执行写入为 0；这些是隔离 Edge 组件验收，不是安装后的真实桌面验收。
+- 支持边界：目前只支持与根相同冻结模型；启用旧汇总预算及同调用暂停提问返回明确 unsupported，未伪造完成。旧办公室外壳、旧恢复和旧工具适配尚未全部退出。完整 CI、多引擎在线集成、桌面安装、合并与发布未执行，#94 保持开放。后续修改入口见 [Agent 契约](../src/logic/agents/CONTRACT.md)、[装配契约](../src/logic/application/assembly/CONTRACT.md) 与 [工程交接](agent-tool-engineering.md)。
+
+- 前端选取连续正文、历史展示、输入等待和续接消费者：`pnpm exec vitest run tests/inline-conversation.test.ts tests/team-conversation-view.test.ts tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 初次 24 通过、旧 SVG 断言 1 失败；改为真实禁用状态断言后单独运行 `tests/conversation-waiting.test.ts` 3 项通过。补齐 continuing 参数后以同一命令前缀运行 `tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 10 项通过，五套累计 25 项最终通过，未重复重跑已通过且未再改变的套件。
+
+## 2026-11-15：统一 Agent 工具模型的产品、UX 与工程交接
+
+- 来源：用户逐步确认主 Agent 对用户、执行 Agent 对直接调用方，Agent 可递归调用 Agent／工具；深度、并发、预算作为工具约束，超限返回错误；随后明确要求替换旧 Agent／Team 需求、界面及 UX。基线 `06509c1b`，未跟踪的品牌素材与领域引擎草稿保留。查询开放 Issues（上限 200，实际 1 项）仅有既有 #65，未将其扩成此次产品重设计工单。
+- 按产品需求 → UX → 程序员接入核查完成设计交接。新需求、UX、工程方案及 [替换范围](agent-tool-design-replacement.md) 描述目标与迁移；同步替换概念设计、Agent／Team 核心模型、办公室／话题旧方案、两份 UX 设计和原型、图标动效规范及导航。普通设置与项目管理设计继续保留。
+- 工程核查指出：成员不装配派发能力、父运行写租约可能阻断递归子执行、旧成员求助后封轮；不能只删除禁止派发提示或改 UI 就报告实现。交接拆为启动预检与调用关系、真实递归工具、统一对话呈现、历史兼容与验收，具体接入和测试入口见 [工程交接](agent-tool-engineering.md)。
+- 当前运行规范及源码契约保持事实，须随对应执行实现迁移；历史验证和发布记录不改写。未修改产品源码、用户运行数据或执行权限。本次仅做文档、原型验证；不运行产品单元、类型检查、完整 CI、打包或桌面安装验收，不宣称产品已支持递归执行。
+- 验证：本轮 16 份变更／新增 Markdown 的 383 条本地文件引用检查通过（不包含外部页面和全部标题锚点），无编码替换字符或成串问号；`git -c core.safecrlf=false diff --check` 通过。程序员核对工程方案所列 13 个测试路径存在，不代表这些测试已经执行。
+- 原型专项：`node design/build-cbim-icon-sprite.mjs --check` 及完整原型静态检查通过；`node test-results/check-agent-ux.cjs` 在隔离 headless Edge 检查 8 种核心状态、7 个变更页面、15 个工具状态组合、320／390／1280px 根部无溢出、草稿保留和执行 Agent 无输入框，页面异常为空。主题、减少动效与演示发送已核查；不代表全面无障碍审计或真实桌面产品通过。`node test-results/capture-agent-ux.cjs` 更新桌面和图标预览并新增 [390px 手机工具详情](agent-tool-mobile-preview.png)。
+
 ## 2026-11-15：清理 design 临时缓存与失效开发方案
 
 - 来源：用户直接要求清理 `design/` 的临时文件和过期文档；基线 `14bf63f0a3b1adf90d5293f9df70f81a7f2535f4`，分支 `feat/ux-system-completion`。查询 `nan023062/cbim` 全部开放 Issues（上限 100，实际 1 项）仅有无关 #65，不创建或回填工单。开始时未跟踪的品牌素材和 `task/domain-agent-loop-engine-architecture.md` 保留原样。

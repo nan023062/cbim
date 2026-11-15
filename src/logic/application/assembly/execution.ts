@@ -1,4 +1,5 @@
 /**
+ * 统一 Agent 路径：可信 launch.executionModel 选择独立 Agent 调度装配，主/子共用对象与执行循环；旧 Auto/Team 规则仅用于旧日志续接。
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
  * 公开网页端口仅装配主会话，网络前后核实同一工作区实例；搜索每次使用当前已保存设置。
@@ -39,6 +40,7 @@ import {mainModuleOwnershipTools} from '../../workspace/service/main-module-owne
 import type {ModuleOwnerships} from '../../workspace/service/module-ownerships';
 import type {WorkspaceMembers} from '../../team/service/workspace-members';
 import type {ModelRequestBudgetService} from '../../budget/runtime/model-request-budget-service';
+import {createAgentCallAssembly} from './agent-calls';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -62,9 +64,14 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
     }
     const conversationBinding=task.mode==='chat'?await dispatch?.conversationBinding(task):undefined;
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
+    const authorizeNative:import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative']=async call=>{
+      workspace.assert();const mapped=call.name==='find'?'Glob':call.name;const reason=guard({name:mapped,input:call.input},workspace.entry.path);return {allow:!reason,reason};
+    };
+    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative}):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
-    requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
+    ...agentCalls,
+    requestBudget:agentCalls?agentCalls.requestBudget:requestBudgets?({task,runId})=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm):undefined,
     conversationBinding,
     repositoryTools,
     // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
@@ -85,11 +92,6 @@ export function createExecutionManager(workspace:Workspace,models:LlmProfiles,le
       try{const lock=new KernelLock(directory,hash(workspace.entry.id+':'+task.taskId),'loop');return ()=>{try{lock.close()}finally{release()}}}
       catch(error){release();throw error}
     },
-    authorizeNative:async call=>{
-      workspace.assert();
-      const mapped=call.name==='find'?'Glob':call.name;
-      const reason=guard({name:mapped,input:call.input},workspace.entry.path);
-      return {allow:!reason,reason};
-    },
+    authorizeNative,
   });},ids=>new ChatInputs(workspace).images(ids),(input,signal)=>new ChatInputs(workspace).prepareContinuation(input.message,input.attachmentIds,signal));
 }

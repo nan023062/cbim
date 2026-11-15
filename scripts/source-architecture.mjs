@@ -7,6 +7,7 @@ import ts from 'typescript';
 const scope={
   "src/bridge/server": "可信宿主桥接：桌面/CLI 入口、IPC 处理和业务 Application 的通信适配；业务状态与生命周期归 Logic。",
   "src/bridge/server/platform": "Electron utility 文件传输和子进程入口；处理可信私有协议，业务文件规则与 Win32 实现归 Logic。",
+  "src/logic/agents": "独立 Agent 对象、单次执行循环和调用调度：纯契约与实现分离，调度通过注入端口执行，不依赖 Application 或具体引擎。",
   "src/logic/application": "唯一应用生命周期：装配业务服务，按工作区实例打开、撤票、取消、排空与关闭；不导入 IPC 或 Electron。",
   "src/logic/budget/settings": "保存作用域预算默认值；运行周期在创建时冻结，设置变化不追改活动周期。",
   "src/logic/file-operations/platform": "业务文件与隔离执行的平台实现；权限、占位、日志和恢复语义属于受控操作，不抽成通用 Core。",

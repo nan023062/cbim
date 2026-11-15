@@ -65,7 +65,7 @@
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
 | [MemberProgressSummary.tsx](MemberProgressSummary.tsx) | 在成员公开对话卡中直接展示结构化步骤、证据数量及交付限制。 |
-| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
+| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以执行 Agent 身份连续显示调用方输入、公开输出与工具过程，兼容旧成员卡片及任务详情。 |
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
 | [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON/CSV/PNG 验证记录，列出验证器、明确条件、文件与当时结论。 |
 | [office-scene.css](office-scene.css) | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排。 |
@@ -94,7 +94,7 @@
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 以办公室人物/模块工位展示当前主会话，保留可切换的节点依赖图，并在选择根或任务后显示对应执行详情。 |
 | [task-graph.css](task-graph.css) | 主会话派发图、可读任务节点与按需详情的自适应布局。 |
 | [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
-| [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实与影响处置入口，供主对话及任务页使用。 |
+| [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实、影响处置和按调用 ID 延迟挂载的详情，供主对话及任务页使用。 |
 | [useAdmission.ts](useAdmission.ts) | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |
 | [useControlledFiles.ts](useControlledFiles.ts) | 将共享原文件操作/补偿控制器连接桌面 IPC，供成员原调用卡使用。 |
 | [useEffectObservation.ts](useEffectObservation.ts) | 将共享影响处置控制器接到桌面 IPC，供主工具记录、成员详情与业务重规划使用。 |
@@ -1780,7 +1780,7 @@ class N_src_view_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[MemberProgressSummary.tsx](MemberProgressSummary.tsx)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[MemberProgressSummary.tsx](MemberProgressSummary.tsx)、[../execution-view/ToolTimeline.tsx](../execution-view/ToolTimeline.tsx)、[../execution-view/AgentCallDetails.tsx](../execution-view/AgentCallDetails.tsx)。
 
 ### MemberTaskDetail.tsx
 
@@ -4123,6 +4123,10 @@ N_src_view_tasks_useSessionGraph_ts ..> N_src_view_tasks_scope_state_ts : 导入
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 主对话工具详情与旧执行记录
+
+`ToolActivity` 透传按原调用 ID 的只读详情插槽，由共享工具轨道在展开后挂载。`MemberRunTranscript` 按原日志顺序交错显示调用方输入、执行 Agent 文字与工具；新的 Agent 工具使用 `AgentCallDetails` 核验并递归读取，旧成员历史仍只读。输入对象是调用方 Agent，不提供用户直发执行 Agent 的控件。`ScopeContinuationForm` 保留持久续接请求的核实与异常恢复；正常补充也可以由主对话输入框提交同一控制器，不把表单显示当作人工验收。
 
 ### 办公室长期对话联合投影
 

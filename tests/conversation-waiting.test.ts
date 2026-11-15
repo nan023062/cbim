@@ -27,7 +27,7 @@ it('持久等待优先于暂未追齐的running日志，状态不旋转且等待
 it('等待期间只禁止继续队列，仍可编辑删除排序，并明确取消目标按钮',()=>{
   const item:QueuedMessage={id:'q',taskId:'root',message:'同意',options:{provider:'p',model:'m'},status:'paused',reason:'当前目标等待补充'};
   const html=renderToStaticMarkup(createElement(MessageQueue,{items:[item],busy:false,continueDisabled:true,onChange:()=>{},onContinue:()=>{},onEdit:async()=>true,onMove:()=>{}}));
-  expect(html).toMatch(/<button disabled=""[^>]*>继续队列<\/button>/);expect(html).toContain('编辑第 1 条消息');expect(html).toContain('删除第 1 条消息');expect(html).toContain('draggable="true"');expect(html).not.toContain('插入第 1 条到当前任务');
+  expect(html).toMatch(/<button disabled=""[^>]*>(?:<svg[\s\S]*?<\/svg>)?继续队列<\/button>/);expect(html).toContain('编辑第 1 条消息');expect(html).toContain('删除第 1 条消息');expect(html).toContain('draggable="true"');expect(html).not.toContain('插入第 1 条到当前任务');
   expect(renderToStaticMarkup(createElement(SendButton,{disabled:false,isStreaming:true,stopLabel:'取消当前任务',onClick:()=>{}}))).toContain('aria-label="取消当前任务"');
   const send=renderToStaticMarkup(createElement(SendButton,{disabled:false,queued:true,onClick:()=>{}}));
   expect(send).toContain('加入队列');expect(send).not.toContain('补充并继续');

@@ -1,6 +1,9 @@
 // 编排与适配按领域归属；公开文件单独登记，规则不得依赖运行服务。
 export const engineRoot='src/logic/execution/engines/';
 export const orchestrationRoots=[
+  "src/logic/agents/loop.ts",
+  "src/logic/agents/scheduler.ts",
+  "src/logic/agents/index.ts",
   "src/logic/execution/admission/",
   "src/logic/execution/assembly/",
   "src/logic/automation/runtime/",
@@ -18,6 +21,9 @@ export const orchestrationRoots=[
 export const isOrchestration=file=>orchestrationRoots.some(root=>file.startsWith(root));
 export const isEngine=file=>file.startsWith(engineRoot);
 export const runtimePublicEntries=new Set([
+  "src/logic/agents/index.ts",
+  "src/logic/agents/loop.ts",
+  "src/logic/agents/scheduler.ts",
   "src/logic/automation/runtime/scheduler.ts",
   "src/logic/budget/runtime/model-request-budget-service.ts",
   "src/logic/budget/runtime/scope-budget-service.ts",

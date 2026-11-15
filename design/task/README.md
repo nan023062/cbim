@@ -1,5 +1,7 @@
 # Task：单一任务
 
+产品目标已统一为 [Agent 工具调用需求](../agent-tool-product-requirements.md) 与 [UX](../agent-tool-ux-design.md)，原办公室／话题设计入口已同步替换。以下产品加载规范和带日期实施记录描述既有运行格式与事实；涉及“只有主 Agent 派发”等限制须在对应执行迁移中退出，不作为新产品需求。
+
 本说明面向人，帮助了解任务目录；Agent 按需读取专用规范。Task 将一个AI 成员、由它维护的模块集合和一个验收目标组合起来。CBIM AI 助理组织任务，执行者使用 CBIM 内部大脑循环。
 
 本目录同时保存产品加载的规范、仍适用的操作指南和带日期的历史方案。`architecture-spec.md`、`task-baseline.md`、`task-spec.md`、`task-loop.md`、`base-task.md` 由产品内置资料白名单读取，不能当作临时文档清理。Step／R 编号表示历史设计切片；其中的验收数字、支持范围与“下一步”只对应记录时点，当前实现见 [任务规则契约](../../src/logic/tasks/rules/CONTRACT.md) 及相关源码，开发清单统一见 [GitHub Issues](https://github.com/nan023062/cbim/issues)。

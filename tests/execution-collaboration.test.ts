@@ -328,3 +328,21 @@ test('用户队列容量不足保留并暂停原消息，释放额度不会把�
     await f.finish(f.runs.length-1);
   }finally{release();await f.cleanup()}
 });
+
+test('活动原运行的未决工具只允许补充排队，不启动新模型或接受核实 ID',async()=>{
+  const f=await fixture(undefined,true);
+  try{
+    const run=await f.manager.chat('原运行',options);
+    const call={id:'active-agent-call',name:'write',input:{path:'result.txt',content:'pending'}};
+    expect((await f.runs[0].context!.beforeTool(call)).allow).toBe(true);
+    await expect(f.manager.resume(run.taskId,run.runId,'不能用 ID 绕过',options,[call.id])).rejects.toMatchObject({code:'COLLABORATION_BUSY'});
+    const queued=await f.manager.resume(run.taskId,run.runId,'保留新的用户要求',{...options,model:'model-two'});
+    expect(queued).toMatchObject({taskId:run.taskId,runId:run.runId,queued:true});
+    expect(f.factory).toHaveBeenCalledTimes(1);
+    expect(await f.manager.queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'pending',options:{model:'model-two'}}]);
+    await f.manager.stop(run.taskId);
+    expect(await f.manager.queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'paused'}]);
+    await expect(f.manager.resume(run.taskId,run.runId,'历史未知操作不能排队恢复',options)).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    expect(f.factory).toHaveBeenCalledTimes(1);
+  }finally{await f.cleanup()}
+});

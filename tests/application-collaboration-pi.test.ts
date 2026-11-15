@@ -1,7 +1,7 @@
 import {spawn,type ChildProcess} from 'node:child_process';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
@@ -10,308 +10,232 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {goalCompleteArguments,goalPlanArguments} from './goal-provider-fixture';
-import {json} from '../src/core/platform/node/serialization';
-import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
-import type {RunSummary} from '../src/logic/execution/rules/types';
-import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
+import {jsonValidationLogBytes} from './json-validation-fixture';
 import type {ChatApproval} from '../src/logic/tools/rules/policy/types';
 
-type ProviderRequest={
-  model:string;
-  messages:{role:string;content:unknown}[];
-  tools?:{function:{name:string}}[];
-};
+type ProviderRequest={model:string;messages:{role:string;content:unknown;tool_call_id?:string}[];tools?:{function:{name:string}}[]};
+const fact='COLLAB_FILE_FACT_7c4d52',candidate='Agent verified '+fact;
+const mainGoal='COLLAB_MAIN: read the actual input through an Agent';
+const memberGoal='COLLAB_MEMBER: read collaboration-input.txt and return evidence';
+const acceptance=['Read collaboration-input.txt and provide real evidence'];
+const queuedMessage='QUEUED_USER_AFTER_CALL: preserve this original user request';
+const followupMessage='RESUMED_USER_NEW_GOAL: describe delivery limitations';
 
-/** Real Application, native Pi, dispatch persistence and continuation; only the provider uses deterministic localhost responses. */
-it.each(['normal','repair','restart','restart-corrupt','restart-pending','restart-stopped','restart-model'] as const)('automatically executes a model dispatch, handles final review and never replays on reopen (%s)',async(mode)=>{
-  const f=await fixture();let child:ChildProcess|undefined;
-  const mainGoal='COLLAB_MAIN: 请让团队成员核实模块内的实际文件，并将结果告诉我';
-  const memberGoal='COLLAB_MEMBER: 读取协作输入文件并报告实际内容';
-  const businessFact='COLLAB_FILE_FACT_7c4d52';
-  const candidate='成员已核实实际文件内容为 '+businessFact;
-  const acceptance=['实际读取 collaboration-input.txt 并提供读取回执'];
-  const requests:ProviderRequest[]=[],mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[];
-  const transportErrors:unknown[]=[];
-  let agentId='',moduleId='';let ownerSelection:OwnerExecutionSelection|undefined;
+function result(body:ProviderRequest,id:string){
+  const message=body.messages.filter(message=>message.role==='tool'&&message.tool_call_id===id).at(-1);
+  expect(message,'actual tool result '+id).toBeTruthy();
+  return JSON.parse(String(message!.content));
+}
+/** Real Pi transport only; parent/child are identified by actual root-only capability. */
+async function provider(mode:string){
+  const main:ProviderRequest[]=[],member:ProviderRequest[]=[],errors:string[]=[];
+  let memberId='',moduleId='';
+  const ask=mode==='deliver'||mode==='stop',restart=mode.startsWith('restart');
   const server=http.createServer(async(req,res)=>{
     try{
       let raw='';for await(const chunk of req)raw+=chunk;
-      const body=JSON.parse(raw) as ProviderRequest;requests.push(body);
-      const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
-      const history=isMain?mainRequests:memberRequests,turn=history.length;history.push(body);
+      const body=JSON.parse(raw) as ProviderRequest;
+      const root=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review');
+      const history=root?main:member,turn=history.length;history.push(body);
+      expect(body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')).toBe(false);
+      // Stop at actual transport boundaries, leaving original run and canonical storage untouched.
+      if(restart&&((root&&turn===1)||(mode==='restart-pending'&&!root&&turn===5)))return;
       res.writeHead(200,{'Content-Type':'text/event-stream'});
-      const emit=(delta:unknown,finish_reason:string|null)=>res.write('data: '+JSON.stringify({id:'collaboration-'+requests.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
+      const emit=(delta:unknown,finish_reason:string|null)=>res.write('data: '+JSON.stringify({id:'agent-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]},null);emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
-      if(isMain){
-        if(turn===0)tool('main-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
-        else if(turn===1)tool('main-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
-        else if(turn===2)reply('已登记成员任务，等待返回，尚未宣称完成。');
-        else if(turn===3||mode==='repair'&&turn===5)tool('main-goal-inspect','cbim_goal_inspect',{});
-        else if(mode!=='repair'&&turn===4||mode==='repair'&&turn===6)tool('main-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-goal-inspect'));
-        else reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已收到成员结果：'+businessFact+'；候选尚未验收。':'主会话没有收到成员事实。');
+      if(root){
+        const offset=ask?1:0;
+        if(ask&&turn===0)tool('main-write','write',{path:'ask-main-note.txt',content:'must be denied'});
+        else if(turn===offset)tool('agent-call','cbim_agent_call',{agentId:memberId,message:memberGoal,business:{moduleIds:[moduleId],acceptance}});
+        else if(turn===offset+1){
+          expect(result(body,'agent-call')).toMatchObject({status:'completed',summary:expect.stringContaining(fact),verification:{state:'verified',acceptance:'not_evaluated'}});
+          tool('check-first','cbim_agent_result_check',{callId:mode==='repair'?'unknown-call':'agent-call'});
+        }else if(mode==='repair'&&turn===2){
+          expect(result(body,'check-first')).toHaveProperty('error');
+          tool('check-repaired','cbim_agent_result_check',{callId:'agent-call'});
+        }else{
+          const input=JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content);
+          if(input.includes(followupMessage))reply(followupMessage);
+          else if(input.includes(queuedMessage))reply(queuedMessage);
+          else{
+            expect(result(body,mode==='repair'?'check-repaired':'check-first')).toMatchObject({state:'verified'});
+            reply('Root received '+fact+'; human acceptance not evaluated');
+          }
+        }
+      }else if(ask){
+        if(turn===0)tool('member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'execute requested work',acceptance,steps:[{id:'verify',title:'write then read',owner:'Agent'}]});
+        else if(turn===1)tool('member-write','write',{path:'ask-member-output.txt',content:fact});
+        else if(turn===2)tool('member-read','read',{path:'ask-member-output.txt'});
+        else if(turn===3)tool('member-inspect','cbim_task_inspect',{});
+        else if(turn===4)tool('member-step','cbim_task_step',{expectedVersion:2,id:'verify',state:'reported_done',evidenceIds:['member-read']});
+        else if(turn===5)tool('member-delivery','cbim_delivery_prepare',{expectedVersion:3,summary:candidate,limitations:['not human accepted']});
+        else {expect(JSON.stringify(body.messages)).toContain(fact);reply(candidate)}
       }else{
-        // A model may hallucinate an unavailable native tool; readonly scope must still prevent the real write.
-        if(turn===0&&mode.startsWith('restart'))tool('member-write','write',{path:'collaboration-output.txt',content:businessFact});
-        else if(turn===0&&mode==='repair')tool('member-pre-read','read',{path:'collaboration-input.txt'});
-        else if(turn===0)tool('member-forbidden-write','write',{path:'collaboration-forbidden.txt',content:'must-not-be-written'});
-        else if(turn===1)tool('member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'处理主会话可靠派发的目标',acceptance,steps:[{id:'verify',title:'读取实际文件并核实内容',owner:'开发者'}]});
+        if(turn===0)tool(restart?'member-write':'member-forbidden-write','write',{path:restart?'collaboration-output.txt':'collaboration-forbidden.txt',content:fact});
+        else if(turn===1)tool('member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'verify actual input',acceptance,steps:[{id:'verify',title:'read real input',owner:'Agent'}]});
         else if(turn===2)tool('member-read','read',{path:'collaboration-input.txt'});
         else if(turn===3)tool('member-step','cbim_task_step',{expectedVersion:1,id:'verify',state:'reported_done',evidenceIds:['member-read']});
-        else if(turn===4)tool('member-delivery','cbim_delivery_prepare',{expectedVersion:2,summary:candidate,limitations:['尚未进行人工业务验收']});
-        else reply('已准备交付候选，原发送方可核对读取证据。');
+        else if(turn===4)tool('member-delivery','cbim_delivery_prepare',{expectedVersion:2,summary:candidate,limitations:['not human accepted']});
+        else {expect(JSON.stringify(body.messages)).toContain(fact);reply(candidate)}
       }
       res.end('data: [DONE]\n\n');
-    }catch(error){transportErrors.push(error);res.writeHead(500);res.end('Local collaboration fixture failed')}
+    }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end()}
   });
+  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address=server.address();if(!address||typeof address==='string')throw Error('provider not bound');
+  return {url:'http://127.0.0.1:'+address.port+'/v1',main,member,errors,
+    bind:(id:string,module:string)=>{memberId=id;moduleId=module},
+    close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+}
+async function setup(f:Awaited<ReturnType<typeof fixture>>,p:Awaited<ReturnType<typeof provider>>){
+  await f.app.models.save({profile:{name:'Agent return fixture',api:'openai-completions',baseUrl:p.url,auth:'none',defaultModel:'return-fixture',models:[{id:'return-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
+  const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json';
+  const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
+  definition.maintenance={bindingId:'agent-return-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
+  await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})},{path:modulePath,text:JSON.stringify(definition)}]));
+  const owner=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'return-fixture'});
+  p.bind(owner.selection.memberId,team.input.moduleId);
+  await fs.writeFile(path.join(f.a,'collaboration-input.txt'),fact);
+  return entry;
+}
+async function childRun(user:string,id:string,started:{taskId:string;runId:string}){
+  const base=path.join(user,id,'loop-engine','tasks'),storage=new FileRunStorage();
+  const root=await storage.read(path.join(base,started.taskId,started.runId));
+  const ref=root.events.find(event=>event.type==='tool.updated'&&event.data.agentCall)?.data.agentCall as {taskId:string;runId:string;callerTaskId:string;callerRunId:string};
+  expect(ref).toMatchObject({callerTaskId:started.taskId,callerRunId:started.runId,toolCallId:'agent-call'});
+  return {root,ref,child:await storage.read(path.join(base,ref.taskId,ref.runId))};
+}
+async function until(p:Awaited<ReturnType<typeof provider>>,check:()=>Promise<void>|void){
+  await vi.waitFor(async()=>{expect(p.errors).toEqual([]);await check()},{timeout:30000,interval:40});
+}
+
+/** Kill only the host created by this fixture and its owned engine descendants. */
+async function crash(child:ChildProcess|undefined){
+  if(!child||child.exitCode!==null||child.signalCode!==null)return;
+  const exited=new Promise<void>(resolve=>child.once('exit',()=>resolve()));
+  if(process.platform==='win32'){
+    await new Promise<void>((resolve,reject)=>{
+      const killer=spawn('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});
+      killer.once('error',reject);killer.once('exit',code=>code===0?resolve():reject(Error('Test process tree termination failed: '+code)));
+    });
+  }else child.kill('SIGKILL');
+  await exited;
+}
+
+it.each(['normal','repair','restart','restart-corrupt','restart-pending','restart-stopped','restart-model'] as const)('returns Agent results within the original call and never replays on reopen (%s)',async mode=>{
+  const f=await fixture(),p=await provider(mode);let processChild:ChildProcess|undefined;
   try{
-    await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-    const address=server.address();if(!address||typeof address==='string')throw Error('Local collaboration fixture did not bind');
-    await f.app.models.save({profile:{name:'Local collaboration fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-fixture',models:[{id:'collaboration-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
-    agentId=team.input.agentId;moduleId=team.input.moduleId;
-    const snapshot=await workspace.snapshot(),modulePath=moduleId+'/module.json';
-    const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
-    definition.maintenance={bindingId:'collaboration-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'collaboration-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
-    await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'collaboration-fixture'})).selection;
-    await fs.writeFile(path.join(f.a,'collaboration-input.txt'),businessFact);
-
-    let started!:{taskId:string;runId:string};
-    if(mode.startsWith('restart')){
+    const entry=await setup(f,p);let started!:{taskId:string;runId:string};
+    const restarting=mode.startsWith('restart');
+    if(restarting){
       await f.app.shutdown();const marker=path.join(f.temp,'ready.json');
-      child=spawn(process.execPath,['--import','tsx','tests/automatic-return-crash-host.ts',f.user,entry.id,mainGoal,marker,mode],{windowsHide:true,stdio:['ignore','ignore','pipe']});
-      let stderr='';child.stderr!.on('data',chunk=>{stderr+=chunk});const exited=new Promise(resolve=>child!.once('exit',resolve));
-      await vi.waitFor(async()=>{if(child!.exitCode!==null)throw Error(stderr);started=JSON.parse(await fs.readFile(marker,'utf8'))},{timeout:30000,interval:50});
-      child.kill();await exited;
-      if(mode==='restart-corrupt')await fs.appendFile(path.join(new Paths(f.user,path.resolve('.')).project(entry.id),'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
+      processChild=spawn(process.execPath,['--import','tsx','tests/automatic-return-crash-host.ts',f.user,entry.id,mainGoal,marker,mode],{windowsHide:true,stdio:['ignore','ignore','pipe']});
+      let stderr='';processChild.stderr!.on('data',chunk=>{stderr+=chunk});
+      const exited=new Promise(resolve=>processChild!.once('exit',resolve));
+      await until(p,async()=>{if(processChild!.exitCode!==null)throw Error(stderr);started=JSON.parse(await fs.readFile(marker,'utf8'))});
+      await until(p,()=>{expect(p.member).toHaveLength(6);expect(p.main).toHaveLength(mode==='restart-pending'?1:2)});
+      const before=await childRun(f.user,entry.id,started);
+      if(mode==='restart-pending')expect(before.child.events.some(event=>['run.settled','run.interrupted'].includes(event.type))).toBe(false);else expect(before.child.status).toBe('completed');
+      expect(await fs.readFile(path.join(f.a,'collaboration-output.txt'),'utf8')).toBe(fact);
+      if(mode==='restart-stopped'){
+        await fs.writeFile(marker+'.stop','stop');
+        await until(p,async()=>{await fs.access(marker+'.stopped')});
+      }
+      await crash(processChild);await exited;
+      if(mode==='restart-corrupt')await fs.appendFile(path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
+      const counts=[p.main.length,p.member.length],stat=await fs.stat(path.join(f.a,'collaboration-output.txt'));
       f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));
+      await f.app.init({restore:false});
       if(mode==='restart-model'){
-        await f.app.init({restore:false});const {id,hasKey,...profile}=(await f.app.models.list()).profiles[0];
-        await f.app.models.save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:2048}))}});
-      }else await f.app.init();
+        const {id,hasKey,...profile}=(await f.app.models.list()).profiles[0];
+        await f.app.models.save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:4096}))}});
+      }
       await f.app.open(entry.id);
-    }else started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
-    const identity={workspaceId:entry.id,rootSessionId:started!.taskId};
-    if(mode.startsWith('restart-')){
-      const scope=(await f.app.memberDispatch(entry.id).automaticReturns.scopes()).find(value=>value.rootSessionId===started.taskId)!;
-      expect(scope).toMatchObject({status:'closed',outcome:mode==='restart-stopped'?'cancelled':'interrupted'});
-      expect(mainRequests).toHaveLength(3);expect(memberRequests).toHaveLength(6);
-      expect(await fs.readFile(path.join(f.a,'collaboration-output.txt'),'utf8')).toBe(businessFact);
-      await f.app.open(entry.id,true);expect(mainRequests).toHaveLength(3);expect(memberRequests).toHaveLength(6);return;
+      const restored=await childRun(f.user,entry.id,started);
+      expect(restored.root.status).toBe(mode==='restart-stopped'?'cancelled':'interrupted');
+      expect(restored.child.status).toBe(mode==='restart-pending'?'interrupted':'completed');
+      expect([p.main.length,p.member.length]).toEqual(counts);
+      const bytes=await jsonValidationLogBytes(f.user,entry.id);
+      await f.app.open(entry.id,true);
+      expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
+      expect([p.main.length,p.member.length]).toEqual(counts);
+      expect((await fs.stat(path.join(f.a,'collaboration-output.txt'))).mtimeMs).toBe(stat.mtimeMs);
+    }else{
+      started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:60000}});
+      await until(p,async()=>{const history=await f.app.execution(entry.id).thread(started.taskId);expect(history).toHaveLength(1);expect(history[0].status).toBe('completed')});
+      const {root,child}=await childRun(f.user,entry.id,started);
+      expect(child.status).toBe('completed');
+      expect(child.taskProgress?.delivery).toMatchObject({summary:candidate});expect(child.taskProgress?.steps[0]).toMatchObject({evidence:['member-read'],state:'reported_done'});expect(child.events.find(event=>event.type==='tool.finished'&&event.data.id==='member-read')?.data.receipt).toMatchObject({outcome:'succeeded'});
+      expect(root.acceptance).toBe('not_evaluated');
+      expect(JSON.stringify(root.events.filter(event=>event.type==='message'))).toContain('Root received '+fact);
+      expect(p.main).toHaveLength(mode==='repair'?4:3);expect(p.member).toHaveLength(6);
+      expect(p.member.every(body=>!body.tools?.some(tool=>tool.function.name==='write'))).toBe(true);
+      await expect(fs.readFile(path.join(f.a,'collaboration-forbidden.txt'))).rejects.toMatchObject({code:'ENOENT'});
+      const counts=[p.main.length,p.member.length],bytes=await jsonValidationLogBytes(f.user,entry.id);
+      await f.app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
+      await f.app.open(entry.id,true);
+      expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
+      expect([p.main.length,p.member.length]).toEqual(counts);
     }
-    const graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
-    const thread=()=>f.app.execution(entry.id).thread(started.taskId);
-    let history:RunSummary[]=[];
-    await vi.waitFor(async()=>{
-      history=await thread();
-      expect(history).toHaveLength(mode==='repair'?3:2);
-      expect(history.every(run=>run.status==='completed')).toBe(true);
-    },{timeout:30000,interval:50});
-
-    const snapshotGraph=await graph();
-    expect(snapshotGraph.tasks).toHaveLength(1);
-    const task=snapshotGraph.tasks[0];
-    await vi.waitFor(async()=>expect(await f.app.memberDispatch(entry.id).goals.inspect(identity,task.scopeId!)).toMatchObject({status:'closed',outcome:'completed',goal:{revision:3,review:{decision:'complete'}}}),{timeout:5000,interval:30});
-    expect(task).toMatchObject({goal:memberGoal,status:'result_ready',requester:snapshotGraph.root.agent,assignee:{agentId},modules:[{moduleId}],result:{summary:candidate,evidenceRefs:['member-read'],acceptance:'not_evaluated'}});
-    expect(snapshotGraph.edges.filter(edge=>edge.kind==='dispatch')).toEqual([expect.objectContaining({fromNodeId:snapshotGraph.root.nodeId,toNodeId:task.nodeId})]);
-    expect(history.map(run=>run.task.taskId)).toEqual(Array(mode==='repair'?3:2).fill(started.taskId));
-    expect(new Set(history.map(run=>run.runId)).size).toBe(mode==='repair'?3:2);
-    expect(history[1].sessionFile).toBe(history[0].sessionFile);
-    const resumed=history[1].events.find(event=>event.type==='run.started');
-    expect(resumed?.data.source).toMatchObject({kind:'member-results',continuationId:expect.any(String)});
-    expect(JSON.stringify(history[1].events.filter(event=>event.type==='message'))).toContain('主 Agent 已收到成员结果：'+businessFact);
-    expect(history.every(run=>run.acceptance==='not_evaluated')).toBe(true);
-    const member=await f.app.dispatch('dispatch.executionInspect',{...identity,taskId:task.taskId}) as MemberExecutionView;
-    expect(member.runs).toHaveLength(1);
-    expect(member.runs[0]).toMatchObject({permission:mode.startsWith('restart')?'execute':'read',status:'completed',binding:{rootSessionId:started!.taskId}});
-    expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:snapshotGraph.root.agent.agentSessionId})).toEqual([]);
-    await expect(fs.readFile(path.join(f.a,'collaboration-forbidden.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
-    expect(await fs.readFile(path.join(f.a,'collaboration-input.txt'),'utf8')).toBe(businessFact);
-    expect(mainRequests).toHaveLength(mode==='repair'?8:6);
-    if(mode==='repair'){expect(history[2].source).toMatchObject({kind:'goal-repair',attempt:1,sourceRunId:history[1].runId});expect(history[2].sessionFile).toBe(history[0].sessionFile)}
-    expect(memberRequests).toHaveLength(6);
-    expect(memberRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')&&(mode.startsWith('restart')||tool.function.name!=='write')))).toBe(true);
-    if(mode.startsWith('restart'))expect(await fs.readFile(path.join(f.a,'collaboration-output.txt'),'utf8')).toBe(businessFact);
-    expect(JSON.stringify(mainRequests[3].messages)).toContain(candidate);
-    expect(JSON.stringify(memberRequests[3].messages)).toContain(businessFact);
-    expect(transportErrors).toEqual([]);
-
-    // Settled collaborations are not replayed by explicit stop or workspace reopen.
-    const count=requests.length;
-    await f.app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
-    await f.app.open(entry.id,true);
-    expect(await thread()).toHaveLength(mode==='repair'?3:2);
-    expect((await graph()).tasks).toEqual(snapshotGraph.tasks);
-    expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:snapshotGraph.root.agent.agentSessionId})).toEqual([]);
-    expect(requests).toHaveLength(count);
-  }finally{child?.kill();await f.app.shutdown();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
+    expect((await f.app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+    expect(await fs.readFile(path.join(f.a,'collaboration-input.txt'),'utf8')).toBe(fact);
+    expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
+  }finally{await crash(processChild);await f.app.shutdown();await f.cleanup();await p.close()}
 },90000);
 
-it.each(['deliver','stop'] as const)('keeps ask approvals and queued user input independent during automatic collaboration (%s)',async(outcome)=>{
-  const f=await fixture();
-  const mainGoal='ASK_COLLAB_MAIN: 委派成员写入并验证成果';
-  const memberGoal='ASK_COLLAB_MEMBER: 写入成果文件并读取验证';
-  const businessFact='ASK_MEMBER_FACT_f291ce';
-  const candidate='成员已写入并读取 '+businessFact;
-  const acceptance=['ask-member-output.txt 实际内容与指定内容一致'];
-  const queuedMessage='QUEUED_USER_AFTER_COLLAB: 请保留这条原始要求，在团队结果之后回复';
-  const followupMessage='RESUMED_USER_NEW_GOAL: 这是独立的下一轮目标，请说明当前交付限制';
-  const requests:ProviderRequest[]=[],mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[];
-  const transportErrors:unknown[]=[];
-  let agentId='',moduleId='';let ownerSelection:OwnerExecutionSelection|undefined;
-  const server=http.createServer(async(req,res)=>{
-    try{
-      let raw='';for await(const chunk of req)raw+=chunk;
-      const body=JSON.parse(raw) as ProviderRequest;requests.push(body);
-      const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
-      const history=isMain?mainRequests:memberRequests,turn=history.length;history.push(body);
-      res.writeHead(200,{'Content-Type':'text/event-stream'});
-      const emit=(delta:unknown,finish_reason:string|null)=>res.write('data: '+JSON.stringify({id:'ask-collaboration-'+requests.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
-      const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]},null);emit({},'tool_calls')};
-      const reply=(content:string)=>{emit({role:'assistant',content},null);emit({},'stop')};
-      if(isMain){
-        if(turn===0)tool('main-ask-write','write',{path:'ask-main-note.txt',content:'main run approved only'});
-        else if(turn===1)tool('main-ask-goal-plan','cbim_goal_plan',goalPlanArguments({objective:mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
-        else if(turn===2)tool('main-ask-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:memberGoal,acceptance:acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
-        else if(turn===3)reply('已派发成员任务，本轮让出执行占用。');
-        else if(turn===4)tool('main-ask-goal-inspect','cbim_goal_inspect',{});
-        else if(turn===5)tool('main-ask-goal-review','cbim_goal_review',goalCompleteArguments(body,'main-ask-goal-inspect'));
-        else if(turn===6)reply(JSON.stringify(body.messages).includes(candidate)?'主 Agent 已处理成员写入结果：'+businessFact:'缺少成员候选。');
-        else{
-          const input=JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content);
-          reply(input.includes(followupMessage)?'已收到独立续聊要求：'+followupMessage:input.includes(queuedMessage)?'已收到原始排队要求：'+queuedMessage:'没有收到原始用户要求。');
-        }
-      }else{
-        if(turn===0)tool('ask-member-plan','cbim_task_plan',{expectedVersion:0,goal:memberGoal,reason:'执行主会话委派',acceptance,steps:[{id:'verify',title:'写入后核实真实文件',owner:'开发者'}]});
-        else if(turn===1)tool('ask-member-write','write',{path:'ask-member-output.txt',content:businessFact});
-        else if(turn===2)tool('ask-member-read','read',{path:'ask-member-output.txt'});
-        else if(turn===3)tool('ask-member-inspect','cbim_task_inspect',{});
-        else if(turn===4)tool('ask-member-step','cbim_task_step',{expectedVersion:2,id:'verify',state:'reported_done',evidenceIds:['ask-member-read']});
-        else if(turn===5)tool('ask-member-delivery','cbim_delivery_prepare',{expectedVersion:3,summary:candidate,limitations:['尚未人工验收']});
-        else reply('已提交写入与读取候选。');
-      }
-      res.end('data: [DONE]\n\n');
-    }catch(error){transportErrors.push(error);res.writeHead(500);res.end('Local ask fixture failed')}
-  });
+it.each(['deliver','stop'] as const)('keeps approval identity and queued user input separate from Agent results (%s)',async outcome=>{
+  const f=await fixture(),p=await provider(outcome);
   try{
-    await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-    const address=server.address();if(!address||typeof address==='string')throw Error('Local ask fixture did not bind');
-    await f.app.models.save({profile:{name:'Local ask collaboration fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'ask-collaboration-fixture',models:[{id:'ask-collaboration-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
-    agentId=team.input.agentId;moduleId=team.input.moduleId;
-    const snapshot=await workspace.snapshot(),modulePath=moduleId+'/module.json';
-    const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
-    definition.maintenance={bindingId:'ask-collaboration-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'ask-collaboration-review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
-    await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'ask-collaboration-fixture'})).selection;
-
-    const scopesOpened=vi.spyOn(f.app.memberDispatch(entry.id),'openScope'),scopesClosed=vi.spyOn(f.app.memberDispatch(entry.id),'closeScope');
-    const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'ask',turnTimeoutMs:20000}}) as {taskId:string;runId:string};
-    const identity={workspaceId:entry.id,rootSessionId:started.taskId};
-    const graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
-    const thread=()=>f.app.execution(entry.id).thread(started.taskId);
-    // Verify the durable goals, not only calls to the coordinator's open/close methods.
-    const scopes=async()=>{
-      // Read complete committed lines without opening a second recovering writer over the live store.
-      const raw=await fs.readFile(path.join(f.user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
-      for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){
-        const {body}=JSON.parse(line);expect(body.workspaceId).toBe(entry.id);
-        for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope);
-      }
-      return [...found.values()];
-    };
-    let taskId='';
-    // 主 Agent 也具备业务工具，但 ask 必须先处理自己的审批，不能借用后续成员批准。
-    let mainApprovals:ChatApproval[]=[];
-    await vi.waitFor(async()=>{mainApprovals=await f.app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId});expect(mainApprovals).toHaveLength(1)},{timeout:15000,interval:30});
-    expect(mainApprovals[0].name).toBe('write');
-    await f.app.dispatch('loop.approve',{id:entry.id,taskId:started.taskId,approvalId:mainApprovals[0].id,allow:false});
-    await vi.waitFor(async()=>{const value=await graph();expect(value.tasks).toHaveLength(1);taskId=value.tasks[0].taskId;expect(value.tasks[0].status).toBe('running')},{timeout:15000,interval:30});
-    const memberIdentity={...identity,taskId};
-    let memberApprovals:ChatApproval[]=[];
-    await vi.waitFor(async()=>{memberApprovals=await f.app.dispatch('dispatch.approvals',memberIdentity);expect(memberApprovals).toHaveLength(1)},{timeout:15000,interval:30});
-    expect(memberApprovals[0].name).toBe('write');
-    // 拒绝主运行写入不影响成员独立提出审批；两者的权限不能互相继承。
-    await expect(fs.readFile(path.join(f.a,'ask-main-note.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
-    expect(mainRequests.every(body=>['write','edit','bash'].every(name=>body.tools?.some(tool=>tool.function.name===name)))).toBe(true);
-    const beforeQueue=await thread();expect(beforeQueue).toHaveLength(1);expect(beforeQueue[0].status).toBe('completed');
-    expect((await f.app.dispatch('dispatch.executionInspect',memberIdentity) as MemberExecutionView).runs[0]).toMatchObject({permission:'ask',status:'running'});
-    await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
-    expect(await f.app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId})).toEqual([]);
-    const originalScopes=await scopes();expect(originalScopes).toHaveLength(1);
-    expect(originalScopes[0]).toMatchObject({...identity,status:'active',goal:{revision:2,input:{message:mainGoal,attachmentIds:[]}}});
-
-    const queued=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:20000}});
-    expect(queued).toMatchObject({taskId:started.taskId,runId:started.runId,queued:true,queueId:expect.any(String)});
-    expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([expect.objectContaining({id:queued.queueId,message:queuedMessage,status:'pending',options:expect.objectContaining({permission:'execute'})})]);
-    expect(mainRequests).toHaveLength(4);
-    expect(await f.app.dispatch('dispatch.approvals',memberIdentity)).toEqual(memberApprovals);
-    expect(scopesOpened).toHaveBeenCalledTimes(1);expect(scopesClosed).not.toHaveBeenCalled();
-    expect(await scopes()).toEqual(originalScopes); // Waiting user input is not a new running goal yet.
-
+    const entry=await setup(f,p),started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'ask',turnTimeoutMs:60000}});
+    const input={id:entry.id,taskId:started.taskId},thread=()=>f.app.execution(entry.id).thread(started.taskId);
+    let approvals:ChatApproval[]=[];
+    await until(p,async()=>{approvals=await f.app.dispatch('loop.approvals',input);expect(approvals).toHaveLength(1)});
+    const mainApproval=approvals[0];expect(mainApproval.name).toBe('write');
+    await f.app.dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:false});
+    await until(p,async()=>{approvals=await f.app.dispatch('loop.approvals',input);expect(approvals).toHaveLength(1);expect(approvals[0].id).not.toBe(mainApproval.id)});
+    const childApproval=approvals[0],running=await childRun(f.user,entry.id,started);
+    expect(childApproval.name).toBe('write');expect((await thread())[0].status).toBe('running');expect(running.child.events.some(event=>['run.settled','run.interrupted'].includes(event.type))).toBe(false);
+    await expect(f.app.dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
+    await expect(fs.readFile(path.join(f.a,'ask-main-note.txt'))).rejects.toMatchObject({code:'ENOENT'});
+    await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'))).rejects.toMatchObject({code:'ENOENT'});
+    const queued=await f.app.dispatch('loop.resume',{...input,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:60000}});
+    expect(queued).toMatchObject({taskId:started.taskId,runId:started.runId,queued:true});
+    expect(await f.app.dispatch('loop.queue',input)).toEqual([expect.objectContaining({id:queued.queueId,message:queuedMessage,status:'pending'})]);
+    expect(await f.app.dispatch('loop.approvals',input)).toEqual([childApproval]);expect(p.main).toHaveLength(2);
     if(outcome==='stop'){
-      const requestCount=requests.length;
-      await f.app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
-      await vi.waitFor(async()=>expect((await f.app.dispatch('dispatch.executionInspect',memberIdentity) as MemberExecutionView).task.status).toBe('cancelled'),{timeout:15000,interval:30});
-      expect(scopesClosed).toHaveBeenCalledWith(identity,scopesOpened.mock.calls[0][1],'cancelled');
-      await expect(f.app.dispatch('dispatch.approve',{...memberIdentity,approvalId:memberApprovals[0].id,allow:true,allowAll:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
-      expect(await thread()).toHaveLength(1);
-      expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([expect.objectContaining({message:queuedMessage,status:'paused'})]);
-      await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).rejects.toMatchObject({code:'ENOENT'});
+      const counts=[p.main.length,p.member.length];
+      await f.app.dispatch('loop.stop',input);
+      await until(p,()=>expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+      const stopped=await childRun(f.user,entry.id,started);
+      expect(stopped.root.status).toBe('cancelled');expect(stopped.child.status).toBe('cancelled');
+      await expect(f.app.dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
+      expect(await f.app.dispatch('loop.queue',input)).toEqual([expect.objectContaining({message:queuedMessage,status:'paused'})]);
+      await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'))).rejects.toMatchObject({code:'ENOENT'});
+      await f.app.open(entry.id,true);expect(await thread()).toHaveLength(1);
+      expect([p.main.length,p.member.length]).toEqual(counts);
+    }else{
+      await f.app.dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true});
+      await until(p,async()=>{const runs=await thread();expect(runs).toHaveLength(2);expect(runs.every(run=>run.status==='completed')).toBe(true)});
+      let runs=await thread();expect(new Set(runs.map(run=>run.sessionFile)).size).toBe(1);
+      expect(JSON.stringify(runs[0].events.filter(event=>event.type==='message'))).toContain('Root received '+fact);
+      expect(runs[1].events[0].data.message).toBe(queuedMessage);
+      expect(await fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).toBe(fact);
+      expect(await f.app.dispatch('loop.queue',input)).toEqual([]);
+      expect(p.main).toHaveLength(5);expect(p.member).toHaveLength(7);
+      expect(JSON.stringify(p.main[2].messages)).not.toContain(queuedMessage);
+      const followup=await f.app.dispatch('loop.resume',{...input,runId:runs[1].runId,message:followupMessage,options:{permission:'read',turnTimeoutMs:60000}});
+      await until(p,async()=>{runs=await thread();expect(runs).toHaveLength(3);expect(runs.every(run=>run.status==='completed')).toBe(true)});
+      expect(runs[2].runId).toBe(followup.runId);expect(runs[2].events[0].data.message).toBe(followupMessage);
+      expect(runs.every(run=>run.task.goal===mainGoal)).toBe(true);
+      expect(new Set(runs.map(run=>run.sessionFile)).size).toBe(1);
+      expect(p.main).toHaveLength(6);expect(p.member).toHaveLength(7);
+      const bytes=await jsonValidationLogBytes(f.user,entry.id);
       await f.app.open(entry.id,true);
-      expect(await thread()).toHaveLength(1);
-      const stoppedScopes=await scopes();expect(stoppedScopes).toHaveLength(1);
-      expect(stoppedScopes[0]).toMatchObject({scopeId:originalScopes[0].scopeId,outcome:'cancelled',goal:originalScopes[0].goal});
-      expect(requests).toHaveLength(requestCount);
-      expect(transportErrors).toEqual([]);
-      return;
+      expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);expect(p.main).toHaveLength(6);
     }
-
-    await f.app.dispatch('dispatch.approve',{...memberIdentity,approvalId:memberApprovals[0].id,allow:true,allowAll:true});
-    let history:RunSummary[]=[];
-    await vi.waitFor(async()=>{history=await thread();expect(history).toHaveLength(3);expect(history.every(run=>run.status==='completed')).toBe(true)},{timeout:30000,interval:50});
-    expect(await fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).toBe(businessFact);
-    expect(history.map(run=>run.source?.kind)).toEqual([undefined,'member-results',undefined]);
-    expect(history.map(run=>run.task.taskId)).toEqual([started.taskId,started.taskId,started.taskId]);
-    expect(new Set(history.map(run=>run.sessionFile)).size).toBe(1);
-    expect(JSON.stringify(history[1].events.filter(event=>event.type==='message'))).toContain('主 Agent 已处理成员写入结果：'+businessFact);
-    expect(JSON.stringify(history[2].events.filter(event=>event.type==='message'))).toContain('已收到原始排队要求：'+queuedMessage);
-    expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([]);
-    expect(mainRequests).toHaveLength(8);expect(memberRequests).toHaveLength(7);
-    expect(JSON.stringify(mainRequests[4].messages)).toContain(candidate);
-    expect(JSON.stringify(mainRequests[4].messages)).not.toContain(queuedMessage);
-    expect(JSON.stringify(mainRequests[7].messages.filter(message=>message.role==='user').at(-1)?.content)).toContain(queuedMessage);
-    expect((await graph()).tasks[0]).toMatchObject({status:'result_ready',result:{summary:candidate,acceptance:'not_evaluated'}});
-    await vi.waitFor(()=>expect(scopesClosed).toHaveBeenCalledTimes(2),{timeout:5000,interval:20});
-    expect(scopesOpened).toHaveBeenCalledTimes(2);
-    expect(scopesOpened.mock.calls[0][1]).not.toBe(scopesOpened.mock.calls[1][1]);
-    expect((await graph()).tasks[0].scopeId).toBe(scopesOpened.mock.calls[0][1]);
-    const closed=await Promise.all(scopesClosed.mock.results.map(result=>result.value));
-    expect(closed.map(scope=>scope.outcome)).toEqual(['completed','completed']);
-    const beforeFollowup=await scopes();expect(beforeFollowup).toHaveLength(2);
-    expect(beforeFollowup[0]).toMatchObject({scopeId:originalScopes[0].scopeId,status:'closed',outcome:'completed',goal:{revision:3,input:originalScopes[0].goal!.input,review:{decision:'complete'}}});
-    expect(beforeFollowup[1]).toMatchObject({...identity,status:'closed',goal:{revision:1,input:{message:queuedMessage,attachmentIds:[]}}});
-    expect(history[1].source?.kind).toBe('member-results');
-    expect(beforeFollowup.some(scope=>scope.goal?.input.message.includes(candidate))).toBe(false);
-
-    const followup=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:history[2].runId,message:followupMessage,options:{permission:'read',turnTimeoutMs:20000}});
-    await vi.waitFor(async()=>{history=await thread();expect(history).toHaveLength(4);expect(history.every(run=>run.status==='completed')).toBe(true);expect((await scopes()).every(scope=>scope.status==='closed')).toBe(true)},{timeout:15000,interval:30});
-    expect(history[3].runId).toBe(followup.runId);expect(history[3].events[0].data.message).toBe(followupMessage);
-    expect(new Set(history.map(run=>run.sessionFile)).size).toBe(1);
-    expect(history.every(run=>run.task.goal===mainGoal)).toBe(true); // Thread identity stays stable; scope goals carry the new inputs.
-    const persisted=await scopes();expect(persisted).toHaveLength(3);
-    expect(new Set(persisted.map(scope=>scope.scopeId)).size).toBe(3);
-    expect(persisted.every(scope=>scope.rootSessionId===started.taskId)).toBe(true);
-    expect(persisted.map(scope=>scope.goal?.input)).toEqual([mainGoal,queuedMessage,followupMessage].map(message=>({message,attachmentIds:[]})));
-    expect(persisted.slice(0,2)).toEqual(beforeFollowup);
-    expect(mainRequests).toHaveLength(9);expect(memberRequests).toHaveLength(7);
-    const requestCount=requests.length;
-    await f.app.open(entry.id,true);
-    expect(await scopes()).toEqual(persisted);expect(await thread()).toHaveLength(4);
-    expect(requests).toHaveLength(requestCount);
-    expect(transportErrors).toEqual([]);
-  }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
+    expect((await f.app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+    expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
+  }finally{await f.cleanup();await p.close()}
 },90000);

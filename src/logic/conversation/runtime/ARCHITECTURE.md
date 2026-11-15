@@ -478,3 +478,7 @@ executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢�
 
 
 统一 Agent 主轮直接使用 LoopRuntime.start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
+
+### 递归调用等待时的普通补充
+
+resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运行接收排队输入；不启动第二个运行、不核实未决工具、不将补充提前混入子结果。排队保存发送时的权限及模型选项，原运行安全完成后才由既有 pump 处理；停止仍暂停队列。历史未决工具没有活跃身份时继续返回 RECOVERY_INSPECTION_REQUIRED，reconciledToolIds 不签发恢复许可。已有更新轮次仍拒绝 STALE_RUN。

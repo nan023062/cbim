@@ -7,6 +7,7 @@
  * 作用定位：管理工作区主对话、可信结果与目标返工接续、多轮历史及队列；系统接续共用去重与停止屏障，业务成员经岗位派发领取。
  * 设计原因：排队项沿已保存 ID 建立话题，普通接续与原目标补充分开；容量准入先于意图，beforeRun 核额度、停止与清单后登记运行，坏历史不能回退旧头。
  * 插入边界：先查原 scope/run/queue 回执再领取和读附件；绑定明确的原主 run，停止信号先于串行清理。周期输入接收落盘后才移除队列，未知结果同时阻止内存自动推进。
+ * 活动原运行的补充仅持久排队，工具等待不等于未知恢复；中断历史仍需独立核实。
  * 执行选项接受明确引擎并随本轮准备、排队与后续调用传递；具体适配器仍由可信工厂选择。
  * 读取边界：团队与模块查询统一经 knowledge/read-models 公开入口，主对话生命周期与写操作仍由现有调度服务管理。
  */
@@ -526,14 +527,21 @@ export class WorkspaceExecutionManager {
       const receipt=await lookup();if(!receipt)fail('HUMAN_CONTINUATION_UNKNOWN','人工接续受理结果尚未确认，请查询原命令');return receipt;
     });
   }
-  /** 安全普通对话可续聊；未知工具仅允许独立核实，旧裸 ID 字段不授予原 native 恢复许可。 */
+  /** 活动原运行仅接收排队输入，不恢复或重放工具；离线未知工具仍只能独立核实。 */
   resume(taskId:string,runId:string,message:string,options:Options,reconciledToolIds:string[]=[]){return this.serial(async()=>{
     if(!message?.trim())fail('MESSAGE','恢复说明不能为空');
     const prior=await this.inspect(taskId,runId);
     if(prior.task.mode!=='chat')fail('OWNER_DISPATCH_REQUIRED','旧业务任务不能直接续执行，请按模块负责人重新派发；原历史保持不变');
-    if(prior.unresolvedTools.length)fail('RECOVERY_INSPECTION_REQUIRED','原运行仍有未确认工具结果，请创建新的只读核实；调用 ID 确认不能恢复旧上下文');
     const history=await this.thread(taskId);if(history.at(-1)?.runId!==runId)fail('STALE_RUN','已有更新的对话轮次，请刷新后继续');
     const parsed=executionOptions.parse(options);
+    // 只有本进程仍持有的准确运行可以排队；日志中的 running/工具未决不构成存活证明。
+    const active=this.active.get(taskId);
+    if(active?.runId===runId&&active.isMain&&!this.closing&&!this.resultContinuationStopped.has(taskId)){
+      if(reconciledToolIds.length)fail('COLLABORATION_BUSY','活动运行仅接收补充排队，不能据此核实或重放工具');
+      const entry=await (await this.queue()).add(taskId,message,parsed);
+      return {workspaceId:prior.task.workspaceId,taskId,runId,queued:true as const,queueId:entry.id};
+    }
+    if(prior.unresolvedTools.length)fail('RECOVERY_INSPECTION_REQUIRED','原运行仍有未确认工具结果，请创建新的只读核实；调用 ID 确认不能恢复旧上下文');
     if(prior.task.mode==='chat'&&this.collaboration?.busy(taskId)){
       if(reconciledToolIds.length)fail('COLLABORATION_BUSY','协作期间不能排队未决工具核实，请先停止并核实当前任务');
       const queue=await this.queue(),entry=await queue.add(taskId,message,parsed);

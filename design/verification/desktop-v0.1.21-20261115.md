@@ -56,3 +56,59 @@ c39a8b58 后迁移剩余六项 JSON/CSV/PNG 负面人工决定到主 Agent 的�
 验证：`pnpm exec vitest run tests/workflow-selection-pi.test.ts` 两项通过；`pnpm check:test-modules` 通过（537 文件，174 unit / 163 contract / 200 integration）。测试文件仍归原集成模块；本次没有 src 变更，不涉及源码类图。完整 CI run 43727211812 的静态检查已通过，四片测试仍运行，不能据专项通过发布。旧 6541c41d 候选继续保留为历史，当前源码尚未重新构建或公开发布。
 
 发布复核补充：`pnpm exec vitest run tests/application-collaboration-pi.test.ts -t 'reopen \(normal\)' --reporter=default --reporter=json --outputFile=test-results/release-collaboration-blocker.json` 实际选中 1 项失败，另外 8 项未被选择。30 秒等待后预期 2 个历史运行，实际只有 1 个；夹具仍用 cbim_dispatch_task 识别主 Agent，并调用旧 cbim_goal_plan/dispatch/goal_review。不能仅改历史数量放行，须迁移实际调用、回流与恢复覆盖。该失败是当前发布阻塞；完整 CI 即使尚在运行，也不能声称全部通过。未执行新的构建、合并或公开发布。
+
+## 2026-11-15 — #94 自动派工/结果回流测试迁入递归 Agent 链路
+
+基线 836173f3，继续用户授权的 PR #96 / 0.1.21 发布修复。原 `application-collaboration-pi.test.ts` 仍用 cbim_dispatch_task 识别主 Agent，等待额外的 member-results / goal-repair 轮次；新设计通过同一个主运行的普通工具返回结果。
+
+本次保留 9 个真实集成场景，采用真实 Application、Pi SDK、受控本地模型响应、真实文件与独立崩溃进程：正常回流、错误核验后的原调用再核验、已完成子运行回流前崩溃、主日志残尾、子运行尚未终结时崩溃、显式停止后重启、模型配置变化后重启、审批/排队完成、审批/排队停止。原生实际结果回到原主调用；旧图为空，未恢复 Team 派工。主 Agent 的模型响应明确保留尚未人工验收的限制。
+
+语义迁移：旧 goal-repair 的额外主轮替换为同一主轮处理真实工具核验错误，不重放子调用；旧自动续接/未记账回流替换为中断后禁止重放，新的用户指令另行处理。崩溃夹具不再替换 continueFromResults，不写虚构旧 scope 意图；从实际模型请求观察已写文件/未返回的窗口，强制终止自己创建的宿主及其进程树。只读拒绝写入、单次审批不能借用旧批准、排队消息不提前混入结果、停止暂停队列、文件与日志重启后不重放均保留。
+
+迁移发现实际缺陷：活动主运行正在等待 Agent 工具时，resume 在排队前按未决工具拒绝补充。Logic/conversation 的 WorkspaceExecutionManager 现在先核对当前准确 taskId/runId、active 主运行及停止屏障，仅持久排队，不启动第二个模型、不恢复工具；无存活事实的历史仍返回 RECOVERY_INSPECTION_REQUIRED，reconciledToolIds 不能绕过。状态仍由原 manager/queue 持有，未新建调度或恢复机制。源码文件头/JSDoc、runtime/CONTRACT.md、runtime/ARCHITECTURE.md 同步。
+
+验证与选择依据：
+- `pnpm exec vitest run tests/application-collaboration-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/agent-return-migration.json`：9/9 通过，覆盖本次全部集成消费者。测试报告为本地确定性模型，非在线模型验收。
+- `pnpm exec vitest run tests/execution-collaboration.test.ts`：18/18 通过；新增活动未决工具只排队、停止后仍拒绝未知恢复的模块回归，原恢复/队列消费者同时验证。
+- `pnpm typecheck`、`pnpm check:test-modules`：通过（537 文件，174 unit / 163 contract / 200 integration）。测试归属未变。
+- `node scripts/source-architecture.mjs` 同步 1 份；`pnpm check:architecture` 通过：135 目录 / 831 代码样式文件无差异，1649 文件 / 7816 依赖 / 0 环 / 0 违规。
+- 类型检查初次发现测试的 findLast 不在配置的标准库内，改为同义 filter(...).at(-1)，类型复核通过。初次崩溃夹具清理遇到 EBUSY，改用本夹具宿主 PID 的进程树终止并关闭新 Application；最终完整九项通过。
+- 未重新构建、未安装升级、未合并、未公开发布：上一个精确 head 的完整 CI 已失败，不以定向通过或旧包安装证据放行。
+
+完整 CI 43728249910（836173f3）已完成且失败：第 2 片 801 通过 / 48 失败，第 4 片 754 通过 / 42 失败；第 1/3 片均被 GitHub 标注超过 30m0s，仅有分片清单，无完整测试 JSON。此 90 项是两份完整报告的失败数，不是全仓失败总数，不是新提交结果；静态检查通过。剩余失败包括旧等待、人工接续、预算、产物/效果、依赖和源码结构契约；不能统一当作无效测试、延长超时掩盖失败或取消门禁。完整原始报告/日志保留于 Actions；本次摘录见现有版本验证记录。开发清单与进度继续由 Issue #94 承载。
+
+
+### 完整 CI 两份已结束报告的失败套件摘录
+
+来源：https://github.com/nan023062/cbim/actions/runs/43728249910 ，只描述该旧提交的实际报告。
+
+| 分片 | 套件 | 失败项 |
+| --- | --- | ---: |
+| 2 | artifact-transition-pi.test.ts | 3 |
+| 2 | automatic-execution-pi.test.ts | 2 |
+| 2 | business-replan-pi.test.ts | 3 |
+| 2 | controlled-file-pi.test.ts | 6 |
+| 2 | core-layer-contracts.test.ts | 1 |
+| 2 | effect-observation-pi.test.ts | 5 |
+| 2 | global-admission-pi.test.ts | 3 |
+| 2 | knowledge-effect-pi.test.ts | 3 |
+| 2 | member-help-pi.test.ts | 4 |
+| 2 | member-tool-contract-pi.test.ts | 2 |
+| 2 | module-ownership-pi.test.ts | 7 |
+| 2 | scoped-execution-pi.test.ts | 1 |
+| 2 | waiting-mixed-sources-pi.test.ts | 4 |
+| 2 | workflow-condition-pi.test.ts | 4 |
+| 4 | abandoned-checkpoint-dependency-pi.test.ts | 4 |
+| 4 | coordination-pi.test.ts | 1 |
+| 4 | execution-report-pi.test.ts | 2 |
+| 4 | global-runtime-view-pi.test.ts | 1 |
+| 4 | goal-repair-pi.test.ts | 1 |
+| 4 | human-continuation-pi.test.ts | 8 |
+| 4 | inspection-cycle-pi.test.ts | 3 |
+| 4 | member-checkpoint-chain-pi.test.ts | 3 |
+| 4 | model-request-budget-pi.test.ts | 4 |
+| 4 | original-command-pi.test.ts | 3 |
+| 4 | queue-insert.test.ts | 1 |
+| 4 | scope-budget-pi.test.ts | 7 |
+| 4 | scope-usage-pi.test.ts | 1 |
+| 4 | scope-wait-pi.test.ts | 3 |

@@ -12,6 +12,9 @@
 | [文档 2：架构治理规范与治理流程](architecture-governance-process.md) | 治理的标准流程、分级、迁移与验收；附 CBIM G01–G09 方案基线，不维护实时进度 |
 | [四份概念设计](../README.md#设计文档) | `docs/` 仅保留 01–04，说明理念与目标流程 |
 | [本地 AI 团队开发：核心模型与运行规则](team-workspace-network.md) | 面向单人/少数人的自动开发闭环及完成判据；当前不建设 Cindy 接入、联网协作或大型团队能力；目标不等于已实现 |
+| [CBIM UX 与风格系统提案](cbim-ux-system-proposal.md) · [可切换界面原型](cbim-ux-prototype.html) | 目标、办公室、话题、团队责任与交付证据的体验设计；自包含原型仅使用示例数据，不代表产品已经实现 |
+| [全界面 UX 与统一设计语言](cbim-complete-ux-design.md) · [42 页评审原型](cbim-complete-ux-prototype.html) | 补齐 34 个原有操作面的逐页布局、动作、恢复与窄屏设计；共用规范及 7 个新增提案单列，默认优先展示原有界面 |
+| [图标、动效与提示系统](cbim-icon-motion-system.md) · [图标目录](cbim-ux-prototype.html#icons) | CBIM Outline 母版、状态与操作映射、动效和 Tooltip 规范，含可导出的 SVG sprite |
 | [源码整体架构](../src/ARCHITECTURE.md) | 当前模块边界、依赖与数据流，须结合实际源码核实 |
 | [四层架构与渐进迁移设计](four-layer-architecture.md) | Core、Logic、Bridge、View 目标目录与分片规格；当前实现与目标分别说明 |
 | [模块测试入口](../tests/README.md) | 单元/契约/集成归属、独立夹具与按模块执行；不维护任务进度 |

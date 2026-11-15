@@ -15,6 +15,18 @@ const task=(id:string):TaskNode=>({kind:'task',nodeId:'task:'+id,taskId:id,ident
 const dispatch=(id:string):GraphEdge=>({edgeId:'dispatch-'+id,identity,fromNodeId:'session:root',toNodeId:'task:'+id,revision:1,enabled:true,kind:'dispatch'});
 function graph():GraphSnapshot{return {version:1,identity,cursor:{...identity,streamId:'stream',seq:1},root:{kind:'session-root',nodeId:'session:root',identity,agent:main,revision:1,createdAt:time},tasks:[task('a'),{...task('b'),status:'waiting',waitReason:'等待功能 a 的交付候选'}],edges:[dispatch('a'),dispatch('b'),{edgeId:'dependency',identity,fromNodeId:'task:a',toNodeId:'task:b',revision:1,enabled:true,kind:'dependency',condition:{kind:'result_ready',planRevision:1}}],agents:[]}}
 
+test('任务列表保留原节点状态、派发与依赖，折叠历史不补造关系',()=>{
+  const input=graph(),before=structuredClone(input),root=sessionRoot([],identity.rootSessionId,0,input);
+  const props={graph:input,root,presentation:'list' as const,onSelectTask:()=>{}};
+  const html=renderToStaticMarkup(createElement(DispatchGraph,props));
+  expect(html).toContain('当前会话任务列表');expect(html).toContain('前置依赖');expect(html).toContain('派发来源');
+  expect(html).toContain('等待功能 a 的交付候选');expect(html).not.toContain('dispatch-graph-lines');
+  expect(html.match(/data-testid="dispatch-task-node"/g)).toHaveLength(2);
+  const hidden=renderToStaticMarkup(createElement(DispatchGraph,{...props,hiddenTaskIds:new Set(['a'])}));
+  expect(hidden).not.toContain('data-task-id="a"');expect(hidden).not.toContain('前置依赖');expect(hidden).toContain('data-task-id="b"');
+  expect(input).toEqual(before);
+});
+
 test('layout retains real nodes and routes every active dispatch/dependency forward without overlapping cards',()=>{
   const input=graph(),layout=layoutDispatchGraph(input,input.root.nodeId),positions=new Map(layout.nodes.map(node=>[node.nodeId,node]));
   expect(layout.nodes).toHaveLength(3);expect(layout.edges).toHaveLength(3);

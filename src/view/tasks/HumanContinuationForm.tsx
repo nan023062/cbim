@@ -2,6 +2,7 @@
  * 作用定位：显示本等待最新人工决定及独立继续按钮，不把保存意见变成隐式执行。
  * 设计原因：用户可看清交给主调度的完整意见集合和模型配置；未知请求仅查原命令，受理成功不等于业务目标完成。
  */
+import {Icon} from '../components/Icon';
 import type {HumanContinuationView} from './useHumanContinuation';
 import {humanDecisionLabels} from './HumanDecisionPanel';
 import './human-continuation.css';
@@ -20,9 +21,9 @@ export function HumanContinuationForm({state}:{state:HumanContinuationView}){
     {phase==='accepted'&&<p role="status" data-testid="human-continuation-accepted" data-continuation-id={attempt?.receipt?.continuation.continuationId}>已受理按决定继续。执行及验收结果以当前目标和任务图为准。</p>}
     {state.pending&&<p role="status">正在确认本次接续…</p>}
     <div className="human-continuation-actions">
-      {state.eligible&&(!attempt||phase==='rejected')&&<button data-testid="human-continuation-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}>按以上决定继续</button>}
-      {(phase==='unknown'||phase==='accepted'||phase==='submitting')&&<button data-testid="human-continuation-query" disabled={state.pending} onClick={()=>void state.query()}>查询接续结果</button>}
-      {phase==='unknown'&&state.canRetry&&<button data-testid="human-continuation-retry" disabled={state.pending} onClick={()=>void state.retry()}>重试原请求</button>}
+      {state.eligible&&(!attempt||phase==='rejected')&&<button data-testid="human-continuation-submit" disabled={!state.canSubmit} onClick={()=>void state.submit()}><Icon name="play" size={16}/>按以上决定继续</button>}
+      {(phase==='unknown'||phase==='accepted'||phase==='submitting')&&<button data-testid="human-continuation-query" disabled={state.pending} onClick={()=>void state.query()}><Icon name="search" size={16}/>查询接续结果</button>}
+      {phase==='unknown'&&state.canRetry&&<button data-testid="human-continuation-retry" disabled={state.pending} onClick={()=>void state.retry()}><Icon name="retry" size={16}/>重试原请求</button>}
     </div>
     {attempt&&<details><summary>接续标识</summary><code>{attempt.request.commandId}</code></details>}
   </section>;

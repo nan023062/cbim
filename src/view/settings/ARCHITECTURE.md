@@ -18,6 +18,7 @@
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
 | [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按引擎连接测试。 |
+| [settings.css](settings.css) | 对应界面的布局与视觉样式。 |
 | [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
 
@@ -33,7 +34,7 @@ class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
 
 ### budget-settings-state.ts
 
@@ -109,7 +110,7 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
 
 ### GitHubFeedbackSettings.tsx
 
@@ -121,7 +122,7 @@ class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/github-feedback.ts](../../bridge/contracts/github-feedback.ts)。
 
 ### models.css
 
@@ -142,7 +143,7 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
 
 ### ProviderConnections.tsx
 
@@ -158,6 +159,15 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
 
+### settings.css
+
+```mermaid
+classDiagram
+class N_src_view_settings_settings_css["settings.css"] {
+  <<stylesheet>>
+}
+```
+
 ### SettingsView.tsx
 
 ```mermaid
@@ -168,7 +178,19 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[WebSettings.tsx](WebSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)。
+```mermaid
+classDiagram
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_SettingsView_tsx_SettingsGroup["SettingsGroup"] {
+  <<type>>
+
+}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsGroup : 声明
+```
+
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[WebSettings.tsx](WebSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)、[settings.css](settings.css)。
 
 ### WebSettings.tsx
 
@@ -180,7 +202,7 @@ class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-settings.ts](../../bridge/contracts/ipc-settings.ts)。
 
 ### 本目录调用边界
 
@@ -241,7 +263,11 @@ class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
 class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
   <<component>>
 }
+class N_src_view_settings_settings_css["settings.css"] {
+  <<stylesheet>>
+}
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_GitHubFeedbackSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
 ```
 
 
@@ -262,6 +288,8 @@ N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_GitHubFeedbackSetti
 WebSettings 显示浏览器 robots 策略（默认允许读正文、可选遵守规则）、Brave Search API 开关与密码输入；明确查询词发送给供应商。策略不依赖搜索密钥，可在安全存储不可用时保存。保存成功清空密钥输入，移除密钥同时关闭搜索；无安全存储时禁填密钥。版本冲突刷新配置摘要，保留未成功保存的密钥输入；不提供密钥读取或测试搜索自动调用。
 
 # 设置界面
+
+模型、并发、预算、网页、GitHub 连接及仓库表单采用公共操作图标、主题边框、可见焦点和控件尺寸。保存、刷新、删除、授权的文字与原确认行为保留；操作说明只读控件标签，不读取输入值、密钥或令牌。
 
 版本与更新由用户栏右侧的常驻图标和独立 [updates](../updates/ARCHITECTURE.md) 详情展示；设置页不重复装配更新组件。悬停图标或打开详情不会卸载设置页，模型、预算与 GitHub 反馈连接草稿继续由各表单持有。
 
@@ -304,3 +332,15 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 ### 异步结果失效边界
 
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
+
+## 分组设置与草稿
+
+SettingsView 提供总览卡片及模型、额度、网页/反馈、仓库四组导航。组件固定挂载，hidden 只改变可见性，切换分组不清除输入或中断已有授权轮询。离开整个设置页仍按原生命周期卸载；当前没有跨页面持久草稿保证。总览的作用范围来自配置契约，不推断连接健康；各组仍独立保存。
+
+## 供应商取消编辑
+
+ModelSettings 对照打开时的配置及未添加型号、临时密钥确认是否存在未保存输入；取消确认后清空凭据，取消确认本身不保存或测试连接。保存操作区粘性显示。分组仍保持挂载；此取消保护不等于跨全局导航持久草稿。
+
+## 跨页面草稿保护
+
+设置子表单仅上报脏稿布尔值，SettingsView 按来源聚合后交给外壳；卸载清理标记。并发/额度刷新须确认放弃草稿；网页保存失败保留输入，显式重新读取才重置。

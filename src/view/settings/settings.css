@@ -1,0 +1,11 @@
+/* 设置导航和总览只管理信息层级；隐藏分组保留组件与草稿，不用 CSS 覆盖 hidden。 */
+.settings-navigation {display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.settings-navigation button[aria-current=page] {color:var(--bg);background:var(--text);border-color:var(--text)}
+.settings-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.settings-card {display:flex;align-items:flex-start;gap:16px;text-align:left;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-control);min-width:0}
+.settings-card > span {display:grid;gap:8px;flex:1;min-width:0}
+.settings-card strong {font-size:17px}
+.settings-card span span,.settings-card small {color:var(--muted);line-height:1.65}
+.settings-card > svg {flex-shrink:0}
+.settings-page [hidden] {display:none !important}
+@media(max-width:600px){.settings-cards{grid-template-columns:minmax(0,1fr)}.settings-card{padding:16px}.settings-navigation{gap:4px}.settings-navigation button{flex:1 1 40%;justify-content:center}}

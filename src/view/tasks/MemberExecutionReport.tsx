@@ -5,6 +5,7 @@
  * 当前影响：用户明确选择原调用后才观察文件和保存处置；原报告与新影响分别显示，不因当前文件存在而清除 unknown。
  * 隔离资源：独立显式查询原运行，清理不依赖业务日志面板是否已打开，也不改写任务结果。
  */
+import {Icon} from '../components/Icon';
 import type {ExecutionReport,GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
 import {useExecutionReport} from './useExecutionReport';
 import type {ExecutionReportState} from './execution-report-state';
@@ -53,7 +54,7 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
             <p className="member-muted">提议记录：{item.proposedSeq??'未知'} · 授权记录：{item.allowedSeq??'未知'} · 结果记录：{item.finishedSeq??'未知'}</p>
             {item.receipt?<><p className="member-muted">回执时间：{new Date(item.receipt.recordedAt).toLocaleString()}</p><p className="member-muted">输入记录哈希：<code>{item.receipt.inputHash}</code>{item.receipt.resultHash&&<> · 结果记录哈希：<code>{item.receipt.resultHash}</code></>}</p><p className="member-muted">这些哈希对应调用记录，不是业务产物指纹。</p></>:<p className="member-warning">没有可核实的完整回执。</p>}
           </details>)}
-          {report.tools.nextCursor&&<button data-testid="execution-report-more" disabled={loading||stale} onClick={()=>void state.more()}>加载更多工具记录</button>}
+          {report.tools.nextCursor&&<button data-testid="execution-report-more" disabled={loading||stale} onClick={()=>void state.more()}><Icon name="next" size={16}/>加载更多工具记录</button>}
         </>:report.execution==='not_started'?<p className="member-muted">未登记成员运行，本报告没有可展示的工具回执。</p>:<p className="member-warning">工具记录不可完整核实；这不表示没有执行任何操作。</p>}
       </div>
       {report.candidate&&<div className="execution-report-candidate" data-testid="execution-report-candidate"><h5>本轮交付候选 · 尚未验收</h5><p>计划第 {report.candidate.planRevision} 版 · <code>{report.candidate.resultId}</code></p></div>}

@@ -11,6 +11,7 @@ React 桌面界面。页面消费 Bridge 通信契约、共享 Core 和自身视
 | 文件 | 当前职责 |
 | --- | --- |
 | [main.tsx](main.tsx) | 前端视图层的渲染进程入口，仅挂载 App 并加载外壳样式；通过 bridge 与本机后端通信。 |
+| [styles.ts](styles.ts) | 集中装配视图样式，业务页代码可延迟加载，样式保持首屏可用。 |
 
 ## 架构类图
 
@@ -34,10 +35,12 @@ class N_src_view_execution_view["execution-view/"] {
 class N_src_view_foundations["foundations/"] {
   <<directory>>
 }
+N_src_view_automation ..> N_src_view_components : 导入依赖
 N_src_view_conversation ..> N_src_view_components : 导入依赖
 N_src_view_conversation ..> N_src_view_execution_view : 导入依赖
 N_src_view_conversation ..> N_src_view_automation : 导入依赖
 N_src_view_conversation ..> N_src_view_foundations : 导入依赖
+N_src_view_diagnostics ..> N_src_view_components : 导入依赖
 N_src_view_execution_view ..> N_src_view_components : 导入依赖
 ```
 
@@ -84,6 +87,14 @@ class N_src_view_workspace["workspace/"] {
 class N_src_view_main_tsx["main.tsx"] {
   <<component>>
 }
+class N_src_view_styles_ts["styles.ts"] {
+  <<module>>
+}
+N_src_view_main_tsx ..> N_src_view_styles_ts : 导入依赖
+N_src_view_styles_ts ..> N_src_view_tasks : 导入依赖
+N_src_view_styles_ts ..> N_src_view_team : 导入依赖
+N_src_view_styles_ts ..> N_src_view_updates : 导入依赖
+N_src_view_styles_ts ..> N_src_view_workspace : 导入依赖
 N_src_view_team ..> N_src_view_tasks : 导入依赖
 N_src_view_team ..> N_src_view_workspace : 导入依赖
 N_src_view_workspace ..> N_src_view_team : 导入依赖
@@ -91,6 +102,7 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `automation` → `components`：导入。
 - `conversation` → `components`：导入。
 - `conversation` → `shell`：导入。
 - `conversation` → `execution-view`：导入。
@@ -98,20 +110,26 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `conversation` → `tasks`：导入。
 - `conversation` → `team`：导入。
 - `conversation` → `foundations`：导入。
+- `diagnostics` → `components`：导入。
 - `execution-view` → `components`：导入。
+- `governance` → `components`：导入。
 - `knowledge` → `components`：导入。
 - `knowledge` → `execution-view`：导入。
 - `main.tsx` → `shell`：导入。
+- `main.tsx` → `styles.ts`：导入。
+- `resources` → `components`：导入。
 - `resources` → `knowledge`：导入。
 - `runtime` → `foundations`：导入。
+- `runtime` → `components`：导入。
 - `runtime` → `tasks`：导入。
+- `settings` → `components`：导入。
 - `settings` → `tasks`：导入。
 - `settings` → `foundations`：导入。
+- `shell` → `components`：导入。
 - `shell` → `resources`：导入。
 - `shell` → `settings`：导入。
 - `shell` → `updates`：导入。
 - `shell` → `conversation`：导入。
-- `shell` → `components`：导入。
 - `shell` → `execution-view`：导入。
 - `shell` → `runtime`：导入。
 - `shell` → `team`：导入。
@@ -119,12 +137,27 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 - `shell` → `automation`：导入。
 - `shell` → `diagnostics`：导入。
 - `shell` → `foundations`：导入。
+- `styles.ts` → `shell`：导入。
+- `styles.ts` → `automation`：导入。
+- `styles.ts` → `components`：导入。
+- `styles.ts` → `conversation`：导入。
+- `styles.ts` → `diagnostics`：导入。
+- `styles.ts` → `execution-view`：导入。
+- `styles.ts` → `governance`：导入。
+- `styles.ts` → `knowledge`：导入。
+- `styles.ts` → `resources`：导入。
+- `styles.ts` → `runtime`：导入。
+- `styles.ts` → `settings`：导入。
+- `styles.ts` → `tasks`：导入。
+- `styles.ts` → `team`：导入。
+- `styles.ts` → `updates`：导入。
+- `styles.ts` → `workspace`：导入。
 - `tasks` → `foundations`：导入。
 - `tasks` → `components`：导入。
 - `tasks` → `execution-view`：导入。
 - `team` → `tasks`：导入。
-- `team` → `execution-view`：导入。
 - `team` → `components`：导入。
+- `team` → `execution-view`：导入。
 - `team` → `knowledge`：导入。
 - `team` → `resources`：导入。
 - `team` → `foundations`：导入。
@@ -166,7 +199,9 @@ N_src_view_workspace ..> N_src_view_team : 导入依赖
 
 # View 视图与交互
 
-原 frontend 的页面、控制器、订阅状态、hooks 和样式迁入本目录；行为与实例状态保持原实现。main.tsx 仅挂载 App，index.html 指向新入口，资源引用和样式加载顺序不变。
+`styles.ts` 集中静态装配当前全部页面 CSS，顺序为外壳、业务布局、统一 interface 规则；页面 JavaScript 延迟加载不会再迟到注入样式改变覆盖关系。新增 CSS 文件须同步该清单。`main.tsx` 只导入该样式入口。App 与 ExtensionArea 的专业页面通过局部 deferredView 装配；样式仍首屏加载，不能把 JavaScript 按需加载称为全部资源按需。
+
+原 frontend 的页面、控制器、订阅状态、hooks 和样式迁入本目录；行为与实例状态保持原实现。main.tsx 挂载 App，index.html 指向该入口。业务样式、外壳样式之后加载 components/interface.css，使所有页面共享主题令牌、控件焦点、字号下限及减少动效规则。
 
 页面经 window.cbim 使用 Bridge 的受限调用契约；不导入 Logic 服务、Node 或 Electron。共享算法经 Core 便携公开入口使用；foundations/utility 保留视图专属比较、订阅、异步代次、分层和存储适配，不反向依赖页面、React 或通信。订阅与代次只管理实例机制，业务状态与取消仍由控制器持有。
 

@@ -6,6 +6,8 @@
  * 成员交互端口仅接受停止、批准和回答问题，身份与刷新仍归当前任务详情。
  * IPC 边界：任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。
  */
+import {Icon} from '../components/Icon';
+import {stateIconNames} from '../components/state-labels';
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import type {GraphCursor,ScopeSummary,TaskNode} from '../../bridge/contracts/dispatch';
@@ -36,9 +38,9 @@ export function MemberTaskDetail({workspaceId,workspaceInstanceId,rootSessionId,
   const reviewStage=memberReviewStage(task);
   const valid=task.identity.workspaceId===workspaceId&&task.identity.rootSessionId===rootSessionId;
   return <section className="member-task-detail" aria-label={'成员任务详情 · '+task.assignee.name}>
-    <header className="member-detail-heading"><div><span className="member-role-caption">执行 Agent</span><h3>{task.assignee.name}</h3></div>{onBack&&<button onClick={onBack}>返回任务图</button>}</header>
+    <header className="member-detail-heading"><div><span className="member-role-caption">执行 Agent</span><h3>{task.assignee.name}</h3></div>{onBack&&<button onClick={onBack}><Icon name="undo" size={16}/>返回任务图</button>}</header>
     {!valid?<p className="member-error" role="alert">所选任务不属于当前会话，请返回任务图重新选择。</p>:<>
-      <span className={'member-state '+task.status}>{memberTaskLabel(task)}</span><h4>任务目标</h4><p className="member-detail-goal">{task.goal}</p>
+      <span className={'member-state '+task.status}><Icon name={stateIconNames[task.status]??'info'} size={16}/>{memberTaskLabel(task)}</span><h4>任务目标</h4><p className="member-detail-goal">{task.goal}</p>
       {reviewStage&&<section className="member-result" aria-label="交付审阅阶段"><h4>{reviewStage.label}</h4><p>{reviewStage.description}</p></section>}
       <MemberOwnerNotice task={task}/>
       <OwnerExecutionInspection key={'owner:'+JSON.stringify([workspaceId,rootSessionId,task.taskId])} task={task}/>
@@ -94,11 +96,11 @@ function MemberRunDetail({workspaceId,rootSessionId,task,runId,active}:{workspac
     finally{lock.current=false;if(alive.current)setBusy(false)}
   }
   return <div className="member-run-detail">
-    {current&&<div className="member-run-actions"><button disabled={busy} onClick={()=>void operate('dispatch.executionStop',{}).catch(()=>{})}>停止成员执行</button><small>仅停止此任务，不回滚已完成操作</small></div>}
-    {(error||interactionError||operationError)&&<div className="member-error" role="alert">{operationError||error||interactionError}<button onClick={()=>{setOperationError('');void refresh();void refreshInteractions.current()}}>重新读取</button></div>}
+    {current&&<div className="member-run-actions"><button disabled={busy} onClick={()=>void operate('dispatch.executionStop',{}).catch(()=>{})}><Icon name="stop" size={16}/>停止成员执行</button><small>仅停止此任务，不回滚已完成操作</small></div>}
+    {(error||interactionError||operationError)&&<div className="member-error" role="alert">{operationError||error||interactionError}<button onClick={()=>{setOperationError('');void refresh();void refreshInteractions.current()}}><Icon name="refresh" size={16}/>重新读取</button></div>}
     {loading&&<p role="status" className="member-muted">正在读取成员执行记录…</p>}
     {hasMore&&<p role="status" className="member-muted">正在加载后续记录…</p>}
-    {current&&approvals.map(approval=><section className="member-approval" key={approval.id} aria-label="成员操作确认"><strong>允许 {task.assignee.name} 执行 {approval.name}？</strong><pre>{JSON.stringify(approval.input,null,2)}</pre><div><button disabled={busy} onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:true}).catch(()=>{})}>允许一次</button><button disabled={busy} title="仅当前成员的本次运行有效，不影响主会话或其它成员" onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:true,allowAll:true}).catch(()=>{})}>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:false}).catch(()=>{})}>拒绝</button></div></section>)}
+    {current&&approvals.map(approval=><section className="member-approval" key={approval.id} aria-label="成员操作确认"><strong>允许 {task.assignee.name} 执行 {approval.name}？</strong><pre>{JSON.stringify(approval.input,null,2)}</pre><div><button disabled={busy} onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:true}).catch(()=>{})}><Icon name="confirm" size={16}/>允许一次</button><button disabled={busy} title="仅当前成员的本次运行有效，不影响主会话或其它成员" onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:true,allowAll:true}).catch(()=>{})}><Icon name="confirm" size={16}/>本次任务全部通过</button><button disabled={busy} onClick={()=>void operate('dispatch.approve',{approvalId:approval.id,allow:false}).catch(()=>{})}><Icon name="close" size={16}/>拒绝</button></div></section>)}
     {current&&questions.map(question=><QuestionCard key={question.id} request={question} onAnswer={answers=>operate('dispatch.answerQuestion',{questionId:question.id,answers})}/>)}
     {run&&<>
       <MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} active={active}/>

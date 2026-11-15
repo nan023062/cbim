@@ -143,7 +143,7 @@ class N_src_view_governance_ModuleGovernancePanel_tsx_Props["Props"] {
 N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_ModuleGovernancePanel_tsx_Props : 声明
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[governance-feedback.ts](governance-feedback.ts)、[module-governance.css](module-governance.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/governance.ts](../../bridge/contracts/governance.ts)、[governance-pending.ts](governance-pending.ts)、[GovernanceOrigin.tsx](GovernanceOrigin.tsx)、[GovernanceFeedback.tsx](GovernanceFeedback.tsx)、[governance-feedback.ts](governance-feedback.ts)、[module-governance.css](module-governance.css)。
 
 ### 本目录调用边界
 
@@ -200,6 +200,8 @@ N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_module
 
 # 模块知识治理面板
 
+治理操作用公共 Icon 区分核实、预览、保存与实施；完整文字、预览内容、版本条件和已知/未知结果保持原契约，不因统一图形而合并操作。
+
 界面只从明确选择的静态 Module 打开，不属于会话任务图。保护登记、观察、精确正文提案、人工决定与实施分别发送命令；批准不会自动写知识，结构验证与知识提交不会被显示为业务验收。
 
 每个新操作清除上次的成功提示。当前回复丢失时，只显示当前错误和待确认状态，不同时保留旧命令的“已确认”提示；历史回执仍有原命令身份。
@@ -221,3 +223,6 @@ N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_module
 仅首次 RPC 返回明确的预受理拒绝码时可解除本次元数据；接收回执或刷新之后的失败、已未知/重开请求以及 IO/损坏/实施待核实均不使用此分支。后端须保证实施意图保存后的不确定错误统一为未知或返回真实事务状态，不能伪装成前置拒绝。
 
 治理提交从已验证的 action 联合构造固定 IPC 名称，不能使用任意字符串；严格请求、待确认记录与原回执查询保持。
+## 模态可访问性
+
+ModuleGovernancePanel 使用 ModalFrame 的原生焦点约束与入口返回。Escape 在 busy 时保持打开；关闭不会移除持久待确认记录或重发原命令。治理字段、版本、批准与实施语义保持原契约。

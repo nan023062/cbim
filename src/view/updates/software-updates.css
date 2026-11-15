@@ -24,7 +24,7 @@
 .software-update-ring.is-indeterminate{animation:software-update-spin 1.8s linear infinite}
 .software-update-button.is-ready .software-update-ring{animation:software-update-breathe 2.4s ease-in-out infinite}
 .software-update-tooltip{position:fixed;z-index:2000;box-sizing:border-box;width:min(280px,calc(100vw - 24px));max-height:calc(100dvh - 72px);overflow:auto;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--text);box-shadow:0 8px 28px #0003;font-size:12px;line-height:1.6;pointer-events:none;overflow-wrap:anywhere}
-.software-update-tooltip>*{display:block}.software-update-tooltip>span,.software-update-tooltip>small{margin-top:4px}.software-update-tooltip>small{color:var(--muted);font-size:11px}.software-update-tooltip-error{color:var(--danger)}
+.software-update-tooltip>*{display:block}.software-update-tooltip>span,.software-update-tooltip>small{margin-top:4px}.software-update-tooltip>small{color:var(--muted);font-size:12px}.software-update-tooltip-error{color:var(--danger)}
 @keyframes software-update-spin{to{transform:rotate(270deg)}}
 @keyframes software-update-breathe{0%,100%{opacity:1}50%{opacity:.35}}
 @media(prefers-reduced-motion:reduce){.software-update-ring,.software-update-button.is-ready .software-update-ring{animation:none}.software-update-value{transition:none}}

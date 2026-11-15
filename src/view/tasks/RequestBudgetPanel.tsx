@@ -3,6 +3,7 @@
  * 设计原因：用户显式刷新；目标身份变化时更换控制器，旧响应不能串到新的目标，不提供解除未知或自动恢复按钮。
  * 金额展示保留六位有效数字，不改账本值；极小正金额保留科学记数，不能显示成明确零费用。
  */
+import {Icon} from '../components/Icon';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {RequestBudgetDenial,ScopeBudgetSummary} from '../../bridge/contracts/scope-budget';
 import {RequestBudgetController,type RequestBudgetQuery} from './request-budget-state';
@@ -14,7 +15,7 @@ export function RequestBudgetPanel({query,budget}:{query:RequestBudgetQuery;budg
   const controller=useMemo(()=>new RequestBudgetController(query,budget.policy.revision,q=>window.cbim.call('dispatch.requestBudget',q)),[query.workspaceId,query.rootSessionId,query.scopeId,budget.policy.revision]);
   const state=useSyncExternalStore(controller.subscribe,controller.snapshot,controller.snapshot);
   useEffect(()=>()=>controller.dispose(),[controller]);const report=state.report;
-  return <div data-testid="request-budget-panel"><button disabled={state.busy} onClick={()=>void controller.load()}>刷新请求账本</button>
+  return <div data-testid="request-budget-panel"><button disabled={state.busy} onClick={()=>void controller.load()}><Icon name="refresh" size={16}/>刷新请求账本</button>
     {state.error&&<p role="alert">{state.error}</p>}
     {!report?<p className="scope-goal-muted">尚未读取逐请求账本。</p>:<>
       <p className="scope-goal-muted">以下为最近一次读取的记录。</p>

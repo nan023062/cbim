@@ -1,7 +1,7 @@
 /**
  * 候选节点显示主调度审阅阶段及后续验收说明，不凭活动周期虚构正在审阅。
  * 作用定位：把当前主会话的已提交派发图绘制为可选择的任务节点流程图。
- * 设计原因：HTML 节点保留可读文字和键盘操作，SVG 仅负责有向连线；布局缓存按图身份隔离，状态增量不让节点反复跳位。
+ * 设计原因：图与可读列表共用同一节点事实；列表逐项展示原关系，不缩小画布文字。SVG 只负责有向连线；布局缓存按图身份隔离。
  * 职责边界：主 Agent 根只负责调度；历史折叠仅投影可见节点及两端均可见的原边，不补造跨历史连线，完整图仍先校验。求助、撤销和放弃只展示已提交记录。
  */
 import {useId,useMemo,useRef} from 'react';
@@ -27,12 +27,14 @@ export interface DispatchGraphProps {
   highlightedScopeId?:string;
   /** 仅隐藏指定业务任务及关联线；原快照用于状态、审阅和完整拓扑校验，不作为过滤后的持久图。 */
   hiddenTaskIds?:ReadonlySet<string>;
+  /** 列表保留节点状态及可见原边，仅改变展示，不修改调度图。 */
+  presentation?:'graph'|'list';
   onSelectTask:(id:string)=>void;
 }
 export const taskStatusLabels:Record<TaskNode['status'],string>={planned:'待安排',queued:'排队中',running:'执行中',waiting:'等待前置',checkpointed:'已保存检查点',result_ready:'交付待审阅',blocked:'需要处理',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 
 /** 节点选择只展开详情，不发起任务、改变调度顺序或签发验收。 */
-export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlightedScopeId,hiddenTaskIds}:DispatchGraphProps){
+export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlightedScopeId,hiddenTaskIds,presentation='graph'}:DispatchGraphProps){
   const viewport=useRef<HTMLDivElement>(null),previous=useRef<{root:string;layout:DispatchGraphLayout}|undefined>(undefined),marker=useId().replace(/[^a-zA-Z0-9_-]/g,'');
   const computed=useMemo(()=>{
     try{
@@ -51,25 +53,25 @@ export function DispatchGraph({graph,root,selectedTaskId,onSelectTask,highlighte
   },[graph,root.nodeId,hiddenTaskIds]);
   if(!computed.layout)return <p role="alert" className="task-graph-error">{computed.error}</p>;
   const layout=computed.layout,tasks=new Map(graph?.tasks.map(task=>[task.taskId,task])??[]);
-  return <section className="dispatch-graph" aria-label="当前会话任务流程图" data-testid="dispatch-graph">
-    <div className="dispatch-graph-toolbar"><span className="graph-legend"><i className="graph-line-sample"/>派发<i className="graph-line-sample dependency"/>依赖</span><button className="graph-home" onClick={()=>viewport.current?.scrollTo({top:0,left:0,behavior:'smooth'})}>定位主 Agent</button></div>
-    <div ref={viewport} className="dispatch-graph-viewport" tabIndex={0} aria-label="任务流程图画布，可滚动查看全部节点" data-testid="dispatch-graph-viewport">
-      <div className="dispatch-graph-canvas" style={{width:layout.width,height:layout.height}}>
-        <svg className="dispatch-graph-lines" width={layout.width} height={layout.height} aria-hidden="true">
+  return <section className={'dispatch-graph'+(presentation==='list'?' dispatch-list':'')} aria-label={presentation==='list'?'当前会话任务列表':'当前会话任务流程图'} data-testid="dispatch-graph">
+    <div className="dispatch-graph-toolbar"><span className="graph-legend"><i className="graph-line-sample"/>派发<i className="graph-line-sample dependency"/>依赖</span><button className="graph-home" onClick={()=>viewport.current?.scrollTo({top:0,left:0,behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}><Icon name="coordinator" size={16}/>定位主 Agent</button></div>
+    <div ref={viewport} className="dispatch-graph-viewport" tabIndex={0} aria-label={presentation==='list'?'任务列表，可滚动查看全部节点':'任务流程图画布，可滚动查看全部节点'} data-testid="dispatch-graph-viewport">
+      <div className="dispatch-graph-canvas" style={presentation==='graph'?{width:layout.width,height:layout.height}:undefined}>
+        {presentation==='graph'&&<svg className="dispatch-graph-lines" width={layout.width} height={layout.height} aria-hidden="true">
           <defs><marker id={'dispatch-arrow-'+marker} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="currentColor" strokeWidth="1.5"/></marker></defs>
           {layout.edges.map(({edge,path})=><path key={edge.edgeId} d={path} className={'dispatch-graph-edge '+edge.kind} markerEnd={`url(#dispatch-arrow-${marker})`} data-testid="dispatch-graph-edge" data-kind={edge.kind} data-from={edge.fromNodeId} data-to={edge.toNodeId}/>)}
-        </svg>
+        </svg>}
         {layout.nodes.map(node=>{
           const task=node.taskId?tasks.get(node.taskId):undefined,help=task?committedMemberHelp(task):undefined,cancellation=task?committedMemberCancellation(task):undefined,checkpoint=task?memberCheckpointView(task):undefined,id=task?.taskId??root.nodeId,status=task?(cancellation?memberCancellationLabel:help?'需要主调度协助':checkpoint?.phase==='abandoned'?checkpointPhaseLabels.abandoned:checkpoint?.phase==='queued'?checkpointPhaseLabels.queued:task.status==='queued'&&task.activeRunId?'正在启动':memberReviewStage(task)?.label??taskStatusLabels[task.status]):root.status;
           const reason=(task?memberReviewStage(task,graph?.tasks)?.description:undefined)??cancellation?.reason??help?.input.reason??task?.waitReason??checkpoint?.record?.input.reason;
           const outsideScope=Boolean(task&&highlightedScopeId&&task.scopeId!==highlightedScopeId);
-          return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')+(cancellation?' has-cancellation':'')} style={{left:node.x,top:node.y,width:node.width,height:node.height}} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-help-id={help?.helpId} data-cancel-id={cancellation?.commandId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
+          return <button key={node.nodeId} className={'dispatch-node '+(task?'task-node':'root-node')+(selectedTaskId===id?' selected':'')+(outsideScope?' other-scope':'')+(cancellation?' has-cancellation':'')} style={presentation==='graph'?{left:node.x,top:node.y,width:node.width,height:node.height}:undefined} onClick={()=>onSelectTask(id)} aria-pressed={selectedTaskId===id} aria-label={`${task?.assignee.name??root.name} · ${task?.goal??root.goal}${task?' · '+task.modules.map(module=>module.name).join('、'):''} · ${status}${outsideScope?' · 其他任务周期':''}`} data-testid={task?'dispatch-task-node':'dispatch-root-node'} data-task-id={task?.taskId} data-node-id={node.nodeId} data-status={task?.status} data-scope-id={task?.scopeId} data-help-id={help?.helpId} data-cancel-id={cancellation?.commandId} data-highlighted={task&&highlightedScopeId?!outsideScope:undefined}>
             <span className="dispatch-node-top"><span className="dispatch-node-avatar"><Icon name={task?'team':'sparkles'} size={17}/></span><span className="dispatch-node-agent">{task?.assignee.name??root.name}<small>{task?'执行 Agent':'主会话 · 调度根'}</small></span><Icon name="chevron" size={13}/></span>
             <span className="dispatch-node-goal" title={task?.goal??root.goal}>{task?.goal??root.goal}</span>
             {task?<span className="dispatch-node-modules" title={task.modules.map(module=>module.name).join('、')}><Icon name="folder" size={12}/><span>{task.modules.map(module=>module.name).join(' · ')}</span></span>:<span className="dispatch-node-modules">已读 {root.runCount} 轮记录{root.unreadableRunCount?` · ${root.unreadableRunCount} 轮待核实`:''} · {root.pendingCount} 条待执行</span>}
             <span className={'dispatch-node-status '+(task?.status??(root.running?'running':''))} data-checkpoint-id={checkpoint?.record?.checkpointId}><i className={task?.status==='running'||!task&&root.running?'task-state-dot animated':'task-state-dot'}/>{status}</span>
             {reason&&<span className="dispatch-node-reason" title={reason}>{reason}</span>}
-            {cancellation&&<time className="dispatch-node-cancellation-time" dateTime={cancellation.cancelledAt} title={'撤销记录时间：'+new Date(cancellation.cancelledAt).toLocaleString()}>记录于 {new Date(cancellation.cancelledAt).toLocaleString()}</time>}
+            {presentation==='list'&&<span className="dispatch-list-relations">{layout.edges.filter(item=>item.edge.toNodeId===node.nodeId).map(({edge})=><span key={edge.edgeId}>{edge.kind==='dependency'?'前置依赖':'派发来源'} · {edge.fromNodeId===root.nodeId?root.name:graph?.tasks.find(item=>item.nodeId===edge.fromNodeId)?.goal??edge.fromNodeId}</span>)}</span>}{cancellation&&<time className="dispatch-node-cancellation-time" dateTime={cancellation.cancelledAt} title={'撤销记录时间：'+new Date(cancellation.cancelledAt).toLocaleString()}>记录于 {new Date(cancellation.cancelledAt).toLocaleString()}</time>}
           </button>;
         })}
       </div>

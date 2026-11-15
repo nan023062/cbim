@@ -33,7 +33,7 @@ class N_src_view_shell_App_tsx["App.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
+直接依赖：[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../resources/ResourceRepositoryView.tsx](../resources/ResourceRepositoryView.tsx)、[../settings/SettingsView.tsx](../settings/SettingsView.tsx)、[../updates/SoftwareUpdates.tsx](../updates/SoftwareUpdates.tsx)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[../conversation/conversation-activity.ts](../conversation/conversation-activity.ts)、[WorkspaceList.tsx](WorkspaceList.tsx)、[ExtensionArea.tsx](ExtensionArea.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[tabs.ts](tabs.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/InterfaceHelp.tsx](../components/InterfaceHelp.tsx)、[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../components/Empty.tsx](../components/Empty.tsx)、[../conversation/Conversation.tsx](../conversation/Conversation.tsx)、[../execution-view/team-conversations.ts](../execution-view/team-conversations.ts)、[UserMenu.tsx](UserMenu.tsx)、[useSidebarWidth.ts](useSidebarWidth.ts)、[../runtime/RuntimeOverview.tsx](../runtime/RuntimeOverview.tsx)、[../runtime/runtime-view-state.ts](../runtime/runtime-view-state.ts)、[runtime-navigation.ts](runtime-navigation.ts)。
 
 ### ExtensionArea.tsx
 
@@ -63,7 +63,7 @@ class N_src_view_shell_ExtensionArea_tsx_Panel["Panel"] {
 N_src_view_shell_ExtensionArea_tsx ..> N_src_view_shell_ExtensionArea_tsx_Panel : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../team/TeamView.tsx](../team/TeamView.tsx)、[../workspace/WorkspaceView.tsx](../workspace/WorkspaceView.tsx)、[../automation/AutomationView.tsx](../automation/AutomationView.tsx)、[../diagnostics/WorkspaceDiagnostics.tsx](../diagnostics/WorkspaceDiagnostics.tsx)、[../components/DeferredView.tsx](../components/DeferredView.tsx)、[../components/Icon.tsx](../components/Icon.tsx)、[extensions.css](extensions.css)。
 
 ### extensions.css
 
@@ -324,6 +324,14 @@ N_src_view_shell_WorkspaceList_tsx ..> N_src_view_shell_workspace_list_css : 导
 
 # 工作区外壳与原会话定位
 
+## 页面代码按需到达
+
+App 的对话、设置、运行管理、资源库，以及 ExtensionArea 的团队架构、业务架构、自动化、诊断采用模块级延迟入口。共同组合 components/deferredView，显示局部加载与失败重试；业务导航和草稿保护仍在原外壳处理。入口类型直接引用目标组件参数，不能放宽为任意 props。原已挂载隐藏页签保持挂载，因此恢复的隐藏扩展也可能下载代码；切换工作区或离开全局页面继续沿用原卸载语义。不会停止后台运行或延迟用户提交的业务执行。依赖分包由 vite.renderer.config.ts 管理，保留相对资源路径和默认告警阈值。
+
+## 窗口交互与统一视觉
+
+App 顶栏常驻 InterfaceHelp，打开说明不会卸载会话或更改运行。600px 以下首次打开默认收起侧栏；展开时侧栏位于对话上方，选择工作区或管理页后收起，仍保留原草稿与后端任务。桌面保留可调整侧栏与按需扩展区。导航、设置动作复用 Icon，欢迎页以提出目标引导工作区选择。
+
 外壳按工作区实例与主 Session 缓存对话页面发布的已验证成员投影。主条目始终可见，成员在其下折叠；点击成员保留主页签/taskId，仅设置本机查看身份，点击主条目回到主话题列表。子会话无创建、重命名和删除操作；工作区重新打开后的实例不复用旧动态缓存。草稿和发送归属仍由原主页签持有。
 
 对话列表与会话历史菜单共用 `ConversationEntries` 和本机 `TabLayout`：自定义标题不覆盖原任务目标，移除条目保存工作区隔离的 `hiddenTaskIds`，轮询和重开不复活；删除最后一项创建空对话，不停止后台运行或删除日志。运行总览的显式定位可以恢复被移除条目。红色运行灯取 `runtime.snapshot` 的 ready 工作区及实际主／成员 running 记录，排队、历史状态和持久等待不点亮，读取失败清除观察。工作区菜单使用 portal 以点击坐标锚定左上角，视口边缘避让，支持键盘与焦点返回；折叠按钮紧邻项目名。
@@ -371,3 +379,11 @@ App 将自动化历史的真实 taskId 交给 showStartedTask，复用已有会�
 
 RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 cancel 推进代次，列表、会话记录与二次运行列表的 await 后分别检查，过期成功或失败均不影响当前定位。标记只作前端迟到隔离；目标白名单、运行实例重核验、原会话绑定及 requestId 的业务序号保持。
 主/子对话入口由 `showAgentChat` 同时更新逻辑子 Session 选择和本地 `chatNavigation` 序号。即使当前已选该 Agent，也能从办公室切回文字页；办公室头顶入口沿原页签回传身份。此状态按原页签隔离，不改变 taskId、草稿、模型或后端执行。共用角色投影归 execution-view/team-conversations。
+
+## 扩展工具交互
+
+扩展 tab 与 panel 使用稳定 ID/aria-controls/aria-labelledby，方向键及 Home/End 切换并聚焦；只有选中 tab 进入普通 Tab 顺序。工具面板显示当前项目，终端另显示实际工作目录。浏览器只接收无凭据 HTTP(S)，保留沙箱与外部打开，不把 iframe 加载事件视为可读成功。终端按钮在请求中禁用，以同步 ref 防止重复派发；停止回执不等于退出，running/exitCode 仍从原读取入口展示，失败保留命令并提示核对，不自动重试。
+
+## 跨页面草稿保护
+
+App 将设置脏稿纳入离开及 beforeunload 提示。select 返回是否允许导航，侧栏会话、成员与项目设置入口遇拒绝立即停止；同一全局页面重复点击不丢弃草稿。

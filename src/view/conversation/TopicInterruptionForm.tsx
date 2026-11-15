@@ -2,6 +2,7 @@
  * 作用定位：当前话题内的显式补充入口，展示冻结原文、全员暂停含义和原请求查询。
  * 设计原因：阅读成员对话不会中断工作；只有按钮提交执行。此表单不消费普通聊天草稿，所有请求指向原主 Session。
  */
+import {Icon} from '../components/Icon';
 import {useEffect,useMemo,useState} from 'react';
 import {pendingTopicInterruption} from '../../bridge/contracts/dispatch';
 import type {PublicDispatchScope,TopicInterruptionRequest} from '../../bridge/contracts/dispatch';
@@ -26,7 +27,7 @@ export function TopicInterruptionForm({scope,options,active,onRefresh}:{scope:Pu
     {state.request&&!state.receipt&&!state.pending&&<p role="status">补充原文已保留，尚未确认主 Agent 接收。请查询状态，或明确重试同一请求。</p>}
     {state.receipt&&<p role="status">补充已受理，后续进展见本话题对话。</p>}
     {state.error&&<p role="alert">{state.error}</p>}
-    {canWrite&&<button disabled={!selected||!text.trim()} onClick={()=>void execute(()=>controller.submit(text,selected!))}>暂停话题并提交补充</button>}
-    {state.request&&<><button disabled={state.pending} onClick={()=>void execute(()=>controller.query())}>查询原请求</button>{!state.receipt&&scope.status!=='closed'&&<button disabled={!active||state.pending} onClick={()=>void execute(()=>controller.retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
+    {canWrite&&<button disabled={!selected||!text.trim()} onClick={()=>void execute(()=>controller.submit(text,selected!))}><Icon name="pause" size={16}/>暂停话题并提交补充</button>}
+    {state.request&&<><button disabled={state.pending} onClick={()=>void execute(()=>controller.query())}><Icon name="search" size={16}/>查询原请求</button>{!state.receipt&&scope.status!=='closed'&&<button disabled={!active||state.pending} onClick={()=>void execute(()=>controller.retry())}><Icon name="retry" size={16}/>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
   </details>;
 }

@@ -1,14 +1,16 @@
 /**
+ * 编辑与变更预览使用原生模态焦点边界；Escape 经已有草稿确认，不在提交中关闭。
  * 作用定位：团队与业务架构共用的语义对象编辑器，负责表单、删除影响预览和显式事务提交。
  * 设计原因：界面填写领域字段，不让用户手工拼目录/索引；固定打开时的知识版本，后端校验并保存计划，避免后台刷新覆盖草稿或跨版本误提交。
  * Agent 编辑独立选择内置引擎，再按供应商兼容接口和型号范围筛选，失效选型不能提交；删除不依赖模型配置仍然存在。
  * IPC 边界：动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。
  */
+import {Icon} from '../components/Icon';
 import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useEffect,useRef,useState} from 'react';
 import {EngineModelPicker} from '../components/EngineModelPicker';
 import {providerSupportsEngine,type LlmSettings,type AgentModelSelection} from '../../bridge/contracts/models';
-import {createPortal} from 'react-dom';
+import {ModalFrame} from '../components/ModalFrame';
 import type {Snapshot,Preview} from '../../bridge/contracts/workspace';
 import {moduleBodyTemplate} from '../../bridge/contracts/architecture';
 import {teamGroupIds} from './static-owners';
@@ -69,8 +71,8 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
     try{await window.cbim.call('architecture.commit',{workspaceId,instanceId:base.instanceId,planId:preview.planId});setChanged(false);onSaved(preview.objects)}
     catch(cause){setError(cause instanceof Error?cause.message:String(cause))}finally{lock.current=false;setBusy(false)}
   }
-  return createPortal(<div className="modal-backdrop architecture-editor-backdrop"><form className="modal architecture-editor" role="dialog" aria-modal="true" aria-label={removing?'删除'+labels[kind]:(id?'编辑':'新建')+labels[kind]} onSubmit={event=>{event.preventDefault();void prepare()}}>
-    <header><div><small>工作区知识 · {base.workspaceId.slice(0,8)}</small><h2>{removing?'删除':id?'编辑':'新建'}{labels[kind]}</h2></div><button type="button" disabled={busy} onClick={close}>关闭</button></header>
+  return <ModalFrame label={removing?'删除'+labels[kind]:(id?'编辑':'新建')+labels[kind]} onRequestClose={()=>{if(!busy)close()}}><form className="modal architecture-editor" onSubmit={event=>{event.preventDefault();void prepare()}}>
+    <header><div><small>工作区知识 · {base.workspaceId.slice(0,8)}</small><h2>{removing?'删除':id?'编辑':'新建'}{labels[kind]}</h2></div><button type="button" disabled={busy} onClick={close}><Icon name="close" size={16}/>关闭</button></header>
     {id&&<p className="architecture-object-id">{id}</p>}
     {removing?<><p>先检查删除范围与引用影响。仅删除正式知识，项目业务源码不会被删除；已有执行记录会保留。</p><label className="architecture-checkbox"><input type="checkbox" aria-label="同时删除下级知识" disabled={busy} checked={cascade} onChange={event=>edit(()=>setCascade(event.target.checked))}/>同时删除下级模块或所属方法（如有）</label></>:<fieldset disabled={busy} className="architecture-fields">
       {!id&&<><label>归属{kind==='module'?'工程 / 模块':'节点'}{kind==='agent'||kind==='module'?<select aria-label="归属节点" value={owner} onChange={event=>edit(()=>setOwner(event.target.value))}>{(kind==='module'?moduleParents:teamParents).map(value=><option key={value} value={value}>{value}</option>)}</select>:<input aria-label="归属节点" readOnly value={owner}/>}</label><label>目录标识<input autoFocus aria-label="目录标识" required pattern={kind==='module'||kind==='workflow'?'[a-z][a-z0-9]*(_[a-z0-9]+)*':'[a-z][a-z0-9]*([_-][a-z0-9]+)*'} placeholder="如 gameplay / developer / code_review" value={slug} onChange={event=>edit(()=>setSlug(event.target.value))}/><small>标识创建后保持固定；模块使用小写 snake_case。</small></label></>}
@@ -79,7 +81,7 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
       {kind==='agent'&&<><label>专业能力（每行一项）<textarea aria-label="专业能力" required rows={3} value={capabilities} onChange={event=>edit(()=>setCapabilities(event.target.value))}/></label><label>能力限制（每行一项）<textarea aria-label="能力限制" rows={2} value={limitations} onChange={event=>edit(()=>setLimitations(event.target.value))}/></label></>}
       {kind==='agent'&&<><EngineModelPicker models={models} value={runtime} onChange={value=>edit(()=>setRuntime(value))}/><small>新登记岗位采用此选型；已有岗位在岗位配置中独立修改或采纳。模型目录在设置中管理。</small></>}
       {kind==='skill'&&<label>适用目的<input aria-label="适用目的" required value={purpose} onChange={event=>edit(()=>setPurpose(event.target.value))}/></label>}
-      {kind==='module'&&<><div className="architecture-sources"><b>业务源目录</b><small>可留空；目录应真实存在且位于项目内。</small>{sources.map((source,index)=><div className="architecture-source" key={index}><input aria-label={'源目录 '+(index+1)} placeholder="如 src/game" value={source.location} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,location:event.target.value}:item)))}/><input aria-label={'目录职责 '+(index+1)} placeholder="该目录的职责范围" value={source.scope} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,scope:event.target.value}:item)))}/><button type="button" aria-label={'移除源目录 '+(index+1)} onClick={()=>edit(()=>setSources(old=>old.filter((_,i)=>i!==index)))}>移除</button></div>)}<button type="button" onClick={()=>edit(()=>setSources(old=>[...old,{location:'',scope:''}]))}>添加源目录</button></div>
+      {kind==='module'&&<><div className="architecture-sources"><b>业务源目录</b><small>可留空；目录应真实存在且位于项目内。</small>{sources.map((source,index)=><div className="architecture-source" key={index}><input aria-label={'源目录 '+(index+1)} placeholder="如 src/game" value={source.location} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,location:event.target.value}:item)))}/><input aria-label={'目录职责 '+(index+1)} placeholder="该目录的职责范围" value={source.scope} onChange={event=>edit(()=>setSources(old=>old.map((item,i)=>i===index?{...item,scope:event.target.value}:item)))}/><button type="button" aria-label={'移除源目录 '+(index+1)} onClick={()=>edit(()=>setSources(old=>old.filter((_,i)=>i!==index)))}><Icon name="remove" size={16}/>移除</button></div>)}<button type="button" onClick={()=>edit(()=>setSources(old=>[...old,{location:'',scope:''}]))}><Icon name="add" size={16}/>添加源目录</button></div>
       </>}
       <label>{kind==='agent'?'工作原则':kind==='skill'?'Skill 正文':kind==='workflow'?'Workflow 正文':'模块知识正文'}<textarea className="architecture-body" aria-label="知识正文" required spellCheck={false} value={body} onChange={event=>edit(()=>setBody(event.target.value))}/></label>
       {kind==='module'&&!id&&<small>正文提供章节框架，请在提交前填写实际业务内容；结构校验不代替架构 review。</small>}
@@ -87,5 +89,5 @@ export function ArchitectureEditor({workspaceId,snapshot,kind,id,parentId,mode='
     {error&&<p role="alert" className="error-text">{error}</p>}
     <div className="architecture-dialog-actions"><button type="submit" disabled={busy}>{busy?'正在处理…':removing?'预览删除影响':'校验并预览'}</button></div>
     {preview&&<section className="architecture-preview" aria-label="知识变更预览"><h3>{preview.validation.structural?'结构检查通过':'结构检查未通过'} · {preview.changes.length} 个文件</h3><ul>{preview.validation.issues.map((issue,index)=><li key={index} className={issue.severity==='error'?'error-text':''}>{issue.path} · {issue.message}</li>)}</ul><details open><summary>文件变化与引用影响</summary><pre>{preview.diff}</pre></details><button className="solid-button" type="button" disabled={busy||!preview.validation.structural} onClick={()=>void commit()}>{removing?'确认删除知识':'确认提交到工作区'}</button></section>}
-  </form></div>,document.body);
+  </form></ModalFrame>;
 }

@@ -753,7 +753,9 @@
         "src/logic/tasks/runtime/"
       ],
       "tests": {
-        "unit": ["tests/office-history-service.test.ts"],
+        "unit": [
+          "tests/office-history-service.test.ts"
+        ],
         "contract": [
           "tests/command-verification-service.test.ts"
         ],
@@ -863,7 +865,9 @@
         "src/view/components/"
       ],
       "tests": {
-        "unit": [],
+        "unit": [
+          "tests/deferred-view.test.ts"
+        ],
         "contract": [
           "tests/repository-tools-view.test.ts"
         ],
@@ -1058,7 +1062,8 @@
       ],
       "tests": {
         "unit": [
-          "tests/update-button-state.test.ts"
+          "tests/update-button-state.test.ts",
+          "tests/software-updates-view.test.ts"
         ],
         "contract": [],
         "integration": []
@@ -1113,11 +1118,19 @@
       }
     },
     "tooling/desktop-acceptance-process": {
-      "roots": ["scripts/desktop-acceptance-process.mjs", "scripts/desktop-acceptance-process.ps1"],
+      "roots": [
+        "scripts/desktop-acceptance-process.mjs",
+        "scripts/desktop-acceptance-process.ps1"
+      ],
       "tests": {
-        "unit": ["tests/desktop-acceptance-process.test.mjs"],
+        "unit": [
+          "tests/desktop-acceptance-process.test.mjs"
+        ],
         "contract": [],
-        "integration": ["tests/desktop-acceptance-process-integration.test.mjs", "tests/desktop-acceptance-windows.test.mjs"]
+        "integration": [
+          "tests/desktop-acceptance-process-integration.test.mjs",
+          "tests/desktop-acceptance-windows.test.mjs"
+        ]
       }
     },
     "tooling/desktop-inspector-connection": {
@@ -1490,6 +1503,18 @@
       "tests": {
         "unit": [
           "tests/budget-settings.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "view/diagnostics": {
+      "roots": [
+        "src/view/diagnostics/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/diagnostics-view.test.ts"
         ],
         "contract": [],
         "integration": []

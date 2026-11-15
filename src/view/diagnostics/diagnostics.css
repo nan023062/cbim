@@ -13,3 +13,6 @@
 .knowledge-issue.warning>b{color:var(--warning)}
 .knowledge-issue p{margin:4px 0}
 .knowledge-issue-path{font-family:monospace;font-size:12px}
+.workspace-diagnostics dd{margin:4px 0 12px;font-family:monospace;overflow-wrap:anywhere}
+.workspace-diagnostics dt{color:var(--muted)}
+.workspace-diagnostics header p{display:flex;align-items:center;gap:8px}

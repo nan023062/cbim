@@ -117,7 +117,7 @@ class N_src_view_runtime_RuntimeOverview_tsx["RuntimeOverview.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[useRuntime.ts](useRuntime.ts)、[runtime-view-state.ts](runtime-view-state.ts)、[RuntimeRows.tsx](RuntimeRows.tsx)、[runtime-overview.css](runtime-overview.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ViewTabs.tsx](../components/ViewTabs.tsx)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[useRuntime.ts](useRuntime.ts)、[runtime-view-state.ts](runtime-view-state.ts)、[RuntimeRows.tsx](RuntimeRows.tsx)、[runtime-overview.css](runtime-overview.css)。
 
 ### RuntimeRows.tsx
 
@@ -149,7 +149,7 @@ class N_src_view_runtime_RuntimeRows_tsx_RowProps["RowProps"] {
 N_src_view_runtime_RuntimeRows_tsx ..> N_src_view_runtime_RuntimeRows_tsx_RowProps : 声明
 ```
 
-直接依赖：[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/state-labels.ts](../components/state-labels.ts)、[../../bridge/contracts/runtime.ts](../../bridge/contracts/runtime.ts)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../../bridge/contracts/usage.ts](../../bridge/contracts/usage.ts)、[runtime-view-state.ts](runtime-view-state.ts)。
 
 ### useRuntime.ts
 
@@ -230,6 +230,8 @@ N_src_view_runtime_useRuntime_ts ..> N_src_view_runtime_runtime_feed_ts : 导入
 
 # 全局运行总览
 
+任务/运行行增加与文字并列的 stateIconNames，completed 使用 history；刷新与原会话定位使用公共 Icon。卡片、筛选和压力指标统一主题及字号，不改变只读数据口径或定位契约。
+
 只消费 runtime.read 与现有独立 admission.read，不启动或恢复模型。监管的 scope、派发 task、模型 run、成员与用户消息队列分别展示；模型轮次 completed 标为“本轮结束”，closed/completed 但没有完成审阅仅表示周期结束；实际完成审阅和周期结算同时存在才显示“目标周期完成”。这些系统事实仍不代表人工业务验收。
 
 RuntimeFeed 持有窗口唯一在途读取与独立游标，noop 保持快照引用，变化快照重用未变行；同游标矛盾内容拒绝，错误保留旧值并明确可能过期，关闭/隐藏页面停止订阅与计时。新进程 stream 换入新快照，退订代际屏蔽迟到结果。没有轮询全部日志或正文。
@@ -249,3 +251,7 @@ RuntimeFeed 的 listeners 使用前端 SubscriptionSet，通知保持同步实�
 ### 异步结果失效边界
 
 RuntimeFeed 组合前端 AsyncGeneration；首订阅和末退订推进代次，refresh 只捕获当前标记。旧结果丢弃，pending 仍按 Promise 身份清理；当前仍有订阅时，旧代完成立即安排补读，新代完成按原间隔轮询。响应校验顺序、游标和行引用规则保持，代次推进不取消后端读取。
+
+## 监管记录分类
+
+RuntimeOverview 用目标与任务、成员实例、运行与用量、项目与队列四组面板组织同一只读快照。隐藏面板保持挂载以保留展开量；工作区与状态筛选共享且可清除，上方统计仍为全局。准入等待继续明确为独立快照，不与已启动运行混合。

@@ -3,6 +3,7 @@
  * 设计原因：坏历史不应遮住新核实周期，也不能被伪造成正常 RunSummary 或让续聊退回更早的原生上下文。
  * 恢复入口只导航原运行或创建空对话，原历史、草稿及附件保留，不修改日志或自动重放工具。
  */
+import {Icon} from '../components/Icon';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
 
 /** 缺少可信运行头即不可续接，绝不回退 runs.at(-1)。 */
@@ -22,8 +23,8 @@ export function ThreadRecoveryNotice({reason,disabled,onInspect,onNewConversatio
   return <section className="chat-reconcile" data-testid="thread-recovery-notice" aria-label="对话恢复" role="status">
     <p>{reason}原记录、草稿和附件仍保留。</p>
     <p>可查看原运行并使用核实入口；也可新建对话，重新说明要继续的工作。新对话不会自动继承上下文或重发原操作。</p>
-    <button disabled={disabled} onClick={onInspect}>查看原运行</button>{' '}
-    <button disabled={disabled} onClick={onNewConversation}>新建对话继续</button>
+    <button disabled={disabled} onClick={onInspect}><Icon name="inspect" size={16}/>查看原运行</button>{' '}
+    <button disabled={disabled} onClick={onNewConversation}><Icon name="conversation" size={16}/>新建对话继续</button>
   </section>;
 }
 

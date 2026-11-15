@@ -2833,3 +2833,5 @@ A 已通过准确 head 的四片完整 CI（408 文件，2774 通过、0 失败�
 ## 2026-11-12：A/B 已公开，预下载通过，差分缓存缺陷确认
 
 A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 通过、0 失败、2 个历史 EXE 跳过）和候选安装 43154244827 后公开。严格 A→B 差分测试 43155757174 失败，因 NSIS 写入 cbim-assistant-updater 而应用读取 cbim-desktop-updater，真实传输为完整 391409091 字节。显式全量回退场景 43156807720 补齐预下载、正常退出不安装、有效缓存复用、UI 点击后安装及全部数据保留，differentialDownload=false；1 次模型请求、零页面错误。构建配置已改为复用 NSIS 的 AppInfo 目录规则，原回归先失败后通过，37 项制品测试和依赖检查通过；未公开 0.1.12 修复候选另行验证，不改 A/B 原附件。详见 [B 结果](verification/desktop-release-0.1.11-20261112.md) 与 [缓存调查](verification/desktop-update-cache-diagnosis-20261112.md)。
+
+0.1.21 发布复核补充：首个 f99490bf 构建虽通过制品检查，但发现对话整合遗漏附加模型角色入口，未上传或公开该候选。恢复 AgentModelForm 的 revision、角色保留和可用性校验，入口置于引擎菜单；模型发送/续接/核实均传 modelRoles。inline-conversation/model-roles 15 项和 engine-menu-ui-smoke 五场景通过（含四引擎、320px、进度、重开无重放、失败重试，页面错误为零）。重新冻结后另建候选；完整 CI 以最终 head 为准。

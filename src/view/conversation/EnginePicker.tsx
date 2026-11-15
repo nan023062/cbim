@@ -10,7 +10,7 @@ import './engine-picker.css';
 const api=window.cbim;
 const labels:Record<ManagedEngineStatus['state'],string>={install:'可安装',update:'可更新',ready:'已安装',preparing:'正在准备',failed:'准备失败',unavailable:'暂不可用',bundled:'随应用提供'};
 /** 所有支持引擎始终可查看；仅选择受父级配置锁影响，准备请求严格绑定行内 engine。 */
-export function EnginePicker({value,onChange,disabled=false}:{value:LoopEngine;onChange:(value:string)=>void;disabled?:boolean}){
+export function EnginePicker({value,onChange,onConfigure,disabled=false}:{onConfigure?:()=>void;value:LoopEngine;onChange:(value:string)=>void;disabled?:boolean}){
   const [open,setOpen]=useState(false),[items,setItems]=useState<ManagedEngineStatus[]>([]),[error,setError]=useState('');
   const [pending,setPending]=useState<LoopEngine[]>([]);
   const root=useRef<HTMLDivElement>(null),trigger=useRef<HTMLButtonElement>(null),alive=useRef(true),locks=useRef(new Set<LoopEngine>()),epoch=useRef(0),id=useId();
@@ -48,6 +48,7 @@ export function EnginePicker({value,onChange,disabled=false}:{value:LoopEngine;o
           {working?<span className="engine-progress" role="progressbar" aria-label={engineLabel(engine)+' 准备进度'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Number.isFinite(progress)?progress:undefined} title={Number.isFinite(progress)?Math.round(progress!)+'%':'正在准备，进度待确认'}><svg viewBox="0 0 36 36" className={Number.isFinite(progress)?'':'indeterminate'}><circle cx="18" cy="18" r="15" className="track"/><circle cx="18" cy="18" r="15" pathLength="100" strokeDasharray={Number.isFinite(progress)?'100':'25 75'} strokeDashoffset={Number.isFinite(progress)?100-progress!:0}/></svg><small>{Number.isFinite(progress)?Math.round(progress!)+'%':'准备中'}</small></span>:item&&['install','update','failed'].includes(item.state)?<button className="engine-install" onClick={()=>void prepare(engine)}><Icon name={item.state==='update'?'refresh':'download'} size={16}/>{item.state==='update'?'更新':item.state==='failed'?'重试':'安装'}</button>:null}
           {item?.error&&<small className="engine-error" role="status">{item.error}</small>}
         </div>})}
+      {onConfigure&&<button disabled={disabled} onClick={()=>{close();onConfigure()}}>配置当前引擎模型</button>}
       {error&&<p role="alert">{error}</p>}<p className="engine-menu-note">仅使用当前应用签名清单中的兼容版本。</p>
     </div>}
   </div>;

@@ -223,3 +223,5 @@ MemberConversation 为只读工作审阅，按逻辑会话、频道、任务、�
 ## 0.1.21 主线整合
 
 EnginePicker 使用当前四种受支持引擎的目录；主进程将菜单状态投影自唯一 EnginePackages，准备复用其 revision/identity 校验和依赖闭包。历史话题的中断恢复用 LegacyTopicInterruptionForm 接回原持久草稿，不创建新频道。
+
+菜单内“配置当前引擎模型”复用 AgentModelForm；打开时冻结 revision，同引擎切换主模型保留附加角色，换引擎不携带旧角色。发送、续接和恢复均传入冻结的 modelRoles；角色缺失时禁止发送。

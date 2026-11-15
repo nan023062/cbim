@@ -1,5 +1,5 @@
 /**
- * 引擎选择和受管安装统一由 EnginePicker 提供，安装不更改主 Agent 配置或正在执行的任务。
+ * 引擎选择和受管安装统一由 EnginePicker 提供；完整模型角色用 AgentModelForm 冻结 revision，发送与恢复保留角色，安装不更改正在执行的任务。
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
  * 主对话连续展示全部真实消息和工具调用；旧话题归属仅用于兼容恢复，不再作为正文导航门槛。
  * Agent/Team 不再是聊天模式；旧协作选项不从输入框修改，新发送使用统一的自动执行入口。
@@ -25,7 +25,9 @@ import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'rea
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
 import {EnginePicker} from './EnginePicker';
-import {providerSupportsEngine,engineLabel,loopEngineSchema,type LoopEngine} from '../../bridge/contracts/engines';
+import {AgentModelForm} from '../components/AgentModelForm';
+import type {AgentModelSelection} from '../../bridge/contracts/agent-settings';
+import {engineDescriptor,engineSelectionAvailable,providerSupportsEngine,engineLabel,loopEngineSchema,type LoopEngine} from '../../bridge/contracts/engines';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
 import {runtimeTaskSelection,type RuntimeNavigationRequest} from '../shell/runtime-navigation';
@@ -114,6 +116,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const mainAgent=useMainAgentSettings(workspace.id,workspace.instanceId,active);
   // 无兼容模型时只保留尚未完成的表单输入，不另存一份会话配置。
   const [pendingEngine,setPendingEngine]=useState<LoopEngine>();
+  const [modelEditor,setModelEditor]=useState<{initial?:AgentModelSelection;engine?:LoopEngine;revision:number}>();
   const selectedRuntime=mainAgent.value?.selection;
   const selection=selectedRuntime?JSON.stringify([selectedRuntime.profileId,selectedRuntime.modelId]):'';
   // 只保存输入区真实权限偏好；旧模式偏好不再决定新会话行为。
@@ -192,7 +195,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     if(tab.taskId&&stopGate.current.pending({id:workspace.id,taskId:tab.taskId}))return;
     await operate(async()=>{
       if(!modelAvailable||!selectedProfile||!selectedModel)throw Error('请为当前引擎选择兼容的已启用模型');
-      const options={engine:chosenEngine,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode:'auto' as const};
+      const options={engine:chosenEngine,...roleOptions,profileId:selectedProfile.id,model:selectedModel.id,permission,collaborationMode:'auto' as const};
       if(waiting&&!skill){
         await continuation.submitInput(message,sentAttachments);
         onDraft('');onAttachments([]);return;
@@ -215,6 +218,9 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
   const selectedProfile=models?.profiles.find(p=>p.id===(selectedPair[0]||models?.selectedId));
   const selectedModel=selectedProfile?.models.find(m=>m.id===(selectedPair[1]||selectedProfile.defaultModel));
   const chosenEngine=pendingEngine??selectedRuntime?.engine??'pi';
+  // 同引擎更换主模型保留其他角色；切换引擎时不能带入旧引擎的额外角色。
+  const modelRoles=chosenEngine===selectedRuntime?.engine?selectedRuntime.modelRoles:undefined;
+  const roleOptions=modelRoles===undefined?{}:{modelRoles};
   const compatibleProfiles=models?.profiles.map(p=>({...p,models:p.models.filter(m=>providerSupportsEngine(chosenEngine,p,m.id))})).filter(p=>p.models.length)??[];
   const defaultProfile=compatibleProfiles.find(p=>p.id===models?.selectedId);
   const defaultModel=defaultProfile?.models.find(m=>m.id===defaultProfile.defaultModel&&m.enabled);
@@ -225,23 +231,24 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
     const profile=selectedProfile&&selectedModel?.enabled&&providerSupportsEngine(next,selectedProfile,selectedModel.id)?selectedProfile:profiles.find(p=>p.id===models?.selectedId)??profiles[0];
     const candidates=profile?.models.filter(m=>m.enabled&&providerSupportsEngine(next,profile,m.id));
     const model=profile===selectedProfile&&selectedModel?.enabled&&candidates?.includes(selectedModel)?selectedModel:candidates?.find(m=>m.id===profile?.defaultModel)??candidates?.[0];
+    if((engineDescriptor(next).additionalModelRoles??[]).length){setModelEditor({revision:mainAgent.value!.revision,engine:next,initial:profile&&model?{engine:next,profileId:profile.id,modelId:model.id,...(next===chosenEngine?roleOptions:{})}:undefined});return}
     if(!profile||!model){setPendingEngine(next);return}
-    if(await mainAgent.save({engine:next,profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(await mainAgent.save({engine:next,...(next===chosenEngine?roleOptions:{}),profileId:profile.id,modelId:model.id})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
   async function chooseModel(value:string){
     const [profileId,modelId]=value?JSON.parse(value):[defaultProfile?.id,defaultModel?.id];
-    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
+    if(profileId&&modelId&&await mainAgent.save({engine:chosenEngine,...roleOptions,profileId,modelId})){setPendingEngine(undefined);if(taskOpen)setNextTip(Date.now())}
   }
-  const modelAvailable=!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
+  const modelAvailable=!modelEditor&&engineSelectionAvailable(selectedRuntime??(selectedProfile&&selectedModel?{engine:chosenEngine,profileId:selectedProfile.id,modelId:selectedModel.id}:undefined),models)&&!!mainAgent.value&&!mainAgent.busy&&!mainAgent.error&&!pendingEngine&&!!selectedProfile&&!!selectedModel?.enabled&&providerSupportsEngine(chosenEngine,selectedProfile,selectedModel.id);
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。
-  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
+  const continuationConfig=modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id,permission},label:(selectedModel.name||selectedModel.id)+' · '+{read:'只读访问',ask:'默认权限',execute:'完全访问'}[permission]}:undefined;
   const continuation=useScopeContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh,active);
   const humanContinuation=useHumanContinuation(workspace.id,tab.taskId,graph,continuationConfig,graph.refresh);
   // 业务重规划仅共享实际模型身份，权限在独立表单默认 ask 并由用户明确选择；两处卡片共用一份请求。
-  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
+  const replan=useScopeReplan(workspace.id,tab.taskId,graph,modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,graph.refresh,id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')});
   // 影响核实共用实际会话状态和模型，仅显式新建核实任务时使用模型；不触碰聊天草稿。
   // 保留全部恢复依赖；当前模型、图或历史选择一旦变化，旧工具卡也必须获得新上下文。
-  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine]);
+  const recovery=useMemo<ExecutionRecoveryContext>(()=>({state:graph,refresh:graph.refresh,model:modelAvailable&&selectedProfile&&selectedModel?.enabled?{options:{engine:chosenEngine,...roleOptions,provider:'cbim-'+selectedProfile.id,profileId:selectedProfile.id,model:selectedModel.id},label:selectedModel.name||selectedModel.id}:undefined,showScope:id=>{graph.selectScope(id);setSelectedTaskId(graph.graph?.root.nodeId);setSection('tasks')}}),[graph,modelAvailable,selectedProfile,selectedModel,chosenEngine,modelRoles]);
   // 人工决定只有一份本机会话控制器，保存不改普通草稿、权限或当前等待状态。
   const humanDecisions=useHumanDecisions(workspace.id,tab.taskId,graph,graph.refresh);
   // 初次周期读取尚未完成时不能凭运行日志猜测 resume；等待信息就绪后再决定发送或排队。
@@ -306,7 +313,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
-        <div className="chat-controls-right"><EnginePicker value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} onChange={value=>void chooseEngine(value)}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
+        <div className="chat-controls-right"><EnginePicker onConfigure={()=>setModelEditor({revision:mainAgent.value!.revision,initial:selectedRuntime??undefined,engine:chosenEngine})} value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} onChange={value=>void chooseEngine(value)}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           ...(defaultModel?[{value:'',label:defaultModel.name||defaultModel.id,description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
           ...(compatibleProfiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
         ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} continuing={waiting} queued={shouldQueue&&!waiting} onClick={()=>void send()}/>}</div></div>

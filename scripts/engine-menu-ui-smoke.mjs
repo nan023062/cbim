@@ -16,7 +16,7 @@ try{
  await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1200,height:800}});page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:'+server.httpServer.address().port+'/test-results/engine-menu.html');
  await page.getByRole('button',{name:'Loop 引擎',exact:true}).click();const menu=page.getByRole('dialog',{name:'引擎选择与安装'});
- await menu.getByRole('button',{name:'安装',exact:true}).waitFor();assert.equal(await menu.locator('.engine-picker-row').count(),3);
+ await menu.getByRole('button',{name:'安装',exact:true}).waitFor();assert.equal(await menu.locator('.engine-picker-row').count(),4);
  assert.equal(await page.evaluate(()=>window.fixture.calls.filter(c=>c.action==='desktop.engines.prepare').length),0);checks.push('all-engines-no-install-on-open');
  await menu.getByRole('button',{name:'更新',exact:true}).click();await page.getByRole('progressbar',{name:'Codex 准备进度'}).waitFor();
  await page.waitForFunction(()=>document.querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')==='36');

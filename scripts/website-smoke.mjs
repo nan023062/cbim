@@ -19,7 +19,7 @@ try{
     await page.getByRole('heading',{level:1}).waitFor();
     const measurements=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,images:[...document.images].every(i=>i.complete&&i.naturalWidth>0),fonts:document.fonts.status}));
     assert.ok(measurements.scroll<=width,`${file} overflows ${width}: ${measurements.scroll}`);assert.ok(measurements.images);
-    assert.equal(await page.locator('h1').count(),1);assert.equal(await page.locator('title').textContent().then(t=>t.includes('CBIM Assistant')),true);
+    assert.equal(await page.locator('h1').count(),1);assert.equal(await page.locator('head > title').textContent().then(t=>t.includes('CBIM Assistant')),true);
     if(file==='download.html'){
       assert.equal(await page.locator('[data-download]').getAttribute('href'),links.downloadUrl);
       await page.locator('.integrity summary').click();assert.equal((await page.locator('.integrity code').textContent()).trim(),release.sha256);

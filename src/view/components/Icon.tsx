@@ -6,6 +6,7 @@
 import React from 'react';
 
 const paths: Record<string, React.ReactNode> = {
+
   grip: <><circle cx="8" cy="5" r="1"/><circle cx="16" cy="5" r="1"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/></>,
   running: <><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4Z"/></>,
   queued: <><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></>,

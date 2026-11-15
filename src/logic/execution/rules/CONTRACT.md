@@ -414,3 +414,13 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 ## 指定话题补充与排空
 
 `UserContinuationSource.interruptionId` 只由可信话题接续生成，必须等于 continuationId/waitId；普通聊天不能提交此来源。它表示已有用户补充在整话题排空后受理，允许引用完整 cancelled 主轮；不放宽未知工具、损坏日志、原生身份或其它系统回注的 completed 要求。
+
+### 官方包运行协议 V1
+
+engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。正式加载还传入 R 静态声明，比较 E 编译声明中的模型协议、角色、依赖、原生目录与历史格式；缺失或不匹配时拒绝启动，不回退或自动重试。展示名称、角色标签和业务介绍不参与语义比较。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。
+
+### 通用包地址
+
+EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。
+
+EngineRuntimePackage 可携带准确依赖映射和 retain 引用端口，仅在宿主内存使用；不序列化函数或加载路径到模型。

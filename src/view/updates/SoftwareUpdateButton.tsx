@@ -2,7 +2,7 @@
  * 作用定位：侧栏用户栏右侧的更新图标，提供版本 tooltip、真实准备进度和显式安装操作。
  * 设计原因：入口常驻而不占用菜单；未就绪时仍可键盘聚焦查看状态，但不会下载、排队或安装。
  * 生命周期：tooltip 使用视口内的独立浮层；完整进度与呼吸提示只属于已验证的 ready 快照。
- * 引擎首次准备显示独立版本和进度；下载 E 不会让按钮获得 C/R 安装资格。
+ * 仅展示 CBIM 应用更新；引擎的准备、失败和管理统一归引擎详情。
  */
 import {useEffect,useId,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
@@ -39,7 +39,6 @@ export function SoftwareUpdateButton({updates}:{updates:SoftwareUpdateController
     </button>
     {open&&createPortal(<div id={id} role="tooltip" className="software-update-tooltip" style={position}>
       <strong>{view.current}</strong><span>{view.target}</span><span>{view.description}</span>
-      {view.engines.map(text=><span key={text}>{text}</span>)}
       {view.ready&&<small>会结束当前任务并重启，请先保存未提交的编辑。</small>}
       {view.error&&<span className="software-update-tooltip-error">{view.error}</span>}
     </div>,document.body)}

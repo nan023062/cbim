@@ -5,7 +5,7 @@
  */
 import {fail} from '../../../core/errors';
 import {checkedConversationAgentBinding,type ConversationAgentBinding} from '../../execution/rules/conversation-binding';
-import {agentModelSelectionSchema} from '../../models';
+import {agentModelSelectionSchema} from '../rules/agent-runtime';
 import {data} from '../../knowledge/rules/read-models';
 import type {KnowledgeWorkspace} from '../../knowledge/rules/ports';
 import type {TaskSpec} from '../../tasks/rules/types';

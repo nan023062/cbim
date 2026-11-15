@@ -51,15 +51,15 @@ try{
   await call('resources.configure',{mode:'local',location:repository});
   const snapshot=(id:string)=>call<Snapshot>('snapshot',{id});
   const currentView=()=>page!.locator('.extension-area:not([hidden]) .extension-content:not([hidden])');
-  // 0.1.7 起使用知识文件树；按真实对象路径定位，文件按钮与同名对象不能混为一项。
-  const knowledgePath=(objectPath:string)=>currentView().locator(`[data-knowledge-path="${objectPath}"]`);
+  // 组织与业务模块按语义身份导航；配置资料不再是树节点。
+  const knowledgePath=(objectPath:string)=>currentView().locator(`[data-team-id="${objectPath}"],[data-module-id="${objectPath}"]`);
   async function selectWorkspace(name:string){await page!.getByRole('button',{name:name+' · 运行中',exact:true}).click()}
   async function extension(name:'团队架构'|'业务架构'){
     const open=page!.getByRole('button',{name:'展开右侧扩展',exact:true});if(await open.isVisible())await open.click();
     const tab=page!.getByRole('tab',{name,exact:true});
     if(await tab.count())await tab.click();
     else{await page!.getByRole('button',{name:'新增扩展页签',exact:true}).click();await currentView().getByRole('button',{name:'打开'+name,exact:true}).click()}
-    await currentView().getByRole('heading',{name:name==='团队架构'?'团队组织架构':'业务架构',exact:true}).waitFor();
+    await currentView().getByRole('navigation',{name:name==='团队架构'?'团队组织树':'业务模块源码树',exact:true}).waitFor();
   }
   const editor=(name:string)=>page!.getByRole('dialog',{name,exact:true});
   async function preview(dialog:Locator){

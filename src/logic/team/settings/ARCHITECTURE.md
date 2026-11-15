@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-仅保留主 Agent 设置及工作区 revision 校验；模型配置服务已迁至 logic/models/service，通过其公开入口使用配置短锁。
+仅保留主 Agent 设置及工作区 revision 校验；模型配置服务已迁至 logic/models/service，经 logic/engines/service 的引擎投影复用同一个模型配置短锁。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -38,7 +38,7 @@ class N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings["MainAg
 N_src_logic_team_settings_main_agent_settings_ts ..> N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings : 声明
 ```
 
-直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../models/index.ts](../../models/index.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../../models/service/index.ts](../../models/service/index.ts)。
+直接依赖：[../../../core/utility/index.ts](../../../core/utility/index.ts)、[../../../core/platform/node/files/index.ts](../../../core/platform/node/files/index.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../rules/agent-runtime.ts](../rules/agent-runtime.ts)、[../../engines/service/index.ts](../../engines/service/index.ts)。
 
 
 ## 子目录导航
@@ -55,7 +55,7 @@ N_src_logic_team_settings_main_agent_settings_ts ..> N_src_logic_team_settings_m
 
 # 主 Agent 设置
 
-MainAgentSettings，拥有工作区主 Agent 的选型 revision 与保存队列。通过 [Logic 模型服务](../../models/service/CONTRACT.md) 公开入口组合 LlmProfiles，后者拥有模型身份与配置短锁。
+MainAgentSettings，拥有工作区主 Agent 的选型 revision 与保存队列。通过 [引擎选型服务](../../engines/CONTRACT.md) 组合 EngineModelProfiles；该服务将引擎策略投影为模型需求，底层 LlmProfiles 仍独占模型身份、设置队列与配置短锁。
 
 configure 先核对工作区实例和 revision，再在模型配置短锁内写入新 revision；写盘成功才返回结果。read 不解密或启动执行。两处界面读取同一份设置，已捕获的运行快照不被新设置热替换。
 

@@ -1,3 +1,7 @@
+### 模块源码读取
+
+ipc-workspace 注册 source.list/source.read，重用 Logic 的严格纯请求及数据类型。必须提供 workspaceId、instanceId、revision、moduleId 和 source；path 相对已声明来源，默认目录根。协议不接受写入选项或绝对路径授权，服务重复核实真实绑定。
+
 ### 长期对话公共身份
 
 `dispatch` 导出纯 `TeamSession` 类型与严格 Schema，供 View 校验联合读取；只有逻辑办公室/角色/Session 标识和创建时间，无原生目录、执行入口或调度权限。
@@ -337,11 +341,11 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+engines 公开重导出静态 supportedEngines、LoopEngine、engineLabel、loopEngineSchema、engineSupportsApi；agent-settings 公开 AgentModelSelection 与主 Agent 设置契约。models 只提供供应商/模型定义、预设及目录信息。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
-models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
+engines 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
 
 ## 分组关联 IPC 契约
 
@@ -381,3 +385,7 @@ execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的
 公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。
 
 loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 scope 覆盖参数，真实新 scope 仍由持久队列身份创建。
+
+引擎设置公开 engines.settings/check/install/configure。安装只接官方 ID、展示的准确摘要与 revision；启停/移除不接受 URL、路径或第三方来源。
+
+models.testConnection 按 generation/api 或 embedding 操作测试已经保存的模型，无引擎、URL 或凭据参数；保留旧 models.test 的兼容契约。

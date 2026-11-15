@@ -3,8 +3,8 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import type {GraphSnapshot,ScopeSummary,TaskNode} from '../src/bridge/contracts/dispatch';
 import {taskHistoryView} from '../src/view/tasks/task-history-state';
-import {DispatchGraph} from '../src/view/tasks/DispatchGraph';
-import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {SessionTaskView} from '../src/view/tasks/SessionTaskView';
+import {officeScene} from '../src/view/tasks/office-state';
 import {scopeGoalView,type ScopeGoalState} from '../src/view/tasks/scope-state';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-13T07:00:00.000Z';
@@ -22,7 +22,7 @@ function scopeState(scopes:ScopeSummary[]):ScopeGoalState {
   return {scopes,selectedScopeId:selected?.scopeId,selectedGoalView:scopeGoalView(selected),currentGoalView:scopeGoalView(selected),loading:false,detailLoading:false,error:'',selectScope:()=>{}};
 }
 function render(input:GraphSnapshot,scopes:ScopeSummary[]=[done],selectedTaskId?:string) {
-  return renderToStaticMarkup(createElement(SessionTaskView,{...identity,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph:input,scopeState:scopeState(scopes),selectedTaskId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+  return renderToStaticMarkup(createElement(SessionTaskView,{...identity,taskId:identity.rootSessionId,runs:[],queued:[],graph:input,scopeState:scopeState(scopes),selectedTaskId,onSelectTask:()=>{},onAgentChat:()=>{},onChat:()=>{}}));
 }
 
 it('只折叠可靠完成周期的交付及撤销，失败/检查点/待审阅和在途事实保留',()=>{
@@ -31,7 +31,7 @@ it('只折叠可靠完成周期的交付及撤销，失败/检查点/待审阅�
   expect([...view.taskIds]).toEqual(['complete','cancel']);expect(JSON.stringify(input)).toBe(before);
   const html=render(input);expect(html).toContain('历史任务 · 2');expect(html).toContain('<details class="office-history">');
   const current=html.split('<details class="office-history"')[0];expect(current).not.toContain('data-task-id="complete"');expect(current).not.toContain('data-task-id="cancel"');
-  for(const id of ['failed','interrupted','blocked','checkpointed','waiting','queued','running','pending','in-flight'])expect(html).toContain(`data-task-id="${id}"`);
+  expect(officeScene(input,[],[done],false).current.map(task=>task.taskId)).toEqual(['failed','interrupted','blocked','checkpointed','waiting','queued','running','pending','in-flight']);
 });
 
 it('缺失、旧事件流、完成依据不完整及未关闭周期都不把候选当作完成',()=>{
@@ -51,29 +51,11 @@ it('候选获主 Agent 接受仍需等目标可靠完成，拒绝的候选不能
   member.candidateReview.decision='reject';expect(taskHistoryView(input,[done]).tasks).toEqual([]);
 });
 
-it('折叠不补造穿越历史的依赖，展开原图恢复真实连线；原数据保持不变',()=>{
-  const input=graph([task('old','result_ready'),{...task('current','waiting'),scopeId:'active'}]);
-  input.edges.push({edgeId:'depends-on-old',identity,fromNodeId:'task:old',toNodeId:'task:current',kind:'dependency',condition:{kind:'result_ready',planRevision:1},enabled:true,revision:1});
-  const before=JSON.stringify(input),archived=taskHistoryView(input,[done]),root=sessionRoot([],identity.rootSessionId,0,input);
-  expect(archived.relatedEdgeCount).toBe(1);expect(render(input)).toContain('任务依赖图');
-  const props={graph:input,root,onSelectTask:()=>{}};
-  const collapsed=renderToStaticMarkup(createElement(DispatchGraph,{...props,hiddenTaskIds:archived.taskIds}));
-  expect(collapsed).toContain('data-task-id="current"');expect(collapsed).not.toContain('data-task-id="old"');expect(collapsed).not.toContain('data-kind="dependency"');
-  const expanded=renderToStaticMarkup(createElement(DispatchGraph,props));expect(expanded).toContain('data-task-id="old"');expect(expanded).toContain('data-from="task:old" data-to="task:current"');
-  expect(JSON.stringify(input)).toBe(before);
-});
 
-it('折叠不能遮蔽完整图的循环或缺少端点',()=>{
-  const input=graph([task('old','cancelled'),task('current','waiting')]);
-  const props={graph:input,root:sessionRoot([],identity.rootSessionId,0,input),onSelectTask:()=>{},hiddenTaskIds:new Set(['old'])};
-  input.edges.push({edgeId:'invalid',identity,fromNodeId:'missing',toNodeId:'task:old',kind:'dispatch',enabled:true,revision:1});
-  expect(renderToStaticMarkup(createElement(DispatchGraph,props))).toContain('缺少端点');
-  input.edges.at(-1)!.fromNodeId='task:old';expect(renderToStaticMarkup(createElement(DispatchGraph,props))).toContain('循环');
-});
 
-it('全部折叠时保留主根和历史入口，直接定位历史任务自动展开原节点与详情',()=>{
+it('全部折叠时保留主根和历史入口，直接定位历史任务保留原引用，不在办公室显示详情',()=>{
   const input=graph([task('old','cancelled')]);
-  const collapsed=render(input);expect(collapsed).toContain('data-office-actor="main:root"');expect(collapsed).toContain('当前没有待处理任务');expect(collapsed).not.toContain('尚未派发成员任务');
-  const selected=render(input,[done],'old');expect(selected).toContain('<details class="office-history" open="">');expect(selected).toContain('data-task-id="old"');expect(selected).toContain('成员任务详情');
+  const collapsed=render(input);expect(collapsed).toContain('data-office-actor="main:root"');expect(collapsed).not.toContain('当前没有待处理任务');expect(collapsed).not.toContain('尚未派发成员任务');
+  const selected=render(input,[done],'old');expect(selected).toContain('<details class="office-history" open="">');expect(selected).toContain('data-task-id="old"');expect(selected).not.toContain('成员任务详情');expect(selected).not.toContain('session-graph-detail');
   const foreign={...input,identity:{...identity,workspaceId:'foreign'}};expect(render(foreign)).not.toContain('task-history-toggle');
 });

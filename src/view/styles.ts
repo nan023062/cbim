@@ -5,7 +5,9 @@
  */
 import './shell/shell.css';
 import './automation/automation.css';
+import './components/agent-model-form.css';
 import './components/repository-scope.css';
+import './components/sidebar.css';
 import './conversation/conversation-entries.css';
 import './conversation/conversation-topics.css';
 import './conversation/conversation.css';
@@ -23,6 +25,7 @@ import './knowledge/knowledge-source.css';
 import './resources/repository-connections.css';
 import './resources/workspace-transfer.css';
 import './runtime/runtime-overview.css';
+import './settings/appearance.css';
 import './settings/budget-settings.css';
 import './settings/models.css';
 import './settings/settings.css';

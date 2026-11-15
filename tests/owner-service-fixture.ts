@@ -7,5 +7,5 @@ export async function registerServiceOwner(app:Application,workspace:Workspace,a
   const definition={name,api:'openai-completions' as const,baseUrl:'https://example.test/v1',auth:'none' as const,defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false,vision:false}]};
   const settings=await app.models.save({profile:definition}),profile=settings.profiles.find(item=>item.name===name)!;
   const registered=await registerFixtureOwner(app,workspace.entry.id,{agentId,moduleIds,profileId:profile.id,modelId:'fixture',name,adaptation:{instructions:'按已派发模块执行并保存真实证据。',references:[]}});
-  return {registered,definition,model:await app.models.configuration(profile.id,'fixture')};
+  return {registered,definition,model:await app.engineModels.configuration(profile.id,'fixture')};
 }

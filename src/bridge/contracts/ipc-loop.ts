@@ -2,8 +2,10 @@
  * 作用定位：会话、排队、历史与安全续接的公开 IPC 请求与响应。
  * followupOf 仅供排队新任务显式关联历史话题，后端仍校验同办公室和关闭状态。
  * 设计原因：插入绑定原 expectedRunId，查询原回执不重放；退役的业务启动入口继续拒绝。类型不替代身份和权限校验。
+ * 模型选择使用同一静态目录及 V2 角色契约；发送、排队与续聊不能另存三引擎枚举或丢弃向量选型。
  */
 import {z} from 'zod';
+import {loopEngineSchema,modelRolesSelectionSchema} from './engines';
 import {ipcId,workspaceIdArgs,taskIdArgs,runIdArgs,questionAnswers} from './ipc-shapes';
 import {type ConversationThreadView,type RunSummary} from '../../logic/execution/rules/types';
 import {type ChatApproval} from '../../logic/tools/rules/policy/types';
@@ -24,9 +26,9 @@ export const loopIpcRequests={
   'loop.start':z.never(),
   'loop.queue':taskIdArgs,
   'loop.queueDelta':taskIdArgs.extend({cursor:z.object({epoch:ipcId,revision:z.number().int().nonnegative(),items:z.record(z.number())}).strict().optional()}).strict(),
-  'loop.enqueue':taskIdArgs.extend({followupOf:ipcId.optional(),message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
-  'loop.chat':workspaceIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
-  'loop.resume':runIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:z.enum(['pi','claude-code','codex']).optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional(),reconciledToolIds:z.array(z.string()).optional()}).strict(),
+  'loop.enqueue':taskIdArgs.extend({followupOf:ipcId.optional(),message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
+  'loop.chat':workspaceIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional()}).strict(),
+  'loop.resume':runIdArgs.extend({message:z.string(),attachments:z.array(z.string()).optional(),options:z.object({engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional(),provider:z.string().optional(),model:z.string().optional(),profileId:z.string().optional(),permission:z.enum(['read','ask','execute']).optional(),collaborationMode:z.enum(['auto','team']).optional(),allowNativeExecution:z.boolean().optional(),turnTimeoutMs:z.number().optional()}).strict().optional(),reconciledToolIds:z.array(z.string()).optional()}).strict(),
   'loop.queueChange':taskIdArgs.extend({queueId:ipcId,action:z.enum(['first','up','down','remove'])}).strict(),
   'loop.queueEdit':taskIdArgs.extend({queueId:ipcId,message:z.string(),expected:z.string()}).strict(),
   'loop.queueMove':taskIdArgs.extend({queueId:ipcId,beforeId:ipcId.optional()}).strict(),

@@ -14,6 +14,7 @@
 | [model-request-budget-rules.ts](model-request-budget-rules.ts) | 从不可变请求阶段计算预留、真实用量和后续请求的准入，供服务及 Store 独立核对。 |
 | [model-request-budget-storage.ts](model-request-budget-storage.ts) | 模型请求账本独有的读视图、提交单元与准入端口。 |
 | [model-request-budget.ts](model-request-budget.ts) | 定义逐模型请求预留、发送意图和结算的不可变事实，以及只读预算摘要。 |
+| [model-request-configuration.ts](model-request-configuration.ts) | 从已冻结的执行快照派生单角色的请求计量参数，供预算服务与审计共同核对。 |
 | [request-budget.ts](request-budget.ts) | 定义各引擎共用传输与工作区请求账本之间的可信窄端口。 |
 | [scope-budget-invariants.ts](scope-budget-invariants.ts) | 在派发事务提交与重放时保护冻结额度、真实运行准入证明和不可改写的预算拒绝事实。 |
 | [scope-budget.ts](scope-budget.ts) | 定义周期冻结额度、可信计量观察和启动证明；显式 request 模式另由请求账本控制每次发送。 |
@@ -31,7 +32,7 @@ class N_src_logic_budget_rules_model_request_budget_invariants_ts["model-request
 }
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[model-request-budget.ts](model-request-budget.ts)、[model-request-budget-rules.ts](model-request-budget-rules.ts)。
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[model-request-configuration.ts](model-request-configuration.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[model-request-budget.ts](model-request-budget.ts)、[model-request-budget-rules.ts](model-request-budget-rules.ts)。
 
 ### model-request-budget-rules.ts
 
@@ -41,6 +42,7 @@ class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budg
   <<module>>
   +requestBudgetReservation()
   +requestBudgetCost()
+  +requestBudgetInputCapacity()
   +requestBudgetRecords()
   +requestBudgetReport()
   +requestBudgetDecision()
@@ -114,6 +116,28 @@ class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetBinding["Req
 
 }
 N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetBinding : 声明
+class N_src_logic_budget_rules_model_request_budget_ts_GenerationBudgetModel["GenerationBudgetModel"] {
+  <<type>>
+
+}
+N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_GenerationBudgetModel : 声明
+class N_src_logic_budget_rules_model_request_budget_ts_EmbeddingBudgetModel["EmbeddingBudgetModel"] {
+  <<type>>
+
+}
+N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_EmbeddingBudgetModel : 声明
+class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetCapacity["RequestBudgetCapacity"] {
+  <<type>>
+
+}
+N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetCapacity : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
+  <<module>>
+}
 class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetModel["RequestBudgetModel"] {
   <<type>>
 
@@ -129,6 +153,11 @@ class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetIntent["Requ
 
 }
 N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetIntent : 声明
+class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetDenial["RequestBudgetDenial"] {
+  <<type>>
+
+}
+N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetDenial : 声明
 ```
 
 ```mermaid
@@ -136,11 +165,6 @@ classDiagram
 class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetDenial["RequestBudgetDenial"] {
-  <<type>>
-
-}
-N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetDenial : 声明
 class N_src_logic_budget_rules_model_request_budget_ts_ModelRequestBudgetChange["ModelRequestBudgetChange"] {
   <<type>>
 
@@ -159,6 +183,30 @@ class N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetReport["Requ
 N_src_logic_budget_rules_model_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts_RequestBudgetReport : 声明
 ```
 
+
+### model-request-configuration.ts
+
+```mermaid
+classDiagram
+class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
+  <<module>>
+  +requestBudgetModelFor()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
+  <<module>>
+}
+class N_src_logic_budget_rules_model_request_configuration_ts_RequestBudgetExecutionModel["RequestBudgetExecutionModel"] {
+  <<type>>
+
+}
+N_src_logic_budget_rules_model_request_configuration_ts ..> N_src_logic_budget_rules_model_request_configuration_ts_RequestBudgetExecutionModel : 声明
+```
+
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../team/rules/workspace-member-rules.ts](../../team/rules/workspace-member-rules.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[model-request-budget.ts](model-request-budget.ts)。
 
 ### request-budget.ts
 
@@ -329,6 +377,9 @@ classDiagram
 class N_src_logic_budget_rules_model_request_budget_invariants_ts["model-request-budget-invariants.ts"] {
   <<module>>
 }
+class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
+  <<module>>
+}
 class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
   <<module>>
 }
@@ -338,31 +389,49 @@ class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budg
 class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
   <<module>>
 }
+N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_configuration_ts : 导入依赖
 N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 N_src_logic_budget_rules_model_request_budget_invariants_ts ..> N_src_logic_budget_rules_model_request_budget_rules_ts : 导入依赖
 N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
-N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_budget_rules_model_request_budget_rules_ts["model-request-budget-rules.ts"] {
+  <<module>>
+}
+class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
+  <<module>>
+}
 class N_src_logic_budget_rules_model_request_budget_storage_ts["model-request-budget-storage.ts"] {
   <<module>>
 }
 class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
   <<module>>
 }
-class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
+class N_src_logic_budget_rules_model_request_configuration_ts["model-request-configuration.ts"] {
   <<module>>
 }
+N_src_logic_budget_rules_model_request_budget_rules_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+N_src_logic_budget_rules_model_request_configuration_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_budget_rules_request_budget_ts["request-budget.ts"] {
+  <<module>>
+}
+class N_src_logic_budget_rules_model_request_budget_ts["model-request-budget.ts"] {
   <<module>>
 }
 class N_src_logic_budget_rules_scope_budget_invariants_ts["scope-budget-invariants.ts"] {
   <<module>>
 }
-N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
-N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
+class N_src_logic_budget_rules_scope_budget_ts["scope-budget.ts"] {
+  <<module>>
+}
 N_src_logic_budget_rules_request_budget_ts ..> N_src_logic_budget_rules_model_request_budget_ts : 导入依赖
 N_src_logic_budget_rules_scope_budget_invariants_ts ..> N_src_logic_budget_rules_scope_budget_ts : 导入依赖
 ```
@@ -387,3 +456,9 @@ N_src_logic_budget_rules_scope_budget_invariants_ts ..> N_src_logic_budget_rules
 request-budget.ts 提供 RequestBudgetPort、RequestBudgetTicket 与未知原因契约，依赖本域请求账本类型。reserve/issue 分别保存申请与发送意图，实际发送前同步 assertSend；报告、明确未发送与未知分别保留事实。规则不执行网络请求，也不拥有模型凭据或运行服务。
 
 实际请求传输位于 [execution/engines/transport](../../execution/engines/transport/ARCHITECTURE.md)，预算编排在 [budget/runtime](../runtime/ARCHITECTURE.md)，持久化由 [dispatch/storage](../../dispatch/storage/CONTRACT.md) 承担。模型目录和配置服务分别见 [models](../../models/CONTRACT.md) 与 [models/service](../../models/service/CONTRACT.md)。迁移保留账本、结算与工具授权顺序。
+
+### V2 逐角色预算
+
+model-request-configuration.ts 从原执行快照投影预算模型；primary 保留旧字段及指纹，附加角色保存 slot、角色配置指纹和完整执行 bindingHash。成员预留/发送审计逐字段核对原 run.model 中的角色，不能仅复制 hash 后更换价格。
+
+生成预算继续使用 contextWindow/maxTokens/完整价格分量；向量使用 inputTokens、dimensions、inputPrice，maxOutputTokens 必须为 0，不假造生成容量。向量只接受非缓存输入用量，未知价格仍为未知，金额为本地估算。两类请求在同一个周期账本汇总，未知、超额、重启遗留阻止后续准入。旧生成记录不补 role；旧阶段、命令指纹和终态规则保持不变。

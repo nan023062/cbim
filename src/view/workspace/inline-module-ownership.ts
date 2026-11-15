@@ -7,7 +7,9 @@
  */
 import type {ModuleOwnershipIdentity,ModuleOwnershipPage,ModuleOwnershipView} from '../../bridge/contracts/module-ownership';
 import type {WorkspaceMemberList,WorkspaceMemberPreviewInput} from '../../bridge/contracts/workspace-members';
-import {providerSupportsEngine,type LlmSettings,type AgentModelSelection} from '../../bridge/contracts/models';
+import {providerSupportsEngine} from '../../bridge/contracts/engines';
+import {type LlmSettings} from '../../bridge/contracts/models';
+import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import {checkedWorkspaceMemberList,checkedWorkspaceMemberPreview,type WorkspaceMemberCommands} from '../team/workspace-member-state';
 import {checkedModuleOwnershipPage,checkedModuleOwnershipDetail,checkedModuleOwnershipPreview,type ModuleOwnershipCommands} from './module-ownership-state';
 

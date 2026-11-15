@@ -1,4 +1,5 @@
 /**
+ * 自动返回模型指纹包含全部角色，模型变化不能用原返回请求继续。
  * 作用定位：持久保存主轮待回传批次，重启时核实可自动接收的已完成成员结果。
  * 设计原因：恢复只转交可靠成果，不运行旧成员；最新启动意图、完整日志、模型配置与当前文件均须匹配，同目标异常额度从持久任务图核实，未知保持封存。
  */
@@ -20,7 +21,7 @@ export class AutomaticReturnService {
   constructor(private owner:Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>,private store:DispatchStore,private goals:ScopeGoalService,private logs?:ScopeGoalPorts,private models?:OwnerExecutionModelPorts){}
   private async modelHash(options:AutomaticReturn['options']){
     if(!this.models)fail('AUTO_RETURN_UNAVAILABLE','模型配置核实未装配');
-    return workspaceMemberModelHash(await this.models.configuration(options.profileId,options.model,options.engine));
+    return workspaceMemberModelHash(await this.models.configuration(options.profileId,options.model,options.engine,options.modelRoles));
   }
   /** 真实主轮结算后、首次启动成员前保存；同批重复只查原记录，不刷新指纹或改变权限。 */
   async record(identity:GraphIdentity,scopeId:string,summary:RunSummary,taskIds:string[],options:AutomaticReturn['options']):Promise<void>{

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {RuntimeJournal} from '../../../logic/updates/service/runtime-journal';
-import {verifyRuntimeManifest,runtimeRelativePath,type ColdRuntime,type RuntimeManifest,type RuntimeFile} from '../../../logic/updates/service/runtime-manifest';
+import {verifyRuntimeManifest,runtimeRelativePath,type ColdRuntime,type RuntimeManifest,type RuntimeFile,type SignedRuntimeManifest} from '../../../logic/updates/service/runtime-manifest';
 
 /** 同步启动校验只处理有限资源，不用于大型引擎包；活动目录不得有额外文件或链接。 */
 export function verifyBootResources(root:string,files:RuntimeFile[]){
@@ -25,7 +25,7 @@ export function verifyBootResources(root:string,files:RuntimeFile[]){
   walk(root);if(count!==files.length)throw Error('启动资源不完整');
 }
 function readJson(file:string){const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.size>16*1024*1024)throw Error('资源清单文件无效');return JSON.parse(fs.readFileSync(file,'utf8'))}
-export interface BootSelection {root:string;manifest:RuntimeManifest;digest:string;journal:RuntimeJournal;pending:boolean}
+export interface BootSelection {root:string;manifest:RuntimeManifest;envelope:SignedRuntimeManifest;digest:string;journal:RuntimeJournal;pending:boolean}
 
 /** 与 cacheRoot 对应的单实例锁由桌面入口取得；返回后仍须先记 data-access 才可导入业务。 */
 export function selectBootResources(cold:ColdRuntime,cacheRoot:string,bundledRoot:string,bundledManifest:string,stateDirectory=path.join(cacheRoot,'state')):BootSelection{
@@ -42,5 +42,5 @@ export function selectBootResources(cold:ColdRuntime,cacheRoot:string,bundledRoo
   try{selected=resolve(state.pending?.digest??state.confirmed)}catch(error){
     if(!state.pending||state.pending.dataAccessed)throw error;journal.rejectBeforeData(state.pending.digest);selected=resolve(state.confirmed);pending=false;
   }
-  return {root:selected.root,manifest:selected.manifest,digest:selected.digest,journal,pending};
+  return {root:selected.root,manifest:selected.manifest,envelope:selected.envelope,digest:selected.digest,journal,pending};
 }

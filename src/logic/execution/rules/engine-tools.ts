@@ -1,7 +1,7 @@
 /**
  * 目录归属：logic/execution/rules/execution；运行协议与计量。
- * 作用定位：将可信装配注入的能力组装成引擎无关的目录与调用端口。
- * 设计原因：Pi、Claude Code 与 Codex 只适配传输；真实调用 ID、取消信号和能力归属保持同一契约。
+ * 作用定位：将可信装配注入的能力组装成 SDK 与自定义 Loop 共用的目录与调用端口。
+ * 设计原因：厂商 SDK 与自定义领域 Loop 只适配传输；真实调用 ID、取消信号和能力归属保持同一契约。
  */
 
 export interface EngineToolSchema {name:string;description?:string;inputSchema:Record<string,unknown>}

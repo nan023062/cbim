@@ -4,7 +4,7 @@
  * 职责边界：这里只持有无密钥的执行快照和原生会话定位，不进入公开任务图，也不把 completed 视为业务验收。
  */
 import type {MemberRunBinding} from '../../execution/rules/member-run';
-import type {ResolvedLlm} from '../../models';
+import type {ResolvedEngineModel} from '../../engines';
 import type {ChatPermission} from '../../tools/rules/policy/types';
 import type {PreparedDispatchKnowledge} from './execution-context';
 import type {TaskNode} from './graph-types';
@@ -33,8 +33,8 @@ export interface DispatchRun {
   prerequisites?:Array<{taskId:string;planRevision:number;result:NonNullable<TaskNode['result']>}>;
   /** 子会话仅引用当前话题资料，正文由原目标/任务提供；缺省是旧运行，不推造历史上下文。 */
   topicContext?:MemberTopicContext;
-  /** ResolvedLlm 中的公开参数快照；apiKey 只在启动时由装配层提供，不得落入此记录。 */
-  model:ResolvedLlm['profile'];
+  /** ResolvedEngineModel 中的公开参数快照；apiKey 只在启动时由装配层提供，不得落入此记录。 */
+  model:ResolvedEngineModel['profile'];
   permission:ChatPermission;
   /** 毫秒；缺省由大脑适配器应用其默认超时，不表示永不超时。 */
   turnTimeoutMs?:number;

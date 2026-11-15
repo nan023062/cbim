@@ -42,6 +42,7 @@ h3 {font-size: 15px; line-height: 1.5}
 button > .cbim-icon {color: inherit}
 .cbim-icon {display: inline-block; vertical-align: -.15em; flex: 0 0 auto}
 .icon-button {min-width: 36px; min-height: 36px; border-radius: var(--radius-small)}
+.sidebar-top {height: 36px}
 .desktop-shell .primary-nav > button {min-height: 38px; height: auto; border-radius: var(--radius-control)}
 .desktop-shell .sidebar-search {height: 36px; border-radius: var(--radius-control)}
 .desktop-shell .workspace-item {border-radius: var(--radius-control)}

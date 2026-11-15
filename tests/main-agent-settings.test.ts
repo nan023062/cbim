@@ -61,3 +61,18 @@ test('主 Agent 兼容性与工作区隔离：错误协议不覆盖配置，另�
     expect(await fs.readFile(path.join(f.app.paths.project(entry.id),'main-agent.json'),'utf8')).toBe('broken');
   }finally{await f.cleanup()}
 });
+
+
+test('V2 主 Agent 选型持久化并随聊天选项完整捕获，不回填旧选型',async()=>{
+  const f=await fixture();try{
+    const models=await f.app.models.save({profile}),profileId=models.selectedId!;
+    const entry=await f.app.dispatch('add',{path:f.a}),identity={workspaceId:entry.id,instanceId:f.app.workspace(entry.id).instanceId};
+    const initial=await f.app.dispatch('agent.mainSettings',identity),modelRoles={version:2 as const,roles:{}};
+    const saved=await f.app.dispatch('agent.configureMain',{...initial,selection:{engine:'pi',profileId,modelId:'shared',modelRoles}});
+    expect(saved.selection?.modelRoles).toEqual(modelRoles);
+    expect(await f.app.chatOptions(entry.id,{permission:'read'},[])).toMatchObject({engine:'pi',profileId,model:'shared',modelRoles});
+    expect((await f.app.dispatch('agent.mainSettings',identity)).selection).toEqual(saved.selection);
+    await expect(f.app.dispatch('agent.configureMain',{...saved,selection:{...saved.selection,modelRoles:{version:2,roles:{memory:{kind:'embedding',profileId,modelId:'vec'}}}}})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
+    expect((await f.app.dispatch('agent.mainSettings',identity)).revision).toBe(saved.revision);
+  }finally{await f.cleanup()}
+});

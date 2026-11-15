@@ -78,12 +78,12 @@ it('旧图CAS竞争整体拒绝，首次合法修订结果不受第二条迟到�
 it('真实领取先保存，旧游标及刷新后的增删均拒绝；不能删除正在执行的原来源',async()=>{
  const f=await revisionFixture(),entered=deferred(),release=deferred(),logs=path.join(f.user,'revision-claim-logs'),storage=new FileRunStorage();let members:MemberExecutionManager|undefined;
  try{
-  const binding=f.oldSource.ownerBinding!,model=await f.app.models.configuration(binding.model.profileId,binding.model.modelId);
+  const binding=f.oldSource.ownerBinding!,model=await f.app.engineModels.configuration(binding.model.profileId,binding.model.modelId);
   const prepare=():PreparedEngine=>({model,create:async(_run,_task,hooks)=>{
    let context:EngineContext;const engine:AgentEngine={kind:'held-claim-test',start:async c=>{context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(logs,'native.jsonl')}})},run:async()=>{entered.resolve();await release.promise;return {status:'cancelled'}},stop:async()=>{release.resolve()},close:async()=>{release.resolve()}};
    return new LoopRuntime({storage,directory:logs,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:true,effects:['read'],scope:{kind:'workspace',workspaceId:f.entry.id}})});
   }});
-  members=new MemberExecutionManager(f.workspace,f.store,{acquire:()=>()=>{},inspect:r=>storage.read(path.join(logs,r.binding.taskId,r.binding.runId)),prepare:async()=>prepare(),owners:f.service.owners,withEngineConfiguration:(ref,_options,use)=>f.app.models.withRuntimeConfiguration(ref,c=>use({model:c.profile,prepare}))});await members.initialize();
+  members=new MemberExecutionManager(f.workspace,f.store,{acquire:()=>()=>{},inspect:r=>storage.read(path.join(logs,r.binding.taskId,r.binding.runId)),prepare:async()=>prepare(),owners:f.service.owners,withEngineConfiguration:(ref,_options,use)=>f.app.engineModels.withRuntimeConfiguration(ref,c=>use({model:c.profile,prepare}))});await members.initialize();
   await members.start({...f.identity,taskId:f.oldSource.taskId,commandId:'claim-first',expectedRevision:f.oldSource.revision,options:{permission:'read'}});await entered.promise;
   const before=await f.store.read(),graph=before.graphs[0];expect(before.runs).toHaveLength(1);expect(before.outbox.find(m=>m.taskId===f.oldSource.taskId)!.delivery).toBe('claimed');
   await expect(f.revise()).rejects.toMatchObject({code:'DEPENDENCY_GRAPH_STALE'});

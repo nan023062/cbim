@@ -1,14 +1,18 @@
 /**
- * 作用定位：工作区生命周期与知识编辑的公开 IPC 请求与响应。
+ * 作用定位：工作区生命周期、模块源码只读浏览与知识编辑的公开 IPC 请求与响应。
  * 设计原因：目录登记、实例启停与知识事务沿原服务执行；公共协议依赖纯对象契约，不加载事务或 Node.js 实现。类型不替代身份和权限校验。
  */
 import {z} from 'zod';
+import {sourceDirectoryInput,sourceFileInput,type SourceDirectory,type SourceFile} from '../../logic/workspace/rules/source-browser';
+export type {SourceTarget,SourceDirectory,SourceFile} from '../../logic/workspace/rules/source-browser';
 import {ipcId,noIpcArgs,workspaceIdArgs,taskIdArgs} from './ipc-shapes';
 import {type ObjectCommit,type ObjectPreview,objectOperation} from '../../logic/knowledge/rules/object-contract';
 import {type KnowledgeCommit,type Preview,type Snapshot,type TaskView} from '../../logic/knowledge/rules/types';
 import {type Catalog,type WorkspaceEntry,type WorkspaceView} from './workspace-view';
 
 export const workspaceIpcRequests={
+  'source.list':sourceDirectoryInput,
+  'source.read':sourceFileInput,
   'list':noIpcArgs,
   'add':z.object({path:z.string()}).strict(),
   'relocate':z.object({path:z.string(),id:ipcId,confirm:z.boolean().optional()}).strict(),
@@ -26,6 +30,8 @@ export const workspaceIpcRequests={
   'architecture.commit':z.object({workspaceId:ipcId,instanceId:ipcId,planId:z.string().uuid()}).strict(),
 };
 export interface WorkspaceIpcResponses {
+  'source.list':SourceDirectory;
+  'source.read':SourceFile;
   'list':Omit<Catalog,'entries'>&{warning:string;entries:WorkspaceView[]};
   'add':WorkspaceEntry;
   'relocate':WorkspaceEntry;

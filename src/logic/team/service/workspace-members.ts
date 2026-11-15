@@ -1,11 +1,12 @@
 /**
+ * 角色引用与公开快照一起采纳；角色变更参与配置变化判断。
  * 目录归属：logic/team/service；岗位、责任与来源协调。
  * 作用定位：将桌面岗位登记、采纳与当前差异查询接到工作区唯一 DispatchStore，公开模型配置由 Main 注入。
  * 设计原因：稳定 memberId 与运行实例分离；登记只保存实际原则、有效 Skill 和无凭据模型快照，不派工、不修改知识或默认执行角色。
  * 事务边界：能力采纳固定知识串行快照后进入同一 Store，未追踪来源捕获与岗位事件同事务；模型配置仍前后复验，不宣称拥有跨存储原子锁。原命令先查回执，重开不能重做已提交动作。
  */
 import {data} from '../../knowledge/rules/read-models';
-import {agentModelSelectionSchema} from '../../models';
+import {agentModelSelectionSchema} from '../rules/agent-runtime';
 import {randomUUID} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {z} from 'zod';
@@ -33,7 +34,7 @@ import type {SourceSelection,KnowledgeSourceReadState} from '../../workspace/rul
 import type {KnowledgeSourceWorkspace} from '../../knowledge/service/knowledge-sources';
 
 /** 只接收岗位独立选择的引擎、明确供应商和模型公开参数；不得在实现中解密、网络探测或读取默认选择。 */
-export interface WorkspaceMemberModels {configuration(profileId:string,modelId:string,engine?:WorkspaceMemberModelRef['engine']):Promise<WorkspaceMemberModelSnapshot>}
+export interface WorkspaceMemberModels {configuration(profileId:string,modelId:string,engine?:WorkspaceMemberModelRef['engine'],modelRoles?:WorkspaceMemberModelRef['modelRoles']):Promise<WorkspaceMemberModelSnapshot>}
 interface PreparedMember {
   preview:WorkspaceMemberPreview;
   knowledgeRevision?:string;
@@ -149,8 +150,8 @@ export class WorkspaceMembers {
     return parsed.data;
   }
   private async policy(ref:WorkspaceMemberModelRef & {snapshot?:WorkspaceMemberModelSnapshot}):Promise<WorkspaceMemberRuntimePolicy>{
-    const snapshot=workspaceMemberModelSnapshotSchema.parse(await this.models.configuration(ref.profileId,ref.modelId,workspaceMemberEngine(ref)));
-    return {profileId:ref.profileId,modelId:ref.modelId,...(ref.engine===undefined?{}:{engine:ref.engine}),snapshot,configurationHash:workspaceMemberModelHash(snapshot)};
+    const snapshot=workspaceMemberModelSnapshotSchema.parse(await this.models.configuration(ref.profileId,ref.modelId,workspaceMemberEngine(ref),ref.modelRoles));
+    return {profileId:ref.profileId,modelId:ref.modelId,...(ref.engine===undefined?{}:{engine:ref.engine}),...(ref.modelRoles===undefined?{}:{modelRoles:structuredClone(ref.modelRoles)}),snapshot,configurationHash:workspaceMemberModelHash(snapshot)};
   }
   private async prepare(state:DispatchState,request:WorkspaceMemberPreviewInput,fixed?:Snapshot):Promise<PreparedMember>{
     this.assert(request);const change=request.change,old=change.kind==='register'?undefined:this.member(state,change.memberId);
@@ -166,7 +167,7 @@ export class WorkspaceMembers {
     }else if(change.kind==='update'){
       const {runtimePolicy,...patch}=change.patch;proposed={...proposed!,...patch};
       if(runtimePolicy){
-        if(runtimePolicy.profileId===old!.runtimePolicy.profileId&&runtimePolicy.modelId===old!.runtimePolicy.modelId&&(runtimePolicy.engine??'pi')===(workspaceMemberEngine(old!.runtimePolicy)??'pi'))fail('MEMBER_NO_CHANGE','相同模型的配置刷新请使用明确采纳操作');
+        if(runtimePolicy.profileId===old!.runtimePolicy.profileId&&runtimePolicy.modelId===old!.runtimePolicy.modelId&&(runtimePolicy.engine??'pi')===(workspaceMemberEngine(old!.runtimePolicy)??'pi')&&isDeepStrictEqual(runtimePolicy.modelRoles,old!.runtimePolicy.modelRoles))fail('MEMBER_NO_CHANGE','相同模型的配置刷新请使用明确采纳操作');
         model=await this.selectedPolicy(runtimePolicy);this.assert(request);proposed.runtimePolicy=model;
       }
     }else if(change.kind==='adopt'){

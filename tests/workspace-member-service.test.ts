@@ -40,8 +40,8 @@ it('同一供应商模型可只改岗位引擎，保存与重开保持选型；�
 it('0.1.5 只有 snapshot.engine 的岗位不补写引用字段，移除旧供应商 engine 后仍沿原采纳读取',async()=>{
   const f=await setup();
   await f.app.models.save({id:f.profileId,profile:{...f.definition,api:'anthropic-messages',engine:'claude-code'}});
-  const original=f.app.models.configuration.bind(f.app.models);
-  const legacy=vi.spyOn(f.app.models,'configuration').mockImplementation((id,model)=>original(id,model,'claude-code'));
+  const original=f.app.engineModels.configuration.bind(f.app.engineModels);
+  const legacy=vi.spyOn(f.app.engineModels,'configuration').mockImplementation((id,model)=>original(id,model,'claude-code'));
   const registered=await f.commit(f.command(await f.preview(f.register()))),memberId=registered.memberId;
   legacy.mockRestore();
   const before=await f.service.get({...f.identity,memberId});expect(before.member.runtimePolicy.engine).toBeUndefined();expect(before.member.runtimePolicy.snapshot.engine).toBe('claude-code');
@@ -66,7 +66,7 @@ it('the original receipt wins over retired instance and unavailable source witho
   await f.app.open(f.identity.workspaceId,true);
   const service=f.app.workspaceMembers(f.identity.workspaceId),workspace=f.app.workspace(f.identity.workspaceId);
   const snapshot=vi.spyOn(workspace,'snapshot').mockRejectedValue(Error('must not reread knowledge'));
-  const models=vi.spyOn(f.app.models,'configuration').mockRejectedValue(Error('must not reread profile'));
+  const models=vi.spyOn(f.app.engineModels,'configuration').mockRejectedValue(Error('must not reread profile'));
   expect(await service.commit(command,{kind:'local_desktop',interaction:'explicit_submit'})).toEqual(receipt);
   expect(await service.receipt({workspaceId:f.identity.workspaceId,commandId:command.commandId})).toEqual(receipt);
   await expect(service.commit({...command,change:{...command.change,reason:'different request'}},{kind:'local_desktop',interaction:'explicit_submit'})).rejects.toMatchObject({code:'MEMBER_COMMAND_CONFLICT'});
@@ -93,8 +93,8 @@ it('changed adopted content invalidates a prepared commit without writing a regi
 });
 
 it('knowledge changing while public model preparation awaits is rejected before the shared journal is appended',async()=>{
-  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),original=f.app.models.configuration.bind(f.app.models);
-  vi.spyOn(f.app.models,'configuration').mockImplementationOnce(async(...args)=>{
+  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),original=f.app.engineModels.configuration.bind(f.app.engineModels);
+  vi.spyOn(f.app.engineModels,'configuration').mockImplementationOnce(async(...args)=>{
     const value=await original(...args);
     // 采纳已持知识串行锁；外部文件变化仍可能发生，不能在同锁回调中排队并等待另一知识提交。
     await fs.writeFile(path.join(f.workspace.entry.path,f.team.input.agentId,'principles.md'),'# Changed externally during model configuration');
@@ -105,8 +105,8 @@ it('knowledge changing while public model preparation awaits is rejected before 
 });
 
 it('public model changes during preparation are caught by the final source reread',async()=>{
-  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),original=f.app.models.configuration.bind(f.app.models);
-  vi.spyOn(f.app.models,'configuration').mockImplementationOnce(async(...args)=>{
+  const f=await setup(),p=await f.preview(f.register()),command=f.command(p),original=f.app.engineModels.configuration.bind(f.app.engineModels);
+  vi.spyOn(f.app.engineModels,'configuration').mockImplementationOnce(async(...args)=>{
     const value=await original(...args);
     await f.app.models.save({id:f.profileId,profile:{...f.definition,name:'changed after selected snapshot'}});
     return value;
@@ -130,7 +130,7 @@ it('metadata edits and registration state changes preserve adopted snapshots eve
   const f=await setup(),created=await commitWorkspaceMember(f.app,f.identity.workspaceId,f.register());
   const before=(await f.service.get({...f.identity,memberId:created.receipt.memberId})).member;
   vi.spyOn(f.workspace,'snapshot').mockRejectedValue(Error('source is unavailable'));
-  vi.spyOn(f.app.models,'configuration').mockRejectedValue(Error('model is unavailable'));
+  vi.spyOn(f.app.engineModels,'configuration').mockRejectedValue(Error('model is unavailable'));
   const updated=await f.commit(f.command(await f.preview({kind:'update',memberId:before.memberId,expectedRevision:1,patch:{name:'renamed without adoption'},reason:'edit metadata only'})));
   const suspended=await f.commit(f.command(await f.preview({kind:'state',memberId:before.memberId,expectedRevision:updated.memberRevision,nextState:'suspended',reason:'pause registration'})));
   await f.commit(f.command(await f.preview({kind:'state',memberId:before.memberId,expectedRevision:suspended.memberRevision,nextState:'active',reason:'restore registration only'})));
@@ -159,4 +159,19 @@ it('pagination freezes registration order and current diff is not cached behind 
   await commitWorkspaceMember(f.app,f.identity.workspaceId,{kind:'update',memberId:second.receipt.memberId,expectedRevision:1,patch:{name:'second renamed'},reason:'update metadata'});
   await expect(f.service.list({...f.identity,offset:1,expectedRegistryCursor:page.registryCursor!})).rejects.toMatchObject({code:'MEMBER_REGISTRY_STALE'});
   await expect(f.service.list({...f.identity,offset:1})).rejects.toMatchObject({code:'MEMBER_INPUT_INVALID'});
+});
+
+
+it('岗位 V2 角色块随采纳冻结，角色配置变化更新原模型指纹',async()=>{
+  const f=await setup(),change=f.register();if(change.kind!=='register')throw Error('fixture');
+  const first=await f.commit(f.command(await f.preview(change))),memberId=first.memberId;
+  const before=await f.service.get({...f.identity,memberId});
+  const modelRoles={version:2 as const,roles:{}};
+  await f.commit(f.command(await f.preview({kind:'update',memberId,expectedRevision:1,patch:{runtimePolicy:{...change.runtimePolicy,modelRoles}},reason:'明确采纳多角色配置'})));
+  const after=await f.service.get({...f.identity,memberId});
+  expect(before.member.runtimePolicy.snapshot).not.toHaveProperty('modelRoles');
+  expect(after.member.runtimePolicy.modelRoles).toEqual(modelRoles);
+  expect(after.member.runtimePolicy.snapshot.modelRoles).toEqual(modelRoles);
+  expect(after.member.runtimePolicy.configurationHash).not.toBe(before.member.runtimePolicy.configurationHash);
+  expect(after.currentDiff.model.status).toBe('same');
 });

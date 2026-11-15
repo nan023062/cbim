@@ -1,0 +1,5 @@
+/* 外观偏好只覆盖已命名的阅读区域；菜单与运行业务状态不受字号设置影响。 */
+:root .chat-message,:root .appearance-reading-preview{font-size:var(--chat-text-size,15px)}
+:root .chat-code-block pre code,:root .appearance-reading-preview pre{font-size:var(--chat-code-size,12px)}
+:root[data-reduce-motion=true] *,:root[data-reduce-motion=true] *::before,:root[data-reduce-motion=true] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){:root *,:root *::before,:root *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

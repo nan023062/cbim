@@ -33,6 +33,11 @@ classDiagram
 class N_src_logic_team_rules_agent_runtime_ts["agent-runtime.ts"] {
   <<module>>
 }
+class N_src_logic_team_rules_agent_runtime_ts_AgentModelSelection["AgentModelSelection"] {
+  <<type>>
+
+}
+N_src_logic_team_rules_agent_runtime_ts ..> N_src_logic_team_rules_agent_runtime_ts_AgentModelSelection : 声明
 class N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView["MainAgentSettingsView"] {
   <<type>>
 
@@ -40,7 +45,7 @@ class N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView["MainAgentSe
 N_src_logic_team_rules_agent_runtime_ts ..> N_src_logic_team_rules_agent_runtime_ts_MainAgentSettingsView : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)。
 
 ### agent-types.ts
 
@@ -148,7 +153,7 @@ class N_src_logic_team_rules_automatic_execution_ts_AutomaticExecutionBinding["A
 N_src_logic_team_rules_automatic_execution_ts ..> N_src_logic_team_rules_automatic_execution_ts_AutomaticExecutionBinding : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../../workspace/rules/project-root.ts](../../workspace/rules/project-root.ts)。
+直接依赖：[../../engines/index.ts](../../engines/index.ts)、[../../workspace/rules/project-root.ts](../../workspace/rules/project-root.ts)。
 
 ### implicit-module-owner.ts
 
@@ -732,7 +737,7 @@ class N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail["Workspac
 N_src_logic_team_rules_workspace_member_ts ..> N_src_logic_team_rules_workspace_member_ts_WorkspaceMemberDetail : 声明
 ```
 
-直接依赖：[../../models/index.ts](../../models/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
+直接依赖：[../../models/index.ts](../../models/index.ts)、[../../engines/index.ts](../../engines/index.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)。
 
 ### 本目录调用边界
 
@@ -1013,3 +1018,7 @@ workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命
 ### JSON 排序复用边界
 
 本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+
+### V2 角色引用与采纳
+
+AgentModelSelection 和 WorkspaceMemberModelRef 可包含 version:2 的额外 modelRoles。primary 不重复保存；岗位 RuntimePolicy 的引用与快照必须逐角色同能力、同供应商、同型号，完整快照进入原 configurationHash。OwnerExecutionBinding 仍记录岗位 revision 和该完整 hash；领取时从匹配岗位恢复角色，不能由主会话覆盖。旧缺省不回填。

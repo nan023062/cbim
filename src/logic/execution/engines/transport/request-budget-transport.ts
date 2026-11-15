@@ -1,7 +1,7 @@
 /**
  * 目录归属：logic/execution/engines/transport；模型请求代理与用量解析。
  * 作用定位：每运行创建只接受随机令牌的本机供应商代理，逐 HTTP 尝试预留并结算预算。
- * 设计原因：真实供应商凭据仅在父进程，路径/模型/输出上限固定；终态先落盘再交付，断流与退出不靠猜测释放额度。
+ * 设计原因：真实供应商凭据仅在父进程，路径/模型/输出上限固定，仅接受生成操作；终态先落盘再交付，断流与退出不靠猜测释放额度。
  * 职责边界：网络 IO 不在 Store 事务内；流式提前调用工具须等待 assertSettled，close 取消实际请求并等待结算。
  */
 import http from 'node:http';
@@ -21,7 +21,9 @@ export function requestBudgetEndpoint(llm:ResolvedLlm):string{
 }
 /** 返回值只给当前引擎；任何失败一旦阻断，不能通过新调用 ID 或再次握手解除。 */
 export async function openRequestBudgetTransport(llm:ResolvedLlm,port:RequestBudgetPort,options:{anthropicClient?:boolean}={}){
-  llm=structuredClone(llm);const model=structuredClone(port.model);
+  llm=structuredClone(llm);const candidate=structuredClone(port.model);
+  if(candidate.api==='openai-embeddings')throw Error('向量模型不能使用生成流式传输');
+  const model=candidate;
   if(model.configurationHash!==workspaceMemberModelHash(llm.profile))throw Error('模型传输与原预算快照不一致，未启动门禁');
   if(llm.apiKey.includes('sk-ant-oat'))throw Error('逐请求预算当前仅支持配置的 API key，不支持 OAuth 凭据');
   const endpoint=requestBudgetEndpoint(llm),token=randomBytes(32).toString('hex');

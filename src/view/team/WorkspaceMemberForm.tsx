@@ -7,7 +7,8 @@
  */
 import {Icon} from '../components/Icon';
 import {EngineModelPicker} from '../components/EngineModelPicker';
-import {providerSupportsEngine,type AgentModelSelection} from '../../bridge/contracts/models';
+import {providerSupportsEngine} from '../../bridge/contracts/engines';
+import {type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import {useState} from 'react';
 import type {LlmSettings} from '../../bridge/contracts/models';
 import {workspaceMemberChangeInputSchema} from '../../bridge/contracts/workspace-members';

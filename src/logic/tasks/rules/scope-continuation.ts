@@ -5,7 +5,7 @@
  * 接续模型选项保留可选引擎，旧记录缺省沿用 Pi；主轮选型不覆盖成员岗位。
  */
 import {z} from 'zod';
-import {loopEngineSchema} from '../../models';
+import {loopEngineSchema,modelRolesSelectionSchema} from '../../engines';
 import {continuationAttachmentIdsSchema,continuationAttachmentManifestSchema,assertContinuationAttachmentManifest} from './scope-continuation-attachments';
 import {memberPauseSchema} from './member-pause';
 
@@ -19,7 +19,7 @@ export type DispatchScopeWait=z.infer<typeof dispatchScopeWaitSchema>;
 export const scopeContinuationTextLimit=64_000;
 export const scopeContinuationTotalTextLimit=256_000;
 const input=z.object({message:z.string().max(scopeContinuationTextLimit).refine(value=>value.trim().length>0,'补充正文不能为空'),attachmentIds:continuationAttachmentIdsSchema.optional()}).strict();
-export const scopeContinuationOptionsSchema=z.object({engine:loopEngineSchema.optional(),provider:id,model:id,profileId:z.string().uuid(),permission:z.enum(['read','ask','execute']),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
+export const scopeContinuationOptionsSchema=z.object({engine:loopEngineSchema.optional(),modelRoles:modelRolesSelectionSchema.optional(),provider:id,model:id,profileId:z.string().uuid(),permission:z.enum(['read','ask','execute']),turnTimeoutMs:z.number().int().min(1000).max(3600000).optional()}).strict();
 export type ScopeContinuationOptions=z.infer<typeof scopeContinuationOptionsSchema>;
 /** 仅接收正文与本工作区附件 ID；不接收快照清单、路径、图片字节、权限批准或人工签署。 */
 export const goalContinuationRequestSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,waitId:id,expectedGoalRevision:revision,expectedInputRevision:z.number().int().min(1).max(32),commandId:z.string().uuid(),input,options:scopeContinuationOptionsSchema}).strict();

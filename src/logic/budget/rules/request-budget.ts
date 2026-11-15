@@ -16,7 +16,7 @@ export interface RequestBudgetTicket {
   unknown(reason:RequestUnknownReason):Promise<void>;
   notSent(reason:'cancelled_before_send'|'closed_before_send'):Promise<void>;
 }
-/** 工厂固定实际运行和模型；调用方只提供实际正文摘要及协议输出上限，不可选额度、身份或价格。 */
+/** 工厂固定实际运行和模型；调用方只提供实际正文摘要及协议输出上限，不可选额度、身份或价格；向量请求明确传 maxOutputTokens=0，生成仍须正上限。 */
 export interface RequestBudgetPort {
   readonly model:RequestBudgetModel;
   reserve(input:{requestHash:string;maxOutputTokens:number}):Promise<RequestBudgetTicket>;

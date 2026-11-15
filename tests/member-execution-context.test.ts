@@ -95,10 +95,10 @@ it('读取期间版本变化或正文缺失不会生成半新半旧的执行快�
 it('应用内置规范更新、正文或指纹篡改均拒绝恢复，冻结快照不接受授权字段',async()=>{
   const f=await setup();
   try{
-    const runtime=path.join(f.temp,'rules','design','runtime');await fs.mkdir(runtime,{recursive:true});
-    for(const id of ['business-execution','common-rules'])await fs.copyFile(path.join(f.w.rules.designRoot,'runtime',id+'.md'),path.join(runtime,id+'.md'));
+    const runtime=path.join(f.temp,'rules','assets','runtime');await fs.mkdir(runtime,{recursive:true});
+    for(const id of ['business-execution','common-rules'])await fs.copyFile(path.join(f.w.rules.assetsRoot,'runtime',id+'.md'),path.join(runtime,id+'.md'));
     const isolated=Object.create(f.w) as KnowledgeWorkspace;
-    Object.defineProperty(isolated,'rules',{value:{designRoot:path.dirname(runtime)}});
+    Object.defineProperty(isolated,'rules',{value:{assetsRoot:path.dirname(runtime)}});
     const prepared=await prepareDispatchExecutionContext(isolated,f.task);
     await fs.appendFile(path.join(runtime,'common-rules.md'),'\n新的发布规范。\n');
     await expect(recheckDispatchExecutionContext(isolated,prepared)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});

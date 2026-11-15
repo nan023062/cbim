@@ -45,9 +45,10 @@ export async function coldFingerprint(bootstrap:string,repo=process.cwd()){
   for(const name of ['forge.config.ts','electron-builder.config.cjs','vite.main.config.ts','vite.bootstrap.config.ts','scripts/desktop-signing/config.cjs'])configuration.push({name,sha256:await fileHash(path.join(repo,name))});
   return createHash('sha256').update(JSON.stringify({schema:1,bootstrap:await fileHash(bootstrap),electron,native,configuration,identity:{name:pkg.name,productName:pkg.productName},platform:'win32-x64'})).digest('hex');
 }
+/** 仅收集运行资产与法律资料；设计、发布历史和原生品牌资源不进入可更新 R。 */
 export async function collectResources(viteDirectory:string,target:string,repo=process.cwd()){
   await fs.mkdir(target);await fs.cp(viteDirectory,path.join(target,'.vite'),{recursive:true,filter:file=>!['desktop.js','desktop.js.map'].includes(path.basename(file))&&!file.endsWith('.map')});
-  for(const name of ['design','docs','legal','assets/business'])await fs.cp(path.join(repo,name),path.join(target,name),{recursive:true});
+  for(const name of ['legal','assets/business','assets/capability','assets/connector','assets/runtime','assets/task'])await fs.cp(path.join(repo,name),path.join(target,name),{recursive:true});
   await fs.writeFile(path.join(target,'package.json'),JSON.stringify({private:true,type:'commonjs'}));
   // Git 删除文件后可能留下空目录；ZIP 只登记文件，冷包必须与同一清单保持一致。
   // 只清理由本函数新建的制品目录，不改源码，也不放宽启动时的额外内容校验。

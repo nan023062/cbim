@@ -1,3 +1,8 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import {Builtins} from '../src/logic/knowledge/rules/builtins';
+import {Rules} from '../src/logic/knowledge/rules/knowledge';
 import {it,expect} from 'vitest';
 import {fixture} from './helpers';
 import {internalKnowledge} from './knowledge-tool-fixture';
@@ -37,7 +42,7 @@ it('两项反馈 Skill 返回自愿参考格式及版本，读取不写知识或
     const e=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(e.id),{service,identity,call}=internalKnowledge(ws),before=await ws.snapshot();
     for(const [id,title,field] of [['bug-feedback','BUG 反馈','复现步骤（可选）：'],['feature-wish','需求许愿','期望的功能或效果（可选）：']]){
       const name='cbim_skill_'+id.replaceAll('-','_'),result=await call(name);
-      expect(result).toMatchObject({id,title,kind:'skill',readOnly:true,source:`design/runtime/${id}.md`});
+      expect(result).toMatchObject({id,title,kind:'skill',readOnly:true,source:`assets/runtime/${id}.md`});
       expect(result.text).toContain(field);expect(result.version).toBe(hash(result.text));
       expect(result.text).toContain('只填写第一项就可以提交');expect(result.text).toContain('用户未提供');expect(result.text).toContain('不要为填满字段反复追问');
       expect(result.references).toEqual(expect.arrayContaining([expect.objectContaining({id:'common-rules',status:'available'})]));
@@ -46,4 +51,21 @@ it('两项反馈 Skill 返回自愿参考格式及版本，读取不写知识或
     const after=await ws.snapshot();expect(after.revision).toBe(before.revision);expect(after.files).toEqual(before.files);
     expect(await f.app.dispatch('loop.list',{id:e.id})).toEqual([]);
   }finally{await f.cleanup()}
+});
+
+it('运行资产脱离 design 可加载全部规范与 Schema，缺失资源不回退开发目录',async()=>{
+  const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-assets-'));
+  try{
+    const root=path.join(temp,'assets');
+    for(const name of ['business','capability','connector','runtime','task'])await fs.cp(path.resolve('assets',name),path.join(root,name),{recursive:true});
+    await expect(fs.stat(path.join(temp,'design'))).rejects.toMatchObject({code:'ENOENT'});
+    await new Rules(root).init();
+    const builtins=new Builtins(root),catalog=await builtins.catalog();
+    expect(catalog.items).toHaveLength(24);
+    for(const entry of catalog.items){expect(entry.source.startsWith('assets/')).toBe(true);expect((await builtins.read(entry.id,entry.version)).text.length).toBeGreaterThan(0)}
+    const module=await builtins.read('module-spec');
+    expect(module.references).toEqual(expect.arrayContaining([expect.objectContaining({id:'shared-skills-workflows',status:'available'})]));
+    await fs.unlink(path.join(root,'business/module.schema.json'));
+    await expect(new Rules(root).init()).rejects.toMatchObject({code:'ENOENT'});
+  }finally{if(path.dirname(temp)!==path.resolve(os.tmpdir())||!path.basename(temp).startsWith('cbim-assets-'))throw Error('Invalid test cleanup');await fs.rm(temp,{recursive:true,force:true})}
 });

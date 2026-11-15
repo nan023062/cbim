@@ -1,4 +1,5 @@
 /**
+ * 资源边界：任务准备通过 rules.assetsRoot 读取同包规范，不从开发设计文件补全缺失资源。
  * 作用定位：调度引擎：将明确选择的模块、叶子 Agent 和本模块 Workflow 装配为执行任务。
  * 设计原因：通过本层只读查询编排和 Core 契约准备版本一致的 Skill 与 Workflow；旧单模块入口及续聊遇程序约定明确拒绝，避免绕过正式成员门禁。无约定旧任务保留计划与证据行为，知识正文不赋予无限改写权。
  * 旧 responsiblePerson 仅作历史说明，不查询花名册、不承担授权或派发门禁。
@@ -32,7 +33,7 @@ export async function prepareTeamTask(workspace:KnowledgeWorkspace,input:TeamTas
   if(parseWorkflowContract(workflow.content.text))fail('WORKFLOW_MEMBER_REQUIRED','声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务入口不提供该门禁');
   const current=await workspace.read();
   if([agent.revision,current.revision].some(r=>r!==module.revision))fail('CONFLICT','任务准备期间知识变化，请重新准备');
-  const builtins=new Builtins(workspace.rules.designRoot);
+  const builtins=new Builtins(workspace.rules.assetsRoot);
   const standards=await Promise.all(['business-execution','common-rules'].map(id=>builtins.read(id)));
   return {taskId:randomUUID(),workspaceId:workspace.entry.id,root:workspace.entry.path,goal:selection.goal,moduleIds:[module.id],agentId:agent.id,responsiblePerson:selection.responsiblePerson,acceptance:selection.acceptance,
     workflowContext:{revision:module.revision,workflowId:workflow.id,module,agent,workflow,standards}};

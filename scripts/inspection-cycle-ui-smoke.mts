@@ -20,7 +20,7 @@ const project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkd
 const provider=await inspectionCycleProvider({holdFresh:true,holdOld:true,again}),pageErrors:string[]=[],draft='普通聊天草稿保持不变，不作为新的只读核实输入',queuedMessage='保留排队消息，不作为核实或重试授权';
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,legacyRecord:string|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
   const {entry}=await seedExecutionReport(setup,project,provider),profileId=(await setup.models.list()).selectedId!;await setup.shutdown();setup=undefined;
   const scopes=()=>inspectionScopes(user,entry.id),waitUntil=async(check:()=>Promise<boolean>,label:string)=>{const deadline=Date.now()+30000;while(Date.now()<deadline){if(await check())return;await new Promise(resolve=>setTimeout(resolve,50))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));

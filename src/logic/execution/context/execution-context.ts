@@ -1,4 +1,5 @@
 /**
+ * 资源边界：冻结与恢复均通过 rules.assetsRoot 读取同包规范，保留正文摘要和版本变化拒绝语义。
  * 无模块自动执行只生成内存中的隐式全项目知识；正式模块及岗位登记均保持原样。
  * 作用定位：为已派发成员任务冻结完整执行知识和各模块可选 Workflow 程序约定，并在启动、恢复或未启动依赖替换前复核基线。
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
@@ -57,7 +58,7 @@ export async function prepareDispatchExecutionContext(workspace:DispatchKnowledg
   const activeBindings=(bindings:TaskNode['modules'])=>bindings.map(({maintenanceBindingId,maintainerPersonIds,...binding})=>binding);
   if(canonical(activeBindings(currentBindings))!==canonical(activeBindings(task.modules)))fail('DISPATCH_CONTEXT_CHANGED','已派发的模块或 Workflow 绑定不一致');
   const bindings=structuredClone(task.modules);
-  const builtin=new Builtins(workspace.rules.designRoot);
+  const builtin=new Builtins(workspace.rules.assetsRoot);
   const standards=await Promise.all(standardIds.map(async id=>{const doc=await builtin.read(id);return {id,version:doc.version,text:doc.text}}));
   const business=new BusinessWorkspace(snapshot);
   const modules=await Promise.all(bindings.map(async binding=>{
@@ -90,7 +91,7 @@ export async function recheckDispatchExecutionContext(workspace:DispatchKnowledg
   if(prepared.agent.source==='builtin')fail('AGENT_RETIRED','内置默认执行 Agent 已退役；请由主 Agent 核实历史后在当前会话继续');
   if(prepared.workspaceId!==workspace.entry.id)fail('GRAPH_IDENTITY_MISMATCH','冻结执行知识不属于当前工作区');
   const check=async()=>{const current=await workspace.read();if(current.workspaceId!==prepared.workspaceId||current.revision!==prepared.knowledgeRevision)fail('KNOWLEDGE_CHANGED','执行知识版本已经变化，请核实后重新准备任务')};
-  await check();const builtin=new Builtins(workspace.rules.designRoot);
+  await check();const builtin=new Builtins(workspace.rules.assetsRoot);
   for(const standard of prepared.standards){const current=await builtin.read(standard.id);if(current.version!==standard.version)fail('KNOWLEDGE_CHANGED','内置执行规范已经变化，请核实后重新准备任务')}
   await check();
 }

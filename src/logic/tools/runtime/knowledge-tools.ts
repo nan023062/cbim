@@ -1,4 +1,5 @@
 /**
+ * 资源边界：内置查询使用 rules.assetsRoot 的白名单资源，不开放任意 assets 文件读取。
  * 知识身份允许缺省：先核实绑定实例并读取当前身份；显式身份不覆盖，业务版本/命令与写权限不自动补齐。
  * 对象维护优先 object_preview/commit；底层 knowledge 文件事务标为兼容，保留无法由对象操作表达的维护场景。
  * 作用定位：向 CBIM 内部大脑提供知识查询、对象事务和内置 Skill 工具。
@@ -22,7 +23,7 @@ export class KnowledgeTools {
     // 与 identity 查询共用当前已绑定实例；仅 undefined 使用默认值，显式旧值仍由 assert 拒绝。
     const currentIdentity=()=>{workspace.assert();return {workspaceId:workspace.entry.id,instanceId:workspace.instanceId}};
     const identity={workspaceId:z.string().default(()=>currentIdentity().workspaceId),instanceId:z.string().default(()=>currentIdentity().instanceId)};
-    const builtins=new Builtins(workspace.rules.designRoot);
+    const builtins=new Builtins(workspace.rules.assetsRoot);
     const queries=this.queries=new KnowledgeQueries({snapshot:()=>workspace.snapshot()});
     const refresh=new KnowledgeRefresh({snapshot:()=>workspace.snapshot(),assert:identity=>workspace.assert(identity),committedReceipt:request=>workspace.committedReceipt(request),commit:request=>workspace.commit(request)});
     const objects=new ObjectCrud(workspace);

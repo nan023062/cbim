@@ -1,6 +1,6 @@
 # Module 定义与维护规范
 
-> 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../../design/runtime/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
+> 结构设计：workspace 是根容器，一级 Module 是按领域划分的工程节点，以下是各工程的模块节点。每个 Module 可用的 Workflow 仅为自身 module.json.workflows，不继承父模块或工程节点流程，不设置根级或模块级共享 workflows.json。Agent 任务基于明确的 Module。详见 [Team 与 Workspace 结构设计](../runtime/shared-skills-workflows.md)；工程层级的新增校验尚未实现，不据此自动改写已有工程。
 
 新增、修改模块定义或核实模块契约时按需读取。项目实例、索引位置与实际工作范围由调用方提供；本规范不组织执行者路由。
 
@@ -201,4 +201,4 @@ summary 必须由负责维护的 AI 成员 结合整体模块体系、目标完�
 
 ## connectors 列表
 
-connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [连接器声明规范](../../design/connector/connector-spec.md) 引用资源仓库或兼容的旧插件声明，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。
+connectors 是无重复的注册表逻辑 id 数组，无引用时为 []。按 [连接器声明规范](../connector/connector-spec.md) 引用资源仓库或兼容的旧插件声明，不指向本地实现目录。所属任务将唯一 AI 成员与全部作业模块的声明合并，作为任务连接器需求集合；不表示独占或操作授权。实际外部工具接入仍需适配器；当前声明不证明工具已可调用。

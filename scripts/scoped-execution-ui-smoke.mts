@@ -11,7 +11,7 @@ await fs.access(report).then(()=>{throw Error('报告已存在，拒绝覆盖')}
 const executable=await latestExecutable(),root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-scoped-ui-')),project=path.join(root,'project'),user=path.join(root,'user');await fs.mkdir(project);
 const provider=await scopedProvider(mode==='stop'?'stop':'complete');let setup:Application|undefined,desktop:ElectronApplication|undefined,keep=false;const errors:string[]=[],approved:string[]=[],ownedPids:number[]=[];let isolatedRoot:string|undefined;
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await seedScopedExecution(setup,project,provider.url,mode==='stop'?'stop':'complete');provider.bind(seed.agentId,seed.moduleId,seed.selection);await setup.shutdown();setup=undefined;
+ setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await seedScopedExecution(setup,project,provider.url,mode==='stop'?'stop':'complete');provider.bind(seed.agentId,seed.moduleId,seed.selection);await setup.shutdown();setup=undefined;
  desktop=await electron.launch({executablePath:executable,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>errors.push(error.message));
  const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
  const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('等待验收超时：'+label)};

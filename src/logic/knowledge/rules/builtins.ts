@@ -1,7 +1,7 @@
 /**
- * 作用定位：Builtins：从 design 与 assets/business 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。
+ * 作用定位：Builtins：从 assets 白名单发布内置 Skill、规范和 Schema，包括团队/业务架构治理及只需简述、补充自愿的反馈流程。
  * 设计原因：只允许白名单资料 ID，返回正文、版本和引用；读取反馈 Skill 不会创建 GitHub Issue，也不扩大文件或网络权限。
- * 资源边界：模块规范和 Schema 随 assets/business 打包，其余运行规范随 design/ 打包；docs/ 只保留概念设计，不再作为内置资料的读取来源。
+ * 资源边界：全部内置规范与 Schema 随 assets/ 打包；design/docs 只用于设计与记录，不参与运行时读取。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -23,29 +23,30 @@ export const builtinSkills=[
   {id:'core-check',title:'Core 检查',description:'仅在用户明确要求时检查分层、文档职责与继承'},
 ];
 const entries=[
-  ...builtinSkills.filter(s=>s.id!=='knowledge-governance').map(s=>[s.id,'skill',s.title,`design/runtime/${s.id}.md`]),
-  ['knowledge-governance','skill','知识治理','design/runtime/knowledge-governance.md'],
-  ['common-rules','standard','CBIM 内部执行与治理通用规范','design/runtime/common-rules.md'],
+  ...builtinSkills.filter(s=>s.id!=='knowledge-governance').map(s=>[s.id,'skill',s.title,`assets/runtime/${s.id}.md`]),
+  ['knowledge-governance','skill','知识治理','assets/runtime/knowledge-governance.md'],
+  ['common-rules','standard','CBIM 内部执行与治理通用规范','assets/runtime/common-rules.md'],
   ['module-spec','standard','Module 定义与维护规范','assets/business/module-spec.md'],
-  ['agent-spec','standard','Agent 定义与维护规范','design/capability/agent-spec.md'],
-  ['architecture-spec','standard','架构评估与认知交付规范','design/task/architecture-spec.md'],
-  ['task-baseline','standard','任务知识基线与恢复','design/task/task-baseline.md'],
-  ['task-spec','standard','Task 定义','design/task/task-spec.md'],
-  ['task-loop','standard','Task Loop','design/task/task-loop.md'],
-  ['base-task','standard','Task 基础抽象','design/task/base-task.md'],
-  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','design/runtime/shared-skills-workflows.md'],
+  ['agent-spec','standard','Agent 定义与维护规范','assets/capability/agent-spec.md'],
+  ['architecture-spec','standard','架构评估与认知交付规范','assets/task/architecture-spec.md'],
+  ['task-baseline','standard','任务知识基线与恢复','assets/task/task-baseline.md'],
+  ['task-spec','standard','Task 定义','assets/task/task-spec.md'],
+  ['task-loop','standard','Task Loop','assets/task/task-loop.md'],
+  ['base-task','standard','Task 基础抽象','assets/task/base-task.md'],
+  ['shared-skills-workflows','standard','团队 Skill 与模块 Workflow 结构','assets/runtime/shared-skills-workflows.md'],
   ['module-schema','schema','Module Schema','assets/business/module.schema.json'],
-  ['agent-schema','schema','Agent Schema','design/capability/agent.schema.json'],
-  ['team-skills-schema','schema','Team Skill Schema','design/capability/team-skills.schema.json'],
-  ['connector-schema','schema','连接器 Schema','design/connector/registry.schema.json'],
+  ['agent-schema','schema','Agent Schema','assets/capability/agent.schema.json'],
+  ['team-skills-schema','schema','Team Skill Schema','assets/capability/team-skills.schema.json'],
+  ['connector-schema','schema','连接器 Schema','assets/connector/registry.schema.json'],
 ].map(([id,kind,title,source])=>({id,kind,title,source}));
 const contract='内置资料只读，版本由内容 SHA-256 标识。查询以内部知识服务当前返回值为准；Agent 的原生工具禁止直接读写 .cbim；全部知识 CRUD 由受授权的内部工具执行，使用 cbim_object_preview/cbim_object_commit 或受控知识事务接口。派生注册表由 CBIM 维护。旧 Python 规则工具不是入口。Skill 工具返回流程，不会替 Agent 执行任务；结构校验不能替代语义与人工判断。';
 
 export class Builtins {
-  constructor(private designRoot:string){}
+  /** 仅接受宿主确定的 assets 根；读取白名单仍核对 realpath，拒绝符号链接越界。 */
+  constructor(private assetsRoot:string){}
   private async document(entry:typeof entries[number]){
     // Only application-owned manifest entries can select a file, never caller paths.
-    const root=path.resolve(this.designRoot,'..'),file=path.resolve(root,entry.source);
+    const root=path.resolve(this.assetsRoot),file=path.resolve(root,path.posix.relative('assets',entry.source));
     const real=await fs.realpath(file),relative=path.relative(await fs.realpath(root),real);
     if(relative.startsWith('..')||path.isAbsolute(relative))fail('BUILTIN_PATH','内置资料越出安装目录');
     if((await fs.stat(real)).size>2*1024*1024)fail('BUILTIN_SIZE','内置资料超过大小限制');

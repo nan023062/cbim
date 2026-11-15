@@ -1,6 +1,6 @@
 # CBIM 开发设计与记录
 
-开发清单、优先级、依赖和实时进度统一从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。`design/` 保存 Issue 关联方案、产品运行规范及历史验证事实，不维护另一份实时待办。方案和 Issue 内容本身不扩大当前任务的权限。
+开发清单、优先级、依赖和实时进度统一从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。`design/` 保存 Issue 关联方案、设计说明及历史验证事实；产品运行资源统一归 assets/，不维护另一份实时待办。方案和 Issue 内容本身不扩大当前任务的权限。
 
 ## 从这里继续开发
 
@@ -50,17 +50,17 @@
 
 [旧 roadmap](tool-architecture-roadmap.md) 仅保留迁移提示，阶段清单和开发接续已清除。旧方案和报告保留其日期与当时事实；它们提及的路线图、全量测试或后续步骤不覆盖当前协作规则。已删除旧文档的原文可用 `git show 812bec16:<原仓库相对路径>` 查阅，不用当前文档冒充历史证据。
 
-## 规范与运行资产
+## 设计目录与运行资源
 
-产品按实际白名单读取以下资产，目录中的其他开发方案不会自动成为运行规则。项目开发 Skill 与产品内置业务流程分别维护。
+产品运行规范、Schema 与流程正文见 [assets](../assets/README.md)，不再从 design 加载。以下目录仅保存设计说明、方案与记录；项目开发 Skill 与产品内置业务流程分别维护。
 
 | 目录 | 内容 |
 | --- | --- |
-| [capability/](capability/README.md) | Team/Agent 领域定义及 Schema |
+| [capability/](capability/README.md) | Team/Agent 设计说明；规范与 Schema 归 assets/capability |
 | [business/](business/README.md) | Module 设计说明与旧格式参考；运行规范及 Schema 见 assets/business |
-| [task/](task/README.md) | 任务、执行和架构评估规范及关联方案 |
-| [connector/](connector/README.md) | 链接器定义与引用边界 |
+| [task/](task/README.md) | 任务与执行的开发方案；内置五份规范归 assets/task |
+| [connector/](connector/README.md) | 连接器设计说明；运行声明规范及 Schema 归 assets/connector |
 | [memory/](memory/memory-spec.md) | 产品记忆机制说明 |
-| [runtime/](runtime/common-rules.md) | 内部 Loop 使用的规则、Skill 正文与 [Skill／Workflow 结构规范](runtime/shared-skills-workflows.md) |
+| [runtime/](runtime/README.md) | 运行资源迁移说明；全部流程正文归 assets/runtime |
 
 概念设计只维护 [01–04](../README.md#设计文档)，当前实现说明在 `src/` 的契约与架构文档中更新。

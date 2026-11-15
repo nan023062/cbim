@@ -14,7 +14,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-issue17-')),root=path.jo
 await fs.mkdir(root);await fs.mkdir('test-results',{recursive:true});
 const errors:string[]=[],checks:string[]=[];let desktop:ElectronApplication|undefined,setup:Application|undefined,page:Page|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
   const entry=await setup.dispatch('add',{path:root}),team=await seedTeam(setup.workspace(entry.id));
   await setup.models.save({profile:{name:'No execution fixture',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'Fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}]}});
   await setup.shutdown();setup=undefined;

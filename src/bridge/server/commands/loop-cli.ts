@@ -1,4 +1,5 @@
 /**
+ * 资源边界：CLI 将工程 assets 作为运行资源根传入 Application，不再依赖 design 目录。
  * 作用定位：主进程命令入口：Pi Loop 开发 CLI：创建任务、显式恢复、中断和输出执行事件。
  * 设计原因：独立拥有工作区锁并复用应用执行管理；不能与桌面同时占用同一工作区。
  */
@@ -11,7 +12,7 @@ async function main(){
   const {values}=parseArgs({options:{root:{type:'string'},'user-data':{type:'string'},provider:{type:'string'},model:{type:'string'},goal:{type:'string'},module:{type:'string'},agent:{type:'string'},workflow:{type:'string'},person:{type:'string'},acceptance:{type:'string',multiple:true},'allow-execution':{type:'boolean'},task:{type:'string'},resume:{type:'string'},message:{type:'string'},'reconciled-tool':{type:'string',multiple:true}}});
   if(!values.root||!values.provider||!values.model)throw Error('需要 --root、--provider 和 --model；CLI 独立打开工作区，请先关闭占用该工程的 CBIM');
   if(Boolean(values.task)!==Boolean(values.resume))throw Error('--task 与 --resume 必须同时提供');
-  const application=new Application(new Paths(values['user-data'],path.resolve('.')),path.resolve('design'));
+  const application=new Application(new Paths(values['user-data'],path.resolve('.')),path.resolve('assets'));
   let stop:(()=>void)|undefined;
   try{
     await application.init();const entry=await application.catalog.add(values.root);await application.open(entry.id);

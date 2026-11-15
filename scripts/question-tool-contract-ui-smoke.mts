@@ -17,7 +17,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-question-contract-ui-'))
 const provider=await questionContractProvider(stopping?'stop':'complete',{holdAfterAnswer:unknown}),pageErrors:string[]=[],draft='普通主对话草稿：问题答案不覆盖这段下一任务内容';
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await seedQuestionContract(setup,project,provider),{entry}=seed;await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await seedQuestionContract(setup,project,provider),{entry}=seed;await setup.shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
   await desktop.evaluate(({ipcMain},{unknown})=>{

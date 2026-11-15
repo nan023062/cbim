@@ -2,10 +2,10 @@
 
 本说明面向人，帮助了解任务目录；Agent 按需读取专用规范。Task 将一个AI 成员、由它维护的模块集合和一个验收目标组合起来。CBIM AI 助理组织任务，执行者使用 CBIM 内部大脑循环。
 
-- [构建与维护规范](task-spec.md)：字段语义、维护依据、合并拆分及恢复要求。
-- [BaseTask 与执行接口](base-task.md)：结构图、派发与执行边界。
-- [Task Loop](task-loop.md)：CBIM AI 助理的任务构建与结果反馈。
-- [知识基线与恢复](task-baseline.md)：版本绑定与恢复证据。
+- [构建与维护规范](../../assets/task/task-spec.md)：字段语义、维护依据、合并拆分及恢复要求。
+- [BaseTask 与执行接口](../../assets/task/base-task.md)：结构图、派发与执行边界。
+- [Task Loop](../../assets/task/task-loop.md)：CBIM AI 助理的任务构建与结果反馈。
+- [知识基线与恢复](../../assets/task/task-baseline.md)：版本绑定与恢复证据。
 - [模块负责人索引历史方案](module-owner-index.md)：工作区成员、责任查询、按负责人派发与更换交接的开发切片；不是运行时 Skill，当前实现见 [任务契约](../../src/logic/tasks/rules/CONTRACT.md)，方案不是实时进度。
 - [反馈／许愿 Skill 与软件更新日志](user-feedback-intake.md)：对话加号菜单调用两项产品 Skill，一句问题或愿望即可提交，参考字段自愿填写，经真实 GitHub 授权提交 Issue；版本日志已接入，实际线上结果另记。
 - [正式桌面发布与更新](desktop-release.md)：Windows 安装包、独立 updater 目录、GitHub 桌面通道、后台检查和下载、用户明确点击重启安装。

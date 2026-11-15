@@ -18,7 +18,7 @@ const pageErrors:string[]=[],firstDraft='原会话普通草稿保持不变。',s
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page:Page|undefined,report:Record<string,unknown>|undefined,keepTemp=false,observed:unknown;
 await fs.mkdir('test-results',{recursive:true});
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await seedWaitingAttachments(setup,project,provider);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await seedWaitingAttachments(setup,project,provider);await setup.shutdown();setup=undefined;
   const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message))};await launch();
   await desktop!.evaluate(({ipcMain})=>{const handlers=(ipcMain as any)._invokeHandlers,original=handlers.get('cbim:call');(globalThis as any).__sourceSwitch=[];handlers.set('cbim:call',async(event:unknown,action:string,args:unknown)=>{const record={action,args,result:undefined as unknown};if(action==='chat.import'||action==='chat.importCancel')(globalThis as any).__sourceSwitch.push(record);const result=await original(event,action,args);record.result=result;return result})});
   const trace=()=>desktop!.evaluate(()=>(globalThis as any).__sourceSwitch as {action:string;args:any;result:any}[]),call=<T=any,>(action:string,args:unknown={})=>page!.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}) as Promise<T>;

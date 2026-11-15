@@ -1,6 +1,6 @@
 # 项目协作与注释规范
 
-开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 只保留 01、02、03、04 四份概念设计；`design/` 保存关联方案、运行规范和验证记录，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
+开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 只保留 01、02、03、04 四份概念设计；`design/` 保存关联方案、设计说明和验证记录；产品运行规范与 Schema 位于 assets/，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
 
 开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。
 

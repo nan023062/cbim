@@ -13,7 +13,7 @@ it('登记工作区随应用启动，移除与退出释放实例，旧启动设�
     const a=await f.app.dispatch('add',{path:f.a}),b=await f.app.dispatch('add',{path:f.b}),before=f.app.workspace(a.id).instanceId;
     const catalogFile=path.join(f.app.paths.userRoot,'workspaces.json');
     await fs.writeFile(catalogFile,JSON.stringify({...await f.app.catalog.read(),settings:{restore:false},lastRunning:[]}));
-    await f.app.shutdown();next=new Application(f.app.paths,path.resolve('design'));await next.init();
+    await f.app.shutdown();next=new Application(f.app.paths,path.resolve('assets'));await next.init();
     const wa=next.workspace(a.id),wb=next.workspace(b.id);
     expect(wa.state).toBe('running');expect(wb.state).toBe('running');expect(wa.instanceId).not.toBe(before);
     const migrated=await readJson(catalogFile);expect(migrated.entries.map((e:any)=>e.id).sort()).toEqual([a.id,b.id].sort());
@@ -45,7 +45,7 @@ it('一个工作区丢失不阻止其他登记实例启动，也不创建丢失�
     const a=await f.app.catalog.add(f.a),b=await f.app.catalog.add(f.b);
     const from=path.resolve(f.a),to=path.resolve(f.a+'-moved'),base=path.resolve(f.temp)+path.sep;
     expect(from.startsWith(base)&&to.startsWith(base)).toBe(true);
-    await fs.rename(from,to);await f.app.shutdown();next=new Application(f.app.paths,path.resolve('design'));await next.init();
+    await fs.rename(from,to);await f.app.shutdown();next=new Application(f.app.paths,path.resolve('assets'));await next.init();
     expect(next.workspace(a.id).state).toBe('failed');expect(next.workspace(b.id).state).toBe('running');expect(await exists(f.a)).toBe(false);
   }finally{await next?.shutdown();await f.cleanup()}
 });

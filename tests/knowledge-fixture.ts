@@ -28,7 +28,7 @@ export async function knowledgeFixture(){
     await fs.rm(target,{recursive:true,force:true});
   };
   try{
-    const rules=new Rules(path.resolve('design'));
+    const rules=new Rules(path.resolve('assets'));
     await rules.init();
     const base=[file('.cbim/connectors/registry.json',{connectors:[]}),file('.cbim/team/skills.json',{skills:[]})];
     const snapshot=async(files:KnowledgeFile[]=base):Promise<Snapshot>=>({

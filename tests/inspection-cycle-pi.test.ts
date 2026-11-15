@@ -27,7 +27,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
     expect(await fs.readFile(marker,'utf8')).toBe(data.markerLine);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(3);
     const query={...identity,taskId:oldTask.taskId,runId:oldRun},verified=await app.dispatch('dispatch.executionReport',query);expect(verified.log.state).toBe('verified');
     const corrupt=await corruptInspectionHistory(f.user,entry.id,started.taskId,oldTask.taskId,oldRun);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     const beforeView=await app.dispatch('loop.threadView',{id:entry.id,taskId:started.taskId});expect(beforeView.runs).toEqual([]);expect(beforeView.issues).toHaveLength(corrupt.oldIds.length);expect(beforeView.resumeRunId).toBeUndefined();
     const report=await app.dispatch('dispatch.executionReport',query);expect(report.log.state).toBe('invalid');expect(report.execution).toBe('unknown');
     const req:RecoveryRequest={...identity,commandId:randomUUID(),source:{scopeId:oldScope.scopeId,taskId:oldTask.taskId,runId:oldRun,reportBasis:report.basis.key},operation:'inspect_effects',observation:{text:data.observation},input:{message:data.newGoal},options:{provider:'cbim-'+profileId,model:'report-fixture',profileId,permission:'read',turnTimeoutMs:30000}};
@@ -77,7 +77,7 @@ it.each(['complete-restart','stop','again'] as const)('starts a new read-only Pi
       }finally{await fs.writeFile(latest,bytes)}
     }
     const finalScopes=await scopes(),counts=[provider.mainRequests.length,provider.memberRequests.length];await corrupt.unchanged();expect(await fs.readFile(marker,'utf8')).toBe(data.markerLine);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs);expect(provider.errors).toEqual([]);expect((await queue())[0]).toMatchObject({id:queued[0].id,message:queued[0].message,status:'paused'});
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await scopes()).toEqual(finalScopes);expect(required((await app.dispatch('loop.recoveryReceipt',lookup))).scopeStatus).toBe('closed');expect((await app.dispatch('loop.recoveryStart',req)).recovery).toEqual(receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);await corrupt.unchanged();
     if(repeated){expect(required((await app.dispatch('loop.recoveryReceipt',{...identity,commandId:repeated.request.commandId}))).recovery).toEqual(repeated.receipt.recovery);expect((await app.dispatch('loop.recoveryStart',repeated.request)).recovery).toEqual(repeated.receipt.recovery);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
   }finally{provider.releaseOld();provider.releaseFresh();await app.shutdown();await f.cleanup();await provider.close()}

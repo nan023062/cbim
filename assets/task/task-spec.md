@@ -2,7 +2,7 @@
 
 构建、调整或验收单一任务时读取。本文件是字段语义、维护依据与分组规则的权威正文；任务调度由调用方安排。
 
-Task 组合 [Agent 契约](../capability/agent-spec.md) 与 [Module 契约](../../assets/business/module-spec.md)，只在需核实下层字段或维护约定时读取对应部分。Task 不引入执行者内部循环，不建立项目任务注册表，也不反向加载上层 Skill 或项目入口。
+Task 组合 [Agent 契约](../capability/agent-spec.md) 与 [Module 契约](../business/module-spec.md)，只在需核实下层字段或维护约定时读取对应部分。Task 不引入执行者内部循环，不建立项目任务注册表，也不反向加载上层 Skill 或项目入口。
 
 Task 绑定唯一 Agent 与一个或多个由其维护的模块；调用方提供目标、约束及下层对象定义。维护对象是 core 或能力定义时使用文末约定。
 

@@ -1,3 +1,11 @@
+## 2026-11-15：design 全目录设计与运行资源分离（#92）
+
+- 基线 83fb0e33；用户授权将相同规则扩展到全部 design 目录。按 Builtins、Rules、装配、打包和引用核对受版本控制的完整目录清单。再迁移 24 份运行正文/Schema 到 assets/capability、connector、runtime、task；前一步 business 两份资源继续复用。设计、记忆说明、UX 原型、发布说明、公钥与历史验证保留，分类依据及逐文件清单见 [目录审计](verification/design-runtime-assets-20261115.md)。
+- Application/Rules/KnowledgeWorkspace 显式使用 assetsRoot；桌面、CLI、自动化、执行上下文、知识工具、脚本与重启夹具同步。Builtins 真实路径检查限制在 assets 根。资源包只收集五个业务资产目录与 legal，不再携带 design/docs，branding 仍独立按原生资源打包。
+- 保持工具 ID、只读权限、模块校验、用户数据和恢复语义。目录来源与修正链接后的正文仍按实际内容产生版本；不伪造旧指纹、不回退读取开发资料。同步源码文件头、契约、8 份架构文档及开发 Skill 三入口，未改变专业规范的业务规则。
+- 实际验证：pnpm exec vitest run tests/rules.test.ts tests/builtins.test.ts tests/runtime-packaging.test.ts tests/ci-validation.test.mjs tests/connector-definitions.test.ts tests/member-execution-context.test.ts tests/desktop-update-lifecycle.test.ts：7 文件 60 项通过，覆盖 Schema、内置知识、打包清单、CI、连接器、冻结恢复与应用重开。最后核对消费者发现自动化独立读取入口，补跑 pnpm exec vitest run tests/automation-application.test.ts：1 文件 2 项通过（真实 Pi 装配与重开）。
+- pnpm typecheck、pnpm check:architecture（1629 文件/7714 依赖/0 循环/0 违规）、pnpm check:test-modules（530 文件）及 git diff --check 通过。无 design 的隔离目录可加载全部 24 个内置条目与 Schema，资源缺失拒绝；修改文档相对文件链接无缺失，Skill 三入口一致。
+- 仅机械更新其余集成测试/桌面脚本的构造路径，不声称这些用例已执行。全量回归与真实安装/升级未运行，留给 PR/候选集成。未公开发布，也未修改其他工作树里的用户设计改动。
 ## 2026-11-15：业务模块设计与运行资源拆分（#92）
 
 - 用户授权将 design/business 中运行必需文件分离：module-spec.md 与 module.schema.json 迁至 assets/business；base-module.md、README 与仅供迁移识别的 module.legacy.schema.json 保留。

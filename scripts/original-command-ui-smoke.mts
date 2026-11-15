@@ -18,7 +18,7 @@ const provider=await originalCommandProvider(mode),pageErrors:string[]=[],transp
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 let panelColors:Record<string,string>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await executeOriginalCommandSeed(setup,user,project,provider,mode),id=seed.seeded.entry.id;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await executeOriginalCommandSeed(setup,user,project,provider,mode),id=seed.seeded.entry.id;
   const other=await setup.dispatch('loop.chat',{id,message:data.otherGoal,options:seed.seeded.options});await waitOriginalCommand(async()=>(await originalCommandRecords(user,id)).scopes.every(scope=>scope.status==='closed')&&setup!.runtime.snapshot().pressure.activeRuns===0,provider,'second actual root closed');
   const saved=await originalCommandRecords(user,id),logs=await originalCommandLogBytes(user,id),journal=await fs.readFile(path.join(user,id,'dispatch','dispatch.jsonl')),runBytes=await originalCommandRunBytes(user,id,seed.query.rootSessionId,await setup.execution(id).thread(seed.query.rootSessionId),saved.runs),otherBytes=await originalCommandRunBytes(user,id,other.taskId,await setup.execution(id).thread(other.taskId),[]),counts={main:provider.main.length,member:provider.member.length,other:provider.other.length};
   const bytesDirectory=`test-results/${artifact}-ui-original-bytes`;await archiveOriginalCommandEvidence(bytesDirectory,user,id,[...runBytes,...otherBytes]);await setup.shutdown();setup=undefined;

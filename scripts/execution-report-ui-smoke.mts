@@ -17,7 +17,7 @@ const project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkd
 const provider=await executionReportProvider({success,hold:true}),pageErrors:string[]=[];
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,diagnosticQuery:Record<string,unknown>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
   const {entry}=await seedExecutionReport(setup,project,provider);await setup.shutdown();setup=undefined;
   const waitUntil=async(check:()=>Promise<boolean>,label:string)=>{const deadline=Date.now()+30000;while(Date.now()<deadline){if(await check())return;await new Promise(resolve=>setTimeout(resolve,50))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});

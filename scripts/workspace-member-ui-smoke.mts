@@ -19,7 +19,7 @@ const pageErrors:string[]=[],transportErrors:string[]=[],dialogs:string[]=[],scr
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keepTemp=false;
 let report:Record<string,unknown>|undefined;const cleanup={desktopClosed:false,probeClosed:false,tempRemoved:false};
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seeded=await seedWorkspaceMembers(setup,temp,probe.url);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seeded=await seedWorkspaceMembers(setup,temp,probe.url);await setup.shutdown();setup=undefined;
   const launch=async()=>{
     desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);
     page.on('pageerror',error=>pageErrors.push(error.message));page.on('requestfailed',request=>transportErrors.push(request.url()+': '+request.failure()?.errorText));page.on('dialog',async dialog=>{dialogs.push(dialog.type()+': '+dialog.message());await dialog.dismiss()});

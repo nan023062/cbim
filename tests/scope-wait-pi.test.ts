@@ -39,7 +39,7 @@ it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('ke
       await app.shutdown();
       const closed=(await scopes())[0];expect(closed).toMatchObject({status:'closed',outcome:'cancelled'});expect(closed.wait).toBeUndefined();expect(leases.size).toBe(0);
       const count=provider.mainRequests.length+provider.memberRequests.length;
-      app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+      app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
       expect(await scopes()).toEqual([closed]);expect(provider.mainRequests.length+provider.memberRequests.length).toBe(count);
       expect((await graph()).tasks[0].result?.acceptance).toBe('not_evaluated');return;
     }
@@ -53,7 +53,7 @@ it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('ke
       expect(thread.slice(2).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:saved.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
       expect(saved.goal?.plan?.criteria.find(item=>item.id===waitFixture.humanId)).toMatchObject({kind:'human',text:waitFixture.humanCriterion});
       expect(saved).toMatchObject({status:'closed',outcome:'failed',goal:{blocked:{reason:expect.any(String)}}});expect(saved.wait).toBeUndefined();
-      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
       expect(await scopes()).toEqual([saved]);expect(provider.mainRequests.length+provider.memberRequests.length).toBe(count);
       await expect(app.memberDispatch(entry.id).parkScope(identity,saved.scopeId,thread[1],thread.map(run=>run.runId))).rejects.toThrow();
       expect(await scopes()).toEqual([saved]);return;
@@ -70,7 +70,7 @@ it.each(['parked-restart','shutdown-before-park','missing-review'] as const)('ke
     expect(await scopes()).toEqual([saved]);expect(provider.mainRequests.length+provider.memberRequests.length).toBe(count);
     expect((await app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).map((item:{message:string})=>item.message)).toEqual(['同意']);
     await app.shutdown();expect(await scopes()).toEqual([saved]);expect(leases.size).toBe(0);
-    app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await scopes()).toEqual([saved]);expect((await graph()).root.agent).toEqual(beforeGraph.root.agent);
     expect((await graph()).tasks).toEqual(beforeGraph.tasks);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(leases.size).toBe(0);
     expect(provider.mainRequests.length+provider.memberRequests.length).toBe(count);

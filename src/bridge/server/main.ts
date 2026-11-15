@@ -1,4 +1,5 @@
 /**
+ * 资源边界：桌面从当前 R 的 assets 注入业务规范；开发态使用工程 assets，窗口品牌仍按安装边界读取。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
  * 作用定位：本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
@@ -51,7 +52,7 @@ app.whenReady().then(async()=>{
   if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
   const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
   updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'assets'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
   window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,app.isPackaged?'branding':'assets/branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
   window.on('close',event=>{if(!quitting){event.preventDefault();app.quit()}});

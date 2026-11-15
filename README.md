@@ -139,4 +139,4 @@ pnpm start
 3. [渐进式架构演进与人工认知保障体系](docs/03-渐进式架构演进与人工认知保障体系.md)
 4. [AI-Native 开发全流程设计方案](docs/04-AI-Native开发全流程设计方案.md)
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](design/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](assets/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

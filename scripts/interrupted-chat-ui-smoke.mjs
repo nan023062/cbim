@@ -46,8 +46,8 @@ try{
   await notice().waitFor();await draft().fill('为什么中断了');assert.equal(await send().isDisabled(),true);
   assert.match(await notice().innerText(),/未登记/);checks.push('missing-binding-explained-with-recovery-actions');
   await draft().press('Enter');assert.equal(await draft().inputValue(),'为什么中断了\n');await draft().fill('为什么中断了');
-  await notice().getByRole('button',{name:'查看原运行',exact:true}).click();await active().getByTestId('root-task-detail').waitFor();
-  await active().getByRole('tab',{name:'对话',exact:true}).click();assert.equal(await draft().inputValue(),'为什么中断了');checks.push('inspect-original-run-does-not-send-or-clear-draft');
+  await notice().getByRole('button',{name:'查看原运行',exact:true}).click();await page.getByRole('dialog',{name:'运行记录与核实',exact:true}).getByTestId('root-task-detail').waitFor();
+  await page.getByRole('dialog',{name:'运行记录与核实',exact:true}).getByRole('button',{name:'关闭运行核实',exact:true}).click();assert.equal(await draft().inputValue(),'为什么中断了');checks.push('inspect-original-run-does-not-send-or-clear-draft');
   // 恢复提示不能被模型、权限菜单切换绕过；同一后端运行头补齐后按钮才重新可用。
   await page.evaluate(()=>window.fixture.set('valid'));await notice().waitFor({state:'hidden'});await page.waitForFunction(()=>!document.querySelector('.workspace-panel:not([hidden]) button[aria-label="发送消息"]').disabled);
   checks.push('valid-interrupted-session-can-send');

@@ -35,3 +35,6 @@ ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/star
 ## 同调用问答状态
 
 ToolTimeline 根据原工具的 agentCallState 显示等待调用方答复、执行中、已完成或执行未完成。waiting 的中间 tool.finished 不覆盖暂停状态；后续 tool.updated 的终态结束同一卡片。cbim_agent_reply 以普通工具显示“答复执行 Agent”，不新增频道或层级。
+### 原任务的对话定位
+
+taskConversationTarget 只把当前 workspace/root 下唯一任务映射为已登记 TeamSession；主根及主 Agent 自执行回主对话，其他任务必须有唯一同 Agent 的登记。缺记录、跨会话或重复登记抛出明确错误，不能猜名字、复用另一执行实例或偷偷回主 Agent。纯函数只返回 sessionId/scopeId/taskId，页面切换和一次性定位代次由 Conversation/MemberConversation 拥有。

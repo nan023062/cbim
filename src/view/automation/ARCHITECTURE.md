@@ -12,7 +12,7 @@
 | --- | --- |
 | [automation.css](automation.css) | 对应界面的布局与视觉样式。 |
 | [AutomationEditor.tsx](AutomationEditor.tsx) | 编辑当前工作区自动化，Agent/模块/Workflow/Skill 来自后端有效目录。 |
-| [AutomationView.tsx](AutomationView.tsx) | 对话内固定工作区自动化页签，展示任务列表、配置和真实运行历史。 |
+| [AutomationView.tsx](AutomationView.tsx) | 右侧扩展区的工作区自动化页签，展示任务列表、配置和真实运行历史。 |
 
 ## 架构类图
 
@@ -47,7 +47,7 @@ class N_src_view_automation_AutomationView_tsx["AutomationView.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[AutomationEditor.tsx](AutomationEditor.tsx)、[automation.css](automation.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/automation.ts](../../bridge/contracts/automation.ts)、[AutomationEditor.tsx](AutomationEditor.tsx)、[automation.css](automation.css)。
 
 ### 本目录调用边界
 
@@ -81,14 +81,10 @@ N_src_view_automation_AutomationView_tsx ..> N_src_view_automation_automation_cs
 
 # 当前工作区自动化
 
-列表、编辑器和历史的保存、取消、运行、编辑、删除与刷新使用公共线性图标，动作仍保留文字。图形和主题不改变计划权限、保存时机或运行生命周期。
-
-固定页签复用任务列表/设置/运行历史布局，参考 Cindy 的本地 scheduler 行为，但不提供工作区路径输入。菜单来自当前有效模块、模块自身 Workflow、已采纳启用岗位及其 Skill。默认主 Agent 与成员岗位分别读取既有配置，无第二份模型选型。
+扩展页签复用任务列表/设置/运行历史布局，参考 Cindy 的本地 scheduler 行为，但不提供工作区路径输入。菜单来自当前有效模块、模块自身 Workflow、已采纳启用岗位及其 Skill。默认主 Agent 与成员岗位分别读取既有配置，无第二份模型选型。
 
 手动、间隔、每天与一次计划明确显示权限；保存不立即运行。配置变更只影响未来，暂停/删除会停止当前运行。定义新 ID 在提交前固定，写入未知不自动重试，可刷新清单核实同 ID。运行历史打开原 taskId 会话，不清原对话草稿；执行结束与业务验收区分。
 
 只在活动页签轮询，实例重建卸载旧视图。表单保留编辑草稿，不接受轮询覆盖。后端会在保存和每次启动重新校验引用；列表不是执行授权。
 
-## 定义查找与历史筛选
-
-AutomationView 在项目范围条展示已读取的定义/启用数量，名称搜索只筛选左侧定义，不改当前详情或任务状态。历史状态筛选作用于当前选定自动化的记录，显示匹配/总数；全部记录不冒充全局统计。完成运行使用已结束图标，不签发验收结论。AutomationEditor 的底部保存区常驻，取消时若与初始值不同须确认；后台轮询不覆盖草稿。
+自动化入口归右侧扩展区；中央交互区不挂载自动化。active 由扩展区可见性与选中页签共同决定，隐藏保留编辑状态并停止轮询，历史导航沿原 taskId 返回会话。

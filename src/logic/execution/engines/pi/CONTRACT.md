@@ -152,3 +152,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 ### RPC 请求关联边界
 
 PendingRequests 只持有 ID 对应回调和时限。Pi 超时取出单项并拒绝，进程可继续；Codex 超时仍 fail 全部请求并终止进程。坏协议、错误脱敏、发送异常及 close 等待进程/通知排空仍由适配器管理。未知或重复回包仍忽略，收到回包先移除后结算，不自动重送。
+
+### 包工厂
+
+package.ts 导出协议 1 的 Pi 工厂和适配器版本；它保留 SDK 1.5.0 校验、受管入口与开发依赖解析。进程 override 仅是可信测试/开发端口，存在受管包时仍先校验版本。PiCommand 兼容类型来自公共 EngineProcess。

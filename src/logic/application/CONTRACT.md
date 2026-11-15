@@ -28,12 +28,12 @@ Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等
 
 ## 产品标识与原生窗口
 
-`main.ts` 只装配窗口品牌资源：开发态从工程 `branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。窗口标题为 CBIM，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
+`main.ts` 只装配窗口品牌资源：开发态从工程 `assets/branding/cbim.png` 读取，打包态从固定 `resources/branding/cbim.png` 读取。Forge 的应用图标及独立安装器均使用同一矢量源生成的 ICO；运行时不生成或下载品牌资源。窗口标题为 CBIM，原应用 ID、可执行文件名称、卸载器探测与用户数据目录保持兼容。
 
 ```mermaid
 classDiagram
 class main_brand["main.ts"] { <<module>> }
-class brand_assets["branding/（工程外部资源边界）"] { <<resource>> }
+class brand_assets["assets/branding/（工程外部资源边界）"] { <<resource>> }
 main_brand ..> brand_assets : 固定资源路径装配窗口图标
 note for main_brand "名称与图标只属于桌面呈现，不参与运行身份、更新版本或账户状态。"
 ```
@@ -52,7 +52,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 ## 长期岗位登记的独立装配
 
-`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `LlmProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
+`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `EngineModelProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
 
 岗位登记保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置，不直接创建运行。新业务执行从真实模块责任解析该岗位，核来源、能力和配置后冻结到计划、任务与运行；active 单独不代表可执行。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
 
@@ -222,3 +222,13 @@ canonical 读取仅按可信索引 source/task/run 定位；safeId、逐层符�
 ## 主岗位控制面
 
 execution 装配工作区已有 WorkspaceMembers 与真实 MainToolContext；新增主工具只复用本机岗位服务和同一 Store，不管理第二份登记。静态 Agent 的模型引用由用户预先配置，主工具无凭据端口、无批准或安装能力。
+
+### 主 Agent 模型角色
+
+聊天未显式选择模型时，从同一主 Agent revision 捕获 engine、primary 和 modelRoles；显式请求完整校验选型，不从新配置偷偷补其他角色。执行准备将角色交给 EngineModelProfiles，公开运行选项保留引用而不保存凭据。
+
+Application 接收可选冷宿主 engineArtifacts 并持有唯一 EnginePackages；正式主/成员执行共用此解析器，源码运行继续使用原源工厂。初始化先校验本机安装清单，模型凭据与包管理状态独立。
+
+## 内置运行资源边界
+
+Application 的第二个构造参数为 assetsRoot。Rules 与内置查询共用该只读资源根；用户数据生命周期保持原样。

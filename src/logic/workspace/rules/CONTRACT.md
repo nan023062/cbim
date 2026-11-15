@@ -1,3 +1,7 @@
+### 源码浏览纯契约
+
+source-browser.ts 定义模块/来源/工作区版本目标及 sourceDirectoryInput/sourceFileInput 严格请求。SourceDirectory 有显式 nextOffset，SourceFile 区分文本与不可预览，契约不导入 Node。路径安全与真实来源验证由工作区服务再次执行。
+
 ### 静态模块视图的单向边界
 
 `logic/knowledge/rules/read-models/workspace.ts` 中的 BusinessWorkspace 只依赖知识快照公开类型、只读解析辅助、共享 Core 与 `project-root.ts`，不依赖 Team 视图、知识写入端口或调度编排。跨域查询由 logic/knowledge/rules/knowledge-queries.ts 组合，执行准备在 logic/execution/context 调用查询端口，固定快照视图不缓存后续版本，也不取得实际工程的生命周期。依赖矩阵和状态归属见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)；Workflow 协议、责任与来源登记各有原领域契约，不因目录同名合并职责。

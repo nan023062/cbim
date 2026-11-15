@@ -25,14 +25,14 @@ async function setup(withRun=true){
   const {model}=await registerServiceOwner(f.app,workspace,'.cbim/team/dev',[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease(),identity={workspaceId:entry.id,rootSessionId:'main-root'};
   const mainJournals=new Map<string,RunJournal>(),inspect=vi.fn(async(run:Parameters<MemberExecutionPorts['inspect']>[0])=>storage.read(path.join(directory,'runs',run.binding.taskId,run.binding.runId)));
-  const service=new WorkspaceDispatchService(workspace,store,{inspectMain:async(_root,id)=>RunJournal.read(mainJournals.get(id)!.directory),inspectMember:inspect},undefined,undefined,f.app.models);
+  const service=new WorkspaceDispatchService(workspace,store,{inspectMain:async(_root,id)=>RunJournal.read(mainJournals.get(id)!.directory),inspectMember:inspect},undefined,undefined,f.app.engineModels);
   await service.openGraph({...identity,commandId:'open'});await service.openScope(identity,'source',{message:'读取实际状态并报告'},'old-main-run');
   const ownerSelection=(await service.owners.discover([moduleId])).groups[0].selection!;
   const prepare=vi.fn<()=>Awaited<ReturnType<MemberExecutionPorts['prepare']>>>(()=>({model,create:async(_run,_task,hooks)=>{
     let context:EngineContext;
     return new LoopRuntime({storage,directory:path.join(directory,'runs'),acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:true,effects:['read']}),createEngine:()=>({kind:'fixture',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(directory,context.nativeSessionId+'.jsonl')}})},run:async()=>({status:'failed'}),stop:async()=>{},close:async()=>{}})});
   }}));
-  const members=new MemberExecutionManager(workspace,store,{prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect,acquire:(key,permission,agent)=>lease.acquire(key,permission,agent)});await members.initialize();
+  const members=new MemberExecutionManager(workspace,store,{prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.engineModels.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect,acquire:(key,permission,agent)=>lease.acquire(key,permission,agent)});await members.initialize();
   let count=0;
   const assign=(scopeId:string)=>service.dispatchTask({...identity,commandId:'dispatch-'+(++count),expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'读取实际状态并报告',acceptance:[{id:'fact',text:'核实当前状态'}],prerequisites:[]}},scopeId);
   await service.goals.plan(identity,'source','old-main-run','source-plan',{expectedRevision:1,objective:'读取实际状态并报告',constraints:[],criteria:[{id:'fact',text:'核实当前状态',kind:'evidence'}],assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['fact'],reason:'明确负责岗位'}],reason:'保存实际业务来源计划'});

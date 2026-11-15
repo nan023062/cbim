@@ -12,8 +12,8 @@ import type {Workspace} from '../../workspace/service/workspace';
 import type {WorkspaceMembers} from '../../team/service/workspace-members';
 import {workspaceMemberModelHash} from '../../team/rules/workspace-member-rules';
 import {workspaceMemberEngine} from '../../team/rules/workspace-member';
-import type {ResolvedLlm} from '../../models';
-import type {LlmProfiles} from '../../models/service';
+import type {ResolvedEngineModel as ResolvedLlm} from '../../engines';
+import type {EngineModelProfiles as LlmProfiles} from '../../engines/service';
 import type {TaskSpec,RunSummary} from '../../execution/rules/types';
 import type {RunStorage} from '../../execution/rules/storage';
 import type {WorkspaceAdmission} from './execution-admission';
@@ -34,10 +34,10 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
   const scopeId=randomUUID(),identity={workspaceId:rootAgent.conversation.workspaceId,rootSessionId:rootAgent.conversation.taskId};
   let rootRunId:string|undefined,releaseBudget:(()=>void)|undefined,opened=false,closed=false;
   let unsupportedBudget=false;
-  let requestBudget:Promise<RequestBudgetPort|undefined>|undefined;
-  const budget=()=>{
+  const requestBudgetsByRole=new Map<string,Promise<RequestBudgetPort|undefined>>();
+  const budget=(_context:unknown,role='primary')=>{
     if(!rootRunId)fail('AGENT_ROOT_NOT_STARTED','根运行尚未受理，不能调用模型');
-    return requestBudget??=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId,kind:'main'},llm)??Promise.resolve(undefined);
+    let result=requestBudgetsByRole.get(role);if(!result){result=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId,kind:'main'},llm,role)??Promise.resolve(undefined);requestBudgetsByRole.set(role,result)}return result;
   };
   const scheduler=new AgentCallScheduler({maxDepth:8,maxConcurrent:32},{list:async()=>{
     workspace.assert();if(!members)return {items:[],reason:'当前宿主没有已配置的 Agent 目录'};
@@ -64,9 +64,9 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(detail.currentDiff.capability.status!=='same'||detail.currentDiff.model.status!=='same')fail('AGENT_CONFIGURATION_CHANGED','目标 Agent 配置已变化，请先核实并采纳配置');
     const policy=detail.member.runtimePolicy;
     const engine=workspaceMemberEngine(policy)??'pi';
-    const childLlm=input.models?await input.models.withRuntimeConfiguration({profileId:policy.profileId,modelId:policy.modelId,engine},async captured=>{
+    const childLlm=input.models?await input.models.withRuntimeConfiguration({profileId:policy.profileId,modelId:policy.modelId,engine,modelRoles:policy.modelRoles},async captured=>{
       if(workspaceMemberModelHash(captured.profile)!==policy.configurationHash)fail('AGENT_CONFIGURATION_CHANGED','目标模型配置已变化，未启动子运行');
-      await requestBudgets?.preflight(task.taskId,scopeId,{profile:captured.profile,apiKey:''});
+      await requestBudgets?.preflight(task.taskId,scopeId,{profile:captured.profile});
       request.signal.throwIfAborted();return captured.resolve();
     }):llm;
     if(!childLlm||childLlm.profile.id!==policy.profileId||childLlm.profile.model!==policy.modelId||workspaceMemberModelHash(childLlm.profile)!==policy.configurationHash)fail('AGENT_MODEL_UNAVAILABLE','目标模型不能按冻结配置解析，未替换为根模型');
@@ -80,14 +80,14 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(permit.kind!=='granted'){const usage=admission.manager.snapshot();throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT','当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用',{current:usage.occupied.length,requested:1,limit:usage.policy.maxConcurrentRuns,unit:'process'})}
     try{
       const childTask:TaskSpec={...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
-      let childContext:AgentToolContext|undefined,childBudget:Promise<RequestBudgetPort|undefined>|undefined,childAlive=true;
+      let childContext:AgentToolContext|undefined,childAlive=true;const childBudgets=new Map<string,Promise<RequestBudgetPort|undefined>>();
       const assertChild=()=>{workspace.assert();if(closed||!childAlive||request.signal.aborted)fail('AGENT_CALL_CANCELLED','原子调用已结束，不能发送新请求')};
-      const child=await createWorkspaceLoop(workspace.paths,workspace,{...options,engine,llm:childLlm,profileId:policy.profileId,model:policy.modelId,provider:'cbim-'+policy.profileId,process:undefined,images:[],attachmentIds:[],requestQuestion:async(args,signal)=>{
+      const child=await createWorkspaceLoop(workspace.paths,workspace,{...options,engine,llm:childLlm,profileId:policy.profileId,model:policy.modelId,modelRoles:policy.modelRoles,provider:'cbim-'+policy.profileId,process:undefined,images:[],attachmentIds:[],requestQuestion:async(args,signal)=>{
         if(!childContext)fail('AGENT_CALL_NOT_STARTED','子调用尚未受理');
         childContext.assertQuestionWait?.();return request.requestQuestion(args,signal);
       }},{
-        storage,agent,agentCall:request.reference,agentTools:context=>{childContext=context;return scheduler.bind(context,request.parent.depth+1)},requestBudget:context=>{
-          assertChild();return childBudget??=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId!,kind:'main',agentRun:{taskId:childTaskId,runId:context.runId}},childLlm,assertChild)??Promise.resolve(undefined);
+        storage,agent,agentCall:request.reference,agentTools:context=>{childContext=context;return scheduler.bind(context,request.parent.depth+1)},requestBudget:(context,role='primary')=>{
+          assertChild();let result=childBudgets.get(role);if(!result){result=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId!,kind:'main',agentRun:{taskId:childTaskId,runId:context.runId}},childLlm,role,assertChild)??Promise.resolve(undefined);childBudgets.set(role,result)}return result;
         },
         acquireLease:async()=>{workspace.assert();if(closed||request.signal.aborted)fail('AGENT_CALL_CANCELLED','调用已停止');return ()=>{}},
         authorizeNative:input.authorizeNative,

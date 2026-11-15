@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
+  <title>CBIM · Flow C</title>
+  <defs>
+    <linearGradient id="blue" x1="40" y1="20" x2="222" y2="256" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4265F5"/>
+      <stop offset="1" stop-color="#2545CB"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#blue)"/>
+  <path d="M178 60H115C77 60 50 89 50 128C50 167 77 196 115 196H178L154 164H115C96 164 82 149 82 128C82 107 96 92 115 92H154L178 60Z" fill="#FFFFFF"/>
+  <path d="M150 104H182L206 128L182 152H150L174 128L150 104Z" fill="#92F0DB"/>
+</svg>

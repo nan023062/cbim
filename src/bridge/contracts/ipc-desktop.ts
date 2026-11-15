@@ -9,7 +9,7 @@ import {type DesktopUpdateStatus,type ManagedEngineStatus} from './desktop-updat
 
 export const desktopIpcRequests={
   'desktop.engines.status':noIpcArgs,
-  'desktop.engines.prepare':z.object({engine:z.enum(['pi','claude-code','codex'])}).strict(),
+  'desktop.engines.prepare':z.object({engine:z.enum(['pi','claude-code','codex','memory'])}).strict(),
   'desktop.updates.status':noIpcArgs,
   'desktop.updates.check':noIpcArgs,
   'desktop.updates.download':noIpcArgs,

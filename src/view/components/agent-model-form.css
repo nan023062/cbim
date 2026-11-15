@@ -1,0 +1,10 @@
+/**
+ * 作用定位：主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。
+ * 设计原因：字段按业务角色纵向排列，长标签、供应商名称与操作按钮可在窄屏收缩换行。
+ */
+.agent-model-form,.agent-model-form fieldset{min-width:0;max-width:100%;box-sizing:border-box}
+.agent-model-form fieldset{display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);border-radius:8px;padding:12px}
+.agent-model-form label{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.agent-model-form select{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.agent-model-form p{margin:0;overflow-wrap:anywhere}
+.agent-model-form .agent-model-actions{display:flex;gap:8px;flex-wrap:wrap}

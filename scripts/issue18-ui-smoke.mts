@@ -14,7 +14,7 @@ await fs.mkdir(root);await fs.mkdir('test-results',{recursive:true});
 let desktop:ElectronApplication|undefined,setup:Application|undefined,page:Page|undefined;
 const checks:string[]=[],errors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
   const entry=await setup.dispatch('add',{path:root}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
   await workspace.commit(request(await workspace.snapshot(),[{path:'.cbim/team/design/skills.json',text:JSON.stringify({skills:[]})}]));
   const plan=await team.call('cbim_object_preview',{revision:(await workspace.snapshot()).revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team/design',slug:'designer',data:{name:'嵌套设计师',summary,capabilities:['交互设计']},body:'# 工作原则\n核对界面与项目约束。'}]});await team.call('cbim_object_commit',{planId:plan.planId},true);

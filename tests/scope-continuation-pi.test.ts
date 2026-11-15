@@ -36,7 +36,7 @@ it.each(['complete-restart','wait-again','stop-race','live-queue'] as const)('re
     await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:continuationFixture.queuedGoal,options:{permission:'read'}});
     let queued=await queue();expect(queued).toHaveLength(1);expect(queued[0].status).toBe('pending');
     await expect(app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId})).rejects.toThrow();
-    if(mode!=='live-queue'){await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();queued=await queue();expect(queued[0].status).toBe('paused')}
+    if(mode!=='live-queue'){await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();queued=await queue();expect(queued[0].status).toBe('paused')}
     expect(await scopes()).toEqual([original]);expect(provider.mainRequests).toHaveLength(6);expect(await queue()).toEqual(queued);
     const req:GoalContinuationRequest={...identity,scopeId:original.scopeId,waitId:original.wait!.waitId,expectedGoalRevision:original.goal!.revision,expectedInputRevision:original.goal!.inputRevision??1,commandId:randomUUID(),input:{message:continuationFixture.supplement},options:{provider:'cbim-'+profileId,model:'continue-fixture',profileId,permission:'read',turnTimeoutMs:30000}};
     const lookup={...identity,scopeId:req.scopeId,commandId:req.commandId};
@@ -81,7 +81,7 @@ it.each(['complete-restart','wait-again','stop-race','live-queue'] as const)('re
       expect(resolved).toMatchObject({status:'closed',outcome:'completed',goal:{review:{decision:'complete'}}});
       await expect(app.dispatch('loop.goalContinue',{...req,commandId:randomUUID()})).rejects.toThrow();
       expect((await app.dispatch('loop.goalContinue',req)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
-      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await scopes()).toEqual([resolved]);expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
+      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await scopes()).toEqual([resolved]);expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(12);
       await app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId});await vi.waitFor(async()=>{const all=await scopes();expect(all).toHaveLength(2);expect(all[1]).toMatchObject({status:'closed',outcome:'completed',goal:{input:{message:continuationFixture.queuedGoal}}})},{timeout:20000,interval:30});expect(await queue()).toEqual([]);expect(provider.mainRequests).toHaveLength(13);
     }
     expect(provider.errors).toEqual([]);

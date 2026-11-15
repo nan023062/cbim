@@ -51,3 +51,9 @@ it('迟到回执只写原话题，身份/版本/原文/运行不符均不能作�
   for(const bad of [{...accepted,rootSessionId:'other'},{...accepted,continuation:{...accepted.continuation,inputRevision:3}},{...accepted,continuation:{...accepted.continuation,input:{message:'伪造'}}},{...accepted,continuation:{...accepted.continuation,wait:{...accepted.continuation.wait,interruptionId:undefined}}}])expect(()=>checkedTopicInterruptionReceipt(bad,request)).toThrow();
   expect(()=>checkedTopicInterruptionReceipt({...accepted,continuation:{...accepted.continuation,runId:'replaced'}},request,accepted)).toThrow();
 });
+
+it('频道附件随原请求冻结，未知后的重试不借用其他频道的选择',async()=>{
+ const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});await f.controller.restore();const ids=['33333333-3333-4333-8333-333333333333'];await f.controller.submit('附件补充',options,ids);ids.push('44444444-4444-4444-8444-444444444444');
+ expect(f.controller.snapshot.request?.input.attachmentIds).toEqual(['33333333-3333-4333-8333-333333333333']);
+ f.send.mockImplementation(async value=>receipt(value));await f.controller.retry();expect(f.send.mock.calls[1][0].input.attachmentIds).toEqual(['33333333-3333-4333-8333-333333333333']);
+});

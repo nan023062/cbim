@@ -2,7 +2,7 @@
 
 ## 目录定位
 
-模型、资源仓库、GitHub 反馈连接、并发及新目标软限额配置。GitHub 采用 Device Flow，页面仅持公开 Client ID 与短期授权码；资源服务器账号仍为占位。并发实时状态不覆盖草稿；软限额默认关闭，显式保存与新周期生效相区分，失败保留输入且不盲目重试。 反馈预置公开产品连接；版本更新由侧栏图标与独立详情呈现，设置表单不因查看日志而卸载。 预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
+设置中心的九类导航、关键词搜索与独立表单；按需挂载并保留跨页草稿。外观偏好由 App 唯一持有并保存在本机；账号页区分本地使用与 GitHub 反馈连接。资源共享、模型、引擎、并发、预算和网页仍走原版本化服务；关于页复用更新控制器与安装详情。
 
 本文描述当前实现。通过分析目录边界后维护的 [源码架构脚本](../../../scripts/source-architecture.mjs) 同步清单和声明；代码变更时仍须核对职责、关键成员与关系。
 
@@ -10,19 +10,54 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [AboutSettings.tsx](AboutSettings.tsx) | 设置中心的产品版本和更新入口，读取 App 已有更新控制器。 |
+| [AccountSettings.tsx](AccountSettings.tsx) | 展示本地使用模式与已有 GitHub 反馈连接，区分产品账号与外部服务账号。 |
 | [AdmissionSettings.tsx](AdmissionSettings.tsx) | 配置应用级 Agent 并发上限，展示真实准入占用与等待数量。 |
+| [appearance-state.ts](appearance-state.ts) | View 层的本机外观偏好、旧主题迁移与存储边界，不含账号或模型配置。 |
+| [appearance.css](appearance.css) | 对应界面的布局与视觉样式。 |
+| [AppearanceSettings.tsx](AppearanceSettings.tsx) | 设置中心的主题、阅读字号与动效偏好，消费外壳唯一的外观控制器。 |
 | [budget-settings-state.ts](budget-settings-state.ts) | 管理额度及显式逐请求模式草稿、版本化保存，隔离页面卸载后的异步响应；缺省仍是运行间软限额。 |
 | [budget-settings.css](budget-settings.css) | 对应界面的布局与视觉样式。 |
-| [BudgetSettings.tsx](BudgetSettings.tsx) | 展示用户显式配置的新目标 Token/费用软限额，与全局并发设置相邻但独立保存。 |
+| [BudgetSettings.tsx](BudgetSettings.tsx) | 设置中心的用量与预算子页，展示用户显式配置的新目标 Token/费用软限额，与全局并发独立保存。 |
+| [EmbeddingModels.tsx](EmbeddingModels.tsx) | 供应商草稿中的向量接口及模型编辑，独立输入容量、向量维度和输入计价。 |
+| [EngineOverview.tsx](EngineOverview.tsx) | 设置页的已安装引擎总览，按官方清单展示当前版本、启停和实时运行占用。 |
+| [EngineSettings.tsx](EngineSettings.tsx) | 默认总览全部已安装引擎，选择具体引擎后集中展示能力、模型、版本、实时状态及包管理操作。 |
 | [GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx) | 设置页的 GitHub 反馈连接入口，展示设备授权码及固定目标仓库。 |
 | [models.css](models.css) | 供应商列表和模型表单布局。 |
 | [ModelSettings.tsx](ModelSettings.tsx) | 设置页的自定义供应商、连接表单与模型目录编辑器。 |
-| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按引擎连接测试。 |
-| [settings.css](settings.css) | 对应界面的布局与视觉样式。 |
-| [SettingsView.tsx](SettingsView.tsx) | 模型供应商、运行并发、新目标软限额、GitHub 反馈连接、仓库与共享服务设置；版本与更新由账号菜单独立打开。 |
+| [ProviderConnections.tsx](ProviderConnections.tsx) | 供应商表单的接口预设、自动识别和高级兼容地址编辑，以及已保存配置的按操作/接口连接测试。 |
+| [ResourceSettings.tsx](ResourceSettings.tsx) | 设置中心的本地资源目录与仓库共享，验证及保存由原资源服务负责。 |
+| [settings-sections.ts](settings-sections.ts) | 设置中心的静态导航、分组与搜索词；仅描述已有设置入口。 |
+| [settings.css](settings.css) | 设置内容表单与窄屏导航布局；侧栏视觉复用 components/sidebar.css。设计原因：只保留设置内容的独立排版，桌面导航宽度继承首页同一布局状态，窄屏仍保证表单可读。 */ |
+| [SettingsView.tsx](SettingsView.tsx) | 设置中心的分类导航、搜索与独立子页面；业务表单仍通过原 IPC 保存。 |
+| [useAppearance.ts](useAppearance.ts) | 由 App 唯一持有的外观控制器，将本机偏好应用到窗口，并响应系统配色变化。 |
 | [WebSettings.tsx](WebSettings.tsx) | 桌面网页配置，保存浏览器 robots 策略、Brave 开关与密钥。 |
 
 ## 架构类图
+
+### AboutSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
+  <<component>>
+  +AboutSettings()
+}
+```
+
+直接依赖：[../components/BrandMark.tsx](../components/BrandMark.tsx)、[../../bridge/contracts/desktop-updates.ts](../../bridge/contracts/desktop-updates.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)。
+
+### AccountSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
+  <<component>>
+  +AccountSettings()
+}
+```
+
+直接依赖：[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)。
 
 ### AdmissionSettings.tsx
 
@@ -34,7 +69,67 @@ class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
+直接依赖：[../../bridge/contracts/admission.ts](../../bridge/contracts/admission.ts)、[../tasks/useAdmission.ts](../tasks/useAdmission.ts)、[../tasks/admission.css](../tasks/admission.css)。
+
+### appearance-state.ts
+
+```mermaid
+classDiagram
+class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
+  <<module>>
+  +readAppearance()
+  +saveAppearance()
+  +resolveTheme()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
+  <<module>>
+}
+class N_src_view_settings_appearance_state_ts_ThemePreference["ThemePreference"] {
+  <<type>>
+
+}
+N_src_view_settings_appearance_state_ts ..> N_src_view_settings_appearance_state_ts_ThemePreference : 声明
+class N_src_view_settings_appearance_state_ts_AppearancePreferences["AppearancePreferences"] {
+  <<interface>>
+  +theme
+  +textSize
+  +codeSize
+  +reduceMotion
+}
+N_src_view_settings_appearance_state_ts ..> N_src_view_settings_appearance_state_ts_AppearancePreferences : 声明
+class N_src_view_settings_appearance_state_ts_PreferenceStorage["PreferenceStorage"] {
+  <<interface>>
+  +getItem()
+  +setItem()
+}
+N_src_view_settings_appearance_state_ts ..> N_src_view_settings_appearance_state_ts_PreferenceStorage : 声明
+```
+
+
+### appearance.css
+
+```mermaid
+classDiagram
+class N_src_view_settings_appearance_css["appearance.css"] {
+  <<stylesheet>>
+}
+```
+
+### AppearanceSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
+  <<component>>
+  +AppearanceSettings()
+}
+```
+
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[useAppearance.ts](useAppearance.ts)、[appearance-state.ts](appearance-state.ts)。
 
 ### budget-settings-state.ts
 
@@ -110,7 +205,43 @@ class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
+直接依赖：[../../bridge/contracts/ipc-call.ts](../../bridge/contracts/ipc-call.ts)、[budget-settings-state.ts](budget-settings-state.ts)、[budget-settings.css](budget-settings.css)。
+
+### EmbeddingModels.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
+  <<component>>
+  +EmbeddingModels()
+}
+```
+
+直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+
+### EngineOverview.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_EngineOverview_tsx["EngineOverview.tsx"] {
+  <<component>>
+  +EngineOverview()
+}
+```
+
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)。
+
+### EngineSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
+  <<component>>
+  +EngineSettings()
+}
+```
+
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../foundations/utility/index.ts](../foundations/utility/index.ts)、[EngineOverview.tsx](EngineOverview.tsx)。
 
 ### GitHubFeedbackSettings.tsx
 
@@ -143,7 +274,7 @@ class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
+直接依赖：[EmbeddingModels.tsx](EmbeddingModels.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[models.css](models.css)、[ProviderConnections.tsx](ProviderConnections.tsx)。
 
 ### ProviderConnections.tsx
 
@@ -158,6 +289,41 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 ```
 
 直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/model-actions.ts](../../bridge/contracts/model-actions.ts)。
+
+### ResourceSettings.tsx
+
+```mermaid
+classDiagram
+class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
+  <<component>>
+  +ResourceSettings()
+}
+```
+
+直接依赖：[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)。
+
+### settings-sections.ts
+
+```mermaid
+classDiagram
+class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
+  <<module>>
+  +findSettingsSections()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
+  <<module>>
+}
+class N_src_view_settings_settings_sections_ts_SettingsSectionId["SettingsSectionId"] {
+  <<type>>
+
+}
+N_src_view_settings_settings_sections_ts ..> N_src_view_settings_settings_sections_ts_SettingsSectionId : 声明
+```
+
 
 ### settings.css
 
@@ -183,14 +349,50 @@ classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
-class N_src_view_settings_SettingsView_tsx_SettingsGroup["SettingsGroup"] {
-  <<type>>
-
+class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"] {
+  <<interface>>
+  +onDirtyChange
+  +sidebarResize
+  +section
+  +onSectionChange
+  +onBack
+  +appearance
+  +updates
+  +onOpenUpdates
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsGroup : 声明
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/resources.ts](../../bridge/contracts/resources.ts)、[WebSettings.tsx](WebSettings.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[GitHubFeedbackSettings.tsx](GitHubFeedbackSettings.tsx)、[settings.css](settings.css)。
+直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
+
+### useAppearance.ts
+
+```mermaid
+classDiagram
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
+  +useAppearance()
+}
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
+}
+class N_src_view_settings_useAppearance_ts_AppearanceController["AppearanceController"] {
+  <<interface>>
+  +value
+  +resolvedTheme
+  +error
+  +update
+  +reset
+  +retry
+}
+N_src_view_settings_useAppearance_ts ..> N_src_view_settings_useAppearance_ts_AppearanceController : 声明
+```
+
+直接依赖：[appearance-state.ts](appearance-state.ts)、[appearance.css](appearance.css)。
 
 ### WebSettings.tsx
 
@@ -208,39 +410,71 @@ class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
 
 ```mermaid
 classDiagram
+class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
+}
+class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
+  <<module>>
+}
 class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_budget_settings_state_ts["budget-settings-state.ts"] {
   <<module>>
 }
+N_src_view_settings_AccountSettings_tsx ..> N_src_view_settings_GitHubFeedbackSettings_tsx : 导入依赖
+N_src_view_settings_AppearanceSettings_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
+N_src_view_settings_AppearanceSettings_tsx ..> N_src_view_settings_appearance_state_ts : 导入依赖
+N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_budget_settings_css["budget-settings.css"] {
   <<stylesheet>>
 }
+class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_EngineOverview_tsx["EngineOverview.tsx"] {
+  <<component>>
+}
 class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_EmbeddingModels_tsx["EmbeddingModels.tsx"] {
   <<component>>
 }
 class N_src_view_settings_models_css["models.css"] {
   <<stylesheet>>
 }
-class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
-  <<component>>
-}
-N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_state_ts : 导入依赖
 N_src_view_settings_BudgetSettings_tsx ..> N_src_view_settings_budget_settings_css : 导入依赖
+N_src_view_settings_EngineSettings_tsx ..> N_src_view_settings_EngineOverview_tsx : 导入依赖
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_EmbeddingModels_tsx : 导入依赖
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_models_css : 导入依赖
-N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
-  <<component>>
-}
 class N_src_view_settings_ModelSettings_tsx["ModelSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
 class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
@@ -249,7 +483,7 @@ class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
 class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
+N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
@@ -260,14 +494,60 @@ classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
-class N_src_view_settings_GitHubFeedbackSettings_tsx["GitHubFeedbackSettings.tsx"] {
+class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
   <<component>>
+}
+class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
+  <<component>>
+}
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ResourceSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AccountSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
+  <<component>>
+}
+class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
+  <<module>>
+}
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
 }
 class N_src_view_settings_settings_css["settings.css"] {
   <<stylesheet>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_GitHubFeedbackSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AboutSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_sections_ts : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
+  <<module>>
+}
+class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
+  <<module>>
+}
+class N_src_view_settings_appearance_css["appearance.css"] {
+  <<stylesheet>>
+}
+N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_state_ts : 导入依赖
+N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_css : 导入依赖
 ```
 
 
@@ -289,9 +569,9 @@ WebSettings 显示浏览器 robots 策略（默认允许读正文、可选遵守
 
 # 设置界面
 
-模型、并发、预算、网页、GitHub 连接及仓库表单采用公共操作图标、主题边框、可见焦点和控件尺寸。保存、刷新、删除、授权的文字与原确认行为保留；操作说明只读控件标签，不读取输入值、密钥或令牌。
+设置中心按已访问分类保留表单，以来源键合并模型、并发、预算、网页、GitHub 反馈和资源目录的未保存布尔标记。外壳返回/离开与窗口关闭先提示；不向外壳传递输入或凭据。表单保存后按实际返回版本清除自身标记，卸载退订。目录、并发和预算显式重新读取会先保护草稿；取消离开不继续切换工作区。外观设置仍即时持久化，不充当未提交表单。
 
-版本与更新由用户栏右侧的常驻图标和独立 [updates](../updates/ARCHITECTURE.md) 详情展示；设置页不重复装配更新组件。悬停图标或打开详情不会卸载设置页，模型、预算与 GitHub 反馈连接草稿继续由各表单持有。
+版本与更新由用户栏图标、设置中心“关于与更新”和独立 [updates](../updates/ARCHITECTURE.md) 详情展示。App 持有唯一更新控制器；设置页只读取同一状态或显式检查，日志入口打开原模态框，不重建轮询、不卸载表单。重启安装仍由原详情显式触发。
 
 GitHub 连接已预置公开产品配置；普通用户直接连接，高级字段保留在折叠区，不要求复制 Client ID。
 
@@ -305,7 +585,9 @@ class GitHubFeedbackSettings { <<component>> }
 note for GitHubFeedbackSettings "GitHubFeedbackSettings.tsx：等待授权时说明页面轮询及本机已连接的完成条件；不展示 Issue 处理结果。"
 ```
 
-`SettingsView` 独立装配模型、执行并发、新目标软限额和资源仓库设置，仓库服务失败不阻止配置运行策略。运行设置表单始终保留在同一渲染位置，仓库异步加载只改变仓库区域，不重挂载已可交互的表单或清除草稿。
+`SettingsView` 使用 `settings-sections` 的九类静态导航和多关键词搜索；搜索只筛选入口，不自动选页或调用业务。外壳传入当前分类，支持账号菜单、模型和仓库入口直达。设置中心独占主区域，返回恢复原工作区选择；导航与首页共用 components/sidebar.css 的标题、搜索与菜单几何，宽度沿 App 的唯一 useSidebarWidth（默认 260px，范围 200～420px），设置中的调整返回首页后继续生效。只接收外壳提供的调整手柄，不持久化第二份宽度；窄内容区保留分类下拉和可搜索入口，隐藏不适用的拖动边缘。
+
+每个分类首次访问才挂载，之后使用 hidden 保留表单草稿，离开设置中心才卸载。仓库加载失败只显示于 ResourceSettings，不能阻塞其它分类。隐藏运行页退订共享准入快照；GitHub 授权流程在设置中心内换页时继续原有轮询，离开中心时清理。EngineSettings 返回可见分类或完成操作后刷新包与已保存模型，忙碌时不启动额外读取，旧读取在操作/切页时失效。
 
 `AdmissionSettings` 从可靠设置读取版本，显式保存 1～32 的全局运行上限。输入草稿不随占用变化重置；版本冲突后由用户刷新确认。`useAdmission` 与会话共用一个窗口级游标订阅，显示实际占用/上限和等待数量；降低上限可以暂时出现占用高于上限，不结束已有任务。读取失败保留旧数据并明确可能过期。
 
@@ -333,14 +615,20 @@ BudgetSettingsController 使用前端 SubscriptionSet，只在发布新状态后
 
 BudgetSettingsController 组合前端 AsyncGeneration。load/save 开始和 cancel 推进代次；成功、失败与 finally 分别在原位置判断标记，避免旧结果覆盖新草稿或清掉新请求的 busy。配置版本校验、单次提交及未知保存结果策略仍属于设置控制器，代次不作为后端版本。
 
-## 分组设置与草稿
+EngineSettings 的下拉框在开发者静态官方清单前提供“全部引擎”，默认进入总览。EngineOverview 只展示具有 active 选择的已安装引擎；仅有 installed 历史缓存的已移除引擎不列入。总览展示当前安装版本和运行库版本，并分别显示启停、运行占用、准备进度与错误；references 包含依赖占用，不等同于任务数，准备或错误不能遮盖已有运行。点击总览条目只切换到对应详情，不检查远端更新或安装。选中具体引擎后只显示该引擎的业务专长、兼容主/额外角色模型、当前与候选版本、启停/安装/使用状态、缓存与依赖。所有引擎操作在详情中，提交显示的摘要与 revision；当前相同制品已安装且无错误时禁用重复安装，移除后仍有候选缓存时显示“从缓存添加”。错误不自动重试。
 
-SettingsView 提供总览卡片及模型、额度、网页/反馈、仓库四组导航。组件固定挂载，hidden 只改变可见性，切换分组不清除输入或中断已有授权轮询。离开整个设置页仍按原生命周期卸载；当前没有跨页面持久草稿保证。总览的作用范围来自配置契约，不推断连接健康；各组仍独立保存。
+引擎页活动时每秒读取 engines.settings；读取和切换不联网检查或安装。准备含本地校验和下载，进度不能当作已激活。轮询与操作代际隔离，旧快照不覆盖回执；离开分类停轮询但已提交操作继续，返回保持选择并重新读取模型和安装状态。模型编辑与引擎管理独立，刷新不提交模型草稿。
 
-## 供应商取消编辑
+EmbeddingModels 编辑明确向量端点、输入容量、维度和可选输入价，不填生成输出字段；纯向量供应商允许保存。编辑既有供应商保留 embedding；端点改变清输入中的 Key，保存仍由服务强制凭据重确认。连接预览/测试只选模型能力与接口，不要求用户了解引擎。
 
-ModelSettings 对照打开时的配置及未添加型号、临时密钥确认是否存在未保存输入；取消确认后清空凭据，取消确认本身不保存或测试连接。保存操作区粘性显示。分组仍保持挂载；此取消保护不等于跨全局导航持久草稿。
+### 外观与账号的边界
 
-## 跨页面草稿保护
+`appearance-state` 校验本机主题、对话字号、代码块字号及减少动效。无新记录时继承 `cbim.theme`；单键 `cbim.appearance.v1` 保存，不读取或改写工作区、凭据。损坏字段回退，读取失败不覆盖原记录；写入失败仍可预览但明确本窗口有效，并提供重试。恢复默认只改外观。
 
-设置子表单仅上报脏稿布尔值，SettingsView 按来源聚合后交给外壳；卸载清理标记。并发/额度刷新须确认放弃草稿；网页保存失败保留输入，显式重新读取才重置。
+`useAppearance` 由 App 唯一挂载，监听系统配色并将实际深浅模式及阅读变量写入根节点；选择“跟随系统”不会被解析结果改写。正文字号仅影响聊天消息，代码字号仅影响聊天代码块。减少动效和系统偏好共同生效。账号菜单快捷主题与 AppearanceSettings 共用此控制器。
+
+`AccountSettings` 明确 CBIM 当前本地使用、无云账号及跨设备同步；实际外部账号仍由 GitHubFeedbackSettings 管理，无伪登录或退出按钮。`ResourceSettings` 保留原目录验证与共享的显式启停，连接令牌仅在点击后读取。
+
+## 引擎管理入口迁移
+
+SettingsView 不再注册 engines 分页；安装、更新与进度由对话 EnginePicker 提供，使用 Application 同一 EnginePackages，不改变运行中的固定版本。

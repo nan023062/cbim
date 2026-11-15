@@ -450,7 +450,7 @@ N_src_logic_governance_rules_module_governance_tools_ts ..> N_src_logic_governan
 
 本目录保存工作区级 Module 知识治理的严格协议和纯保护规则，不持有存储、网络、模型、运行租约或 Electron 身份。其依赖只指向 Core 基础能力；知识存储通过结构兼容的文件/请求快照调用规则，避免知识端口与治理实现互相引用。静态保护和治理历史属于工作区，不创建主会话、执行成员或派发节点。
 
-`module-governance.ts` 区分登记、观察、不可变提案、版本化决定和独立实施。请求固定 workspaceId、instanceId 与 commandId，不接受任意知识路径、actor、permit 或批准证明。现行 `design/business/module.schema.json` 将 overview 固定为 `module.md`；规则仍解析实际 `module.json` 并核对 id/overview，不仅凭路径存在猜测 Module。正文使用跨前后端的 UTF-8 字节长度检查，沿用单文件 2 MiB 上限。
+`module-governance.ts` 区分登记、观察、不可变提案、版本化决定和独立实施。请求固定 workspaceId、instanceId 与 commandId，不接受任意知识路径、actor、permit 或批准证明。现行 `assets/business/module.schema.json` 将 overview 固定为 `module.md`；规则仍解析实际 `module.json` 并核对 id/overview，不仅凭路径存在猜测 Module。正文使用跨前后端的 UTF-8 字节长度检查，沿用单文件 2 MiB 上限。
 
 保护记录绑定真实 definition 与 overview 的路径/哈希。用户逐个明确登记，不自动冻结全部项目。初始登记历史不改写；保护 revision 和当前 overview 哈希只能由已经核实治理关联的 committed 知识 journal 派生。首片没有修改 definition、移动、删除、解除保护或切换正文绑定的入口。
 

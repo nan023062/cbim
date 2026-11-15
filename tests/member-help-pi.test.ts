@@ -44,7 +44,7 @@ it.each(['complete','waiting','stop','unknown-log'] as const)('hands member help
       }
     }
     expect(await fs.readFile(path.join(f.a,data.source),'utf8')).toBe(data.sourceText);expect(await fs.readFile(path.join(f.a,data.supplement),'utf8')).toBe(data.supplementText);expect(provider.errors).toEqual([]);
-    const counts=[provider.mainRequests.length,provider.memberRequests.length],snapshot=await records();await app.shutdown();expect(held.size).toBe(0);app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    const counts=[provider.mainRequests.length,provider.memberRequests.length],snapshot=await records();await app.shutdown();expect(held.size).toBe(0);app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await records()).toEqual(snapshot);expect(await graph()).toEqual(finishedGraph);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);if(markerStat){expect(await fs.readFile(marker,'utf8')).toBe(data.markerText);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs)}
     if(mode==='waiting'){await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await records()).scopes[0]).toMatchObject({status:'closed',outcome:'cancelled',wait:scope.wait});expect((await graph()).tasks[0].help).toEqual(first.help);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
   }finally{provider.releaseHelp();await app.shutdown();leaseSpy.mockRestore();await f.cleanup();await provider.close()}

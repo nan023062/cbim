@@ -6,7 +6,8 @@ import {Icon} from '../components/Icon';
 import {useEffect,useState} from 'react';
 import {ModalFrame} from '../components/ModalFrame';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
-import type {LlmSettings,AgentModelSelection} from '../../bridge/contracts/models';
+import type {LlmSettings} from '../../bridge/contracts/models';
+import type {AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import {EngineModelPicker} from '../components/EngineModelPicker';
 import {useMainAgentSettings} from './useMainAgentSettings';
 

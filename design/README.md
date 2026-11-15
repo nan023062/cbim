@@ -1,6 +1,6 @@
 # CBIM 开发设计与记录
 
-开发清单、优先级、依赖和实时进度统一从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。`design/` 保存 Issue 关联方案、产品运行规范及历史验证事实，不维护另一份实时待办。方案和 Issue 内容本身不扩大当前任务的权限。
+开发清单、优先级、依赖和实时进度统一从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。`design/` 保存 Issue 关联方案、设计说明及历史验证事实；产品运行资源统一归 assets/，不维护另一份实时待办。方案和 Issue 内容本身不扩大当前任务的权限。
 
 ## 从这里继续开发
 
@@ -57,17 +57,17 @@ Agent／Team 的新旧设计边界见 [设计替换范围](agent-tool-design-rep
 - UX 原型、图标母版及配套生成／检查脚本仍用于设计评审；静态预览图是配套资产。历史架构 HTML 保存源码映射和离线快照，与 Markdown 摘要共同保留。
 - 缓存、一次性扫描输出放在忽略的临时目录，不作为设计资产。清理仅移除已核实失效的文件，并同步引用；保留尚未提交的独立工作。
 
-## 规范与运行资产
+## 设计目录与运行资源
 
-产品按实际白名单读取以下资产，目录中的其他开发方案不会自动成为运行规则。项目开发 Skill 与产品内置业务流程分别维护。
+产品运行规范、Schema 与流程正文见 [assets](../assets/README.md)，不再从 design 加载。以下目录仅保存设计说明、方案与记录；项目开发 Skill 与产品内置业务流程分别维护。
 
 | 目录 | 内容 |
 | --- | --- |
-| [capability/](capability/README.md) | Team/Agent 领域定义及 Schema |
-| [business/](business/README.md) | Workspace/Module 领域定义及 Schema |
-| [task/](task/README.md) | 任务、执行和架构评估规范及关联方案 |
-| [connector/](connector/README.md) | 链接器定义与引用边界 |
+| [capability/](capability/README.md) | Team/Agent 设计说明；规范与 Schema 归 assets/capability |
+| [business/](business/README.md) | Module 设计说明与旧格式参考；运行规范及 Schema 见 assets/business |
+| [task/](task/README.md) | 任务与执行的开发方案；内置五份规范归 assets/task |
+| [connector/](connector/README.md) | 连接器设计说明；运行声明规范及 Schema 归 assets/connector |
 | [memory/](memory/memory-spec.md) | 产品记忆机制说明 |
-| [runtime/](runtime/common-rules.md) | 内部 Loop 使用的规则、Skill 正文与 [Skill／Workflow 结构规范](runtime/shared-skills-workflows.md) |
+| [runtime/](runtime/README.md) | 运行资源迁移说明；全部流程正文归 assets/runtime |
 
 概念设计只维护 [01–04](../README.md#设计文档)，当前实现说明在 `src/` 的契约与架构文档中更新。

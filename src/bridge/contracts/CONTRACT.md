@@ -1,6 +1,9 @@
 ## 引擎管理公开契约
 
 ManagedEngineStatus 来自 Logic，区分 install/update/ready/preparing/failed/unavailable/bundled。desktop.engines.prepare 严格限定支持引擎，不接受路径、URL、版本或额外字段；status 只读。状态快照不能作为运行授权，实际执行继续校验固定包。
+### 模块源码读取
+
+ipc-workspace 注册 source.list/source.read，重用 Logic 的严格纯请求及数据类型。必须提供 workspaceId、instanceId、revision、moduleId 和 source；path 相对已声明来源，默认目录根。协议不接受写入选项或绝对路径授权，服务重复核实真实绑定。
 
 ### 长期对话公共身份
 
@@ -341,11 +344,11 @@ architecture.ts 另重导纯 moduleBodyTemplate，供编辑器复用模块协议
 
 ### 引擎与模型菜单
 
-models 公开重导出 LoopEngine、AgentModelSelection、engineLabel、loopEngineSchema、engineSupportsApi；只传公开模型身份。具体引擎、SDK、环境与凭据不进入渲染进程。
+engines 公开重导出静态 supportedEngines、LoopEngine、engineLabel、loopEngineSchema、engineSupportsApi；agent-settings 公开 AgentModelSelection 与主 Agent 设置契约。models 只提供供应商/模型定义、预设及目录信息。具体引擎、SDK、环境与凭据不进入渲染进程。
 
 ### 引擎协议选型
 
-models 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
+engines 仅重导出 engineApi 等纯规则，设置页用它约束 Codex/Claude 的协议选择；不会把原生二进制、账号目录或进程参数作为公开 IPC。
 
 ## 分组关联 IPC 契约
 
@@ -388,3 +391,7 @@ loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 
 ### Agent 工具记录引用
 
 `execution.ts` 公开 Logic 的 `AgentCallReference` 类型，保存工作区、调用者运行、工具调用与被调用运行的明确关联。它只是公开日志定位，不是执行许可；界面展开须核对父工具身份和子运行记录，查询失败不能调用执行入口重试。
+
+引擎设置公开 engines.settings/check/install/configure。安装只接官方 ID、展示的准确摘要与 revision；启停/移除不接受 URL、路径或第三方来源。
+
+models.testConnection 按 generation/api 或 embedding 操作测试已经保存的模型，无引擎、URL 或凭据参数；保留旧 models.test 的兼容契约。

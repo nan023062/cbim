@@ -9,16 +9,18 @@ import {spawn, execFile, execFileSync} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks, assertUnsignedNotice} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {DesktopAcceptanceProcess, ownLaunchedDesktop} from './desktop-acceptance-process.mjs';
 import {parse} from 'yaml';
+import {verifyDesktopBrand} from './brand-acceptance.mjs';
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
 assert.equal(process.env.GITHUB_REPOSITORY, 'nan023062/cbim');
 const {version, previousVersion, previousUpdateFlow, commit, expected, mode} = acceptanceInputs(process.env);
+const retentionChecks = acceptanceRetentionChecks(previousVersion);
 const transferExpectation = acceptanceTransferExpectation(process.env, {mode, previousUpdateFlow});
 const repo = 'nan023062/cbim', root = path.resolve('test-results/desktop-acceptance');
 const install = path.join(root, 'app'), exe = path.join(install, 'CBIM Desktop.exe'), userRoot = path.join(root, 'user');
@@ -220,7 +222,7 @@ async function notes(page) {
   const snapshot = await status(page);
   if (snapshot.currentResourceVersion !== undefined) {
     assert.equal(snapshot.currentVersion, version); assert.equal(snapshot.currentResourceVersion, 1);
-    assert.match(snapshot.currentNotes, /未签名/);
+    assertUnsignedNotice(snapshot.currentNotes);
     const icon = page.getByRole('button', {name: '版本与更新', exact: true}); await icon.hover();
     const tooltip = page.getByRole('tooltip'); await tooltip.waitFor();
     assert.ok((await tooltip.innerText()).includes(`C ${version} · R 1`));
@@ -231,7 +233,7 @@ async function notes(page) {
   const title = await combined.count() ? '版本与更新' : '最近一次更新';
   await page.getByRole('menuitem', {name: title, exact: true}).click();
   const dialog = page.getByRole('dialog', {name: title, exact: true}); await dialog.waitFor();
-  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
+  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assertUnsignedNotice(await dialog.innerText());
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }
 // 新版先显示窗口再恢复工程；等待真实生命周期就绪，不用测试主动打开来掩盖恢复失败。
@@ -242,6 +244,19 @@ async function restoredCatalog(page, id) {
     await pause(500);
   }
   throw Error('Original workspace did not restore after the update');
+}
+// 读取已安装 Pi 的原共享目录和文件元数据；升级不能重写安装清单或以重新解压掩盖缓存丢失。
+async function retainedEngineSnapshot(page) {
+  const initial=JSON.parse(JSON.parse(await fs.readFile(path.join(install,'resources/runtime-initial.json'),'utf8')).payload);
+  const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor?.adapter);
+  const appData=await app.evaluate(({app})=>app.getPath('appData'));
+  const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(userRoot).toLowerCase()).digest('hex').slice(0,24);
+  const directory=path.join(appData,'CBIM-runtime',identity,'engines','packages',descriptor.package.sha256);
+  const files=[];
+  for(const item of descriptor.package.files){const file=path.join(directory,item.path),stat=await fs.stat(file);assert.equal(stat.size,item.bytes);assert.equal(await sha(file),item.sha256);files.push({path:item.path,bytes:stat.size,sha256:item.sha256,mtimeMs:stat.mtimeMs})}
+  const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
+  const pi=state.items.find(item=>item.kind==='pi');assert.equal(pi?.active?.identity,descriptor.package.sha256);
+  return {identity:descriptor.package.sha256,files,installation:await fs.readFile(path.join(userRoot,'engine-installations.json'),'utf8'),enabled:pi.enabled};
 }
 // 首次冷包必须从真实固定公开源取得 E；不写缓存、不改下载地址、不向客户端传入 GitHub 凭据。
 async function verifyFreshEngine(page, profileRoot) {
@@ -263,7 +278,7 @@ async function verifyFreshEngine(page, profileRoot) {
   const appData=await app.evaluate(({app})=>app.getPath('appData'));
   const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(profileRoot).toLowerCase()).digest('hex').slice(0,24);
   const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor);
-  const directory=path.join(appData,'CBIM-runtime',identity,version,'packages',descriptor.package.sha256);
+  const directory=path.join(appData,'CBIM-runtime',identity,descriptor.adapter?'engines':version,'packages',descriptor.package.sha256);
   for(const file of descriptor.package.files){const target=path.join(directory,file.path);assert.equal((await fs.stat(target)).size,file.bytes);assert.equal(await sha(target),file.sha256)}
   const result={engine:'pi',version:descriptor.version,packageSha256:descriptor.package.sha256,filesVerified:descriptor.package.files.length,modelRequests:requests-before,taskId:run.taskId,runId:run.runId};
   await save('fresh-engine',result);return result;
@@ -276,13 +291,14 @@ try {
     const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
     assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
     let page = await launch(path.join(root, 'fresh-user'));
+    if(version==='0.1.20')await verifyDesktopBrand({app,page,executable:exe,installer:candidate,output:root});
     assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page);
     if((await status(page)).currentResourceVersion!==undefined)freshEngine=await verifyFreshEngine(page,path.join(root,'fresh-user'));
     await close();requests=0; // 全新安装与旧版迁移是两个独立 profile，分别记录模型请求计数。
   }
   await setup(old, previousVersion); const previousCache = await recordInstallerCache('previous');
   // 0.1.12 已修正 NSIS 缓存归属；先证明真实安装产生了准确旧包，不能手动补足差分前提。
-  if (['0.1.12', '0.1.13', '0.1.14', '0.1.15'].includes(previousVersion)) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
+  if (retentionChecks.installerCache) assert.equal(previousCache.entries.find(item => item.configured)?.sha256, await sha(old));
   let page = await launch(); assert.equal((await status(page)).currentVersion, previousVersion);
   const profile = {name: 'Release acceptance', api: 'openai-completions', baseUrl: `http://127.0.0.1:${server.address().port}/v1`, auth: 'none', defaultModel: 'acceptance', models: [{id: 'acceptance', name: 'Acceptance', enabled: true, contextWindow: 32768, maxTokens: 1024, reasoning: false, pricing: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0}}]};
   const savedModels = await page.evaluate(profile => window.cbim.call('models.save', {profile}), profile);
@@ -290,7 +306,7 @@ try {
   const entry = await page.evaluate(path => window.cbim.call('add', {path}), workspace);
   // 0.1.7 的新增持久数据也必须沿真实旧版 IPC 创建；不能只证明旧聊天没有丢失。
   let priorMainSettings, priorAutomation;
-  if (['0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15'].includes(previousVersion)) {
+  if (retentionChecks.mainAgentAndAutomation) {
     const opened = (await page.evaluate(() => window.cbim.call('list'))).entries.find(item => item.id === entry.id);
     assert.ok(opened?.instanceId);
     const identity = {workspaceId: entry.id, instanceId: opened.instanceId};
@@ -317,6 +333,13 @@ try {
     if (summary.status === 'completed') break; if (['failed', 'interrupted', 'cancelled'].includes(summary.status)) throw Error(JSON.stringify(summary)); await pause(500);
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
+  let previousEngine;
+  if(['0.1.17','0.1.18','0.1.19'].includes(previousVersion)){
+    const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
+    await page.evaluate(revision=>window.cbim.call('engines.configure',{kind:'pi',revision,action:'disable'}),state.revision);
+    previousEngine=await retainedEngineSnapshot(page);assert.equal(previousEngine.enabled,false);
+    await save('engine-cache-before',previousEngine);
+  }
   const marker = `from-${previousVersion}-to-${version}`;
   await page.evaluate(marker => localStorage.setItem('cbim.release-retention', marker), marker);
   await fs.writeFile(path.join(userRoot, 'acceptance-marker.txt'), marker);
@@ -328,9 +351,16 @@ try {
       // 不点检查或下载，也不替换网络：由真实上一安装版的原定时器发现并下载本次公开版本。
       const prepared = await prepareColdUpgrade(page); page=prepared.page; const ready=prepared.ready;
       assert.equal(requests,1,'Resource activation must not replay the completed model request');
-      await page.getByRole('button', {name: '查看更新', exact: true}).click();
-      const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
-      await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      // 0.1.17/0.1.18 的侧栏图标直接安装；查看就绪时只悬停，不提前授权重启。
+      if(['0.1.17','0.1.18','0.1.19'].includes(previousVersion)){
+        await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
+        await page.getByRole('button',{name:'版本与更新',exact:true}).hover();
+        await page.getByRole('tooltip').waitFor();
+      }else{
+        await page.getByRole('button', {name: '查看更新', exact: true}).click();
+        const dialog = page.getByRole('dialog', {name: '版本与更新', exact: true});
+        await dialog.getByRole('button', {name: '重启安装', exact: true}).waitFor();
+      }
       await page.screenshot({path: path.join(root, 'prefetch-ready.png')});
       await page.keyboard.press('Escape');
       await pause(3500); assert.equal((await status(page)).phase, 'ready');
@@ -357,10 +387,13 @@ try {
       await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
-      await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      if(!['0.1.17','0.1.18','0.1.19'].includes(previousVersion))await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      else await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
       // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
       // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
-      installingPid=await exitAfter(()=>page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
+      installingPid=await exitAfter(()=>['0.1.17','0.1.18','0.1.19'].includes(previousVersion)
+        ?page.getByRole('button',{name:'版本与更新',exact:true}).click()
+        :page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
       await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
     } else {
     const available = await waitPhase(page, 'available'); assert.equal(available.release.version, version);
@@ -397,6 +430,13 @@ try {
   assert.equal(native.version, version); assert.equal(native.packaged, true); assert.equal(native.userData, path.join(userRoot, 'desktop'));
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
+  if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
+  // 真实新客户端匿名检查 E 通道，覆盖换钥后的来源验证；发现版本不能更改原安装/停用选择。
+  if(['0.1.19','0.1.20'].includes(version)){
+    const checked=await page.evaluate(()=>window.cbim.call('engines.check'));
+    if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page),previousEngine);
+    await save('engine-channel-after',{checked:true,items:checked.items.map(item=>({kind:item.kind,enabled:item.enabled}))});
+  }
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);
   const catalog = await restoredCatalog(page,entry.id); assert.ok(catalog.entries.some(e => e.id === entry.id));
   const afterKnowledge = await page.evaluate(id => window.cbim.call('snapshot', {id}), entry.id);
@@ -419,7 +459,7 @@ try {
   if (mode === 'online') { const current = await page.evaluate(() => window.cbim.call('desktop.updates.check')); assert.equal(current.phase, 'current'); }
   const installedCache = await recordInstallerCache('final');
   await close();
-  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: true, freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
+  await save('report', {success: true, mode, version, commit, installerSha256: expected, native, signature, from: previousVersion, previousUpdateFlow, resourcePrelude, checkRetries, transferExpectation, installedCache, freshInstall: true, freshEngine, onlineDiscoveryDownloadAndInstall: mode === 'online', normalQuitDidNotInstall: mode === 'online', backgroundPrefetchAndExplicitInstall: mode === 'online' && previousUpdateFlow === 'prefetch', differentialDownload: mode === 'online' && previousUpdateFlow === 'prefetch' && transferExpectation === 'differential', differential, retained: {workspace: true, model: true, completedConversation: true, localStorage: true, marker: true, knowledge: true, businessFile: true, engineInstallationAndCache: previousEngine ? true : 'not-applicable', mainAgentSettings: priorMainSettings ? true : 'not-applicable', automation: priorAutomation ? true : 'not-applicable', noReplay: true}, modelRequests: requests+(freshEngine?.modelRequests??0), migrationModelRequests: requests, restarted, pageErrors: errors, phases, completedAt: new Date().toISOString()});
   console.log(JSON.stringify({success: true, mode, version, sha256: expected, retained: true}));
 } catch (error) {
   acceptanceError=error;

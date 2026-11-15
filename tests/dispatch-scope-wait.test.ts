@@ -22,7 +22,7 @@ async function setup(){
   const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),directory=workspace.dispatchStore.directory,memberDirectory=path.join(f.user,'waiting-members');
   const store=workspace.dispatchStore,identity={workspaceId:entry.id,rootSessionId:'root'},runId='main-run';
   let memberOverride:((summary:RunSummary)=>RunSummary)|undefined,members:MemberExecutionManager|undefined,leases=0;
-  const service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async run=>{const summary=await RunJournal.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId));return memberOverride?memberOverride(summary):summary}},undefined,undefined,f.app.models);
+  const service=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(journal.directory),inspectMember:async run=>{const summary=await RunJournal.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId));return memberOverride?memberOverride(summary):summary}},undefined,undefined,f.app.engineModels);
   const task:TaskSpec={mode:'chat',taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'旧会话标题',moduleIds:[],agentId:'cbim:main',acceptance:[]},binding=await service.conversationBinding(task);
   const scope=await service.openScope(identity,'scope',{message:'  本轮完整原文\n请先问清再执行',attachmentIds:[]});
   const journal=new RunJournal(path.join(f.user,'waiting-main'),task,runId);await journal.init();await journal.append({type:'run.started',data:{task,message:scope.goal!.input.message,conversationBinding:binding}});
@@ -33,14 +33,14 @@ async function setup(){
     definition.maintenance={bindingId:'maintain',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
     await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护者',team:'.cbim/team'}]})},{path:moduleId+'/module.json',text:json(definition)}]));
     const settings=await f.app.models.save({profile:{name:'Wait service fixture',api:'openai-completions',auth:'none',baseUrl:'https://example.test/v1',defaultModel:'fixture',models:[{id:'fixture',name:'fixture',enabled:true,contextWindow:200000,maxTokens:1000,reasoning:false}]}}),profile=settings.profiles.find(item=>item.name==='Wait service fixture')!;
-    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,model=await f.app.models.configuration(profile.id,'fixture');
+    const registered=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:profile.id,modelId:'fixture'}),ownerSelection=registered.selection,model=await f.app.engineModels.configuration(profile.id,'fixture');
     const storage=new FileRunStorage();
     const prepare=():Awaited<ReturnType<MemberExecutionPorts['prepare']>>=>({model,create:async(_run,_task,hooks)=>{
       let context:EngineContext;
       const engine:AgentEngine={kind:'waiting-test',start:async value=>{context=value;await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(memberDirectory,'native.jsonl')}})},run:async()=>({status:'failed',error:'明确的测试失败，未执行任何工具'}),stop:async()=>{},close:async()=>{}};
       return new LoopRuntime({storage,directory:memberDirectory,createEngine:()=>engine,acquireLease:async()=>()=>{},onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async()=>({allow:false})});
     }});
-    members=new MemberExecutionManager(workspace,store,{acquire:()=>{leases++;return()=>{leases--}},inspect:run=>storage.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
+    members=new MemberExecutionManager(workspace,store,{acquire:()=>{leases++;return()=>{leases--}},inspect:run=>storage.read(path.join(memberDirectory,run.binding.taskId,run.binding.runId)),prepare:async()=>prepare(),owners:service.owners,withEngineConfiguration:(reference,_options,use)=>f.app.engineModels.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare}))});await members.initialize();
     const draft={...plan,assignments:[{agentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,criterionIds:['choice'],reason:'验证后交由用户判断'}]};
     await service.goals.plan(identity,scope.scopeId,runId,'plan',draft);
     const input={...identity,commandId:'dispatch',expectedParentRevision:1,task:{assigneeAgentId:'.cbim/team/dev',moduleIds:[moduleId],ownerSelection,goal:'核实目标模块',acceptance:[{id:'choice',text:'核实并说明结果'}],prerequisites:[]}};

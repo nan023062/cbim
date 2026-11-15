@@ -1,11 +1,17 @@
 {
-  "version": "0.1.16",
-  "tag": "desktop-v0.1.16",
-  "publishedAt": "2026-11-14T03:06:33Z",
+  "version": "0.1.19",
+  "tag": "desktop-v0.1.19",
+  "publishedAt": "2026-11-15T08:16:07Z",
   "repository": "nan023062/cbim",
-  "filename": "CBIM-Setup-0.1.16-x64.exe",
-  "bytes": 111930139,
-  "sha256": "4ca66fdb13118b67c6e2f08891b9204fc854dc6dabfb2609c09fa182b670ef39",
+  "filename": "CBIM-Setup-0.1.19-x64.exe",
+  "bytes": 112368217,
+  "sha256": "2ad92a1bebf12223cb9c6a7bd742002b0acfc931f07555c8bc1424974aca1674",
   "signed": false,
-  "resourceVersion": 1
+  "resourceVersion": 1,
+  "resourceTag": "runtime-c0.1.19",
+  "resourcePublishedAt": "2026-11-15T08:14:28Z",
+  "resourceDate": "2026-11-15",
+  "resourceBytes": 4512553,
+  "resourceSha256": "345838bdbba15765daed54025cd3f4c29e5fda4fe1db151bc6a07f54b9538bdd",
+  "resourceManifestDigest": "ae6142ce8da384cfb21b1c1b752bb22119d68eacb3d2e999cfdf1e420610c8c8"
 }

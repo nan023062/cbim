@@ -159,6 +159,7 @@ N_src_view_updates_SoftwareUpdates_tsx ..> N_src_view_updates_software_updates_c
 版本使用公开的 desktopVersionLabel：旧安装包显示 vX.Y.Z；提供资源版本时显示 C X.Y.Z / R N，当前与目标分别取后端快照，不因发现候选就提前改变当前版本。
 
 独立 E 的版本、安装、更新和进度统一迁入对话 EnginePicker；应用更新按钮只显示 C/R 状态，不受 E 下载影响。旧 enginePreparations 投影保留通信兼容，不再作为此界面的展示或安装依据。
+本目录只展示 CBIM 应用的 C/R 更新。旧冷宿主返回的 enginePreparations 兼容字段一律忽略，不显示引擎名称、准备百分比或失败，也不因此转动更新图标。引擎下载、状态和操作统一由设置中心的引擎详情承载；即使引擎正在准备，应用更新仍只按自己的 phase/progress/ready 工作。
 
 `SoftwareUpdateController` 只公开状态、错误、在途标志和固定 check／download／install 动作。每秒轮询的 status 仅为本机读取；后台定时 GitHub 检查继续属于后端。操作前后推进读取代际，丢弃较旧的在途快照；同一窗口不重复派发操作，下载期间仍读取进度。读取失败有可见提示和重读入口，关闭弹窗不取消后端下载，卸载 App 后不更新 React 状态。
 

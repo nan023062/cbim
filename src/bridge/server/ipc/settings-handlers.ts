@@ -10,7 +10,12 @@ import type {SettingsIpcResponses} from '../../contracts/ipc-settings';
 
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function settingsIpcHandlers(app:ApplicationServices):IpcHandlers<keyof SettingsIpcResponses>{
+  const packages=()=>{if(!app.enginePackages)throw Error('源码开发模式不管理正式引擎包');return app.enginePackages};
   return {
+    'engines.settings':()=>app.enginePackages?.read()??{managed:false,revision:0,items:[]},
+    'engines.check':async()=>{await packages().check();return packages().read()},
+    'engines.install':async args=>{await packages().install(args.kind,{revision:args.revision,identity:args.identity});return packages().read()},
+    'engines.configure':async args=>{await packages().setEnabled(args.kind,args.action==='enable',args.action==='remove',args.revision);return packages().read()},
     'web.settings':()=>app.webSettings.read(),
     'web.configure':args=>app.webSettings.configure(args),
     'agent.mainSettings':args=>app.mainAgentSettings.read(args),
@@ -34,7 +39,8 @@ return app.githubFeedback.auth.begin(args);},
     'models.save':async args=>{return app.models.save(args);},
     'models.select':async args=>{return app.models.select(args.id);},
     'models.remove':async args=>{return app.models.remove(args.id);},
-    'models.test':async args=>{return app.models.test(args.id,args.modelId,args.engine);},
+    'models.test':async args=>{return app.engineModels.test(args.id,args.modelId,args.engine);},
+    'models.testConnection':args=>args.kind==='embedding'?app.models.testEmbedding(args.id,args.modelId):app.models.test(args.id,args.modelId,{supportedApis:[args.api],fallbackApi:args.api}),
     'models.discover':async args=>{return app.models.discover(args);},
     'models.discoverDetails':async args=>{return app.models.discoverDetails(args);},
   };

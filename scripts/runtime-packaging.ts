@@ -45,9 +45,10 @@ export async function coldFingerprint(bootstrap:string,repo=process.cwd()){
   for(const name of ['forge.config.ts','electron-builder.config.cjs','vite.main.config.ts','vite.bootstrap.config.ts','scripts/desktop-signing/config.cjs'])configuration.push({name,sha256:await fileHash(path.join(repo,name))});
   return createHash('sha256').update(JSON.stringify({schema:1,bootstrap:await fileHash(bootstrap),electron,native,configuration,identity:{name:pkg.name,productName:pkg.productName},platform:'win32-x64'})).digest('hex');
 }
+/** 仅收集运行资产与法律资料；设计、发布历史和原生品牌资源不进入可更新 R。 */
 export async function collectResources(viteDirectory:string,target:string,repo=process.cwd()){
   await fs.mkdir(target);await fs.cp(viteDirectory,path.join(target,'.vite'),{recursive:true,filter:file=>!['desktop.js','desktop.js.map'].includes(path.basename(file))&&!file.endsWith('.map')});
-  for(const name of ['design','docs','legal'])await fs.cp(path.join(repo,name),path.join(target,name),{recursive:true});
+  for(const name of ['legal','assets/business','assets/capability','assets/connector','assets/runtime','assets/task'])await fs.cp(path.join(repo,name),path.join(target,name),{recursive:true});
   await fs.writeFile(path.join(target,'package.json'),JSON.stringify({private:true,type:'commonjs'}));
   // Git 删除文件后可能留下空目录；ZIP 只登记文件，冷包必须与同一清单保持一致。
   // 只清理由本函数新建的制品目录，不改源码，也不放宽启动时的额外内容校验。
@@ -63,14 +64,19 @@ export async function collectResources(viteDirectory:string,target:string,repo=p
   }
   await pruneEmpty(boundary);
 }
-const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'}} as const;
-export async function collectEngines(buildRoot:string,output:string):Promise<EnginePackage[]>{
+const engineEntries={pi:{directory:'pi-runtime',package:'@earendil-works/pi-coding-agent',entry:'node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js'},'claude-code':{directory:'claude-runtime',package:'@anthropic-ai/claude-agent-sdk',entry:'node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs'},codex:{directory:'codex-runtime',package:'@openai/codex',entry:'node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe'},memory:{directory:'memory-runtime',entry:'adapter.cjs'}} as const;
+export async function collectEngines(buildRoot:string,output:string,kinds:readonly (keyof typeof engineEntries)[]=Object.keys(engineEntries) as (keyof typeof engineEntries)[]):Promise<EnginePackage[]>{
   const result:EnginePackage[]=[];
-  for(const [kind,definition] of Object.entries(engineEntries)){
-    const root=path.join(buildRoot,definition.directory),pkg=JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8'));
+  for(const kind of kinds){
+    const definition=engineEntries[kind];if(!definition)throw Error('未登记的引擎构建入口');
+    const root=path.join(buildRoot,definition.directory);
     await fs.access(path.join(root,definition.entry));
-    result.push({kind:kind as EnginePackage['kind'],version:pkg.version,entry:definition.entry,package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+pkg.version+'-win32-x64')});
+    const adapter=JSON.parse(await fs.readFile(path.join(root,'adapter.json'),'utf8'));if(adapter.id!==kind||adapter.protocol!==1)throw Error('适配器与引擎归档不一致');
+    // SDK 引擎保持上游版本；自定义 Loop 的运行库与适配器同版，不伪造 vendor package。
+    const version='package' in definition?JSON.parse(await fs.readFile(path.join(root,'node_modules',definition.package,'package.json'),'utf8')).version:adapter.version;
+    result.push({kind,version,entry:definition.entry,adapter:{entry:adapter.entry,version:adapter.version,protocol:adapter.protocol},package:await archiveDirectory(root,output,'runtime-engines',kind+'-'+adapter.version+'-win32-x64')});
   }
+  const codex=result.find(engine=>engine.kind==='codex'),pi=result.find(engine=>engine.kind==='pi');if(codex&&pi)codex.dependencies=[{kind:'pi',identity:pi.package.sha256}];
   return result;
 }
 export async function signRuntimeManifest(manifest:RuntimeManifest,key:Awaited<ReturnType<typeof runtimeSigningKey>>,cold:ColdRuntime){

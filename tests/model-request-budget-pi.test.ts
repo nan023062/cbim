@@ -26,7 +26,7 @@ it.each(['openai-completions','openai-responses','anthropic-messages'] as Resolv
     expect(inspected.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active')?.data.missing).toEqual([]);
     const report=requestBudgetReportSchema.parse(await app.dispatch('dispatch.requestBudget',query));expect(report).toMatchObject({requests:1,reported:1,tokens:120,reservedTokens:0,unknown:0,estimatedCostUsd:0.000125});
     const journal=path.join(app.paths.project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(journal);expect(bytes.toString()).not.toContain('Request budget verified.');
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();await app.open(entry.id);expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.requests).toHaveLength(1);
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();await app.open(entry.id);expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(await fs.readFile(journal)).toEqual(bytes);expect(provider.requests).toHaveLength(1);
   }finally{await app.shutdown();await provider.close();await f.cleanup()}
 },45000);
 
@@ -56,7 +56,7 @@ it('逐请求剩余容量不足时，安全等待补充在受理前拒绝，修�
     const request={...query,waitId:before.wait!.waitId,expectedGoalRevision:before.goal!.revision,expectedInputRevision:before.goal!.inputRevision??1,commandId:randomUUID(),input:{message:scopeBudgetFixture.supplement},options:{provider:'cbim-'+profileId,profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:30000}};
     await app.dispatch('budget.configure',{revision:2,enabled:true,enforcement:'request',limits:{tokens:300000}});
     await expect(app.dispatch('loop.goalContinue',request)).rejects.toMatchObject({code:'MODEL_REQUEST_PREFLIGHT'});expect((await budgetScopes(f.user,entry.id))[0]).toEqual(before);expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(provider.sequence).toEqual(sequence);expect(await app.dispatch('loop.goalContinuation',{...query,commandId:request.commandId})).toBeUndefined();
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect((await budgetScopes(f.user,entry.id))[0]).toEqual(before);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});expect((await budgetScopes(f.user,entry.id))[0].outcome).toBe('cancelled');
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect((await budgetScopes(f.user,entry.id))[0]).toEqual(before);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});expect((await budgetScopes(f.user,entry.id))[0].outcome).toBe('cancelled');
   }finally{provider.releaseAll();await app.shutdown();await provider.close();await f.cleanup()}
 },60000);
 

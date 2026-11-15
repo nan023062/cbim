@@ -1,16 +1,16 @@
 # CBIM Assistant
 
-<img src="branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
+<img src="assets/branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
 
-面向 AI 原生团队的桌面工作空间。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](assets/branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
 [引擎无关执行内核](src/logic/execution/rules/ARCHITECTURE.md)通过注入的存储端口管理执行事件、中断与显式恢复；[具体引擎](src/logic/execution/engines/ARCHITECTURE.md)由调度装配接入。桌面主对话经调度引擎派发正式业务任务，执行结束不等于业务验收通过。开发运行要求 Node.js 22.19+。
 
-界面采用工作区侧栏与主会话区：中间切换对话和任务视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
+界面采用工作区侧栏与主会话区：中间切换对话与办公室视图，右侧扩展区承载团队架构、业务架构、浏览器与终端。详见 [工作区界面](src/view/ARCHITECTURE.md)。
 
-**CBIM 是面向单人或少数人使用的本地 AI Native 团队开发工具。** Agent 团队在具有业务架构、岗位责任和知识的工作区中分工协作，首要目标是贯通“目标 → 分工 → 开发 → 自动 review/验证 → 返工 → 交付 → 知识沉淀”。工作区网络先表达本地业务关系；当前不建设 Cindy 接入、联网协作或大型团队平台。
+**CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用。** 用户组织 Agent 在具有业务架构、岗位责任和知识的工作区中执行任务与交接；不建设独立账号、多人邀请、在线状态或协作服务。工程团队协作未来通过插件和连接器接入 P4、Git、飞书等工具，多端定位不代表已实现完整同步或远程能力。
 
 执行引擎由独立适配器接入；工具、MCP、连接器和插件属于能力或业务扩展。已有模型服务、反馈和更新可能使用网络，因此“本地优先”不等于已经支持完全离线运行。
 
@@ -20,9 +20,9 @@
 
 ## 运行
 
-Windows x64 当前公开桌面版为 [desktop-v0.1.16](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.16)，**C 0.1.16 / R1**，Windows 安装包未签名，资源清单沿用原 Ed25519 签名。本版将 Agent Team 的主子会话、话题排队和上下文隔离连接到办公室场景：每个主会话对应独立办公室，每位成员有一个逻辑子会话；派发和回传归属原话题，完成或撤销的任务默认折叠到历史。普通新输入进入排队，补充原任务须选择话题，由主 Agent 暂停相关执行后重新协调。详见[版本说明](design/releases/desktop-v0.1.16.md)。
+Windows x64 当前公开桌面版为 [desktop-v0.1.19](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.19)，内置资源为 **[C 0.1.19 / R1](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.19)**。统一图标、状态、表单、帮助提示和明暗主题，改善窄窗口与减少动效体验；页面按需加载，保留未保存输入提示、独立频道草稿及 Agent 工作记录。
 
-当前版本每分钟检查更新，在后台准备资源或安装包；就绪后由用户显式点击升级，普通退出不会应用。已验证真实 **0.1.15/R1 → 公开 R4 → 0.1.16/R1** 路径：先应用旧版资源更新，再通过实际 Range 差分下载新安装包，无全量回退，原工作区、模型、会话、知识及自动化保留且无重放。完整证据与限制见[0.1.16 发布验收](design/verification/desktop-release-0.1.16-20261114.md)。Pi、Claude Code、Codex 继续使用固定独立 E 包，首次使用需联网下载；关闭或离线的客户端需启动并联网。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
@@ -139,4 +139,4 @@ pnpm start
 3. [渐进式架构演进与人工认知保障体系](docs/03-渐进式架构演进与人工认知保障体系.md)
 4. [AI-Native 开发全流程设计方案](docs/04-AI-Native开发全流程设计方案.md)
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](design/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](assets/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

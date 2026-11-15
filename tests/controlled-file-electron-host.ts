@@ -77,7 +77,7 @@ async function handle(op:string,args:any){
 
 void electronApp.whenReady().then(async()=>{
   const transport=observedTransport(createControlledFileTransport({entryPath:config.childEntry,koffiPath:config.koffiPath}));
-  application=new Application(new Paths(config.user,config.repository),path.join(config.repository,'design'),undefined,{controlledFiles:transport});await application.init();
+  application=new Application(new Paths(config.user,config.repository),path.join(config.repository,'assets'),undefined,{controlledFiles:transport});await application.init();
   // Windows GUI Electron 不保证继承的 stdin 可持续读取；测试控制使用仅 loopback 的私有随机端口。
   const server=http.createServer(async(req,res)=>{try{assert.equal(req.method,'POST');assert.equal(req.headers['x-cbim-test-token'],config.controlToken);let body='';for await(const chunk of req)body+=chunk;const request=JSON.parse(body),value=await handle(request.op,request.args);res.end(JSON.stringify({value}));if(request.op==='shutdown')res.once('finish',()=>{server.close();setImmediate(()=>electronApp.exit(0))})}catch(error){res.end(JSON.stringify({error:{message:String(error instanceof Error?error.message:error),code:(error as {code?:string})?.code,stack:error instanceof Error?error.stack:undefined}}))}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');

@@ -1,7 +1,7 @@
 /**
  * 粘贴导入在应用退出期间拒绝，已保存的附件不会自动发送。
  * 网页设置管理浏览器 robots 策略、Brave 开关和加密密钥摘要，不向页面提供任意抓取代理。
- * 作用定位：主进程 IPC 的运行时请求解析与受理前拒绝，保留旧队列插入的失效运行错误码。
+ * 作用定位：主进程 IPC 的运行时请求解析与受理前拒绝；源浏览在退出期间停止接单且畸形参数返回可读提示，保留旧队列插入的失效运行错误码。
  * 设计原因：统一 Schema 后仍保留关闭门禁和领域错误码，避免客户端把已拒绝请求误当成待核实事务。
  * 职责边界：只转换解析失败；绝不捕获服务调用后的异常，也不声称写入失败等于未受理。
  */
@@ -9,6 +9,8 @@ import {ZodError} from 'zod';
 import {parseIpcRequest,type ApplicationIpcAction} from '../../contracts/ipc-call';
 import {fail} from '../../../core/errors';
 const shutdownMessages:Partial<Record<ApplicationIpcAction,string>>={
+  'source.list':'CBIM 正在退出，无法读取源目录',
+  'source.read':'CBIM 正在退出，无法读取源文件',
   'chat.paths':'CBIM 正在退出，未导入路径',
   'chat.image':'CBIM 正在退出，未导入图片',
   'agent.configureMain':'CBIM 正在退出',
@@ -48,6 +50,7 @@ export function parseApplicationRequest<A extends ApplicationIpcAction>(action:A
   const shutdown=shutdownMessages[action];if(stopping&&shutdown)fail('SHUTTING_DOWN',shutdown);
   try{return parseIpcRequest(action,input)}catch(error){
     if(!(error instanceof ZodError))throw error;
+    if(action==='source.list'||action==='source.read')fail('SOURCE_INPUT','源浏览请求缺少有效身份或路径，请刷新架构后重试');
     // 缺少原运行身份不能由路由补齐；提前拒绝仍保留队列“不发送、原消息保留”的公开错误语义。
     if(action==='loop.queueInsert'&&error.issues.every(issue=>issue.path.length===1&&issue.path[0]==='expectedRunId'))fail('QUEUE_INSERT_STALE','缺少有效的原主运行标识，原消息仍保留在队列');
     const code=inputCodes[action]

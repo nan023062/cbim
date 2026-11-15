@@ -19,7 +19,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-mixed-sources-ui-')),pro
 const pageErrors:string[]=[],pickers:unknown[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page:Page|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 await fs.mkdir('test-results',{recursive:true});
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await seedMixedSources(setup,project,temp,provider);seed.trace.close();await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await seedMixedSources(setup,project,temp,provider);seed.trace.close();await setup.shutdown();setup=undefined;
   const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message))};await launch();
   const call=<T=any,>(action:string,args:unknown={})=>page!.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}) as Promise<T>,active=()=>page!.locator('.workspace-panel:not([hidden])'),card=()=>active().getByTestId('conversation-goal-summary'),draft=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),attachments=()=>card().getByTestId('scope-continuation-attachments');
   // Setup explicitly reopens the same app's shared repository after setup shutdown; no saved grant implicitly starts HTTP.

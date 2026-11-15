@@ -12,7 +12,7 @@ import {knowledgeSourceDiskEvidence} from './knowledge-source-lifecycle-fixture'
 it.skipIf(!existsSync(ownerExecutionLegacyExecutable()))('reads genuine pre-owner queued/running/checkpoint records, settles old intent without rebinding, and rejects new legacy claims',async()=>{
   const legacy=await createOwnerExecutionLegacyFixture();let app:Application|undefined,passed=false;
   try{
-    app=new Application(new Paths(legacy.user,path.resolve('.')),path.resolve('design'));await app.init();const current=app,id=legacy.workspaceId,old=legacy.evidence;
+    app=new Application(new Paths(legacy.user,path.resolve('.')),path.resolve('assets'));await app.init();const current=app,id=legacy.workspaceId,old=legacy.evidence;
     await vi.waitFor(async()=>{expect(current.runtime.snapshot().pressure.activeRuns).toBe(0);expect((await ownerExecutionRecords(legacy.user,id)).runs.every(run=>run.status!=='running'&&run.status!=='starting')).toBe(true)},{timeout:30000,interval:30});
     const records=await ownerExecutionRecords(legacy.user,id),queuedIdentity={workspaceId:id,rootSessionId:old.queued.input.rootSessionId,taskId:old.queued.receipt.taskId};
     const queued=await current.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:id,rootSessionId:queuedIdentity.rootSessionId}});
@@ -30,7 +30,7 @@ it.skipIf(!existsSync(ownerExecutionLegacyExecutable()))('reads genuine pre-owne
     expect(parked.tasks.every((task:{ownerBinding?:unknown})=>task.ownerBinding===undefined)).toBe(true);
     for(const row of legacy.originalRunBytes){expect(await fs.readFile(row.sessionFile)).toEqual(row.native);const actual=await fs.readFile(row.canonicalPath);expect(actual.subarray(0,row.canonical.length)).toEqual(row.canonical)}
     expect(legacy.counts()).toEqual(old.requestCounts);expect(legacy.providerErrors()).toEqual([]);
-    const stabilized=(await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes;await current.shutdown();app=new Application(new Paths(legacy.user,path.resolve('.')),path.resolve('design'));await app.init();
+    const stabilized=(await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes;await current.shutdown();app=new Application(new Paths(legacy.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect((await knowledgeSourceDiskEvidence(legacy.user,id)).dispatchBytes).toEqual(stabilized);expect(await ownerExecutionRecords(legacy.user,id)).toEqual(records);expect(legacy.counts()).toEqual(old.requestCounts);
     await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/owner-execution-legacy-application-evidence.json',JSON.stringify({oldExecutable:old.executable,workspaceId:id,killedTestPid:old.killedPid,actualQueuedTask:old.queued.receipt.taskId,actualRunningTask:old.live.receipt.taskId,actualCheckpointTask:old.checkpointTaskId,oldRunningFinalStatus:live.status,originalReceiptStable:true,legacyClaimError:'OWNER_BINDING_REQUIRED',originalModelsAndPreparedBytesPreserved:true,originalNativeBytesPreserved:true,canonicalOriginalPrefixesPreserved:true,noOwnerBindingBackfill:true,restartWithoutReplay:true,requestCounts:legacy.counts()},null,2));passed=true;
   }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/owner-execution-legacy-application-failure.json',JSON.stringify({...legacy.evidence,error:String(error),actualCounts:legacy.counts(),providerErrors:legacy.providerErrors(),retained:true},null,2));throw error}

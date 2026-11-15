@@ -12,7 +12,7 @@ it('初始化、应用启动与工作区重启不生成废弃入口或宿主指�
   try{
     const e=await f.app.dispatch('add',{path:f.a});
     expect(await exists(path.join(f.a,'.cbim/entry.md'))).toBe(false);
-    await f.app.shutdown();app=new Application(f.app.paths,path.resolve('design'));await app.init();
+    await f.app.shutdown();app=new Application(f.app.paths,path.resolve('assets'));await app.init();
     await app.open(e.id,true);
     expect(await exists(path.join(f.a,'.cbim/entry.md'))).toBe(false);
     expect(await exists(path.join(app.paths.project(e.id),'entry-backups'))).toBe(false);

@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {definition,type LlmDefinition,type LlmProfile} from '../src/logic/models';
-import {connectionForEngine,providerSupportsEngine} from '../src/logic/models';
+import {connectionForEngine,providerSupportsEngine} from '../src/logic/engines';
 import {identifyProvider} from '../src/logic/models';
 import {EngineModelPicker} from '../src/view/components/EngineModelPicker';
 import {ProviderConnections,ProviderConnectionTest,connectionTestNotice} from '../src/view/settings/ProviderConnections';
@@ -31,12 +31,12 @@ test('MiniMax 兼容接口仅列出声明型号；自定义模型 ID 不因名�
   expect(providerSupportsEngine('claude-code',{...profile,baseUrl:'https://custom.example/v1'},'claude-custom')).toBe(false);
 });
 
-test('设置预览展示实际推导端点，测试菜单只列可用引擎，渲染不会执行测试',()=>{
+test('模型设置预览和测试只选择接口，不要求了解引擎，渲染不会执行测试',()=>{
   let calls=0;
   const html=renderToStaticMarkup(createElement(ProviderConnections,{value:profile,onChange:()=>{calls++}}));
   expect(html).toContain('已识别 DeepSeek');expect(html).toContain('https://api.deepseek.com/anthropic');expect(html).toContain('自定义兼容接口');
   const custom={...profile,baseUrl:'https://custom.example/v1'};
   const tests=renderToStaticMarkup(createElement(ProviderConnectionTest,{profile:custom,busy:false,onTest:()=>{calls++}}));
-  expect(tests).toMatch(/<option value="claude-code" disabled/);expect(tests).toMatch(/<option value="codex" disabled/);expect(calls).toBe(0);
-  expect(connectionTestNotice('DeepSeek',{ok:true,model:'deepseek-flash',latencyMs:10,engine:'claude-code',api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic'})).toContain('Anthropic Messages，仅文本请求');
+  expect(tests).toMatch(/<option value="anthropic-messages" disabled/);expect(tests).toMatch(/<option value="openai-responses" disabled/);expect(tests).not.toContain('测试引擎');expect(calls).toBe(0);
+  expect(connectionTestNotice('DeepSeek',{ok:true,model:'deepseek-flash',latencyMs:10,api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic'})).toContain('Anthropic Messages，仅文本请求');
 });

@@ -12,8 +12,8 @@ module.exports={
   directories:{output:process.env.CBIM_DESKTOP_OUTPUT},
   forceCodeSigning:signingMode==='signed',
   artifactName:'CBIM-Setup-${version}-${arch}.${ext}',
-  win:{target:[{target:'nsis',arch:['x64']}],icon:path.resolve('branding/cbim.ico'),executableName:'CBIM Desktop',signAndEditExecutable:true,
+  win:{target:[{target:'nsis',arch:['x64']}],icon:path.resolve('assets/branding/cbim.ico'),executableName:'CBIM Desktop',signAndEditExecutable:true,
     ...(signing?{signtoolOptions:{publisherName:[signing.publisherName],signingHashAlgorithms:['sha256'],sign:path.resolve('scripts/desktop-signing/electron-builder-sign.cjs')}}:{})},
-  nsis:{oneClick:false,perMachine:false,allowElevation:false,packElevateHelper:false,allowToChangeInstallationDirectory:true,deleteAppDataOnUninstall:false,runAfterFinish:false,createDesktopShortcut:true,createStartMenuShortcut:true,shortcutName:pkg.productName,installerIcon:path.resolve('branding/cbim.ico'),uninstallerIcon:path.resolve('branding/cbim.ico'),include:'packaging/updater/installer.nsh'},
+  nsis:{oneClick:false,perMachine:false,allowElevation:false,packElevateHelper:false,allowToChangeInstallationDirectory:true,deleteAppDataOnUninstall:false,runAfterFinish:false,createDesktopShortcut:true,createStartMenuShortcut:true,shortcutName:pkg.productName,installerIcon:path.resolve('assets/branding/cbim.ico'),uninstallerIcon:path.resolve('assets/branding/cbim.ico'),include:'packaging/updater/installer.nsh'},
   publish:[{provider:'generic',url:`https://github.com/nan023062/cbim/releases/download/desktop-v${version}/`}],
 };

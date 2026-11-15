@@ -3,7 +3,7 @@
  * 设计原因：树与详情共用归属/继承规则；主角色隐式承担未分配模块，不再提供默认执行者节点或岗位选项。
  * 节点只解析可核实的本机 runtime 引用，供新岗位预选；能力正文与运行中的模型快照保持分离。
  */
-import {agentModelSelectionSchema,type AgentModelSelection} from '../../bridge/contracts/models';
+import {agentModelSelectionSchema,type AgentModelSelection} from '../../bridge/contracts/agent-settings';
 import type {Snapshot} from '../../bridge/contracts/workspace';
 import {teamGroupIds} from '../knowledge/static-owners';
 

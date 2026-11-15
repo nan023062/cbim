@@ -122,3 +122,7 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 ## 新递归协议的求助
 
 新 Agent 协议提示要求收到 waiting 后使用 cbim_agent_reply 答复原 callId/questionId，不用新建 Agent 调用替代续跑。执行 Agent 问直接调用方，可逐层向上转问；只有根向用户提问。该分支不改变以上旧协议历史恢复指令。
+
+### 多角色发送选项
+
+executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。

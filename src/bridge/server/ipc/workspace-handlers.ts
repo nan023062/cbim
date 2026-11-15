@@ -5,12 +5,15 @@
 import type {ApplicationServices} from './services';
 import type {IpcHandlers} from '../../contracts/ipc-call';
 import type {WorkspaceIpcResponses} from '../../contracts/ipc-workspace';
+import {ModuleSourceBrowser} from '../../../logic/workspace/service/source-browser';
 import {ArchitectureService} from '../../../logic/workspace/service/architecture-service';
 import {fail} from '../../../core/errors';
 
 /** 仅装配本业务组；每项实际实现都受对应请求／响应约束。 */
 export function workspaceIpcHandlers(app:ApplicationServices):IpcHandlers<keyof WorkspaceIpcResponses>{
   return {
+    'source.list':async args=>new ModuleSourceBrowser(app.workspace(args.workspaceId)).list(args),
+    'source.read':async args=>new ModuleSourceBrowser(app.workspace(args.workspaceId)).read(args),
     'list':async args=>{return app.list();},
     'architecture.preview':async args=>{return new ArchitectureService(app.workspace(args.workspaceId)).preview(args);},
     'architecture.commit':async args=>{return new ArchitectureService(app.workspace(args.workspaceId)).commit(args);},

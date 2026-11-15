@@ -9,9 +9,9 @@ const sizes=[16,24,32,48,64,128,256];
 
 /** 打包前只校验已提交资源；图标源变更后必须显式生成，避免静默使用旧 ICO。 */
 export async function verifyBrandAssets(){
-  const manifest=JSON.parse(await fs.readFile(path.join(root,'branding/generated.json'),'utf8'));
+  const manifest=JSON.parse(await fs.readFile(path.join(root,'assets/branding/generated.json'),'utf8'));
   for(const name of ['cbim-mark.svg','cbim.png','cbim.ico']){
-    if(hash(await fs.readFile(path.join(root,'branding',name)))!==manifest.sha256[name])throw Error(`品牌资源已变化：${name}；请运行 pnpm build:brand 后一起提交生成资源。`);
+    if(hash(await fs.readFile(path.join(root,'assets/branding',name)))!==manifest.sha256[name])throw Error(`品牌资源已变化：${name}；请运行 pnpm build:brand 后一起提交生成资源。`);
   }
   return manifest;
 }
@@ -20,7 +20,7 @@ export async function verifyBrandAssets(){
 async function generate(){
   const {_electron}=await import('playwright-core');
   const {default:electron}=await import('electron');
-  const svg=await fs.readFile(path.join(root,'branding/cbim-mark.svg'));
+  const svg=await fs.readFile(path.join(root,'assets/branding/cbim-mark.svg'));
   const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
   const app=await _electron.launch({executablePath:electron,args:[path.join(root,'scripts/brand-renderer.cjs')],cwd:root,env});
   try{
@@ -34,8 +34,8 @@ async function generate(){
     let offset=header.length;
     sizes.forEach((size,index)=>{const at=6+index*16;header[at]=header[at+1]=size===256?0:size;header.writeUInt16LE(1,at+4);header.writeUInt16LE(32,at+6);header.writeUInt32LE(buffers[index].length,at+8);header.writeUInt32LE(offset,at+12);offset+=buffers[index].length});
     const ico=Buffer.concat([header,...buffers.slice(0,sizes.length)]),png=buffers.at(-1);
-    await fs.writeFile(path.join(root,'branding/cbim.ico'),ico);await fs.writeFile(path.join(root,'branding/cbim.png'),png);
-    await fs.writeFile(path.join(root,'branding/generated.json'),JSON.stringify({source:'cbim-mark.svg',sizes,sha256:{'cbim-mark.svg':hash(svg),'cbim.png':hash(png),'cbim.ico':hash(ico)}},null,2)+'\n');
+    await fs.writeFile(path.join(root,'assets/branding/cbim.ico'),ico);await fs.writeFile(path.join(root,'assets/branding/cbim.png'),png);
+    await fs.writeFile(path.join(root,'assets/branding/generated.json'),JSON.stringify({source:'cbim-mark.svg',sizes,sha256:{'cbim-mark.svg':hash(svg),'cbim.png':hash(png),'cbim.ico':hash(ico)}},null,2)+'\n');
     console.log('品牌图标已生成：512 px PNG，16–256 px 多尺寸 ICO。');
   }finally{await app.close()}
 }

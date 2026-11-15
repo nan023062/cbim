@@ -77,7 +77,7 @@ it.each(['complete','owner-before-claim','profile-before-claim','profile-after-c
     const thread=await app.execution(workspaceId).thread(started.taskId);
     expect(thread[0].toolReceipts?.find(receipt=>receipt.toolCallId==='execution-owner-dispatch-0')?.outcome).toBe(mode==='bad-wire'?'failed':'succeeded');
     const runBytes=await additionRunBytes(f.user,workspaceId,started.taskId,thread,finalRecords.runs),sequence=[...provider.sequence];
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await records()).toEqual(finalRecords);expect(await graph()).toEqual(finalGraph);expect(provider.sequence).toEqual(sequence);
     expect(await additionRunBytes(f.user,workspaceId,started.taskId,await app.execution(workspaceId).thread(started.taskId),finalRecords.runs)).toEqual(runBytes);
     expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(provider.errors).toEqual([]);

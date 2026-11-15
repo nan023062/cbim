@@ -12,7 +12,7 @@ import {latestExecutable} from './build-artifact.mjs';
 const exe=await latestExecutable(),artifact='repository-connection',temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-repository-connection-ui-')),user=path.join(temp,'user');
 const pageErrors:string[]=[],dialogs:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seeded=await seedRepositoryConnection(setup,temp,false);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seeded=await seedRepositoryConnection(setup,temp,false);await setup.shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();
   // Test-only observation: preserve actual IPC/HTTP behavior; capture only public grant inputs and counts, never authorization headers.
   await desktop.evaluate(({ipcMain})=>{

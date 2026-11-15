@@ -10,7 +10,7 @@ import {GlobalRunAdmission} from '../src/logic/execution/admission/run-admission
 import {workspaceMemberModelHash} from '../src/logic/team/rules/workspace-member-rules';
 import type {AgentEngine,EngineContext,TaskSpec,ToolDecision} from '../src/logic/execution/rules/types';
 import type {AgentCallAssemblyInput} from '../src/logic/application/assembly/agent-calls';
-import type {ResolvedLlm} from '../src/logic/models';
+import type {ResolvedEngineModel as ResolvedLlm} from '../src/logic/engines';
 import type {RequestBudgetPort} from '../src/logic/budget/rules/request-budget';
 
 // Only the external engine is replaced. Assembly, runtime, scheduler, logs and admission remain real.

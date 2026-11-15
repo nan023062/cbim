@@ -1,14 +1,15 @@
 /**
  * 引擎菜单仅调用固定 status/prepare 端口；只允许主 Frame 和已签名版本，查看不安装。
+ * 资源边界：桌面从当前 R 的 assets 注入业务规范；开发态使用工程 assets，窗口品牌仍按安装边界读取。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
- * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
+ * 作用定位：本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  * GitHub 登录只在桌面点击后打开固定官方 Device Flow 页面，不接收重定向地址或令牌。
  * 桌面更新只装配在正式 NSIS 包中；后台检查、预下载并校验，等待用户确认重启后才拒绝新请求、排空业务并安装。
  * 资源入口：由固定冷壳调用 startDesktop；所有业务入口来自同一 R，先显示窗口再按原策略恢复工作区。
- * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
+ * 窗口图标开发态读取 assets/branding，打包态保留 resources/branding，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  * 网页读取：ready 后注入独立匿名 Chromium 适配，仅静态读取不足时创建有界后台窗口，不共享应用登录态。
  */
 import {parseIpcRequest,ipcSuccess} from '../contracts/ipc-call';
@@ -52,8 +53,8 @@ app.whenReady().then(async()=>{
   if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
   const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
   updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineRuntimes:runtime,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
-  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'assets'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
+  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,app.isPackaged?'branding':'assets/branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
   window.on('close',event=>{if(!quitting){event.preventDefault();app.quit()}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());
@@ -77,18 +78,19 @@ app.whenReady().then(async()=>{
     }catch{return {ok:false,error:{code:'DESKTOP_UPDATE',message:'更新操作未能完成，请检查当前状态后重试。'}}}
     if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
 
+    // 对话菜单复用 Application 的唯一引擎安装账本；冷壳仅提供验签制品，不维护第二份安装状态。
     if(action==='desktop.engines.status'||action==='desktop.engines.prepare')try{
-      if(action==='desktop.engines.status'){
-        parseIpcRequest(action,args);
-        const value=runtime?.engineStatus?await runtime.engineStatus():(['pi','claude-code','codex'] as const).map(engine=>({engine,state:runtime?'unavailable' as const:'bundled' as const,...(runtime?{error:'当前冷壳不支持手动管理，请更新应用后重试。'}:{})}));
-        return ipcSuccess(action,value);
+      const request=action==='desktop.engines.prepare'?parseIpcRequest(action,args):(parseIpcRequest(action,args),undefined);
+      const packages=application.enginePackages;
+      if(request){
+        if(!packages)throw Error('当前宿主不支持引擎安装');
+        const state=await packages.read(),item=state.items.find(item=>item.kind===request.engine);
+        if(!item?.candidate)throw Error('没有可安装的兼容版本');
+        await packages.install(request.engine,{revision:state.revision,identity:item.candidate.identity});
       }
-      const request=parseIpcRequest(action,args);
-      if(!runtime?.engineStatus)throw Error('当前宿主不支持引擎安装，请使用兼容桌面版本。');
-      await runtime.resolveEngine(request.engine);
-      if(request.engine==='codex')await runtime.resolveEngine('pi');
-      const value=(await runtime.engineStatus()).find(item=>item.engine===request.engine);
-      if(!value)throw Error('引擎状态不可用');return ipcSuccess(action,value);
+      const state=await packages?.read();
+      const value=state?state.items.map(item=>({engine:item.kind,state:item.preparing?'preparing' as const:item.error?'failed' as const:!item.active?'install' as const:!item.enabled?'failed' as const:item.candidate?.identity!==item.active.identity?'update' as const:'ready' as const,version:item.candidate?.version,installedVersion:item.active?.version,progress:item.preparation?.progress,error:item.error??(!item.enabled?'引擎已停用，可重新安装启用':undefined)})):(['pi','claude-code','codex','memory'] as const).map(engine=>({engine,state:runtime?'unavailable' as const:'bundled' as const}));
+      return action==='desktop.engines.status'?ipcSuccess(action,value):ipcSuccess(action,value.find(item=>item.engine===request!.engine)!);
     }catch{return {ok:false,error:{code:'ENGINE_PREPARE',message:'引擎操作未完成，请检查引擎菜单状态后重试。'}}}
     if(action.startsWith('terminal.'))try{
       if(action==='terminal.close'){const request=parseIpcRequest(action,args);terminals.close(request.id+':'+request.tabId);return ipcSuccess(action,undefined)}

@@ -4,7 +4,7 @@
  * 设计原因：引擎展示统计可能为缺字段补零，不能用作预算依据；缓存输入与推理输出按协议计一次，断流和冲突保持未知。
  * 中断诊断只取已知协议原因，不回显供应商任意错误正文；仍阻断终态和工具，不重试或补造可靠用量。
  */
-import {requestBudgetUsageSchema,type RequestBudgetUsage,type RequestBudgetModel} from '../../../budget/rules/model-request-budget';
+import {requestBudgetUsageSchema,type RequestBudgetUsage,type GenerationBudgetModel} from '../../../budget/rules/model-request-budget';
 import {fail} from '../../../../core/errors';
 
 const integer=(v:unknown):number=>{if(typeof v!=='number'||!Number.isSafeInteger(v)||v<0)throw Error('请求用量缺失或不是安全非负整数');return v};
@@ -25,13 +25,20 @@ function openai(value:any,responses:boolean){
   if(reasoning!==undefined&&integer(reasoning)>output)throw Error('推理输出超过总输出');
   return usage(input-read-write,output,read,write,value.total_tokens);
 }
+/** 完整 JSON 操作复用相同计量规则；向量只有输入，不能补造输出或缓存用量。 */
+export function modelJsonUsage(value:unknown,kind:'generation'|'embedding'):RequestBudgetUsage{
+  if(kind==='generation')return openai(value,false);
+  const u=value as Record<string,unknown>|undefined;
+  if(!u||u.total_tokens===undefined||Object.keys(u).some(key=>!['prompt_tokens','total_tokens'].includes(key)))throw Error('向量请求缺少完整用量或包含未知分量');
+  return usage(integer(u.prompt_tokens),0,0,0,u.total_tokens);
+}
 /** 单个响应一份解析器；限制按原始字节计，UTF-8 损坏、额外终态或终态后数据均不接受。 */
 export class RequestBudgetUsageStream {
   static readonly responseBytes=64*1024*1024;
   static readonly frameBytes=8*1024*1024;
   private readonly decoder=new TextDecoder('utf-8',{fatal:true});
   private pending='';private bytes=0;private result?:RequestBudgetUsage;private terminal?:string;private started?:RequestBudgetUsage;private ended=false;private finishSeen=false;
-  constructor(private readonly api:RequestBudgetModel['api']){}
+  constructor(private readonly api:GenerationBudgetModel['api']){}
   /** 返回可立即转发的非终态帧；终态只由 finish 在完整 EOF 后提供。 */
   push(bytes:Uint8Array):string[]{
     this.bytes+=bytes.byteLength;if(this.bytes>RequestBudgetUsageStream.responseBytes)throw Error('请求响应超过受管上限');

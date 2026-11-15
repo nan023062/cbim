@@ -16,6 +16,7 @@
 | [MainAgentEditor.tsx](MainAgentEditor.tsx) | 团队页面的主 Agent 引擎/模型配置入口。 |
 | [team-model.ts](team-model.ts) | 从工作区知识快照构建静态 Team、分组、Agent 与 Skill 视图模型。 |
 | [team-view.css](team-view.css) | 对应界面的布局与视觉样式。 |
+| [TeamTree.tsx](TeamTree.tsx) | 从静态团队模型显示团队、小组和自定义 Agent，配置文件只在详情查看。 |
 | [TeamView.tsx](TeamView.tsx) | 静态团队架构、知识编辑与人才市场入口；独立打开角色 Session 履历和项目岗位登记。 |
 | [useAgentHistory.ts](useAgentHistory.ts) | 为只读角色历史面板提供按需分页与单轮公开事件读取。 |
 | [useMainAgentSettings.ts](useMainAgentSettings.ts) | 对话栏与主 Agent 配置页共用的配置读取、保存和同步 Hook。 |
@@ -107,7 +108,7 @@ class N_src_view_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
 }
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[useMainAgentSettings.ts](useMainAgentSettings.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/ModalFrame.tsx](../components/ModalFrame.tsx)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[useMainAgentSettings.ts](useMainAgentSettings.ts)。
 
 ### team-model.ts
 
@@ -161,7 +162,7 @@ class N_src_view_team_team_model_ts_TeamModel["TeamModel"] {
 N_src_view_team_team_model_ts ..> N_src_view_team_team_model_ts_TeamModel : 声明
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../knowledge/static-owners.ts](../knowledge/static-owners.ts)。
 
 ### team-view.css
 
@@ -171,6 +172,18 @@ class N_src_view_team_team_view_css["team-view.css"] {
   <<stylesheet>>
 }
 ```
+
+### TeamTree.tsx
+
+```mermaid
+classDiagram
+class N_src_view_team_TeamTree_tsx["TeamTree.tsx"] {
+  <<component>>
+  +TeamTree()
+}
+```
+
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[team-model.ts](team-model.ts)、[../knowledge/knowledge-files.css](../knowledge/knowledge-files.css)。
 
 ### TeamView.tsx
 
@@ -205,7 +218,7 @@ class N_src_view_team_TeamView_tsx_Transfer["Transfer"] {
 N_src_view_team_TeamView_tsx ..> N_src_view_team_TeamView_tsx_Transfer : 声明
 ```
 
-直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/ViewTabs.tsx](../components/ViewTabs.tsx)、[../knowledge/KnowledgeFileTree.tsx](../knowledge/KnowledgeFileTree.tsx)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[MainAgentEditor.tsx](MainAgentEditor.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
+直接依赖：[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../components/Icon.tsx](../components/Icon.tsx)、[../components/TreeActions.tsx](../components/TreeActions.tsx)、[TeamTree.tsx](TeamTree.tsx)、[../knowledge/KnowledgeFilePreview.tsx](../knowledge/KnowledgeFilePreview.tsx)、[../knowledge/GovernanceLaunch.tsx](../knowledge/GovernanceLaunch.tsx)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../knowledge/ArchitectureEditor.tsx](../knowledge/ArchitectureEditor.tsx)、[../resources/WorkspaceResourceTransfer.tsx](../resources/WorkspaceResourceTransfer.tsx)、[AgentSessionHistory.tsx](AgentSessionHistory.tsx)、[MainAgentEditor.tsx](MainAgentEditor.tsx)、[WorkspaceMembers.tsx](WorkspaceMembers.tsx)、[team-model.ts](team-model.ts)、[team-view.css](team-view.css)。
 
 ### useAgentHistory.ts
 
@@ -243,7 +256,7 @@ class N_src_view_team_useMainAgentSettings_ts["useMainAgentSettings.ts"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)。
+直接依赖：[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)。
 
 ### workspace-member-state.ts
 
@@ -360,7 +373,7 @@ class N_src_view_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
+直接依赖：[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)。
 
 ### WorkspaceMemberForm.tsx
 
@@ -394,7 +407,7 @@ class N_src_view_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps["Workspac
 N_src_view_team_WorkspaceMemberForm_tsx ..> N_src_view_team_WorkspaceMemberForm_tsx_WorkspaceMemberFormProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../components/EngineModelPicker.tsx](../components/EngineModelPicker.tsx)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)。
 
 ### WorkspaceMembers.tsx
 
@@ -431,7 +444,7 @@ class N_src_view_team_WorkspaceMembers_tsx_WorkspaceMembersProps["WorkspaceMembe
 N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_WorkspaceMembers_tsx_WorkspaceMembersProps : 声明
 ```
 
-直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[workspace-members.css](workspace-members.css)。
+直接依赖：[../components/Icon.tsx](../components/Icon.tsx)、[../../bridge/contracts/engines.ts](../../bridge/contracts/engines.ts)、[../../bridge/contracts/workspace.ts](../../bridge/contracts/workspace.ts)、[../../bridge/contracts/models.ts](../../bridge/contracts/models.ts)、[../../bridge/contracts/workspace-members.ts](../../bridge/contracts/workspace-members.ts)、[workspace-member-state.ts](workspace-member-state.ts)、[WorkspaceMemberForm.tsx](WorkspaceMemberForm.tsx)、[WorkspaceMemberDetail.tsx](WorkspaceMemberDetail.tsx)、[../workspace/ModuleOwnershipPanel.tsx](../workspace/ModuleOwnershipPanel.tsx)、[../knowledge/KnowledgeSourceDetails.tsx](../knowledge/KnowledgeSourceDetails.tsx)、[workspace-members.css](workspace-members.css)、[../../bridge/contracts/agent-settings.ts](../../bridge/contracts/agent-settings.ts)。
 
 ### 本目录调用边界
 
@@ -463,6 +476,12 @@ N_src_view_team_MainAgentEditor_tsx ..> N_src_view_team_useMainAgentSettings_ts 
 
 ```mermaid
 classDiagram
+class N_src_view_team_TeamTree_tsx["TeamTree.tsx"] {
+  <<component>>
+}
+class N_src_view_team_team_model_ts["team-model.ts"] {
+  <<module>>
+}
 class N_src_view_team_TeamView_tsx["TeamView.tsx"] {
   <<component>>
 }
@@ -472,22 +491,22 @@ class N_src_view_team_AgentSessionHistory_tsx["AgentSessionHistory.tsx"] {
 class N_src_view_team_MainAgentEditor_tsx["MainAgentEditor.tsx"] {
   <<component>>
 }
-class N_src_view_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
-  <<component>>
-}
-class N_src_view_team_team_model_ts["team-model.ts"] {
-  <<module>>
-}
+N_src_view_team_TeamTree_tsx ..> N_src_view_team_team_model_ts : 导入依赖
+N_src_view_team_TeamView_tsx ..> N_src_view_team_TeamTree_tsx : 导入依赖
 N_src_view_team_TeamView_tsx ..> N_src_view_team_AgentSessionHistory_tsx : 导入依赖
 N_src_view_team_TeamView_tsx ..> N_src_view_team_MainAgentEditor_tsx : 导入依赖
-N_src_view_team_TeamView_tsx ..> N_src_view_team_WorkspaceMembers_tsx : 导入依赖
-N_src_view_team_TeamView_tsx ..> N_src_view_team_team_model_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_team_TeamView_tsx["TeamView.tsx"] {
   <<component>>
+}
+class N_src_view_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
+  <<component>>
+}
+class N_src_view_team_team_model_ts["team-model.ts"] {
+  <<module>>
 }
 class N_src_view_team_team_view_css["team-view.css"] {
   <<stylesheet>>
@@ -498,6 +517,14 @@ class N_src_view_team_useAgentHistory_ts["useAgentHistory.ts"] {
 class N_src_view_team_agent_history_state_ts["agent-history-state.ts"] {
   <<module>>
 }
+N_src_view_team_TeamView_tsx ..> N_src_view_team_WorkspaceMembers_tsx : 导入依赖
+N_src_view_team_TeamView_tsx ..> N_src_view_team_team_model_ts : 导入依赖
+N_src_view_team_TeamView_tsx ..> N_src_view_team_team_view_css : 导入依赖
+N_src_view_team_useAgentHistory_ts ..> N_src_view_team_agent_history_state_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_view_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
   <<component>>
 }
@@ -507,23 +534,14 @@ class N_src_view_team_workspace_member_state_ts["workspace-member-state.ts"] {
 class N_src_view_team_WorkspaceMemberForm_tsx["WorkspaceMemberForm.tsx"] {
   <<component>>
 }
-N_src_view_team_TeamView_tsx ..> N_src_view_team_team_view_css : 导入依赖
-N_src_view_team_useAgentHistory_ts ..> N_src_view_team_agent_history_state_ts : 导入依赖
-N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_workspace_member_state_ts : 导入依赖
-N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_WorkspaceMemberForm_tsx : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_view_team_WorkspaceMembers_tsx["WorkspaceMembers.tsx"] {
-  <<component>>
-}
 class N_src_view_team_WorkspaceMemberDetail_tsx["WorkspaceMemberDetail.tsx"] {
   <<component>>
 }
 class N_src_view_team_workspace_members_css["workspace-members.css"] {
   <<stylesheet>>
 }
+N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_workspace_member_state_ts : 导入依赖
+N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_WorkspaceMemberForm_tsx : 导入依赖
 N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_WorkspaceMemberDetail_tsx : 导入依赖
 N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_workspace_members_css : 导入依赖
 ```
@@ -541,11 +559,13 @@ N_src_view_team_WorkspaceMembers_tsx ..> N_src_view_team_workspace_members_css :
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 团队组织树与配置详情
+
+TeamTree 只显示团队、小组与自定义 Agent；模型、Skill 继承和真实配置文件不变。TeamView 的详情提供配置文件与 Skill 预览编辑，损坏的 Agent 定义仍可从根详情检查。原大标题说明移除，一键治理进入根菜单，启动状态独立显示且未知回执不重放。菜单捕获节点真实身份；草稿切换保护继续生效。
+
 ### 团队文件树行尾菜单
 
-岗位登记、成员配置、负责人采纳与历史浏览的动作也使用公共线性 Icon 和可读辅助字号。统一图形不合并预览/确认/核实步骤，不改变岗位身份、冻结模型或退休规则。
-
-Team/分组菜单绑定共享Skill、新建Agent与导入；Team可发布整个团队，Agent行菜单绑定编辑/删除/发布/执行历史与自有Skill，Skill目录菜单绑定其真实owner的编辑/删除/发布。内置角色仍不出现在文件树，没有虚构可编辑节点。跨节点动作捕获所点击的真实路径，原草稿保护、知识事务预览和删除确认保持。独立主Agent设置/历史角色/岗位入口以及Skill详情操作改图标，均保留title/aria-label。展开折叠由共用KnowledgeFileTree管理，不更改模型与岗位状态。
+Team/分组菜单绑定共享Skill、新建Agent与导入；Team可发布整个团队，Agent行菜单绑定编辑/删除/发布/执行历史与自有Skill，Skill 的编辑/删除/发布在所属详情中操作。内置角色仍不出现在组织树，没有虚构可编辑节点。跨节点动作捕获所点击的真实路径，原草稿保护、知识事务预览和删除确认保持。独立主Agent设置/历史角色/岗位入口以及Skill详情操作改图标，均保留title/aria-label。展开折叠由 TeamTree 管理，不更改模型与岗位状态。
 
 # 静态团队架构契约
 
@@ -612,15 +632,3 @@ WorkspaceMemberCommands 的 listeners 由前端 SubscriptionSet 独立持有，s
 ### 本地记录存储边界
 
 命令控制器组合前端 JsonRecordStorage，仍使用原键、紧凑 JSON 字节与 2 MiB 上限。基础库仅解析/序列化和调用存储；条数、记录身份、回执匹配、坏数据保留与禁写、内存发布和未知请求恢复保持原顺序，不自动重送。
-
-## 团队入口与配置模态
-
-团队范围条展示真实项目及自定义 Agent/Skill 数量，明确静态定义不是运行实例。主 Agent、履历、岗位入口保留可见文字与禁用原因。MainAgentEditor 使用 ModalFrame，Escape 和关闭共用脏稿确认；保存中不允许关闭；固定版本校验仍由原设置入口处理。
-
-## 分区详情与草稿保护
-
-TeamView 将职责边界、可用方法、工作原则分为保持挂载的详情面板；顶部创建与导入、详情编辑与发布复用原树节点动作。保存 Skill 后定位可用方法面板。项目岗位名称/状态筛选只作用于当前已读取分页；切换岗位、取消或返回前确认未保存输入，受理后清除草稿标记。登记表单明确输入、预览、保存三个阶段，不改变命令回执或模型采纳。此局部保护不覆盖外壳关闭整个页面。
-
-## 跨页面草稿保护
-
-岗位表单向所属扩展页上报脏稿标记，供关闭页签与切换项目确认；不传递字段或凭据，卸载清理。

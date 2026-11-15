@@ -32,7 +32,7 @@ async function setup(useBuiltin=false){
   const agentId=team.input.agentId,{model}=await registerServiceOwner(f.app,workspace,agentId,[moduleId]);
   const store=workspace.dispatchStore,directory=store.directory,storage=new FileRunStorage(),lease=new WorkspaceExecutionLease();
   let mainJournal:RunJournal;
-  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(mainJournal.directory),inspectMember:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.models),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
+  const dispatch=new WorkspaceDispatchService(workspace,store,{inspectMain:()=>RunJournal.read(mainJournal.directory),inspectMember:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))},undefined,undefined,f.app.engineModels),identity={workspaceId:entry.id,rootSessionId:'session-1'},scopeId='member-scope';
   await dispatch.openScope(identity,scopeId,{message:'核实派发产物'},'main-one');
   const mainTask={mode:'chat' as const,taskId:identity.rootSessionId,workspaceId:entry.id,root:f.a,goal:'核实派发产物',moduleIds:[],agentId:'cbim:main',acceptance:[]};
   mainJournal=new RunJournal(path.join(f.user,'review-main'),mainTask,'main-one');await mainJournal.init();
@@ -65,7 +65,7 @@ async function setup(useBuiltin=false){
       },stop:async()=>release(),close:async()=>{}};
     return new LoopRuntime({storage,directory:path.join(directory,'runs','tasks'),acquireLease:async()=>{await beforeRuntimeLease();return ()=>{}},createEngine:()=>engine,onEngineReady:hooks.onEngineReady,onEvent:hooks.onEvent,toolPolicy:async call=>({allow:true,effects:[call.name==='read'?'read':'maintenance']})});
   }}));
-  const ports:MemberExecutionPorts={acquire:(key,permission,agentInstanceId)=>lease.acquire(key,permission,agentInstanceId),prepare:async()=>prepare(),owners:dispatch.owners,withEngineConfiguration:(reference,_options,use)=>f.app.models.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))};
+  const ports:MemberExecutionPorts={acquire:(key,permission,agentInstanceId)=>lease.acquire(key,permission,agentInstanceId),prepare:async()=>prepare(),owners:dispatch.owners,withEngineConfiguration:(reference,_options,use)=>f.app.engineModels.withRuntimeConfiguration(reference,configuration=>use({model:configuration.profile,prepare})),inspect:run=>storage.read(path.join(directory,'runs','tasks',run.binding.taskId,run.binding.runId))};
   const members=new MemberExecutionManager(workspace,store,ports);await members.initialize();
   let command=0;
   const assign=(assigneeAgentId=agentId,prerequisites:{taskId:string;expectedPlanRevision:number}[]=[])=>dispatch.dispatchTask({...identity,commandId:'dispatch-'+(++command),expectedParentRevision:1,task:{assigneeAgentId,moduleIds:[moduleId],ownerSelection,goal:'核验已派发的产物',acceptance:[{id:'verified',text:'提供真实工具证据'}],prerequisites}},scopeId);

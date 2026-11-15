@@ -87,7 +87,7 @@ it.each(['normal','repair','restart','restart-corrupt','restart-pending','restar
       await vi.waitFor(async()=>{if(child!.exitCode!==null)throw Error(stderr);started=JSON.parse(await fs.readFile(marker,'utf8'))},{timeout:30000,interval:50});
       child.kill();await exited;
       if(mode==='restart-corrupt')await fs.appendFile(path.join(new Paths(f.user,path.resolve('.')).project(entry.id),'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
-      f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));
+      f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));
       if(mode==='restart-model'){
         await f.app.init({restore:false});const {id,hasKey,...profile}=(await f.app.models.list()).profiles[0];
         await f.app.models.save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:2048}))}});

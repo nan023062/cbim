@@ -1,6 +1,6 @@
 /**
  * 分类面板共享同一快照与筛选；切换保留列表展开量，不改变运行或统计口径。
- * 作用定位：全局只读运行总览，集中显示周期、人员、任务、准入等待及已报告消耗。
+ * 作用定位：全局只读运行总览，集中显示周期、Agent 实例、任务、准入等待及已报告消耗。
  * 设计原因：应用统计和列表筛选分开，缺失计量不冒充零；原会话操作交由外壳按真实身份核实。
  * 职责边界：这里只读内存游标，不读业务正文、不启动模型，也没有恢复或修改权限入口。
  */
@@ -42,7 +42,7 @@ export function RuntimeOverview({onOpen}:{onOpen:RuntimeOpen}){
   const workspace=(key:string)=>data?.workspaces.find(w=>w.workspaceId===key)?.name??key;
   const canOpen=(key:string)=>data?.workspaces.some(w=>w.workspaceId===key&&w.availability==='ready')??false;
   return <section className="runtime-overview" data-testid="runtime-overview" data-runtime-revision={data?.cursor.revision} data-runtime-stream={data?.cursor.streamId}>
-    <header className="runtime-header"><div><h1>运行管理</h1><p>查看整个应用的人员活动与任务压力，返回原会话处理。</p></div><button onClick={()=>void refreshRuntime()}><Icon name="refresh" size={16}/>刷新运行状态</button></header>
+    <header className="runtime-header"><div><h1>运行管理</h1><p>查看整个应用的本地 Agent 活动与任务压力，返回原会话处理。</p></div><button onClick={()=>void refreshRuntime()}><Icon name="refresh" size={16}/>刷新运行状态</button></header>
     {state.error&&<p role="alert">{state.error}{data?'；保留上次快照，可能已过期。':''}</p>}{!visible&&<p role="status">页面隐藏，读取已暂停。</p>}
     {!data?<p role="status">{state.error?'暂未取得可信运行数据。':'正在读取运行状态…'}</p>:<>
       <RuntimeMetrics data={data}/>

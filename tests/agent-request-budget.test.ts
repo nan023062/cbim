@@ -21,7 +21,7 @@ const attempt={requestHash:'a'.repeat(64),maxOutputTokens:128},usage={input:100,
 it('rechecks the original child before issue and immediately before transport send',async()=>{
  for(const stage of ['issue','send']){
   const f=fixture();let live=true;
-  const port=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},f.model('child-model',10),()=>{if(!live)throw Error('child closed')}))!;
+  const port=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},f.model('child-model',10), 'primary',()=>{if(!live)throw Error('child closed')}))!;
   const ticket=await port.reserve(attempt);
   if(stage==='send')await ticket.issue();
   live=false;
@@ -34,7 +34,7 @@ it('rechecks the original child before issue and immediately before transport se
 it('different child prices share the root ledger while recording actual child run identities',async()=>{
  const f=fixture(),root=(await f.service.forRun(f.binding,f.model('root-model',1)))!,childModel=f.model('child-model',10);
  let childLive=true;const assertChild=()=>{if(!childLive)throw Error('child closed')};
- const child=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},childModel,assertChild))!;
+ const child=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},childModel, 'primary',assertChild))!;
  childModel.profile.pricing!.input=999;
  const tickets=await Promise.all([root.reserve(attempt),child.reserve(attempt)]);
  for(const ticket of tickets){await ticket.issue();await ticket.report(usage)}
@@ -57,7 +57,7 @@ it('child reservation cannot bypass shared token/dollar limits or missing pricin
 });
 it('unknown child usage stops the whole root budget and late real usage remains auditable',async()=>{
  const f=fixture(),root=(await f.service.forRun(f.binding,f.model('root-model',1)))!;
- let live=true;const child=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},f.model('child-model',10),()=>{if(!live)throw Error('child closed')}))!;
+ let live=true;const child=(await f.service.forRun({...f.binding,agentRun:{taskId:'child',runId:'child-run'}},f.model('child-model',10), 'primary',()=>{if(!live)throw Error('child closed')}))!;
  const ticket=await child.reserve(attempt);await ticket.issue();live=false;await ticket.report(usage);
  expect(await f.service.report(f.query)).toMatchObject({reported:1,tokens:120});
  live=true;const unknown=await child.reserve(attempt);await unknown.issue();await unknown.unknown('cancelled');

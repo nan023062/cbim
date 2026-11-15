@@ -23,6 +23,7 @@ export const domainRoots=[
 export const domainPublicEntries=new Set([
   "src/logic/agents/agent.ts",
   "src/logic/agents/contracts.ts",
+  "src/logic/execution/rules/engine-adapter.ts",
   "src/logic/tasks/rules/topic-interruption.ts",
   "src/logic/tasks/rules/office-history.ts",
   "src/logic/tasks/rules/member-topic-context.ts",
@@ -33,6 +34,7 @@ export const domainPublicEntries=new Set([
   "src/logic/budget/rules/model-request-budget-rules.ts",
   "src/logic/budget/rules/model-request-budget-storage.ts",
   "src/logic/budget/rules/model-request-budget.ts",
+  "src/logic/budget/rules/model-request-configuration.ts",
   "src/logic/budget/rules/request-budget.ts",
   "src/logic/budget/rules/scope-budget-invariants.ts",
   "src/logic/budget/rules/scope-budget.ts",
@@ -105,6 +107,7 @@ export const domainPublicEntries=new Set([
   "src/logic/knowledge/rules/ports.ts",
   "src/logic/knowledge/rules/read-models/index.ts",
   "src/logic/knowledge/rules/tool-output-base.ts",
+  "src/logic/knowledge/rules/memory-index.ts",
   "src/logic/knowledge/rules/tool-output-builtins.ts",
   "src/logic/knowledge/rules/tool-output-queries.ts",
   "src/logic/knowledge/rules/tool-output-transactions.ts",
@@ -222,6 +225,7 @@ export const domainPublicEntries=new Set([
   "src/logic/workspace/rules/module-ownership-tool-policy.ts",
   "src/logic/workspace/rules/module-ownership-tools.ts",
   "src/logic/workspace/rules/module-ownership.ts",
+  "src/logic/workspace/rules/source-browser.ts",
   "src/logic/workspace/rules/png-validation-schema.ts",
   "src/logic/workspace/rules/project-root.ts",
   "src/logic/workspace/rules/workflow-contract.ts"

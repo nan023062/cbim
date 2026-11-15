@@ -4,7 +4,8 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {SessionReadProjection,SessionScopeProjection,completeSessionRead,scopeGoalView,currentScope,type ScopeGoalState} from '../src/view/tasks/scope-state';
 import {ScopeGoalPanel,goalTaskReference} from '../src/view/tasks/ScopeGoalPanel';
 import {MemberTaskDetail} from '../src/view/tasks/MemberTaskDetail';
-import {SessionTaskView,sessionRoot} from '../src/view/tasks/SessionTaskView';
+import {SessionTaskReview} from '../src/view/tasks/SessionTaskReview';
+import {sessionRoot} from '../src/view/tasks/session-task-state';
 import {applyGraphBatch} from '../src/logic/tasks/rules/graph-reducer';
 import {summarizeScope} from '../src/logic/tasks/rules/scope-view';
 import type {DispatchScope,DispatchSessionRead,ScopeSnapshot,ScopeDetailRead,GraphEventBatch,GraphSnapshot,TaskNode} from '../src/bridge/contracts/dispatch';
@@ -152,7 +153,7 @@ it.each([
   Object.assign(state,{scopes:[summary],openScope:summary,activeScope:summary,selectedGoalView:goalView,currentGoalView:goalView});
   expect(goalView).toEqual({phase,label,tone:'running'});
   const card=renderToStaticMarkup(createElement(ScopeGoalPanel,{state,compact:true,testId:'conversation-goal-summary'}));
-  const root=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+  const root=renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
   for(const html of [card,root]){expect(html).toContain(label);expect(html).toContain(description);expect(html).not.toContain('普通对话处理中');expect(html).not.toContain('普通问答无需派发任务');}
   const stopped={...summary,status:'closed' as const,outcome:'cancelled' as const,closedAt:time};expect(scopeGoalView(stopped).phase).toBe('cancelled');
   const stoppedView={...state,scopes:[stopped],selectedScope:{...state.selectedScope!,status:'closed' as const,outcome:'cancelled' as const,closedAt:time},selectedGoalView:scopeGoalView(stopped)};
@@ -186,10 +187,10 @@ it('主回合结束后活动周期根仍有停止入口，历史目标选择不�
   const chosen=planned(),state=view(chosen),history={task:{mode:'chat' as const,taskId:identity.rootSessionId,workspaceId:identity.workspaceId,root:'root',goal:'首次标题',moduleIds:[],agentId:'cbim:main',acceptance:[]},runId:'main-run',status:'completed' as const,acceptance:'not_evaluated' as const,unresolvedTools:[],events:[]};
   const tasks=['scope-one','scope-old'].map((scopeId,index)=>({kind:'task' as const,nodeId:'task:t'+index,taskId:'t'+index,scopeId,identity,requester:agent,assignee:{...agent,agentId:'cbim:executor',name:'执行 Agent',agentInstanceId:'executor-'+index},modules:[],goal:'任务 '+index,acceptance:[],revision:1,planRevision:1,status:'running' as const,awaitedChildren:[],runIds:[],createdAt:time,updatedAt:time}));
   const fullGraph:GraphSnapshot={...graph,tasks,edges:tasks.map((task,index)=>({edgeId:'edge-'+index,identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:task.nodeId,revision:1,enabled:true}))};
-  const html=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
-  expect(html).toContain('dispatch-root-goal');expect(html).toContain('data-testid="scope-stop"');expect(html).toContain('停止当前任务');expect(html).toContain('data-task-id="t0"');expect(html).toContain('data-task-id="t1"');expect(html).toContain('data-testid="office-scene"');expect(html).toContain('当前周期的治理目标');
+  const html=renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:state,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));
+  expect(html).toContain('dispatch-root-goal');expect(html).toContain('data-testid="scope-stop"');expect(html).toContain('停止当前任务');expect(html).not.toContain('data-testid="office-scene"');expect(html).toContain('当前周期的治理目标');
   const legacyState=view({...scope('legacy'),goal:undefined});expect(sessionRoot([history],identity.rootSessionId,0,fullGraph,legacyState).goal).toBe('旧周期 · 未保存原始目标');expect(sessionRoot([history],identity.rootSessionId,0,fullGraph).goal).toBe('首次标题');
-  const browsing={...legacyState,openScope:state.openScope,activeScope:state.activeScope};const oldHtml=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(oldHtml).toContain('当前另有任务运行');expect(oldHtml).toContain('停止正在运行的任务');
+  const browsing={...legacyState,openScope:state.openScope,activeScope:state.activeScope};const oldHtml=renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[history],queued:[],now:0,busy:false,graph:fullGraph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(oldHtml).toContain('当前另有任务运行');expect(oldHtml).toContain('停止正在运行的任务');
 });
 
 it('只有持久waiting才显示执行暂停，历史选择不覆盖当前等待和取消对象',()=>{
@@ -201,6 +202,6 @@ it('只有持久waiting才显示执行暂停，历史选择不覆盖当前等待
   const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state}));expect(html).toContain('data-goal-state="waiting"');expect(html).toContain('scope-goal-wait-detail');expect(html).toContain('完整原因末尾');expect(html).toContain('普通排队消息不会恢复本目标');expect(html).not.toContain('<button');
   const historical=view({...scope('closed'),status:'closed',closedAt:time,outcome:'completed'}),browsing={...historical,scopes:[state.openScope!,...historical.scopes],openScope:state.openScope,waitingScope:state.waitingScope,currentGoalView:state.currentGoalView};
   expect(currentScope(browsing.scopes)).toBe(state.waitingScope);
-  const root=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(root).toContain('当前另有待补充任务');expect(root).toContain('取消当前任务');expect(root).toContain('data-testid="scope-stop"');
+  const root=renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:identity.workspaceId,taskId:identity.rootSessionId,runs:[],queued:[],now:0,busy:false,graph,scopeState:browsing,selectedTaskId:graph.root.nodeId,onSelectTask:()=>{},onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{}}));expect(root).toContain('当前另有待补充任务');expect(root).toContain('取消当前任务');expect(root).toContain('data-testid="scope-stop"');
   const closed={...waiting,status:'closed' as const,outcome:'cancelled' as const,closedAt:time};expect(scopeGoalView(summarizeScope(closed,streamId,2)).phase).toBe('cancelled');expect(renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(closed)}))).toContain('等待记录');
 });

@@ -24,6 +24,7 @@
 | [module-ownership.ts](module-ownership.ts) | 单模块负责人控制面的严格公开协议，供岗位、责任服务、持久化及桌面共用。 |
 | [png-validation-schema.ts](png-validation-schema.ts) | 冻结静态 PNG 的精确尺寸、通道要求和资源上限，供知识声明、运行端口与公开结果共用。 |
 | [project-root.ts](project-root.ts) | 提供所有项目共有的内置根模块身份和只读说明，供知识查询与视图共用。 |
+| [source-browser.ts](source-browser.ts) | 模块绑定源码浏览的纯数据与请求契约，由工作区业务拥有。 |
 | [workflow-contract.ts](workflow-contract.ts) | 定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。 |
 
 ## 架构类图
@@ -720,6 +721,39 @@ class N_src_logic_workspace_rules_project_root_ts["project-root.ts"] {
 }
 ```
 
+### source-browser.ts
+
+```mermaid
+classDiagram
+class N_src_logic_workspace_rules_source_browser_ts["source-browser.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_rules_source_browser_ts_SourceTarget["SourceTarget"] {
+  <<type>>
+
+}
+N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_source_browser_ts_SourceTarget : 声明
+class N_src_logic_workspace_rules_source_browser_ts_SourceEntry["SourceEntry"] {
+  <<interface>>
+  +name
+  +path
+  +kind
+}
+N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_source_browser_ts_SourceEntry : 声明
+class N_src_logic_workspace_rules_source_browser_ts_SourceDirectory["SourceDirectory"] {
+  <<interface>>
+  +entries
+  +nextOffset
+}
+N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_source_browser_ts_SourceDirectory : 声明
+class N_src_logic_workspace_rules_source_browser_ts_SourceFile["SourceFile"] {
+  <<type>>
+
+}
+N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_source_browser_ts_SourceFile : 声明
+```
+
+
 ### workflow-contract.ts
 
 ```mermaid
@@ -862,6 +896,10 @@ N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+### 源码浏览纯契约
+
+source-browser.ts 定义模块/来源/工作区版本目标及 sourceDirectoryInput/sourceFileInput 严格请求。SourceDirectory 有显式 nextOffset，SourceFile 区分文本与不可预览，契约不导入 Node。路径安全与真实来源验证由工作区服务再次执行。
 
 ### 静态模块视图的单向边界
 

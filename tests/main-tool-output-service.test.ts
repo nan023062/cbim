@@ -19,7 +19,7 @@ it.each(['goal','dispatch'] as const)('真实 %s 事务提交后的坏回包只�
   const f=await fixture();let store:FileDispatchStore|undefined;
   try{
     const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id);
-    store=workspace.dispatchStore;const directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.models);
+    store=workspace.dispatchStore;const directory=store.directory,service=new WorkspaceDispatchService(workspace,store,undefined,undefined,undefined,f.app.engineModels);
     const identity={workspaceId:entry.id,rootSessionId:'contract-root'},binding={...identity,scopeId:'contract-scope',runId:'contract-run'},signal=new AbortController().signal;
     await service.openScope(identity,binding.scopeId,{message:'核实当前业务产物'},binding.runId);
     let modules:string[]=[],ownerSelection:OwnerExecutionSelection|undefined;

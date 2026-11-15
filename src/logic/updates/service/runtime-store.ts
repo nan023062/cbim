@@ -1,6 +1,6 @@
 /**
  * 作用定位：管理资源 / 引擎不可变版本目录及其签名清单；后台准备不修改活动选择。
- * 设计原因：按内容摘要去重并合并同一包的并发下载，已存在目录仍核验；失败候选不覆盖正在使用的文件。
+ * 设计原因：按内容摘要去重并合并同一包的并发下载，迁移只复制已经验证的旧缓存，已存在目录仍核验；失败候选不覆盖正在使用的文件。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,7 +13,7 @@ export type RuntimePackageDownloader=typeof downloadRuntimePackage;
 /** 缓存仅含发布代码；用户数据、engineHome 与业务工作区不得位于此根目录。 */
 export class RuntimeStore {
   private preparing=new Map<string,Promise<string>>();
-  constructor(readonly root:string,readonly cold:ColdRuntime,private readonly download:RuntimePackageDownloader=downloadRuntimePackage){}
+  constructor(readonly root:string,readonly cold:ColdRuntime,private readonly download:RuntimePackageDownloader=downloadRuntimePackage,private readonly reuseRoots:readonly string[]=[]){}
   packageRoot(pkg:RuntimePackage){return path.join(this.root,'packages',pkg.sha256)}
   manifestPath(digest:string){if(!/^[a-f0-9]{64}$/.test(digest))throw Error('资源身份无效');return path.join(this.root,'manifests',digest+'.json')}
   async saveManifest(envelope:SignedRuntimeManifest){
@@ -46,8 +46,10 @@ export class RuntimeStore {
     const stage=await fs.mkdtemp(path.join(this.root,'staging','package-'));
     const archive=path.join(stage,randomUUID()+'.zip'),expanded=path.join(stage,'expanded');
     try{
-      await this.download(pkg,archive,signal,value=>progress(value*.7));
-      await extractRuntimeArchive(archive,expanded,pkg.files,signal,value=>progress(70+value*.25));
+      let source:string|undefined;
+      for(const root of this.reuseRoots){const candidate=path.join(root,'packages',pkg.sha256),stat=await fs.lstat(candidate).catch(error=>{if(error.code==='ENOENT')return undefined;throw error});if(stat){await verifyRuntimeDirectory(candidate,pkg.files,signal);source=candidate;break;}}
+      if(source){await fs.cp(source,expanded,{recursive:true});progress(95)}
+      else{await this.download(pkg,archive,signal,value=>progress(value*.7));await extractRuntimeArchive(archive,expanded,pkg.files,signal,value=>progress(70+value*.25));}
       await verifyRuntimeDirectory(expanded,pkg.files,signal);signal.throwIfAborted();
       await fs.rename(expanded,target);progress(100);
       await fs.unlink(archive).catch(()=>{});await fs.rmdir(stage).catch(()=>{});return target;

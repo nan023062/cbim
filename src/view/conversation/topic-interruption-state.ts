@@ -55,13 +55,13 @@ export class TopicInterruptionController {
     }catch(error){this.blocked=true;throw error}
     if(this.value.request)await this.lookup();
   })}
-  /** 普通草稿不传入此控制器；创建请求后，任何失败都保留冻结原文及选型。 */
-  submit(message:string,options:TopicInterruptionRequest['options']):Promise<void>{return this.run(async()=>{
+  /** 普通草稿不传入此控制器；创建请求后，任何失败都保留冻结原文、有序附件身份及选型。 */
+  submit(message:string,options:TopicInterruptionRequest['options'],attachmentIds:readonly string[]=[]):Promise<void>{return this.run(async()=>{
     if(!this.value.ready||this.blocked)throw Error('原补充记录尚未核实，未发送');
     if(this.value.request)throw Error('已有提交记录，请查询或重试原请求');
     const other=this.records.read('本机话题补充记录过大，请核实后继续');
     if(other){this.publish({request:this.validate(other)});throw Error('此话题已有提交记录，未创建重复请求')}
-    const request=this.validate({...this.target,commandId:this.ports.uuid(),input:{message},options});
+    const request=this.validate({...this.target,commandId:this.ports.uuid(),input:{message,...(attachmentIds.length?{attachmentIds:[...attachmentIds]}:{})},options});
     this.records.write(request,'补充超出本机记录上限，未发送');this.publish({request});
     this.accept(await this.ports.submit(structuredClone(request)),request);
   })}

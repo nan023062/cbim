@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry} from '../scripts/desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks, assertUnsignedNotice} from '../scripts/desktop-acceptance-inputs.mjs';
 
 const retryCheck={currentVersion:'0.1.15',enabled:true,phase:'idle',error:'暂时无法检查更新，将在下一分钟自动重试，也可手动检查。'};
 it.each(['idle','available'])('observes the real automatic check retry from %s without treating it as ready',phase=>{
@@ -12,6 +12,17 @@ it.each([{error:'下载或校验失败，五分钟后自动重试，也可手动
 it('does not tolerate a check failure while waiting for installation',()=>expect(acceptanceCanAwaitCheckRetry(retryCheck,'installing')).toBe(false));
 
 const env = {CBIM_ACCEPTANCE_VERSION: '0.1.3', CBIM_ACCEPTANCE_PREVIOUS_VERSION: '0.1.2', CBIM_ACCEPTANCE_COMMIT: 'a'.repeat(40), CBIM_ACCEPTANCE_SHA256: 'b'.repeat(64), CBIM_ACCEPTANCE_MODE: 'candidate'};
+
+it.each(['candidate','online'])('accepts the actual 0.1.18 client for 0.1.19 in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.19',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.18',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.18',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.18',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.18',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
+});
+it('accepts only the verified 0.1.18 R2 prelude before the new cold installer',()=>{
+  const ready={currentVersion:'0.1.18',currentResourceVersion:1,phase:'ready',release:{version:'0.1.18',resourceVersion:2,delivery:'resources',tag:'runtime-c0.1.18'}};
+  expect(acceptanceReadyTarget(ready,'0.1.18','0.1.19')).toEqual({kind:'resources',resourceVersion:2});
+  for(const change of [{currentResourceVersion:2},{release:{...ready.release,resourceVersion:3}},{release:{...ready.release,tag:'runtime-c0.1.17'}}])expect(()=>acceptanceReadyTarget({...ready,...change},'0.1.18','0.1.19')).toThrow();
+  expect(acceptanceReadyTarget({...ready,currentResourceVersion:2,release:{version:'0.1.19',delivery:'installer'}},'0.1.18','0.1.19')).toEqual({kind:'installer'});
+});
 
 const resourceReady = () => ({currentVersion:'0.1.15',currentResourceVersion:1,phase:'ready',release:{version:'0.1.15',resourceVersion:4,delivery:'resources',tag:'runtime-c0.1.15'}});
 it('requires the verified public R4 hop before treating a newer cold installer as ready',()=>{
@@ -43,7 +54,7 @@ describe('desktop upgrade acceptance inputs', () => {
   });
   it('preserves the earlier two-step flow and rejects unsupported future previous versions', () => {
     expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.1'}).previousUpdateFlow).toBe('two-step');
-    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16'})).toThrow();
+    expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.21',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.20'})).toThrow();
   });
   it.each(['candidate', 'online'])('uses the unchanged automatic updater from the actual 0.1.4 release in %s mode', mode => {
     expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.5', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.4', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.5',previousVersion:'0.1.4',previousUpdateFlow:'automatic',mode});
@@ -100,3 +111,35 @@ it.each(['candidate','online'])('accepts 0.1.9 to A with the original automatic 
 it.each(['candidate','online'])('accepts A to B as background prefetch with explicit installation in %s mode', mode => {
   expect(acceptanceInputs({...env, CBIM_ACCEPTANCE_VERSION:'0.1.11', CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.10', CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousUpdateFlow:'prefetch', mode});
 });
+
+it.each(['candidate','online'])('pins the released 0.1.16 prefetch client for the generic engine host in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({version:'0.1.17',previousVersion:'0.1.16',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.16',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.16',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
+});
+
+it.each([['0.1.0',false,false],['0.1.6',false,false],['0.1.7',false,true],['0.1.11',false,true],['0.1.12',true,true],['0.1.15',true,true],['0.1.16',true,true],['0.1.17',true,true],['0.1.18',true,true],['0.1.19',true,true]])('retains every existing capability of %s', (version,installerCache,mainAgentAndAutomation)=>{
+  expect(acceptanceRetentionChecks(version)).toEqual({installerCache,mainAgentAndAutomation});
+});
+it.each(['0.1.20','0.2.0'])('rejects an unverified retention source %s', version=>{expect(()=>acceptanceRetentionChecks(version)).toThrow()});
+
+it.each(['candidate','online'])('accepts actual 0.1.17 prefetch and rejects same-version installation in %s mode',mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.18',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.17',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.17',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.17',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.17',CBIM_ACCEPTANCE_MODE:mode})).toThrow();
+});
+it('verifies the 0.1.17 R3 prelude and still requires the 0.1.18 installer',()=>{
+  const ready={currentVersion:'0.1.17',currentResourceVersion:1,phase:'ready',release:{version:'0.1.17',resourceVersion:3,delivery:'resources',tag:'runtime-c0.1.17'}};
+  expect(acceptanceReadyTarget(ready,'0.1.17','0.1.18')).toEqual({kind:'resources',resourceVersion:3});
+  for(const change of [{currentResourceVersion:3},{release:{...ready.release,resourceVersion:4}},{release:{...ready.release,tag:'runtime-c0.1.15'}}])expect(()=>acceptanceReadyTarget({...ready,...change},'0.1.17','0.1.18')).toThrow();
+  expect(acceptanceReadyTarget({...ready,currentResourceVersion:3,release:{version:'0.1.18',delivery:'installer'}},'0.1.17','0.1.18')).toEqual({kind:'installer'});
+});
+
+it.each(['candidate','online'])('accepts verified 0.1.19 source for 0.1.20 (%s)', mode=>{
+  expect(acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.20',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.19',CBIM_ACCEPTANCE_MODE:mode})).toMatchObject({previousVersion:'0.1.19',previousUpdateFlow:'prefetch',mode});
+  expect(()=>acceptanceInputs({...env,CBIM_ACCEPTANCE_VERSION:'0.1.19',CBIM_ACCEPTANCE_PREVIOUS_VERSION:'0.1.19'})).toThrow();
+});
+it('does not invent an unpublished 0.1.19 resource prelude',()=>{
+  expect(()=>acceptanceReadyTarget({currentVersion:'0.1.19',currentResourceVersion:1,phase:'ready',release:{delivery:'resources',version:'0.1.19',tag:'runtime-c0.1.19',resourceVersion:2}},'0.1.19','0.1.20')).toThrow();
+});
+
+it.each(['安装包未签名，发布者未验证','Windows 安装包未做代码签名，发布者未验证'])('accepts explicit unsigned disclosure: %s',text=>expect(()=>assertUnsignedNotice(text)).not.toThrow());
+it.each(['已签名','发布者已验证',''])('rejects absent unsigned disclosure: %s',text=>expect(()=>assertUnsignedNotice(text)).toThrow());

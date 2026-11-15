@@ -2,11 +2,11 @@
 
 ## 本步范围
 
-用户要求先统一产品名称与图标，再搭建官网和下载页。完整产品名固定为 **CBIM Assistant**，简称 **CBIM**；图标源归 `branding/`，网站源归 `website/`，构建／验收工具归 `scripts/`。这一独立步骤不恢复旧运行时开发计划，不改变账号、更新版本规则或应用数据身份。
+用户要求先统一产品名称与图标，再搭建官网和下载页。完整产品名固定为 **CBIM Assistant**，简称 **CBIM**；图标源归 `assets/branding/`，网站源归 `website/`，构建／验收工具归 `scripts/`。这一独立步骤不恢复旧运行时开发计划，不改变账号、更新版本规则或应用数据身份。
 
 ## 当前结构与修改入口
 
-- `branding/cbim-mark.svg` 是唯一图形源。`build-brand-assets.mjs` 离屏生成 PNG／多尺寸 ICO，并保存摘要；`.gitattributes` 固定源文件换行，防止跨平台检出造成假漂移。
+- `assets/branding/cbim-mark.svg` 是唯一图形源。`build-brand-assets.mjs` 离屏生成 PNG／多尺寸 ICO，并保存摘要；`.gitattributes` 固定源文件换行，防止跨平台检出造成假漂移。
 - `BrandMark` 只展示资源，侧栏和欢迎页共用。窗口读取固定 `resources/branding`，Forge／NSIS 配置引用同源 ICO。应用 ID、EXE 名称、卸载器探测、`.cbim` 路径不因品牌变化迁移。
 - 网站是两份独立 HTML，构建时内联样式和 SVG。无需桌面运行时、模型、服务端、账号或 CDN。首页说明当前产品，下载页给出真实发布、安装说明、校验文件和日志。
 - `website/release.json` 是已经公开的桌面版本快照；它与开发版本分离，不能读取旧 Python 通道的 latest。正式版本或同版本安装字节变化时更新快照和页面文案。

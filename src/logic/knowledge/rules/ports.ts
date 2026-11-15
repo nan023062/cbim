@@ -1,4 +1,5 @@
 /**
+ * 资源边界：工作区只暴露宿主注入的 assetsRoot，供内置资料读取，不暴露开发设计根。
  * 作用定位：核心知识领域需要的工作区存取与事务接口。
  * 边界说明：此完整端口用于知识写入协调；只读查询使用 types 中的 KnowledgeSnapshotReader，刷新使用自身四项最小端口。
  * 设计原因：核心只依赖能力契约，由 main 注入实际工作区；不导入 Electron 或服务生命周期实现。
@@ -17,7 +18,8 @@ export interface KnowledgeWorkspace {
   readonly entry:{id:string;path:string};
   readonly instanceId:string;
   readonly paths:Paths;
-  readonly rules:{designRoot:string};
+  /** 当前运行资产的可信绝对根路径，不是用户工作区路径。 */
+  readonly rules:{assetsRoot:string};
   readonly tasks:Map<string,TaskView>;
   state:string;
   assert(identity?:{workspaceId:string;instanceId:string}):void;

@@ -6,7 +6,7 @@ import {Paths} from '../src/logic/workspace/service/paths';
 // 独立进程只在真实成员已落盘、主回传尚未发起的窗口停住，由父测试强制终止。
 async function main(){
 const [user,id,message,marker,mode]=process.argv.slice(2);
-const app=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));
+const app=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));
 await app.init();await app.open(id);
 app.execution(id).continueFromResults=async(taskId)=>{
   const history=await app.execution(id).thread(taskId);

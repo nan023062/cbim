@@ -3,7 +3,7 @@
  * 设计原因：浏览不安装、安装不选择；真实进度由宿主持有，关闭菜单不会取消或重复下载。
  */
 import {useEffect,useId,useRef,useState} from 'react';
-import {engineLabel,loopEngineSchema,type LoopEngine} from '../../bridge/contracts/models';
+import {engineLabel,loopEngineSchema,type LoopEngine} from '../../bridge/contracts/engines';
 import type {ManagedEngineStatus} from '../../bridge/contracts/desktop-updates';
 import {Icon} from '../components/Icon';
 import './engine-picker.css';

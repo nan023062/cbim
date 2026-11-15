@@ -4,7 +4,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import type {GraphSnapshot,ScopeSummary,TaskNode} from '../src/bridge/contracts/dispatch';
 import type {RunSummary} from '../src/bridge/contracts/execution';
 import {conversationTopics} from '../src/view/conversation/conversation-topics';
-import {ConversationTopics} from '../src/view/conversation/ConversationTopics';
+import {ConversationTopics,ConversationChannel} from '../src/view/conversation/ConversationTopics';
 
 const identity={workspaceId:'workspace',rootSessionId:'root'},time='2026-11-14T00:00:00.000Z';
 const actor={agentId:'main',agentInstanceId:'main-instance',agentSessionId:'main-channel',name:'主 Agent'};
@@ -32,24 +32,24 @@ it('仅已完成和已撤销归入历史；失败及中断仍可见',()=>{
   const summaries:ScopeSummary[]=['completed','cancelled','failed','interrupted'].map((outcome,i)=>({...scope(String(i)),status:'closed',outcome:outcome as ScopeSummary['outcome']}));
   expect(conversationTopics(identity,summaries,[]).topics.map(t=>t.archived)).toEqual([true,true,false,false]);
 });
-it('主列表不渲染话题正文，历史默认折叠；选中只渲染该话题内容',()=>{
+it('主聊天保留正文与频道入口，历史默认折叠；子窗独立渲染所选频道',()=>{
   const result=conversationTopics(identity,[scope('one',['a']),{...scope('two',['b']),status:'closed',outcome:'completed'}],[run('a'),run('b')]);
   const props={...result,onSelect:()=>{},onSelectTask:()=>{},renderRun:(r:RunSummary)=>createElement('p',{key:r.runId},'正文-'+r.runId)};
   const list=renderToStaticMarkup(createElement(ConversationTopics,props));
-  expect(list).not.toContain('正文-');expect(list).toContain('<details class="conversation-topic-history">');
-  const thread=renderToStaticMarkup(createElement(ConversationTopics,{...props,selectedId:'one'}));
-  expect(thread).toContain('正文-a');expect(thread).not.toContain('正文-b');expect(thread).toContain('全部话题');
+  expect(list).toContain('正文-a');expect(list).toContain('<details class="conversation-topic-history">');
+  const thread=renderToStaticMarkup(createElement(ConversationChannel,{topic:result.topics[0],onSelect:()=>{},onClose:()=>{},renderRun:props.renderRun}));
+  expect(thread).toContain('正文-a');expect(thread).not.toContain('正文-b');expect(thread).toContain('关闭频道');
 });
 
 it('排队任务以将来的话题身份展示，读取已出现同身份话题时不重复展示',()=>{
   const queued=[{id:'queued-topic',taskId:'root',message:'稍后执行',status:'pending' as const,options:{provider:'p',model:'m'}}];
-  const render=(scopes:ScopeSummary[])=>renderToStaticMarkup(createElement(ConversationTopics,{...conversationTopics(identity,scopes,[]),queued,onSelect:()=>{},onSelectTask:()=>{},renderRun:()=>null}));
+  const render=(scopes:ScopeSummary[])=>renderToStaticMarkup(createElement(ConversationTopics,{...conversationTopics(identity,scopes,[]),queued,onSelect:()=>{},renderRun:()=>null}));
   expect(render([])).toContain('排队话题 1');expect(render([])).toContain('data-topic-id="queued-topic"');
   expect(render([scope('queued-topic')])).not.toContain('排队话题 1');
 });
 
 it('历史后续话题保留可导航来源，不把旧正文自动混入新话题',()=>{
  const result=conversationTopics(identity,[{...scope('new',['new-run']),followupOf:'old'},{...scope('old',['old-run']),status:'closed',outcome:'completed'}],[run('new-run'),run('old-run')]);
- const html=renderToStaticMarkup(createElement(ConversationTopics,{...result,selectedId:'new',onSelect:()=>{},onSelectTask:()=>{},renderRun:r=>createElement('p',{key:r.runId},r.runId)}));
+ const html=renderToStaticMarkup(createElement(ConversationChannel,{topic:result.topics[0],onSelect:()=>{},onClose:()=>{},renderRun:r=>createElement('p',{key:r.runId},r.runId)}));
  expect(html).toContain('查看原话题');expect(html).toContain('new-run');expect(html).not.toContain('old-run');
 });

@@ -5,7 +5,7 @@ import http from 'node:http';
 import {randomUUID} from 'node:crypto';
 import {CodexEngine} from '../src/logic/execution/engines/codex/engine';
 import type {EngineContext,EngineEvent,ToolCall} from '../src/logic/execution/rules/types';
-import type {ResolvedLlm} from '../src/logic/models';
+import type {ResolvedEngineModel} from '../src/logic/engines';
 
 export function codexResponse(res:http.ServerResponse,call?:{id:string;name:string;input:unknown},incomplete=false){
   res.writeHead(200,{'content-type':'text/event-stream'});let sequence_number=0;const send=(value:any)=>res.write('event: '+value.type+'\ndata: '+JSON.stringify({...value,sequence_number:sequence_number++})+'\n\n');
@@ -32,7 +32,7 @@ export async function codexFixture(options:{tool?:'internal'|'read'|'write'|'bas
     codexResponse(res,tool&&requests.length===1?{id:callId,name,input}:undefined,options.incompleteTool&&requests.length===1)
   }catch(error){errors.push(String(error));res.destroy()}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const llm:ResolvedLlm={apiKey:'test-codex-key',profile:{engine:'codex',id:randomUUID(),name:'Codex test',api:'openai-responses',auth:'api-key',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',model:'codex-test-model',contextWindow:200000,maxTokens:4096,reasoning:false}};
+  const llm:ResolvedEngineModel={apiKey:'test-codex-key',profile:{engine:'codex',id:randomUUID(),name:'Codex test',api:'openai-responses',auth:'api-key',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',model:'codex-test-model',contextWindow:200000,maxTokens:4096,reasoning:false}};
   const engineOptions={agentHome:home,prompt:'Use only the CBIM tools.',llm,allowNativeExecution:true,turnTimeoutMs:15000,knowledge:{list:async()=>[{name:'cbim_test_read',description:'Read test data',inputSchema:{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false}}],call:async(name:string,args:unknown,signal:AbortSignal,id?:string)=>{signal.throwIfAborted();invocations.push({name,args,id});return {content:[{type:'text',text:'test result'}]}}}};
   const context:EngineContext={task:{taskId:randomUUID(),workspaceId:'test',root:cwd,mode:'chat',agentId:'cbim:main',goal:'test',moduleIds:[],acceptance:[]},runId:randomUUID(),directory:path.join(root,'run'),emit:async event=>{events.push(event)},beforeTool:async call=>{calls.push(call);if(options.allow==='throw')throw Error('test authorization unavailable');return {allow:options.allow??true,reason:'CBIM test gate'}}};
   const engine=new CodexEngine(engineOptions);

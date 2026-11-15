@@ -5,7 +5,7 @@ import {ScopeReplanController,ScopeReplanPool,checkedReplanPreview,checkedReplan
 import {replanTarget,type ScopeReplanView} from '../src/view/tasks/useScopeReplan';
 import {ScopeReplanForm} from '../src/view/tasks/ScopeReplanForm';
 import {ScopeGoalPanel} from '../src/view/tasks/ScopeGoalPanel';
-import {SessionTaskView} from '../src/view/tasks/SessionTaskView';
+import {SessionTaskReview} from '../src/view/tasks/SessionTaskReview';
 import type {ReplanPreview,ReplanRequest,ReplanReceipt,DispatchScope,ScopeSummary,GraphSnapshot} from '../src/bridge/contracts/dispatch';
 import type {ScopeGoalState} from '../src/view/tasks/scope-state';
 
@@ -130,7 +130,7 @@ it('条件面板公开必覆盖模块与继承人工项，不能批准/删改；
 
 it('对话卡与任务根使用同一视图且表单不藏在目标details；未知只能原命令查询重试',()=>{
   const graph=scopeState(),card=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:graph,compact:true,replan:base}));expect(card.indexOf('scope-replan-form')).toBeLessThan(card.indexOf('scope-goal-details'));
-  const root=renderToStaticMarkup(createElement(SessionTaskView,{workspaceId:'workspace',taskId:'root',runs:[],queued:[],now:0,busy:false,onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{},graph:graph.graph,scopeState:graph,replan:base,selectedTaskId:'session:root',onSelectTask:()=>{}}));expect(root).toContain('scope-replan-form');expect(root).toContain(message);
+  const root=renderToStaticMarkup(createElement(SessionTaskReview,{workspaceId:'workspace',taskId:'root',runs:[],queued:[],now:0,busy:false,onQueueChange:()=>{},onQueueContinue:()=>{},onChat:()=>{},onStop:()=>{},graph:graph.graph,scopeState:graph,replan:base,selectedTaskId:'session:root',onSelectTask:()=>{}}));expect(root).toContain('scope-replan-form');expect(root).toContain(message);
   const request:ReplanRequest={...identity,commandId:command,source:{inspectionScopeId:scopeId,expectedBasis:preview().basis!},input:{message},options:{...model,permission:'ask'}};
   const unknown={...base,editable:false,record:{inspectionScopeId:scopeId,message,permission:'ask' as const,attempt:{request,proof:preview(),phase:'unknown' as const,uncertain:true}}};
   const html=renderToStaticMarkup(createElement(ScopeReplanForm,{state:unknown}));expect(html).toContain('scope-replan-query');expect(html).toContain('scope-replan-retry');expect(html).not.toContain('scope-replan-submit');expect(html).toMatch(/readonly=""/i);

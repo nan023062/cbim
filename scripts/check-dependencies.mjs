@@ -45,6 +45,8 @@ const businessView='src/logic/knowledge/rules/read-models/workspace.ts';
 const projectRoot='src/logic/workspace/rules/project-root.ts';
 // utility 通用入口只能组合环境无关实现，Node 算法必须显式选用独立入口。
 const utilityPortable=['src/core/utility/index.ts','src/core/utility/json.ts','src/core/utility/async.ts','src/core/utility/strings.ts','src/core/utility/bytes.ts','src/core/utility/graphs.ts'];
+const enginePublic='src/logic/engines/index.ts',engineService='src/logic/engines/service/index.ts';
+const allowsEngineAccess=(from,to)=>from==='src/logic/engines/package-status.ts'&&to==='src/logic/updates/engine-artifacts.ts'||to===enginePublic&&(from.startsWith('src/logic/')||from==='src/bridge/contracts/engines.ts')||to===engineService&&(from.startsWith('src/bridge/server/')||isService(from));
 const modelPublic='src/logic/models/index.ts';
 const modelService='src/logic/models/service/index.ts';
 // 纯模型与有副作用的服务入口分开；引擎和编排的访问权由模块边界进一步收紧。
@@ -52,7 +54,7 @@ export function allowsModelAccess(from,to){
   if(to===modelPublic)return from.startsWith('src/logic/')||from==='src/bridge/contracts/models.ts';
   return to===modelService&&(from.startsWith('src/bridge/server/')||isService(from));
 }
-const modelBridgeNames=new Set(['LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','connectionForEngine','providerSupportsEngine','DiscoveredModel','engineSupportsApi','engineLabel','engineApi','loopEngineSchema','agentModelSelectionSchema','LoopEngine','AgentModelSelection']);
+const modelBridgeNames=new Set(['EmbeddingModel','EmbeddingConnection','selectProviderConnection','LlmDefinition','LlmModel','LlmProfile','LlmSettings','LlmApi','AlternateConnection','llmApiSchema','connectionSchema','definition','providerPresets','identifyProvider','DiscoveredModel']);
 // Web 仅按已迁移的纯契约/服务入口放行；Electron 只由桌面入口装配。
 const webPublic='src/logic/web/index.ts';
 const webService='src/logic/web/service/index.ts';
@@ -74,10 +76,13 @@ const moduleBoundaries=[
   // 视图专属适配可以组合共享 Core，但不反向依赖页面、通信契约或后端实现。
   {sources:['src/view/foundations/'],allow:['src/view/foundations/','src/core/utility/index.ts']},
   {sources:utilityPortable,allow:utilityPortable},
-  // 引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
-  {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic]},
+  // 记忆包仅此存储实现使用公开原子单文件机制，目录权限与正式知识仍由业务边界负责。
+  {sources:['src/logic/execution/engines/memory/storage.ts'],allow:['src/logic/execution/engines/memory/','@domain-public','src/core/platform/node/files/index.ts']},
+  // 其它引擎只组合可移植算法，不借此接入 files/web、平台适配或 Node 私有实现。
+  {sources:['src/logic/execution/engines/'],allow:['src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic]},
   // 更新子系统仅复用环境无关的数据消费入口，不因此取得 Main 服务或其他基础方案的依赖权。
-  {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/core/utility/index.ts']},
+  {sources:['src/logic/updates/service/engine-artifacts.ts'],allow:['src/logic/updates/service/','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts','src/core/platform/node/files/index.ts']},
+  {sources:['src/logic/updates/service/'],allow:['src/logic/updates/service/','src/logic/updates/contracts.ts','src/logic/updates/engine-artifacts.ts','src/core/utility/index.ts']},
   {sources:['src/view/execution-view/'],allow:['src/view/execution-view/','src/view/components/','src/bridge/contracts/']},
   {sources:['src/view/tasks/'],allow:['src/view/tasks/','src/view/execution-view/','src/view/components/','src/view/foundations/utility/index.ts','src/bridge/contracts/']},
   {sources:[foundation],allow:[foundation,'src/core/errors.ts','src/core/utility/index.ts','src/core/platform/node/digest.ts']},
@@ -92,12 +97,12 @@ const moduleBoundaries=[
   {sources:['src/logic/budget/rules/model-request-budget-storage.ts'],allow:['src/logic/budget/rules/scope-budget.ts','src/logic/budget/rules/model-request-budget.ts']},
   {sources:['src/logic/execution/rules/engine-tools.ts'],allow:[]},
   {sources:['src/logic/execution/rules/index.ts'],allow:['src/logic/execution/rules/types.ts','src/logic/execution/rules/storage.ts','src/logic/execution/rules/runtime/runtime.ts','src/logic/execution/rules/member-run.ts','src/logic/execution/rules/input-source.ts','src/logic/execution/rules/conversation-binding.ts']},
-  {sources:['src/logic/budget/runtime/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/logic/budget/runtime/scope-budget-service.ts']},
+  {sources:['src/logic/budget/runtime/model-request-budget-service.ts'],allow:[foundation,'src/logic/budget/rules/model-request-budget-storage.ts','src/logic/budget/rules/model-request-budget.ts','src/logic/budget/rules/model-request-budget-rules.ts','src/logic/budget/rules/model-request-configuration.ts',modelPublic,'src/logic/budget/rules/request-budget.ts','src/logic/team/rules/workspace-member-rules.ts','src/logic/budget/runtime/scope-budget-service.ts']},
   // 领域样本不能通过 helpers 或其他中间文件重新加载完整应用。
   {sources:['tests/knowledge-data.ts'],allow:[knowledgeTypes,foundation]},
   {sources:['tests/knowledge-fixture.ts'],allow:[knowledgeTypes,foundation,'src/logic/knowledge/rules/knowledge.ts','tests/knowledge-data.ts']},
   // 调度器只组合可移植公开算法，不取得 Node、files 或 web 的访问权。
-  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,webPublic,feedbackPublic]},
+  {sources:[...orchestrationRoots],allow:[...orchestrationRoots,'src/logic/execution/engines/','@domain-public','src/core/utility/index.ts',modelPublic,enginePublic,webPublic,feedbackPublic]},
 ];
 const matchesBoundary=(file,entry)=>{
   if(entry==='@domain-public')return isDomainFile(file)&&domainPublicEntries.has(file)||['src/core/errors.ts','src/core/json.ts','src/core/platform/node/serialization.ts'].includes(file);
@@ -118,6 +123,8 @@ export const externalLoads = [
 ];
 // 冷壳从已验证的构建目录加载固定业务入口；仍把源码边纳入分层与循环检查，不作为外部豁免。
 export const generatedLoads = [
+  {file:'src/logic/execution/assembly/engine-package-loader.ts',expression:'loadAdapter(descriptor.entry)',source:'src/logic/execution/assembly/engine-adapters.ts'},
+  {file:'scripts/build-engine-adapters.mjs',expression:'load(file)',source:'src/logic/execution/assembly/engine-adapters.ts'},
   {file:'src/bridge/server/bootstrap/desktop.ts',expression:'loadApplication(entry)',source:'src/bridge/server/main.ts'},
 ];
 
@@ -252,12 +259,12 @@ export function auditDependencies(root = process.cwd(), options = {}) {
       if(e.to.startsWith('src/logic/application/')&&!e.from.startsWith('src/logic/application/')&&!e.from.startsWith('src/bridge/server/'))return true;
       const domainAccess=isDomainFile(e.to)&&domainPublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/contracts/')||e.from.startsWith('src/bridge/server/')||e.from.startsWith('src/logic/'));
       const runtimeAccess=runtimePublicEntries.has(e.to)&&(e.from.startsWith('src/bridge/server/')||isService(e.from)||isOrchestration(e.from)||isEngine(e.from)&&isEngine(e.to));
-      const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
-      const publicAccess=allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
+      const serviceAccess=servicePublicEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/server/'))||businessDataEntries.has(e.to)&&(isService(e.from)||e.from.startsWith('src/bridge/contracts/'))||isService(e.from)&&[modelPublic,enginePublic,webPublic,feedbackPublic,resourcePublic].includes(e.to);
+      const publicAccess=allowsEngineAccess(e.from,e.to)||allowsModelAccess(e.from,e.to)||allowsWebAccess(e.from,e.to)||allowsFeedbackAccess(e.from,e.to)||allowsResourceAccess(e.from,e.to)||domainAccess||runtimeAccess||serviceAccess;
       if(isService(e.from)&&b==='logic'&&e.from.split('/')[2]!==e.to.split('/')[2]&&!publicAccess)return true;
       if(isEngine(e.to)&&!isEngine(e.from)&&!e.from.startsWith('src/logic/execution/assembly/'))return true;
       // 领域规则只组合领域与既有纯模型/反馈入口，不借目录迁移取得宿主服务权限。
-      if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&![modelPublic,feedbackPublic].includes(e.to))return true;
+      if(isDomainFile(e.from)&&e.to.startsWith('src/logic/')&&!isDomainFile(e.to)&&![modelPublic,enginePublic,feedbackPublic].includes(e.to))return true;
       if((!layers[a]||!layers[a].includes(b))&&!publicAccess)return true;
       // 跨业务仅接受登记的细粒度入口或普通模块 index；较窄私有边界仍单独检查。
       if(b==='logic'&&(!e.from.startsWith('src/logic/')||e.from.split('/')[2]!==e.to.split('/')[2])&&!/^src\/logic\/[^/]+\/index\.ts$/.test(e.to)&&!publicAccess)return true;

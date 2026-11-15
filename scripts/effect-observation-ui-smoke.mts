@@ -19,7 +19,7 @@ const provider=await effectObservationProvider({unsupported}),pageErrors:string[
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
   const source=await prepareUnknownEffect(setup,user,project,provider,unsupported),id=source.identity.workspaceId,rootSessionId=source.identity.rootSessionId;
   const other=await setup.dispatch('loop.chat',{id,message:data.otherGoal,options:source.seed.options});await effectWait(async()=>{const records=await effectRecords(user,id);return records.scopes.length===2&&records.scopes.every(scope=>scope.status==='closed')&&setup!.runtime.snapshot().pressure.activeRuns===0},provider,'auxiliary root closed');
   const originalRuns=await effectRunBytes(setup,user,id,rootSessionId),otherRuns=await effectRunBytes(setup,user,id,other.taskId),sourceRecords=await effectRecords(user,id),seedCounts={main:provider.main.length,member:provider.member.length,other:provider.other.length};

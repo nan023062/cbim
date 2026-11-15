@@ -4,6 +4,12 @@
 
 ## 制品与身份
 
+### 0.1.19 签名身份轮换
+
+0.1.19 新冷壳的 E 索引按当前公钥 SPKI DER SHA-256 命名为 `latest-<摘要>.json`，位于原 `runtime-engines` Release。旧 `latest.json` 保持原字节，不覆盖旧客户端的更新身份。C/R 通道仍为 `runtime-c<C>/latest.json`。
+
+生成新 E 索引继续使用 `pnpm sign:engines` 校验并签名候选，本地输出仍叫 `latest.json`；上传前调用 `engineIndexAsset(cold.publicKey)` 确定新客户端的附件名，以该名称另存并上传。这个身份的首次索引使用序号 2，高于已兼容旧索引的 1；后续递增并提供同身份前一索引。历史身份仅由冷宿主固定，用于本地 E 来源重验，不能用于新资源或新远程索引。候选安装前必须匿名回读新索引、验签并核对所有附件；新客户端实际 `engines.check` 和旧安装/停用状态保留纳入验收。操作事实以本次发布回执为准。
+
 | 制品 | 内容与触发条件 | 入口 |
 | --- | --- | --- |
 | C | 固定 bootstrap、Electron/Node/Chromium、koffi、安装配置和资源验签公钥；这些输入变化时提高三段 code 版本 | `pnpm make:desktop [--unsigned]` |

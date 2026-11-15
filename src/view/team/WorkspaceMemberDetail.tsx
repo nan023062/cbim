@@ -3,7 +3,7 @@
  * 设计原因：当前模板和模型配置不能覆盖历史采纳；内容差异与受控来源身份分开显示，不据同字节或启用状态推断运行资格。
  * 已采纳模型同时展示其冻结引擎，未声明的历史快照按 Pi 解释而不改写。
  */
-import {engineLabel} from '../../bridge/contracts/models';
+import {engineLabel} from '../../bridge/contracts/engines';
 import type {WorkspaceMemberDetail} from '../../bridge/contracts/workspace-members';
 import {KnowledgeSourceDetails} from '../knowledge/KnowledgeSourceDetails';
 const labels={same:'与已采纳一致',changed:'已变化，尚未采纳',missing:'当前来源缺失',invalid:'当前来源无法核实'};

@@ -13,7 +13,7 @@
 | [runtime-feed.ts](runtime-feed.ts) | 维护窗口内只读监管游标、最近确认快照和增量发布，供运行管理页面订阅。 |
 | [runtime-overview.css](runtime-overview.css) | 只读全局监管的自适应列表与统计。设计原因：沿用主题变量并在窄屏换行，身份长串不挤压原会话操作。 */ |
 | [runtime-view-state.ts](runtime-view-state.ts) | 全局运行页面的纯筛选、状态说明与原会话定位契约。 |
-| [RuntimeOverview.tsx](RuntimeOverview.tsx) | 全局只读运行总览，集中显示周期、人员、任务、准入等待及已报告消耗。 |
+| [RuntimeOverview.tsx](RuntimeOverview.tsx) | 全局只读运行总览，集中显示周期、Agent 实例、任务、准入等待及已报告消耗。 |
 | [RuntimeRows.tsx](RuntimeRows.tsx) | 全局监管中的独立只读行，分别呈现周期、任务、成员和运行，不混淆各自终态。 |
 | [useRuntime.ts](useRuntime.ts) | 把窗口共享的监管快照接入 React，并跟随文档可见性暂停后台读取。 |
 
@@ -255,3 +255,7 @@ RuntimeFeed 组合前端 AsyncGeneration；首订阅和末退订推进代次，r
 ## 监管记录分类
 
 RuntimeOverview 用目标与任务、成员实例、运行与用量、项目与队列四组面板组织同一只读快照。隐藏面板保持挂载以保留展开量；工作区与状态筛选共享且可清除，上方统计仍为全局。准入等待继续明确为独立快照，不与已启动运行混合。
+
+## 单人工具范围
+
+运行管理展示本地 Agent 实例的执行活动，不是人员在线状态。任务交接、阻塞与未知回执仍由原任务流程处理；不提供多人邀请、账号协作或人员消息入口。

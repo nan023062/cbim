@@ -16,6 +16,8 @@ new vm.Script(script);
 const pageLiteral=script.match(/const pages=(\[[\s\S]*?\n\])\.map/)[1];
 const pages=vm.runInNewContext(pageLiteral,Object.create(null),{timeout:1000});
 if(pages.length!==42||new Set(pages.map(p=>p[0])).size!==42)throw new Error('Page inventory mismatch');
+if(pages.some(p=>p[0]==='people')||!pages.some(p=>p[0]==='handoff'))throw new Error('Single-user handoff inventory mismatch');
+if(/真实人员协作|预览评论|人员在线状态|发送邀请/.test(script))throw new Error('Removed multi-user entry remains');
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
 // 动态模板可包含重复的同页标识；这里只检查正文静态部分。
 const staticHtml=html.split('<script>')[0];

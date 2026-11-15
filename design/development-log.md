@@ -1,3 +1,8 @@
+## 2026-11-15：0.1.20 候选准备（#91/#92）
+
+- 接入已确认的 Flow C SVG，生成同源 PNG 与多尺寸 ICO；版本设为 0.1.20，明确未签名 Windows 模式及沿用 0.1.19 资源公钥。官网版本仍为公开的 0.1.19。
+- 验收器登记实际上一公开版 0.1.19 的侧栏显式安装与保留检查；不接受未公开的 R2 前置。真实全新安装阶段新增欢迎页明暗截图、EXE/安装器原生图标像素比对及品牌资源摘要校验。
+- pnpm build:brand、pnpm check:brand、pnpm build:website 通过；pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs：90 项通过。完整 CI、制品构建和隔离安装将在冻结提交后执行，最终回执回填 PR/Issue，不能提前声明通过。
 ## 2026-11-15：design 全目录设计与运行资源分离（#92）
 
 - 基线 83fb0e33；用户授权将相同规则扩展到全部 design 目录。按 Builtins、Rules、装配、打包和引用核对受版本控制的完整目录清单。再迁移 24 份运行正文/Schema 到 assets/capability、connector、runtime、task；前一步 business 两份资源继续复用。设计、记忆说明、UX 原型、发布说明、公钥与历史验证保留，分类依据及逐文件清单见 [目录审计](verification/design-runtime-assets-20261115.md)。

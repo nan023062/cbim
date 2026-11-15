@@ -1,6 +1,6 @@
 // 在启动安装器之前核实验收输入；旧版必须明确给出，指定历史版验收与实际上一公开版验收分别记录。
 import assert from 'node:assert/strict';
-const verifiedPreviousVersions=['0.1.0', '0.1.1', '0.1.2', '0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15', '0.1.16', '0.1.17', '0.1.18'];
+const verifiedPreviousVersions=['0.1.0', '0.1.1', '0.1.2', '0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.1.8', '0.1.9', '0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15', '0.1.16', '0.1.17', '0.1.18', '0.1.19'];
 
 export function acceptanceInputs(env) {
   const version = env.CBIM_ACCEPTANCE_VERSION, previousVersion = env.CBIM_ACCEPTANCE_PREVIOUS_VERSION;
@@ -8,7 +8,7 @@ export function acceptanceInputs(env) {
   assert.match(version, /^0\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
   // 已核实的旧界面显式枚举；不能把任意未来版本猜成已覆盖的更新交互。
   assert.ok(verifiedPreviousVersions.includes(previousVersion), 'Unsupported previous desktop version for upgrade acceptance');
-  const previousUpdateFlow = ['0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15', '0.1.16', '0.1.17', '0.1.18'].includes(previousVersion) ? 'prefetch' : ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.1.8', '0.1.9'].includes(previousVersion) ? 'automatic' : 'two-step';
+  const previousUpdateFlow = ['0.1.10', '0.1.11', '0.1.12', '0.1.13', '0.1.14', '0.1.15', '0.1.16', '0.1.17', '0.1.18', '0.1.19'].includes(previousVersion) ? 'prefetch' : ['0.1.3', '0.1.4', '0.1.5', '0.1.6', '0.1.7', '0.1.8', '0.1.9'].includes(previousVersion) ? 'automatic' : 'two-step';
   const target = version.split('.').map(Number), previous = previousVersion.split('.').map(Number);
   assert.ok(target[1] > previous[1] || (target[1] === previous[1] && target[2] > previous[2]), 'Target version must be newer than previous version');
   assert.match(commit, /^[a-f0-9]{40}$/); assert.match(expected, /^[a-f0-9]{64}$/);

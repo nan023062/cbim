@@ -42,7 +42,7 @@ async function launch(){
   await active().getByRole('textbox',{name:'对话草稿',exact:true}).waitFor();
 
 }
-async function picker(label:string,option:string){await active().getByRole('combobox',{name:label,exact:true}).click();await page!.getByRole('listbox',{name:label+'选项',exact:true}).getByRole('option').filter({hasText:option}).click()}
+async function picker(label:string,option:string){if(label==='Loop 引擎'){await active().getByRole('button',{name:label,exact:true}).click();await page!.getByRole('dialog',{name:'引擎选择与安装'}).getByRole('button',{name:option,exact:true}).click();return}await active().getByRole('combobox',{name:label,exact:true}).click();await page!.getByRole('listbox',{name:label+'选项',exact:true}).getByRole('option').filter({hasText:option}).click()}
 async function openTeam(){const expand=page!.getByRole('button',{name:'展开右侧扩展',exact:true});if(await expand.isVisible())await expand.click();const tab=page!.getByRole('tab',{name:'团队架构',exact:true});if(await tab.count())await tab.click();else{await page!.getByRole('button',{name:'新增扩展页签',exact:true}).click();await view().getByRole('button',{name:'打开团队架构',exact:true}).click()}await view().getByTestId('team-workspace-members').waitFor()}
 try{
   setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();entry=await setup.dispatch('add',{path:project});team=await seedTeam(setup.workspace(entry.id));
@@ -50,7 +50,7 @@ try{
     const value=await setup.models.save({profile:{name:'Desktop '+engine,api:engine==='pi'?'openai-completions':engine==='codex'?'openai-responses':'anthropic-messages',auth:'none',baseUrl:engine==='codex'?codexUrl:providers[engine].url,defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:engine+' enabled',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false},{id:'disabled-model',name:'Must not appear',enabled:false,contextWindow:200000,maxTokens:4096,reasoning:false}]}});ids[engine]=value.profiles.find(p=>p.name==='Desktop '+engine)!.id;
   }
   await setup.shutdown();setup=undefined;await launch();
-  stage='main engine menu';await active().getByRole('combobox',{name:'Loop 引擎',exact:true}).click();assert.deepEqual(await page!.getByRole('listbox',{name:'Loop 引擎选项',exact:true}).getByRole('option').allTextContents(),['Pi','Claude Code','Codex']);await page!.keyboard.press('Escape');
+  stage='main engine menu';await active().getByRole('button',{name:'Loop 引擎',exact:true}).click();assert.deepEqual(await page!.getByRole('dialog',{name:'引擎选择与安装'}).locator('[data-engine-choice] b').allTextContents(),['Pi','Claude Code','Codex']);await page!.keyboard.press('Escape');
   await picker('执行权限','只读访问');
   const engines=['pi','claude-code','codex','pi','codex','codex'] as const;
   for(const [index,engine] of engines.entries()){
@@ -79,7 +79,7 @@ try{
   await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('pi');
   await mainDialog.getByRole('combobox',{name:'Agent 模型',exact:true}).selectOption(JSON.stringify([ids['claude-code'],'request-budget-model']));
   await mainDialog.getByRole('button',{name:'保存主 Agent 配置',exact:true}).click();await mainDialog.waitFor({state:'hidden'});
-  await until(async()=>(await active().getByRole('combobox',{name:'Loop 引擎',exact:true}).innerText()).includes('Pi'),'主 Agent 页面同步到对话栏');
+  await until(async()=>(await active().getByRole('button',{name:'Loop 引擎',exact:true}).innerText()).includes('Pi'),'主 Agent 页面同步到对话栏');
   await picker('Loop 引擎','Claude Code');
   await view().getByTestId('team-main-agent-settings').click();mainDialog=page!.getByRole('dialog',{name:'主 Agent 配置',exact:true});
   await until(async()=>await mainDialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).inputValue()==='claude-code','对话栏同步到主 Agent 页面');

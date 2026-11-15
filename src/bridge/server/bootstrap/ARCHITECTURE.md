@@ -23,7 +23,7 @@ class N_src_bridge_server_bootstrap_desktop_ts["desktop.ts"] {
   <<module>>
 }
 ```
-直接依赖：[selection.ts](selection.ts)、[../../../logic/updates/service/runtime-journal.ts](../../../logic/updates/service/runtime-journal.ts)、[../../../logic/updates/service/runtime-manifest.ts](../../../logic/updates/service/runtime-manifest.ts)、[../../../logic/updates/service/runtime-store.ts](../../../logic/updates/service/runtime-store.ts)、[../../../logic/updates/service/runtime-updates.ts](../../../logic/updates/service/runtime-updates.ts)、[../../../logic/updates/service/desktop-updates.ts](../../../logic/updates/service/desktop-updates.ts)、[../../../logic/updates/service/nsis-updater.ts](../../../logic/updates/service/nsis-updater.ts)、[../../../logic/updates/service/restart-profile.ts](../../../logic/updates/service/restart-profile.ts)、[../../../logic/updates/service/runtime-host.ts](../../../logic/updates/service/runtime-host.ts)。
+直接依赖：[selection.ts](selection.ts)、[../../../logic/updates/service/runtime-journal.ts](../../../logic/updates/service/runtime-journal.ts)、[../../../logic/updates/service/runtime-manifest.ts](../../../logic/updates/service/runtime-manifest.ts)、[../../../logic/updates/service/runtime-store.ts](../../../logic/updates/service/runtime-store.ts)、[../../../logic/updates/service/managed-engines.ts](../../../logic/updates/service/managed-engines.ts)、[../../../logic/updates/service/runtime-updates.ts](../../../logic/updates/service/runtime-updates.ts)、[../../../logic/updates/service/desktop-updates.ts](../../../logic/updates/service/desktop-updates.ts)、[../../../logic/updates/service/nsis-updater.ts](../../../logic/updates/service/nsis-updater.ts)、[../../../logic/updates/service/restart-profile.ts](../../../logic/updates/service/restart-profile.ts)、[../../../logic/updates/service/runtime-host.ts](../../../logic/updates/service/runtime-host.ts)。
 
 ### selection.ts
 
@@ -79,6 +79,10 @@ N_src_bridge_server_bootstrap_desktop_ts ..> N_src_bridge_server_bootstrap_selec
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## 对话中的引擎管理端口
+
+冷壳通过 ManagedEngines 装配 engineStatus 与 resolveEngine，共用受管缓存、固定签名版本及退出信号。新增状态端口随 C 发布；旧 C 仅支持原 resolve 时，新 R 不假造可安装状态，而说明需更新应用。启动仍不扫描 E，仅首次目录查询/执行时核验缓存。
 
 # 固定桌面冷壳
 

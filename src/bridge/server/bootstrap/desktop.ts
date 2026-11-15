@@ -1,6 +1,7 @@
 /**
  * 作用定位：固定冷壳的桌面启动入口，选择已签名资源、持有更新与引擎缓存，并把窄端口交给业务入口。
  * 设计原因：日常 TS / UI 更新不替换 Electron 或冷壳；启动失败先保留原数据，恢复界面不加载失败的业务代码。
+ * 引擎目录和准备委托 ManagedEngines；对话菜单与执行工厂共享固定版本及在途下载。
  * 加载边界：唯一计算式应用入口由已验证清单固定为 .vite/build/main.js；依赖检查显式记录该装配边。
  */
 import {app,dialog} from 'electron';
@@ -12,6 +13,7 @@ import {selectBootResources} from './selection';
 import {RuntimeJournal} from '../../../logic/updates/service/runtime-journal';
 import {verifyRuntimeManifest,type ColdRuntime} from '../../../logic/updates/service/runtime-manifest';
 import {RuntimeStore} from '../../../logic/updates/service/runtime-store';
+import {ManagedEngines} from '../../../logic/updates/service/managed-engines';
 import {RuntimeUpdates} from '../../../logic/updates/service/runtime-updates';
 import {DesktopUpdates} from '../../../logic/updates/service/desktop-updates';
 import {NsisUpdateInstaller} from '../../../logic/updates/service/nsis-updater';
@@ -54,20 +56,14 @@ function boot(){
   if(selection.pending)selection.journal.accessData(selection.digest);
   app.setPath('userData',path.join(userRoot,'desktop'));app.setPath('sessionData',path.join(userRoot,'desktop'));
   const store=new RuntimeStore(cacheRoot,cold),controller=new AbortController();
-  const engines=new Map<string,Promise<{root:string;version:string;entry:string;identity:string}>>();
-  const preparation=new Map<string,{engine:'pi'|'claude-code'|'codex';version:string;progress?:number;error?:string}>();
+  const engines=new ManagedEngines(store,selection.manifest.engines,controller.signal);
   const host:DesktopRuntimeHost={assetsRoot:selection.root,cacheRoot:cacheIdentityRoot,codeVersion:cold.codeVersion,resourceVersion:selection.manifest.resourceVersion,
-    resolveEngine(kind){
-      let existing=engines.get(kind);if(existing)return existing;
-      const descriptor=selection.manifest.engines.find(engine=>engine.kind===kind);if(!descriptor)return Promise.reject(Error('此资源版本没有兼容的引擎包'));
-      preparation.set(kind,{engine:kind,version:descriptor.version,progress:0});
-      existing=store.prepare(descriptor.package,controller.signal,progress=>preparation.set(kind,{engine:kind,version:descriptor.version,progress})).then(root=>{preparation.delete(kind);return {root,version:descriptor.version,entry:path.join(root,descriptor.entry),identity:descriptor.package.sha256}}).catch(error=>{engines.delete(kind);const message='准备 '+kind+' '+descriptor.version+' 运行包失败：'+String(error)+'。请检查网络和磁盘后重试，原会话数据已保留。';preparation.set(kind,{engine:kind,version:descriptor.version,error:message});throw Error(message)});
-      engines.set(kind,existing);return existing;
-    },
+    resolveEngine:kind=>engines.resolveEngine(kind),
+    engineStatus:()=>engines.status(),
     stopPreparingEngines(){controller.abort()},
     updates(beforeInstall,enabled){
-      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>[...engines.keys()]);
-      return new DesktopUpdates(cold.codeVersion,selection.manifest.notes,enabled,signal=>installer.latest(signal),installer,beforeInstall,selection.manifest.resourceVersion,()=>[...preparation.values()]);
+      const installer=new RuntimeUpdates(store,selection.journal,selection.manifest,new NsisUpdateInstaller(),()=>{app.relaunch();app.exit(0)},undefined,()=>engines.used());
+      return new DesktopUpdates(cold.codeVersion,selection.manifest.notes,enabled,signal=>installer.latest(signal),installer,beforeInstall,selection.manifest.resourceVersion,()=>engines.preparations());
     },
     confirm(){selection.journal.confirm(selection.digest)},
   };

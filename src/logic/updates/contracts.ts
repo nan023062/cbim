@@ -19,3 +19,9 @@ export interface DesktopUpdateStatus {
   /** 最近一次完成检查的 ISO 时间，包含失败尝试；结果由 phase/error 区分。 */
   checkedAt?:string;error?:string;
 }
+/** 引擎菜单的公开投影，不包含缓存路径、下载地址或凭据；版本由签名清单固定。 */
+export interface ManagedEngineStatus {
+  engine:'pi'|'claude-code'|'codex';
+  state:'install'|'update'|'ready'|'preparing'|'failed'|'unavailable'|'bundled';
+  version?:string;installedVersion?:string;progress?:number;error?:string;
+}

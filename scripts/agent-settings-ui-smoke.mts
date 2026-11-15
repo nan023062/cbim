@@ -30,17 +30,17 @@ view==='team'&&React.createElement(TeamView,{workspace,snapshot,refresh}),view==
 createRoot(document.getElementById('root')).render(React.createElement(App));
 `);
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},logLevel:'error',server:{host:'127.0.0.1',port:0},plugins:[{name:'real-app-ipc',configureServer(server){server.middlewares.use('/__engine_ipc',async(req,res)=>{
-  try{let raw='';for await(const chunk of req)raw+=chunk;const {action,args}=JSON.parse(raw);actions.push(action);if(['loop.chat','loop.resume','loop.enqueue'].includes(action))throw Error('此配置验收不授权启动模型');const value=await f.app.dispatch(action,args);res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:true,value}))}
+  try{let raw='';for await(const chunk of req)raw+=chunk;const {action,args}=JSON.parse(raw);actions.push(action);if(['loop.chat','loop.resume','loop.enqueue'].includes(action))throw Error('此配置验收不授权启动模型');const value=action==='desktop.engines.status'?['pi','claude-code','codex'].map(engine=>({engine,state:'bundled'})):await f.app.dispatch(action,args);res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:true,value}))}
   catch(error){res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:false,message:String(error)}))}
 })}}]});
 let browser;try{
   await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});const page=await browser.newPage({viewport:{width:1280,height:900}});page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+(server.httpServer!.address() as any).port+'/'+path.relative(root,out).replaceAll('\\','/')+'/index.html');
   const first=page.locator('#conversation-a'),second=page.locator('#conversation-b');
-  const engine=(scope=first)=>scope.getByRole('combobox',{name:'Loop 引擎',exact:true});
-  async function pick(label:string,value:string,scope=first){await scope.getByRole('combobox',{name:label,exact:true}).click();await page.getByRole('listbox',{name:label+'选项',exact:true}).getByRole('option',{name:value,exact:true}).click()}
+  const engine=(scope=first)=>scope.getByRole('button',{name:'Loop 引擎',exact:true});
+  async function pick(label:string,value:string,scope=first){if(label==='Loop 引擎'){await scope.getByRole('button',{name:label,exact:true}).click();await page.getByRole('dialog',{name:'引擎选择与安装'}).getByRole('button',{name:value,exact:true}).click();return}await scope.getByRole('combobox',{name:label,exact:true}).click();await page.getByRole('listbox',{name:label+'选项',exact:true}).getByRole('option',{name:value,exact:true}).click()}
   async function expectEngine(scope:typeof first,value:string){await page.waitForFunction(({id,value})=>document.querySelector(id+' [aria-label="Loop 引擎"]')?.textContent?.includes(value),{id:'#'+await scope.getAttribute('id'),value})}
-  await engine().click();assert.deepEqual(await page.getByRole('listbox',{name:'Loop 引擎选项'}).getByRole('option').allTextContents(),['Pi','Claude Code','Codex']);await page.keyboard.press('Escape');
+  await engine().click();assert.deepEqual(await page.getByRole('dialog',{name:'引擎选择与安装'}).locator('[data-engine-choice] b').allTextContents(),['Pi','Claude Code','Codex']);await page.keyboard.press('Escape');
   await pick('Loop 引擎','Claude Code');await expectEngine(first,'Claude Code');await first.getByText('选择兼容模型后将保存主 Agent 配置。').waitFor();
   await first.getByRole('textbox',{name:'对话草稿',exact:true}).fill('保留主 Agent 配置测试草稿');assert.equal(await first.getByRole('button',{name:'发送消息',exact:true}).isEnabled(),false);
   checks.push('legacy-profile-all-three-engines','no-compatible-model-blocks-send');
@@ -62,7 +62,7 @@ let browser;try{
   await page.getByRole('button',{name:'a',exact:true}).click();await expectEngine(first,'Codex');assert.equal(await first.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'保留主 Agent 配置测试草稿');checks.push('composer-to-agent-and-agent-to-composer','draft-preserved');
   assert.equal((await f.app.chatOptions(entry.id,{},[])).engine,'codex');
   await page.screenshot({path:path.join(out,'main-agent-shared.png')});
-  await page.getByRole('button',{name:'models',exact:true}).click();await page.getByRole('button',{name:'编辑',exact:true}).first().click();assert.equal(await page.getByRole('combobox',{name:'Loop 引擎',exact:true}).count(),0);assert.equal(await page.getByRole('combobox',{name:'接口协议',exact:true}).isEnabled(),true);checks.push('provider-has-no-engine-setting');
+  await page.getByRole('button',{name:'models',exact:true}).click();await page.getByRole('button',{name:'编辑',exact:true}).first().click();assert.equal(await page.getByRole('button',{name:'Loop 引擎',exact:true}).count(),0);assert.equal(await page.getByRole('combobox',{name:'接口协议',exact:true}).isEnabled(),true);checks.push('provider-has-no-engine-setting');
   await page.reload();await expectEngine(first,'Codex');checks.push('shared-setting-survives-reload');
   const current=await f.app.dispatch('agent.mainSettings',identity);await f.app.dispatch('agent.configureMain',{...current,selection:null});
   for(const profile of (await f.app.models.list()).profiles)await f.app.models.remove(profile.id);

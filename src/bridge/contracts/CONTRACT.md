@@ -1,3 +1,7 @@
+## 引擎管理公开契约
+
+ManagedEngineStatus 来自 Logic，区分 install/update/ready/preparing/failed/unavailable/bundled。desktop.engines.prepare 严格限定支持引擎，不接受路径、URL、版本或额外字段；status 只读。状态快照不能作为运行授权，实际执行继续校验固定包。
+
 ### 长期对话公共身份
 
 `dispatch` 导出纯 `TeamSession` 类型与严格 Schema，供 View 校验联合读取；只有逻辑办公室/角色/Session 标识和创建时间，无原生目录、执行入口或调度权限。

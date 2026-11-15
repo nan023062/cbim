@@ -5,7 +5,7 @@ import ts from 'typescript';
 import {parseIpcRequest,ipcSuccess} from '../src/bridge/contracts/ipc-call';
 
 // 执行 main.ts 真正注册的回调；仅替换 Electron/系统副作用，不复制分派实现。
-function desktop(){
+function desktop(runtime?:unknown){
   const file='src/bridge/server/main.ts',source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);
   let callback:ts.Expression|undefined;
   const visit=(node:ts.Node)=>{if(ts.isCallExpression(node)&&node.expression.getText(source)==='ipcMain.handle'&&node.arguments[0]?.getText(source)==="'cbim:call'")callback=node.arguments[1];ts.forEachChild(node,visit)};visit(source);
@@ -17,7 +17,7 @@ function desktop(){
   const terminalValue={output:'hello',running:false,exitCode:0},terminals={start:vi.fn(()=>terminalValue),read:vi.fn(()=>terminalValue),close:vi.fn()};
   const dialog={showOpenDialog:vi.fn(async()=>({canceled:true,filePaths:[]}))},shell={openExternal:vi.fn(async()=>{}),openPath:vi.fn(async()=>'')};
   const text=ts.transpile('('+callback.getText(source)+')',{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS});
-  const call=vm.runInNewContext(text,{window:{webContents},updates,application,terminals,dialog,shell,parseIpcRequest,ipcSuccess,URL,ChatInputs:class{}}) as (event:unknown,action:unknown,args?:unknown)=>Promise<{ok:boolean;value?:unknown;error?:{code?:string;message:string}}>;
+  const call=vm.runInNewContext(text,{window:{webContents},runtime,updates,application,terminals,dialog,shell,parseIpcRequest,ipcSuccess,URL,ChatInputs:class{}}) as (event:unknown,action:unknown,args?:unknown)=>Promise<{ok:boolean;value?:unknown;error?:{code?:string;message:string}}>;
   return {call:(action:unknown,args?:unknown)=>call(event,action,args),raw:call,event,status,updates,application,workspace,terminals,dialog,shell,terminalValue};
 }
 it('主 Frame 与安装期间门禁仍先于系统操作',async()=>{
@@ -43,4 +43,15 @@ it('畸形请求不触发终端、文件选择或链接操作，错误与业务�
   expect(await f.call(null)).toMatchObject({ok:false,error:{code:'ACTION'}});
   f.application.dispatch.mockRejectedValueOnce(Object.assign(Error('unknown result'),{code:'GOVERNANCE_APPLY_UNKNOWN'}));
   expect(await f.call('governance.apply',{})).toEqual({ok:false,error:{code:'GOVERNANCE_APPLY_UNKNOWN',message:'unknown result'}});expect(f.application.dispatch).toHaveBeenCalledTimes(1);
+});
+it('engine preparation validates a fixed engine and respects the installation gate',async()=>{
+  const value={engine:'pi',state:'ready'},runtime={engineStatus:vi.fn(async()=>[value]),resolveEngine:vi.fn(async()=>({}))},f=desktop(runtime);
+  expect(await f.call('desktop.engines.status')).toMatchObject({ok:true,value:[value]});expect(runtime.resolveEngine).not.toHaveBeenCalled();
+  expect(await f.call('desktop.engines.prepare',{engine:'pi',url:'https://untrusted'})).toMatchObject({ok:false});expect(runtime.resolveEngine).not.toHaveBeenCalled();
+  expect(await f.call('desktop.engines.prepare',{engine:'pi'})).toMatchObject({ok:true,value});
+  expect(runtime.resolveEngine).toHaveBeenCalledExactlyOnceWith('pi');
+  f.status.phase='installing';expect(await f.call('desktop.engines.prepare',{engine:'pi'})).toMatchObject({ok:false,error:{code:'UPDATING'}});
+  expect(runtime.resolveEngine).toHaveBeenCalledTimes(1);
+  expect(await desktop().call('desktop.engines.status')).toMatchObject({ok:true,value:[{engine:'pi',state:'bundled'},{engine:'claude-code',state:'bundled'},{engine:'codex',state:'bundled'}]});
+  expect(await desktop({}).call('desktop.engines.prepare',{engine:'pi'})).toMatchObject({ok:false});
 });

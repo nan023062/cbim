@@ -1,3 +1,12 @@
+## 2026-11-15：#95 对话引擎下拉菜单统一安装与更新
+
+- 来源：[Issue #95](https://github.com/nan023062/cbim/issues/95)，用户要求移除设置引擎分页、独立安装界面，将所有支持引擎及安装/更新/环形进度移入对话菜单。基线 `911347b7`，查询全部开放 Issues（上限 200，实际 2 项）后独立登记；当前源码 SettingsView 无引擎分页，不虚构删除。实际旧入口是首次执行自动准备与侧栏 E 进度，现统一到 EnginePicker，应用 C/R 更新保留。
+- View 默认显示三个引擎；安装/更新与配置选择分开，未就绪不可选；关闭菜单不停止或重放准备。Logic ManagedEngines 复用 RuntimeStore 的下载、解压和校验，状态只读本地缓存；同引擎的显式准备与执行解析合并，目标由签名清单固定，更新不会覆盖旧运行目录。准备成功的摘要/版本记录只用于展示，不授予路径或执行信任。Bridge 严格枚举请求，主 Frame/应用安装门禁保留，Codex 同时准备其 Pi 工具依赖。
+- 兼容边界：新的 engineStatus 随冷壳发布，旧冷壳明确不可管理；开发态显示随应用提供。可更新仅表示当前签名清单目标发生改变，不查询任意引擎上游最新版。本次没有下载真实引擎或改变本机安装，未打包、安装验收、完整 CI、合并或发布。
+- 受影响服务、IPC、旧更新投影：`pnpm exec vitest run tests/managed-engines.test.ts tests/ipc-desktop.test.ts tests/update-button-state.test.ts` 12 项通过。覆盖只读目录、真实临时缓存准备、并发去重、进度、失败重试、固定版本变化和旧目录保留、IPC 额外字段/安装门禁。调用契约与运行版本冻结消费者：`pnpm exec vitest run tests/ipc-requests.test.ts tests/engine-runtime-binding.test.ts` 18 项通过。
+- 新服务公开入口及源说明/对话消费者：`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/inline-conversation.test.ts` 166 项通过。类型检查 `pnpm typecheck`、`pnpm check:architecture`（0 循环/违规）、`pnpm check:test-modules`（506 文件）通过。同步源文件注释及 conversation、updates、Bridge/contracts、server/bootstrap、Logic/updates/service 的 CONTRACT/类图，生成器更新 8 份受影响架构文档。
+- `$env:CBIM_UI_ROOT='C:\XDTWorkspace\cbim-ai'; node scripts/engine-menu-ui-smoke.mjs` 通过五组真实组件 Edge 无头检查：全部引擎可见且查看无安装、更新进度与关闭重开不重放、320px/减少动效、安装不自动选择与草稿保留、失败显式重试。首次发现准备按钮移除导致焦点落到 body 后 Escape 失效，修复后通过；另修验收脚本样式路径。证据 `test-results/engine-menu-report.json`、`engine-menu-mobile.png`，页面错误为空；组件状态为明确替身，不冒充安装版验证。旧配置、自动化、多引擎和应用更新验收脚本同步选择器/断言，本轮未执行其完整安装验收。
+
 ## 2026-11-15：#94 独立 Agent、执行循环与递归调度首片实现
 
 - 来源：[Issue #94](https://github.com/nan023062/cbim/issues/94)，用户授权替换产品源码并明确要求三种独立系统封装。基线 `06509c1b`；沿主输入、运行受理、引擎装配、工具执行、子运行记录与只读展示核查，未宣称全仓逐行审计。原品牌素材及领域引擎草稿不纳入提交。

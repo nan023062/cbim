@@ -1,4 +1,5 @@
 /**
+ * 引擎选择和受管安装统一由 EnginePicker 提供，安装不更改主 Agent 配置或正在执行的任务。
  * 粘贴仅作用输入框：图片保存有界原字节，纯绝对路径列表先校验并变为引用，失败保留原文字；不自动发送。
  * 主对话连续展示全部真实消息和工具调用；旧话题归属仅用于兼容恢复，不再作为正文导航门槛。
  * Agent/Team 不再是聊天模式；旧协作选项不从输入框修改，新发送使用统一的自动执行入口。
@@ -23,6 +24,7 @@ import {checkedIpcCall} from '../../bridge/contracts/ipc-call';
 import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {WorkspaceView} from '../../bridge/contracts/workspace';
 import type {RunSummary,ConversationThreadView} from '../../bridge/contracts/execution';
+import {EnginePicker} from './EnginePicker';
 import {providerSupportsEngine,engineLabel,loopEngineSchema} from '../../bridge/contracts/models';
 import type {LlmSettings,LoopEngine} from '../../bridge/contracts/models';
 import type {ViewTab,TabKind} from '../shell/tabs';
@@ -304,7 +306,7 @@ export function Conversation({chatNavigation,selectedChild,onAgentChat,onTeamCon
           {value:'ask',label:'默认权限',icon:'hand',description:'修改业务文件、提交知识和运行命令前逐次确认'},
           {value:'execute',label:'完全访问',icon:'warning',description:'自动执行业务文件、知识提交和命令操作；仍检查工作区边界及知识版本'},
         ]}/></div>
-        <div className="chat-controls-right"><ComposerPicker label="Loop 引擎" value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel="选择引擎" onChange={value=>void chooseEngine(value)} options={loopEngineSchema.options.map(engine=>({value:engine,label:engineLabel(engine)}))}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
+        <div className="chat-controls-right"><EnginePicker value={chosenEngine} disabled={busy||mainAgent.busy||!models||!mainAgent.value} onChange={value=>void chooseEngine(value)}/><ComposerPicker label="对话模型" value={pendingEngine?'':selection} onChange={value=>void chooseModel(value)} disabled={busy||mainAgent.busy||!models||!mainAgent.value} fallbackLabel={models?'所选模型不可用':'正在加载模型…'} searchable align="right" options={[
           ...(defaultModel?[{value:'',label:defaultModel.name||defaultModel.id,description:'使用设置中的默认供应商和模型',group:'默认'}]:[]),
           ...(compatibleProfiles.flatMap(p=>p.models.filter(m=>m.enabled).map(m=>({value:JSON.stringify([p.id,m.id]),label:m.name||m.id,description:p.name+' / '+m.id,group:p.name})))||[]),
         ]}/>{taskOpen&&<SendButton disabled={stopping} isStreaming stopLabel={waiting?'取消当前任务':undefined} onClick={()=>void stopCurrent()}/>} {(!taskOpen||!!tab.draft?.trim()||attachments.length>0)&&<SendButton disabled={!canSend} continuing={waiting} queued={shouldQueue&&!waiting} onClick={()=>void send()}/>}</div></div>

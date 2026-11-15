@@ -2,9 +2,15 @@
   "version": 1,
   "modules": {
     "agents": {
-      "roots": ["src/logic/agents/"],
+      "roots": [
+        "src/logic/agents/"
+      ],
       "tests": {
-        "unit": ["tests/agent-object.test.ts", "tests/agent-call-scheduler.test.ts", "tests/agent-execution-loop.test.ts"],
+        "unit": [
+          "tests/agent-object.test.ts",
+          "tests/agent-call-scheduler.test.ts",
+          "tests/agent-execution-loop.test.ts"
+        ],
         "contract": [],
         "integration": []
       }
@@ -17,7 +23,9 @@
       ],
       "tests": {
         "unit": [],
-        "contract": ["tests/agent-call-assembly.test.ts"],
+        "contract": [
+          "tests/agent-call-assembly.test.ts"
+        ],
         "integration": [
           "tests/abandoned-checkpoint-dependency-pi.test.ts",
           "tests/abandoned-checkpoint-dependency-service.test.ts",
@@ -839,7 +847,8 @@
           "tests/runtime-journal.test.ts",
           "tests/runtime-manifest.test.ts",
           "tests/runtime-store.test.ts",
-          "tests/runtime-updates.test.ts"
+          "tests/runtime-updates.test.ts",
+          "tests/managed-engines.test.ts"
         ],
         "integration": []
       }

@@ -508,6 +508,8 @@ class N_src_bridge_contracts_ipc_desktop_ts["ipc-desktop.ts"] {
 }
 class N_src_bridge_contracts_ipc_desktop_ts_DesktopIpcResponses["DesktopIpcResponses"] {
   <<interface>>
+  +'desktop.engines.status'
+  +'desktop.engines.prepare'
   +'desktop.updates.status'
   +'desktop.updates.check'
   +'desktop.updates.download'
@@ -1300,6 +1302,10 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## 引擎管理公开契约
+
+ManagedEngineStatus 来自 Logic，区分 install/update/ready/preparing/failed/unavailable/bundled。desktop.engines.prepare 严格限定支持引擎，不接受路径、URL、版本或额外字段；status 只读。状态快照不能作为运行授权，实际执行继续校验固定包。
 
 ### 长期对话公共身份
 

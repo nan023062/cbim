@@ -12,6 +12,7 @@
 | --- | --- |
 | [desktop-releases.ts](desktop-releases.ts) | 读取固定 GitHub 仓库中独立 desktop-v 通道的公开稳定发布。 |
 | [desktop-updates.ts](desktop-updates.ts) | 桌面更新的单实例状态机，后台检查并预下载，用户确认后才排空业务和重启安装。 |
+| [managed-engines.ts](managed-engines.ts) | 受管引擎目录、准备进度及固定版本解析；由冷壳注入已验签的清单和缓存。 |
 | [nsis-updater.ts](nsis-updater.ts) | electron-updater 的 Windows NSIS 适配，固定发布源并优先差分下载、校验安装包。 |
 | [release-http.ts](release-http.ts) | 更新子系统读取公开 Release 列表的独立 HTTP 边界。 |
 | [restart-profile.ts](restart-profile.ts) | 恢复安装器显式传回的本机用户目录，供 Main 在初始化任何业务数据之前调用。 |
@@ -95,6 +96,32 @@ N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_d
 ```
 
 直接依赖：[../contracts.ts](../contracts.ts)、[desktop-releases.ts](desktop-releases.ts)。
+
+### managed-engines.ts
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_managed_engines_ts_ManagedEngines["ManagedEngines"] {
+  +status()
+  +preparations()
+  +used()
+  +resolveEngine()
+  -store
+  -descriptors
+  -signal
+  -states
+  -jobs
+  -initialization
+  -initialize()
+  -prepare()
+}
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_managed_engines_ts_ManagedEngines : 声明
+```
+
+直接依赖：[runtime-manifest.ts](runtime-manifest.ts)、[runtime-store.ts](runtime-store.ts)、[runtime-archive.ts](runtime-archive.ts)、[../contracts.ts](../contracts.ts)。
 
 ### nsis-updater.ts
 
@@ -199,6 +226,7 @@ class N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost["DesktopRun
   +codeVersion
   +resourceVersion
   +resolveEngine()
+  +engineStatus()
   +stopPreparingEngines()
   +updates()
   +confirm()
@@ -206,7 +234,7 @@ class N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost["DesktopRun
 N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost : 声明
 ```
 
-直接依赖：[desktop-updates.ts](desktop-updates.ts)。
+直接依赖：[desktop-updates.ts](desktop-updates.ts)、[../contracts.ts](../contracts.ts)。
 
 ### runtime-journal.ts
 
@@ -407,24 +435,53 @@ class N_src_logic_updates_service_release_http_ts["release-http.ts"] {
 class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
   <<module>>
 }
-class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
-  <<module>>
-}
-N_src_logic_updates_service_desktop_releases_ts ..> N_src_logic_updates_service_release_http_ts : 导入依赖
-N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
-N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
-N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
-class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
+class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
+class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
+  <<module>>
+}
+N_src_logic_updates_service_desktop_releases_ts ..> N_src_logic_updates_service_release_http_ts : 导入依赖
+N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
+  <<module>>
+}
+N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
+N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
+N_src_logic_updates_service_nsis_updater_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_runtime_archive_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
+class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_host_ts["runtime-host.ts"] {
@@ -436,18 +493,18 @@ class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
   <<module>>
 }
-N_src_logic_updates_service_runtime_archive_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
+class N_src_logic_updates_service_runtime_archive_ts["runtime-archive.ts"] {
+  <<module>>
+}
 N_src_logic_updates_service_runtime_download_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_archive_ts : 导入依赖
+N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
-  <<module>>
-}
-class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
@@ -462,18 +519,18 @@ class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
 class N_src_logic_updates_service_desktop_releases_ts["desktop-releases.ts"] {
   <<module>>
 }
-N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
+class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
+  <<module>>
+}
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_desktop_releases_ts : 导入依赖
+N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_logic_updates_service_runtime_updates_ts["runtime-updates.ts"] {
-  <<module>>
-}
-class N_src_logic_updates_service_runtime_download_ts["runtime-download.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_runtime_manifest_ts["runtime-manifest.ts"] {
@@ -485,7 +542,6 @@ class N_src_logic_updates_service_runtime_store_ts["runtime-store.ts"] {
 class N_src_logic_updates_service_runtime_journal_ts["runtime-journal.ts"] {
   <<module>>
 }
-N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_download_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_manifest_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_store_ts : 导入依赖
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_journal_ts : 导入依赖
@@ -503,6 +559,10 @@ N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_r
 ## 设计契约 v1 与落地范围
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## 受管引擎菜单
+
+ManagedEngines 从已验签的启动清单取得固定 E，目录状态只读本地缓存，不检查网络、不安装。首次查询校验当前包并缓存快照；prepare 与执行 resolve 共享 Promise，真实下载/解压/校验经 RuntimeStore。成功后按引擎持久化最后准备的摘要/版本，仅用于区分可安装与可更新，不作为执行路径或信任来源。改变摘要时准备新不可变目录，原进程引用不变。失败可显式重试，不覆盖损坏缓存。冷壳旧版没有 engineStatus 时界面说明不可管理；开发态说明随应用提供，不假装已完成安装校验。
 
 # 桌面更新子系统
 

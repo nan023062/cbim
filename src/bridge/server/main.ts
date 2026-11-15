@@ -1,4 +1,5 @@
 /**
+ * 引擎菜单仅调用固定 status/prepare 端口；只允许主 Frame 和已签名版本，查看不安装。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
  * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
@@ -75,6 +76,20 @@ app.whenReady().then(async()=>{
       return ipcSuccess(action,value);
     }catch{return {ok:false,error:{code:'DESKTOP_UPDATE',message:'更新操作未能完成，请检查当前状态后重试。'}}}
     if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
+
+    if(action==='desktop.engines.status'||action==='desktop.engines.prepare')try{
+      if(action==='desktop.engines.status'){
+        parseIpcRequest(action,args);
+        const value=runtime?.engineStatus?await runtime.engineStatus():(['pi','claude-code','codex'] as const).map(engine=>({engine,state:runtime?'unavailable' as const:'bundled' as const,...(runtime?{error:'当前冷壳不支持手动管理，请更新应用后重试。'}:{})}));
+        return ipcSuccess(action,value);
+      }
+      const request=parseIpcRequest(action,args);
+      if(!runtime?.engineStatus)throw Error('当前宿主不支持引擎安装，请使用兼容桌面版本。');
+      await runtime.resolveEngine(request.engine);
+      if(request.engine==='codex')await runtime.resolveEngine('pi');
+      const value=(await runtime.engineStatus()).find(item=>item.engine===request.engine);
+      if(!value)throw Error('引擎状态不可用');return ipcSuccess(action,value);
+    }catch{return {ok:false,error:{code:'ENGINE_PREPARE',message:'引擎操作未完成，请检查引擎菜单状态后重试。'}}}
     if(action.startsWith('terminal.'))try{
       if(action==='terminal.close'){const request=parseIpcRequest(action,args);terminals.close(request.id+':'+request.tabId);return ipcSuccess(action,undefined)}
       if(action==='terminal.start'){const request=parseIpcRequest(action,args),ws=application.workspace(request.id);ws.assert();return ipcSuccess(action,terminals.start(request.id+':'+request.tabId,ws.entry.path,request.command))}

@@ -2962,3 +2962,10 @@ S6 实际验证（同一文件可能因实际后续改动补跑，以下按用�
 剩余实测失败：tests/queued-task-cancel-pi.test.ts 3 项仍依赖旧 goal_plan/dispatch_cancel/持久等待图，未删除或跳过，需按递归调用与新用户输入语义迁移。其他旧业务、派工、预算、检查点集成尚未完成迁移，本步不宣称全量 CI 通过。未重建候选、未合并、未公开发布；旧 0.1.21 草稿制品不是本次源码。
 
 S7 review：从 AgentLifecycle → execution-manager → agent-calls → ScopeActiveInputService.send 阅读；OfficeHistoryTools 只读限制未改。同步六个源码目录的 CONTRACT/ARCHITECTURE 与 Logic 父图，接口注释说明状态归属和失败含义。后续引擎仍复用同一 send 事务，不增加第二个输入账本。完整 diff 从 56eb2ca2 起；人工 review 尚未发生。
+
+
+## 2026-11-16 · #94 顺序调用取消三项迁移
+
+基线 eede62dd。将 queued-task-cancel-pi 的 complete/stop/cancel-not-success 三个真实 Pi 集成改为顺序 Agent 调用：A 求助沿原 call/task/run 暂停，B/C 尚未创建，不伪造 cancelled 图节点。完整答案只续原 A；错误 questionId 和重复用户答复拒绝。停止及未答复收尾排空原子树，未开始的 B/C 没有引擎、日志或文件操作；重启不重放，用户明确新输入才创建新一轮 A/B/C。旧图层精确撤销集合、依赖闭包及历史规则继续由原 queued-task-cancel.test.ts / queued-task-cancel-tools.test.ts 覆盖，本步未删除这些覆盖或重启旧 Team 执行。
+
+验证：pnpm exec vitest run tests/queued-task-cancel-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-cancel-migration.json 首次 complete 通过，另外两项仅在续聊后的原生会话字节断言失败。核实同一 Pi 会话显式 resume 会追加原生日志，修正为仅原主 session 允许前缀不变追加，原 canonical、子日志、scope 仍严格不变。pnpm exec vitest run tests/queued-task-cancel-pi.test.ts -t 'stop|cancel-not-success' --reporter=default --reporter=json --outputFile=build/recursive-cancel-resume.json 两项通过；第一项未再次选中，不是永久跳过。合计三项通过。pnpm check:test-modules 通过：537 文件，174 unit/163 contract/200 integration；未改归属。纯测试迁移，不改产品契约或类图。其他失败仍待处理，未达到完整 CI/公开发行门槛。

@@ -2969,3 +2969,12 @@ S7 review：从 AgentLifecycle → execution-manager → agent-calls → ScopeAc
 基线 eede62dd。将 queued-task-cancel-pi 的 complete/stop/cancel-not-success 三个真实 Pi 集成改为顺序 Agent 调用：A 求助沿原 call/task/run 暂停，B/C 尚未创建，不伪造 cancelled 图节点。完整答案只续原 A；错误 questionId 和重复用户答复拒绝。停止及未答复收尾排空原子树，未开始的 B/C 没有引擎、日志或文件操作；重启不重放，用户明确新输入才创建新一轮 A/B/C。旧图层精确撤销集合、依赖闭包及历史规则继续由原 queued-task-cancel.test.ts / queued-task-cancel-tools.test.ts 覆盖，本步未删除这些覆盖或重启旧 Team 执行。
 
 验证：pnpm exec vitest run tests/queued-task-cancel-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-cancel-migration.json 首次 complete 通过，另外两项仅在续聊后的原生会话字节断言失败。核实同一 Pi 会话显式 resume 会追加原生日志，修正为仅原主 session 允许前缀不变追加，原 canonical、子日志、scope 仍严格不变。pnpm exec vitest run tests/queued-task-cancel-pi.test.ts -t 'stop|cancel-not-success' --reporter=default --reporter=json --outputFile=build/recursive-cancel-resume.json 两项通过；第一项未再次选中，不是永久跳过。合计三项通过。pnpm check:test-modules 通过：537 文件，174 unit/163 contract/200 integration；未改归属。纯测试迁移，不改产品契约或类图。其他失败仍待处理，未达到完整 CI/公开发行门槛。
+
+
+## 2026-11-16 · #94 求助同调用续跑四项迁移
+
+基线 10d12029。member-help-pi 的 complete/waiting/stop/unknown-log 改为真实子 Agent 工具求助：直接调用方收到 waiting，主 Agent 可自行答复或转原用户问题队列，子 task/run 不变。主根始终持工作区租约，原写只发生一次；不再创建 replacement 图任务或 member-results 续轮。unknown-log 实际追加不完整 canonical 行，最终原读取必须 RUN_LOG_INVALID，父工具返回同错误，不能把损坏记录报告为 completed。重启前后精确日志字节、原文件、写入时间及请求次数不变。旧持久 goal 等待不冒称在新问答中实现。
+
+pnpm exec vitest run tests/member-help-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-help-migration.json：前三项通过；unknown-log 首次误期望可读 interrupted，但真实记录按设计拒绝读取。改为断言 RUN_LOG_INVALID 与原父工具错误后，pnpm exec vitest run tests/member-help-pi.test.ts -t unknown-log --reporter=default --reporter=json --outputFile=build/recursive-help-unknown.json 选中一项通过。合计四项通过，无永久 skip，未减掉原写不重放、租约、损坏证据限制。产品代码未修改，测试入口未变。
+
+后续源码核实：prepareAgentBusiness 当前只装配采集、验证、清单、代码检查；scope 隔离明确拒绝，controlled-files 的运行核验、报告与补偿仍依赖旧 DispatchState 的 run/task/member 事实。不能只替换测试工具名或放宽断言让六项受控文件集成转绿；必须迁移真实身份与恢复边界。此项仍是发布阻塞，不声明全部完成。

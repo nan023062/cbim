@@ -7,45 +7,65 @@ import {seedMemberHelp,memberHelpRecords} from './member-help-fixture';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
 import {WorkspaceExecutionLease} from '../src/logic/execution/admission/workspace-lease';
-import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
-import type {MemberExecutionView} from '../src/logic/tasks/rules/member-commands';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import {globalRuntimeLogBytes} from './global-runtime-fixture';
+import type {PendingQuestion} from '../src/logic/tools/rules/questions';
 
-it.each(['complete','waiting','stop','unknown-log'] as const)('hands member help to the coordinator only after safe normal settlement (%s)',async mode=>{
-  const f=await fixture(),provider=await memberHelpProvider({waiting:mode==='waiting',holdHelp:true,effectful:mode==='complete',unknownHelp:mode==='unknown-log'});let app=f.app;
-  const held=new Set<string>(),leases:{kind:'acquire'|'release';key:string;instance?:string}[]=[],originalAcquire=WorkspaceExecutionLease.prototype.acquire;
-  const leaseSpy=vi.spyOn(WorkspaceExecutionLease.prototype,'acquire').mockImplementation(function(this:WorkspaceExecutionLease,...args:Parameters<typeof originalAcquire>){const release=originalAcquire.apply(this,args);held.add(args[0]);leases.push({kind:'acquire',key:args[0],instance:args[2]});return ()=>{release();held.delete(args[0]);leases.push({kind:'release',key:args[0],instance:args[2]})}});
-  try{
-    const {entry}=await seedMemberHelp(app,f.a,provider),started=await app.dispatch('loop.chat',{id:entry.id,message:data.mainGoal,options:{permission:mode==='complete'?'execute':'read',turnTimeoutMs:30000}}) as {taskId:string;runId:string};
-    const identity={workspaceId:entry.id,rootSessionId:started.taskId},records=()=>memberHelpRecords(f.user,entry.id),graph=()=>app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
-    await vi.waitFor(()=>expect(provider.memberRequests).toHaveLength(4),{timeout:25000,interval:30});
-    const before=await graph(),original=before.tasks[0],taskIdentity={...identity,taskId:original.taskId},runId=original.runIds[0],log=path.join(f.user,entry.id,'dispatch','runs','tasks',original.taskId,runId,'events.jsonl'),marker=path.join(f.a,data.marker),markerStat=mode==='complete'?await fs.stat(marker):undefined;
-    expect(original.status).toBe('running');expect(original.help).toBeUndefined();expect(original.result).toBeUndefined();expect((await records()).messages.filter(message=>message.kind==='help')).toEqual([]);expect(provider.mainRequests).toHaveLength(3);expect(held.size).toBe(1);
-    const stagedEvents=(await fs.readFile(log,'utf8')).trim().split('\n').map(line=>JSON.parse(line));expect(stagedEvents.some(event=>event.type==='task.help_requested')).toBe(true);expect(stagedEvents.some(event=>event.type==='run.completed')).toBe(false);
-    if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
-    else{if(mode==='unknown-log')await fs.appendFile(log,'{"isolated_test_incomplete_help_tail":');provider.releaseHelp()}
-    await vi.waitFor(async()=>{expect((await records()).scopes[0].status).toBe(mode==='waiting'?'waiting':'closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(held.size).toBe(0)},{timeout:30000,interval:30});
-    const settled=await records(),scope=settled.scopes[0],finishedGraph=await graph(),first=finishedGraph.tasks.find(task=>task.taskId===original.taskId)!,view=await app.dispatch('dispatch.executionInspect',taskIdentity) as MemberExecutionView;
-    expect(scope.goal?.input).toEqual({message:data.mainGoal,attachmentIds:[]});expect(finishedGraph.root.agent).toEqual(before.root.agent);
-    if(mode==='stop'||mode==='unknown-log'){
-      expect(scope.outcome).toBe(mode==='stop'?'cancelled':'failed');expect(first.help).toBeUndefined();expect(first.result).toBeUndefined();expect(settled.messages.filter(message=>message.kind==='help')).toEqual([]);expect(finishedGraph.tasks).toHaveLength(1);expect(provider.mainRequests).toHaveLength(mode==='stop'?3:6);expect(provider.memberRequests).toHaveLength(4);
-      if(mode==='stop')expect(view.runs[0].status).toBe('cancelled');else{const report=await app.dispatch('dispatch.executionReport',{...taskIdentity,runId});expect(report.execution).toBe('unknown');expect(['invalid','incomplete']).toContain(report.log.state)}
-    }else{
-      expect(first).toMatchObject({status:'blocked',help:{toolCallId:'help-request',binding:{...identity,taskId:original.taskId,runId},input:{kind:'missing_input',reason:data.reason,question:data.question,attemptedToolCallIds:mode==='complete'?['help-original-effect','help-read-source']:['help-read-source']}}});expect(first.result).toBeUndefined();expect(first.activeRunId).toBeUndefined();expect(view.runs[0].status).toBe('completed');
-      expect(first.help!.requestedSeq).toBeLessThan(first.help!.finishedSeq);expect(first.help!.lastEffectSeq).toBeLessThan(first.help!.requestedSeq);
-      const helpMessages=settled.messages.filter(message=>message.kind==='help');expect(helpMessages).toHaveLength(1);expect(helpMessages[0]).toMatchObject({helpId:first.help!.helpId,runId,taskId:first.taskId,delivery:'processed',to:before.root.agent});
-      const thread=await app.execution(entry.id).thread(started.taskId);expect(thread[1].source).toMatchObject({kind:'member-results',messageIds:[helpMessages[0].messageId],taskIds:[first.taskId]});expect(thread.every(run=>run.status==='completed')).toBe(true);
-      const releasedAt=leases.findIndex(event=>event.kind==='release'&&event.instance===original.assignee.agentInstanceId),nextMain=leases.findIndex((event,index)=>index>releasedAt&&event.kind==='acquire'&&event.instance===before.root.agent.agentInstanceId);expect(releasedAt).toBeGreaterThan(-1);expect(nextMain).toBeGreaterThan(releasedAt);
-      if(mode==='waiting'){
-        expect(scope.wait).toBeDefined();expect(scope.goal?.review?.decision).toBe('awaiting_user');expect(finishedGraph.tasks).toHaveLength(1);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(4);
-        await app.dispatch('loop.enqueue',{id:entry.id,taskId:started.taskId,message:'同意',options:{permission:'read'}});await expect(app.dispatch('loop.queueContinue',{id:entry.id,taskId:started.taskId})).rejects.toThrow();expect((await records()).scopes).toEqual([scope]);expect(provider.mainRequests).toHaveLength(6);
-      }else{
-        expect(scope.outcome).toBe('completed');expect(scope.goal?.plan?.revision).toBe(3);expect(finishedGraph.tasks).toHaveLength(2);const replacement=finishedGraph.tasks.find(task=>task.taskId!==first.taskId)!;
-        expect(replacement.status).toBe('result_ready');expect(replacement.assignee.agentInstanceId).not.toBe(first.assignee.agentInstanceId);expect(replacement.assignee.agentSessionId).not.toBe(first.assignee.agentSessionId);expect(replacement.result?.evidenceRefs).toEqual(['replacement-source','replacement-supplement']);expect(scope.goal?.review?.superseded).toEqual([{taskId:first.taskId,replacementTaskIds:[replacement.taskId],reason:expect.any(String)}]);expect(provider.mainRequests).toHaveLength(10);expect(provider.memberRequests).toHaveLength(10);
-      }
-    }
-    expect(await fs.readFile(path.join(f.a,data.source),'utf8')).toBe(data.sourceText);expect(await fs.readFile(path.join(f.a,data.supplement),'utf8')).toBe(data.supplementText);expect(provider.errors).toEqual([]);
-    const counts=[provider.mainRequests.length,provider.memberRequests.length],snapshot=await records();await app.shutdown();expect(held.size).toBe(0);app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    expect(await records()).toEqual(snapshot);expect(await graph()).toEqual(finishedGraph);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);if(markerStat){expect(await fs.readFile(marker,'utf8')).toBe(data.markerText);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs)}
-    if(mode==='waiting'){await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await records()).scopes[0]).toMatchObject({status:'closed',outcome:'cancelled',wait:scope.wait});expect((await graph()).tasks[0].help).toEqual(first.help);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts)}
-  }finally{provider.releaseHelp();await app.shutdown();leaseSpy.mockRestore();await f.cleanup();await provider.close()}
+it.each(['complete','waiting','stop','unknown-log'] as const)('hands help to the direct caller within the original Agent call (%s)',async mode=>{
+ const f=await fixture(),provider=await memberHelpProvider(mode);let app=f.app;
+ const leases=new Set<string>(),originalAcquire=WorkspaceExecutionLease.prototype.acquire;
+ const spy=vi.spyOn(WorkspaceExecutionLease.prototype,'acquire').mockImplementation(function(this:WorkspaceExecutionLease,...args:Parameters<typeof originalAcquire>){
+  const release=originalAcquire.apply(this,args);leases.add(args[0]);return ()=>{release();leases.delete(args[0])};
+ });
+ try{
+  const {entry}=await seedMemberHelp(app,f.a,provider);
+  const started=await app.dispatch('loop.chat',{id:entry.id,message:data.mainGoal,options:{permission:mode==='complete'?'execute':'read',turnTimeoutMs:30000}});
+  const root=()=>app.execution(entry.id).inspect(started.taskId,started.runId),records=()=>memberHelpRecords(f.user,entry.id);
+  const questions=()=>app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId}) as Promise<PendingQuestion[]>;
+  const until=async(check:()=>Promise<void>|void)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await check()},{timeout:30000,interval:40});
+  await until(()=>expect(provider.mainRequests).toHaveLength(2));
+  const waiting=await root(),ref=waiting.events.find(e=>e.type==='tool.updated'&&e.data.agentCallState==='waiting')!.data.agentCall as {taskId:string;runId:string};
+  expect(leases.size).toBe(1);expect(await questions()).toEqual([]);
+  const directory=path.join(f.user,entry.id,'loop-engine','tasks',ref.taskId,ref.runId),storage=new FileRunStorage(),log=path.join(directory,'events.jsonl');
+  const before=await storage.read(directory);
+  expect(before.events.filter(e=>e.type==='run.started')).toHaveLength(1);
+  expect(before.events.some(e=>e.type==='run.settled')).toBe(false);
+  expect(before.toolReceipts?.find(r=>r.toolCallId==='help-source')?.outcome).toBe('succeeded');
+  const marker=path.join(f.a,data.marker),markerStat=mode==='complete'?await fs.stat(marker):undefined;
+  if(mode==='unknown-log')await fs.appendFile(log,'{"isolated_test_incomplete_help_tail":');
+  provider.releaseHelp();
+  if(mode==='waiting'||mode==='stop'){
+   await until(async()=>expect(await questions()).toHaveLength(1));
+   expect(provider.memberRequests).toHaveLength(2);expect(leases.size).toBe(1);
+   const question=(await questions())[0];expect(question.questions[0].question).toBe(data.question);
+   if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
+   else await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:started.taskId,questionId:question.id,answers:[{option:0,other:''}]});
+  }
+  await until(async()=>{expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(leases.size).toBe(0);expect((await records()).scopes[0]?.status).toBe('closed')});
+  const finished=await root();
+  if(mode==='unknown-log')await expect(storage.read(directory)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});
+  const child=mode==='unknown-log'?undefined:await storage.read(directory);
+  expect(new Set(finished.events.filter(e=>e.data.agentCall).map(e=>(e.data.agentCall as {runId:string}).runId))).toEqual(new Set([ref.runId]));
+  if(child)expect(child.events.filter(e=>e.type==='run.started')).toHaveLength(1);
+  if(mode==='stop'){
+   expect(finished.status).toBe('cancelled');expect(child!.status).toBe('cancelled');expect(provider.memberRequests).toHaveLength(2);
+  }else if(mode==='unknown-log'){
+   const receipt=finished.events.find(e=>e.type==='tool.finished'&&e.data.id==='reply-original');
+   expect(receipt).toBeDefined();expect(JSON.stringify(receipt)).toContain('RUN_LOG_INVALID');
+   expect((await fs.readFile(log,'utf8')).includes('isolated_test_incomplete_help_tail')).toBe(true);
+  }else{
+   expect(child!.status).toBe('completed');expect(finished.status).toBe('completed');
+   expect(child!.toolReceipts?.find(r=>r.toolCallId==='help-supplement')?.outcome).toBe('succeeded');
+   expect(child!.events.some(e=>e.type==='tool.finished'&&e.data.name==='cbim_ask_user_question')).toBe(true);
+  }
+  expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+  expect(await questions()).toEqual([]);
+  const counts=[provider.mainRequests.length,provider.memberRequests.length],snapshot=await records(),bytes=await globalRuntimeLogBytes(f.user,entry.id);
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await records()).toEqual(snapshot);expect(await globalRuntimeLogBytes(f.user,entry.id)).toEqual(bytes);
+  expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);
+  if(markerStat){expect(await fs.readFile(marker,'utf8')).toBe(data.markerText);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs)}
+  expect(await fs.readFile(path.join(f.a,data.source),'utf8')).toBe(data.sourceText);
+  expect(await fs.readFile(path.join(f.a,data.supplement),'utf8')).toBe(data.supplementText);
+ }finally{provider.releaseHelp();await app.shutdown();spy.mockRestore();await provider.close();await f.cleanup()}
 },120000);

@@ -5,7 +5,7 @@ import type {Application} from '../src/bridge/server/application';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {request} from './data/knowledge';
-import {seedJsonValidation,jsonValidationRecords} from './json-validation-fixture';
+import {seedJsonValidation} from './json-validation-fixture';
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 import {jsonValidationFixture} from './json-validation-provider';
@@ -21,12 +21,31 @@ export async function seedWorkflowSelection(app:Application,project:string,provi
   return {...seeded,owner,workflow:workflowId+'/workflow.md',selection:{moduleId,workflowId},firstWorkflowId,workflowVersion:createHash('sha256').update(body).digest('hex'),firstContract};
 }
 
-/** Check actual persisted goal/task/prepared/native provenance and result proof, without editing them. */
-export async function assertWorkflowSelection(user:string,workspaceId:string,graph:GraphSnapshot,expected:{moduleId:string;workflowId:string},complete=false){
-  const records=await jsonValidationRecords(user,workspaceId),scope=records.scopes[0],task=graph.tasks[0],run=records.runs[0];
-  assert.deepEqual(scope.goal?.plan?.assignments[0].workflowSelections,[expected]);assert.deepEqual(task.workflowSelections,[expected]);assert.equal(task.modules[0].workflow.kind,'module');assert.equal(task.modules[0].workflow.id,expected.workflowId);assert.equal(run.prepared.modules[0].binding.workflow.id,expected.workflowId);assert.deepEqual(run.prepared.modules[0].binding,task.modules[0]);assert.ok(run.prepared.modules[0].workflowContract?.delivery?.requiredValidations?.length);assert.equal(run.prepared.modules[0].definition.workflows instanceof Array,true);
-  const summary=await new FileRunStorage().read(path.join(user,workspaceId,'dispatch','runs','tasks',task.taskId,run.binding.runId)),contract=(summary.events[0].data.workflowContracts as Array<{moduleId:string;workflowId:string;workflowVersion:string}>)[0];assert.equal(contract.moduleId,expected.moduleId);assert.equal(contract.workflowId,expected.workflowId);assert.equal(contract.workflowVersion,task.modules[0].workflow.version);
-  const validations=summary.events.filter(event=>event.type==='validation.checked');assert.ok(validations.length);for(const event of validations){const result=event.data.validation as {requirement:{moduleId:string;workflowId:string;workflowVersion:string}};assert.equal(result.requirement.moduleId,expected.moduleId);assert.equal(result.requirement.workflowId,expected.workflowId);assert.equal(result.requirement.workflowVersion,task.modules[0].workflow.version)}
-  if(complete){assert.equal(task.status,'result_ready');assert.equal(summary.taskProgress?.delivery?.workflow?.validationChecks?.length,1);assert.equal(summary.taskProgress?.delivery?.workflow?.validationChecks?.[0].workflowId,expected.workflowId);assert.equal(summary.taskProgress?.delivery?.workflow?.checks[0].workflowId,expected.workflowId)}
-  return {selection:expected,workflowVersion:task.modules[0].workflow.version,taskId:task.taskId,runId:run.binding.runId,validationCount:validations.length};
+/** Read the real child through its parent tool reference; never reconstruct retired dispatch state. */
+export async function assertWorkflowSelection(user:string,workspaceId:string,root:{taskId:string;runId:string},expected:{moduleId:string;workflowId:string},complete=false){
+  const directory=path.join(user,workspaceId,'loop-engine','tasks'),storage=new FileRunStorage();
+  const parent=await storage.read(path.join(directory,root.taskId,root.runId));
+  const reference=parent.events.find(event=>event.type==='tool.updated'&&event.data.agentCall)?.data.agentCall as {taskId:string;runId:string}|undefined;
+  assert.ok(reference,'Parent must persist the actual child reference');
+  const summary=await storage.read(path.join(directory,reference.taskId,reference.runId));
+  assert.deepEqual(summary.events[0].data.agentCall,{version:1,workspaceId,taskId:reference.taskId,runId:reference.runId,callerTaskId:root.taskId,callerRunId:root.runId,toolCallId:'json-agent-call'});
+  const contracts=summary.events[0].data.workflowContracts as Array<{moduleId:string;workflowId:string;workflowVersion:string}>;
+  assert.equal(contracts.length,1);const contract=contracts[0];
+  assert.equal(contract.moduleId,expected.moduleId);assert.equal(contract.workflowId,expected.workflowId);
+  assert.ok(contract.workflowVersion);
+  const validations=summary.events.filter(event=>event.type==='validation.checked');
+  assert.ok(validations.length);
+  for(const event of validations){
+    const result=event.data.validation as {requirement:{moduleId:string;workflowId:string;workflowVersion:string}};
+    assert.equal(result.requirement.moduleId,expected.moduleId);
+    assert.equal(result.requirement.workflowId,expected.workflowId);
+    assert.equal(result.requirement.workflowVersion,contract.workflowVersion);
+  }
+  if(complete){
+    assert.equal(summary.status,'completed');
+    assert.equal(summary.taskProgress?.delivery?.workflow?.validationChecks?.length,1);
+    assert.equal(summary.taskProgress?.delivery?.workflow?.validationChecks?.[0].workflowId,expected.workflowId);
+    assert.equal(summary.taskProgress?.delivery?.workflow?.checks[0].workflowId,expected.workflowId);
+  }
+  return {selection:expected,workflowVersion:contract.workflowVersion,taskId:reference.taskId,runId:reference.runId,validationCount:validations.length};
 }

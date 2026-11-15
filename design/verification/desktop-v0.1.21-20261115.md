@@ -48,3 +48,11 @@ pnpm exec vitest run tests/execution-collaboration.test.ts tests/unified-tool-po
 c39a8b58 后迁移剩余六项 JSON/CSV/PNG 负面人工决定到主 Agent 的普通评审工具，真实问题卡保存意见后显式继续。当前文件变化拒绝接受，负面意见不授权新子运行；停止保留审计历史，重启不重放。六项通过，此前九项复核通过，调用/装配 31 项通过，类型、测试边界及架构通过。该集成文件 15 项均已定向覆盖。具体命令和协议差异见开发记录。
 
 这解除该文件的人工决策迁移缺口，不表示整个仓库完整 CI 或当前源码的发布安装验收通过。用户要求更新 PR 并申请评审；Ready for review 与允许合并/发布是不同状态，旧候选仍不能代表当前源码。
+
+## 2026-11-15 — #94 显式 Workflow 选择迁入 Agent 调用验证
+
+发布复核在 f2e9790a 复现 `workflow-selection-pi.test.ts` 仍按旧派工工具识别主 Agent，导致两项无法进入业务验证。仅迁移测试消费者：使用真实 cbim_agent_call 的 business.workflowSelections，沿父运行持久引用读取 loop-engine 子运行；核对第二 Workflow 冻结版本、验证要求和交付证明，保留停止、真实文件及重启不重放，并明确旧任务图为空。不恢复旧派工入口，不删减业务验证。
+
+验证：`pnpm exec vitest run tests/workflow-selection-pi.test.ts` 两项通过；`pnpm check:test-modules` 通过（537 文件，174 unit / 163 contract / 200 integration）。测试文件仍归原集成模块；本次没有 src 变更，不涉及源码类图。完整 CI run 43727211812 的静态检查已通过，四片测试仍运行，不能据专项通过发布。旧 6541c41d 候选继续保留为历史，当前源码尚未重新构建或公开发布。
+
+发布复核补充：`pnpm exec vitest run tests/application-collaboration-pi.test.ts -t 'reopen \(normal\)' --reporter=default --reporter=json --outputFile=test-results/release-collaboration-blocker.json` 实际选中 1 项失败，另外 8 项未被选择。30 秒等待后预期 2 个历史运行，实际只有 1 个；夹具仍用 cbim_dispatch_task 识别主 Agent，并调用旧 cbim_goal_plan/dispatch/goal_review。不能仅改历史数量放行，须迁移实际调用、回流与恢复覆盖。该失败是当前发布阻塞；完整 CI 即使尚在运行，也不能声称全部通过。未执行新的构建、合并或公开发布。

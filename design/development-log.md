@@ -1,3 +1,11 @@
+## 2026-11-15 — #94 显式 Workflow 选择迁入 Agent 调用验证
+
+发布复核补充：`pnpm exec vitest run tests/application-collaboration-pi.test.ts -t 'reopen \(normal\)' --reporter=default --reporter=json --outputFile=test-results/release-collaboration-blocker.json` 实际选中 1 项失败，另外 8 项未被选择。30 秒等待后预期 2 个历史运行，实际只有 1 个；夹具仍用 cbim_dispatch_task 识别主 Agent，并调用旧 cbim_goal_plan/dispatch/goal_review。不能仅改历史数量放行，须迁移实际调用、回流与恢复覆盖。该失败是当前发布阻塞；完整 CI 即使尚在运行，也不能声称全部通过。未执行新的构建、合并或公开发布。
+
+发布复核在 f2e9790a 复现 `workflow-selection-pi.test.ts` 仍按旧派工工具识别主 Agent，导致两项无法进入业务验证。仅迁移测试消费者：使用真实 cbim_agent_call 的 business.workflowSelections，沿父运行持久引用读取 loop-engine 子运行；核对第二 Workflow 冻结版本、验证要求和交付证明，保留停止、真实文件及重启不重放，并明确旧任务图为空。不恢复旧派工入口，不删减业务验证。
+
+验证：`pnpm exec vitest run tests/workflow-selection-pi.test.ts` 两项通过；`pnpm check:test-modules` 通过（537 文件，174 unit / 163 contract / 200 integration）。测试文件仍归原集成模块；本次没有 src 变更，不涉及源码类图。完整 CI run 43727211812 的静态检查已通过，四片测试仍运行，不能据专项通过发布。旧 6541c41d 候选继续保留为历史，当前源码尚未重新构建或公开发布。
+
 ## 2026-11-15：0.1.21 发布整合准备
 
 - 用户授权提交 PR 并发布。保留 0.1.20 已冻结图标草稿，使用新的 0.1.21；沿用已明确的 Windows 未签名方式，既有 User 作用域资源签名密钥文件可用，不输出凭据。独立 worktree 整合 bda7f5cb 与 origin/develop eb03dc61，保留全部原提交及用户草稿。

@@ -39,7 +39,7 @@ it.each(['accept','reject','request_evidence'] as HumanDecisionKind[])('persists
       const preview=await c.preview(c.baselines);expect(preview.basis).toBe(c.verified.basis);expect(preview.decisionRevision).toBe(1);
       const next=humanDecisionReceiptSchema.parse(await c.f.app.dispatch('dispatch.humanDecide',{...request,commandId:randomUUID(),expectedDecisionRevision:1,decision:'reject',comment:'重新考虑同一依据，保留先前接受记录'}));expect(next.record.supersedesDecisionId).toBe(receipt.record.decisionId);expect(next.decisionRevision).toBe(2);await c.unchanged();
     }
-    const saved=await c.records(),savedHistory=await c.f.app.dispatch('dispatch.humanHistory',c.identity);await c.f.app.shutdown();reopened=new Application(new Paths(c.f.user,path.resolve('.')),path.resolve('design'));await reopened.init();expect(await c.records()).toEqual(saved);expect(await reopened.dispatch('dispatch.humanHistory',c.identity)).toEqual(savedHistory);expect(humanDecisionReceiptSchema.parse(await reopened.dispatch('dispatch.humanReceipt',{...c.identity,commandId:request.commandId})).record).toEqual(receipt.record);await c.unchanged(reopened);
+    const saved=await c.records(),savedHistory=await c.f.app.dispatch('dispatch.humanHistory',c.identity);await c.f.app.shutdown();reopened=new Application(new Paths(c.f.user,path.resolve('.')),path.resolve('assets'));await reopened.init();expect(await c.records()).toEqual(saved);expect(await reopened.dispatch('dispatch.humanHistory',c.identity)).toEqual(savedHistory);expect(humanDecisionReceiptSchema.parse(await reopened.dispatch('dispatch.humanReceipt',{...c.identity,commandId:request.commandId})).record).toEqual(receipt.record);await c.unchanged(reopened);
   }finally{if(reopened)await reopened.shutdown();await c.cleanup()}
 },120000);
 

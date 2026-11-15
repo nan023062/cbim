@@ -1,8 +1,8 @@
 # CBIM Assistant
 
-<img src="branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
+<img src="assets/branding/cbim-mark.svg" width="64" height="64" alt="CBIM Assistant 图标">
 
-本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
+本地／多端定位的 AI Native 工作流工具，当前以单人本地使用为主。完整产品名为 **CBIM Assistant**，简称 **CBIM**。品牌资源与生成方式见 [品牌规范](assets/branding/README.md)；官网构建与维护见 [网站说明](website/README.md)。
 
 [产品官网](https://nan023062.github.io/cbim/) · [Windows 下载与更新日志](https://nan023062.github.io/cbim/download.html)
 
@@ -139,4 +139,4 @@ pnpm start
 3. [渐进式架构演进与人工认知保障体系](docs/03-渐进式架构演进与人工认知保障体系.md)
 4. [AI-Native 开发全流程设计方案](docs/04-AI-Native开发全流程设计方案.md)
 
-其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](design/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。
+其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](assets/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

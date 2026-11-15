@@ -1,4 +1,5 @@
 /**
+ * 资源边界：自动化通过 workspace.rules.assetsRoot 读取内置规范，保持与交互任务相同的资源版本。
  * 目录归属：logic/automation/service；自动化触发与业务接入。
  * 作用定位：将工作区知识、已采纳岗位和真实协作接入自动化端口，提供桌面目录与实例校验。
  * 设计原因：日程不认识团队派发实现；这里每次触发核实当前引用，先保存真实主任务身份，再让明确岗位进入原计划/派发链。模型凭据及引擎装配仍归既有服务。
@@ -22,7 +23,7 @@ export class WorkspaceAutomations {
  readonly scheduler:AutomationScheduler;
  private readonly builtins:Builtins;
  constructor(private readonly workspace:Workspace,private readonly execution:WorkspaceExecutionManager,private readonly dispatch:WorkspaceDispatchService,private readonly collaboration:AutoCollaboration,private readonly options:(permission:AutomationDefinition['permission'])=>Promise<unknown>){
-  this.builtins=new Builtins(workspace.rules.designRoot);
+  this.builtins=new Builtins(workspace.rules.assetsRoot);
   const runner:AutomationRunner={
    validate:async definition=>{await this.prepare(definition);executionOptions.parse(await this.options(definition.permission))},
    start:async(run,signal,bind)=>{

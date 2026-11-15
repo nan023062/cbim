@@ -51,7 +51,7 @@ it.each(['complete','stop','revoked','generation','ungranted'] as RepositoryTool
     const history=await app.dispatch('agentHistory.events',{workspaceId:seeded.entry.id,agentId:'cbim:main',sessionId:sessions.items[0].sessionId,taskId:started.taskId,runId:started.runId,limit:500}) as AgentHistoryEventsRead;
     if(mode!=='ungranted')expect(JSON.stringify(history)).toContain('"kind":"repository"');expect(JSON.stringify(history)).not.toContain('REPOSITORY_HTTP_CONTENT_17b2_42c1');expect(JSON.stringify(history)).not.toMatch(/Bearer|"token"|sessionFile/);
     expect((await workspace.snapshot()).files).toEqual(snapshot.files);expect(await fs.readFile(path.join(seeded.repository,'cbim-resources.json'),'utf8')).toBe(beforeRepository);
-    const bytes=await repositoryToolsLogBytes(f.user,seeded.entry.id),requestCount=provider.requests.length,readCount=reads.length;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    const bytes=await repositoryToolsLogBytes(f.user,seeded.entry.id),requestCount=provider.requests.length,readCount=reads.length;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect((await app.dispatch('resources.status')).sharing).toBeUndefined();expect(await records()).toEqual(saved);expect(await graph()).toEqual(finished);expect(await repositoryToolsLogBytes(f.user,seeded.entry.id)).toEqual(bytes);expect(provider.requests).toHaveLength(requestCount);expect(reads).toHaveLength(readCount);expect(provider.errors).toEqual([]);
   }finally{release();vi.restoreAllMocks();await app.shutdown();await f.cleanup();await provider.close()}
 },90000);

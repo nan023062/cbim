@@ -236,3 +236,7 @@ automatic-context.ts 是隐式全项目范围的唯一解析位置，仅完整�
 ### JSON 排序复用边界
 
 本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+
+## 内置运行资源边界
+
+team-workflow 与 execution-context 使用 workspace.rules.assetsRoot 读取 Builtins。冻结、派发与恢复仍比较内容版本；路径迁移不绕过旧快照版本拒绝。

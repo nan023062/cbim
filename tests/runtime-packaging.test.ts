@@ -24,6 +24,13 @@ it('resource collection omits empty retired directories without changing source 
     const repo=path.join(f.root,'collection-repo'),compiled=path.join(f.root,'compiled'),target=path.join(f.root,'collected');
     const source={
       'design/guide.md':'current guide',
+      'assets/business/module.schema.json':'module schema',
+      'assets/business/module-spec.md':'module standard',
+      'assets/capability/agent.schema.json':'agent schema',
+      'assets/connector/registry.schema.json':'connector schema',
+      'assets/runtime/common-rules.md':'rules',
+      'assets/task/task-spec.md':'task',
+      'assets/branding/cbim.png':'native brand',
       'docs/01.md':'concept',
       'legal/license.txt':'license',
     };
@@ -34,11 +41,13 @@ it('resource collection omits empty retired directories without changing source 
     await fs.writeFile(path.join(compiled,'build/main.js'),'business');
     await fs.writeFile(path.join(compiled,'build/desktop.js'),'cold');
     await collectResources(compiled,target,repo);
-    expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js','design/guide.md','docs/01.md','legal/license.txt','package.json']);
+    const published=Object.keys(source).filter(name=>name.startsWith('legal/')||name.startsWith('assets/')&&!name.startsWith('assets/branding/'));
+    expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js',...published,'package.json'].sort());
+    for(const name of ['design','docs','assets/branding'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'design/retired'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'.vite/renderer'))).rejects.toMatchObject({code:'ENOENT'});
     expect((await fs.stat(path.join(repo,'design/retired/scripts'))).isDirectory()).toBe(true);
-    for(const [name,text]of Object.entries(source))expect(await fs.readFile(path.join(target,name),'utf8')).toBe(text);
+    for(const name of published)expect(await fs.readFile(path.join(target,name),'utf8')).toBe(source[name as keyof typeof source]);
     expect(await fs.readFile(path.join(target,'.vite/build/main.js'),'utf8')).toBe('business');
   }finally{await f.cleanup()}
 });

@@ -111,7 +111,7 @@ CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用�
 
 - 中性色承载长时间阅读；主操作使用高对比中性色。品牌与工作状态分离。
 - 层级依靠留白、字号、细线和局部表面区分；无装饰渐变、无大面积彩色工作卡片。
-- 保留现有 CBIM 标志，正式实现引用 `branding/cbim-mark.svg`，不仿制 Cindy 标志。原型仅使用 CBIM 文字标识。
+- 保留现有 CBIM 标志，正式实现引用 `assets/branding/cbim-mark.svg`，不仿制 Cindy 标志。原型仅使用 CBIM 文字标识。
 - 办公室人物与工位用于表达真实团队活动，避免把游戏式动画当工作主反馈；使用与正文一致的线条与中性色。
 - 可用性优先于极简：停止、未决事项与失败原因不能藏在溢出菜单。
 
@@ -289,7 +289,7 @@ CBIM 是本地／多端的 AI Native 工作流工具，当前面向单人使用�
 - [CBIM 产品与当前能力](../README.md)
 - [主会话办公室、话题与团队对话](task/team-office-topics.md)
 - [本地 AI 团队核心模型（目标设计）](team-workspace-network.md)
-- [品牌资源](../branding/README.md)
+- [品牌资源](../assets/branding/README.md)
 - [架构设计规范](project-architecture-standard.md)
 - [Cindy 设计体系](https://github.com/makecindy/cindy/blob/main/docs/design-rules/DESIGN.md)
 - [Cindy 产品原则](https://github.com/makecindy/cindy/blob/main/docs/product-rules/core-product-principles.md)

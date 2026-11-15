@@ -15,7 +15,7 @@ const stopping=process.argv.includes('--stop'),unknown=process.argv.includes('--
 const mode=stopping?'stop':unknown?'unknown':'complete',artifact='queue-insertion-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-queue-insertion-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');
 const provider=await insertionProvider(),pageErrors:string[]=[];let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seed=await seedInsertion(setup,project,provider),{entry}=seed;await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seed=await seedInsertion(setup,project,provider),{entry}=seed;await setup.shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
   const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
   await desktop.evaluate(({ipcMain},{unknown})=>{const handlers=(ipcMain as any)._invokeHandlers,original=handlers.get('cbim:call');let dropped=false;(globalThis as any).__queueInsertionTrace=[];handlers.set('cbim:call',async(event:unknown,action:string,args:unknown)=>{

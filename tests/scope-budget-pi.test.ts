@@ -36,14 +36,14 @@ it.each(['main-limit','member-limit','cost-limit','unknown-price','tokens-unpric
       if(mode!=='waiting')expect(settled).toMatchObject({status:'closed',outcome:'completed'});
     }
     expect(usage.totals.costComplete).toBe(!budgetUnpriced(mode));
-    const sequence=[...provider.sequence],beforeRestart=await scopes(),beforeGraph=await graph();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    const sequence=[...provider.sequence],beforeRestart=await scopes(),beforeGraph=await graph();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await app.dispatch('budget.settings')).toEqual(raised);expect(await scopes()).toEqual(beforeRestart);expect(await graph()).toEqual(beforeGraph);expect(provider.sequence).toEqual(sequence);
     if(mode==='waiting'){
       const before=(await scopes())[0],wait=before.wait!,req:GoalContinuationRequest={...identity,scopeId:before.scopeId,waitId:wait.waitId,expectedGoalRevision:before.goal!.revision,expectedInputRevision:before.goal!.inputRevision??1,commandId:randomUUID(),input:{message:data.supplement},options:{provider:'cbim-'+profileId,model:data.model,profileId,permission:'read',turnTimeoutMs:30000}};
       const lookup={...identity,scopeId:req.scopeId,commandId:req.commandId};expect(await app.dispatch('loop.goalContinuation',lookup)).toBeUndefined();
       await expect(app.dispatch('loop.goalContinue',req)).rejects.toMatchObject({code:'SCOPE_BUDGET_EXCEEDED'});
       const denied=(await scopes())[0];expect(denied.status).toBe('waiting');expect(denied.wait).toEqual(before.wait);expect(denied.goal).toEqual(before.goal);expect(denied.continuations).toEqual(before.continuations);expect(denied.runTracking).toEqual(before.runTracking);expect(denied.budget?.blocked?.reason).toBe('token_limit');expect(await app.dispatch('loop.goalContinuation',lookup)).toBeUndefined();expect((await queue())[0]).toMatchObject({message:data.queued,status:'paused'});expect(provider.sequence).toEqual(sequence);
-      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect((await scopes())[0]).toEqual(denied);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await scopes())[0]).toMatchObject({status:'closed',outcome:'cancelled'});expect(provider.sequence).toEqual(sequence);
+      await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect((await scopes())[0]).toEqual(denied);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});expect((await scopes())[0]).toMatchObject({status:'closed',outcome:'cancelled'});expect(provider.sequence).toEqual(sequence);
     }
     expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact);expect(provider.errors).toEqual([]);
   }catch(error){failed=true;console.error(JSON.stringify({mode,temp:f.temp,sequence:provider.sequence,transportErrors:provider.errors}));throw error}

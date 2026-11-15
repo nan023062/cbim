@@ -1,13 +1,14 @@
 /**
+ * 资源边界：桌面从当前 R 的 assets 注入业务规范；开发态使用工程 assets，窗口品牌仍按安装边界读取。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
- * 作用定位：本机后端的 Electron 装配入口，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
+ * 作用定位：本机后端的 Electron 装配入口，区分开发与打包品牌资源路径，管理窗口、固定 IPC、原生文件选择、附件预览与打包验证；前端只通过 bridge/preload 请求服务。
  * 设计原因：把 Electron 窗口与 IPC 留在唯一桌面入口，服务层可以脱离窗口验证；模型凭据加密通过系统 safeStorage 注入；手动终端固定工作区目录，退出时释放子进程。
  * 附件边界：原生多选超过12项时在任何快照导入前拒绝；安全等待的 importId 贯穿选择器，取消后迟到路径不读取、不返回给另一目标。
  * GitHub 登录只在桌面点击后打开固定官方 Device Flow 页面，不接收重定向地址或令牌。
  * 桌面更新只装配在正式 NSIS 包中；后台检查、预下载并校验，等待用户确认重启后才拒绝新请求、排空业务并安装。
  * 资源入口：由固定冷壳调用 startDesktop；所有业务入口来自同一 R，先显示窗口再按原策略恢复工作区。
- * 窗口图标从固定品牌资源读取，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
+ * 窗口图标开发态读取 assets/branding，打包态保留 resources/branding，Forge 同源写入 EXE；保留原应用身份与卸载器名称以兼容更新。
  * 网页读取：ready 后注入独立匿名 Chromium 适配，仅静态读取不足时创建有界后台窗口，不共享应用登录态。
  */
 import {parseIpcRequest,ipcSuccess} from '../contracts/ipc-call';
@@ -51,8 +52,8 @@ app.whenReady().then(async()=>{
   if(installed&&!runtime&&!app.requestSingleInstanceLock()){app.quit();return}
   const beforeInstall=async()=>{runtime?.stopPreparingEngines();terminals.closeAll();await application.shutdown();quitting=true};
   updates=runtime?runtime.updates(beforeInstall,installed):new DesktopUpdates(app.getVersion(),typeof release.notes==='string'?release.notes:'',installed,latestDesktopRelease,new NsisUpdateInstaller(),beforeInstall);
-  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'design'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
-  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,'branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  application=new Application(new Paths(userRoot,app.isPackaged?path.dirname(app.getPath('exe')):install,runtime?[runtime.cacheRoot]:[]),path.join(resources,'assets'),systemSecretCipher,{controlledFiles:createControlledFileTransport(),engineArtifacts:runtime?.engineArtifacts,webBrowser:new ElectronBrowserReader()});await application.init({restore:false});
+  window=new BrowserWindow({width:1320,height:860,minWidth:760,minHeight:520,title:'CBIM',icon:path.join(install,app.isPackaged?'branding':'assets/branding','cbim.png'),webPreferences:{preload:path.join(__dirname,'preload.js'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
   window.on('close',event=>{if(!quitting){event.preventDefault();app.quit()}});
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',(event)=>event.preventDefault());

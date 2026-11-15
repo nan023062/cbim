@@ -30,7 +30,7 @@ it.each(['complete','stop','restart-waiting'] as const)('shares actual Pi admiss
     const waiting=await read(),bTicket=waiting.waiting[0],bTask=(await graph('b')).tasks[0];expect(bTicket.order).toBeGreaterThan(earliest.order);expect(bTask.runIds).toEqual([]);expect(bTask.activeRunId).toBeUndefined();expect(bTask.result).toBeUndefined();expect(provider.projects.b.member).toHaveLength(0);expect((await app.execution(ids.b).thread(b.taskId))).toHaveLength(1);
     expect(await app.dispatch('admission.read',{cursor:waiting.cursor})).toEqual({kind:'noop',cursor:waiting.cursor});
     if(mode==='restart-waiting'){
-      const sequence=[...provider.sequence];await app.shutdown();provider.releaseAll();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+      const sequence=[...provider.sequence];await app.shutdown();provider.releaseAll();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
       expect(await app.dispatch('admission.settings')).toEqual(limited);expect((await read()).occupied).toEqual([]);expect((await read()).waiting).toEqual([]);expect(provider.sequence).toEqual(sequence);expect(provider.projects.a.member).toHaveLength(1);expect(provider.projects.b.member).toHaveLength(0);expect((await graph('b')).tasks[0].runIds).toEqual([]);expect((await admissionScopes(f.user,ids.b))[0].status).toBe('closed');expect(provider.errors).toEqual([]);return;
     }
     if(mode==='stop'){
@@ -46,7 +46,7 @@ it.each(['complete','stop','restart-waiting'] as const)('shares actual Pi admiss
     expect(provider.projects.a.main).toHaveLength(6);expect(provider.projects.a.member).toHaveLength(5);expect(provider.projects.b.main).toHaveLength(mode==='complete'?6:3);expect(provider.projects.b.member).toHaveLength(mode==='complete'?5:0);
     if(mode==='complete'){expect(provider.sequence.indexOf('a:member:0')).toBeLessThan(provider.sequence.indexOf('b:member:0'));expect(provider.sequence.indexOf('b:member:0')).toBeLessThan(provider.sequence.indexOf('a:main:3'));expect(provider.sequence.indexOf('a:main:3')).toBeLessThan(provider.sequence.indexOf('b:main:3'))}
     const scopesA=await admissionScopes(f.user,ids.a),scopesB=await admissionScopes(f.user,ids.b),graphA=await graph('a'),graphB=await graph('b'),sequence=[...provider.sequence];
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await app.dispatch('admission.settings')).toEqual(limited);expect((await read()).occupied).toEqual([]);expect((await read()).waiting).toEqual([]);expect(await graph('a')).toEqual(graphA);expect(await graph('b')).toEqual(graphB);expect(await admissionScopes(f.user,ids.a)).toEqual(scopesA);expect(await admissionScopes(f.user,ids.b)).toEqual(scopesB);expect(provider.sequence).toEqual(sequence);
     expect(await fs.readFile(path.join(f.a,data.file),'utf8')).toBe(data.fact('a'));expect(await fs.readFile(path.join(f.b,data.file),'utf8')).toBe(data.fact('b'));expect(provider.errors).toEqual([]);
   }catch(error){failed=true;console.error(JSON.stringify({mode,temp:f.temp,sequence:provider.sequence,providerErrors:provider.errors,admission:await app.dispatch('admission.read').catch(()=>undefined)}));throw error}

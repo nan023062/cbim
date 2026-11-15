@@ -26,7 +26,7 @@ async function main(){
   await fs.mkdir(path.join(appRoot,'.vite/build'),{recursive:true});await fs.copyFile(path.join(compiled,'build/desktop.js'),path.join(appRoot,'.vite/build/desktop.js'));
   await fs.writeFile(path.join(appRoot,'runtime-cold.json'),JSON.stringify(cold));await fs.writeFile(path.join(resources,'runtime-initial.json'),JSON.stringify(initial));
   await fs.writeFile(path.join(resources,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:codeVersion,notes:'测试冷包'}));
-  await fs.cp('branding',path.join(resources,'branding'),{recursive:true});
+  await fs.cp('assets/branding',path.join(resources,'branding'),{recursive:true});
   await fs.writeFile(path.join(program,'Uninstall CBIM Desktop.exe'),'test marker, not executable');
   const fakeExe=path.join(program,'CBIM Desktop.exe'),relaunchReceipt=path.join(root,'relaunch.json');
   const hostConfig={resources,appData,user,codeVersion,fakeExe,relaunchReceipt,next,archive:path.join(root,nextResource.name)};

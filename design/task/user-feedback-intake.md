@@ -19,7 +19,7 @@
 
 菜单请求不携带、覆盖或清空已有草稿与附件，沿用所选模型和权限；已有开放任务时排队，不自动插入或恢复等待中的目标。没有可用模型或不满足安全续聊条件时禁用。附件数量上限不影响两项 Skill。
 
-这两项是 **CBIM 产品内置 Skill**，正文分别为 [BUG 反馈](../runtime/bug-feedback.md)、[需求许愿](../runtime/feature-wish.md)，由产品内置清单注册并随软件打包；与开发团队的 `cbim-triage` 等岗位 Skill 分开维护。
+这两项是 **CBIM 产品内置 Skill**，正文分别为 [BUG 反馈](../../assets/runtime/bug-feedback.md)、[需求许愿](../../assets/runtime/feature-wish.md)，由产品内置清单注册并随软件打包；与开发团队的 `cbim-triage` 等岗位 Skill 分开维护。
 
 ### GitHub 直连提交
 

@@ -31,7 +31,7 @@ async function saveBuildInfo(info:unknown){
 }
 const config: ForgeConfig = {
   outDir: buildOut,
-  packagerConfig: { asar: true, executableName, icon:path.resolve('branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['branding','legal','node_modules/koffi',...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
+  packagerConfig: { asar: true, executableName, icon:path.resolve('assets/branding/cbim.ico'), ...(desktopRelease?{appVersion:desktopVersion,buildVersion:desktopVersion}:{}),extraResource: ['assets/branding','legal','node_modules/koffi',...(desktopRelease?[path.join(buildOut,'desktop-release.json'),path.join(buildOut,'app-update.yml')]:[])] },
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     prePackage:async()=>{await runtimeSigningKey()},

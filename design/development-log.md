@@ -1,3 +1,41 @@
+## 2026-11-15：0.1.20 完整 CI 与隔离安装通过（#91/#92）
+
+- 完整 CI 43702922295：c73d8a49 对 master 基线 6ef19cff，四片与汇总通过，530 文件/3575 通过/0 失败/2 历史 EXE 条件跳过。
+- 安装 run 43702918148：冻结候选 95b799de，真实 0.1.19 → 0.1.20 候选升级与全新安装通过，11 项保留标记为 true，无重放/页面错误；Pi 首次下载核验 15340 文件与实际请求通过。EXE/安装器原生图标像素匹配均 1.0。
+- pnpm verify:desktop 对精确候选 --unsigned 通过；实际 EXE 六项隔离执行场景及官网 14 场景通过。首次说明措辞断言失败与恢复证据保留，不重建或替换冻结附件。
+- [完整证据与跳过边界](verification/desktop-0.1.20-candidate-20261115.md)；最终合并回执由 PR #93 记录。此提交仅追加非运行文档，候选保持草稿、未公开。
+
+## 2026-11-15：0.1.20 安装验收措辞兼容修复（#91/#92）
+
+- 冻结候选来自 95b799de，安装器 SHA-256 d16d865876090ed509b46a7e475202f56b0f785de0dcb12be83da9b590269dc0；草稿 Release 445962642，未公开。首次隔离安装 run 43702615263 已完成品牌验收：欢迎页新图标加载，EXE 与安装器原生图标像素匹配率均 1.0，明暗截图已保留；随后因说明写“未做代码签名”而脚本只认“未签名”失败，尚未完成升级验收。
+- 仅修正验收器的明确未签名披露文字识别，两种同义写法可接受；真实 Windows NotSigned 校验不变。新增接受/拒绝用例，pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs：95 项通过。
+- 本提交只改验收脚本、测试和本记录，不改变产品、品牌、依赖、运行资产、版本说明或打包输入；复用原候选重新验收，不替换附件。最终 CI/安装证据回填 PR #93，未通过前不合并。
+## 2026-11-15：0.1.20 候选准备（#91/#92）
+
+- 接入已确认的 Flow C SVG，生成同源 PNG 与多尺寸 ICO；版本设为 0.1.20，明确未签名 Windows 模式及沿用 0.1.19 资源公钥。官网版本仍为公开的 0.1.19。
+- 验收器登记实际上一公开版 0.1.19 的侧栏显式安装与保留检查；不接受未公开的 R2 前置。真实全新安装阶段新增欢迎页明暗截图、EXE/安装器原生图标像素比对及品牌资源摘要校验。
+- pnpm build:brand、pnpm check:brand、pnpm build:website 通过；pnpm exec vitest run tests/desktop-acceptance-inputs.test.mjs：90 项通过。完整 CI、制品构建和隔离安装将在冻结提交后执行，最终回执回填 PR/Issue，不能提前声明通过。
+## 2026-11-15：design 全目录设计与运行资源分离（#92）
+
+- 基线 83fb0e33；用户授权将相同规则扩展到全部 design 目录。按 Builtins、Rules、装配、打包和引用核对受版本控制的完整目录清单。再迁移 24 份运行正文/Schema 到 assets/capability、connector、runtime、task；前一步 business 两份资源继续复用。设计、记忆说明、UX 原型、发布说明、公钥与历史验证保留，分类依据及逐文件清单见 [目录审计](verification/design-runtime-assets-20261115.md)。
+- Application/Rules/KnowledgeWorkspace 显式使用 assetsRoot；桌面、CLI、自动化、执行上下文、知识工具、脚本与重启夹具同步。Builtins 真实路径检查限制在 assets 根。资源包只收集五个业务资产目录与 legal，不再携带 design/docs，branding 仍独立按原生资源打包。
+- 保持工具 ID、只读权限、模块校验、用户数据和恢复语义。目录来源与修正链接后的正文仍按实际内容产生版本；不伪造旧指纹、不回退读取开发资料。同步源码文件头、契约、8 份架构文档及开发 Skill 三入口，未改变专业规范的业务规则。
+- 实际验证：pnpm exec vitest run tests/rules.test.ts tests/builtins.test.ts tests/runtime-packaging.test.ts tests/ci-validation.test.mjs tests/connector-definitions.test.ts tests/member-execution-context.test.ts tests/desktop-update-lifecycle.test.ts：7 文件 60 项通过，覆盖 Schema、内置知识、打包清单、CI、连接器、冻结恢复与应用重开。最后核对消费者发现自动化独立读取入口，补跑 pnpm exec vitest run tests/automation-application.test.ts：1 文件 2 项通过（真实 Pi 装配与重开）。
+- pnpm typecheck、pnpm check:architecture（1629 文件/7714 依赖/0 循环/0 违规）、pnpm check:test-modules（530 文件）及 git diff --check 通过。无 design 的隔离目录可加载全部 24 个内置条目与 Schema，资源缺失拒绝；修改文档相对文件链接无缺失，Skill 三入口一致。
+- 仅机械更新其余集成测试/桌面脚本的构造路径，不声称这些用例已执行。全量回归与真实安装/升级未运行，留给 PR/候选集成。未公开发布，也未修改其他工作树里的用户设计改动。
+## 2026-11-15：业务模块设计与运行资源拆分（#92）
+
+- 用户授权将 design/business 中运行必需文件分离：module-spec.md 与 module.schema.json 迁至 assets/business；base-module.md、README 与仅供迁移识别的 module.legacy.schema.json 保留。
+- Rules 从 designRoot 同级 assets/business 加载当前 Schema；Builtins 保留 module-spec/module-schema ID、只读/摘要/越界检查，更新实际来源；collectResources 将 assets/business 纳入 R 文件清单。未加入旧格式自动回退。
+- 同步规范相对链接、设计导航、模块治理契约、知识规则注释与架构类图。
+- 按受影响行为选择 pnpm exec vitest run tests/rules.test.ts tests/builtins.test.ts tests/runtime-packaging.test.ts tests/ci-validation.test.mjs：4 文件 44 项通过，分别覆盖结构规则、真实知识工具读取与引用解析、打包精确清单与内容、CI 资源分类。
+- pnpm check:architecture、pnpm check:test-modules、git diff --check 通过。未运行全量回归、桌面打包与安装升级；留待候选包集成阶段。
+## 2026-11-15：品牌资源目录迁移（#91）
+
+- 正式品牌资源移至 assets/branding/，同步 View SVG、开发态窗口 PNG、Forge/NSIS、官网、favicon、生成/验收工具、CI 与文档。打包态仍为 resources/branding/，保持既有资源包兼容。
+- 同步 BrandMark/main 文件头、相关架构图及契约。本步只迁移目录，未替换图形或改版本。
+- 验证：pnpm check:brand；pnpm exec vitest run tests/ci-validation.test.mjs（35 项通过）；pnpm check:architecture（0 循环/0 违规）；pnpm check:test-modules；pnpm build:website；pnpm exec vite build --config vite.renderer.config.ts；git diff --check，均通过。
+- 未执行全量回归、Windows 安装/升级或新图标视觉验收；不能据此声称 0.1.20 已交付。dist 为未提交的前端构建产物。
 ## 2026-11-15：0.1.19 公开发行与真实升级
 
 - PR #88 正常合并到 master；冻结 1c498878 的未签名安装包已公开，固定新的资源签名公钥。旧失败候选保留为 rejected 草稿；未改旧版本附件、资源/引擎通道或 Python latest。

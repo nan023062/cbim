@@ -12,7 +12,7 @@
 | --- | --- |
 | [agent-model-form.css](agent-model-form.css) | 主对话多角色模型表单的独立布局，随组件加载，不依赖设置页先打开。 |
 | [AgentModelForm.tsx](AgentModelForm.tsx) | 主对话中完整引擎与模型角色配置草稿，复用 Agent 页面选择器并支持窄屏纵向填写。 |
-| [BrandMark.tsx](BrandMark.tsx) | 无业务状态的 CBIM 产品标识，供外壳与欢迎页复用。 |
+| [BrandMark.tsx](BrandMark.tsx) | 引用 assets/branding 的无业务状态 CBIM 产品标识，供外壳与欢迎页复用。 |
 | [DeferredView.tsx](DeferredView.tsx) | 页面入口的延迟模块装配，提供局部加载与失败重试，不负责业务导航。 |
 | [Empty.tsx](Empty.tsx) | 各页面复用的空状态布局。 |
 | [EngineModelPicker.tsx](EngineModelPicker.tsx) | Agent 编辑和岗位登记共用的引擎/模型级联下拉菜单。 |

@@ -38,7 +38,7 @@ it.each(['complete','invalid','lost-reply','stop'] as ModuleGovernanceToolsMode[
     }
     expect((await workspace.snapshot()).files).toEqual(seeded.snapshot.files);expect(await moduleGovernanceToolsJournalBytes(f.user,seeded.entry.id)).toEqual(journals);
     await expect(workspace.commit(request(await workspace.snapshot(),[{path:seeded.overviewPath,text:seeded.proposed}]))).rejects.toMatchObject({code:'GOVERNANCE_PROTECTED'});expect(await moduleGovernanceToolsJournalBytes(f.user,seeded.entry.id)).toEqual(journals);
-    const bytes=await moduleGovernanceToolsLogBytes(f.user,seeded.entry.id),count=provider.requests.length;vi.restoreAllMocks();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+    const bytes=await moduleGovernanceToolsLogBytes(f.user,seeded.entry.id),count=provider.requests.length;vi.restoreAllMocks();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
     expect(await records()).toEqual(saved);expect(await graph()).toEqual(finished);expect(await moduleGovernanceToolsLogBytes(f.user,seeded.entry.id)).toEqual(bytes);expect(await moduleGovernanceToolsJournalBytes(f.user,seeded.entry.id)).toEqual(journals);expect((await app.workspace(seeded.entry.id).snapshot()).files).toEqual(seeded.snapshot.files);expect((await moduleGovernanceToolsHistory(app,seeded.entry.id,provider.state.proposalReceipt?.record.proposalId)).selected).toEqual(history.selected);expect(provider.requests).toHaveLength(count);expect(provider.errors).toEqual([]);
   }finally{provider.release();vi.restoreAllMocks();await app.shutdown();await f.cleanup();await provider.close()}
 },90000);

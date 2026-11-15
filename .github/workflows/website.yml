@@ -5,7 +5,7 @@ on:
     branches: [master]
     paths:
       - 'website/**'
-      - 'branding/**'
+      - 'assets/branding/**'
       - 'scripts/build-website.mjs'
       - 'scripts/build-brand-assets.mjs'
       - '.github/workflows/website.yml'

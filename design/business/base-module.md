@@ -2,7 +2,7 @@
 
 author：linan
 
-面向人的模块对象设计。字段语义与唯一内容归属见 [Module 定义与维护规范](module-spec.md)。类图描述设计，不代表已部署执行器。
+面向人的模块对象设计。字段语义与唯一内容归属见 [Module 定义与维护规范](../../assets/business/module-spec.md)。类图描述设计，不代表已部署执行器。
 
 ## 压缩索引与正文
 

@@ -32,6 +32,6 @@ it.each(['complete','stop','malformed-after-commit'] as KnowledgeContractMode[])
         const transactions=await fs.readdir(path.join(f.user,entry.id,'transactions'));expect(transactions.filter(value=>value===provider.requestId+'.json')).toHaveLength(1);
       }
     }
-    const bytes=await knowledgeContractLogBytes(f.user,entry.id),requests=provider.requests.length;vi.restoreAllMocks();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();expect(await records()).toEqual(saved);expect(await graph()).toEqual(finished);expect(await knowledgeContractLogBytes(f.user,entry.id)).toEqual(bytes);expect((await app.workspace(entry.id).snapshot()).revision).toBe(after.revision);expect(provider.requests).toHaveLength(requests);expect(provider.errors).toEqual([]);
+    const bytes=await knowledgeContractLogBytes(f.user,entry.id),requests=provider.requests.length;vi.restoreAllMocks();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(saved);expect(await graph()).toEqual(finished);expect(await knowledgeContractLogBytes(f.user,entry.id)).toEqual(bytes);expect((await app.workspace(entry.id).snapshot()).revision).toBe(after.revision);expect(provider.requests).toHaveLength(requests);expect(provider.errors).toEqual([]);
   }finally{vi.restoreAllMocks();await app.shutdown();await f.cleanup();await provider.close()}
 },90000);

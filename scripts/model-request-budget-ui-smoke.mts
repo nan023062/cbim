@@ -16,7 +16,7 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-request-budget-ui-')),pr
 const simple=mode==='complete'?undefined:await modelRequestBudgetProvider('openai-completions',mode==='block'?'two-requests':'unknown'),shared=mode==='complete'?await scopeBudgetProvider('complete'):undefined;
 let setup:Application|undefined,desktop:ElectronApplication|undefined,keep=false;const pageErrors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();let entry:{id:string};
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();let entry:{id:string};
   if(shared)entry=(await seedScopeBudget(setup,project,shared,'complete')).entry;
   else{
     await setup.models.save({profile:{name:'Request budget UI',api:'openai-completions',baseUrl:simple!.url,auth:'none',defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Request budget UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]}});

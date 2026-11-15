@@ -13,7 +13,7 @@ import type {RunSummary} from '../src/logic/execution/rules/types';
 it.each(['bug','wish'] as const)('refreshes both feedback tools after login when resuming an empty-project conversation (%s)',async kind=>{
   const f=await fixture();await f.app.shutdown();
   const cipher={available:()=>true,encrypt:(value:string)=>Buffer.from(value).toString('base64'),decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
-  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'),cipher);await app.init();
+  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.init();
   const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),before=await workspace.snapshot();
   const input=kind==='bug'?{kind,summary:'Lifecycle bug',steps:'User supplied step',actual:'User supplied error',expected:'Open normally',environment:'Windows fixture'}:{kind,summary:'Lifecycle wish',scenario:'User supplied scenario',problem:'User supplied problem',expected:'User supplied feature',example:'User supplied example'};
   const token='gho_lifecycle_fixture_token',issues:unknown[]=[],requests:any[]=[],errors:string[]=[];

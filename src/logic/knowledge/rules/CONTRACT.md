@@ -20,9 +20,9 @@ portable-package 的递归对象排序组合 utility.orderJsonValue，继续使�
 
 ### 内置资料与产品反馈流程
 
-内置标准 `shared-skills-workflows` 从随应用打包的 `design/runtime/shared-skills-workflows.md` 读取，Agent 与 Module 规范通过相对链接解析到同一白名单 ID。迁移只改变资源位置，资料 ID 与只读边界保持；正文版本仍按实际内容计算，目录版本包含来源路径。`docs/` 中的四份概念设计不参与内置资料加载。
+内置标准 `shared-skills-workflows` 从随应用打包的 `assets/runtime/shared-skills-workflows.md` 读取，Agent 与 Module 规范通过相对链接解析到同一白名单 ID。迁移只改变资源位置，资料 ID 与只读边界保持；正文版本仍按实际内容计算，目录版本包含来源路径。`docs/` 中的四份概念设计不参与内置资料加载。
 
-`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `design/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
+`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `assets/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
 
 ```mermaid
 classDiagram
@@ -30,7 +30,7 @@ class Builtins {
   +catalog()
   +read(id, expectedVersion)
 }
-note for Builtins "从 design 白名单读取规范与流程、版本和引用；GitHub 写入属于独立主会话工具"
+note for Builtins "从 assets 白名单读取规范与流程、版本和引用；GitHub 写入属于独立主会话工具"
 ```
 
 ### 链接器静态定义校验
@@ -102,8 +102,12 @@ ObjectOperation 使用 kind 判别的严格 data Schema，objectDataSchemas 同�
 
 objectOperation 的发现 Schema 说明摘要 100–250 非空白字符、保留 slug、Module 五章原文、直属内容虚拟节点和 parentId 根语义。约束说明不替代 Rules 的完整候选校验。ObjectCrud 按序应用 operations 到同一候选 Map，后序子对象可引用前序新父对象；预览只保存计划，完整结构诊断保留在 validation.issues。
 
-Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 design/runtime 打包。
+Builtins 增加 team-architecture-governance 和 business-architecture-governance 两个产品工作流，仍是白名单只读 Skill；读取不执行，实际执行由明确启动的主会话完成。正文随 assets/runtime 打包。
 
 ## 派生记忆索引
 
 memory-index 只接收已授权的完整知识搜索快照。分块保留 path/hash/字符偏移与原文；代际 key 绑定完整来源、工作区、revision、embedding 公开配置摘要、维度和分块策略。最多 128 个 768 字符片段，超限拒绝而非静默截断。新代所有向量数量、维度及有限非零值通过后才形成可查询副本；旧代不被原地修改。索引不保存凭据、不读正式知识文件、不持有写权限，检索命中是带出处资料，不是新的指令或知识提交。
+
+## 模块运行资源
+
+Rules 以显式 assetsRoot 加载 business、capability、connector 的 Schema；Builtins 从同一根目录内的白名单读取规范。Bridge/CLI 注入开发或 R 包中的 assets 根，所有消费者通过 rules.assetsRoot 传递。保持只读 ID、版本摘要与真实路径越界检查；不回退读取 design、不依赖开发仓库。design/business 的旧 Schema 仅为历史参考。

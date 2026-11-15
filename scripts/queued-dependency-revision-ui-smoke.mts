@@ -14,7 +14,7 @@ const stopping=process.argv.includes('--stop'),restartHeld=process.argv.includes
 const mode=stopping?'stop':restartHeld?'restart-held':'complete',artifact='dependency-revision-'+mode,exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-dependency-revise-ui-')),project=path.join(temp,'project'),user=path.join(temp,'user');
 const provider=await dependencyRevisionProvider(),pageErrors:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,keepTemp=false,report:Record<string,unknown>|undefined;
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const {entry}=await seedDependencyRevision(setup,project,provider);await setup.shutdown();setup=undefined;
+ setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const {entry}=await seedDependencyRevision(setup,project,provider);await setup.shutdown();setup=undefined;
  const launch=()=>electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});desktop=await launch();let page=await desktop.firstWindow();
  const watch=()=>{page.setDefaultTimeout(30000);page.on('pageerror',e=>pageErrors.push(e.message))};watch();
  const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args}),active=()=>page.locator('.workspace-panel:not([hidden])'),input=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),records=()=>revisionRecords(user,entry.id);

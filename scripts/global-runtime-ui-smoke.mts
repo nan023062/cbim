@@ -13,7 +13,7 @@ import {latestExecutable} from './build-artifact.mjs';
 const exe=await latestExecutable(),temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-global-runtime-ui-')),projects={a:path.join(temp,'runtime-project-a'),b:path.join(temp,'runtime-project-b')},user=path.join(temp,'user');await fs.mkdir(projects.a);await fs.mkdir(projects.b);
 const providers=await globalRuntimeProviders(),pageErrors:string[]=[],dialogs:string[]=[];let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('design'));await setup.init();const seeded=await seedGlobalRuntime(setup,projects,providers),ids={a:seeded.a.entry.id,b:seeded.b.entry.id};await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seeded=await seedGlobalRuntime(setup,projects,providers),ids={a:seeded.a.entry.id,b:seeded.b.entry.id};await setup.shutdown();setup=undefined;
   const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+60000;while(Date.now()<end){assert.deepEqual(providers.errors(),[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,40))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});let page=await desktop.firstWindow();const observe=()=>{page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));page.on('dialog',async dialog=>{dialogs.push(dialog.type()+': '+dialog.message());await dialog.dismiss()})};observe();
   // Count real IPC requests/replies without replacing their implementations or their state.

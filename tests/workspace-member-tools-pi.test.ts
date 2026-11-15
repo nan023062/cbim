@@ -50,7 +50,7 @@ it.each(['execute','read'] as const)('真实 Pi 主工具 %s 注册、采纳、�
    expect(list.items[0]).toMatchObject({memberId,revision:4,state:'suspended',name:'由主工具修订的岗位'});
    const receipt=await app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,started.taskId);
    await expect(app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,'other')).rejects.toMatchObject({code:'MEMBER_ACTOR'});
-   const count=requests.length;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('design'));await app.init();
+   const count=requests.length;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
    expect(await app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,started.taskId)).toEqual(receipt);expect(requests).toHaveLength(count);
   }
  }finally{await app.shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}

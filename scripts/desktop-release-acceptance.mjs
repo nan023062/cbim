@@ -9,11 +9,12 @@ import {spawn, execFile, execFileSync} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 import {_electron as electron, chromium} from 'playwright-core';
-import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks} from './desktop-acceptance-inputs.mjs';
+import {acceptanceInputs, acceptanceTransferExpectation, acceptanceReadyTarget, acceptanceCanAwaitCheckRetry, acceptanceRetentionChecks, assertUnsignedNotice} from './desktop-acceptance-inputs.mjs';
 import {observeUpdaterNetwork, readUpdaterNetwork, summarizeUpdaterNetwork} from './desktop-update-network-evidence.mjs';
 import {connectDesktopInspector} from './desktop-inspector-connection.mjs';
 import {DesktopAcceptanceProcess, ownLaunchedDesktop} from './desktop-acceptance-process.mjs';
 import {parse} from 'yaml';
+import {verifyDesktopBrand} from './brand-acceptance.mjs';
 
 assert.equal(process.platform, 'win32');
 assert.equal(process.env.GITHUB_ACTIONS, 'true', 'Only run on an isolated GitHub Actions runner');
@@ -221,7 +222,7 @@ async function notes(page) {
   const snapshot = await status(page);
   if (snapshot.currentResourceVersion !== undefined) {
     assert.equal(snapshot.currentVersion, version); assert.equal(snapshot.currentResourceVersion, 1);
-    assert.match(snapshot.currentNotes, /未签名/);
+    assertUnsignedNotice(snapshot.currentNotes);
     const icon = page.getByRole('button', {name: '版本与更新', exact: true}); await icon.hover();
     const tooltip = page.getByRole('tooltip'); await tooltip.waitFor();
     assert.ok((await tooltip.innerText()).includes(`C ${version} · R 1`));
@@ -232,7 +233,7 @@ async function notes(page) {
   const title = await combined.count() ? '版本与更新' : '最近一次更新';
   await page.getByRole('menuitem', {name: title, exact: true}).click();
   const dialog = page.getByRole('dialog', {name: title, exact: true}); await dialog.waitFor();
-  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assert.match(await dialog.innerText(), /未签名/);
+  assert.ok((await dialog.innerText()).includes(`当前版本 ${version}`)); assertUnsignedNotice(await dialog.innerText());
   await page.screenshot({path: path.join(root, `${mode}-notes.png`)}); await page.keyboard.press('Escape');
 }
 // 新版先显示窗口再恢复工程；等待真实生命周期就绪，不用测试主动打开来掩盖恢复失败。
@@ -290,6 +291,7 @@ try {
     const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
     assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
     let page = await launch(path.join(root, 'fresh-user'));
+    if(version==='0.1.20')await verifyDesktopBrand({app,page,executable:exe,installer:candidate,output:root});
     assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page);
     if((await status(page)).currentResourceVersion!==undefined)freshEngine=await verifyFreshEngine(page,path.join(root,'fresh-user'));
     await close();requests=0; // 全新安装与旧版迁移是两个独立 profile，分别记录模型请求计数。
@@ -332,7 +334,7 @@ try {
   }
   assert.equal(summary.status, 'completed'); assert.equal(requests, 1);
   let previousEngine;
-  if(['0.1.17','0.1.18'].includes(previousVersion)){
+  if(['0.1.17','0.1.18','0.1.19'].includes(previousVersion)){
     const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
     await page.evaluate(revision=>window.cbim.call('engines.configure',{kind:'pi',revision,action:'disable'}),state.revision);
     previousEngine=await retainedEngineSnapshot(page);assert.equal(previousEngine.enabled,false);
@@ -350,7 +352,7 @@ try {
       const prepared = await prepareColdUpgrade(page); page=prepared.page; const ready=prepared.ready;
       assert.equal(requests,1,'Resource activation must not replay the completed model request');
       // 0.1.17/0.1.18 的侧栏图标直接安装；查看就绪时只悬停，不提前授权重启。
-      if(['0.1.17','0.1.18'].includes(previousVersion)){
+      if(['0.1.17','0.1.18','0.1.19'].includes(previousVersion)){
         await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
         await page.getByRole('button',{name:'版本与更新',exact:true}).hover();
         await page.getByRole('tooltip').waitFor();
@@ -385,11 +387,11 @@ try {
       await save('online-cache-reuse', {summary: cachedSummary, records: cachedNetwork});
       assert.equal(cachedSummary.requests, 0);
       await save('online-install-intent', {from: previousVersion, to: version, previousUpdateFlow, sha256: expected, install, userRoot});
-      if(!['0.1.17','0.1.18'].includes(previousVersion))await page.getByRole('button', {name: '查看更新', exact: true}).click();
+      if(!['0.1.17','0.1.18','0.1.19'].includes(previousVersion))await page.getByRole('button', {name: '查看更新', exact: true}).click();
       else await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
       // R4 关闭业务 IPC 后才交给固定壳安装；页面可能先关闭，不能继续查询已退出的业务状态。
       // 预先订阅实际进程关闭，再由下方检查 NSIS 新进程、版本与原目录，关闭本身不计为升级成功。
-      installingPid=await exitAfter(()=>['0.1.17','0.1.18'].includes(previousVersion)
+      installingPid=await exitAfter(()=>['0.1.17','0.1.18','0.1.19'].includes(previousVersion)
         ?page.getByRole('button',{name:'版本与更新',exact:true}).click()
         :page.getByRole('dialog', {name: '版本与更新', exact: true}).getByRole('button', {name: '重启安装', exact: true}).click(), 'installer-restart');
       await save('online-ui-install',{clicked:true,previousPid:installingPid,processClosed:true,at:new Date().toISOString()});
@@ -430,7 +432,7 @@ try {
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
   if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
   // 真实新客户端匿名检查 E 通道，覆盖换钥后的来源验证；发现版本不能更改原安装/停用选择。
-  if(version==='0.1.19'){
+  if(['0.1.19','0.1.20'].includes(version)){
     const checked=await page.evaluate(()=>window.cbim.call('engines.check'));
     if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page),previousEngine);
     await save('engine-channel-after',{checked:true,items:checked.items.map(item=>({kind:item.kind,enabled:item.enabled}))});

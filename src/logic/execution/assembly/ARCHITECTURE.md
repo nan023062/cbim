@@ -10,10 +10,10 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [agent-call-scheduler.ts](agent-call-scheduler.ts) | execution 内的递归调用协调，拥有父子关联、深度限制、结果回传和后代取消。 |
+| [agent-call-scheduler.ts](agent-call-scheduler.ts) | execution 内的递归调用协调，拥有父子关联、深度限制、业务结果核验、反馈与后代取消。 |
 | [engine-adapters.ts](engine-adapters.ts) | 当前源码/旧包的官方适配器装配表，所有实现均通过同一版本协议取得工厂。 |
 | [engine-package-loader.ts](engine-package-loader.ts) | 从冷宿主已验证的不可变包路径加载统一引擎工厂。 |
-| [loop-engine.ts](loop-engine.ts) | 调度引擎：将工作区内部知识服务、内核锁与前置策略注入独立 LoopRuntime。 |
+| [loop-engine.ts](loop-engine.ts) | 将工作区知识、权限和工具注入 LoopRuntime；业务 Agent 同时取得冻结 Workflow 指引及产物验证能力。 |
 | [packaged-engine-adapters.ts](packaged-engine-adapters.ts) | 正式 R 构建替换源码兼容表，禁止回退到内嵌具体引擎。 |
 
 ## 架构类图
@@ -41,6 +41,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler[
   -activeCalls
   -stranded
   -replyHistory
+  -checks
   -closed
   -execute()
   -capacity()
@@ -50,7 +51,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler[
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
 ```
 
-直接依赖：[../../agents/agent.ts](../../agents/agent.ts)、[../../agents/exchange.ts](../../agents/exchange.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/runtime/runtime.ts](../rules/runtime/runtime.ts)、[../rules/types.ts](../rules/types.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
+直接依赖：[../../agents/agent.ts](../../agents/agent.ts)、[../../agents/exchange.ts](../../agents/exchange.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/member-run.ts](../rules/member-run.ts)、[../rules/runtime/runtime.ts](../rules/runtime/runtime.ts)、[../rules/types.ts](../rules/types.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../tools/rules/outcome.ts](../../tools/rules/outcome.ts)、[../../tools/rules/results.ts](../../tools/rules/results.ts)。
 
 ### engine-adapters.ts
 
@@ -256,3 +257,9 @@ loop-engine 不直接选择具体构造器，也不解析 Pi SDK 路径；通过
 ## 递归调用协调
 
 agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答复与取消树，直接调用已准备 Runtime.start 并等待 done；finally 经 Runtime.close 确认排空后才释放已有全局准入许可。关闭失败保留原句柄，只重试排空，不重放任务。并发来自 execution/admission，预算来自根请求账本；协调器不另存 reserved 或本根额度，capacity 仅显示权威快照。Agent 对象继续归 agents，不迁入具体引擎。
+
+### 显式业务调用与当前结果核验
+
+AgentCallScheduler.prepare 可以返回可信 launch 及只读 verify。带 launch 调用同一个 LoopRuntime.startMember，beforeRun 仍将真实子 task/run 关联父工具；普通调用沿 start。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
+
+cbim_agent_result_check 仅接受当前父运行已经完成的原 callId；从闭包取得原身份与验证器，模型不能提交路径或证明。外部文件变化返回 WORKFLOW_VALIDATION_STALE；不能据此重放子运行。调用图深度、全局准入、预算、停止及排空逻辑不变。业务 Agent 暴露原产物证据工具及递归求助，旧终止交接/检查点工具仅保留给旧运行。

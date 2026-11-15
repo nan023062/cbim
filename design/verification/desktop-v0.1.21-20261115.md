@@ -36,3 +36,9 @@ pnpm exec vitest run tests/execution-collaboration.test.ts tests/unified-tool-po
 
 ## 未执行
 合并、公开桌面发布、R 通道投放、E 索引切换、公开在线升级和官网版本切换均未执行。Python latest 仍为 v1.0.2；桌面公开稳定版仍为 0.1.19。不能将本记录理解为发布成功。
+
+## 后续专项迁移：九项文件验证（2026-11-15）
+
+基线 17f032c7 后已把 JSON/CSV/PNG × 正常交付/文件变化/停止 的九项失败用例迁到真实 cbim_agent_call 调用链，保留 canonical、当前字节与重启不重放检查；新增调用方 cbim_agent_result_check。相关调用/运行循环测试 37 项以及类型、测试边界、架构检查通过。具体命令和范围见 development-log.md 的 #94 业务验证迁移记录。
+
+这仅解除已定位的九项专项回归阻塞，不表示其余旧业务消费者、同文件六项人工目标决策或完整 CI 已通过。PR #96 保持草稿，原候选 6541c41d 过时，安装及发布记录仍只证明原候选。

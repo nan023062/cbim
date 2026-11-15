@@ -3,6 +3,7 @@
  * 设计原因：复用 execution 的运行生命周期和全局准入，避免重复循环和本根并发账本；根运行持工作区租约，后代只在独占工具交接中执行。
  * 支持边界：子调用捕获岗位自己的冻结模型和价格，计入同一根账本；求助只交给直接调用方。
  */
+import {prepareAgentBusiness} from './agent-business';
 import {randomUUID} from 'node:crypto';
 import {Agent,type AgentToolContext} from '../../agents';
 import {AgentCallScheduler} from '../../execution/assembly/agent-call-scheduler';
@@ -65,7 +66,7 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     if(detail.currentDiff.capability.status!=='same'||detail.currentDiff.model.status!=='same')fail('AGENT_CONFIGURATION_CHANGED','目标 Agent 配置已变化，请先核实并采纳配置');
     const policy=detail.member.runtimePolicy;
     const engine=workspaceMemberEngine(policy)??'pi';
-    const childLlm=input.models?await input.models.withRuntimeConfiguration({profileId:policy.profileId,modelId:policy.modelId,engine,modelRoles:policy.modelRoles},async captured=>{
+    const childLlm=input.models?await input.models.withRuntimeConfiguration({profileId:policy.profileId,modelId:policy.modelId,engine:workspaceMemberEngine(policy),modelRoles:policy.modelRoles},async captured=>{
       if(workspaceMemberModelHash(captured.profile)!==policy.configurationHash)fail('AGENT_CONFIGURATION_CHANGED','目标模型配置已变化，未启动子运行');
       await requestBudgets?.preflight(task.taskId,scopeId,{profile:captured.profile});
       request.signal.throwIfAborted();return captured.resolve();
@@ -80,20 +81,22 @@ export function createAgentCallAssembly(input:AgentCallAssemblyInput){
     });
     if(permit.kind!=='granted'){const usage=admission.manager.snapshot();throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT','当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用',{current:usage.occupied.length,requested:1,limit:usage.policy.maxConcurrentRuns,unit:'process'})}
     try{
-      const childTask:TaskSpec={...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
+      if(request.parent.task.moduleIds.length&&(!request.business||request.business.moduleIds.some(id=>!request.parent.task.moduleIds.includes(id))))fail('AGENT_BUSINESS_SCOPE','业务子调用须保留父调用的冻结模块范围');
+      const business=request.business?await prepareAgentBusiness({workspace,dispatch:dispatch??fail('AGENT_BUSINESS_UNAVAILABLE','缺少业务来源核实服务'),member:detail.member,model:childLlm,taskId:childTaskId,rootSessionId:task.taskId,message:request.message,permission:agent.definition.permission,storage,business:request.business,signal:request.signal}):undefined;
+      const childTask:TaskSpec=business?.task??{...task,taskId:childTaskId,agentId:definition.agentId,goal:request.message,moduleIds:[],acceptance:[],mode:'chat'};
       let childContext:AgentToolContext|undefined,childAlive=true;const childBudgets=new Map<string,Promise<RequestBudgetPort|undefined>>();
       const assertChild=()=>{workspace.assert();if(closed||!childAlive||request.signal.aborted)fail('AGENT_CALL_CANCELLED','原子调用已结束，不能发送新请求')};
       const child=await createWorkspaceLoop(workspace.paths,workspace,{...options,engine,llm:childLlm,profileId:policy.profileId,model:policy.modelId,modelRoles:policy.modelRoles,provider:'cbim-'+policy.profileId,process:undefined,images:[],attachmentIds:[],requestQuestion:async(args,signal)=>{
         if(!childContext)fail('AGENT_CALL_NOT_STARTED','子调用尚未受理');
         childContext.assertQuestionWait?.();return request.requestQuestion(args,signal);
       }},{
-        storage,agent,agentCall:request.reference,agentTools:context=>{childContext=context;return scheduler.bind(context,request.parent.depth+1)},requestBudget:(context,role='primary')=>{
+        ...business?.services,storage,agent,agentCall:request.reference,agentTools:context=>{childContext=context;return scheduler.bind(context,request.parent.depth+1)},requestBudget:(context,role='primary')=>{
           assertChild();let result=childBudgets.get(role);if(!result){result=requestBudgets?.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId:rootRunId!,kind:'main',agentRun:{taskId:childTaskId,runId:context.runId}},childLlm,role,assertChild)??Promise.resolve(undefined);childBudgets.set(role,result)}return result;
         },
         acquireLease:async()=>{workspace.assert();if(closed||request.signal.aborted)fail('AGENT_CALL_CANCELLED','调用已停止');return ()=>{}},
         authorizeNative:input.authorizeNative,
       });
-      return {agent,task:childTask,runtime:child.runtime,release:()=>{childAlive=false;permit.release()}};
+      return {agent,task:childTask,runtime:child.runtime,...(business?{launch:business.launch,verify:business.verify}:{}),release:()=>{childAlive=false;permit.release()}};
     }catch(error){permit.release();throw error}
   }});
   const finish=async(summary?:RunSummary)=>{

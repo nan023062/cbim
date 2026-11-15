@@ -113,3 +113,28 @@ it('stopping a question aborts the original wait and rejects late replies withou
  const late=await binding.capability.tools.call('cbim_agent_reply',{callId:'call',questionId:'1',result:{answers:[{question:'Continue?',answer:'Yes'}]}},signal,'late');
  expect(late).toMatchObject({isError:true});expect(prepare).toHaveBeenCalledTimes(1);expect(child!.release).toHaveBeenCalledTimes(1);expect(binding.active()).toBe(false);
 });
+
+it('starts a frozen business run once and rechecks only the original caller result',async()=>{
+ const child=prepared('B'),startMember=vi.fn(async(task,message,launch,control)=>child.runtime.start(task,message,undefined,undefined,control));
+ let stale=false;const verify=vi.fn(async()=>{if(stale)throw Object.assign(Error('changed bytes'),{code:'WORKFLOW_VALIDATION_STALE'});return {state:'verified'}});
+ const launch={binding:{} as any,session:{nativeSessionId:'session'}};
+ const prepare=vi.fn(async()=>({...child,runtime:{...child.runtime,startMember},launch,verify}));
+ const scheduler=new AgentCallScheduler({maxDepth:2},{prepare}),tools=scheduler.bind(context()).capability.tools,signal=new AbortController().signal;
+ const value=await tools.call('cbim_agent_call',{agentId:'B',message:'work',business:{moduleIds:['module'],acceptance:['actual bytes']}},signal,'original');
+ expect(result(value)).toMatchObject({status:'completed',verification:{state:'verified'}});
+ expect(startMember).toHaveBeenCalledTimes(1);expect(prepare.mock.calls).toHaveLength(1);expect(child.release).toHaveBeenCalledTimes(1);
+ expect(result(await tools.call('cbim_agent_result_check',{callId:'original'},signal,'check'))).toEqual({state:'verified'});
+ expect(result(await scheduler.bind(context('other')).capability.tools.call('cbim_agent_result_check',{callId:'original'},signal,'check')).error.code).toBe('AGENT_RESULT_UNAVAILABLE');
+ stale=true;
+ expect(result(await tools.call('cbim_agent_result_check',{callId:'original'},signal,'stale')).error.code).toBe('WORKFLOW_VALIDATION_STALE');
+ expect(startMember).toHaveBeenCalledTimes(1);expect(prepare).toHaveBeenCalledTimes(1);
+ await scheduler.close();
+ expect(await tools.call('cbim_agent_result_check',{callId:'original'},signal,'closed')).toMatchObject({isError:true});
+});
+it('returns a business verification failure instead of completed when model execution ends',async()=>{
+ const child=prepared('B'),verify=vi.fn(async()=>{throw Object.assign(Error('no valid proof'),{code:'WORKFLOW_EVIDENCE_INVALID'})});
+ const scheduler=new AgentCallScheduler({maxDepth:1},{prepare:async()=>({...child,verify})});
+ const value=await scheduler.bind(context()).capability.tools.call('cbim_agent_call',{agentId:'B',message:'work'},new AbortController().signal,'call');
+ expect(value).toMatchObject({isError:true});expect(result(value)).toMatchObject({error:{code:'WORKFLOW_EVIDENCE_INVALID',started:true}});
+ expect(result(value)).not.toHaveProperty('status','completed');expect(child.release).toHaveBeenCalledTimes(1);
+});

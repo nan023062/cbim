@@ -167,9 +167,9 @@ class N_src_logic_workspace["workspace/"] {
 - `application` → `knowledge`：导入。
 - `application` → `resources`：导入。
 - `application` → `connectors`：导入。
+- `application` → `tasks`：导入。
 - `application` → `agents`：导入。
 - `application` → `governance`：导入。
-- `application` → `tasks`：导入。
 - `application` → `tools`：导入。
 - `application` → `evidence`：导入。
 - `automation` → `workspace`：导入。

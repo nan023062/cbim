@@ -9,7 +9,7 @@
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
  * 主 Agent 和递归执行 Agent 直接共用本运行时；AbortSignal、引擎关闭和排空只有此处持有，不另设 Agent 循环包装。
- * 作用定位：LoopRuntime 持有任务租约、工具授权与终态；显式续聊由会话选择器核实原生恢复或无交互失败重试。
+ * 作用定位：LoopRuntime 持有任务租约、工具授权与终态；业务 Agent 启动关联父工具，使用递归求助，历史交接保持独立。
  * 能力边界：验证准备交给所属能力，工具集合由显式装配提供；本层继续持有授权、日志、在途操作及停止排空时序。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
@@ -150,9 +150,9 @@ export class LoopRuntime {
   }
   /**
    * 启动已可靠领取的成员任务。只接收新业务 taskId；调用方负责成员互斥及前一通道运行的安全核实。
-   * 本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
+   * 递归调用同样使用本入口及 beforeRun 记录父工具关系；本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
    */
-  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch,control?:Pick<RunStartControl,'signal'>):Promise<{runId:string;done:Promise<RunSummary>}>{
+  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch,control?:RunStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     if(this.closing)throw Error('Loop Engine 正在关闭');
     const prepared=checkedMemberRunLaunch(launch,task);
     const pending=this.startInternal(task,message,undefined,prepared,undefined,control);this.starting.add(pending);
@@ -316,7 +316,8 @@ export class LoopRuntime {
       },assertExclusive:id=>{
         if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('AGENT_CALL_BUSY','存在其他在途工具或审批，不能交接 Agent 调用');
       }});
-      const memberHelpTools=member?new MemberHelpTools(member.binding,{
+      // 递归调用使用同调用求助；旧终止交接/检查点仅供历史执行链。
+      const memberHelpTools=member&&!agentTools?new MemberHelpTools(member.binding,{
         save:async help=>{await emit({type:'task.help_requested',data:{help}})},
         assertReady:(id,attempted)=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id))throw Error('求助调用已停止或未获得授权');
@@ -346,7 +347,7 @@ export class LoopRuntime {
       });
       const checkpointAllowance=this.options.memberCheckpointAllowance??(memberResume?0:1);
       if(!Number.isInteger(checkpointAllowance)||checkpointAllowance<0||checkpointAllowance>memberCheckpointLimit)throw Error('成员检查点剩余额度无效');
-      if(member&&this.options.artifacts&&checkpointAllowance>0)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
+      if(member&&!agentTools&&this.options.artifacts&&checkpointAllowance>0)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
         current:()=>taskTools.current(),assertReady:id=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
         },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},

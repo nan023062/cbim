@@ -23,11 +23,11 @@ vi.mock('../src/logic/execution/engines/codex/engine',()=>({CodexEngine:class {c
 const cleanups:(()=>Promise<void>)[]=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0))await cleanup();fake.engine.mockReset()});
 
-async function fixture(mode:'chain'|'different-model'|'changed-capability'|'capacity'|'budget'|'legacy-budget'|'read'|'cross-model'|'cross-model-question'|'changed-model-capture'|'question'|'nested-question'|'unanswered'='chain'){
+async function fixture(mode:'implicit-engine'|'chain'|'different-model'|'changed-capability'|'capacity'|'budget'|'legacy-budget'|'read'|'cross-model'|'cross-model-question'|'changed-model-capture'|'question'|'nested-question'|'unanswered'='chain'){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-agent-assembly-'));
   const storage=new FileRunStorage(),admission=new GlobalRunAdmission();
   const rootTask:TaskSpec={taskId:'root-task',workspaceId:'workspace',root:directory,mode:'chat',agentId:'cbim:main',goal:'root',moduleIds:[],acceptance:[]};
-  const llm:ResolvedLlm={profile:{id:'profile',name:'Configured model',model:'model',api:'openai-completions',baseUrl:'https://example.invalid/v1',auth:'none',contextWindow:8192,maxTokens:1024,reasoning:false,engine:'pi'},apiKey:''};
+  const llm:ResolvedLlm={profile:{id:'profile',name:'Configured model',model:'model',api:'openai-completions',baseUrl:'https://example.invalid/v1',auth:'none',contextWindow:8192,maxTokens:1024,reasoning:false,...(mode==='implicit-engine'?{}:{engine:'pi' as const})},apiKey:''};
   const paths={identity:async()=>({id:'workspace',path:directory}),project:()=>directory};
   const workspace={entry:{id:'workspace',path:directory},instanceId:'instance',paths,rules:{designRoot:path.resolve('design')},assert:vi.fn()};
   const modelB:ResolvedLlm={profile:{...llm.profile,id:'profile-b',model:'model-b',engine:'claude-code',api:'anthropic-messages',pricing:{input:2,output:4,cacheRead:1,cacheWrite:2}},apiKey:'child-key'};
@@ -49,11 +49,11 @@ async function fixture(mode:'chain'|'different-model'|'changed-capability'|'capa
   if(rootPermit.kind!=='granted')throw Error('Root admission failed');
   if(mode==='capacity')admission.configure({revision:1,maxConcurrentRuns:1});
   const options={mode:'chat' as const,engine:'pi' as const,provider:'cbim-profile',profileId:'profile',model:'model',permission:mode==='read'?'read' as const:'execute' as const,process:{command:'test-engine',args:[]},llm};
-  const input={workspace,task:rootTask,options,llm,storage,members:{get:memberGet},admission:{manager:admission,ownerEpoch:1,isCurrent:()=>true},dispatch:{budgets:{holdMain},openScope,closeScope},requestBudgets:{forRun,preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture')?{models:{withRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
+  const input={workspace,task:rootTask,options,llm,storage,members:{get:memberGet},admission:{manager:admission,ownerEpoch:1,isCurrent:()=>true},dispatch:{budgets:{holdMain},openScope,closeScope},requestBudgets:{forRun,preflight:async()=>{}},...((mode.startsWith('cross-model')||mode==='changed-model-capture'||mode==='implicit-engine')?{models:{withRuntimeConfiguration:async(ref:any,use:any)=>{const selected=[modelB,modelC,llm].find(m=>m.profile.id===ref.profileId)!;expect(ref).toMatchObject({modelId:selected.profile.model,engine:selected.profile.engine});return use({profile:{...structuredClone(selected.profile),...(mode==='changed-model-capture'?{maxTokens:selected.profile.maxTokens+1}:{})},resolve:()=>structuredClone(selected)})}}}:{}),authorizeNative:async()=>({allow:true})} as unknown as AgentCallAssemblyInput;
   const assembly=createAgentCallAssembly(input);
   fake.engine.mockImplementation((engineOptions:any):AgentEngine=>{
     let context:EngineContext;
-    return {kind:engineOptions.llm.profile.engine,start:async value=>{context=value;events.push(value);await context.emit({type:'session.bound',data:{sessionId:value.runId,sessionFile:path.join(value.directory,'native.jsonl')}})},run:async(message)=>{
+    return {kind:engineOptions.llm.profile.engine??'pi',start:async value=>{context=value;events.push(value);await context.emit({type:'session.bound',data:{sessionId:value.runId,sessionFile:path.join(value.directory,'native.jsonl')}})},run:async(message)=>{
       const port=await engineOptions.requestBudget?.();if(port){budgets.push(port);const ticket=await port.reserve({requestHash:'f'.repeat(64),maxOutputTokens:64});await ticket.issue();ticket.assertSend();}
       const tools=await runtimeEngineTools(context,engineOptions.knowledge);
       const names=(await tools.list()).map(tool=>tool.name);
@@ -146,4 +146,9 @@ it.each(['question','nested-question','cross-model-question'] as const)('resumes
 });
 it('an unanswered child cannot be silently completed; original subtree is cancelled and drained',async()=>{
  const f=await fixture('unanswered');const run=await f.run();expect(run.status).toBe('interrupted');expect(f.events).toHaveLength(3);expect(f.admission.snapshot().occupied).toHaveLength(1);
+});
+
+it('preserves an implicit Pi engine in adopted model hashes during recursive capture',async()=>{
+ const f=await fixture('implicit-engine');expect((await f.run()).status).toBe('completed');expect(f.events).toHaveLength(3);
+ expect(f.results.map((r:any)=>JSON.parse(r.content[0].text).status)).toEqual(['completed','completed']);
 });

@@ -2865,3 +2865,21 @@ PR #96 已提交并转为草稿。候选构建、校验、EXE 隔离六场景及
 - pnpm check:architecture 核对所有受影响类图与类型依赖；初次发现新增精确入口未登记，补登记并删除旧入口后复查。未放宽层级规则。
 
 同步维护 agents、execution/assembly、execution/rules/runtime、application/assembly、conversation/runtime 的注释、CONTRACT 和类图及父目录导航；设计只更新对应封装说明。单元职责登记同步更新，无完整 Application 单元夹具。未运行全量 CI、构建、安装或发布；既有旧业务集成失败不计为本次通过，PR 保持草稿。review 从 application/assembly/agent-calls.ts → execution/assembly/agent-call-scheduler.ts → execution/rules/runtime/runtime.ts → conversation/runtime/execution-manager.ts 阅读。
+
+### #94：业务文件验证迁入递归 Agent 工具链（2026-11-15）
+
+用户授权：补齐旧业务验证到新 Agent 工具链的迁移，让九项回归通过。基线 17f032c7，release/agent-0.1.21 工作树；PR #96 仍为草稿。S1–S4 采用 C3/L2：实际读取 Agent 调用装配、execution 调用协调/LoopRuntime、冻结知识、岗位责任核实、原始日志验证器、文件平台及九项真实 Pi 集成夹具。断点是新子调用只构造 chat TaskSpec，遗漏冻结 Workflow 和验证端口；测试仍调用旧 goal/dispatch 工具。
+
+S5：business 参数显式传模块、验收和可选 Workflow；application/assembly/agent-business.ts 通过既有来源、岗位、模型检查冻结知识，接入原 ArtifactFiles、验证器、清单和代码检查端口。业务运行使用同一 LoopRuntime.startMember，beforeRun 关联父工具；普通运行保持 start。私有 TaskNode/DispatchRun 投影复用原 canonical 验证规则，不写旧派发图/队列，不创建 Team 入口。模型结束后仍校验真实 canonical 和当前文件；cbim_agent_result_check 只核本父运行原 callId，变化返回 WORKFLOW_VALIDATION_STALE，不重新执行。递归业务禁用旧终止式求助和检查点，保留同调用问答。未装配隔离端口的业务要求拒绝启动。修复原缺省 Pi 引擎被补进模型快照而误报哈希变化的问题，并保留工具错误码/outcome。
+
+稳定边界：未复制 JSON/CSV/PNG 算法、证据重建、文件读取、运行循环或全局调度状态。新增验证器仍经既有 Workflow/平台扩展，调用协调器只接受可信 launch/verify；下一次业务规则变化从原 evidence/workspace 能力修改，端口装配从 agent-business 修改。本次保留旧验证器输入投影以避免同时改写历史日志契约，其退出需另迁移验证器公共输入，不能靠伪造持久派发解决。
+
+S6 验证范围与实际结果：
+- pnpm exec vitest run tests/json-validation-pi.test.ts -t 'validates actual' --reporter=default --reporter=json --outputFile=build/agent-business-regression.json：选中 JSON/CSV/PNG × complete/changed/stop 九项。真实 Application、Pi SDK、本地确定性模型服务及实际文件写/读/采集/验证；未访问在线模型。保留 rejected 不可交付、修复后新基线、CSV/PNG 具体拒绝原因、当前字节、错误/缺失复核回执拒绝、取消排空、重启日志和文件不重放断言；增加父工具精确关联和没有旧图任务/交接工具的断言。同文件六项旧人工目标决策测试未选中、未删除，仍待后续迁移。
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts：37 项通过。覆盖原递归/限额/跨模型/求助及新增可信业务启动、同调用者重核、外部变更错误、不重启子运行、验证失败不返回完成、缺省引擎哈希。
+- pnpm typecheck：通过；新增测试的 unknown 直接属性断言最初被类型检查拒绝，改为对象匹配断言后通过。
+- pnpm check:test-modules：通过，537 文件，unit174/contract163/integration200；没有改变归属或把集成降级为单元。
+- pnpm check:architecture：通过，1649 文件、7823 依赖、零环、零违规。同步源码说明后再次 node scripts/source-architecture.mjs --check：零差异。
+- 前期失败包括夹具仍期待旧协议、真实缺省引擎哈希问题、新断言将 validator 误写入 requirement，以及测试替身未给缺省 Pi 的真实 kind；逐项修正，未恢复旧 Team，也未删减文件验证安全断言。最终结果以本节列明的范围为准。
+
+S7 认知与 review：阅读 agent-calls → agent-business → agent-call-scheduler → LoopRuntime，再看 json-validation-pi/provider 的真实工具请求；完整 diff 从 17f032c7 起。同步这三个源码目录的 CONTRACT、文件头/接口说明及类图和父导航。未运行完整 CI、构建、桌面或安装升级验收；旧人工目标决策和其他未迁移集成不在本次通过声明内。0.1.21 旧候选未包含本次修改，不合并、不发布。

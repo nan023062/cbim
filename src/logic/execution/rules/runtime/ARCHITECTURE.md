@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [runtime.ts](runtime.ts) | LoopRuntime 持有任务租约、工具授权与终态；显式续聊由会话选择器核实原生恢复或无交互失败重试。 |
+| [runtime.ts](runtime.ts) | LoopRuntime 持有任务租约、工具授权与终态；业务 Agent 启动关联父工具，使用递归求助，历史交接保持独立。 |
 
 ## 架构类图
 
@@ -153,3 +153,7 @@ assertQuestionWait 要求唯一已授权问题工具且无其他在途操作。�
 
 
 主 Agent 与递归执行 Agent 直接共用 LoopRuntime，调用者传入同一 AbortSignal 和 beforeRun。Runtime 唯一持有真实运行取消、工具授权、日志及引擎收尾；上层在 done 后关闭所拥有实例，关闭后禁止再次启动。不另建 Agent 循环类或重复启动状态。
+
+### 业务 Agent 的统一启动
+
+startMember 接受 RunStartControl.beforeRun，供可信调用装配记录原父工具与子运行关系；它仍执行 checkedMemberRunLaunch，不能将普通 chat 冒充业务身份。有 agentTools 的业务运行保留产物/验证门禁，但不创建旧 MemberHelpTools 或 RunMemberCheckpoint；求助统一经当前调用的问答端口暂停与继续。历史无 agentTools 的业务运行维持原交接行为。

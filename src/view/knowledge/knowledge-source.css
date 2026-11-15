@@ -1,4 +1,5 @@
-.knowledge-source-details{border-left:2px solid var(--border);padding:0 0 0 12px;margin:16px 0;font-size:12px;line-height:1.7}
+/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
+.knowledge-source-details{border-left:2px solid var(--border);padding:0 0 0 12px;margin:16px 0;font-size:var(--font-ui);line-height:1.7}
 .knowledge-source-details p{margin:6px 0}
 .knowledge-source-details h4{margin:10px 0 4px}
 .knowledge-source-details code{overflow-wrap:anywhere;white-space:normal}

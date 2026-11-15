@@ -632,3 +632,10 @@ EmbeddingModels 编辑明确向量端点、输入容量、维度和可选输入�
 ## 引擎管理入口迁移
 
 SettingsView 不再注册 engines 分页；安装、更新与进度由对话 EnginePicker 提供，使用 Application 同一 EnginePackages，不改变运行中的固定版本。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+textSize 控制全部普通界面与对话文字（13/15/17）；codeSize 独立控制代码和等宽日志（12/14/16，默认 14），已保存的旧选择继续有效。

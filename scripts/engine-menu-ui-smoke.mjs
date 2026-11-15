@@ -2,10 +2,10 @@
 import fs from 'node:fs/promises';import path from 'node:path';import assert from 'node:assert/strict';
 import {createServer} from 'vite';import {chromium} from 'playwright-core';
 const root=await fs.realpath(process.env.CBIM_UI_ROOT||process.cwd()),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
-await fs.writeFile(path.join(out,'engine-menu.html'),'<div id="root"></div><script type="module" src="/test-results/engine-menu.tsx"></script>');
+await fs.writeFile(path.join(out,'engine-menu.html'),'<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script type="module" src="/test-results/engine-menu.tsx"></script>');
 await fs.writeFile(path.join(out,'engine-menu.tsx'),`
 import React from 'react';import {createRoot} from 'react-dom/client';
-import '/src/view/shell/shell.css';import '/src/view/conversation/conversation.css';
+import '/src/view/styles';import '/src/view/conversation/conversation.css';
 window.fixture={calls:[],selection:[],items:[{engine:'pi',state:'ready',installedVersion:'1.0.0',version:'1.0.0'},{engine:'claude-code',state:'install',version:'1.0.0'},{engine:'codex',state:'update',installedVersion:'1.0.0',version:'2.0.0'}],resolve:undefined};
 window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({action,args});if(action==='desktop.engines.status')return structuredClone(f.items);if(action==='desktop.engines.prepare'){const row=f.items.find(i=>i.engine===args.engine);row.state='preparing';row.progress=36;return new Promise(resolve=>{f.resolve=()=>{row.state='ready';row.installedVersion=row.version;delete row.progress;resolve({...row})}})}throw Error(action)}};
 const {EnginePicker}=await import('/src/view/conversation/EnginePicker.tsx');

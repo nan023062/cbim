@@ -1,8 +1,9 @@
+/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
 /* 递归调用复用同一全宽详情；不随调用深度缩小内容列，关闭后回到原工具。 */
 .agent-call-details>button{min-height:44px;display:inline-flex;align-items:center;gap:6px}
 .agent-call-dialog{width:min(860px,calc(100vw - 32px));max-width:100%;max-height:90dvh;overflow:auto;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text)}
 .agent-call-dialog::backdrop{background:rgb(0 0 0 / .4)}
-.agent-call-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.agent-call-dialog h2{font-size:18px;margin:0}.agent-call-dialog header button{min-height:44px;display:inline-flex;align-items:center;gap:6px}
-.agent-call-origin{color:var(--muted);font-size:13px}.agent-call-message{margin:16px 0;overflow-wrap:anywhere}.agent-call-message.user{padding:12px;border:1px solid var(--line);border-radius:8px}.agent-call-stream{min-width:0}.agent-call-stream pre{max-width:100%;overflow:auto}.agent-call-dialog [role=alert]{overflow-wrap:anywhere}
+.agent-call-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.agent-call-dialog h2{font-size:var(--font-dialog-title);margin:0}.agent-call-dialog header button{min-height:44px;display:inline-flex;align-items:center;gap:6px}
+.agent-call-origin{color:var(--muted);font-size:var(--font-ui)}.agent-call-message{margin:16px 0;overflow-wrap:anywhere}.agent-call-message.user{padding:12px;border:1px solid var(--line);border-radius:8px}.agent-call-stream{min-width:0}.agent-call-stream pre{max-width:100%;overflow:auto}.agent-call-dialog [role=alert]{overflow-wrap:anywhere}
 @media(max-width:600px){.agent-call-dialog{margin:0;inset:0;width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding:16px}.agent-call-dialog .chat-tool>summary{flex-wrap:wrap}.agent-call-dialog .tool-target{max-width:100%;overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:no-preference){.agent-call-dialog[open]{animation:agent-call-enter .14s ease-out}@keyframes agent-call-enter{from{opacity:.6;transform:translateY(3px)}to{opacity:1;transform:none}}}

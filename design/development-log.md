@@ -2930,3 +2930,12 @@ S7 认知与 review：阅读 agent-calls → agent-business → agent-call-sched
 - 共 46 项受影响行为验证通过。未运行完整 CI、桌面、构建或安装升级验收，不能以此批准合并/发布。
 
 职责与 review：本步保持 QuestionQueue、LoopRuntime、原文件证据规则稳定，人工工具的身份/去重/负面门禁由 execution 调用协调器持有，可信用户端口在 application 装配；没有新增第二个调度/消息状态源。源码头、两个装配目录的 CONTRACT/ARCHITECTURE 同步。阅读 agent-calls 的 requestReview → agent-call-scheduler.review → json-validation-pi 人工六项，完整 diff 从 c39a8b58 起。用户已要求转为可评审；指定评审者尚待用户名，仓库当前只列出 PR 作者 nan023062，GitHub 不允许作者评审自身。PR/GitHub 更新结果另记录于 #94，当前制品仍过时，未合并/发布。
+
+
+## 2026-11-16 · #94 全界面字号与字重统一
+
+依据 UI 排版审查修改 52 份 View 样式：普通文字统一 15px/400、短标题 500，代码独立默认 14px；长目标恢复正文，主/子 Agent 的 Markdown 复用相同层级。同步 14 个目录契约和架构说明；调度与状态所有权不变。
+
+受影响单元选择外观偏好和话题投影：`pnpm exec vitest run tests/appearance-settings.test.ts` 9/9、`pnpm exec vitest run tests/conversation-topics.test.ts` 7/7；`pnpm typecheck`、`pnpm check:architecture` 通过。设置/页面目录/完整 App/递归 Agent/引擎菜单专项通过，产生 276 张截图与单文件索引。具体命令、覆盖页面、截图修复和未覆盖状态见 [实施验收记录](verification/ui-typography-implementation-20261116.md)。
+
+验证仅涵盖真实前端组件和隔离数据；未运行本轮全仓 CI、打包安装或升级验收，未合并或发布。

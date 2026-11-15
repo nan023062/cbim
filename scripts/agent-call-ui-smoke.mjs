@@ -5,10 +5,10 @@ import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright-core';
 const root=await fs.realpath(process.env.CBIM_UI_ROOT||process.cwd()),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
-await fs.writeFile(path.join(out,'agent-call-ui.html'),'<div id="root"></div><script type="module" src="/test-results/agent-call-ui.tsx"></script>');
+await fs.writeFile(path.join(out,'agent-call-ui.html'),'<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script type="module" src="/test-results/agent-call-ui.tsx"></script>');
 await fs.writeFile(path.join(out,'agent-call-ui.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';
-import '/src/view/shell/shell.css';
+import '/src/view/styles';
 import {inlineMainRuns} from '/tests/inline-conversation-fixture.ts';
 import {ToolTimeline} from '/src/view/execution-view/ToolTimeline.tsx';
 import {AgentCallDetails} from '/src/view/execution-view/AgentCallDetails.tsx';

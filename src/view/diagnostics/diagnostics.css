@@ -1,18 +1,19 @@
 /**
+ * 排版约束：本页普通文字与控件使用共享字号/字重令牌，随界面偏好同步；内容标题与代码按语义单独呈现。
  * 作用定位：工作区运行状态与知识校验详情的扩展面板样式。
  * 设计原因：问题路径允许完整换行，窄扩展区也能定位错误；状态和知识结果保持独立层次。
  */
-.workspace-diagnostics{padding:20px;font-size:13px;line-height:1.6}
-.workspace-diagnostics h2{margin:0;font-size:17px}
+.workspace-diagnostics{padding:20px;font-size:var(--font-ui);line-height:1.6}
+.workspace-diagnostics h2{margin:0;font-size:var(--font-ui)}
 .workspace-diagnostics p{color:var(--muted);overflow-wrap:anywhere}
 .workspace-diagnostics [role=alert],.knowledge-issue.error>b{color:var(--danger)}
 .knowledge-diagnostics{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
-.knowledge-diagnostics h3{margin:0;font-size:14px}
+.knowledge-diagnostics h3{margin:0;font-size:var(--font-ui)}
 .knowledge-issue{padding:12px 0;border-top:1px solid var(--line)}
-.knowledge-issue b{font-weight:500;overflow-wrap:anywhere}
+.knowledge-issue b{font-weight:var(--weight-medium);overflow-wrap:anywhere}
 .knowledge-issue.warning>b{color:var(--warning)}
 .knowledge-issue p{margin:4px 0}
-.knowledge-issue-path{font-family:monospace;font-size:12px}
+.knowledge-issue-path{font-family:monospace;font-size:var(--font-code)}
 .workspace-diagnostics dd{margin:4px 0 12px;font-family:monospace;overflow-wrap:anywhere}
 .workspace-diagnostics dt{color:var(--muted)}
 .workspace-diagnostics header p{display:flex;align-items:center;gap:8px}

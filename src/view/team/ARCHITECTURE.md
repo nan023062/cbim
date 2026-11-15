@@ -632,3 +632,10 @@ WorkspaceMemberCommands 的 listeners 由前端 SubscriptionSet 独立持有，s
 ### 本地记录存储边界
 
 命令控制器组合前端 JsonRecordStorage，仍使用原键、紧凑 JSON 字节与 2 MiB 上限。基础库仅解析/序列化和调用存储；条数、记录身份、回执匹配、坏数据保留与禁写、内存发布和未知请求恢复保持原顺序，不自动重送。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+Agent 履历与团队定义共享界面字号；身份说明使用普通字号，code 元素保留代码字号。

@@ -1,27 +1,28 @@
 /**
+ * 排版约束：本页普通文字与控件使用共享字号/字重令牌，随界面偏好同步；内容标题与代码按语义单独呈现。
  * 作用定位：主会话办公室与显式运行核实对话框的自适应布局。
  * 设计原因：办公室标题与导航共用一行，不保留已移除的话题筛选栏及其空间；窄屏为标题换行保留按钮位置；办公室全宽展示，运行核实按需使用原生对话框；历史折叠不删除任务事实。检查点不显示完成动画，详情在窄视口下移。
  */
 .session-task-view.graph-mode{max-width:none;width:100%;padding:18px;min-width:0;margin:0;container-type:inline-size}
 .session-task-view.graph-mode>header{display:grid;grid-template-columns:minmax(0,1fr) auto;margin-bottom:14px;align-items:start}
-.session-task-view.graph-mode h2{font-size:17px;margin-bottom:6px}
+.session-task-view.graph-mode h2{font-size:var(--font-ui);margin-bottom:6px}
 .task-view-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;flex-shrink:0}
-.task-view-actions button{font-size:12px;padding:6px 9px}
+.task-view-actions button{font-size:var(--font-ui);padding:6px 9px}
 .root-task-detail>[data-testid=scope-stop]{margin-bottom:12px}
 .task-state-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 .task-state-dot.animated{animation:task-node-pulse 1.5s ease-in-out infinite}
 .root-task-detail{padding:14px;min-width:0}
 .root-task-detail>.session-run{background:var(--bg);padding:12px}
-.root-task-detail h3{font-size:13px}
-.root-task-detail p,.root-task-detail li{font-size:12px;line-height:1.8}
+.root-task-detail h3{font-size:var(--font-ui)}
+.root-task-detail p,.root-task-detail li{font-size:var(--font-ui);line-height:1.8}
 .root-task-detail ul,.root-task-detail ol{padding-left:20px}
 .root-task-detail code{overflow-wrap:anywhere}
 .root-task-detail .work-outcome{white-space:normal}
 .root-task-detail .chat-run-status{flex-wrap:wrap}
-.task-graph-error{padding:10px 12px;border:1px solid var(--danger);border-radius:8px;color:var(--danger);font-size:12px}
-.task-graph-loading{font-size:12px;color:var(--muted);margin:8px 0}
+.task-graph-error{padding:10px 12px;border:1px solid var(--danger);border-radius:8px;color:var(--danger);font-size:var(--font-ui)}
+.task-graph-loading{font-size:var(--font-ui);color:var(--muted);margin:8px 0}
 .task-graph-draft{padding:48px 18px;text-align:center;border:1px dashed var(--line);border-radius:12px}
-.task-graph-draft p{font-size:12px;max-width:380px;margin:0 auto 16px}
+.task-graph-draft p{font-size:var(--font-ui);max-width:380px;margin:0 auto 16px}
 @media(max-width:600px){.session-task-view.graph-mode{padding:12px}.session-task-view.graph-mode>header{gap:6px}.task-view-actions{justify-content:flex-start}}
 @media(prefers-reduced-motion:reduce){.task-state-dot.animated{animation:none}}
 @keyframes task-node-pulse{0%,100%{opacity:.35}50%{opacity:1}}

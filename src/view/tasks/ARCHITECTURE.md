@@ -4540,3 +4540,10 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 ## 交互区 Agent 选择
 
 SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人物用边框突出，缺省为主 Agent。只匹配当前主会话的真实人物，不改变任务选择、状态或动画事件。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+任务状态与正文复用共享字号；执行 Agent 记录继承主 Markdown 标题，small/span 说明不当作代码。result_ready 和 interrupted 统一从共享样式取得 warning 颜色。

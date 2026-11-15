@@ -226,3 +226,8 @@ N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_module
 ## 模态可访问性
 
 ModuleGovernancePanel 使用 ModalFrame 的原生焦点约束与入口返回。Escape 在 busy 时保持打开；关闭不会移除持久待确认记录或重发原命令。治理字段、版本、批准与实施语义保持原契约。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

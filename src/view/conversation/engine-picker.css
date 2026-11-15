@@ -1,11 +1,12 @@
+/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
 /* 对话引擎菜单：操作与选择分开，窄屏限制在视口内；未知进度不伪造百分比。 */
 .engine-picker-panel{width:min(360px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:min(480px,65vh);overflow:auto}
 .engine-picker-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px;border-bottom:1px solid var(--line)}
 .engine-picker-row>button:first-child{flex:1;min-width:0;display:flex;gap:8px;align-items:center;text-align:left}
 .engine-picker-row>button:first-child:disabled{opacity:1;color:var(--muted)}.engine-picker-row b{color:var(--text)}
-.engine-picker-row button span{min-width:0}.engine-picker-row b,.engine-picker-row small{display:block;overflow-wrap:anywhere}.engine-picker-row small,.engine-menu-note{color:var(--muted);font-size:12px}
+.engine-picker-row button span{min-width:0}.engine-picker-row b,.engine-picker-row small{display:block;overflow-wrap:anywhere}.engine-picker-row small,.engine-menu-note{color:var(--muted);font-size:var(--font-ui)}
 .engine-menu-note{padding:8px 12px;margin:0;line-height:1.5}.engine-picker-row .engine-install{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .engine-error{flex-basis:100%;color:var(--danger)!important}.engine-progress{width:48px;text-align:center;flex-shrink:0}.engine-progress svg{width:28px;height:28px;transform:rotate(-90deg)}
-.engine-progress circle{fill:none;stroke:currentColor;stroke-width:3}.engine-progress .track{opacity:.18}.engine-progress .indeterminate{animation:engine-progress-spin 1s linear infinite}.engine-progress small{font-size:10px}
+.engine-progress circle{fill:none;stroke:currentColor;stroke-width:3}.engine-progress .track{opacity:.18}.engine-progress .indeterminate{animation:engine-progress-spin 1s linear infinite}.engine-progress small{font-size:var(--font-ui)}
 @keyframes engine-progress-spin{to{transform:rotate(270deg)}}@media(prefers-reduced-motion:reduce){.engine-progress .indeterminate{animation:none}}
 @media(max-width:600px){.engine-picker-panel{position:fixed;left:16px!important;right:16px!important;bottom:100px;width:auto}}

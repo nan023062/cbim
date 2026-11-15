@@ -5,16 +5,16 @@
 export type ThemePreference='dark'|'light'|'system';
 export interface AppearancePreferences {
   theme:ThemePreference;
-  /** 对话正文字号，单位 px；不影响工具输出和菜单。 */
+  /** 全局普通界面文字字号，单位 px；覆盖对话、控件、状态与说明，代码独立。 */
   textSize:13|15|17;
-  /** 对话代码块字号，单位 px；不影响行内代码。 */
+  /** 代码字号，单位 px；代码块、行内代码及等宽日志共用。 */
   codeSize:12|14|16;
   /** 额外减少动画；关闭后仍尊重系统的减少动态效果偏好。 */
   reduceMotion:boolean;
 }
 export interface PreferenceStorage {getItem(key:string):string|null;setItem(key:string,value:string):void}
 export const appearanceKey='cbim.appearance.v1';
-export const defaultAppearance:Readonly<AppearancePreferences>={theme:'dark',textSize:15,codeSize:12,reduceMotion:false};
+export const defaultAppearance:Readonly<AppearancePreferences>={theme:'dark',textSize:15,codeSize:14,reduceMotion:false};
 /** 无新记录时继承旧 cbim.theme；只读取本功能的键，未知字段与无效值不进入视图。 */
 export function readAppearance(storage:PreferenceStorage):{value:AppearancePreferences;error:string}{
   try{

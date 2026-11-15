@@ -38,3 +38,8 @@ ToolTimeline 根据原工具的 agentCallState 显示等待调用方答复、执
 ### 原任务的对话定位
 
 taskConversationTarget 只把当前 workspace/root 下唯一任务映射为已登记 TeamSession；主根及主 Agent 自执行回主对话，其他任务必须有唯一同 Agent 的登记。缺记录、跨会话或重复登记抛出明确错误，不能猜名字、复用另一执行实例或偷偷回主 Agent。纯函数只返回 sessionId/scopeId/taskId，页面切换和一次性定位代次由 Conversation/MemberConversation 拥有。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

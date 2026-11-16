@@ -14,7 +14,7 @@ export async function repositoryToolsProvider(mode:RepositoryToolsMode='complete
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request,turn=requests.length;requests.push(body);assert.equal(body.model,repositoryToolsFixture.model);
-    const names=body.tools?.map(value=>value.function.name)??[];state.names.push(names);assert.ok(names.includes('cbim_dispatch_task'));assert.ok(names.every(name=>!['write','edit','bash'].includes(name)),'主调度不能因仓库读取获得业务执行工具');
+    const names=body.tools?.map(value=>value.function.name)??[];state.names.push(names);assert.ok(names.includes('cbim_agent_call'));assert.ok(!names.includes('cbim_dispatch_task'),'不恢复旧派工入口');
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'repository-tools-'+turn,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     if(mode==='ungranted'){

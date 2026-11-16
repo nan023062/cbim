@@ -1,3 +1,9 @@
+## 2026-11-16 — #94 仓库只读工具新主调用协议
+
+repository-tools-provider 识别当前 cbim_agent_call 并拒绝旧 cbim_dispatch_task。新主 Agent 也可执行任务，不再以“不列出 write/edit/bash”充当角色权限断言；实际授权仍由 permission=read 和工具策略控制。五个真实 HTTP 集成保留资源 scope、真实内容 hash、撤销/服务代次变化后的内容不回流、停止、未授权不列工具、历史脱敏和重启不重放，没有替换网络结果或删减这些断言。此测试范围验证仓库读取，不声称覆盖原生写工具拒绝；该权限边界由现有执行策略用例负责。
+
+pnpm exec vitest run tests/repository-tools-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-repository-tools.json：5/5 通过。共享桌面脚本沿用同一 provider，但此次未运行桌面验收。仅变更测试选择协议，无公共类型、源码或测试归属变更，不重复产品静态检查。完整 CI、安装升级与发布仍未通过。
+
 ## 2026-11-16 — #94 原调用求助经主 Agent 转交用户
 
 question-tool-contract 的四种真实 Pi 情况迁入同一主运行：主偏好问题 → cbim_agent_call → 子 Agent 原调用 waiting → 主 Agent 向用户转交原题 → cbim_agent_reply → 原子执行继续。子 Agent 没有独立用户问题卡；旧 dispatch.questions/answerQuestion 拒绝该身份。取消问题返回 cancelled 并由父级转交，与停止整个任务不同；坏回包仅在真实答案已消费后注入，保留 TOOL_OUTPUT_INVALID 和不重问。主/子原日志、唯一登记、实际文件证据、重启不重放仍检查。

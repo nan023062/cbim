@@ -10,7 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
-| [artifact-report-service.ts](artifact-report-service.ts) | 按指定成员运行列出可信文件基线，并在明确选定后对实际文件作独立只读复核。 |
+| [artifact-report-service.ts](artifact-report-service.ts) | 按指定旧成员或已登记递归运行列出可信文件基线，并在明确选定后对实际文件作独立只读复核。 |
 | [command-verification-service.ts](command-verification-service.ts) | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
 | [effect-controlled-file.ts](effect-controlled-file.ts) | 在影响观察中核对已有受控文件报告与原成员完整绑定、参数和字节摘要。 |
 | [effect-observation-service.ts](effect-observation-service.ts) | 组合原调用授权、已提交控制面、原知识事务、原治理/责任记录、受控文件阶段与当前选定文件，保存本机明确处置并派生新周期关联。 |
@@ -19,7 +19,8 @@
 | [execution-report-service.ts](execution-report-service.ts) | 以持久派发状态和指定成员运行日志生成异常核实报告。 |
 | [human-decision-evidence.ts](human-decision-evidence.ts) | 复核已消费人工接受的精确候选和选定文件，供显式接续、目标审阅及最终完成共用。 |
 | [human-evidence-state.ts](human-evidence-state.ts) | 为人工验收和按意见继续提供同一主周期的证据状态指纹。 |
-| [output-manifest-report-service.ts](output-manifest-report-service.ts) | 对指定成员运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。 |
+| [output-manifest-report-service.ts](output-manifest-report-service.ts) | 对指定旧成员或已登记递归运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。 |
+| [recursive-evidence-source.ts](recursive-evidence-source.ts) | 证据报告读取递归业务运行时，核对持久登记、原调用和固定 canonical 身份。 |
 
 ## 架构类图
 
@@ -33,6 +34,7 @@ class N_src_logic_evidence_runtime_artifact_report_service_ts["artifact-report-s
 class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportPorts["ArtifactReportPorts"] {
   <<interface>>
   +inspect()
+  +inspectAgent()
   +normalizePath()
   +checkFiles()
   +acquireRead()
@@ -43,13 +45,14 @@ class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportServ
   -owner
   -store
   -ports
+  -inspect()
   -facts()
   -stamp()
 }
 N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
+直接依赖：[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[recursive-evidence-source.ts](recursive-evidence-source.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
 
 ### command-verification-service.ts
 
@@ -345,6 +348,7 @@ class N_src_logic_evidence_runtime_output_manifest_report_service_ts["output-man
 class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportPorts["OutputManifestReportPorts"] {
   <<interface>>
   +inspect()
+  +inspectAgent()
   +check()
   +acquireRead()
 }
@@ -354,18 +358,38 @@ class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManif
   -owner
   -store
   -ports
+  -inspect()
   -facts()
   -stamp()
 }
 N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/output-manifest.ts](../rules/output-manifest.ts)、[../rules/output-manifest-evidence.ts](../rules/output-manifest-evidence.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
+直接依赖：[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[recursive-evidence-source.ts](recursive-evidence-source.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[../rules/output-manifest.ts](../rules/output-manifest.ts)、[../rules/output-manifest-evidence.ts](../rules/output-manifest-evidence.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)、[../../workspace/rules/artifact-scope.ts](../../workspace/rules/artifact-scope.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)。
+
+### recursive-evidence-source.ts
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evidence-source.ts"] {
+  <<module>>
+  +recursiveEvidenceRun()
+  +recursiveEvidenceLogMatches()
+}
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../agents/contracts.ts](../../agents/contracts.ts)、[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tasks/rules/execution-context.ts](../../tasks/rules/execution-context.ts)。
 
 ### 本目录调用边界
 
 ```mermaid
 classDiagram
+class N_src_logic_evidence_runtime_artifact_report_service_ts["artifact-report-service.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evidence-source.ts"] {
+  <<module>>
+}
 class N_src_logic_evidence_runtime_command_verification_service_ts["command-verification-service.ts"] {
   <<module>>
 }
@@ -378,17 +402,20 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts["effect-observa
 class N_src_logic_evidence_runtime_effect_source_ts["effect-source.ts"] {
   <<module>>
 }
-class N_src_logic_evidence_runtime_effect_controlled_file_ts["effect-controlled-file.ts"] {
-  <<module>>
-}
+N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence_runtime_recursive_evidence_source_ts : 导入依赖
 N_src_logic_evidence_runtime_command_verification_service_ts ..> N_src_logic_evidence_runtime_execution_report_facts_ts : 导入依赖
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_command_verification_service_ts : 导入依赖
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_source_ts : 导入依赖
-N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_controlled_file_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_evidence_runtime_effect_observation_service_ts["effect-observation-service.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_effect_controlled_file_ts["effect-controlled-file.ts"] {
+  <<module>>
+}
 class N_src_logic_evidence_runtime_effect_source_ts["effect-source.ts"] {
   <<module>>
 }
@@ -401,9 +428,21 @@ class N_src_logic_evidence_runtime_command_verification_service_ts["command-veri
 class N_src_logic_evidence_runtime_execution_report_service_ts["execution-report-service.ts"] {
   <<module>>
 }
+N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_controlled_file_ts : 导入依赖
 N_src_logic_evidence_runtime_effect_source_ts ..> N_src_logic_evidence_runtime_execution_report_facts_ts : 导入依赖
 N_src_logic_evidence_runtime_effect_source_ts ..> N_src_logic_evidence_runtime_command_verification_service_ts : 导入依赖
 N_src_logic_evidence_runtime_execution_report_service_ts ..> N_src_logic_evidence_runtime_execution_report_facts_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_runtime_output_manifest_report_service_ts["output-manifest-report-service.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_recursive_evidence_source_ts["recursive-evidence-source.ts"] {
+  <<module>>
+}
+N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_recursive_evidence_source_ts : 导入依赖
 ```
 
 
@@ -422,3 +461,7 @@ N_src_logic_evidence_runtime_execution_report_service_ts ..> N_src_logic_evidenc
 ## 递归业务影响观察
 
 EffectSourcePorts 使用最小 BusinessRunSource；effect-source 对 agentBusinessRuns 明确走递归协议分支，核对原父引用、冻结岗位/模块、任务根路径、memberBinding、原生会话和完整 canonical。新来源不借用旧派工任务或成员会话，不伪造 taskRevision/planRevision。报告的 executionModel 标识可信递归来源；状态戳包含本根登记，读取期间关闭变化使依据失效。影响与处置仍不重写工具终态，不执行模型或文件命令。
+
+## 递归业务产物报告
+
+ArtifactReportService 与 OutputManifestReportService 读取同一 DispatchStore 的 agentBusinessRuns，明确 task/run/root 后使用独立 inspectAgent 固定日志端口；不造旧图节点、模型快照或派发状态。recursive-evidence-source 共用唯一周期/登记与 canonical 的父调用、模块、岗位、原生通道和连续事件核验。active 登记仅表示原启动意图；可列可信历史引用，但只有 closed 与真实终态同时成立才复核当前文件。读取前后比较原登记和日志，变化即 unverifiable；范围、哈希、只读占用及脱敏仍由原报告服务负责。旧报告路径和错误语义保留。

@@ -284,3 +284,7 @@ member-dispatch 为 ScopeUsageService 提供独立 inspectAgent：固定 loop-en
 ## 递归业务历史回补
 
 WorkspaceRuntimeMonitor 的两目录扫描区分旧成员和新递归业务：后者只从 loop-engine 恢复，并核对首条 agent-tools-v1/agentCall 当前子身份。业务 memberBinding 不再一概要求旧 dispatch/runs 路径。全局统计和历史索引使用同一原日志，重开不重新执行。
+
+## 递归产物报告日志端口
+
+member-dispatch 将现有 inspectMember 同时注入产物/完整清单报告的 inspectAgent。BusinessRunSource.protocol 固定新日志位于 loop-engine/tasks，旧派工继续用 dispatch/runs/tasks；报告服务自行核对持久身份、父调用与原生绑定。只读报告不启动引擎，不读取最新模型配置，也不生成兼容派工图。

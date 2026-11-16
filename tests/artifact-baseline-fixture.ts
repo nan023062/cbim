@@ -10,7 +10,8 @@ import {artifactBaselineFixture as data} from './artifact-baseline-provider';
 import type {Application} from '../src/bridge/server/application';
 import {artifactReportSchema,type ArtifactFileCheck} from '../src/logic/evidence/rules/artifact-baseline';
 export {queuedTaskCancelRecords as artifactBaselineRecords} from './queued-task-cancel-fixture';
-export {reportFiles as artifactBaselineFiles} from './execution-report-fixture';
+import {reportFiles} from './execution-report-fixture';
+export const artifactBaselineFiles=(user:string,workspaceId:string,taskId:string,runId:string)=>reportFiles(user,workspaceId,taskId,runId,'agent-tools-v1');
 
 /** Caller-owned isolated project/user data; only the localhost model profile is installed. */
 export async function seedArtifactBaseline(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>void}){

@@ -7,14 +7,22 @@ import type {DispatchState} from '../src/logic/dispatch/rules/dispatch-storage';
 import type {KnowledgeWorkspace} from '../src/logic/knowledge/rules/ports';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
-async function setup(){
+async function setup(recursive=false){
   const f=await artifactRuntimeFixture(async c=>{await seedProgress(c);await invoke(c,'cbim_task_artifact_capture','capture',captureInput)}),summary=await (await f.start()).done;
   const baseline=(summary.events.find(event=>event.type==='artifact.baseline_captured')!.data.baseline as {baselineId:string}).baselineId;
   const identity={workspaceId:artifactBinding.workspaceId,rootSessionId:artifactBinding.rootSessionId},agent={agentId:artifactBinding.agentId,agentInstanceId:artifactBinding.agentInstanceId,agentSessionId:artifactBinding.agentSessionId,name:'执行者'};
   const state={workspaceId:identity.workspaceId,members:[],sessions:[],outbox:[],scopes:[{...identity,scopeId:'scope',status:'closed',outcome:'failed',createdAt:'2026-11-07T00:00:00Z',closedAt:'2026-11-07T00:01:00Z'}],runs:[{binding:artifactBinding,status:'completed',prepared:{knowledgeRevision:'knowledge-one'},session:{nativeSessionId:'native-one',sessionFile:summary.sessionFile}}],graphs:[{version:1,identity,cursor:{...identity,streamId:'stream',seq:5},root:{agent},edges:[],agents:[],tasks:[{kind:'task',identity,taskId:artifactBinding.taskId,nodeId:'task:'+artifactBinding.taskId,scopeId:'scope',requester:agent,assignee:agent,modules:f.task.moduleIds.map(moduleId=>({moduleId})),goal:f.task.goal,acceptance:f.task.acceptance.map((text,index)=>({id:'criterion-'+index,text})),status:'blocked',revision:3,planRevision:1,runIds:[artifactBinding.runId],awaitedChildren:[],createdAt:'2026-11-07T00:00:00Z',updatedAt:'2026-11-07T00:01:00Z'}]}]} as unknown as DispatchState;
+
+  if(recursive){
+    const previous=state.runs![0],parent={version:1 as const,workspaceId:identity.workspaceId,callerTaskId:identity.rootSessionId,callerRunId:'root-run',toolCallId:'call-child',taskId:artifactBinding.taskId,runId:artifactBinding.runId};
+    summary.events[0].data.executionModel='agent-tools-v1';summary.events[0].data.agentCall=parent;
+    state.scopes=[{...identity,scopeId:'scope',status:'closed',outcome:'completed',createdAt:'2026-11-16T00:00:00Z',closedAt:'2026-11-16T00:01:00Z'}];
+    state.agentBusinessRuns=[{protocol:'agent-tools-v1',binding:artifactBinding,scopeId:'scope',parent,lineage:[parent],prepared:{...previous.prepared,modules:previous.prepared.modules??f.task.moduleIds.map(moduleId=>({binding:{moduleId},workflowContract:undefined}))},permission:'read',status:'closed',createdAt:'2026-11-16T00:00:00Z',closedAt:'2026-11-16T00:01:00Z'}] as unknown as NonNullable<DispatchState['agentBusinessRuns']>;
+    state.runs=[];state.graphs[0].tasks=[];
+  }
   const inspect=vi.fn(async()=>structuredClone(summary)),read=vi.fn(async()=>structuredClone(state)),knowledge=vi.fn(async()=>({revision:'knowledge-one'})),checks=vi.fn((files:Parameters<typeof f.filePort.checkFiles>[0],signal:AbortSignal)=>f.filePort.checkFiles(files,signal)),release=vi.fn(),acquire=vi.fn(()=>release);
   const owner={entry:{id:identity.workspaceId,path:f.directory},assert:()=>{},read:knowledge} as unknown as Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>;
-  const service=new ArtifactReportService(owner,{read},{inspect,normalizePath:f.port.normalizePath,checkFiles:checks,acquireRead:acquire}),input={...identity,taskId:artifactBinding.taskId,runId:artifactBinding.runId};
+  const service=new ArtifactReportService(owner,{read},{inspect,inspectAgent:inspect,normalizePath:f.port.normalizePath,checkFiles:checks,acquireRead:acquire}),input={...identity,taskId:artifactBinding.taskId,runId:artifactBinding.runId};
   return {...f,summary,state,service,input,baseline,inspect,read,knowledge,checks,release,acquire};
 }
 
@@ -64,4 +72,20 @@ it('active runs and unavailable leases produce explicit unverifiable results wit
     f.state.runs![0].status='completed';f.acquire.mockImplementation(()=>{throw Error('workspace busy')});const busy=await f.service.read({...f.input,baselineId:f.baseline});expect(busy.verification?.state).toBe('unverifiable');expect(busy.issues.some(issue=>issue.code==='ARTIFACT_READ_BUSY')).toBe(true);
     const absent=await f.service.read({...f.input,baselineId:'unknown-baseline'});expect(absent.verification?.state).toBe('unverifiable');expect(f.checks).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
+});
+
+it('recursive baseline source checks original parent and prevents active or changed records from authorizing file reads',async()=>{
+ const f=await setup(true);try{
+  const input={...f.input,baselineId:f.baseline};
+  expect((await f.service.read(input)).verification?.state).toBe('matches');
+  const calls=f.checks.mock.calls.length,original=structuredClone(f.summary);
+  const wrong=structuredClone(original);(wrong.events[0].data.agentCall as {callerRunId:string}).callerRunId='foreign';
+  f.inspect.mockResolvedValue(wrong);expect((await f.service.read(input)).log.state).toBe('identity_mismatch');expect(f.checks).toHaveBeenCalledTimes(calls);
+  f.inspect.mockResolvedValue(original);f.state.agentBusinessRuns![0].status='active';
+  expect((await f.service.read(input)).verification?.state).toBe('unverifiable');expect(f.checks).toHaveBeenCalledTimes(calls);
+  f.state.agentBusinessRuns![0].status='closed';
+  f.checks.mockImplementationOnce(async(files,signal)=>{const result=await f.filePort.checkFiles(files,signal);f.state.agentBusinessRuns![0].closedAt='2026-11-16T00:02:00Z';return result});
+  const changed=await f.service.read(input);expect(changed.consistency).toBe('changed_during_read');expect(changed.verification?.state).toBe('unverifiable');
+  await expect(f.service.read({...input,rootSessionId:'foreign-root'})).rejects.toThrow();
+ }finally{await f.cleanup()}
 });

@@ -1,7 +1,7 @@
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {goalCompleteArguments,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import {type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const artifactBaselineFixture={
   goal:'ARTIFACT_BASELINE_MAIN: 独立读取业务文件、采集显式指纹并保留可核实证据',
@@ -19,24 +19,20 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** Only localhost model responses are deterministic; native read/capture, journals and validation are real. */
 export async function artifactBaselineProvider(){
   const d=artifactBaselineFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];
-  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',release=()=>{};const capturedGate=new Promise<void>(resolve=>{release=resolve});
+  let ownerSelection:OwnerExecutionSelection|undefined;let moduleId='',release=()=>{};const capturedGate=new Promise<void>(resolve=>{release=resolve});
   const state:{captured?:unknown}={};
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
     const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);
-    const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const isMain=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'artifact-baseline-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
-      assert.ok(body.tools?.every(tool=>!['write','edit','bash','cbim_task_artifact_capture'].includes(tool.function.name)));
-      if(turn===0)tool('artifact-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance}));
-      else if(turn===1)tool('artifact-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      else if(turn===2)reply('已派发独立执行成员，等待真实读取证据。');
-      else if(turn===3)tool('artifact-goal-inspect','cbim_goal_inspect',{});
-      else if(turn===4)tool('artifact-goal-review','cbim_goal_review',goalCompleteArguments(body,'artifact-goal-inspect'));
-      else if(turn===5)reply(d.final);
+      assert.ok(body.tools?.every(tool=>!['cbim_dispatch_task','cbim_task_artifact_capture'].includes(tool.function.name)));
+      if(turn===0)tool('artifact-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1)reply(d.final);
       else throw Error('文件核实不应触发额外主请求：'+turn);
     }else{
       assert.ok(body.tools?.some(tool=>tool.function.name==='cbim_task_artifact_capture'),'真实成员工具清单必须包含受控采集');
@@ -58,5 +54,5 @@ export async function artifactBaselineProvider(){
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Artifact baseline fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseMember:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(_agent:string,module:string,selection?:OwnerExecutionSelection)=>{moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},releaseMember:()=>release(),close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

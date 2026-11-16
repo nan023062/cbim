@@ -161,8 +161,8 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
       }};
   };
   const members=new MemberExecutionManager(workspace,store,{
-    artifacts:{normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
-    manifests:{check:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('manifest-report:'+randomUUID(),'read')}},
+    artifacts:{inspectAgent:inspectMember,normalizePath:normalizeArtifact,checkFiles:(files,signal)=>artifactFiles.checkFiles(files,signal),acquireRead:()=>{workspace.assert();return lease.acquire('artifact-report:'+randomUUID(),'read')}},
+    manifests:{inspectAgent:inspectMember,check:(snapshot,signal)=>manifestFiles.check(snapshot,signal),acquireRead:()=>{workspace.assert();return lease.acquire('manifest-report:'+randomUUID(),'read')}},
     checkpoints:{nativeFingerprint},
     budgets:dispatch.budgets,
     isCurrent:()=>admission?.isCurrent()??true,

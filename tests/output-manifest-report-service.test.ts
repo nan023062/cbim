@@ -33,3 +33,29 @@ it('活动运行、缺清单、租约冲突或完整端口错误不降级为旧�
     expect(f.release).toHaveBeenCalledTimes(2);await expect(f.service.read({...f.input,rootSessionId:'foreign'})).rejects.toMatchObject({code:'TASK_NOT_FOUND'});
   }finally{await f.cleanup()}
 });
+
+it('recursive complete manifest comes only from its registered original invocation, never a legacy graph',async()=>{
+ const f=await manifestReportFixture(true);try{
+  expect(f.state.graphs[0].tasks).toEqual([]);expect(f.state.runs).toEqual([]);
+  expect((await f.service.read(f.input)).manifests).toHaveLength(1);expect(f.checks).not.toHaveBeenCalled();
+  expect((await f.service.read(f.selected)).verification?.state).toBe('matches');
+  const count=f.checks.mock.calls.length;
+  for(const corrupt of [
+   (s:RunSummary)=>{(s.events[0].data.agentCall as {callerRunId:string}).callerRunId='other-parent'},
+   (s:RunSummary)=>{delete s.events[0].data.executionModel},
+   (s:RunSummary)=>{s.events[0].data.nativeSessionId='other-native'},
+   (s:RunSummary)=>{s.task.moduleIds=['other-module']},
+   (s:RunSummary)=>{s.logIntegrity={partialTail:true}},
+  ]){
+   const bad=structuredClone(f.summary);corrupt(bad);f.inspect.mockResolvedValue(bad);
+   const report=await f.service.read(f.selected);expect(report.log).toBe('unavailable');expect(report.verification?.state).toBe('unverifiable');expect(f.checks).toHaveBeenCalledTimes(count);
+  }
+  f.inspect.mockResolvedValue(structuredClone(f.summary));f.state.agentBusinessRuns![0].status='active';
+  expect((await f.service.read(f.selected)).verification?.state).toBe('unverifiable');expect(f.checks).toHaveBeenCalledTimes(count);
+  f.state.agentBusinessRuns![0].status='closed';
+  f.checks.mockImplementationOnce(async(snapshot,signal)=>{const result=await f.manifestFiles.check(snapshot,signal);f.state.agentBusinessRuns![0].closedAt='2026-11-16T00:02:00Z';return result});
+  const changed=await f.service.read(f.selected);expect(changed.consistency).toBe('changed_during_read');expect(changed.verification?.state).toBe('unverifiable');
+  await expect(f.service.read({...f.selected,rootSessionId:'foreign-root'})).rejects.toThrow();
+  f.state.agentBusinessRuns!.push(structuredClone(f.state.agentBusinessRuns![0]));await expect(f.service.read(f.selected)).rejects.toMatchObject({code:'EVIDENCE_SOURCE_IDENTITY'});
+ }finally{await f.cleanup()}
+});

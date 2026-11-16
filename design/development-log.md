@@ -1,3 +1,19 @@
+## 2026-11-16 — #94 递归调用产物基线与完整清单报告
+
+基线 7f2ceb17。真实输出清单迁移后暴露 TASK_NOT_FOUND：报告只查旧图任务，新业务登记已存在仍不可读。ArtifactReportService 与 OutputManifestReportService 增加独立 inspectAgent 端口并读取原 agentBusinessRuns，装配复用已有按协议固定路径的 inspectMember。没有合成 TaskNode/DispatchRun、模型或派工记录。
+
+C2/L1：共同变化是只读报告的递归来源身份，新增 recursive-evidence-source 只核唯一根/周期/登记及 canonical 的原父调用、模块、岗位、原生通道、连续事件。旧报告与新报告的来源选择显式区分；文件对比、范围完整性、读占用、哈希和输出脱敏仍由原服务负责。active 仅表示原启动意图，可列已确认引用但不放行当前文件复核；closed 仍须与真实日志终态配合。读取后登记或日志变化保持不可核实；不修复旧日志或自动重放。第五问未新增通用规范候选。
+
+真实 Pi 完整清单/选定文件各 complete 与 stop 共四项迁为一主一子；保留真实 read、捕获成功先后顺序、捕获回执不作步骤证据、文件新增/移动/删除检测、重开相同报告与原字节不变。日志夹具新增显式协议参数，其他旧调用默认路径不变。测试中的主结束只说明对话完成，不签署人工验收。
+
+验证：
+- output-manifest-pi 初次完整场景因 TASK_NOT_FOUND 失败，定位后补产品；原两报告服务 13/13 通过。产品修复后的首次真实两项走到夹具旧日志路径 ENOENT，再改为明确 loop-engine 路径，未改产品回退路径。
+- pnpm exec vitest run tests/output-manifest-pi.test.ts（build/recursive-manifest-fixed.json）：2/2 通过。
+- pnpm exec vitest run tests/artifact-baseline-pi.test.ts（build/recursive-artifact-baseline-fixed.json）：2/2 通过。首次测试误从只返回 scopes 的夹具取 runs，改为直接检查实际 Store 为空。
+- 新递归报告反例 pnpm exec vitest run tests/output-manifest-report-service.test.ts tests/artifact-report-service.test.ts -t recursive（build/recursive-report-identity.json）：2/2 通过，覆盖跨父调用/原生/模块、协议缺失、坏尾、active、读取中变更、跨根和重复登记；旧 13 项已有本切片通过证据，无永久跳过。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过：1661 文件/7905 依赖、无环无违规；相关文件头、端口注释、evidence/runtime 和 application/assembly 契约及三份生成类图已同步。
+- 未执行共享旧桌面脚本、安装升级或发布；完整 CI 43790338820 正运行旧提交 ee9c3047，不代表本切片已通过全量检查。
+
 ## 2026-11-16 — #94 Workflow 启动预检接入递归链路
 
 基线 b9849f52。迁移真实 Workflow 四场景时，正常、停止、并发证据均通过；缺能力场景发现新递归调用绕过了旧 MemberExecutionManager 的启动能力检查，只读权限仍启动要求 write 的模型。这是产品缺口，未通过更改预期或放开权限解决。

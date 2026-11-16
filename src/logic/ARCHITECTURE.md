@@ -67,8 +67,8 @@ N_src_logic_dispatch ..> N_src_logic_engines : 导入依赖
 N_src_logic_dispatch ..> N_src_logic_evidence : 导入依赖
 N_src_logic_engines ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_file_operations : 导入依赖
-N_src_logic_evidence ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
+N_src_logic_evidence ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_execution ..> N_src_logic_engines : 导入依赖
 N_src_logic_execution ..> N_src_logic_evidence : 导入依赖
 N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
@@ -213,11 +213,12 @@ class N_src_logic_workspace["workspace/"] {
 - `evidence` → `tools`：导入。
 - `evidence` → `tasks`：导入。
 - `evidence` → `workspace`：导入。
+- `evidence` → `execution`：导入。
 - `evidence` → `dispatch`：导入。
 - `evidence` → `knowledge`：导入。
-- `evidence` → `execution`：导入。
 - `evidence` → `runtime`：导入。
 - `evidence` → `team`：导入。
+- `evidence` → `agents`：导入。
 - `evidence` → `governance`：导入。
 - `execution` → `runtime`：导入。
 - `execution` → `tools`：导入。

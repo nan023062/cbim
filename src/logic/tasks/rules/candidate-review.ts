@@ -5,6 +5,7 @@
 import { z } from 'zod';
 
 const id = z.string().trim().min(1).max(512),
+
   revision = z.number().int().positive().safe();
 
 export const candidateReviewInputSchema = z.object({ taskId: id, expectedRevision: revision, resultId: id, decision: z.enum(['accept', 'reject']), reason: z.string().trim().min(1).max(16000) }).strict();
@@ -20,6 +21,8 @@ export type CandidateReview = z.infer<typeof candidateReviewSchema>;
 export function candidateAccepted(task: { planRevision: number; result?: { resultId: string; runId: string; planRevision: number }; candidateReview?: CandidateReview }): boolean
 {
   const r = task.result,
+
     a = task.candidateReview;
+
   return !!r && a?.decision === 'accept' && a.resultId === r.resultId && a.runId === r.runId && a.planRevision === r.planRevision && r.planRevision === task.planRevision;
 }

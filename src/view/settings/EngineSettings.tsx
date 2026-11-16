@@ -4,9 +4,13 @@
  * 状态边界：AsyncGeneration 只隔离迟到快照；提交冻结的候选摘要与 revision；在途刷新不能覆盖操作回执，已有安装与缓存归后端持久化。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { modelRoleChoices, supportedEngines, providerSupportsEngine, engineDescriptor, type LoopEngine, type EnginePackageSettings } from '../../bridge/contracts/engines';
+
 import type { LlmSettings } from '../../bridge/contracts/models';
+
 import { AsyncGeneration } from '../foundations/utility';
+
 import { EngineOverview } from './EngineOverview';
 
 const api = window.cbim;
@@ -15,112 +19,90 @@ const api = window.cbim;
 export function EngineSettings({ active = true }: { active?: boolean })
 {
   const [selected, setSelected] = useState<LoopEngine | 'all'>('all'),
+
     [state, setState] = useState<EnginePackageSettings>(),
+
     [models, setModels] = useState<LlmSettings>();
+
   const [busy, setBusy] = useState(false),
+
     [error, setError] = useState(''),
+
     [readError, setReadError] = useState(''),
+
     [notice, setNotice] = useState('');
+
   const alive = useRef(false),
+
     reading = useRef<symbol | undefined>(undefined),
+
     acting = useRef(false),
+
     generation = useRef(new AsyncGeneration());
-  const reload = useCallback(async (includeModels = false) =>
-  {
-    if (reading.current === generation.current.Capture())
-      return;
-    const request = generation.current.Capture();
-    reading.current = request;
-    try
-    {
-      const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]);
-      if (alive.current && generation.current.IsCurrent(request))
-      {
-        setState(engines);
-        setReadError('');
-        if (models)
-          setModels(models)
-      }
-    }
-    catch (error: any)
-    {
-      if (alive.current && generation.current.IsCurrent(request))
-        setReadError(error.message)
-    }
-    finally
-    {
-      if (reading.current === request)
-        reading.current = undefined
-    }
-  }, []);
-  useEffect(() =>
-  {
-    if (!active)
-      return;
-    alive.current = true;
-    void reload(true);
-    const timer = setInterval(() =>
-    {
-      if (!document.hidden)
-        void reload()
-    }, 1000);
-    return () =>
-    {
-      alive.current = false;
-      generation.current.Advance();
-      clearInterval(timer)
-    };
-  }, [active, reload]);
+
+  const reload = useCallback(async (includeModels = false) => { if (reading.current === generation.current.Capture()) return; const request = generation.current.Capture(); reading.current = request; try { const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]); if (alive.current && generation.current.IsCurrent(request)) { setState(engines); setReadError(''); if (models) setModels(models) } } catch (error: any) { if (alive.current && generation.current.IsCurrent(request)) setReadError(error.message) } finally { if (reading.current === request) reading.current = undefined } }, []);
+
+  useEffect(() => { if (!active) return; alive.current = true; void reload(true); const timer = setInterval(() => { if (!document.hidden) void reload() }, 1000); return () => { alive.current = false; generation.current.Advance(); clearInterval(timer) }; }, [active, reload]);
+
   async function perform(work: () => Promise<EnginePackageSettings>, message: string)
   {
     if (acting.current)
+
       return;
+
     acting.current = true;
+
     generation.current.Advance();
+
     setBusy(true);
+
     setError('');
+
     setNotice('');
+
     try
     {
       const next = await work();
+
       generation.current.Advance();
+
       setState(next);
+
       setNotice(message)
     }
     catch (error: any)
     {
       generation.current.Advance();
+
       setError(error.message)
     }
     finally
     {
       acting.current = false;
+
       setBusy(false)
     }
   }
   const descriptor = selected !== 'all' ? engineDescriptor(selected) : undefined,
+
     item = state?.items.find(item => item.kind === selected);
+
   const available = descriptor && models ? models.profiles.flatMap(profile => profile.models.filter(model => model.enabled && providerSupportsEngine(descriptor.id, profile, model.id)).map(model => profile.name + ' / ' + (model.name || model.id))) : [];
+
   const installed = !!item?.active,
+
     sameVersion = !!item?.active && item.active.identity === item.candidate?.identity;
+
   const preparing = !!item?.preparing,
+
     blocked = busy || preparing || !state?.managed;
+
   return <section className="repository-settings" aria-label="引擎能力支持列表">
-    <label className="engine-selector">选择引擎<select aria-label="选择引擎" value={selected} disabled={busy} onChange={event =>
-    {
-      setSelected(event.target.value as LoopEngine | 'all');
-      setError('');
-      setNotice('')
-    }}>
+    <label className="engine-selector">选择引擎<select aria-label="选择引擎" value={selected} disabled={busy} onChange={event => { setSelected(event.target.value as LoopEngine | 'all'); setError(''); setNotice('') }}>
       <option value="all">全部引擎</option>{supportedEngines.map(engine => <option key={engine.id} value={engine.id}>{engine.label}</option>)}
     </select></label>
     {!state && !error && !readError && <p role="status">正在读取引擎列表…</p>}
-    {selected === 'all' && <EngineOverview state={state} onSelect={kind =>
-    {
-      setSelected(kind);
-      setError('');
-      setNotice('')
-    }} />}
+    {selected === 'all' && <EngineOverview state={state} onSelect={kind => { setSelected(kind); setError(''); setNotice('') }} />}
     {descriptor && <article className="model-row engine-detail" aria-label={descriptor.label + ' 引擎详情'}>
       <h2>{descriptor.label}</h2><p>擅长：{descriptor.businessTypes.join('、')}</p>
       <p>支持模型范围：{descriptor.supportedApis.join(' / ')} 兼容的生成模型</p>
@@ -137,11 +119,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
           <button disabled={blocked || item.enabled && item.references > 0} onClick={() => void perform(() => api.call('engines.configure', { kind: descriptor.id, revision: state!.revision, action: item.enabled ? 'disable' : 'enable' }), item.enabled ? '引擎已停用。' : '引擎已启用。')}>{item.enabled ? '停用' : '启用'}</button>
           <button disabled={blocked || !installed || item.references > 0} onClick={() => void perform(() => api.call('engines.configure', { kind: descriptor.id, revision: state!.revision, action: 'remove' }), '引擎已移除，模型设置和历史缓存已保留。')}>移除引擎</button>
           <button disabled={blocked} onClick={() => void perform(() => api.call('engines.check'), '已检查官方引擎版本，尚未安装更新。')}>检查引擎更新</button>
-          <button disabled={busy} onClick={() =>
-          {
-            setError('');
-            void reload(true)
-          }}>刷新状态</button>
+          <button disabled={busy} onClick={() => { setError(''); void reload(true) }}>刷新状态</button>
         </div>
         <details><summary>版本与依赖详情</summary>
           <p>运行库版本：{item.active?.nativeVersion ?? '未安装'} · 历史包：{item.installed.length}</p>

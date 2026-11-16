@@ -5,13 +5,21 @@
  * 职责边界：纯规则解析及启动能力预检，JSON/CSV/PNG要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
  */
 import { codeCheckRequirementSchema } from './code-check';
+
 import { z } from 'zod';
+
 import { fail } from '../../../core/errors';
+
 import { parseJson } from '../../../core/json';
+
 import { boundedJsonSchemaSchema, jsonValidationLimits } from './json-validation-schema';
+
 import { csvTableSchema } from './csv-validation-schema';
+
 import { pngImageSchema } from './png-validation-schema';
+
 import { artifactScopeSchema } from './artifact-scope';
+
 import { executionScopeSchema, preparedExecutionScope } from './execution-scope';
 
 /** 限制单份条件的规模；正文其它自然语言仍沿原知识文件大小规则。 */
@@ -41,36 +49,7 @@ export const artifactValidationRequirementSchema = z.discriminatedUnion('validat
 export type ArtifactValidationRequirement = z.infer<typeof artifactValidationRequirementSchema>;
 
 /** 至少一项显式执行条件或产物观察范围；范围本身不构成交付条件，不做隐式默认。 */
-export const workflowContractSchema = z.object({
-  version: z.literal(1),
-  /** 完整枚举的范围随知识冻结；不把观察声明冒充交付条件。 */
-  artifactScope: artifactScopeSchema.optional(),
-  /** 原任务权限之内的显式限制；旧 Workflow 缺省不升级为隔离模式。 */
-  executionScope: executionScopeSchema.optional(),
-  beforeEffects: z.object({ requirePlan: z.literal(true) }).strict().optional(),
-  delivery: z.object({ requiredCodeChecks: z.array(codeCheckRequirementSchema).min(1).max(8).optional(), requiredToolEvidence: z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(), requiredValidations: z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(), requireCompleteManifest: z.literal(true).optional() }).strict().refine(value => !!value.requiredCodeChecks || !!value.requiredToolEvidence || !!value.requiredValidations || value.requireCompleteManifest === true, '交付至少声明一种非空条件').optional(),
-}).strict().superRefine((value, context) =>
-{
-  if (!value.beforeEffects && !value.delivery && !value.artifactScope && !value.executionScope)
-    context.addIssue({ code: z.ZodIssueCode.custom, message: '至少声明一项执行条件或产物观察范围' });
-  try
-  {
-    preparedExecutionScope([{ contract: value }])
-  }
-  catch (error)
-  {
-    context.addIssue({ code: 'custom', message: String(error) })
-  }
-  if (value.delivery?.requireCompleteManifest && !value.artifactScope)
-    context.addIssue({ code: z.ZodIssueCode.custom, message: '完整交付要求必须同时声明本模块 artifactScope' });
-  if (value.artifactScope?.transitions && !value.delivery?.requireCompleteManifest)
-    context.addIssue({ code: z.ZodIssueCode.custom, message: '删除/移动要求必须显式启用完整清单验收' });
-  if (value.delivery?.requiredCodeChecks && (!value.delivery.requireCompleteManifest || !value.artifactScope || value.executionScope))
-    context.addIssue({ code: "custom", message: "代码检查要求完整源码清单且不能使用隔离执行模式" });
-  const ids = [...value.delivery?.requiredCodeChecks ?? [], ...value.delivery?.requiredToolEvidence ?? [], ...value.delivery?.requiredValidations ?? []].map(item => item.id);
-  if (new Set(ids).size !== ids.length)
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ['delivery', 'requiredToolEvidence'], message: '证据要求 ID 不能重复' });
-});
+export const workflowContractSchema = z.object({ version: z.literal(1), /** 完整枚举的范围随知识冻结；不把观察声明冒充交付条件。 */ artifactScope: artifactScopeSchema.optional(), /** 原任务权限之内的显式限制；旧 Workflow 缺省不升级为隔离模式。 */ executionScope: executionScopeSchema.optional(), beforeEffects: z.object({ requirePlan: z.literal(true) }).strict().optional(), delivery: z.object({ requiredCodeChecks: z.array(codeCheckRequirementSchema).min(1).max(8).optional(), requiredToolEvidence: z.array(requirement).min(1).max(workflowContractLimits.requirements).optional(), requiredValidations: z.array(artifactValidationRequirementSchema).min(1).max(workflowContractLimits.requirements).optional(), requireCompleteManifest: z.literal(true).optional() }).strict().refine(value => !!value.requiredCodeChecks || !!value.requiredToolEvidence || !!value.requiredValidations || value.requireCompleteManifest === true, '交付至少声明一种非空条件').optional(), }).strict().superRefine((value, context) => { if (!value.beforeEffects && !value.delivery && !value.artifactScope && !value.executionScope) context.addIssue({ code: z.ZodIssueCode.custom, message: '至少声明一项执行条件或产物观察范围' }); try { preparedExecutionScope([{ contract: value }]) } catch (error) { context.addIssue({ code: 'custom', message: String(error) }) } if (value.delivery?.requireCompleteManifest && !value.artifactScope) context.addIssue({ code: z.ZodIssueCode.custom, message: '完整交付要求必须同时声明本模块 artifactScope' }); if (value.artifactScope?.transitions && !value.delivery?.requireCompleteManifest) context.addIssue({ code: z.ZodIssueCode.custom, message: '删除/移动要求必须显式启用完整清单验收' }); if (value.delivery?.requiredCodeChecks && (!value.delivery.requireCompleteManifest || !value.artifactScope || value.executionScope)) context.addIssue({ code: "custom", message: "代码检查要求完整源码清单且不能使用隔离执行模式" }); const ids = [...value.delivery?.requiredCodeChecks ?? [], ...value.delivery?.requiredToolEvidence ?? [], ...value.delivery?.requiredValidations ?? []].map(item => item.id); if (new Set(ids).size !== ids.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ['delivery', 'requiredToolEvidence'], message: '证据要求 ID 不能重复' }); });
 
 export type WorkflowContract = z.infer<typeof workflowContractSchema>;
 
@@ -85,34 +64,47 @@ export interface WorkflowCapabilities
 
   artifacts: boolean;
 }
-
 /** 原派工和递归调用共用的启动前检查；缺能力即拒绝，不建运行、不申请工具审批或自动提高权限。 */
 export function assertWorkflowCapabilities(bindings: readonly { contract: WorkflowContract }[], capabilities: WorkflowCapabilities): void
 {
   const scoped = preparedExecutionScope(bindings),
+
     available = scoped ? capabilities.scopedTools : capabilities.availableTools;
+
   if (scoped && !available)
+
     fail('EXECUTION_SCOPE_UNAVAILABLE', '本机引擎没有实际范围执行能力');
+
   if (!bindings.length)
+
     return;
+
   if (!available)
+
     fail('WORKFLOW_CAPABILITIES_UNAVAILABLE', '本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
+
   const missing = [...new Set(bindings.flatMap(binding => binding.contract.delivery?.requiredToolEvidence?.map(item => item.toolName) ?? []))].filter(name => !available.includes(name));
+
   if (missing.length)
+
     fail('WORKFLOW_TOOL_UNAVAILABLE', '当前权限或引擎未提供 Workflow 必需工具：' + missing.join('、'));
+
   const requirements = bindings.flatMap(binding => binding.contract.delivery?.requiredValidations ?? []);
+
   if (requirements.length > jsonValidationLimits.records)
+
     fail('WORKFLOW_VALIDATION_LIMIT', '本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
+
   const validators = [...new Set(requirements.map(item => item.validator))];
+
   if (validators.some(validator => !capabilities.availableValidators?.includes(validator)) || validators.length && !capabilities.artifacts)
+
     fail('WORKFLOW_VALIDATION_UNAVAILABLE', '当前引擎或文件端口未提供 Workflow 必需结构验证能力');
 }
-
 function invalid(reason: string): never
 {
   fail('WORKFLOW_CONTRACT_INVALID', 'Workflow 执行约定无效：' + reason)
 }
-
 /**
  * 读取最多一个顶层 cbim-workflow 围栏块；标准反引号/波浪线围栏支持 0–3 空格缩进。
  * 普通代码块内的示例、引用块和缩进代码不是声明。命名后附加语言/属性、未闭合、重复及非严格 JSON 均拒绝。
@@ -121,7 +113,9 @@ function invalid(reason: string): never
 export function parseWorkflowContract(markdown: string): WorkflowContract | undefined
 {
   if (typeof markdown !== 'string')
+
     invalid('正文必须是文本');
+
   let fence:
     {
       character: string;
@@ -130,22 +124,31 @@ export function parseWorkflowContract(markdown: string): WorkflowContract | unde
 
       declared: boolean
     } | undefined;
+
   let declared = false,
+
     body: string[] = [],
+
     contract: WorkflowContract | undefined;
+
   for (const line of markdown.replace(/^\uFEFF/, '').split(/\r\n?|\n/))
   {
     if (fence)
     {
       const closing = line.match(/^ {0,3}(`{3,}|~{3,})[ \t]*$/);
+
       if (closing && closing[1][0] === fence.character && closing[1].length >= fence.length)
       {
         if (fence.declared)
         {
           const text = body.join('\n');
+
           if (new TextEncoder().encode(text).byteLength > workflowContractLimits.blockBytes)
+
             invalid('条件块超过 64 KiB');
+
           let raw: unknown;
+
           try
           {
             raw = parseJson(text)
@@ -155,41 +158,61 @@ export function parseWorkflowContract(markdown: string): WorkflowContract | unde
             invalid('条件块必须是无重复字段的严格 JSON')
           }
           const parsed = workflowContractSchema.safeParse(raw);
+
           if (!parsed.success)
+
             invalid('版本、字段、工具或证据要求不受支持');
+
           contract = parsed.data;
         }
         fence = undefined;
+
         body = [];
       }
       else if (fence.declared)
+
         body.push(line);
+
       continue;
     }
     const opening = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+
     if (!opening)
+
       continue;
+
     const info = opening[2].trim(),
+
       named = info.split(/\s+/)[0].toLowerCase() === 'cbim-workflow';
+
     if (named)
     {
       if (info !== 'cbim-workflow')
+
         invalid('条件块标记必须精确为 cbim-workflow');
+
       if (declared)
+
         invalid('最多允许一个条件块');
+
       declared = true
     }
     // Markdown 反引号围栏的 info 不能再含反引号；无效普通语法不遮蔽后续真实声明。
     if (opening[1][0] === '`' && info.includes('`'))
     {
       if (named)
+
         invalid('条件块标记格式无效');
+
       continue
     }
     fence = { character: opening[1][0], length: opening[1].length, declared: named };
+
     body = [];
   }
   if (fence?.declared)
+
     invalid('条件块未闭合');
+
   return contract;
 }

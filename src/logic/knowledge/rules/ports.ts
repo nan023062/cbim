@@ -5,6 +5,7 @@
  * 设计原因：核心只依赖能力契约，由 main 注入实际工作区；不导入 Electron 或服务生命周期实现。
  */
 import type { StoragePaths as Paths } from '../../workspace/ports/paths';
+
 import type { ChangeRequest, Preview, Snapshot, TaskView, KnowledgeCommit } from './types';
 
 export type { KnowledgeCommit } from './types';
@@ -14,7 +15,6 @@ export interface SourceSnapshotReader
 {
   WithSourceSnapshot<T>(use: (snapshot: Snapshot) => Promise<T>): Promise<T>
 }
-
 /** 实现方负责实例状态、路径边界、并发控制、版本检查、事务恢复和物理写入。 */
 export interface KnowledgeWorkspace
 {
@@ -27,7 +27,6 @@ export interface KnowledgeWorkspace
 
     path: string
   };
-
   readonly instanceId: string;
 
   readonly paths: Paths;
@@ -37,7 +36,6 @@ export interface KnowledgeWorkspace
   {
     assetsRoot: string
   };
-
   readonly tasks: Map<string, TaskView>;
 
   state: string;

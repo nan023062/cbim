@@ -3,15 +3,20 @@
  * 设计原因：补充原目标独立于普通聊天队列；选择资料只保存草稿，点击“补充并继续”才受理，未知结果不能替换正文或附件，也不代表人工批准。
  */
 import { Icon } from '../components/Icon';
+
 import type { ScopeContinuationView } from './useScopeContinuation';
+
 import { ComposerAttachments } from '../execution-view/ComposerAttachments';
+
 import { ContinuationSourceMenu } from './ContinuationSourceMenu';
 
 /** 所有操作交给主会话唯一控制器；两处表单不会各自生成命令或保存独立草稿。 */
 export function ScopeContinuationForm({ state }: { state: ScopeContinuationView })
 {
   const attempt = state.record?.attempt,
+
     phase = attempt?.phase;
+
   return <div className="scope-continuation" data-testid="scope-continuation" data-continuation-phase={state.pending ? 'pending' : phase ?? 'draft'}>
     <h4>补充原目标</h4><p className="scope-goal-muted">补充交给主 Agent 并继续当前目标；主对话输入框也可提交补充。这里保留原请求与附件，补充不代表人工验收。</p>
     <textarea aria-label="目标补充说明" data-testid="scope-continuation-input" value={state.text} readOnly={!state.editable} maxLength={64000} placeholder="补充缺少的信息，继续原目标…" onChange={event => state.edit(event.target.value)} />

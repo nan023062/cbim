@@ -63,39 +63,53 @@ export type ScopeBudgetDecision =
 
     unknownRunIds: string[]
   };
-
 /** 默认策略由可信设置入口提供；复制避免外部更改对象污染已经准备提交的周期。 */
 export function createScopeBudget(policy: ScopeBudgetPolicy = defaultScopeBudgetPolicy): ScopeBudget
 {
   return { version: 1, policy: scopeBudgetPolicySchema.parse(structuredClone(policy)) }
 }
-
 /** 金额只容忍同量级约四个浮点尾差；不以 1 作下限，避免把极小正额度误判为已被零费用消耗。 */
 function costReached(value: number, limit: number): boolean
 {
   return value >= limit || limit - value <= 4 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(limit))
 }
-
 /** 先等待现有运行，不因额度已到而停止已受理工作；只对实际配置的维度要求完整用量。 */
 export function evaluateScopeBudget(rawPolicy: ScopeBudgetPolicy, rawObservation: ScopeBudgetObservation): ScopeBudgetDecision
 {
   const policy = scopeBudgetPolicySchema.parse(rawPolicy);
+
   if (!policy.enabled)
+
     return { kind: 'disabled' };
+
   const value = scopeBudgetObservationSchema.parse(rawObservation);
+
   if (value.liveRunIds.length)
+
     return { kind: 'wait', runIds: [...value.liveRunIds] };
+
   const deny = (reason: ScopeBudgetReason): ScopeBudgetDecision => ({ kind: 'deny', reason, unknownRunIds: [...value.unknownRunIds] });
+
   if (value.coverage !== 'tracked' || value.consistency !== 'stable' || value.unknownRunIds.length)
+
     return deny('usage_unverifiable');
+
   // 首轮没有既有消耗；空集合与“旧记录缺失”不同，后者由归属计数和 coverage 保留。
   if (value.registeredRuns === 0)
+
     return value.tokens === 0 && (value.estimatedCostUsd === undefined || value.estimatedCostUsd === 0) ? { kind: 'allow' } : deny('usage_unverifiable');
+
   if (policy.limits.tokens !== undefined && !value.tokensComplete || policy.limits.estimatedCostUsd !== undefined && (!value.costComplete || value.estimatedCostUsd === undefined))
+
     return deny('usage_unverifiable');
+
   if (policy.limits.tokens !== undefined && value.tokens >= policy.limits.tokens)
+
     return deny('token_limit');
+
   if (policy.limits.estimatedCostUsd !== undefined && costReached(value.estimatedCostUsd!, policy.limits.estimatedCostUsd))
+
     return deny('cost_limit');
+
   return { kind: 'allow' };
 }

@@ -3,12 +3,19 @@
  * 设计原因：工具与正文按原事件顺序展示，Agent 调用详情按需读取；输入只来自调用方，私有推理和用户直发不进入此通道。
  */
 import type { RunSummary } from '../../bridge/contracts/execution';
+
 import { useEffect, useState } from 'react';
+
 import { transcript } from '../execution-view/transcript';
+
 import { MarkdownMessage } from '../execution-view/MarkdownMessage';
+
 import { WorkStatus } from '../execution-view/WorkStatus';
+
 import { MemberProgressSummary } from './MemberProgressSummary';
+
 import { ToolTimeline } from '../execution-view/ToolTimeline';
+
 import { AgentCallDetails } from '../execution-view/AgentCallDetails';
 
 /**
@@ -18,22 +25,17 @@ import { AgentCallDetails } from '../execution-view/AgentCallDetails';
 export function MemberRunTranscript({ run, workspaceId, memberName, compact = false, active = true }: { run: RunSummary; workspaceId: string; memberName: string; compact?: boolean; active?: boolean })
 {
   const [now, setNow] = useState(Date.now());
-  useEffect(() =>
-  {
-    if (run.status !== 'running' || !active)
-      return;
-    setNow(Date.now());
-    const timer = setInterval(() =>
-    {
-      if (document.visibilityState !== 'hidden')
-        setNow(Date.now())
-    }, 1000);
-    return () => clearInterval(timer)
-  }, [run.status, active]);
+
+  useEffect(() => { if (run.status !== 'running' || !active) return; setNow(Date.now()); const timer = setInterval(() => { if (document.visibilityState !== 'hidden') setNow(Date.now()) }, 1000); return () => clearInterval(timer) }, [run.status, active]);
+
   const messages = transcript(run);
+
   const shown = compact ? messages.filter(item => item.kind === 'assistant' || item.kind === 'error').slice(-1) : messages;
+
   if (!run.events.length)
+
     return <p className="member-muted" role="status">{run.status === 'running' ? '正在准备成员执行，尚未收到公开运行事件。' : '本轮没有可展示的公开运行记录。'}</p>;
+
   return <div className={'member-run-transcript' + (compact ? ' compact' : '')}>
     <WorkStatus run={run} now={now} inline />
     <MemberProgressSummary run={run} compact={compact} />

@@ -6,87 +6,162 @@
 import React from 'react';
 
 const paths: Record<string, React.ReactNode> = {
-
   grip: <><circle cx="8" cy="5" r="1" /><circle cx="16" cy="5" r="1" /><circle cx="8" cy="12" r="1" /><circle cx="16" cy="12" r="1" /><circle cx="8" cy="19" r="1" /><circle cx="16" cy="19" r="1" /></>,
+
   running: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4Z" /></>,
+
   queued: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+
   decision: <><path d="M5 4h14v12H9l-4 4Z" /><path d="M10 8a2 2 0 1 1 3 1.7c-1 .5-1 1-1 1.3M12 13v.2" /></>,
+
   verifying: <><circle cx="10" cy="10" r="6.5" /><path d="m15 15 5 5M7 10l2 2 4-4" /></>,
+
   success: <><circle cx="12" cy="12" r="9" /><path d="m7.5 12 3 3 6-6" /></>,
+
   delivered: <><path d="m3 7 9-4 9 4v10l-9 4-9-4ZM3 7l9 4 9-4M12 11v10M7.5 5l9 4" /><path d="m15 14 1.5 1.5L19 13" /></>,
+
   stopping: <><path d="M5 6a9 9 0 1 1-1 10M3 3v5h5" /><rect x="9" y="9" width="6" height="6" rx="1" /></>,
+
   stopped: <><circle cx="12" cy="12" r="9" /><rect x="8.5" y="8.5" width="7" height="7" rx="1" /></>,
+
   blocked: <><path d="M5 3h14M5 21h14M7 3v4l5 5-5 5v4M17 3v4l-5 5 5 5v4M9 17h6" /></>,
+
   conflict: <><path d="M4 5h4l8 14h4M4 19h4l8-14h4M17 2l3 3-3 3M17 16l3 3-3 3" /></>,
+
   unknown: <><circle cx="12" cy="12" r="9" /><path d="M9 9a3 3 0 1 1 4.5 2.6c-1.5.7-1.5 1.4-1.5 2.4M12 17v.2" /></>,
+
   failed: <><path d="m8 3-5 5v8l5 5h8l5-5V8l-5-5ZM9 9l6 6M15 9l-6 6" /></>,
+
   notRun: <><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></>,
+
   rework: <><path d="M14 4a6 6 0 0 0-7 8l-4 6a2 2 0 0 0 3 3l6-5a6 6 0 0 0 8-7l-4 4-4-4Z" /></>,
+
   archived: <><rect x="3" y="3" width="18" height="5" rx="1" /><path d="M5 8v13h14V8M9 12h6M10 16l2 2 3-3" /></>,
+
   play: <><path d="m7 4 14 8L7 20Z" /></>,
+
   pause: <><rect x="5" y="4" width="4" height="16" rx="1" /><rect x="15" y="4" width="4" height="16" rx="1" /></>,
+
   stop: <><rect x="5" y="5" width="14" height="14" rx="2" /></>,
+
   next: <><path d="m5 5 10 7-10 7ZM19 4v16" /></>,
+
   replay: <><path d="M4 8a9 9 0 1 1 0 8M3 3v6h6M11 8l5 4-5 4Z" /></>,
+
   send: <><path d="m3 3 18 9-18 9 3-9ZM6 12h15" /></>,
+
   enqueue: <><path d="M4 5h12M4 10h8M4 15h6M17 12v8M13 16h8" /></>,
+
   edit: <><path d="m4 15 12-12 5 5L9 20l-6 1ZM13 6l5 5M4 15l5 5" /></>,
+
   add: <><path d="M12 4v16M4 12h16" /></>,
+
   remove: <><path d="M5 7h14M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6" /></>,
+
   close: <><path d="m6 6 12 12M18 6 6 18" /></>,
+
   inspect: <><circle cx="10" cy="10" r="6.5" /><path d="m15 15 6 6M10 7v6M7 10h6" /></>,
+
   confirm: <><path d="m4 12 5 5L20 6" /></>,
+
   resolve: <><path d="M4 4v3q0 5 8 5M4 20v-3q0-5 8-5h8M16 8l4 4-4 4" /></>,
+
   retry: <><path d="M4 8a9 9 0 0 1 15-3M20 3v5h-5M20 16A9 9 0 0 1 5 19M4 21v-5h5" /></>,
+
   unblock: <><path d="M7 11V8a5 5 0 0 1 9-3" /><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M12 15v3" /></>,
+
   moon: <><path d="M20 14A9 9 0 0 1 10 3a9 9 0 1 0 10 11Z" /></>,
+
   sun: <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1" /></>,
+
   phone: <><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M10 5h4M11 19h2" /></>,
+
   desktop: <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+
   chevron: <><path d="m9 5 7 7-7 7" /></>,
+
   search: <><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6" /></>,
+
   conversation: <><path d="M3 4h18v13H9l-6 4ZM7 8h10M7 12h6" /></>,
+
   team: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3" /></>,
+
   office: <><path d="M4 21V3h16v18M2 21h20M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-5h4v5" /></>,
+
   list: <><rect x="3" y="4" width="4" height="4" rx="1" /><rect x="3" y="10" width="4" height="4" rx="1" /><rect x="3" y="16" width="4" height="4" rx="1" /><path d="M11 6h10M11 12h10M11 18h10" /></>,
+
   folder: <><path d="M3 6V4h6l3 3h9v13H3ZM3 10h18" /></>,
+
   palette: <><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1-4c-2-1-1-3 1-3h2a3 3 0 0 0 3-3 9 9 0 0 0-9-8Z" /><circle cx="7" cy="11" r=".6" /><circle cx="10" cy="7" r=".6" /><circle cx="15" cy="7" r=".6" /></>,
+
   goal: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></>,
+
   handoff: <><path d="M5 3h10l4 4v14H5ZM15 3v5h4M8 14h8M13 11l3 3-3 3" /></>,
+
   knowledge: <><path d="M12 5Q7 2 3 4v16q4-2 9 1 5-3 9-1V4q-4-2-9 1ZM12 5v16M6 8l3 1M15 9l3-1" /></>,
+
   info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7v.2" /></>,
+
   person: <><circle cx="12" cy="7" r="4" /><path d="M4 21v-3a8 8 0 0 1 16 0v3" /></>,
+
   coordinator: <><circle cx="12" cy="5" r="3" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" /><path d="M12 8v5M5 17v-4h14v4" /></>,
+
   design: <><path d="m4 16 12-12 4 4L8 20H4ZM13 7l4 4M4 5h5M6 3v5" /></>,
+
   code: <><path d="m8 5-6 7 6 7M16 5l6 7-6 7M14 3l-4 18" /></>,
+
   api: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><path d="M10 6h7v8M14 18H7v-8" /></>,
+
   tester: <><path d="M9 3h6M10 3v6l-6 9q-1 3 2 3h12q3 0 2-3l-6-9V3M8 14h8M9 17l2 2 4-4" /></>,
+
   refresh: <><path d="M20 9a8 8 0 1 0 0 6M20 3v6h-6" /></>,
+
   copy: <><rect x="8" y="8" width="13" height="13" rx="2" /><path d="M16 5V3H3v13h2" /></>,
+
   download: <><path d="M12 3v12M7 10l5 5 5-5M3 16v5h18v-5" /></>,
+
   upload: <><path d="M12 15V3M7 8l5-5 5 5M3 16v5h18v-5" /></>,
+
   attachment: <><path d="m9 13 7-7a3 3 0 0 1 4 4L10 20a5 5 0 0 1-7-7L13 3M6 16l10-10" /></>,
+
   undo: <><path d="M3 10h11a7 7 0 0 1 0 14M3 10l6-6M3 10l6 6" transform="translate(0 -2)" /></>,
+
   menu: <><path d="M3 5h18M3 12h18M3 19h18" /></>,
+
   more: <><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></>,
+
   openExternal: <><path d="M13 3h8v8M21 3 10 14M10 5H3v16h16v-7" /></>,
+
   settings: <><path d="M3 6h18M3 12h18M3 18h18" /><rect x="7" y="3" width="4" height="6" rx="1" /><rect x="14" y="9" width="4" height="6" rx="1" /><rect x="6" y="15" width="4" height="6" rx="1" /></>,
+
   connector: <><path d="M8 2v5M16 2v5M5 7h14v4a7 7 0 0 1-14 0ZM12 18v4" /></>,
+
   workflow: <><rect x="3" y="3" width="6" height="6" rx="1" /><rect x="15" y="15" width="6" height="6" rx="1" /><path d="M9 6h9v9M15 12l3 3 3-3M6 9v12h5" /></>,
+
   terminal: <><rect x="2" y="3" width="20" height="18" rx="2" /><path d="m6 8 4 4-4 4M13 16h5" /></>,
+
   browser: <><rect x="2" y="3" width="20" height="18" rx="2" /><path d="M2 8h20M6 5.5h.2M9 5.5h.2M12 5.5h.2" /></>,
+
   history: <><path d="M4 8a9 9 0 1 1 0 8M3 3v6h6M12 7v5l4 2" /></>,
+
   notification: <><path d="M5 9a7 7 0 0 1 14 0v6l2 3H3l2-3ZM9 21h6" /></>,
+
   diff: <><path d="M4 3h16v18H4ZM7 8h4M9 6v4M14 8h3M7 16h4M14 16h3" /></>,
+
   hand: <><path d="M8 13V6a2 2 0 0 1 4 0v6-8a2 2 0 0 1 4 0v8-6a2 2 0 0 1 4 0v9c0 5-3 7-7 7-3 0-5-2-7-5l-3-4a2 2 0 0 1 3-2l2 2Z" /></>,
+
   warning: <><path d="M10.3 4a2 2 0 0 1 3.4 0l8 14a2 2 0 0 1-1.7 3H4a2 2 0 0 1-1.7-3Z" /><path d="M12 9v5M12 17h.01" /></>,
+
   sparkles: <><path d="m10 3 2.5 6.5L19 12l-6.5 2.5L10 21l-2.5-6.5L1 12l6.5-2.5Z" /><path d="m19 1 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z" /></>,
+
   expand: <path d="m7 8 5-5 5 5M7 16l5 5 5-5M4 12h16" />,
+
   collapse: <path d="m7 3 5 5 5-5M7 21l5-5 5 5M4 12h16" />,
+
   'text-minus': <path d="m3 19 5-14 5 14M5 14h6M16 12h6" />,
+
   'text-plus': <path d="m3 19 5-14 5 14M5 14h6M16 12h6M19 9v6" />,
 };
-
 const aliases: Record<string, string> = { chat: 'conversation', flow: 'workflow', plus: 'add', plug: 'connector', arrow: 'send', check: 'success', trash: 'remove', clock: 'queued' };
 
 /** 所有图形都是装饰；图标按钮必须在按钮上提供 aria-label。 */

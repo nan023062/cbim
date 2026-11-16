@@ -16,7 +16,6 @@ export interface RuntimeNavigationTarget
 
   scopeId?: string
 }
-
 export type RuntimeFilter = 'all' | 'current' | 'attention';
 
 /** 任务号只在原根内唯一；列表键保留根身份，避免不同会话的同号任务复用 DOM。 */
@@ -24,13 +23,11 @@ export function runtimeTaskKey(task: RuntimeTask)
 {
   return JSON.stringify([task.workspaceId, task.source, task.source === 'dispatch' ? task.rootSessionId : null, task.taskId])
 }
-
 /** 旧日志的 runId 也须连同 taskId 核对，不假定所有历史 UUID 都全局唯一。 */
 export function runtimeRunKey(run: RuntimeRun)
 {
   return JSON.stringify([run.workspaceId, run.taskId, run.runId])
 }
-
 export const runtimeRunLabels: Record<RuntimeRun['status'], string> = { running: '运行中', completed: '本轮结束', cancelled: '已停止', failed: '运行失败', interrupted: '运行中断' };
 
 export const runtimeTaskLabels = { planned: '已规划', queued: '待执行', running: '执行中', waiting: '等待依赖', result_ready: '交付候选', blocked: '任务受阻', failed: '执行失败', cancelled: '已取消', interrupted: '已中断', checkpointed: '检查点停泊' };
@@ -43,42 +40,49 @@ export const runtimeAdmissionLabels = { global_capacity: '等待全局名额', w
 export function runtimeScopeLabel(scope: RuntimeScope)
 {
   if (scope.status === 'closed')
+
     return scope.outcome ? ({ completed: scope.reviewDecision === 'complete' ? '目标周期完成' : '周期已结束', failed: '周期失败', cancelled: '周期已取消', interrupted: '周期中断' } as const)[scope.outcome] : '周期已关闭（结果未报告）';
+
   if (scope.status === 'waiting')
+
     return '等待用户';
+
   if (scope.budgetBlocked)
+
     return '额度待处理';
+
   if (scope.goalBlocked || scope.reviewDecision === 'blocked')
+
     return '目标受阻';
+
   return scope.reviewDecision === 'complete' ? '完成申请待核验' : scope.reviewDecision === 'awaiting_user' ? '等待请求待结算' : '调度中';
 }
-
 export function runtimeScopeMatches(scope: RuntimeScope, filter: RuntimeFilter)
 {
   return filter === 'all' || (filter === 'current' ? scope.status !== 'closed' : scope.status === 'waiting' || !!scope.budgetBlocked || !!scope.goalBlocked || scope.reviewDecision === 'blocked' || scope.outcome === 'failed' || scope.outcome === 'interrupted')
 }
-
 export function runtimeTaskMatches(task: RuntimeTask, filter: RuntimeFilter)
 {
   return filter === 'all' || (task.source === 'loop' ? (filter === 'current' ? task.activeRunIds.length > 0 : task.status === 'failed' || task.status === 'interrupted') : (filter === 'current' ? ['planned', 'queued', 'running', 'waiting', 'blocked', 'checkpointed'].includes(task.status) : ['blocked', 'failed', 'interrupted', 'checkpointed', 'waiting'].includes(task.status)))
 }
-
 export function runtimeMemberMatches(member: RuntimeMember, filter: RuntimeFilter)
 {
   return filter === 'all' || (member.lifecycle !== 'released' && (filter === 'current' ? member.availability === 'ready' : !member.activityCurrent || member.availability !== 'ready' || member.activity === 'waiting'))
 }
-
 /** 旧 role-only 会话只能按其真实 taskId 定位；执行成员必须有已确认的根身份，不能拿成员任务号冒充主会话号。 */
 export function runtimeTaskTarget(task: RuntimeTask): RuntimeNavigationTarget
 {
   return task.source === 'dispatch' ? { workspaceId: task.workspaceId, rootSessionId: task.rootSessionId, taskId: task.taskId, scopeId: task.scopeId } : { workspaceId: task.workspaceId, rootSessionId: task.binding === 'instance' ? task.rootSessionId : task.taskId }
 }
-
 export function runtimeRunTarget(run: RuntimeRun): RuntimeNavigationTarget | undefined
 {
   if (run.memberBinding)
+
     return { workspaceId: run.workspaceId, rootSessionId: run.memberBinding.rootSessionId, taskId: run.memberBinding.taskId };
+
   if (run.conversationBinding)
+
     return { workspaceId: run.workspaceId, rootSessionId: run.conversationBinding.rootSessionId };
+
   return undefined;
 }

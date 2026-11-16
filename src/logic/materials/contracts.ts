@@ -14,7 +14,6 @@ export interface ChatAttachment
 
   note?: string
 }
-
 /** 图片仅来自当前工作区已保存快照；禁止 SVG/HTML 与任意预览 URL。 */
 export interface ChatAttachmentPreview
 {

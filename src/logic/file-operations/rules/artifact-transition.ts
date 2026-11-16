@@ -5,12 +5,17 @@
  * 职责边界：不访问文件，不授予权限；prepared/executing 或平台返回自身均不代表可验收成功。
  */
 import { z } from 'zod';
+
 import { artifactTransitionDefinitionSchema, artifactScopeLimits } from '../../workspace/rules/artifact-scope';
+
 import { artifactBaselineStagedSchema } from '../../evidence/rules/artifact-baseline';
 
 const id = z.string().min(1).max(128).refine(v => v.trim() === v && !/[\x00-\x1f]/.test(v)),
+
   logical = z.string().min(1).max(512),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   seq = z.number().int().positive().safe();
 
 export const artifactTransitionToolName = 'cbim_artifact_transition';
@@ -22,7 +27,6 @@ export interface ArtifactTransitionToolPort
 
   Call(name: string, input: unknown, toolCallId?: string, signal?: AbortSignal): Promise<{ content: { type: 'text'; text: string }[] }>;
 }
-
 export const artifactTransitionInputSchema = z.object({ moduleId: logical, operationIndex: z.number().int().min(0).max(artifactScopeLimits.transitions - 1), beforeManifestId: id, expectedTaskProgressVersion: seq }).strict();
 
 export type ArtifactTransitionInput = z.infer<typeof artifactTransitionInputSchema>;

@@ -5,7 +5,9 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
+
   logical = z.string().min(1).max(512),
+
   seq = z.number().int().nonnegative().safe();
 
 /** 不接受接收人、scope、模块或权限参数；由当前正式执行任务决定求助归属。 */

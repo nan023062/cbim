@@ -3,10 +3,15 @@
  * 设计原因：真实 before 只留在后端；用户先看当前文件核对与恢复摘要，再明确提交，未知只查原命令，不把补偿当成业务验收。
  */
 import { Icon } from '../components/Icon';
+
 import { controlledFileWriteToolName } from '../../bridge/contracts/controlled-files';
+
 import type { ControlledFileReportInput, ControlledFilePhase, FileCompensationReceipt } from '../../bridge/contracts/controlled-files';
+
 import type { ExecutionReport } from '../../bridge/contracts/dispatch';
+
 import { useControlledFiles } from './useControlledFiles';
+
 import './controlled-file.css';
 
 const phaseLabels: Record<ControlledFilePhase, string> = { prepared: '准备记录已保存', executing: '已准入执行，结果未结算', applied: '内容已应用', not_applied: '已确认未发出内容写入', unknown: '结果未知，可能已部分写入' };
@@ -21,18 +26,25 @@ function CompensationReceipt({ receipt }: { receipt: FileCompensationReceipt })
   {receipt.issue && <p role="alert">{receipt.issue.message}（{receipt.issue.code}）</p>}<code>{receipt.commandId}</code><p>原工具与原写入记录保留；恢复文件内容不表示任务已验收。</p>
 </div>
 }
-
 /** 仅展示已核实工具名的入口；挂载不会查询原账本或读取当前文件。 */
 export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }: { identity: ControlledFileReportInput; instanceId?: string; anchor: string; toolStatus: keyof typeof toolLabels })
 {
   const { controller, snapshot, read, draft, attempt, fresh } = useControlledFiles(identity, instanceId, anchor);
+
   const ledger = read?.report?.ledger,
+
     operation = ledger?.state === 'recorded' ? ledger.operation : undefined,
+
     preview = read?.preview;
+
   const pending = controller.IsPending(draft?.commandId),
+
     locked = !!draft?.commandId && attempt?.state !== 'rejected';
+
   const attempts = snapshot.attempts.filter(v => v.identity.taskId === identity.taskId && v.identity.runId === identity.runId && v.identity.toolCallId === identity.toolCallId);
+
   const known = new Set(attempts.map(v => v.request.commandId));
+
   return <section className="controlled-file" data-testid="controlled-file-panel" data-run-id={identity.runId} data-tool-call-id={identity.toolCallId} data-operation-phase={operation?.phase}>
     <header><strong>受控文件操作</strong><button data-testid="controlled-file-inspect" disabled={read?.loading} onClick={() => void controller.Inspect(identity)}>{read?.loading ? '正在读取…' : read?.report ? '重新核实原操作' : '核实原文件操作'}</button></header>
     <p>{toolLabels[toolStatus]}；文件操作和补偿分别保留，不重试原工具。</p>
@@ -65,11 +77,12 @@ export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }
     {ledger?.state === 'recorded' && ledger.compensations.some(v => !known.has(v.commandId)) && <div className="controlled-actions" data-testid="file-compensation-server-history"><h4>已保存补偿历史</h4>{ledger.compensations.filter(v => !known.has(v.commandId)).map(item => <button key={item.commandId} data-command-id={item.commandId} disabled={controller.IsPending(item.commandId)} onClick={() => void controller.Query(identity, item.commandId)}>{phaseLabels[item.phase]} · {new Date(item.preparedAt).toLocaleString()}</button>)}</div>}
   </section>;
 }
-
 /** 原工具选择来自已加载的真实执行报告，旧 native 操作不会因此获得补偿入口。 */
 export function MemberControlledFiles({ report, instanceId, anchor }: { report: ExecutionReport; instanceId?: string; anchor: string })
 {
   if (!report.identity.runId)
+
     return null;
+
   return <>{report.tools.items.filter(item => item.toolName === controlledFileWriteToolName).map(item => <ControlledFilePanel key={item.toolCallId} identity={{ workspaceId: report.identity.workspaceId, rootSessionId: report.identity.rootSessionId, taskId: report.identity.taskId, runId: report.identity.runId!, toolCallId: item.toolCallId }} instanceId={instanceId} anchor={anchor} toolStatus={item.status} />)}</>;
 }

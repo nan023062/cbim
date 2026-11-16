@@ -4,15 +4,20 @@
  * 设计原因：观察不是对旧结果的更正或人工批准；主来源只显示真实运行，不伪造任务节点。处置引用随新周期固定，旧请求、历史和未知结果仍保留。
  */
 import { Icon } from '../components/Icon';
+
 import type { ExecutionRecoveryView } from './useExecutionRecovery';
 
 /** 表单只转交明确点击；展示、编辑和挂载均不触发模型任务。 */
 export function ExecutionRecoveryForm({ state }: { state: ExecutionRecoveryView })
 {
   if (!state.visible)
+
     return null;
+
   const attempt = state.record?.attempt,
+
     phase = attempt?.phase;
+
   return <section className="execution-recovery" data-testid="execution-recovery-form" data-recovery-phase={state.pending ? 'pending' : phase ?? 'draft'}>
     <h4>新建只读核实任务</h4><p className="member-muted">在当前会话创建新周期，核实已有操作的实际影响。旧任务和原始记录保留，不重放旧工具，不代表人工验收。</p>
     <label>1. 你的观察<textarea data-testid="execution-recovery-observation" aria-label="你的观察" maxLength={64000} readOnly={!state.editable} value={state.observation} placeholder="填写已看到的现象；尚未确认的情况请说明未知。" onChange={event => state.edit({ observation: event.target.value, message: state.message })} /></label>

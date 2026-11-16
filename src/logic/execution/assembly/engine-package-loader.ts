@@ -5,9 +5,13 @@
  * 职责边界：本函数不验证签名或发现目录；runtime 只能由受管制品端口提供，不能来自 IPC、模型或工作区文件。
  */
 import path from 'node:path';
+
 import { createRequire } from 'node:module';
+
 import { checkedEngineAdapter } from '../rules/engine-adapter';
+
 import type { EngineRuntimePackage } from '../rules/engine-runtime';
+
 import { engineDescriptor, loopEngineSchema } from '../../engines';
 
 const loadAdapter = createRequire(typeof __filename === 'string' ? __filename : import.meta.url);
@@ -16,11 +20,17 @@ const loadAdapter = createRequire(typeof __filename === 'string' ? __filename : 
 export function packagedEngineAdapter(id: string, runtime: EngineRuntimePackage)
 {
   const descriptor = runtime.adapter;
+
   if (!descriptor)
+
     throw Error('引擎包缺少统一适配器入口，请准备兼容版本');
+
   const relative = path.relative(path.resolve(runtime.root), path.resolve(descriptor.entry));
+
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative) || !descriptor.entry.endsWith('.cjs') || descriptor.protocol !== 1)
+
     throw Error('引擎包入口路径或协议无效');
+
   const loaded = loadAdapter(descriptor.entry) as
     {
       engineAdapter?: unknown

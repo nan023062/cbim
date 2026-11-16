@@ -3,7 +3,9 @@
  * 设计原因：工具调用成功与专业条件满足分开显示；完整模式显示原集合身份，历史不符合不被后续通过覆盖，未经当前复核不能标为业务验收。
  */
 import type { RunSummary, PublicValidationResult } from '../../bridge/contracts/execution';
+
 import { memberValidationViews } from './member-validation-state';
+
 import './member-validation.css';
 
 const labels = { passed: '当时符合结构', rejected: '当时不符合结构', unconfirmed: '验证结果未确认', stale: '历史验证 · 后续操作已使依据过期' };
@@ -14,8 +16,11 @@ const issues: Record<PublicValidationResult['issues'][number]['code'], string> =
 export function MemberValidationPanel({ run }: { run: RunSummary })
 {
   const rows = memberValidationViews(run);
+
   if (!rows.length)
+
     return null;
+
   return <section className="member-validation-panel" aria-label="产物结构验证"><h4>产物结构验证</h4>
     {rows.map(({ result, state }) => <article className={'member-validation ' + state} key={result.validationId} data-validation-id={result.validationId} data-outcome={state} data-validation-outcome={result.outcome}>
       <strong>{labels[state]}</strong>{state === 'stale' && <small>原结论：{labels[result.outcome]}</small>}<p>{result.artifact.relativePath}</p><p>模块 {result.requirement.moduleId} · 条件 {result.requirement.requirementId}</p>

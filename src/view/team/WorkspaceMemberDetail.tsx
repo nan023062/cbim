@@ -4,7 +4,9 @@
  * 已采纳模型同时展示其冻结引擎，未声明的历史快照按 Pi 解释而不改写。
  */
 import { engineLabel } from '../../bridge/contracts/engines';
+
 import type { WorkspaceMemberDetail } from '../../bridge/contracts/workspace-members';
+
 import { KnowledgeSourceDetails } from '../knowledge/KnowledgeSourceDetails';
 
 const labels = { same: '与已采纳一致', changed: '已变化，尚未采纳', missing: '当前来源缺失', invalid: '当前来源无法核实' };
@@ -13,6 +15,7 @@ const labels = { same: '与已采纳一致', changed: '已变化，尚未采纳'
 export function WorkspaceMemberDetailView({ detail }: { detail: WorkspaceMemberDetail })
 {
   const { member, currentDiff } = detail;
+
   return <section data-testid="workspace-member-detail"><h3>{member.name}</h3><p>{member.position}</p><code>{member.memberId}</code><p>第 {member.revision} 版 · {{ active: '已启用', suspended: '已暂停', retired: '已退休' }[member.state]}</p><p>静态能力：{member.adoption.configuration.name} · <code>{member.adoption.configuration.agentId}</code></p><p>已采纳模型：{engineLabel(member.runtimePolicy.snapshot.engine ?? 'pi')} · {member.runtimePolicy.snapshot.name} / {member.runtimePolicy.modelId}</p>
     <div className="workspace-member-diff" data-testid="workspace-member-diff"><p data-diff="capability">能力：{labels[currentDiff.capability.status]}</p><p data-diff="model">模型：{labels[currentDiff.model.status]}</p>{currentDiff.capability.issue && <p>{currentDiff.capability.issue}</p>}{currentDiff.model.issue && <p>{currentDiff.model.issue}</p>}<small>核实时间：{new Date(currentDiff.checkedAt).toLocaleString()}；仅核配置，不验证密钥或网络。</small></div>
     <KnowledgeSourceDetails state={detail.sourceStatus} adopted={member.adoption.sourceRef} />

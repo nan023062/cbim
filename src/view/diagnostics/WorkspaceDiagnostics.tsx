@@ -4,8 +4,11 @@
  * 职责边界：用户可刷新检查结果，组件不改变运行生命周期或知识内容。
  */
 import { useState } from 'react';
+
 import { Icon } from '../components/Icon';
+
 import type { Snapshot, WorkspaceView } from '../../bridge/contracts/workspace';
+
 import './diagnostics.css';
 
 /** 知识刷新回调固定绑定当前工作区，仅重新读取并检查知识。 */
@@ -17,23 +20,31 @@ interface WorkspaceDiagnosticsProps
 
   refreshKnowledge: () => Promise<unknown>;
 }
-
 const stateLabels: Record<string, string> = { registered: '已登记', running: '运行中', opening: '正在打开', closing: '正在关闭', closed: '已关闭', missing: '路径失效', failed: '打开失败', recovery_required: '需要恢复' };
 
 /** 校验结果来自知识快照；没有快照时明确显示待加载，不将缺失结果当作检查通过。 */
 export function WorkspaceDiagnostics({ workspace, snapshot, refreshKnowledge }: WorkspaceDiagnosticsProps)
 {
   const [refreshing, setRefreshing] = useState(false),
+
     [error, setError] = useState('');
+
   const current = snapshot?.workspaceId === workspace.id && snapshot.instanceId === workspace.instanceId ? snapshot : undefined;
+
   const validation = current?.validation,
+
     issues = validation?.issues || [],
+
     errors = issues.filter(issue => issue.severity === 'error');
+
   const disabled = refreshing || workspace.state !== 'running';
+
   async function refresh()
   {
     setRefreshing(true);
+
     setError('');
+
     try
     {
       await refreshKnowledge()

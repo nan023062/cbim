@@ -8,6 +8,7 @@ import { z } from 'zod';
 export const controlledPlatformBytes = 1024 * 1024;
 
 const token = z.string().regex(/^[a-f0-9]{64}$/),
+
   seq = z.number().int().positive();
 
 const fact = z.object({ byteLength: z.number().int().min(0).max(controlledPlatformBytes), sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
@@ -43,7 +44,6 @@ export interface ExclusiveControlledFile
   /** 已向子进程发出 apply 后即为 true；丢回包也不能宣称零写。 */
   readonly writeIssued: boolean;
 }
-
 /** 返回原文件身份/字节及实际源缺失；调用方还须等工人退出并复核完整范围，不能仅据此签发交付。 */
 export interface ExclusiveControlledTransition
 {
@@ -56,7 +56,6 @@ export interface ExclusiveControlledTransition
   /** 发出原命名空间请求后保持 true，回包丢失不能改成未操作。 */
   readonly writeIssued: boolean;
 }
-
 /** 平台能力只由桌面 app.ready 后注入；无端口不得退回主进程同步写。 */
 export interface ControlledFileTransport
 {

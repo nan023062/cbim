@@ -5,15 +5,25 @@
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import fs from 'node:fs/promises';
+
 import path from 'node:path';
+
 import { randomBytes, randomUUID } from 'node:crypto';
+
 import { networkInterfaces } from 'node:os';
+
 import { z } from 'zod';
+
 import { atomic } from '../../../core/platform/node/files';
+
 import { fail } from '../../../core/errors';
+
 import { JsonUtils } from '../../../core/utility';
+
 import { LocalRepository, type RepositoryStore, saveSchema, removeSchema } from './resource-store';
+
 import { RemoteRepository, repositoryUrl, serveRepository } from './resource-http';
+
 import type { RepositoryStatus, RepositorySession, ResourceLibrarySnapshot } from '..';
 
 /** 宿主提供运行目录边界；服务不取得工程身份、知识路径或应用装配能力。 */
@@ -25,7 +35,6 @@ export interface ResourceRepositoryPaths
 
   readonly protectedRoots?: readonly string[]
 }
-
 /** 只在主进程闭包中使用，既不暴露令牌/地址，也不提供 save/remove；每次读取真正经过 HTTP。 */
 export interface SharedRepositoryReadConnection
 {
@@ -37,7 +46,6 @@ export interface SharedRepositoryReadConnection
 
   Read(signal?: AbortSignal): Promise<ResourceLibrarySnapshot>;
 }
-
 const configSchema = z.discriminatedUnion('mode', [z.object({ mode: z.literal('local'), location: z.string().min(1), repositoryId: z.string().uuid() }), z.object({ mode: z.literal('remote'), location: z.string().url(), repositoryId: z.string().uuid(), token: z.string().min(16).max(512) })]);
 
 type Config = z.infer<typeof configSchema>;
@@ -73,33 +81,31 @@ export class ResourceRepositories
 
       controller: AbortController
     };
-
   constructor(private paths: ResourceRepositoryPaths)
   {
   }
-
   private get settingsFile()
   {
     return path.join(this.paths.userRoot, 'resource-repository-settings.json')
   }
-
   private Serial<T>(fn: () => Promise<T>)
   {
-    const result = this.queue.catch(() =>
-    {
-    }).then(fn);
+    const result = this.queue.catch(() => { }).then(fn);
+
     this.queue = result;
+
     return result
   }
-
   async Init()
   {
     try
     {
       const saved = configSchema.parse(JSON.parse(await fs.readFile(this.settingsFile, 'utf8')));
+
       if (saved.mode === 'local')
       {
         this.localConfig = saved;
+
         this.config = saved
       }
       else
@@ -110,236 +116,183 @@ export class ResourceRepositories
     catch (e: any)
     {
       if (e.code !== 'ENOENT')
+
         this.configError = '仓库配置无效，请检查 resource-repository-settings.json 或重新选择仓库'
     }
   }
-
   Status(): RepositoryStatus
   {
     return { session: this.session, source: this.session.state === 'signedIn' ? 'server' : 'local', config: this.config ? { mode: this.config.mode, location: this.config.location, repositoryId: this.config.repositoryId } : null, error: this.configError, sharing: this.sharing ? { url: this.sharing.url, host: this.sharing.host, port: this.sharing.port } : undefined }
   }
-
   private Store(): RepositoryStore
   {
     if (!this.config)
+
       fail('NOT_CONFIGURED', this.session.state === 'signedIn' ? '账号服务器仓库尚未就绪，不能使用本地仓库代替' : '请先设置本地仓库目录');
+
     return this.config.mode === 'local' ? new LocalRepository(this.config.location) : new RemoteRepository(this.config.location, this.config.token, this.config.repositoryId)
   }
-
   private Identity(id: string)
   {
     if (!this.config || this.config.repositoryId !== id)
+
       fail('REPOSITORY_CHANGED', '当前仓库已切换，请刷新后重新操作')
   }
-
   /** 先退役代际再等待 HTTP 关闭，旧读取不能趁收尾返回可用结果。 */
   private RetireSharing()
   {
     const old = this.sharing;
+
     this.readSharing?.controller.abort();
+
     this.readSharing = undefined;
+
     this.sharing = undefined;
+
     this.shareToken = undefined;
+
     return old
   }
-
   /** 公开连接状态只含安全身份；未共享不会隐式启动服务或读取本地仓库。 */
   SharedIdentity()
   {
     return this.sharing && this.readSharing ? { repositoryId: this.readSharing.repositoryId, connectionId: this.readSharing.connectionId } : undefined
   }
-
   /** 捕获当前显式共享代际；停止/重配后该端口永久失效，不能改读新来源或本地文件。 */
   ReadConnection(repositoryId: string): SharedRepositoryReadConnection
   {
     const sharing = this.sharing,
+
       binding = this.readSharing;
+
     if (!sharing || !binding)
+
       fail('REPOSITORY_CONNECTION_NOT_SHARED', '请先在设置中明确启动本机仓库共享');
+
     if (binding.repositoryId !== repositoryId)
+
       fail('REPOSITORY_CONNECTION_STALE', '当前共享仓库与连接定义不一致');
-    const assertCurrent = () =>
-    {
-      if (this.readSharing !== binding || this.sharing !== sharing || binding.controller.signal.aborted || this.config?.repositoryId !== repositoryId)
-        fail('REPOSITORY_CONNECTION_STALE', '仓库共享代际已失效，请重新核实连接')
-    };
+
+    const assertCurrent = () => { if (this.readSharing !== binding || this.sharing !== sharing || binding.controller.signal.aborted || this.config?.repositoryId !== repositoryId) fail('REPOSITORY_CONNECTION_STALE', '仓库共享代际已失效，请重新核实连接') };
+
     const remote = new RemoteRepository(sharing.url, binding.token, repositoryId);
+
     return {
-      repositoryId, connectionId: binding.connectionId, AssertCurrent: assertCurrent, Read: async signal =>
-      {
-        assertCurrent();
-        const result = await remote.Read(signal ? AbortSignal.any([signal, binding.controller.signal]) : binding.controller.signal);
-        assertCurrent();
-        return result
-      }
+      repositoryId, connectionId: binding.connectionId, AssertCurrent: assertCurrent, Read: async signal => { assertCurrent(); const result = await remote.Read(signal ? AbortSignal.any([signal, binding.controller.signal]) : binding.controller.signal); assertCurrent(); return result }
     };
   }
-
   Configure(args: unknown)
   {
     const request = configureSchema.parse(args);
-    return this.Serial(async () =>
-    {
-      if (request.mode !== 'local')
-        fail('SESSION_REQUIRED', '服务器仓库由账号登录后自动连接，不支持手动配置');
-      if (this.session.state === 'signedIn')
-        fail('ACCOUNT_REPOSITORY', '已登录时使用账号服务器仓库，不能切换本地目录');
-      return this.ApplyConfig(request)
-    })
-  }
 
+    return this.Serial(async () => { if (request.mode !== 'local') fail('SESSION_REQUIRED', '服务器仓库由账号登录后自动连接，不支持手动配置'); if (this.session.state === 'signedIn') fail('ACCOUNT_REPOSITORY', '已登录时使用账号服务器仓库，不能切换本地目录'); return this.ApplyConfig(request) })
+  }
   // Internal integration point for a future verified main-process account service.
   // Never expose this through renderer IPC or accept a renderer-supplied login flag.
-
   SetAccountSession(session: { accountId: string; server?: { location: string; token: string } } | null)
   {
-    return this.Serial(async () =>
-    {
-      if (session)
-        z.object({ accountId: z.string().min(1), server: z.object({ location: z.string().min(1), token: z.string().min(16).max(512) }).optional() }).strict().parse(session);
-      await this.RetireSharing()?.Close();
-      this.config = null;
-      this.configError = undefined;
-      if (!session)
-      {
-        this.session = { state: 'signedOut' };
-        this.config = this.localConfig;
-        return this.Status()
-      }
-      this.session = { state: 'signedIn', accountId: session.accountId };
-      if (!session.server)
-      {
-        this.configError = '服务器仓库待接入，等待账号服务提供连接信息';
-        return this.Status()
-      }
-      try
-      {
-        return await this.ApplyConfig({ mode: 'remote', ...session.server })
-      }
-      catch (e: any)
-      {
-        this.configError = '账号服务器仓库连接失败，请重新登录或重试账号连接';
-        throw e
-      }
-    })
+    return this.Serial(async () => { if (session) z.object({ accountId: z.string().min(1), server: z.object({ location: z.string().min(1), token: z.string().min(16).max(512) }).optional() }).strict().parse(session); await this.RetireSharing()?.Close(); this.config = null; this.configError = undefined; if (!session) { this.session = { state: 'signedOut' }; this.config = this.localConfig; return this.Status() } this.session = { state: 'signedIn', accountId: session.accountId }; if (!session.server) { this.configError = '服务器仓库待接入，等待账号服务提供连接信息'; return this.Status() } try { return await this.ApplyConfig({ mode: 'remote', ...session.server }) } catch (e: any) { this.configError = '账号服务器仓库连接失败，请重新登录或重试账号连接'; throw e } })
   }
-
   private async ApplyConfig(request: z.infer<typeof configureSchema>)
   {
     let config: Config;
+
     if (request.mode === 'local')
     {
       const root = await fs.realpath(request.location);
+
       if (!(await fs.stat(root)).isDirectory())
+
         fail('PATH', '请选择已有文件夹');
+
       const install = await fs.realpath(this.paths.installRoot),
+
         user = await fs.realpath(this.paths.userRoot);
-      for (const blocked of [install, user, ...await Promise.all((this.paths.protectedRoots ?? []).map(root => fs.realpath(root).catch(error =>
-      {
-        if (error.code === 'ENOENT')
-          return path.resolve(root);
-        throw error
-      })))])
+
+      for (const blocked of [install, user, ...await Promise.all((this.paths.protectedRoots ?? []).map(root => fs.realpath(root).catch(error => { if (error.code === 'ENOENT') return path.resolve(root); throw error })))])
       {
         const rel = path.relative(blocked, root);
+
         if (!rel || (!path.isAbsolute(rel) && rel !== '..' && !rel.startsWith('..' + path.sep)))
+
           fail('PATH', '请将资源仓库放在程序安装、更新缓存和用户运行数据目录之外')
       }
       if (root.split(/[\\/]/).some(part => part.toLowerCase() === '.cbim'))
+
         fail('PATH', '资源仓库不能放在项目 .cbim 正式知识目录中');
+
       const repo = new LocalRepository(root),
+
         snapshot = await repo.Initialize();
+
       config = { mode: 'local', location: root, repositoryId: snapshot.repositoryId };
     }
     else
     {
       const url = repositoryUrl(request.location),
+
         target = new URL(url),
+
         ownHosts = new Set(['localhost', '127.0.0.1', '[::1]', ...Object.values(networkInterfaces()).flatMap(list => list?.map(n => n.address) || [])]);
+
       if (this.sharing && Number(target.port) === this.sharing.port && ownHosts.has(target.hostname))
+
         fail('SELF_CONNECTION', '此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');
+
       const snapshot = await new RemoteRepository(url, request.token).Read();
+
       config = { mode: 'remote', location: url, repositoryId: snapshot.repositoryId, token: request.token }
     }
     if (config.mode === 'local')
     {
       await atomic(this.settingsFile, JsonUtils.FormatJson(config));
+
       this.localConfig = config
     }
     const oldSharing = this.RetireSharing();
+
     this.config = config;
+
     this.configError = undefined;
+
     await oldSharing?.Close();
+
     return this.Status();
   }
-
   Read()
   {
-    return this.Serial(async () =>
-    {
-      const result = await this.Store().Read();
-      this.Identity(result.repositoryId);
-      return result
-    })
+    return this.Serial(async () => { const result = await this.Store().Read(); this.Identity(result.repositoryId); return result })
   }
-
   Save(args: unknown)
   {
     const request = saveSchema.parse(args);
-    return this.Serial(async () =>
-    {
-      this.Identity(request.repositoryId);
-      return this.Store().Save(request)
-    })
-  }
 
+    return this.Serial(async () => { this.Identity(request.repositoryId); return this.Store().Save(request) })
+  }
   Remove(args: unknown)
   {
     const request = removeSchema.parse(args);
-    return this.Serial(async () =>
-    {
-      this.Identity(request.repositoryId);
-      return this.Store().Remove(request)
-    })
-  }
 
+    return this.Serial(async () => { this.Identity(request.repositoryId); return this.Store().Remove(request) })
+  }
   StartSharing(args: unknown)
   {
     const options = z.object({ lan: z.boolean(), port: z.number().int().min(0).max(65535) }).strict().parse(args);
-    return this.Serial(async () =>
-    {
-      if (this.config?.mode !== 'local')
-        fail('MODE', '仅本地仓库可以启动共享服务');
-      if (this.sharing)
-        return this.Status();
-      const store = this.Store(),
-        repositoryId = (await store.Read()).repositoryId;
-      this.Identity(repositoryId);
-      const token = randomBytes(32).toString('hex'),
-        readToken = randomBytes(32).toString('hex');
-      this.sharing = await serveRepository(store, token, { host: options.lan ? '0.0.0.0' : '127.0.0.1', port: options.port, readOnlyToken: readToken });
-      this.shareToken = token;
-      this.readSharing = { connectionId: randomUUID(), repositoryId, token: readToken, controller: new AbortController() };
-      return this.Status()
-    })
-  }
 
+    return this.Serial(async () => { if (this.config?.mode !== 'local') fail('MODE', '仅本地仓库可以启动共享服务'); if (this.sharing) return this.Status(); const store = this.Store(), repositoryId = (await store.Read()).repositoryId; this.Identity(repositoryId); const token = randomBytes(32).toString('hex'), readToken = randomBytes(32).toString('hex'); this.sharing = await serveRepository(store, token, { host: options.lan ? '0.0.0.0' : '127.0.0.1', port: options.port, readOnlyToken: readToken }); this.shareToken = token; this.readSharing = { connectionId: randomUUID(), repositoryId, token: readToken, controller: new AbortController() }; return this.Status() })
+  }
   Connection()
   {
     if (!this.sharing || !this.shareToken)
+
       fail('NOT_RUNNING', '仓库共享服务未启动');
+
     return { url: this.sharing.url, host: this.sharing.host, port: this.sharing.port, token: this.shareToken }
   }
-
   StopSharing()
   {
-    return this.Serial(async () =>
-    {
-      await this.RetireSharing()?.Close();
-      return this.Status()
-    })
+    return this.Serial(async () => { await this.RetireSharing()?.Close(); return this.Status() })
   }
-
   async Close()
   {
     await this.StopSharing()

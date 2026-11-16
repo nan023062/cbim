@@ -3,7 +3,9 @@
  * 设计原因：可视化只需核对已保存信封与图游标，不能把主工具的后端业务核实依赖带进浏览器；实际提交与 canonical 关联仍由主工具装配校验。
  */
 import { z } from 'zod';
+
 import { automaticExecutionBindingSchema } from '../../team/rules/automatic-execution';
+
 import { graphCursorSchema } from './graph-rules';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);

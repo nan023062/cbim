@@ -6,18 +6,31 @@
  * 职责边界：从完整canonical重建原集合身份，当前出口调用受限全集合或旧文件端口；不重入派发存储、不签署人工业务验收或承诺跨文件原子快照。
  */
 import { fail } from '../../../core/errors';
+
 import { sameGoalValue } from '../../tasks/rules/scope-goal';
+
 import { preparedWorkflowContracts, validatePreparedDispatchKnowledge } from '../../tasks/rules/execution-context';
+
 import { validateWorkflowEvidence, selectWorkflowValidations } from '../../evidence/rules/workflow-evidence';
+
 import { verifyValidationRecords } from '../../evidence/rules/validation-evidence';
+
 import { completeOutputRequired, selectCompleteOutput, completeOutputProof, assertCompleteOutputCurrent } from '../../evidence/rules/complete-output-evidence';
+
 import { verifyOutputManifests } from '../../evidence/rules/output-manifest-evidence';
+
 import { preparedArtifactScopes, artifactScopeLimits } from '../../workspace/rules/artifact-scope';
+
 import type { OutputManifestRecord, OutputManifestSnapshot, OutputManifestCheck } from '../../evidence/rules/output-manifest';
+
 import { artifactFileCheckSchema, type ArtifactFileFact, type ArtifactFileCheck } from '../../evidence/rules/artifact-baseline';
+
 import type { RunSummary, TaskSpec } from '../../execution/rules/types';
+
 import type { TaskNode } from '../../tasks/rules/graph-types';
+
 import type { DispatchRun } from '../../tasks/rules/dispatch-execution';
+
 import { memberPublicTask } from '../../runtime/monitoring/member-events';
 
 /** 仅可信平台注入，不能调用会重新读取本事务 store 的报告服务。 */
@@ -31,97 +44,140 @@ export interface WorkflowFileVerification
 
   signal?: AbortSignal;
 }
-
 /** 只核历史原始证明并返回应复核的文件；供明确返工保留过去事实，不作为新交付放行。 */
 export function memberWorkflowFiles(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, normalizePath?: (raw: string) => string): ArtifactFileFact[]
 {
   return memberWorkflowEvidence(task, run, summary, root, normalizePath).files;
 }
-
 /** 同时重建历史文件验证与原完整清单；调用方不可把候选自报的摘要当作可信来源。 */
 export function memberWorkflowEvidence(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, normalizePath?: (raw: string) => string): { files: ArtifactFileFact[]; manifest?: OutputManifestRecord }
 {
   return businessWorkflowEvidence(memberPublicTask(task, root), run, summary, normalizePath);
 }
-
 /** 递归业务与旧派工共用冻结契约核证；只接受原 TaskSpec，不创建或登记兼容任务。 */
 function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepared' | 'binding' | 'session'>, summary: RunSummary, normalizePath?: (raw: string) => string): { files: ArtifactFileFact[]; manifest?: OutputManifestRecord }
 {
   validatePreparedDispatchKnowledge(run.prepared);
+
   const bindings = preparedWorkflowContracts(run.prepared);
+
   if (!bindings.length)
+
     return { files: [] };
+
   const head = summary.events[0],
+
     tail = summary.events.at(-1),
+
     bounds = summary.events.filter(event => event.type === 'session.bound'),
+
     progress = summary.events.filter(event => event.type === 'task.updated').at(-1)?.data.progress;
+
   if (summary.logIntegrity?.partialTail !== false || summary.status !== 'completed' || summary.unresolvedTools.length || summary.runId !== run.binding.runId || summary.conversationBinding || !sameGoalValue(summary.memberBinding, run.binding) || !sameGoalValue(summary.task, task) || !sameGoalValue(summary.taskProgress, progress) || head?.type !== 'run.started' || !sameGoalValue(head.data.task, summary.task) || !sameGoalValue(head.data.memberBinding, run.binding) || !run.session.sessionFile || summary.sessionFile !== run.session.sessionFile || !bounds.length || bounds.some(event => event.data.sessionId !== run.session.nativeSessionId || event.data.sessionFile !== run.session.sessionFile) || tail?.type !== 'run.settled' || tail.data.status !== 'completed')
+
     fail('WORKFLOW_EVIDENCE_INVALID', 'Workflow 交付缺少完整的本轮日志、原生通道和可信成员身份');
+
   const required = bindings.some(binding => binding.contract.delivery?.requiredValidations?.length);
+
   if (required && !normalizePath)
+
     fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本次未装配验证文件路径核实端口');
+
   const records = required ? verifyValidationRecords(summary.events, run.binding, run.prepared.knowledgeRevision, bindings, normalizePath!) : [];
+
   let manifest: OutputManifestRecord | undefined;
+
   if (completeOutputRequired(bindings))
   {
     const id = summary.taskProgress?.delivery?.workflow?.manifest?.manifestId;
+
     if (!id)
+
       fail('MANIFEST_REQUIRED', '完整出口缺少原明确选择的清单身份');
+
     manifest = selectCompleteOutput(verifyOutputManifests(summary.events, run.binding, run.prepared.knowledgeRevision, preparedArtifactScopes(bindings)), bindings, id, { ...run.binding, knowledgeRevision: run.prepared.knowledgeRevision, progressVersion: summary.taskProgress!.version });
   }
   validateWorkflowEvidence(summary.events, task, bindings, records, manifest ? completeOutputProof(manifest) : undefined);
+
   if (!required)
+
     return { files: [], ...(manifest ? { manifest } : {}) };
+
   const ids = new Set(summary.taskProgress!.steps.flatMap(step => step.evidence));
+
   const selected = selectWorkflowValidations(bindings, (summary.toolReceipts ?? []).filter(receipt => ids.has(receipt.toolCallId)), { workspaceId: task.workspaceId, taskId: task.taskId, runId: run.binding.runId }, records);
+
   const files = new Map<string, ArtifactFileFact>();
+
   for (const { result } of selected)
   {
     const key = normalizePath!(result.artifact.relativePath),
+
       old = files.get(key);
+
     if (old && !sameGoalValue(old, result.artifact))
+
       fail('WORKFLOW_VALIDATION_STALE', '同一文件的验证证明不一致');
+
     files.set(key, result.artifact)
   }
   return { files: [...files.values()], ...(manifest ? { manifest } : {}) };
 }
-
 /** 有约定的新运行须有完整 canonical；只读旧无约定不新增 I/O，文件变化/无法核实均拒绝当前候选。 */
 export async function validateMemberWorkflow(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, port?: WorkflowFileVerification): Promise<void>
 {
   return validateBusinessWorkflow(memberPublicTask(task, root), run, summary, port);
 }
-
 /** 共用原日志、结构验证和完整出口检查；调用者另核来源身份与结算状态。 */
 export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<DispatchRun, 'prepared' | 'binding' | 'session'>, summary: RunSummary, port?: WorkflowFileVerification): Promise<void>
 {
   const { files, manifest } = businessWorkflowEvidence(task, run, summary, port?.NormalizePath);
+
   if (!files.length && !manifest)
+
     return;
+
   if (!port)
+
     fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本次未装配验证文件复核能力');
+
   const signal = AbortSignal.any([port.signal ?? new AbortController().signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
+
   signal.throwIfAborted();
+
   // 完整清单已经覆盖每个验证文件，同一集合重读取代选定文件子集读取。
   if (manifest)
   {
     if (!port.CheckManifest)
+
       fail('MANIFEST_UNAVAILABLE', '完整出口缺少真实全集合复核端口');
+
     const observed = await port.CheckManifest(manifest.manifest.snapshot, signal);
+
     signal.throwIfAborted();
+
     assertCompleteOutputCurrent(manifest.manifest.snapshot, observed);
+
     return
   }
   const checks = await port.CheckFiles(files, signal);
+
   signal.throwIfAborted();
+
   if (!Array.isArray(checks) || checks.length !== files.length)
+
     fail('WORKFLOW_VALIDATION_STALE', '验证产物未返回完整文件复核结果');
+
   for (let index = 0; index < files.length; index++)
   {
     const parsed = artifactFileCheckSchema.safeParse(checks[index]),
+
       file = files[index],
+
       expected = { byteLength: file.byteLength, sha256: file.sha256 };
+
     if (!parsed.success || parsed.data.relativePath !== file.relativePath || parsed.data.state !== 'matches' || !sameGoalValue(parsed.data.expected, expected) || !sameGoalValue(parsed.data.observed, expected))
+
       fail('WORKFLOW_VALIDATION_STALE', '验证后的文件已变化、缺失或无法核实，请重新执行验证');
   }
 }

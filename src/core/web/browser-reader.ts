@@ -13,7 +13,6 @@ export interface BrowserPage
   /** 浏览器采集已达到内部上限；服务再次按用户 maxChars 截断时不能丢失此事实。 */
   truncated: boolean;
 }
-
 /** 匿名读取独占临时会话；authorize 逐资源应用宿主捕获的访问策略，文档额外节流。取消须释放窗口和连接。 */
 export interface BrowserReader
 {

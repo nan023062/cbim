@@ -4,12 +4,19 @@
  * 职责边界：只生成原引用，不写入、不补造原工作区实例；旧实例仅从匹配的持久命令核实。
  */
 import { hash, json } from '../../../core/platform/node/serialization';
+
 import { governanceObserveInputSchema, governanceProposeInputSchema, type GovernanceObserveInput, type GovernanceProposeInput } from '../../governance/rules/module-governance-tools';
+
 import { moduleGovernanceMainOriginSchema, type ModuleGovernanceMainOrigin } from '../../governance/rules/module-governance';
+
 import { moduleGovernanceMainCommandId } from '../../governance/rules/module-governance-rules';
+
 import { moduleOwnerCommitInputSchema, type ModuleOwnerCommitInput } from '../../workspace/rules/module-ownership-tools';
+
 import { moduleOwnershipMainActorSchema, type ModuleOwnershipMainActor } from '../../workspace/rules/module-ownership';
+
 import { moduleOwnershipMainCommandId } from '../../workspace/rules/module-ownership-rules';
+
 import { persistentWriteIdentitySchema } from './persistent-write-observation';
 
 export interface PersistentMainSource
@@ -28,60 +35,61 @@ export interface PersistentMainSource
 
   toolCallId: string
 }
+export type PersistentWriteReference = |
+{
+  kind: 'governance';
 
-export type PersistentWriteReference =
-  |
-  {
-    kind: 'governance';
+  action: 'observe';
 
-    action: 'observe';
+  workspaceId: string;
 
-    workspaceId: string;
+  source: ModuleGovernanceMainOrigin;
 
-    source: ModuleGovernanceMainOrigin;
+  input: GovernanceObserveInput
+} |
+{
+  kind: 'governance';
 
-    input: GovernanceObserveInput
-  }
-  |
-  {
-    kind: 'governance';
+  action: 'propose';
 
-    action: 'propose';
+  workspaceId: string;
 
-    workspaceId: string;
+  source: ModuleGovernanceMainOrigin;
 
-    source: ModuleGovernanceMainOrigin;
+  input: GovernanceProposeInput
+} |
+{
+  kind: 'ownership';
 
-    input: GovernanceProposeInput
-  }
-  |
-  {
-    kind: 'ownership';
+  workspaceId: string;
 
-    workspaceId: string;
+  source: ModuleOwnershipMainActor;
 
-    source: ModuleOwnershipMainActor;
-
-    input: ModuleOwnerCommitInput
-  };
-
+  input: ModuleOwnerCommitInput
+};
 /** 调用前已核 canonical、授权与唯一 scope；旧参数不严格匹配则无适配，不纠正或剥离未知字段。 */
 export function originalPersistentWrite(name: string, raw: unknown, binding: PersistentMainSource): PersistentWriteReference | undefined
 {
   try
   {
     const { workspaceId, scopeId, ...main } = binding;
+
     if (name === 'cbim_governance_observe' || name === 'cbim_governance_propose')
     {
       const source = moduleGovernanceMainOriginSchema.parse({ kind: 'main_agent', ...main, toolName: name });
+
       const reference: PersistentWriteReference = name === 'cbim_governance_observe' ? { kind: 'governance', action: 'observe', workspaceId, source, input: governanceObserveInputSchema.parse(raw) } : { kind: 'governance', action: 'propose', workspaceId, source, input: governanceProposeInputSchema.parse(raw) };
+
       persistentWriteIdentity(reference);
+
       return reference;
     }
     if (name === 'cbim_module_owner_change_commit')
     {
       const reference: PersistentWriteReference = { kind: 'ownership', workspaceId, source: moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', ...main, scopeId, toolName: name }), input: moduleOwnerCommitInputSchema.parse(raw) };
+
       persistentWriteIdentity(reference);
+
       return reference;
     }
   }
@@ -90,14 +98,13 @@ export function originalPersistentWrite(name: string, raw: unknown, binding: Per
     return undefined
   }
 }
-
 /** 稳定原命令不含当前实例；完整来源与输入另入 sourceHash，避免同 ID 异参冒领。 */
 export function persistentWriteIdentity(reference: PersistentWriteReference)
 {
   const { workspaceId, source } = reference;
+
   return persistentWriteIdentitySchema.parse({ workspaceId, rootSessionId: source.rootSessionId, runId: source.runId, toolCallId: source.toolCallId, toolName: source.toolName, commandId: reference.kind === 'governance' ? moduleGovernanceMainCommandId(workspaceId, reference.source) : moduleOwnershipMainCommandId(workspaceId, reference.source) });
 }
-
 /** 同一命令算法之外另核原参数及完整主来源，不返回其中正文或权限。 */
 export function persistentWriteSourceHash(reference: PersistentWriteReference)
 {

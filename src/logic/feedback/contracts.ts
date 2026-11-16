@@ -36,7 +36,6 @@ export interface FeedbackToolsPort
 
   Receipt(signal: AbortSignal): Promise<FeedbackResult>;
 }
-
 /** 本机连接检查只读公开状态与代际，不请求 GitHub、不解密令牌、不查询提交历史。 */
 export const feedbackConnectionCheckSchema = z.object({ code: z.enum(['GITHUB_CONNECTED', 'GITHUB_NOT_CONNECTED', 'GITHUB_AUTH_PENDING', 'GITHUB_CONNECTION_CHANGED', 'GITHUB_EXPIRED', 'GITHUB_SECRET_STORAGE', 'GITHUB_SETTINGS']), repository: z.object({ owner: z.string().min(1).max(100), repo: z.string().min(1).max(100) }).strict().optional(), }).strict();
 
@@ -66,7 +65,6 @@ export interface GitHubFeedbackStatus
 
     repo: string
   };
-
   flow?:
   {
     id: string;
@@ -80,14 +78,18 @@ export interface GitHubFeedbackStatus
     nextPollAt: number
   };
 }
-
 /** 缺省/空白的主栏目统一标记未提供，保证等价输入防重；完整旧输入输出不变。不读取额外资料。 */
 export function feedbackIssue(input: FeedbackInput)
 {
   const fields: [string, string | undefined][] = input.kind === 'bug'
+
     ? [['问题', input.summary], ['复现步骤', input.steps], ['实际结果', input.actual], ['预期结果', input.expected], ['环境', input.environment]]
+
     : [['需求', input.summary], ['使用场景', input.scenario], ['当前困难', input.problem], ['期望能力', input.expected], ['使用例子', input.example]];
+
   if (input.extra?.trim())
+
     fields.push(['补充上下文', input.extra]);
+
   return { title: `[${input.kind === 'bug' ? 'BUG' : '需求'}] ${input.summary.replace(/\s+/g, ' ').trim()}`, body: fields.map(([label, value]) => `## ${label}\n\n${value?.trim() || '用户未提供'}`).join('\n\n') };
 }

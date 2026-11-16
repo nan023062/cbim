@@ -8,7 +8,9 @@ import type { OutputManifestRef } from '../../bridge/contracts/output-manifest';
 export function ArtifactTransitionProofs({ operations }: { operations: OutputManifestRef['operations'] })
 {
   if (!operations?.length)
+
     return null;
+
   return <section data-testid="artifact-transition-proofs" aria-label="原删除与移动证明">
     <strong>原删除与移动证明 · {operations.length} 项</strong>
     <p>原操作已保存并核实。以下是历史依据，不会再次执行或自动恢复；当前成果仍须复核完整范围。</p>

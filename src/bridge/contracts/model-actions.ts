@@ -5,9 +5,13 @@
  * 连接测试显式选择引擎并返回实际协议/地址，不接受临时任意转发目标。
  */
 import { z } from 'zod';
+
 import { connectionSchema, definition, llmApiSchema, type LlmSettings } from './models';
+
 import { mainAgentIdentitySchema, mainAgentSettingsSchema, type MainAgentSettingsView } from '../../logic/team/rules/agent-runtime';
+
 import { loopEngineSchema, type LoopEngine } from './engines';
+
 import { type LlmApi, type DiscoveredModel } from './models';
 
 const identity = z.object({ id: z.string().uuid() }).strict();
@@ -49,7 +53,6 @@ export interface ModelActionResults
 
     baseUrl: string
   };
-
   'models.testConnection':
   {
     ok: boolean;
@@ -64,11 +67,9 @@ export interface ModelActionResults
 
     dimensions?: number
   };
-
   'models.discover': string[];
 
   'models.discoverDetails': DiscoveredModel[];
 }
-
 /** 只识别自身精确键，原型属性或未知 action 不能进入模型路由。 */
 export const isModelAction = (action: string): action is ModelAction => Object.hasOwn(modelActionSchemas, action);

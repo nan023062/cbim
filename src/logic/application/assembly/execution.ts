@@ -17,33 +17,61 @@
  * 执行工厂把宿主的固定引擎解析端口传给调度装配；公开聊天选项不能替换该端口或传入下载路径。
  */
 import path from 'node:path';
+
 import type { ControlledFileTransport } from '../../file-operations/platform/files/controlled-file-protocol';
+
 import { createArtifactTransitionPort } from '../../file-operations/service/artifact-transitions';
+
 import type { WebToolsPort } from '../../web';
+
 import { FileRunStorage } from '../../execution/storage/run-storage';
+
 import { ChatInputs } from '../../materials/service/chat-inputs';
+
 import type { EngineModelProfiles } from '../../engines/service';
+
 import type { Workspace } from '../../workspace/service/workspace';
+
 import { KernelLock } from '../../../core/platform/node/locking';
+
 import { guard } from '../../execution/platform/tool-guard';
+
 import { hash } from '../../../core/platform/node/serialization';
+
 import { fail } from '../../../core/errors';
+
 import { WorkspaceExecutionManager } from '../../conversation/runtime/execution-manager';
+
 import { createWorkspaceLoop } from '../../execution/assembly/loop-engine';
+
 import type { EngineRuntimeResolver } from '../../execution/rules/engine-runtime';
+
 import { WorkspaceExecutionLease } from '../../execution/admission/workspace-lease';
+
 import type { AutoCollaboration } from '../../dispatch/runtime/auto-collaboration';
+
 import type { WorkspaceDispatchService } from '../../dispatch/runtime/dispatch-service';
+
 import { admissionRequestId, acquireExecutionLease, type WorkspaceAdmission } from './execution-admission';
+
 import type { GitHubFeedback } from '../../feedback/service';
+
 import type { RepositoryConnections } from '../../connectors/service/repository-connections';
+
 import { mainGovernanceTools } from '../../governance/service/main-governance-tools';
+
 import { mainWorkspaceMemberTools } from '../../team/service/main-workspace-member-tools';
+
 import { mainModuleOwnershipTools } from '../../workspace/service/main-module-ownership-tools';
+
 import type { ModuleOwnerships } from '../../workspace/service/module-ownerships';
+
 import type { WorkspaceMembers } from '../../team/service/workspace-members';
+
 import type { ModelRequestBudgetService } from '../../budget/runtime/model-request-budget-service';
+
 import { createAgentCallAssembly } from './agent-calls';
+
 import type { AgentBusinessServices } from './agent-business';
 
 /**
@@ -55,103 +83,99 @@ import type { AgentBusinessServices } from './agent-business';
 export function createExecutionManager(workspace: Workspace, models: EngineModelProfiles, lease = new WorkspaceExecutionLease(), collaboration?: () => AutoCollaboration | undefined, dispatch?: WorkspaceDispatchService, admission?: WorkspaceAdmission, repositories?: RepositoryConnections, ownerships?: { service: ModuleOwnerships; members: WorkspaceMembers }, requestBudgets?: ModelRequestBudgetService, feedback?: GitHubFeedback, web?: WebToolsPort, engineRuntimes?: EngineRuntimeResolver, controlledTransport?: ControlledFileTransport, businessServices?: AgentBusinessServices)
 {
   const storage = new FileRunStorage();
+
   return new WorkspaceExecutionManager(workspace, storage, async (options, task, launch) =>
   {
     const llm = options.profileId ? await models.Resolve(options.profileId, options.model, options.engine, options.modelRoles) : undefined;
+
     if (llm && (options.provider !== 'cbim-' + llm.profile.id || options.model !== llm.profile.model))
+
       throw Error('模型配置已变化，请重新启动任务');
+
     launch.signal.throwIfAborted();
+
     await requestBudgets?.Preflight(task.taskId, launch.scopeId, llm);
+
     const images = launch.preparedInputImages === undefined ? await new ChatInputs(workspace).Images(options.attachmentIds) : launch.preparedInputImages.map(image => ({ ...image }));
+
     launch.signal.throwIfAborted();
+
     if (images.length && (!llm || !llm.profile.vision))
     {
       if (launch.preparedInputImages !== undefined)
+
         fail('GOAL_ATTACHMENT_VISION', '当前模型配置未启用图片输入，请选择视觉模型后再补充');
+
       if (llm)
+
         throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
     }
     const conversationBinding = task.mode === 'chat' ? await dispatch?.ConversationBinding(task) : undefined;
+
     const repositoryTools = task.mode === 'chat' ? await repositories?.PrepareTools({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId }) : undefined;
-    const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call =>
-    {
-      workspace.Assert();
-      const mapped = call.name === 'find' ? 'Glob' : call.name;
-      const reason = guard({ name: mapped, input: call.input }, workspace.entry.path);
-      return { allow: !reason, reason };
-    };
+
+    const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call => { workspace.Assert(); const mapped = call.name === 'find' ? 'Glob' : call.name; const reason = guard({ name: mapped, input: call.input }, workspace.entry.path); return { allow: !reason, reason }; };
+
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
       models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
+
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
       artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? false),
     }) : undefined;
+
     return createWorkspaceLoop(workspace.paths, workspace, { ...options, llm, images, engineRuntimes }, {
       storage,
+
       ...agentCalls,
+
       RequestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
+
       conversationBinding,
+
       repositoryTools,
+
       // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
       webTools: task.mode === 'chat' && web ? {
-        Fetch: async (input, signal) =>
-        {
-          workspace.Assert();
-          const value = await web.Fetch(input, signal);
-          workspace.Assert();
-          return value
-        }, Search: async (input, signal) =>
-        {
-          workspace.Assert();
-          const value = await web.Search(input, signal);
-          workspace.Assert();
-          return value
-        }
+        Fetch: async (input, signal) => { workspace.Assert(); const value = await web.Fetch(input, signal); workspace.Assert(); return value }, Search: async (input, signal) => { workspace.Assert(); const value = await web.Search(input, signal); workspace.Assert(); return value }
       } : undefined,
+
       FeedbackTools: task.mode === 'chat' && feedback ? () => feedback.Prepare({ workspaceId: workspace.entry.id, rootSessionId: task.taskId }, () => workspace.Assert()) : undefined,
-      FeedbackStatus: task.mode === 'chat' && feedback ? scope =>
-      {
-        workspace.Assert();
-        return feedback.auth.CheckConnection(scope)
-      } : undefined,
+
+      FeedbackStatus: task.mode === 'chat' && feedback ? scope => { workspace.Assert(); return feedback.auth.CheckConnection(scope) } : undefined,
+
       GovernanceTools: conversationBinding ? ({ task, runId }) => mainGovernanceTools(workspace, task, runId, conversationBinding) : undefined,
-      OwnershipTools: conversationBinding && ownerships ? ({ task, runId }) =>
-      {
-        const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId);
-        return context ? { port: mainModuleOwnershipTools(workspace, ownerships.service, ownerships.members, task, runId, conversationBinding, context, dispatch?.owners), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined
-      } : undefined,
-      MemberTools: conversationBinding && ownerships ? ({ task, runId }) =>
-      {
-        const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId);
-        return context ? { port: mainWorkspaceMemberTools(workspace, ownerships.members, task, runId, conversationBinding, context), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined
-      } : undefined,
+
+      OwnershipTools: conversationBinding && ownerships ? ({ task, runId }) => { const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId); return context ? { port: mainModuleOwnershipTools(workspace, ownerships.service, ownerships.members, task, runId, conversationBinding, context, dispatch?.owners), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined } : undefined,
+
+      MemberTools: conversationBinding && ownerships ? ({ task, runId }) => { const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId); return context ? { port: mainWorkspaceMemberTools(workspace, ownerships.members, task, runId, conversationBinding, context), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined } : undefined,
+
       DispatchTools: ({ task, runId }) => collaboration?.()?.Tools(task, runId, options),
+
       AcquireLease: async task =>
       {
         workspace.Assert();
+
         if (task.workspaceId !== workspace.entry.id || task.root !== workspace.entry.path)
+
           throw Error('任务与工作区身份不匹配');
+
         // 两种协作模式的主轮都能执行；ask/execute 同样独占，等待审批期间也不能放行冲突运行。
         const workspacePermission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
+
         const release = acquireExecutionLease(lease, 'conversation:' + task.taskId, { workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: task.taskId, scopeId: launch.scopeId, requestId: admissionRequestId('main', launch.requestId), agentInstanceId: conversationBinding?.agentInstanceId, source: launch.wait ? 'main-result' : 'direct', workspacePermission }, admission, launch.wait);
+
         const directory = path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine');
+
         try
         {
           const lock = new KernelLock(directory, hash(workspace.entry.id + ':' + task.taskId), 'loop');
-          return () =>
-          {
-            try
-            {
-              lock.Close()
-            }
-            finally
-            {
-              release()
-            }
-          }
+
+          return () => { try { lock.Close() } finally { release() } }
         }
         catch (error)
         {
           release();
+
           throw error
         }
       },

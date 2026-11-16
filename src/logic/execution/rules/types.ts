@@ -8,9 +8,13 @@
  * 各引擎共享生命周期与工具门禁；engineHandoff 只携带公开上下文，不改变原调用身份或授权。
  */
 import type { TaskSpec } from '../../tasks/rules/types';
+
 import type { ToolCall, ToolDecision } from '../../tools/rules/types';
+
 import type { MemberRunBinding } from './member-run';
+
 import type { RunInputSource } from './input-source';
+
 import type { ConversationAgentBinding } from './conversation-binding';
 
 export type { RunInputSource } from './input-source';
@@ -28,11 +32,11 @@ export interface EngineEvent
 {
   /** 代码检查事件仅由授权后的可信执行端口写入。 */
   type: 'code.validation_checked' | 'run.started' | 'session.bound' | 'message' | 'message.delta' | 'tool.started' | 'tool.finished' |
+
   'tool.proposed' | 'tool.allowed' | 'tool.denied' | 'tool.updated' | 'task.updated' | 'task.help_requested' | 'task.checkpoint_requested' | 'artifact.baseline_captured' | 'artifact.manifest_captured' | 'artifact.transition_prepared' | 'artifact.transition_executing' | 'artifact.transition_applied' | 'validation.checked' | 'engine.status' | 'run.stop_requested' | 'run.settled' | 'run.interrupted';
 
   data: Record<string, unknown>;
 }
-
 /** 事件落盘后的身份与顺序信息；观察者只能收到成功持久化的记录。 */
 export interface StoredEvent extends EngineEvent
 {
@@ -50,7 +54,6 @@ export interface StoredEvent extends EngineEvent
   /** 日志生成的 UTC ISO 8601 时间；连续性以 seq 判断，不按时钟重排事件。 */
   time: string;
 }
-
 /** 原始图片快照；由主进程读取，作为用户输入而非系统指令。 */
 export interface InputImage
 {
@@ -60,7 +63,6 @@ export interface InputImage
 
   mimeType: string
 }
-
 /** 运行时注入适配器的能力；方法名属于已发布引擎包 protocol=1，适配器不得绕过 beforeTool 直接放行工具。 */
 export interface EngineContext
 {
@@ -101,7 +103,6 @@ export interface EngineContext
   /** 决策及证据先落盘，返回 allow 才可执行。 */
   beforeTool(call: ToolCall): Promise<ToolDecision>;
 }
-
 /** 已发布引擎包 protocol=1 的固定生命周期；close 必须释放进程/桥并排空事件，run 终态不表示业务验收通过。 */
 export interface AgentEngine
 {
@@ -124,7 +125,6 @@ export interface AgentEngine
 
   close(): Promise<void>;
 }
-
 /** 从执行事实恢复的摘要；未收到结果的已放行工具必须人工核实，不能自动重放。 */
 export interface RunSummary
 {
@@ -163,7 +163,6 @@ export interface RunSummary
     partialTail: boolean
   };
 }
-
 /** 只读展示全部可核实历史；issues 不代表任务未执行，resumeRunId 缺省时不得猜测较早的可读轮次续聊。 */
 export interface ConversationThreadView
 {

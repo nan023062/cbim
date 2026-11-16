@@ -4,15 +4,25 @@
  * 设计原因：角色可被复用、改名或删除，历史必须保留原身份与配置版本；此页面只读归档，不把多实例历史拼成模型上下文，不提供恢复、审批或执行按钮。
  */
 import { Icon } from '../components/Icon';
+
 import { useEffect, useRef, useState } from 'react';
+
 import type { AgentHistoryRole, AgentHistoryRun, AgentHistorySession, AgentHistoryRoles } from '../../bridge/contracts/agent-history';
+
 import type { RunSummary } from '../../bridge/contracts/execution';
+
 import { MemberRunTranscript } from '../tasks/MemberRunTranscript';
+
 import { transcript } from '../execution-view/transcript';
+
 import { MarkdownMessage } from '../execution-view/MarkdownMessage';
+
 import { historyRunKey } from './agent-history-state';
+
 import { useHistoryEvents, useHistorySessions, useHistoryRuns } from './useAgentHistory';
+
 import './agent-history.css';
+
 import '../tasks/member-activity.css';
 
 const statusNames = { starting: '正在准备', running: '执行中', completed: '本轮结束', cancelled: '已停止', failed: '执行失败', interrupted: '执行中断' };
@@ -34,60 +44,43 @@ export interface AgentSessionHistoryProps
 
   onClose: () => void
 }
-
 function rolePresence(id: string, definitions: Definitions, ready: boolean)
 {
   return definitions[id] ? '当前定义存在' : ready ? '当前定义已删除或不再登记' : '当前定义尚未读取'
 }
-
 function Diagnostics({ items }: { items: string[] })
 {
   return items.length ? <div className="agent-history-diagnostics" role="status"><strong>部分历史需要核实</strong><ul>{items.map((item, index) => <li key={index}>{item}</li>)}</ul></div> : null
 }
-
 /** 未提供 initialAgentId 时先浏览历史角色索引；已删除角色只在此索引出现，不回填静态团队树。 */
 export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefinitions, knowledgeReady, onClose }: AgentSessionHistoryProps)
 {
   const [selected, setSelected] = useState(initialAgentId ?? ''),
+
     [roles, setRoles] = useState<AgentHistoryRole[]>([]),
+
     [diagnostics, setDiagnostics] = useState<string[]>([]),
+
     [error, setError] = useState(''),
+
     [loading, setLoading] = useState(false);
+
   const [filter, setFilter] = useState(''),
+
     [revision, setRevision] = useState(0),
+
     request = useRef(0);
-  useEffect(() =>
-  {
-    const token = ++request.current;
-    let stopped = false;
-    setLoading(true);
-    setError('');
-    void window.cbim.call('agentHistory.roles', { workspaceId }).then(reply =>
-    {
-      if (stopped || request.current !== token)
-        return;
-      if (reply.roles.some(role => role.workspaceId !== workspaceId))
-        throw Error('历史角色工作区不一致，请重新读取');
-      setRoles(reply.roles);
-      setDiagnostics(reply.diagnostics);
-    }).catch(cause =>
-    {
-      if (!stopped && request.current === token)
-        setError(cause instanceof Error ? cause.message : '历史角色读取失败，请重试')
-    }).finally(() =>
-    {
-      if (!stopped && request.current === token)
-        setLoading(false)
-    });
-    return () =>
-    {
-      stopped = true
-    };
-  }, [workspaceId, revision]);
+
+  useEffect(() => { const token = ++request.current; let stopped = false; setLoading(true); setError(''); void window.cbim.call('agentHistory.roles', { workspaceId }).then(reply => { if (stopped || request.current !== token) return; if (reply.roles.some(role => role.workspaceId !== workspaceId)) throw Error('历史角色工作区不一致，请重新读取'); setRoles(reply.roles); setDiagnostics(reply.diagnostics); }).catch(cause => { if (!stopped && request.current === token) setError(cause instanceof Error ? cause.message : '历史角色读取失败，请重试') }).finally(() => { if (!stopped && request.current === token) setLoading(false) }); return () => { stopped = true }; }, [workspaceId, revision]);
+
   const archived = roles.find(role => role.agentId === selected),
+
     name = archived?.name ?? currentDefinitions[selected] ?? selected;
+
   const needle = filter.trim().toLocaleLowerCase(),
+
     shown = roles.filter(role => (role.name + ' ' + role.agentId).toLocaleLowerCase().includes(needle));
+
   return <section className="agent-session-history" aria-label="Agent 执行历史" data-testid="agent-session-history">
     <header className="agent-history-heading"><div><p className="overline">只读履历</p><h2>{selected ? name + ' · 执行历史' : '历史角色'}</h2></div><button data-testid="history-back" onClick={onClose}><Icon name="undo" size={16} />返回团队定义</button></header>
     <p className="agent-history-note">按静态角色检索独立 Session，不合并模型上下文。历史不会因执行实例释放或角色删除而消失；运行结束不等于业务验收。</p>
@@ -102,13 +95,15 @@ export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefini
     </>}
   </section>;
 }
-
 /** Session 与运行选择分层保存；切换角色/会话由 key 重建下层，不能沿用另一角色的日志游标。 */
 function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId: string })
 {
   const sessions = useHistorySessions({ workspaceId, agentId }, true),
+
     [chosen, setChosen] = useState('');
+
   const selected = sessions.page?.items.find(session => session.sessionId === chosen);
+
   return <><div className="agent-history-toolbar"><h3>Session 记录</h3><button disabled={sessions.loading} onClick={() => void sessions.refresh()}><Icon name="refresh" size={16} />刷新 Session</button></div>
     {sessions.error && <p role="alert">{sessions.error}</p>}<Diagnostics items={sessions.page?.diagnostics ?? []} />
     <div className="agent-history-layout"><aside className="agent-history-sessions" aria-label="Agent Session 列表">
@@ -118,12 +113,14 @@ function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId:
     </aside><div className="agent-history-session-content">{selected ? <SessionRuns key={selected.sessionId} session={selected} /> : <p className="agent-history-empty">选择一个 Session 查看独立运行记录。</p>}</div></div>
   </>;
 }
-
 function SessionRuns({ session }: { session: AgentHistorySession })
 {
   const runs = useHistoryRuns({ workspaceId: session.workspaceId, agentId: session.agentId, sessionId: session.sessionId }, true),
+
     [chosen, setChosen] = useState('');
+
   const selected = runs.page?.items.find(run => historyRunKey(run) === chosen);
+
   return <section aria-label="Session 执行轮次"><h3>{session.title}</h3><p className="agent-history-note">记录时角色：{session.agentName} · {time(session.startedAt)} 起</p>
     <details className="agent-history-identity"><summary>Session 归属</summary><dl><dt>历史分组 ID</dt><dd><code>{session.sessionId}</code></dd><dt>实例 ID</dt><dd>{session.agentInstanceId ?? '未绑定'}</dd><dt>运行通道 ID</dt><dd>{session.agentSessionId ?? '未绑定；旧记录分组不是运行通道'}</dd><dt>所属主会话</dt><dd>{session.rootSessionId ?? '未记录'}</dd></dl></details>
     <div className="agent-history-toolbar"><h4>运行轮次</h4><button disabled={runs.loading} onClick={() => void runs.refresh()}><Icon name="refresh" size={16} />刷新轮次</button></div>
@@ -134,20 +131,20 @@ function SessionRuns({ session }: { session: AgentHistorySession })
     {selected ? <SelectedRun key={historyRunKey(selected)} record={selected} /> : <p className="agent-history-empty">选择一个轮次后读取公开消息、工具与计划证据。</p>}
   </section>;
 }
-
 function SelectedRun({ record }: { record: AgentHistoryRun })
 {
   const events = useHistoryEvents(record);
+
   return <section className="agent-history-run-detail" aria-label="历史运行详情" data-testid="agent-history-events"><div className="agent-history-toolbar"><h4>公开执行记录</h4><button disabled={events.loading} onClick={() => void events.refresh()}>{events.projection.hasMore ? '继续加载记录' : '刷新本轮记录'}</button></div>
     {events.error && <p role="alert">{events.error}</p>}{events.loading && <p role="status">正在读取公开记录…</p>}
     <HistoryRunContent record={record} run={events.projection.run} />
   </section>;
 }
-
 /** 只展示后端公开投影；输入和成员回注分别标识，计划证据仅展示引用，不以历史按钮执行任何操作。 */
 export function HistoryRunContent({ record, run }: { record: AgentHistoryRun; run?: RunSummary })
 {
   const inputs = run ? transcript(run).filter(item => item.kind === 'user' || item.kind === 'system') : [];
+
   return <><p>{record.goal}</p><p className="agent-history-note">记录时角色：{record.agentName} · {statusNames[record.status]} · 状态截至本次读取</p>
     <details className="agent-history-identity" open={record.binding === 'legacy'}><summary>执行身份与历史配置</summary><dl><dt>静态角色 ID</dt><dd>{record.agentId}</dd><dt>任务 ID</dt><dd>{record.taskId}</dd><dt>运行 ID</dt><dd>{record.runId}</dd><dt>所属主会话</dt><dd>{record.rootSessionId ?? '未记录'}</dd><dt>执行实例</dt><dd>{record.agentInstanceId ?? '未绑定'}</dd><dt>运行通道</dt><dd>{record.agentSessionId ?? '未绑定'}</dd><dt>执行时配置版本</dt><dd>{record.configurationRevision ?? '未记录；不以当前配置代替'}</dd></dl>{record.binding === 'legacy' && <p>这是未绑定实例或通道的旧记录。历史分组键不是模型 Session，不按角色名称补造身份。</p>}</details>
     {record.moduleIds.length > 0 && <details><summary>目标模块（{record.moduleIds.length}）</summary><ul>{record.moduleIds.map(id => <li key={id}><code>{id}</code></li>)}</ul></details>}

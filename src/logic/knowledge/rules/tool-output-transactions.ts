@@ -4,6 +4,7 @@
  * 职责边界：这些状态只属于知识事务或维护任务，不是主对话、成员任务或人工业务验收状态。
  */
 import { z } from 'zod';
+
 import { knowledgeOutputIdSchema, knowledgeOutputHashSchema, knowledgeIdentityShape, knowledgeValidationSchema, knowledgeContextSchema } from './tool-output-base';
 
 const change = z.object({ path: knowledgeOutputIdSchema, text: z.string().nullable() }).strict();

@@ -5,15 +5,25 @@
  * IPC 边界：动态架构表单先按对应IPC Schema核实；本地数据选择为封闭类别。
  */
 import { checkedIpcCall } from '../../bridge/contracts/ipc-call';
+
 import { useEffect, useRef, useState } from 'react';
+
 import { EngineModelPicker } from '../components/EngineModelPicker';
+
 import { providerSupportsEngine } from '../../bridge/contracts/engines';
+
 import { type LlmSettings } from '../../bridge/contracts/models';
+
 import { type AgentModelSelection } from '../../bridge/contracts/agent-settings';
+
 import { createPortal } from 'react-dom';
+
 import type { Snapshot, Preview } from '../../bridge/contracts/workspace';
+
 import { moduleBodyTemplate } from '../../bridge/contracts/architecture';
+
 import { teamGroupIds } from './static-owners';
+
 import './architecture-editor.css';
 
 export type EditableKind = 'agent' | 'module' | 'skill' | 'workflow';
@@ -31,25 +41,31 @@ function read(snapshot: Snapshot, path: string)
     return {}
   }
 }
-
 /** 读取自身定义及正文；继承 Skill 由调用者传原 owner 的 id，不把副本写到当前 Agent。 */
 export function editableObject(snapshot: Snapshot, kind: EditableKind, id?: string)
 {
   if (!id)
+
     return { data: {}, body: '' };
+
   if (kind === 'agent' || kind === 'module')
   {
     const data = read(snapshot, id + (kind === 'agent' ? '/agent.json' : '/module.json'));
+
     return { data, body: snapshot.files.find(file => file.path === id + '/' + (kind === 'agent' ? data.work_principles : data.overview))?.text ?? '' };
   }
   const segment = kind === 'skill' ? '/skills/' : '/workflows/',
+
     owner = id.slice(0, id.lastIndexOf(segment));
+
   const agent = snapshot.files.some(file => file.path === owner + '/agent.json');
+
   const inventory = read(snapshot, owner + (kind === 'workflow' ? '/module.json' : agent ? '/agent.json' : '/skills.json'));
+
   const reference = id.slice(owner.length + 1) + (kind === 'skill' ? '/SKILL.md' : '/workflow.md');
+
   return { data: (inventory[kind === 'skill' ? 'skills' : 'workflows'] ?? []).find((item: any) => item.reference === reference) ?? {}, body: snapshot.files.find(file => file.path === owner + '/' + reference)?.text ?? '' };
 }
-
 // 与后端诊断共用结构；占位内容须由用户按实际业务填写。
 const moduleScaffold = moduleBodyTemplate();
 
@@ -71,94 +87,118 @@ export interface ArchitectureEditorProps
 
   onSaved: (objects: string[]) => void
 }
-
 /** 删除始终先预览，级联必须单独勾选；不再登记真人或签署旧维护声明，岗位负责人通过独立入口配置。 */
 export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, mode = 'edit', onClose, onSaved }: ArchitectureEditorProps)
 {
   const base = useRef(snapshot).current,
+
     initial = useRef(editableObject(base, kind, id)).current,
+
     removing = mode === 'delete';
+
   const [owner, setOwner] = useState(parentId ?? (kind === 'agent' ? '.cbim/team' : kind === 'module' ? '.cbim/workspace' : ''));
+
   const [slug, setSlug] = useState(''),
+
     [name, setName] = useState(initial.data.name ?? ''),
+
     [summary, setSummary] = useState(initial.data.summary ?? '');
+
   const [body, setBody] = useState(initial.body || (kind === 'module' ? moduleScaffold : '')),
+
     [purpose, setPurpose] = useState(initial.data.purpose ?? '');
+
   const [capabilities, setCapabilities] = useState((initial.data.capabilities ?? []).join('\n')),
+
     [limitations, setLimitations] = useState((initial.data.limitations ?? []).join('\n'));
+
   const [sources, setSources] = useState<
     {
       location: string;
 
       scope: string
     }[]>(initial.data.sources ?? []);
+
   const [models, setModels] = useState<LlmSettings>(),
+
     [runtime, setRuntime] = useState<AgentModelSelection | null>(initial.data.runtime ?? null);
-  useEffect(() =>
-  {
-    if (kind !== 'agent' || removing)
-      return;
-    let cancelled = false;
-    void window.cbim.call('models.list').then(value =>
-    {
-      if (!cancelled)
-        setModels(value)
-    }).catch(cause =>
-    {
-      if (!cancelled)
-        setError(cause.message)
-    });
-    return () =>
-    {
-      cancelled = true
-    }
-  }, [kind, removing]);
+
+  useEffect(() => { if (kind !== 'agent' || removing) return; let cancelled = false; void window.cbim.call('models.list').then(value => { if (!cancelled) setModels(value) }).catch(cause => { if (!cancelled) setError(cause.message) }); return () => { cancelled = true } }, [kind, removing]);
+
   const [cascade, setCascade] = useState(false),
+
     [changed, setChanged] = useState(false),
+
     [busy, setBusy] = useState(false),
+
     [error, setError] = useState('');
+
   const [preview, setPreview] = useState<(Preview &
   {
     planId: string;
 
     objects: string[]
   })>();
+
   const lock = useRef(false),
+
     length = Array.from(summary.replace(/\s/g, '')).length;
+
   function edit(action: () => void)
   {
     action();
+
     setChanged(true);
+
     setPreview(undefined);
+
     setError('')
   }
   function close()
   {
     if (!busy && (!changed || confirm('放弃尚未提交的修改？')))
+
       onClose()
   }
   const lines = (value: string) => value.split('\n').map(item => item.trim()).filter(Boolean);
+
   const moduleParents = ['.cbim/workspace', ...Object.keys(base.validation?.tree.nodes ?? {})];
+
   const teamParents = teamGroupIds(base);
+
   async function prepare()
   {
     if (lock.current)
+
       return;
+
     lock.current = true;
+
     setBusy(true);
+
     setError('');
+
     try
     {
       if (base.workspaceId !== workspaceId)
+
         throw Error('工作区身份已改变，请关闭后重新打开编辑器');
+
       if (!removing && (kind === 'agent' || kind === 'module') && (length < 100 || length > 250))
+
         throw Error('摘要需要 100～250 个非空白字符，请具体描述职责、边界和适用场景');
+
       // 与实际启动共用兼容接口解析，显式接口的型号限制也在编辑时生效。
       if (!removing && kind === 'agent' && runtime && !models?.profiles.some(p => p.id === runtime.profileId && providerSupportsEngine(runtime.engine, p, runtime.modelId) && p.models.some(m => m.id === runtime.modelId && m.enabled)))
+
         throw Error('所选引擎或模型不可用，请重新选择');
+
       const data = kind === 'agent' ? { name, summary, capabilities: lines(capabilities), limitations: lines(limitations), runtime } : kind === 'module' ? { summary, sources } : kind === 'skill' ? { name, purpose } : { name };
+
       const operation = removing ? { kind, action: 'delete', id, cascade } : { kind, action: id ? 'update' : 'create', ...(id ? { id } : { parentId: owner, slug }), data, body };
+
       const request = { workspaceId, instanceId: base.instanceId, revision: base.revision, operations: [operation] };
+
       setPreview(await window.cbim.call(...checkedIpcCall('architecture.preview', request)));
     }
     catch (cause)
@@ -168,20 +208,28 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
     finally
     {
       lock.current = false;
+
       setBusy(false)
     }
   }
   async function commit()
   {
     if (!preview || lock.current)
+
       return;
+
     lock.current = true;
+
     setBusy(true);
+
     setError('');
+
     try
     {
       await window.cbim.call('architecture.commit', { workspaceId, instanceId: base.instanceId, planId: preview.planId });
+
       setChanged(false);
+
       onSaved(preview.objects)
     }
     catch (cause)
@@ -191,14 +239,11 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
     finally
     {
       lock.current = false;
+
       setBusy(false)
     }
   }
-  return createPortal(<div className="modal-backdrop architecture-editor-backdrop"><form className="modal architecture-editor" role="dialog" aria-modal="true" aria-label={removing ? '删除' + labels[kind] : (id ? '编辑' : '新建') + labels[kind]} onSubmit={event =>
-  {
-    event.preventDefault();
-    void prepare()
-  }}>
+  return createPortal(<div className="modal-backdrop architecture-editor-backdrop"><form className="modal architecture-editor" role="dialog" aria-modal="true" aria-label={removing ? '删除' + labels[kind] : (id ? '编辑' : '新建') + labels[kind]} onSubmit={event => { event.preventDefault(); void prepare() }}>
     <header><div><small>工作区知识 · {base.workspaceId.slice(0, 8)}</small><h2>{removing ? '删除' : id ? '编辑' : '新建'}{labels[kind]}</h2></div><button type="button" disabled={busy} onClick={close}>关闭</button></header>
     {id && <p className="architecture-object-id">{id}</p>}
     {removing ? <><p>先检查删除范围与引用影响。仅删除正式知识，项目业务源码不会被删除；已有执行记录会保留。</p><label className="architecture-checkbox"><input type="checkbox" aria-label="同时删除下级知识" disabled={busy} checked={cascade} onChange={event => edit(() => setCascade(event.target.checked))} />同时删除下级模块或所属方法（如有）</label></> : <fieldset disabled={busy} className="architecture-fields">

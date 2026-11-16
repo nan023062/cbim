@@ -4,13 +4,21 @@
  * 职责边界：保持原 run/call 身份和显式点击语义，渲染不授权执行、不重试工具。
  */
 import type { RunSummary } from '../../bridge/contracts/execution';
+
 import type { ReactNode } from 'react';
+
 import { isVerifiableMainToolName } from '../../bridge/contracts/command-verification';
+
 import { ToolTimeline } from '../execution-view/ToolTimeline';
+
 import { mainCommandSelection } from './command-verification-state';
+
 import { MainCommandVerification } from './CommandVerificationPanel';
+
 import type { ExecutionRecoveryContext } from './useExecutionRecovery';
+
 import { EffectObservationPanel } from './EffectObservationPanel';
+
 import { effectObservationAnchor } from './effect-recovery-state';
 
 /** 主来源的完整身份由原日志核验；成员及缺失绑定的旧日志只显示轨道。 */
@@ -19,7 +27,9 @@ export function ToolActivity({ run, recovery, toolCallId, renderDetails }: { run
   return <ToolTimeline run={run} toolCallId={toolCallId} renderDetails={renderDetails} renderControls={({ id, name, attention }) =>
   {
     const mainSelection = mainCommandSelection(run, id, name),
+
       selection = isVerifiableMainToolName(name) ? mainSelection : undefined;
+
     return <>{selection && <MainCommandVerification selection={selection} latestSeq={run.events.at(-1)?.seq ?? 0} />}
    {mainSelection && <details className="tool-observation-controls" open={attention || undefined}><summary>{attention ? '核实未确认的原调用影响' : '更多核实与处置'}</summary><EffectObservationPanel identity={{ workspaceId: mainSelection.workspaceId, rootSessionId: mainSelection.rootSessionId, subject: { kind: 'main_run', runId: run.runId, toolCallIds: [id] } }} anchor={effectObservationAnchor(recovery?.state)} context={recovery} /></details>}</>;
   }} />

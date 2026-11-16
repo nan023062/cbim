@@ -4,16 +4,27 @@
  * 设计原因：一次目标可以经历多轮调度、执行和结果回注；冻结原始输入与软限额。运行中补充先记录发送尝试，仅真实接收后与 waiting 续接共用输入版本；人工决定保存不自动续接，旧损坏链不复活。
  */
 import type { TopicInterruption } from './topic-interruption';
+
 import { type CollaborationPolicy } from '../../team/rules/automatic-execution';
+
 import type { DispatchScopeGoal } from './scope-goal';
+
 import type { DispatchScopeWait } from './scope-continuation';
+
 import type { ScopeContinuationRecord } from './scope-continuation-record';
+
 import type { ScopeRecovery } from './scope-recovery';
+
 import type { ScopeReplan } from './scope-replan';
+
 import type { ScopeRunTracking } from './scope-run-tracking';
+
 import type { ScopeBudget } from '../../budget/rules/scope-budget';
+
 import type { ScopeHumanDecisions } from './human-decisions';
+
 import type { ScopeActiveInput } from './scope-active-input';
+
 import type { AutomaticReturn } from './automatic-return';
 
 export { dispatchScopeWaitSchema } from './scope-continuation';

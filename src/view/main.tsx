@@ -3,7 +3,9 @@
  * 设计原因：让进程启动与页面状态分离，最后加载统一界面令牌和控件规则，业务样式保留各页面布局。
  */
 import { createRoot } from 'react-dom/client';
+
 import { App } from './shell/App';
+
 import './styles';
 
 createRoot(document.getElementById('root')!).render(<App />);

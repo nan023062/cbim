@@ -10,11 +10,15 @@ export type ApplicableResourceKind = 'team' | 'agent' | 'skill' | 'architecture'
 export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | 'content'>): ApplicableResourceKind | undefined
 {
   if (!['team', 'agent', 'skill', 'architecture'].includes(item.kind))
+
     return;
+
   try
   {
     const value = JSON.parse(item.content);
+
     if (value?.format === 'cbim-workspace-package' && value.kind === item.kind)
+
       return item.kind as ApplicableResourceKind
   }
   catch
@@ -22,7 +26,6 @@ export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | '
     /* 旧 Markdown/JSON 文本不是可应用资源包。 */
   }
 }
-
 /** 已有 module/workflow 允许继续编辑，新增业务资源只使用完整 architecture。 */
 export function creatableResourceKinds(category: ResourceCategory): ResourceKind[]
 {

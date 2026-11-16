@@ -8,27 +8,39 @@ import type { Snapshot } from '../../bridge/contracts/workspace';
 export function teamGroupIds(snapshot: Snapshot): string[]
 {
   const root = '.cbim/team',
+
     groups = new Set([root]),
+
     agents = new Set<string>();
+
   function addAncestors(id: unknown)
   {
     if (typeof id !== 'string' || !(id === root || id.startsWith(root + '/')) || id.includes('\\') || id.split('/').some(part => !part || part === '.' || part === '..'))
+
       return;
+
     let owner = id;
+
     while (owner === root || owner.startsWith(root + '/'))
     {
       groups.add(owner);
+
       owner = owner.slice(0, owner.lastIndexOf('/'))
     }
   }
   // Rules 读取真实目录后生成的 groups 还覆盖空组和只有 references 正文的组；快照正文不能重建这些事实。
   const registry = snapshot.validation?.indexes?.[root + '/registry.json'];
+
   if (registry)
+
     try
     {
       const parsed = JSON.parse(registry);
+
       if (Array.isArray(parsed?.groups))
+
         for (const group of parsed.groups)
+
           addAncestors(group?.id)
     }
     catch
@@ -38,15 +50,23 @@ export function teamGroupIds(snapshot: Snapshot): string[]
   for (const file of snapshot.files)
   {
     if (!file.path.startsWith(root + '/'))
+
       continue;
+
     const agent = file.path.endsWith('/agent.json'),
+
       inventory = file.path.endsWith('/skills.json');
+
     if (!agent && !inventory)
+
       continue;
+
     let owner = file.path.slice(0, file.path.lastIndexOf('/'));
+
     if (agent)
     {
       agents.add(owner);
+
       owner = owner.slice(0, owner.lastIndexOf('/'))
     }
     addAncestors(owner);

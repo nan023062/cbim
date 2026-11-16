@@ -3,7 +3,9 @@
  * 设计原因：两类来源共享输入版本和主轮预算但不能混淆正文；独立组合层避免公开协议相互引用成环。
  */
 import { z } from 'zod';
+
 import { scopeContinuationSchema, type ScopeContinuation } from './scope-continuation';
+
 import { scopeHumanContinuationSchema, type ScopeHumanContinuation } from './human-continue';
 
 /** 旧无 kind 记录保持真实文本补充原样，新人工分支没有 input.message。 */

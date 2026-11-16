@@ -8,16 +8,21 @@ import { inputIssueMessage } from '../../bridge/contracts/execution';
 export function rejectedToolView(result: unknown): { message: string; invalidInput: boolean } | undefined
 {
   let value: unknown = result;
+
   if (value && typeof value === 'object' && 'content' in value && Array.isArray(value.content))
   {
     const blocks = value.content.filter(b => b?.type === 'text' && typeof b.text === 'string');
+
     if (blocks.length !== 1)
+
       return;
+
     value = blocks[0].text;
   }
   if (typeof value === 'string')
   {
     const text = value;
+
     try
     {
       value = JSON.parse(text)
@@ -30,11 +35,15 @@ export function rejectedToolView(result: unknown): { message: string; invalidInp
   if (value && typeof value === 'object' && !Array.isArray(value) && 'message' in value && typeof value.message === 'string')
   {
     const invalidInput = 'code' in value && value.code === 'TOOL_INPUT_INVALID';
+
     const message = value.message;
+
     try
     {
       const issues = inputIssueMessage(JSON.parse(message));
+
       if (issues)
+
         return { message: `参数无效；${issues}。请补齐必填字段或修正格式；可选参数可省略，已声明默认值会自动使用。本次尚未执行。`, invalidInput: true }
     }
     catch
@@ -44,5 +53,6 @@ export function rejectedToolView(result: unknown): { message: string; invalidInp
     return { message, invalidInput };
   }
   const issues = inputIssueMessage(value);
+
   return issues ? { message: `参数无效；${issues}。本次尚未执行。`, invalidInput: true } : undefined;
 }

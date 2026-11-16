@@ -6,14 +6,23 @@
  * IPC 边界：模块责任按是否给定memberId选择明确入口，内联岗位表单经过Schema配对。
  */
 import { Icon } from '../components/Icon';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import type { ModuleOwnershipIdentity, ModuleOwnershipPage, ModuleOwnershipDetail, ModuleOwnershipPreview, ModuleOwnershipChangeInput, ModuleOwnershipPreviewInput } from '../../bridge/contracts/module-ownership';
+
 import { isModuleOwnershipSourceAdoption } from '../../bridge/contracts/module-ownership';
+
 import type { WorkspaceMemberList } from '../../bridge/contracts/workspace-members';
+
 import { checkedWorkspaceMemberList } from '../team/workspace-member-state';
+
 import { moduleOwnershipCommands as commands, checkedModuleOwnershipPage, checkedModuleOwnershipDetail, checkedModuleOwnershipPreview } from './module-ownership-state';
+
 import { ModuleOwnershipDetailView, ownershipStatus } from './ModuleOwnershipDetail';
+
 import { KnowledgeSourceSelection } from '../knowledge/KnowledgeSourceDetails';
+
 import './module-ownership.css';
 
 const failure = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -46,137 +55,185 @@ export interface ModuleOwnershipPanelProps
     onSelect: (moduleId: string, agentId: string) => void
   }
 }
-
 export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberId, memberId, onClose, registration, onDirtyChange }: ModuleOwnershipPanelProps)
 {
   const controller = useMemo(() => commands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), [identity.workspaceId]);
+
   const [, setTick] = useState(0),
+
     [page, setPage] = useState<ModuleOwnershipPage>(),
+
     [detail, setDetail] = useState<ModuleOwnershipDetail>(),
+
     [members, setMembers] = useState<WorkspaceMemberList['items']>([]);
+
   const [nextId, setNextId] = useState(''),
+
     [reason, setReason] = useState(''),
+
     [preview, setPreview] = useState<ModuleOwnershipPreview>(),
+
     [error, setError] = useState(''),
+
     [loading, setLoading] = useState(false),
+
     [membersLoaded, setMembersLoaded] = useState(false);
+
   const alive = useRef(false),
+
     generation = useRef(0),
+
     lock = useRef(false),
+
     selection = useRef(0);
+
   const state = controller.snapshot,
+
     blocked = controller.blocked;
+
   const dirty = useRef(false);
-  const markDirty = (value: boolean) =>
-  {
-    dirty.current = value;
-    onDirtyChange?.(value)
-  };
+
+  const markDirty = (value: boolean) => { dirty.current = value; onDirtyChange?.(value) };
+
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
   const leaveDraft = () => !dirty.current || window.confirm('负责人变更尚未保存，放弃这些输入？');
-  useEffect(() =>
-  {
-    alive.current = true;
-    const unsubscribe = controller.Subscribe(() => setTick(value => value + 1));
-    void controller.Restore().then(async () =>
-    {
-      if (!alive.current)
-        return;
-      await list();
-      if (alive.current && initialModuleId)
-        await select(initialModuleId, initialMemberId)
-    });
-    return () =>
-    {
-      alive.current = false;
-      generation.current++;
-      selection.current++;
-      unsubscribe()
-    }
-  }, [controller, identity.instanceId, memberId]);
+
+  useEffect(() => { alive.current = true; const unsubscribe = controller.Subscribe(() => setTick(value => value + 1)); void controller.Restore().then(async () => { if (!alive.current) return; await list(); if (alive.current && initialModuleId) await select(initialModuleId, initialMemberId) }); return () => { alive.current = false; generation.current++; selection.current++; unsubscribe() } }, [controller, identity.instanceId, memberId]);
+
   async function list(offset = 0)
   {
     if (lock.current)
+
       return;
+
     lock.current = true;
+
     const token = ++generation.current;
+
     setLoading(true);
+
     setError('');
+
     try
     {
       const input = { ...identity, offset, limit: 20, ...(offset && page ? { expectedReadBasis: page.basis } : {}) };
+
       const value = memberId ? checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.byMember', { ...input, memberId }), { ...input, memberId }) : checkedModuleOwnershipPage(await window.cbim.call('workspace.ownerships.list', input), input);
+
       if (alive.current && generation.current === token)
+
         setPage(value)
     }
     catch (cause)
     {
       if (alive.current && generation.current === token)
+
         setError('责任列表读取失败：' + failure(cause))
     }
     finally
     {
       lock.current = false;
+
       if (alive.current && generation.current === token)
+
         setLoading(false)
     }
   }
   async function currentMembers()
   {
     const result: WorkspaceMemberList['items'] = [];
+
     let offset = 0,
+
       cursor: WorkspaceMemberList['registryCursor'] | undefined;
+
     do
     {
       const input = { ...identity, offset, limit: 100, ...(offset && cursor ? { expectedRegistryCursor: cursor } : {}) };
+
       const value = checkedWorkspaceMemberList(await window.cbim.call('workspace.members.list', input), input);
+
       result.push(...value.items);
+
       cursor = value.registryCursor;
+
       if (value.nextOffset === undefined)
+
         return result;
+
       if (value.nextOffset <= offset || result.length > 256)
+
         throw Error('岗位分页没有前进或超过范围');
+
       offset = value.nextOffset
     }
     while (alive.current);
+
     throw Error('已离开当前视图');
   }
   async function select(moduleId: string, preferredMemberId?: string)
   {
     if (lock.current || !leaveDraft())
+
       return;
+
     markDirty(false);
+
     lock.current = true;
+
     const token = ++generation.current;
+
     selection.current++;
+
     setLoading(true);
+
     setError('');
+
     setPreview(undefined);
+
     setDetail(undefined);
+
     setMembers([]);
+
     setMembersLoaded(false);
+
     setReason('');
+
     setNextId('');
+
     try
     {
       const input = { ...identity, moduleId };
+
       const value = checkedModuleOwnershipDetail(await window.cbim.call('workspace.ownerships.get', input), input);
+
       if (!alive.current || generation.current !== token)
+
         return;
+
       setDetail(value);
+
       setNextId(value.view.binding?.ownerMemberId ?? '');
+
       try
       {
         const choices = await currentMembers();
+
         if (alive.current && generation.current === token)
         {
           setMembers(choices);
+
           setMembersLoaded(true);
+
           if (preferredMemberId)
           {
             if (choices.some(item => item.memberId === preferredMemberId && item.state === 'active'))
+
               setNextId(preferredMemberId);
+
             else
+
               setError('新登记岗位当前不可选，请重新核实岗位状态。')
           }
         }
@@ -184,110 +241,153 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       catch (cause)
       {
         if (alive.current && generation.current === token)
+
           setError('岗位列表无法核实；仍可明确解除现有关系：' + failure(cause))
       }
     }
     catch (cause)
     {
       if (alive.current && generation.current === token)
+
         setError('模块责任读取失败：' + failure(cause))
     }
     finally
     {
       lock.current = false;
+
       if (alive.current && generation.current === token)
+
         setLoading(false)
     }
   }
   function invalidate()
   {
     markDirty(true);
+
     selection.current++;
+
     setPreview(undefined)
   }
   async function prepare(adoptSource = false)
   {
     if (!detail || blocked || lock.current)
+
       return;
+
     const binding = detail.view.binding,
+
       next = members.find(item => item.memberId === nextId);
+
     if (adoptSource && !binding?.ownerMemberId)
     {
       setError('先设置负责人，再明确采纳新的模块来源');
+
       return
     }
     if (!adoptSource && nextId && (!next || next.state !== 'active'))
     {
       setError('请选择当前已启用的项目岗位');
+
       return
     }
     const expectedBinding = binding ? { bindingId: binding.bindingId, revision: binding.revision, ownerMemberId: binding.ownerMemberId } : null;
+
     // 来源采纳保留原负责人；不能将界面选中的另一个岗位夹带进此命令。
     const change: ModuleOwnershipChangeInput = adoptSource ? { kind: 'adopt_source', moduleId: detail.view.moduleId, expectedBinding: expectedBinding!, reason } : { moduleId: detail.view.moduleId, expectedBinding, nextOwner: nextId && next ? { memberId: next.memberId, expectedRevision: next.revision } : null, reason };
+
     const input: ModuleOwnershipPreviewInput = { ...identity, change };
+
     lock.current = true;
+
     const token = selection.current;
+
     setLoading(true);
+
     setError('');
+
     setPreview(undefined);
+
     try
     {
       const value = checkedModuleOwnershipPreview(await window.cbim.call('workspace.ownerships.preview', input), input);
+
       if (alive.current && selection.current === token)
+
         setPreview(value)
     }
     catch (cause)
     {
       if (alive.current && selection.current === token)
+
         setError('负责人变更预览失败：' + failure(cause))
     }
     finally
     {
       lock.current = false;
+
       if (alive.current)
+
         setLoading(false)
     }
   }
   async function commit()
   {
     if (!preview || blocked || lock.current)
+
       return;
+
     lock.current = true;
+
     setLoading(true);
+
     await controller.Submit({ ...identity, change: preview.change }, preview);
+
     lock.current = false;
+
     if (!alive.current)
+
       return;
+
     setLoading(false);
+
     setPreview(undefined);
+
     const record = controller.snapshot.records.at(-1);
+
     if (record?.phase === 'accepted')
     {
       markDirty(false);
+
       await list();
+
       if (alive.current)
+
         await select(record.receipt!.moduleId)
     }
     else if (record?.error)
+
       setError(record.error);
   }
   async function query(commandId: string, retry = false)
   {
     if (retry)
+
       await controller.Retry(commandId);
+
     else
+
       await controller.Query(commandId);
+
     if (alive.current)
+
       await list()
   }
   const binding = detail?.view.binding,
+
     sameOwner = (binding?.ownerMemberId ?? null) === (nextId || null);
+
   return <section className="module-ownership" data-testid="module-ownership-panel" aria-label="模块负责人">
-    <header><div><p className="overline">工作区 / 模块责任</p><h2>{memberId ? '岗位负责的模块' : '模块负责人'}</h2></div><button disabled={loading} onClick={() =>
-    {
-      if (leaveDraft())
-        onClose()
-    }}><Icon name="undo" size={16} />返回架构</button></header>
+    <header><div><p className="overline">工作区 / 模块责任</p><h2>{memberId ? '岗位负责的模块' : '模块负责人'}</h2></div><button disabled={loading} onClick={() => { if (leaveDraft()) onClose() }}><Icon name="undo" size={16} />返回架构</button></header>
     <p className="module-ownership-note">未指定自定义岗位的模块由主 Agent 执行；一个模块最多登记一个自定义负责人岗位。负责人登记与实际执行分开，本次操作不会移交已有任务或启动模型。</p>
     <button data-testid="module-ownership-refresh" disabled={loading} onClick={() => void list()}><Icon name="refresh" size={16} />刷新责任列表</button>
     {(error || state.error) && <p role="alert">{error || state.error}</p>}{loading && <p role="status">正在核实模块与岗位…</p>}
@@ -297,28 +397,10 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       {page && <div className="module-ownership-paging"><small>共 {page.total} 个</small>{page.offset > 0 && <button disabled={loading} onClick={() => void list()}><Icon name="undo" size={16} />回到首页</button>}{page.nextOffset !== undefined && <button disabled={loading} onClick={() => void list(page.nextOffset)}><Icon name="next" size={16} />下一页</button>}</div>}
     </aside><div className="module-ownership-body">
       {detail && <><ModuleOwnershipDetailView detail={detail} /><button disabled={loading} onClick={() => void select(detail.view.moduleId)}><Icon name="search" size={16} />重新核实模块与岗位</button>
-        <h3>准备责任变更</h3><p className="inline-note">选择岗位并说明原因 → 核对版本与影响 → 确认保存。当前任务保持原执行关系。</p><form className="module-ownership-form" onSubmit={event =>
-          {
-            event.preventDefault();
-            void prepare()
-          }}><fieldset disabled={blocked || loading}>
-          <label>负责人岗位<select aria-label="负责人岗位" value={nextId} onChange={event =>
-              {
-                const value = event.target.value;
-                invalidate();
-                if (value.startsWith('agent:'))
-                {
-                  registration?.onSelect(detail.view.moduleId, value.slice(6));
-                  return
-                }
-                setNextId(value)
-              }}><option value="">自动解析（未显式设置） / 解除自定义岗位</option>{members.map(member => <option key={member.memberId} value={member.memberId} disabled={member.state !== 'active' || member.agentId === 'cbim:executor'}>{member.name} · 第 {member.revision} 版{member.state !== 'active' ? ' · ' + (member.state === 'suspended' ? '已暂停' : '已退休') : ''}</option>)}{nextId && !members.some(member => member.memberId === nextId) && <option value={nextId} disabled>原负责人暂不可选</option>}{membersLoaded && registration && <optgroup label="从 Agent 登记新岗位">{registration.agents.map(agent => <option key={agent.id} value={'agent:' + agent.id}>{agent.name} · 登记项目岗位…</option>)}</optgroup>}</select></label>
+        <h3>准备责任变更</h3><p className="inline-note">选择岗位并说明原因 → 核对版本与影响 → 确认保存。当前任务保持原执行关系。</p><form className="module-ownership-form" onSubmit={event => { event.preventDefault(); void prepare() }}><fieldset disabled={blocked || loading}>
+          <label>负责人岗位<select aria-label="负责人岗位" value={nextId} onChange={event => { const value = event.target.value; invalidate(); if (value.startsWith('agent:')) { registration?.onSelect(detail.view.moduleId, value.slice(6)); return } setNextId(value) }}><option value="">自动解析（未显式设置） / 解除自定义岗位</option>{members.map(member => <option key={member.memberId} value={member.memberId} disabled={member.state !== 'active' || member.agentId === 'cbim:executor'}>{member.name} · 第 {member.revision} 版{member.state !== 'active' ? ' · ' + (member.state === 'suspended' ? '已暂停' : '已退休') : ''}</option>)}{nextId && !members.some(member => member.memberId === nextId) && <option value={nextId} disabled>原负责人暂不可选</option>}{membersLoaded && registration && <optgroup label="从 Agent 登记新岗位">{registration.agents.map(agent => <option key={agent.id} value={'agent:' + agent.id}>{agent.name} · 登记项目岗位…</option>)}</optgroup>}</select></label>
           {membersLoaded && !members.some(member => member.state === 'active') && <p data-testid="module-ownership-no-members" role="status">{members.length ? '当前没有已启用的项目岗位。' : '当前项目尚未登记岗位。'}{registration?.agents.length ? '未显式设置时按父级、模型匹配和主 Agent 兜底解析。需要固定分工时，可选择自定义 Agent，保存岗位与模型后再确认负责人。' : '无需配置即可由主 Agent 执行。需要分工时，可在团队架构创建自定义 Agent 并登记岗位。'}</p>}
-          <label>变更原因<textarea aria-label="负责人变更原因" required maxLength={2000} value={reason} onChange={event =>
-              {
-                setReason(event.target.value);
-                invalidate()
-              }} /></label>
+          <label>变更原因<textarea aria-label="负责人变更原因" required maxLength={2000} value={reason} onChange={event => { setReason(event.target.value); invalidate() }} /></label>
           <button className="solid-button" data-testid="module-ownership-preview" type="submit" disabled={sameOwner || !reason.trim()}><Icon name="inspect" size={16} />预览负责人变更</button>
           {binding?.ownerMemberId && <button data-testid="module-ownership-adopt-source" type="button" disabled={!sameOwner || !reason.trim()} onClick={() => void prepare(true)}><Icon name="inspect" size={16} />预览采纳当前来源</button>}
         </fieldset></form>

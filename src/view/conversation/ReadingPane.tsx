@@ -7,31 +7,14 @@ import { useLayoutEffect, useRef, type ReactNode } from 'react';
 export function ReadingPane({ active, children, label }: { active: boolean; children: ReactNode; label: string })
 {
   const scroll = useRef<HTMLDivElement>(null),
+
     content = useRef<HTMLDivElement>(null),
+
     follow = useRef(true),
+
     position = useRef(0);
-  useLayoutEffect(() =>
-  {
-    const node = scroll.current,
-      body = content.current;
-    if (!active || !node || !body)
-      return;
-    node.scrollTop = follow.current ? node.scrollHeight : position.current;
-    const observer = new ResizeObserver(() =>
-    {
-      if (follow.current)
-        node.scrollTop = node.scrollHeight
-    });
-    observer.observe(body);
-    return () => observer.disconnect()
-  }, [active]);
-  return <div className="chat-scroll" aria-label={label} ref={scroll} onScroll={() =>
-  {
-    const node = scroll.current;
-    if (active && node)
-    {
-      position.current = node.scrollTop;
-      follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80
-    }
-  }}><div ref={content}>{children}</div></div>;
+
+  useLayoutEffect(() => { const node = scroll.current, body = content.current; if (!active || !node || !body) return; node.scrollTop = follow.current ? node.scrollHeight : position.current; const observer = new ResizeObserver(() => { if (follow.current) node.scrollTop = node.scrollHeight }); observer.observe(body); return () => observer.disconnect() }, [active]);
+
+  return <div className="chat-scroll" aria-label={label} ref={scroll} onScroll={() => { const node = scroll.current; if (active && node) { position.current = node.scrollTop; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80 } }}><div ref={content}>{children}</div></div>;
 }

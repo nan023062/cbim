@@ -3,6 +3,7 @@
  * 设计原因：外壳离开运行管理会卸载本订阅；窗口最小化/隐藏时也不持续轮询，恢复可见后按原游标补读。
  */
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+
 import { RuntimeFeed } from './runtime-feed';
 
 const feed = new RuntimeFeed(cursor => window.cbim.call('runtime.read', { cursor }));
@@ -13,23 +14,17 @@ const snapshot = () => feed.snapshot;
 export function useRuntimeVisibility()
 {
   const [visible, setVisible] = useState(() => !document.hidden);
-  useEffect(() =>
-  {
-    const change = () => setVisible(!document.hidden);
-    document.addEventListener('visibilitychange', change);
-    return () => document.removeEventListener('visibilitychange', change)
-  }, []);
+
+  useEffect(() => { const change = () => setVisible(!document.hidden); document.addEventListener('visibilitychange', change); return () => document.removeEventListener('visibilitychange', change) }, []);
+
   return visible
 }
-
 export function useRuntime(active: boolean)
 {
-  const subscribe = useCallback((listener: () => void) => active ? feed.Subscribe(listener) : () =>
-  {
-  }, [active]);
+  const subscribe = useCallback((listener: () => void) => active ? feed.Subscribe(listener) : () => { }, [active]);
+
   return useSyncExternalStore(subscribe, snapshot, snapshot)
 }
-
 export function refreshRuntime()
 {
   return feed.Refresh()

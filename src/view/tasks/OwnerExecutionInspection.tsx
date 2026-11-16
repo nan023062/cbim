@@ -4,8 +4,11 @@
  * 设计原因：查询不随流式事件轮询，不消费检查点或改变执行；控制器按完整任务版本隔离迟到响应，历史与当前观察分别呈现。
  */
 import { useEffect, useState } from 'react';
+
 import type { TaskNode } from '../../bridge/contracts/dispatch';
+
 import { OwnerInspectionController, ownerInspectionKey, ownerTaskView } from './owner-execution-state';
+
 import './owner-execution.css';
 
 const explanations = { matching: '本次读取与原派发绑定一致；实际领取仍须重新核实。', changed: '当前岗位、责任或配置版本已变化；原任务和历史结果保持不变。', unavailable: '当前负责人配置存在缺口，不能据此新领取任务。', legacy: '这是旧任务，没有可信岗位绑定；当前查询不会自动补绑。' };
@@ -14,26 +17,31 @@ const explanations = { matching: '本次读取与原派发绑定一致；实际�
 export function OwnerExecutionInspection({ task }: { task: TaskNode })
 {
   const [controller] = useState(() => new OwnerInspectionController(task, input => window.cbim.call('dispatch.ownerInspect', input))),
+
     [, refresh] = useState(0);
+
   const key = ownerInspectionKey(task),
+
     state = controller.snapshot;
+
   useEffect(() => controller.Subscribe(() => refresh(value => value + 1)), [controller]);
-  useEffect(() =>
-  {
-    controller.Observe(task)
-  }, [controller, key]);
+
+  useEffect(() => { controller.Observe(task) }, [controller, key]);
+
   useEffect(() => () => controller.Dispose(), [controller]);
+
   const shown = state.key === key ? state : undefined;
+
   if (task.fallbackBinding)
+
     return <p className="owner-execution-muted">自动兜底的模块、模型和负责人状态会在实际领取时重新核实；后续登记的负责人不会覆盖这份历史。</p>;
+
   if (ownerTaskView(task).kind === 'invalid')
+
     return null;
+
   return <section className="owner-execution-current" aria-label="当前负责人核实" data-testid="owner-current-inspection">
-    <button disabled={!!shown?.loading} onClick={() =>
-    {
-      controller.Observe(task);
-      void controller.Inspect()
-    }} data-testid="owner-inspect-current">{shown?.loading ? '正在核实…' : '核实当前负责人配置'}</button>
+    <button disabled={!!shown?.loading} onClick={() => { controller.Observe(task); void controller.Inspect() }} data-testid="owner-inspect-current">{shown?.loading ? '正在核实…' : '核实当前负责人配置'}</button>
     <p className="owner-execution-muted">只读取本任务涉及的岗位、模块及公开模型配置；不会启动模型、采纳配置或移交任务。</p>
     {shown?.error && <p className="owner-execution-warning" role="alert">{shown.error}；如有旧报告，仅保留当时观察。</p>}
     {shown?.view && <div data-testid="owner-current-result" data-comparison={shown.view.comparison}>

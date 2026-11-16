@@ -3,32 +3,36 @@
  * 设计原因：阅读成员对话不会中断工作；只有按钮提交执行。此表单消费独立持久的频道草稿，冻结有序附件身份；不消费普通聊天草稿，所有请求指向原主 Session。
  */
 import { useEffect, useMemo, useState } from 'react';
+
 import { pendingTopicInterruption } from '../../bridge/contracts/dispatch';
+
 import type { PublicDispatchScope, TopicInterruptionRequest } from '../../bridge/contracts/dispatch';
+
 import { ChannelDraftInput } from './ChannelDraftInput';
+
 import { useChannelDraft, type ChannelDraftView } from './useChannelDraft';
+
 import { TopicInterruptionController } from './topic-interruption-state';
 
 /** 外层以工作区实例、话题和输入版本作 key；隐藏会话不允许新提交，已在途请求仍保留回执。 */
 export function TopicInterruptionForm({ scope, options, active, onRefresh, draft }: { scope: PublicDispatchScope; draft: ChannelDraftView; options?: TopicInterruptionRequest['options']; active: boolean; onRefresh: () => void })
 {
   const [, render] = useState(0);
+
   const controller = useMemo(() => new TopicInterruptionController({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, expectedInputRevision: scope.goal?.inputRevision ?? 1 }, { storage: window.localStorage, uuid: () => crypto.randomUUID(), submit: request => window.cbim.call('loop.topicInterrupt', request), lookup: request => window.cbim.call('loop.goalContinuation', request) }), [scope.workspaceId, scope.rootSessionId, scope.scopeId, scope.goal?.inputRevision]);
+
   const saved = pendingTopicInterruption(scope),
+
     state = controller.snapshot;
-  useEffect(() =>
-  {
-    const unsubscribe = controller.Subscribe(() => render(value => value + 1));
-    void controller.Restore(saved?.request);
-    return unsubscribe
-  }, [controller, saved?.request.commandId]);
+
+  useEffect(() => { const unsubscribe = controller.Subscribe(() => render(value => value + 1)); void controller.Restore(saved?.request); return unsubscribe }, [controller, saved?.request.commandId]);
+
   const canWrite = active && scope.status === 'active' && !!scope.goal && !scope.goal.blocked && draft.store.writable && !draft.busy && !state.pending && state.ready && !state.request && !saved;
+
   const selected = scope.recovery && options ? { ...options, permission: 'read' as const } : options;
-  const execute = async (work: () => Promise<void>) =>
-  {
-    await work();
-    onRefresh()
-  };
+
+  const execute = async (work: () => Promise<void>) => { await work(); onRefresh() };
+
   return <details className="scope-continuation topic-interruption" data-testid="topic-interruption" open>
     <summary>向主 Agent 补充此话题</summary>
     <p>提交后，本话题的主 Agent 和全部执行成员将暂停。确认退出后，主 Agent 会重新分析和调度；其他办公室不受影响。</p>
@@ -39,23 +43,14 @@ export function TopicInterruptionForm({ scope, options, active, onRefresh, draft
     {state.request && !state.receipt && !state.pending && <p role="status">补充原文已保留，尚未确认主 Agent 接收。请查询状态，或明确重试同一请求。</p>}
     {state.receipt && <p role="status">补充已受理，后续进展见本话题对话。</p>}
     {state.error && <p role="alert">{state.error}</p>}
-    {canWrite && <button disabled={!selected || !!draft.error || !draft.value.text.trim()} onClick={() =>
-    {
-      const value = draft.value;
-      void execute(async () =>
-      {
-        await controller.Submit(value.text, selected!, value.attachments.map(item => item.id));
-        if (controller.snapshot.request)
-          draft.clear(value.revision)
-      })
-    }}>暂停话题并提交补充</button>}
+    {canWrite && <button disabled={!selected || !!draft.error || !draft.value.text.trim()} onClick={() => { const value = draft.value; void execute(async () => { await controller.Submit(value.text, selected!, value.attachments.map(item => item.id)); if (controller.snapshot.request) draft.clear(value.revision) }) }}>暂停话题并提交补充</button>}
     {state.request && <><button disabled={state.pending} onClick={() => void execute(() => controller.Query())}>查询原请求</button>{!state.receipt && scope.status !== 'closed' && <button disabled={!active || state.pending} onClick={() => void execute(() => controller.Retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
   </details>;
 }
-
 /** 旧历史恢复仍用原作用域草稿，普通对话不创建新的频道。 */
 export function LegacyTopicInterruptionForm(props: Omit<Parameters<typeof TopicInterruptionForm>[0], 'draft'>)
 {
   const draft = useChannelDraft(props.scope, props.active);
+
   return <TopicInterruptionForm {...props} draft={draft} />;
 }

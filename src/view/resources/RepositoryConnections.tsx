@@ -6,12 +6,19 @@
  * IPC 边界：连接提交与回执查询按具体Schema形成操作元组。
  */
 import { Icon } from '../components/Icon';
+
 import { checkedIpcCall } from '../../bridge/contracts/ipc-call';
+
 import { useEffect, useRef, useState } from 'react';
+
 import type { WorkspaceView, Snapshot } from '../../bridge/contracts/workspace';
+
 import type { RepositoryStatus } from '../../bridge/contracts/resources';
+
 import type { RepositoryConnectionList, RepositoryConnectionPreview, RepositoryConnectionCheck, } from '../../bridge/contracts/repository-connections';
+
 import { createRepositoryConnectionPendingStore, checkedRepositoryConnectionCommit, checkedRepositoryConnectionReceipt, checkedRepositoryConnectionUnaccepted, isRepositoryConnectionPreflightRejection, type RepositoryConnectionPending } from './repository-connection-state';
+
 import './repository-connections.css';
 
 type Connection = RepositoryConnectionList['connections'][number];
@@ -24,33 +31,42 @@ const message = (cause: unknown) => cause instanceof Error ? cause.message : Str
 export function RepositoryConnections({ onSettings }: { onSettings: () => void })
 {
   const [workspaces, setWorkspaces] = useState<WorkspaceView[]>([]),
+
     [workspaceId, setWorkspaceId] = useState('');
+
   const [list, setList] = useState<RepositoryConnectionList>(),
+
     [status, setStatus] = useState<RepositoryStatus>();
+
   const [preview, setPreview] = useState<RepositoryConnectionPreview>(),
+
     [busy, setBusy] = useState(false),
+
     [error, setError] = useState(''),
+
     [notice, setNotice] = useState('');
+
   const [slug, setSlug] = useState('resource-repository'),
+
     [name, setName] = useState('团队资源仓库');
+
   const [checks, setChecks] = useState<Record<string, RepositoryConnectionCheck>>({});
+
   const [pending, setPending] = useState<RepositoryConnectionPending>(),
+
     [storageError, setStorageError] = useState(false);
+
   const store = useRef(createRepositoryConnectionPendingStore({ getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) })).current;
+
   // 同步锁早于 React 重绘，拒绝双击；generation 防止旧目标结果覆盖新选择。
   const lock = useRef(false),
+
     generation = useRef(0),
+
     alive = useRef(false);
-  useEffect(() =>
-  {
-    alive.current = true;
-    void initial();
-    return () =>
-    {
-      alive.current = false;
-      generation.current++
-    }
-  }, []);
+
+  useEffect(() => { alive.current = true; void initial(); return () => { alive.current = false; generation.current++ } }, []);
+
   function current(token: number)
   {
     return alive.current && generation.current === token
@@ -58,23 +74,29 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function initial()
   {
     const token = ++generation.current;
+
     setBusy(true);
+
     lock.current = true;
+
     try
     {
       const [registered, repository] = await Promise.all([window.cbim.call('list') as Promise<
         {
           entries: WorkspaceView[]
         }>, window.cbim.call('resources.status') as Promise<RepositoryStatus>]);
+
       if (current(token))
       {
         setWorkspaces(registered.entries);
+
         setStatus(repository)
       }
     }
     catch (cause)
     {
       if (current(token))
+
         setError(message(cause))
     }
     finally
@@ -82,6 +104,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       if (current(token))
       {
         lock.current = false;
+
         setBusy(false)
       }
     }
@@ -89,42 +112,62 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function load(id: string, token: number)
   {
     const [snapshot, repository] = await Promise.all([window.cbim.call('snapshot', { id }) as Promise<Snapshot>, window.cbim.call('resources.status') as Promise<RepositoryStatus>]);
+
     if (snapshot.workspaceId !== id)
+
       throw Error('工作区身份已变化，请重新选择');
+
     const value: RepositoryConnectionList = await window.cbim.call('resources.connection.list', { workspaceId: id, instanceId: snapshot.instanceId });
+
     if (value.identity.workspaceId !== id || value.identity.instanceId !== snapshot.instanceId)
+
       throw Error('连接列表身份不一致，请重新加载');
+
     if (current(token))
     {
       setList(value);
+
       setStatus(repository)
     }
   }
   async function select(id: string)
   {
     if (lock.current)
+
       return;
+
     setWorkspaceId(id);
+
     setList(undefined);
+
     setPreview(undefined);
+
     setChecks({});
+
     setPending(undefined);
+
     setError('');
+
     setNotice('');
+
     try
     {
       setPending(id ? store.Read(id) : undefined);
+
       setStorageError(false)
     }
     catch (cause)
     {
       setStorageError(true);
+
       setError(message(cause));
+
       return
     }
     if (!id)
     {
       generation.current++;
+
       return
     }
     await perform(async token => load(id, token));
@@ -133,11 +176,17 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   async function perform(action: (token: number) => Promise<void>)
   {
     if (lock.current)
+
       return;
+
     lock.current = true;
+
     const token = ++generation.current;
+
     setBusy(true);
+
     setError('');
+
     try
     {
       await action(token)
@@ -145,6 +194,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     catch (cause)
     {
       if (current(token))
+
         setError(message(cause))
     }
     finally
@@ -152,181 +202,110 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       if (current(token))
       {
         lock.current = false;
+
         setBusy(false)
       }
     }
   }
   async function refresh()
   {
-    await perform(async token =>
-    {
-      setPreview(undefined);
-      setChecks({});
-      try
-      {
-        setPending(workspaceId ? store.Read(workspaceId) : undefined);
-        setStorageError(false)
-      }
-      catch (cause)
-      {
-        setStorageError(true);
-        throw cause
-      }
-      if (workspaceId)
-        await load(workspaceId, token);
-      else
-      {
-        const registered:
-          {
-            entries: WorkspaceView[]
-          } = await window.cbim.call('list');
-        const repository: RepositoryStatus = await window.cbim.call('resources.status');
-        if (current(token))
-        {
-          setWorkspaces(registered.entries);
-          setStatus(repository)
-        }
-      }
-    })
+    await perform(async token => { setPreview(undefined); setChecks({}); try { setPending(workspaceId ? store.Read(workspaceId) : undefined); setStorageError(false) } catch (cause) { setStorageError(true); throw cause } if (workspaceId) await load(workspaceId, token); else { const registered: { entries: WorkspaceView[] } = await window.cbim.call('list'); const repository: RepositoryStatus = await window.cbim.call('resources.status'); if (current(token)) { setWorkspaces(registered.entries); setStatus(repository) } } })
   }
   async function prepare()
   {
     if (!list?.sharing)
+
       return;
+
     const base = list;
-    await perform(async token =>
-    {
-      setPreview(undefined);
-      setNotice('');
-      const value: RepositoryConnectionPreview = await window.cbim.call('resources.connection.preview', {
-        ...base.identity, revision: base.knowledgeRevision, repositoryId: base.sharing!.repositoryId, connectorId: '.cbim/connectors/' + slug,
-        name: name.trim(), summary: '连接用户明确共享的团队资源仓库。此定义只标识仓库身份，实际访问需要独立的工作区只读授权；资源仅作资料，不能自动安装、应用或执行。',
-      });
-      if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId)
-        throw Error('预览目标身份不一致，请刷新');
-      if (current(token))
-        setPreview(value);
-    });
+
+    await perform(async token => { setPreview(undefined); setNotice(''); const value: RepositoryConnectionPreview = await window.cbim.call('resources.connection.preview', { ...base.identity, revision: base.knowledgeRevision, repositoryId: base.sharing!.repositoryId, connectorId: '.cbim/connectors/' + slug, name: name.trim(), summary: '连接用户明确共享的团队资源仓库。此定义只标识仓库身份，实际访问需要独立的工作区只读授权；资源仅作资料，不能自动安装、应用或执行。', }); if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId) throw Error('预览目标身份不一致，请刷新'); if (current(token)) setPreview(value); });
   }
   async function commit()
   {
     if (!preview || !preview.validation.structural)
+
       return;
+
     const frozen = preview;
+
     await submit({ action: 'commit', input: { ...frozen.identity, planId: frozen.planId }, expected: { connectorId: frozen.definition.id, repositoryId: frozen.repositoryId, definitionHash: frozen.definitionHash } });
   }
   async function authorize(row: Connection, action: 'grant' | 'revoke')
   {
     if (!list)
+
       return;
+
     const identity = list.identity;
+
     const request: RepositoryConnectionPending = action === 'grant' ? { action, input: { ...identity, connectorId: row.connectorId, repositoryId: row.repositoryId!, definitionHash: row.definitionHash!, expectedGrantRevision: row.grantRevision, commandId: crypto.randomUUID() } } : { action, input: { ...identity, connectorId: row.connectorId, expectedGrantRevision: row.grantRevision, commandId: crypto.randomUUID() }, expected: { repositoryId: row.grant!.repositoryId, definitionHash: row.grant!.definitionHash } };
+
     await submit(request);
   }
   /** 先保存小体积原请求再提交；首次确定拒绝可解除，已未知或恢复的请求只能继续核实。 */
   async function submit(request: RepositoryConnectionPending)
   {
-    await perform(async token =>
-    {
-      const existed = store.Read(request.input.workspaceId);
-      store.Save(request);
-      setChecks({});
-      setPending(request);
-      setNotice('');
-      let receipt: unknown;
-      try
-      {
-        receipt = await window.cbim.call(...checkedIpcCall(`resources.connection.${request.action}`, request.input))
-      }
-      catch (cause)
-      {
-        if (!existed && isRepositoryConnectionPreflightRejection(request.action, cause))
-        {
-          store.Remove(request);
-          if (current(token))
-          {
-            setPending(undefined);
-            if (request.action === 'commit')
-              setPreview(undefined)
-          }
-        }
-        throw cause
-      }
-      await accepted(receipt, request, token);
-    });
+    await perform(async token => { const existed = store.Read(request.input.workspaceId); store.Save(request); setChecks({}); setPending(request); setNotice(''); let receipt: unknown; try { receipt = await window.cbim.call(...checkedIpcCall(`resources.connection.${request.action}`, request.input)) } catch (cause) { if (!existed && isRepositoryConnectionPreflightRejection(request.action, cause)) { store.Remove(request); if (current(token)) { setPending(undefined); if (request.action === 'commit') setPreview(undefined) } } throw cause } await accepted(receipt, request, token); });
   }
   async function accepted(receipt: unknown, request: RepositoryConnectionPending, token: number)
   {
     if (request.action === 'commit')
+
       checkedRepositoryConnectionCommit(receipt, request);
+
     else
+
       checkedRepositoryConnectionReceipt(receipt, request);
+
     store.Remove(request);
+
     if (current(token))
     {
       setPending(undefined);
+
       setPreview(undefined);
+
       setNotice(request.action === 'commit' ? '已确认原定义登记回执。下面显示当前状态；读取仍需独立授权。' : request.action === 'grant' ? '已确认原只读授权。下面显示当前状态，可点击“核验连接”读取真实 HTTP 摘要。' : '已确认原撤销命令；下面显示当前状态。');
+
       await load(request.input.workspaceId, token)
     }
   }
   async function inspectPending()
   {
     if (!pending)
+
       return;
+
     const frozen = pending;
-    await perform(async token =>
-    {
-      const receipt: unknown = await window.cbim.call(...checkedIpcCall(frozen.action === 'commit' ? 'resources.connection.commitReceipt' : 'resources.connection.receipt', frozen.action === 'commit' ? { workspaceId: frozen.input.workspaceId, planId: frozen.input.planId } : { workspaceId: frozen.input.workspaceId, commandId: frozen.input.commandId }));
-      if (receipt)
-        await accepted(receipt, frozen, token);
-      else if (current(token))
-        setError('尚未查到原命令回执。可重试原请求；不会创建新的授权命令。');
-    });
+
+    await perform(async token => { const receipt: unknown = await window.cbim.call(...checkedIpcCall(frozen.action === 'commit' ? 'resources.connection.commitReceipt' : 'resources.connection.receipt', frozen.action === 'commit' ? { workspaceId: frozen.input.workspaceId, planId: frozen.input.planId } : { workspaceId: frozen.input.workspaceId, commandId: frozen.input.commandId })); if (receipt) await accepted(receipt, frozen, token); else if (current(token)) setError('尚未查到原命令回执。可重试原请求；不会创建新的授权命令。'); });
   }
   /** 旧实例已退役且服务证明从未受理才解除；查不到回执本身不能推出未提交。 */
   async function resolveUnaccepted()
   {
     if (!pending)
+
       return;
+
     const frozen = pending;
-    await perform(async token =>
-    {
-      const proof = await window.cbim.call('resources.connection.unaccepted', { workspaceId: frozen.input.workspaceId, instanceId: frozen.input.instanceId, action: frozen.action, id: frozen.action === 'commit' ? frozen.input.planId : frozen.input.commandId });
-      if (!checkedRepositoryConnectionUnaccepted(proof, frozen))
-        throw Error('尚不能证明原请求未受理，请保留原请求并查询回执');
-      store.Remove(frozen);
-      if (current(token))
-      {
-        setPending(undefined);
-        setPreview(undefined);
-        setNotice('已核实旧实例没有受理原请求，可以按当前状态重新操作。');
-        await load(frozen.input.workspaceId, token)
-      }
-    });
+
+    await perform(async token => { const proof = await window.cbim.call('resources.connection.unaccepted', { workspaceId: frozen.input.workspaceId, instanceId: frozen.input.instanceId, action: frozen.action, id: frozen.action === 'commit' ? frozen.input.planId : frozen.input.commandId }); if (!checkedRepositoryConnectionUnaccepted(proof, frozen)) throw Error('尚不能证明原请求未受理，请保留原请求并查询回执'); store.Remove(frozen); if (current(token)) { setPending(undefined); setPreview(undefined); setNotice('已核实旧实例没有受理原请求，可以按当前状态重新操作。'); await load(frozen.input.workspaceId, token) } });
   }
   async function check(row: Connection)
   {
     if (!list)
+
       return;
+
     const base = list;
-    await perform(async token =>
-    {
-      setChecks(value =>
-      {
-        const next = { ...value };
-        delete next[row.connectorId];
-        return next
-      });
-      const value: RepositoryConnectionCheck = await window.cbim.call('resources.connection.check', { ...base.identity, connectorId: row.connectorId, expectedGrantRevision: row.grantRevision });
-      if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId || value.connectorId !== row.connectorId || value.grantRevision !== row.grantRevision)
-        throw Error('核验回执已过期，请刷新连接状态');
-      if (current(token))
-        setChecks(values => ({ ...values, [row.connectorId]: value }));
-    });
+
+    await perform(async token => { setChecks(value => { const next = { ...value }; delete next[row.connectorId]; return next }); const value: RepositoryConnectionCheck = await window.cbim.call('resources.connection.check', { ...base.identity, connectorId: row.connectorId, expectedGrantRevision: row.grantRevision }); if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId || value.connectorId !== row.connectorId || value.grantRevision !== row.grantRevision) throw Error('核验回执已过期，请刷新连接状态'); if (current(token)) setChecks(values => ({ ...values, [row.connectorId]: value })); });
   }
   const blocked = busy || !!pending || storageError,
+
     sharing = !!list?.sharing;
+
   return <section className="repository-connections" data-testid="repository-connections">
     <header><div><h2>工作区仓库连接</h2><p>连接当前已共享的资源仓库。允许只读连接后，主 Agent 可按任务读取目录和资料，内容会进入本工作区所选模型的上下文。授权和连接在每轮开始时固定，运行中不会自动换源；撤销会阻止后续读取和迟到结果。</p></div><button disabled={busy} onClick={() => void refresh()}><Icon name="refresh" size={16} />刷新连接状态</button></header>
     {!status?.sharing && <p>请先在设置中启动仓库共享。<button disabled={blocked} onClick={onSettings}><Icon name="openExternal" size={16} />前往仓库设置</button></p>}

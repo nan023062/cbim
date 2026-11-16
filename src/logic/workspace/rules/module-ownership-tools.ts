@@ -4,12 +4,17 @@
  * 边界：模块查询包含真实岗位执行选择及缺口，但选择仅是预期，不能替代服务重核或验收；回执不存在保持 unknown，不授权重新写入。
  */
 import { z } from 'zod';
+
 import { moduleOwnershipChangeInputSchema, moduleOwnershipCursorSchema, moduleOwnershipPageSchema, moduleOwnershipPreviewSchema, moduleOwnershipReadBasisSchema, moduleOwnershipReceiptSchema } from './module-ownership';
+
 import { workspaceMemberListSchema, workspaceRegistryCursorSchema } from '../../team/rules/workspace-member';
+
 import { ownerExecutionDiscoverySchema, moduleOwnerMatchesSchema } from '../../team/rules/owner-execution-discovery';
 
 const id = z.string().min(1).max(1024),
+
   uuid = z.string().uuid(),
+
   sha = z.string().regex(/^[a-f0-9]{64}$/);
 
 const modules = z.object({ moduleIds: z.array(id).min(1).max(20).refine(ids => new Set(ids).size === ids.length), matches: moduleOwnerMatchesSchema.optional() }).strict().refine(value => !value.matches || value.matches.choices.every(item => value.moduleIds.includes(item.moduleId)), '匹配必须属于本次模块');
@@ -63,7 +68,6 @@ export interface ModuleOwnerRunBinding
 
   runId: string
 }
-
 /** 领域方法只执行一次；运行关闭与 Store 生命周期由 Main 实现核实。 */
 export interface ModuleOwnershipToolsPort
 {

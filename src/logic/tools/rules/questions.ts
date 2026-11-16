@@ -18,7 +18,6 @@ export interface PendingQuestion extends QuestionInput
 
   taskId: string
 }
-
 /** option 为 null 才是其它答案；索引只引用冻结选项，不接受客户端自报的题目或答案标签。 */
 export const questionAnswersInputSchema = z.array(z.object({ option: z.number().int().min(0).max(5).nullable(), other: z.string().trim().max(4000) }).strict()).min(1).max(3);
 
@@ -36,22 +35,6 @@ export type QuestionResult = z.infer<typeof questionResultSchema>;
 export function questionResultForInput(input: QuestionInput)
 {
   const expected = structuredClone(input);
-  return questionResultSchema.superRefine((value, context) =>
-  {
-    if ('cancelled' in value)
-      return;
-    if (value.answers.length !== expected.questions.length)
-    {
-      context.addIssue({ code: 'custom', message: '回答数量与原题不一致' });
-      return
-    }
-    value.answers.forEach((answer, index) =>
-    {
-      const original = expected.questions[index];
-      if (answer.question !== original.question)
-        context.addIssue({ code: 'custom', path: ['answers', index, 'question'], message: '回答不属于原题或顺序不一致' });
-      if (answer.supplement !== undefined && !original.options.some(option => option.label === answer.answer))
-        context.addIssue({ code: 'custom', path: ['answers', index, 'answer'], message: '附加说明必须属于原选项答案' });
-    });
-  });
+
+  return questionResultSchema.superRefine((value, context) => { if ('cancelled' in value) return; if (value.answers.length !== expected.questions.length) { context.addIssue({ code: 'custom', message: '回答数量与原题不一致' }); return } value.answers.forEach((answer, index) => { const original = expected.questions[index]; if (answer.question !== original.question) context.addIssue({ code: 'custom', path: ['answers', index, 'question'], message: '回答不属于原题或顺序不一致' }); if (answer.supplement !== undefined && !original.options.some(option => option.label === answer.answer)) context.addIssue({ code: 'custom', path: ['answers', index, 'answer'], message: '附加说明必须属于原选项答案' }); }); });
 }

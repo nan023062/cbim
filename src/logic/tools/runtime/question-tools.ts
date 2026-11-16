@@ -4,10 +4,15 @@
  * 职责边界：保留答案或取消事实，不从用户文字授予工具权限、认证身份或业务验收，也不加入知识工具目录。
  */
 import { zodToJsonSchema } from 'zod-to-json-schema';
+
 import { questionInput, questionResultSchema, questionResultForInput, questionToolName, type QuestionInput } from '../rules/questions';
+
 import { checkedJsonToolResult } from '../rules/results';
+
 import type { ToolCancellation, ToolRecovery } from '../rules/contracts';
+
 import type { RunToolDescriptor } from '../rules/policy/tool-policy';
+
 import { fail } from '../../../core/errors';
 
 /** 仅描述现有交互；等待可取消，已消费的答案及既有运行记录不会回滚。 */
@@ -19,40 +24,44 @@ export class QuestionTools
   constructor(private readonly request: (input: QuestionInput, signal: AbortSignal) => Promise<unknown>)
   {
   }
-
   Has(name: string)
   {
     return name === questionToolName
   }
-
   List()
   {
     return [structuredClone(questionTool)]
   }
-
   private Parse(name: string, raw: unknown)
   {
     if (!this.Has(name))
+
       fail('QUESTION_TOOL_UNKNOWN', '当前运行没有该提问工具');
+
     const parsed = questionInput.safeParse(raw);
+
     if (!parsed.success)
+
       fail('QUESTION_INPUT_INVALID', '问题参数无效，请提供1至3个问题及各2至6个选项，不接受身份或授权字段');
+
     return parsed.data;
   }
-
   /** 授权前只检查严格原参数并分类，不弹题、不消费回答。 */
   Describe(name: string, raw: unknown): RunToolDescriptor
   {
     this.Parse(name, raw);
+
     return { effects: ['read'], native: false }
   }
-
   /** 不在 await 后用取消覆盖先完成的回答；真正终态由队列的一次消费边界决定。 */
   async Call(name: string, raw: unknown, signal: AbortSignal)
   {
     const input = this.Parse(name, raw),
+
       schema = questionResultForInput(input);
+
     const result = await this.request(input, signal);
+
     return checkedJsonToolResult(name, result, schema);
   }
 }

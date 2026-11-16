@@ -6,18 +6,31 @@
  * 隔离资源：独立显式查询原运行，清理不依赖业务日志面板是否已打开，也不改写任务结果。
  */
 import { Icon } from '../components/Icon';
+
 import type { ExecutionReport, GraphCursor, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
+
 import { useExecutionReport } from './useExecutionReport';
+
 import type { ExecutionReportState } from './execution-report-state';
+
 import { useExecutionRecovery, type ExecutionRecoveryContext } from './useExecutionRecovery';
+
 import { ExecutionRecoveryForm } from './ExecutionRecoveryForm';
+
 import { MemberArtifactReport } from './MemberArtifactReport';
+
 import { MemberOutputManifest } from './MemberOutputManifest';
+
 import { MemberEffectObservation } from './EffectObservationPanel';
+
 import { MemberControlledFiles } from './ControlledFilePanel';
+
 import { IsolatedExecutionPanel } from './IsolatedExecutionPanel';
+
 import { effectObservationAnchor } from './effect-recovery-state';
+
 import { RepositoryScopeDetails } from '../components/RepositoryScopeDetails';
+
 import './execution-report.css';
 
 export interface ExecutionReportView extends ExecutionReportState
@@ -28,7 +41,6 @@ export interface ExecutionReportView extends ExecutionReportState
 
   more: () => Promise<void>
 }
-
 const executionLabels: Record<ExecutionReport['execution'], string> = { not_started: '尚未领取执行', in_flight: '有在途执行记录', settled: '执行轮次已结算', unknown: '执行结果未知' };
 
 const logLabels: Record<ExecutionReport['log']['state'], string> = { not_expected: '没有已登记的运行日志', not_selected: '尚未选择执行轮次', verified: '运行日志已通过核对', missing: '运行日志缺失', incomplete: '运行日志不完整', invalid: '运行日志无效', identity_mismatch: '运行日志身份不匹配', unavailable: '运行日志暂时无法读取' };
@@ -45,7 +57,9 @@ const runLabels = { active: '启动意图已登记', closed: '原调用已关闭
 export function ExecutionReportPanel({ state, taskId, runId }: { state: ExecutionReportView; taskId: string; runId?: string })
 {
   const { report, loading, error, stale } = state,
+
     phase = loading ? 'loading' : error ? 'error' : report ? 'ready' : 'idle';
+
   return <section className="execution-report" aria-label="成员执行记录核实" data-testid="member-execution-report" data-task-id={taskId} data-run-id={runId ?? ''} data-report-state={phase} data-execution={report?.execution} data-log-state={report?.log.state}>
     <header><h4>执行记录核实</h4><button data-testid={report ? 'execution-report-refresh' : 'execution-report-inspect'} disabled={loading} onClick={() => void state.inspect()}>{report ? '重新核实' : '核实执行记录'}</button></header>
     <p className="member-muted">只读取派发记录、运行日志和工具回执，不恢复执行或重试操作。</p>
@@ -78,11 +92,12 @@ export function ExecutionReportPanel({ state, taskId, runId }: { state: Executio
     </>}
   </section>;
 }
-
 /** 独立挂载在轮次选择器之后，即使流式日志损坏也能通过该只读入口检查登记事实。 */
 export function MemberExecutionReport({ workspaceId, workspaceInstanceId, rootSessionId, task, runId, graphCursor, scope, recovery }: { workspaceId: string; workspaceInstanceId?: string; rootSessionId: string; task: TaskNode; runId?: string; graphCursor?: GraphCursor; scope?: ScopeSummary; recovery?: ExecutionRecoveryContext })
 {
   const state = useExecutionReport({ workspaceId, rootSessionId, taskId: task.taskId, scopeId: task.scopeId, runId }, task, graphCursor, scope);
+
   const creation = useExecutionRecovery(workspaceId, rootSessionId, task, runId, state.report, state.stale || state.loading || !!state.error, recovery, state.invalidate);
+
   return <><ExecutionReportPanel state={state} taskId={task.taskId} runId={runId} />{runId && <><IsolatedExecutionPanel key={JSON.stringify([workspaceId, workspaceInstanceId, rootSessionId, task.taskId, runId])} identity={{ workspaceId, rootSessionId, taskId: task.taskId, runId }} instanceId={workspaceInstanceId} /><MemberArtifactReport identity={{ workspaceId, rootSessionId, taskId: task.taskId, runId }} task={task} graphCursor={graphCursor} scope={scope} /><MemberOutputManifest identity={{ workspaceId, rootSessionId, taskId: task.taskId, runId }} task={task} graphCursor={graphCursor} scope={scope} /></>}<ExecutionRecoveryForm state={creation} />{state.report && <MemberControlledFiles report={state.report} instanceId={workspaceInstanceId} anchor={effectObservationAnchor(recovery?.state)} />}{state.report && <MemberEffectObservation key={runId} report={state.report} anchor={effectObservationAnchor(recovery?.state)} context={recovery} />}</>;
 }

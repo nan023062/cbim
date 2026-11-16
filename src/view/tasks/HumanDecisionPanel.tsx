@@ -5,9 +5,13 @@
  * 设计原因：普通对话及模型审阅不能代替真人选择；界面解释所选范围与未知限制，保存只记意见，不能暗示已启动或完成目标。
  */
 import { Icon } from '../components/Icon';
+
 import type { HumanDecisionKind, HumanDecisionPreview, HumanReconsideration } from '../../bridge/contracts/human-decisions';
+
 import type { HumanDecisionsView } from './useHumanDecisions';
+
 import { ArtifactTransitionProofs } from './ArtifactTransitionProofs';
+
 import './human-decisions.css';
 
 export const humanDecisionLabels: Record<HumanDecisionKind, string> = { accept: '接受', reject: '拒绝', request_evidence: '要求补证' };
@@ -27,22 +31,26 @@ function ReconsiderationSummary({ value }: { value: HumanReconsideration })
 {
   return <div data-testid="human-reconsideration" data-status={value.status}><strong>{reconsiderLabels[value.status]}</strong><p>旧接受不自动沿用。请明确选择当前成果、核实后提交新意见；保存后仍需独立继续。</p><ul>{value.checks.map(check => <li key={check.key} data-check={check.key} data-state={check.state}><strong>{checkLabels[check.key]}：</strong>{check.message}</li>)}</ul>{!value.canReconsider && <p className="human-warning">当前不能关联提交。可退出对照后，独立核实并决定当前成果。</p>}</div>;
 }
-
 /** 同时展示目录范围与条目数量；不把旧文件子集的观察包装成完整核实。 */
 function ManifestSummary({ manifest }: { manifest: NonNullable<HumanDecisionPreview['candidates'][number]['manifest']> })
 {
   return <div data-testid="human-manifest-scope"><p>完整范围：{manifest.entryCount} 个条目，含 {manifest.fileCount} 个文件。目录包含全部后代。</p><ul>{manifest.scopes.flatMap(binding => binding.scope.roots.map(root => <li key={binding.moduleId + ':' + root.path}><code>{root.path}</code> · {root.kind === 'directory' ? '完整目录' : '文件'}</li>))}</ul><ArtifactTransitionProofs operations={manifest.operations} /><details><summary>原清单身份</summary><p>采集于 {new Date(manifest.capturedAt).toLocaleString()}</p><p>清单 <code>{manifest.manifestId}</code></p><p>集合指纹 <code>{manifest.manifestHash}</code></p></details></div>;
 }
-
 /** 两处卡片只接收同一个 Hook 视图；点击操作不会通过组件自身创建命令。 */
 export function HumanDecisionPanel({ state }: { state: HumanDecisionsView })
 {
   const { record, preview } = state,
+
     result = preview?.result,
+
     attempt = record?.attempt,
+
     history = state.history.filter(value => value.criterionId === state.criterionId);
+
   if (!state.criteria.length && !state.history.length)
+
     return null;
+
   return <section className="human-decisions" aria-label="人工决定" data-testid="human-decision-panel" data-scope-id={state.scopeId} data-criterion-id={state.criterionId} data-basis={state.previewCurrent ? result?.basis : undefined} data-phase={attempt?.phase ?? 'draft'}>
     <header><strong>人工决定</strong><span>本机明确提交 · 尚非整体目标完成</span></header>
     <p className="human-muted">选择验收项并核实成果，再记录接受、拒绝或补证意见。保存本身不启动模型；后续工作由独立的继续操作发起。</p>

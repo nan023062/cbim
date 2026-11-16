@@ -3,30 +3,36 @@
  * 设计原因：组织身份独立于磁盘辅助文件；搜索保留祖先，展开折叠只影响本地查看。
  */
 import { useState } from 'react';
+
 import { Icon } from '../components/Icon';
+
 import { TreeActions, type TreeAction } from '../components/TreeActions';
+
 import { TEAM_ROOT, visibleTeamNodes, type TeamModel } from './team-model';
+
 import '../knowledge/knowledge-files.css';
 
 export function TeamTree({ model, query, selected, onSelect, actions }: { model: TeamModel; query: string; selected: string; onSelect: (id: string) => void; actions: (id: string) => TreeAction[] })
 {
   const [closed, setClosed] = useState(new Set<string>()),
+
     visible = visibleTeamNodes(model, query, false);
+
   const branch = (id: string): React.ReactNode =>
   {
     const node = model.nodes[id];
+
     if (!node || node.kind === 'builtin' || (id !== TEAM_ROOT && !visible.has(id)))
+
       return null;
+
     const children = node.children.filter(child => visible.has(child) && model.nodes[child]?.kind !== 'builtin'),
+
       open = !!query || !closed.has(id);
+
     return <li key={id}><div className={'knowledge-file-row' + (selected === id ? ' selected' : '')}>
    <button className="knowledge-file-name" data-team-id={id} title={node.name} onClick={() => onSelect(id)}><Icon name={node.kind === 'agent' ? 'agent' : 'team'} size={15} /><span>{node.kind === 'team' ? '团队架构' : node.name}</span></button>
-   {!!children.length && <button className="knowledge-file-toggle" aria-label={(open ? '折叠 ' : '展开 ') + node.name} aria-expanded={open} onClick={() => setClosed(old =>
-      {
-        const next = new Set(old);
-        next.has(id) ? next.delete(id) : next.add(id);
-        return next
-      })}><Icon name="chevron" size={13} /></button>}
+   {!!children.length && <button className="knowledge-file-toggle" aria-label={(open ? '折叠 ' : '展开 ') + node.name} aria-expanded={open} onClick={() => setClosed(old => { const next = new Set(old); next.has(id) ? next.delete(id) : next.add(id); return next })}><Icon name="chevron" size={13} /></button>}
    <TreeActions name={node.kind === 'team' ? '团队架构' : node.name} actions={actions(id)} />
   </div>{open && !!children.length && <ul>{children.map(branch)}</ul>}</li>;
   };

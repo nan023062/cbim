@@ -15,7 +15,6 @@ export function isModuleOwnershipToolName(name: string): name is ModuleOwnership
 {
   return Object.hasOwn(moduleOwnershipToolEffects, name)
 }
-
 /** 控制面回执仍是知识写入；本判断只避免纯责任会话被强制当成业务目标，不能用于排除副作用。 */
 export function isModuleOwnershipControlReceipt(receipt: ToolReceipt, workspaceId: string)
 {

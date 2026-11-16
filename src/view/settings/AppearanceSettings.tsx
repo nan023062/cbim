@@ -3,12 +3,15 @@
  * 设计原因：修改即时预览并保存到本机；明确字号作用范围，恢复默认只影响外观。
  */
 import { Icon } from '../components/Icon';
+
 import type { AppearanceController } from './useAppearance';
+
 import type { AppearancePreferences, ThemePreference } from './appearance-state';
 
 export function AppearanceSettings({ appearance }: { appearance: AppearanceController })
 {
   const { value, update, error } = appearance;
+
   return <>
     <section className="settings-card" aria-labelledby="appearance-theme"><h2 id="appearance-theme">显示模式</h2><p>为工作空间选择舒适的配色。</p>
       <div className="theme-options" role="group" aria-label="显示模式">{([{ id: 'light', label: '浅色', icon: 'sun' }, { id: 'dark', label: '深色', icon: 'moon' }, { id: 'system', label: '跟随系统', icon: 'settings' }] as const).map(item => <button key={item.id} type="button" className="theme-option" aria-pressed={value.theme === item.id} onClick={() => update({ theme: item.id as ThemePreference })}><span className={'theme-miniature theme-miniature-' + item.id} aria-hidden="true"><span /><span><i /><i /><i /></span></span><span><Icon name={item.icon} size={16} />{item.label}{value.theme === item.id && <Icon name="check" size={14} />}</span></button>)}</div>

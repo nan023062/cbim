@@ -4,8 +4,11 @@
  * 设计原因：只依据已同步的 waiting 详情开放提交，历史可查看而不能冒充当前目标；文件核实及返工后的清除旧选择均由明确点击触发，不追加轮询或自动批准。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import type { HumanDecisionBaselineSelection, HumanDecisionManifestSelection, HumanDecisionKind, HumanDecisionRecord } from '../../bridge/contracts/human-decisions';
+
 import type { ScopeGoalState } from './scope-state';
+
 import { HumanDecisionPool, type HumanDecisionTarget, type HumanDecisionDraft, type HumanDecisionPreviewState } from './human-decision-state';
 
 const controllers = new HumanDecisionPool();
@@ -67,107 +70,78 @@ export interface HumanDecisionsView
 
   reconsider: (decisionId?: string) => Promise<void>;
 }
-
 /** 详情和摘要都必须属于当前 waiting，目标或独立决定增量变化会使旧预览失效。 */
 export function humanDecisionTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, criterionId: string): HumanDecisionTarget | undefined
 {
   const scope = state.selectedScope,
+
     summary = state.waitingScope;
+
   if (!rootSessionId || !criterionId || state.loading || state.detailLoading || state.error || !scope || scope.status !== 'waiting' || !scope.wait || !scope.goal?.plan || scope.goal.review?.decision !== 'awaiting_user' || summary?.scopeId !== scope.scopeId || summary.scopeId !== state.selectedScopeId || summary.wait?.waitId !== scope.wait.waitId || summary.goalRevision !== scope.goal.revision || scope.goal.revision !== scope.wait.goalRevision || (summary.humanDecisions?.revision ?? 0) !== (scope.humanDecisions?.revision ?? 0) || scope.workspaceId !== workspaceId || scope.rootSessionId !== rootSessionId || !scope.goal.plan.criteria.some(value => value.id === criterionId && value.kind === 'human'))
+
     return;
+
   return { workspaceId, rootSessionId, scopeId: scope.scopeId, criterionId, anchor: JSON.stringify([summary.stamp, scope.wait.waitId, scope.goal.revision, scope.humanDecisions?.revision ?? 0]) };
 }
-
 export function useHumanDecisions(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, refresh: () => void): HumanDecisionsView
 {
   const [selection, select] = useState(''),
+
     [, render] = useState(0),
+
     refreshRef = useRef(refresh);
+
   refreshRef.current = refresh;
+
   const identity = JSON.stringify([workspaceId, rootSessionId]),
+
     identityRef = useRef(identity);
+
   identityRef.current = identity;
-  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, {
-    storage: { getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, uuid: () => crypto.randomUUID(),
-    preview: input => window.cbim.call('dispatch.humanPreview', input), submit: input => window.cbim.call('dispatch.humanDecide', input), lookup: input => window.cbim.call('dispatch.humanReceipt', input),
-  }) : undefined, [workspaceId, rootSessionId]);
-  useEffect(() =>
-  {
-    if (!controller)
-      return;
-    const unsubscribe = controller.Subscribe(() => render(value => value + 1));
-    void controller.Restore().then(() =>
-    {
-      if (identityRef.current === identity)
-        refreshRef.current()
-    });
-    return unsubscribe
-  }, [controller, identity]);
+
+  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, { storage: { getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, uuid: () => crypto.randomUUID(), preview: input => window.cbim.call('dispatch.humanPreview', input), submit: input => window.cbim.call('dispatch.humanDecide', input), lookup: input => window.cbim.call('dispatch.humanReceipt', input), }) : undefined, [workspaceId, rootSessionId]);
+
+  useEffect(() => { if (!controller) return; const unsubscribe = controller.Subscribe(() => render(value => value + 1)); void controller.Restore().then(() => { if (identityRef.current === identity) refreshRef.current() }); return unsubscribe }, [controller, identity]);
+
   const scope = state.selectedScope,
+
     criteria = (scope?.goal?.plan?.criteria ?? []).filter(value => value.kind === 'human'),
+
     criterionId = criteria.some(value => value.id === selection) ? selection : criteria[0]?.id ?? '';
+
   const target = humanDecisionTarget(workspaceId, rootSessionId, state, criterionId),
+
     record = scope && controller?.Record(scope.scopeId, criterionId),
+
     pending = controller?.IsPending(record) ?? false;
+
   const preview = target ? controller?.PreviewState(target) : undefined,
+
     current = target ? controller?.CurrentPreview(target) : undefined;
+
   const editable = !!target && !!controller?.available && !controller.Locked(record);
-  const after = async (action: () => Promise<void>) =>
-  {
-    await action();
-    if (identityRef.current === identity)
-      refreshRef.current()
-  };
-  const edit = (change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>) =>
-  {
-    if (target && editable)
-      controller?.Edit(target, change)
-  };
+
+  const after = async (action: () => Promise<void>) => { await action(); if (identityRef.current === identity) refreshRef.current() };
+
+  const edit = (change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>) => { if (target && editable) controller?.Edit(target, change) };
+
   return {
     scopeId: scope?.scopeId, waitId: scope?.wait?.waitId, criterionId, criteria, record, preview, history: scope?.humanDecisions?.records ?? [], eligible: !!target, editable, pending, previewCurrent: !!current,
+
     canSubmit: editable && record?.attempt?.phase !== 'accepted' && !!record?.decision && !!current?.basis && (!record.reconsidersDecisionId || !!current.reconsideration?.canReconsider) && current.allowedDecisions.includes(record.decision) && (record.decision === 'accept' || !!record.comment.trim()),
+
     canRetry: !!controller?.available && !pending && record?.attempt?.phase === 'unknown', error: controller?.snapshot.error ?? '', select,
-    chooseBaseline: (taskId, runId, baselineId) =>
-    {
-      const baselines: HumanDecisionBaselineSelection[] = (record?.baselines ?? []).filter(value => value.taskId !== taskId);
-      if (baselineId)
-        baselines.push({ taskId, runId, baselineId });
-      edit({ baselines, ...(record?.manifests ? { manifests: record.manifests.filter(value => value.taskId !== taskId) } : {}) })
-    },
-    chooseManifest: (taskId, runId, manifestId) =>
-    {
-      const manifests: HumanDecisionManifestSelection[] = (record?.manifests ?? []).filter(value => value.taskId !== taskId);
-      if (manifestId)
-        manifests.push({ taskId, runId, manifestId });
-      edit({ manifests, baselines: (record?.baselines ?? []).filter(value => value.taskId !== taskId) })
-    },
+
+    chooseBaseline: (taskId, runId, baselineId) => { const baselines: HumanDecisionBaselineSelection[] = (record?.baselines ?? []).filter(value => value.taskId !== taskId); if (baselineId) baselines.push({ taskId, runId, baselineId }); edit({ baselines, ...(record?.manifests ? { manifests: record.manifests.filter(value => value.taskId !== taskId) } : {}) }) },
+
+    chooseManifest: (taskId, runId, manifestId) => { const manifests: HumanDecisionManifestSelection[] = (record?.manifests ?? []).filter(value => value.taskId !== taskId); if (manifestId) manifests.push({ taskId, runId, manifestId }); edit({ manifests, baselines: (record?.baselines ?? []).filter(value => value.taskId !== taskId) }) },
+
     chooseDecision: decision => edit({ decision }), comment: text => edit({ comment: text }),
-    inspect: async () =>
-    {
-      if (target)
-        await controller?.Preview(target)
-    }, clearBaselines: async () =>
-    {
-      if (target && editable && controller?.ResetBaselines(target))
-        await controller.Preview(target)
-    }, submit: async () =>
-    {
-      if (target && controller)
-        await after(() => controller.Submit(target))
-    },
-    reconsider: async decisionId =>
-    {
-      if (target && editable)
-        await controller?.Reconsider(target, decisionId)
-    },
-    query: async () =>
-    {
-      if (scope && controller)
-        await after(() => controller.Query(scope.scopeId, criterionId))
-    }, retry: async () =>
-    {
-      if (scope && controller)
-        await after(() => controller.Retry(scope.scopeId, criterionId))
-    },
+
+    inspect: async () => { if (target) await controller?.Preview(target) }, clearBaselines: async () => { if (target && editable && controller?.ResetBaselines(target)) await controller.Preview(target) }, submit: async () => { if (target && controller) await after(() => controller.Submit(target)) },
+
+    reconsider: async decisionId => { if (target && editable) await controller?.Reconsider(target, decisionId) },
+
+    query: async () => { if (scope && controller) await after(() => controller.Query(scope.scopeId, criterionId)) }, retry: async () => { if (scope && controller) await after(() => controller.Retry(scope.scopeId, criterionId)) },
   };
 }

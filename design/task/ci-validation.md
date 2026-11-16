@@ -21,6 +21,8 @@
 
 `static` 同时执行 `pnpm check:method-names`：检查源码方法大驼峰及逐项登记的固定协议例外。命名检查与类型、架构及行为测试分别负责各自边界，不能相互替代。
 
+`static` 执行 `pnpm check:source-format`，只读检查 `src/` 脚本的 Allman 布局、逐行留白和单行声明/箭头函数。格式漂移返回非零退出码，开发时用 `pnpm format:source` 修正。格式器先核对全部候选文件的语法树、词法内容、注释及幂等性，再写入；必要的字面量、JSX 和注释换行不压缩，`pnpm check:source-format --json` 可查看具体位置与原因。这项检查不替代产品行为测试或人工代码 review。
+
 ## 按耗时分片与覆盖证明
 
 `CiTestSequencer` 接收 Vitest 实际发现的测试全集，`balancedShards` 使用最长任务优先的确定性分配；同权重以路径排序、同负载按分片编号。`ci-test-timings.json` 的毫秒权重来自成功 run 43386158632、43390467062，每文件取两轮最大实测耗时加 1000 ms 开销，内含完整来源和单位。后续可用成功报告的 testResults startTime/endTime 更新权重；历史权重不作为测试白名单，已删除条目不产生运行，新增/改名文件按 30000 ms 默认值纳入。

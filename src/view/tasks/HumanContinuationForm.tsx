@@ -3,17 +3,24 @@
  * 设计原因：用户可看清交给主调度的完整意见集合和模型配置；未知请求仅查原命令，受理成功不等于业务目标完成。
  */
 import { Icon } from '../components/Icon';
+
 import type { HumanContinuationView } from './useHumanContinuation';
+
 import { humanDecisionLabels } from './HumanDecisionPanel';
+
 import './human-continuation.css';
 
 /** 共享控制器持有真实请求，展示组件不生成命令、不调用模型或改写决定。 */
 export function HumanContinuationForm({ state }: { state: HumanContinuationView })
 {
   const attempt = state.record?.attempt,
+
     phase = attempt?.phase;
+
   if (!state.eligible && !attempt)
+
     return null;
+
   return <section className="human-continuation" data-testid="human-continuation" data-phase={state.pending ? 'pending' : phase ?? 'ready'} data-scope-id={state.scopeId} data-wait-id={state.waitId}>
     <h4>按已保存决定继续</h4><p className="scope-goal-muted">将本次等待的最新意见交回主 Agent 重新规划。未覆盖的人工项仍需确认；旧等待的接受不会自动继承。</p>
     <ul data-testid="human-continuation-decisions">{state.decisions.map(record => <li key={record.decisionId} data-decision-id={record.decisionId}><strong>{humanDecisionLabels[record.decision]} · {record.proof.source.criterion.text}</strong><p>{record.comment || '未附加意见'}</p></li>)}</ul>

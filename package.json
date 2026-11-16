@@ -21,6 +21,8 @@
     "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:architecture": "node scripts/source-architecture.mjs --check && pnpm check:dependencies",
     "check:method-names": "node scripts/check-method-names.mjs",
+    "check:source-format": "node scripts/source-format.mjs --check",
+    "format:source": "node scripts/source-format.mjs --write",
     "test": "vitest run",
     "test:module": "node scripts/test-modules.mjs",
     "check:test-modules": "node scripts/test-modules.mjs --check",

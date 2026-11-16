@@ -10,46 +10,61 @@ export type KnowledgeJsonValue = null | boolean | number | string | KnowledgeJso
 {
   [key: string]: KnowledgeJsonValue
 };
-
 function isJsonValue(value: unknown): value is KnowledgeJsonValue
 {
   const active = new Set<object>(),
+
     pending: Array<
       {
         value: unknown;
 
         leave?: boolean
       }> = [{ value }];
+
   while (pending.length)
   {
     const item = pending.pop()!,
+
       current = item.value;
+
     if (item.leave)
     {
       active.delete(current as object);
+
       continue
     }
     if (current === null || typeof current === 'string' || typeof current === 'boolean')
+
       continue;
+
     if (typeof current === 'number')
     {
       if (!Number.isFinite(current))
+
         return false;
+
       continue
     }
     if (typeof current !== 'object' || active.has(current) || Object.getOwnPropertySymbols(current).length)
+
       return false;
+
     const prototype = Object.getPrototypeOf(current);
+
     if (!Array.isArray(current) && prototype !== Object.prototype && prototype !== null)
+
       return false;
+
     active.add(current);
+
     pending.push({ value: current, leave: true });
+
     for (const child of Array.isArray(current) ? [...current] : Object.values(current))
+
       pending.push({ value: child });
   }
   return true;
 }
-
 /**
  * 自定义谓词仅检查且原样返回；Zod record 会删除合法 JSON 自有 __proto__ 键，不能用于这些原始事实槽。
  * JSON Schema 中该字段允许任意 JSON 值，与传输快照语义一致；外层服务对象仍使用严格字段协议。
@@ -57,7 +72,10 @@ function isJsonValue(value: unknown): value is KnowledgeJsonValue
 export const jsonValueSchema = z.custom<KnowledgeJsonValue>(isJsonValue).describe('原样 JSON 诊断事实，不证明知识定义有效');
 
 /** 定义文件的原样对象；字段约束属于知识校验器，不由返回协议覆盖。 */
-export const knowledgeJsonObjectSchema = z.custom<{ [key: string]: KnowledgeJsonValue }>(value => value !== null && typeof value === 'object' && !Array.isArray(value) && isJsonValue(value)).describe('原样知识定义 JSON 对象，不重新施加知识有效性约束');
+export const knowledgeJsonObjectSchema = z.custom<
+  {
+    [key: string]: KnowledgeJsonValue
+  }>(value => value !== null && typeof value === 'object' && !Array.isArray(value) && isJsonValue(value)).describe('原样知识定义 JSON 对象，不重新施加知识有效性约束');
 
 export const knowledgeOutputIdSchema = z.string().min(1);
 

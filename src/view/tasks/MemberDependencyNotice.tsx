@@ -3,24 +3,38 @@
  * 设计原因：任务、实例与原失败/求助/检查点放弃保持独立历史；按节点版本判断最新审计，不把改边解释为成功或立即执行，也不新增轮询与操作入口。
  */
 import type { TaskNode } from '../../bridge/contracts/dispatch';
+
 import { memberDependencyHistory, memberDependencyAdditionHistory, memberDependencyRevisionHistory } from './member-dependency-state';
+
 import './member-dependency.css';
 
 /** compact 展示最近记录摘要，完整记录在任务详情可读；参数变化只重绘，不触发执行或读取。 */
 export function MemberDependencyNotice({ task, compact = false }: { task: TaskNode; compact?: boolean })
 {
   const history = memberDependencyHistory(task),
+
     addition = memberDependencyAdditionHistory(task),
+
     revision = memberDependencyRevisionHistory(task),
+
     all = [...history.records, ...addition.records, ...revision.records.map(r => ({ commandId: r.commandId, previousTaskRevision: r.request.target.expectedRevision }))];
+
   if (history.invalid || addition.invalid || revision.invalid || new Set(all.map(record => record.commandId)).size !== all.length || new Set(all.map(record => record.previousTaskRevision)).size !== all.length)
+
     return <p className="member-warning" role="alert" data-testid="member-dependency-invalid">前置调整记录与任务身份或版本不一致，请重新同步任务图核实。</p>;
+
   if (!all.length)
+
     return null;
+
   const latest = Math.max(...all.map(record => record.previousTaskRevision));
+
   const records = compact ? history.records.filter(record => record.previousTaskRevision === latest) : history.records;
+
   const additions = compact ? addition.records.filter(record => record.previousTaskRevision === latest) : addition.records;
+
   const revisions = compact ? revision.records.filter(r => r.request.target.expectedRevision === latest) : revision.records;
+
   return <>{!!revisions.length && <section className={'member-dependency-notice' + (compact ? ' compact' : '')} data-testid="member-dependency-revision" data-task-id={task.taskId} aria-label="已提交的前置修订记录">
     <strong>前置已修订 · {revision.records.length} 次</strong>
     {revisions.map(r => <details key={r.commandId} open={!compact} data-revision-id={r.commandId}>

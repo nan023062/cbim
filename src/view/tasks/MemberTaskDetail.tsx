@@ -7,37 +7,63 @@
  * IPC 边界：任务详情与续接动态端口按操作解析后进入关联桥，状态所有权不变。
  */
 import { Icon } from '../components/Icon';
+
 import { stateIconNames } from '../components/state-labels';
+
 import { checkedIpcCall } from '../../bridge/contracts/ipc-call';
+
 import { useEffect, useRef, useState } from 'react';
+
 import type { GraphCursor, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
+
 import type { PendingQuestion } from '../../bridge/contracts/execution';
+
 import type { ChatApproval } from '../../bridge/contracts/chat';
+
 import { QuestionCard } from '../execution-view/QuestionCard';
+
 import { useMemberRun } from './useMemberRun';
+
 import { MemberRunTranscript } from './MemberRunTranscript';
+
 import { MemberExecutionReport } from './MemberExecutionReport';
+
 import { MemberHelpNotice } from './MemberHelpNotice';
+
 import { MemberCancellationNotice } from './MemberCancellationNotice';
+
 import { MemberDependencyNotice } from './MemberDependencyNotice';
+
 import { MemberCheckpointNotice } from './MemberCheckpointNotice';
+
 import { MemberValidationPanel } from './MemberValidationPanel';
+
 import { MemberOwnerNotice } from './OwnerExecutionDetails';
+
 import { OwnerExecutionInspection } from './OwnerExecutionInspection';
+
 import type { ExecutionRecoveryContext } from './useExecutionRecovery';
+
 import { memberReviewStage } from './member-review-state';
+
 import { memberTaskLabel } from './MemberActivity';
+
 import './member-activity.css';
 
 /** 轮次切换在内部重建操作状态，保证晚到审批结果不能修改后来选中的成员界面。 */
 export function MemberTaskDetail({ workspaceId, workspaceInstanceId, rootSessionId, task, onBack, active = true, graphCursor, scope, recovery }: { workspaceId: string; workspaceInstanceId?: string; rootSessionId: string; task: TaskNode; onBack?: () => void; active?: boolean; graphCursor?: GraphCursor; scope?: ScopeSummary; recovery?: ExecutionRecoveryContext })
 {
   const [selected, setSelected] = useState('');
+
   const runId = task.runIds.includes(selected) ? selected : task.runIds.at(-1);
+
   // 任务最新候选可能来自另一轮执行，旧轮次不能借用该候选证明自己的结果。
   const candidate = task.result?.runId === runId ? task.result : undefined;
+
   const reviewStage = memberReviewStage(task);
+
   const valid = task.identity.workspaceId === workspaceId && task.identity.rootSessionId === rootSessionId;
+
   return <section className="member-task-detail" aria-label={'成员任务详情 · ' + task.assignee.name}>
     <header className="member-detail-heading"><div><span className="member-role-caption">执行 Agent</span><h3>{task.assignee.name}</h3></div>{onBack && <button onClick={onBack}><Icon name="undo" size={16} />返回任务图</button>}</header>
     {!valid ? <p className="member-error" role="alert">所选任务不属于当前会话，请返回任务图重新选择。</p> : <>
@@ -61,137 +87,86 @@ export function MemberTaskDetail({ workspaceId, workspaceInstanceId, rootSession
     </>}
   </section>;
 }
-
 /** 外层以四层身份作为 React key；历史轮次只读，审批和停止只作用于当前活动轮次。 */
 function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { workspaceId: string; rootSessionId: string; task: TaskNode; runId: string; active: boolean })
 {
   const identity = { workspaceId, rootSessionId, taskId: task.taskId },
+
     current = task.activeRunId === runId;
+
   const { run, loading, hasMore, error, refresh } = useMemberRun(workspaceId, rootSessionId, task.taskId, runId, true, active);
+
   const [approvals, setApprovals] = useState<ChatApproval[]>([]),
+
     [questions, setQuestions] = useState<PendingQuestion[]>([]),
+
     [interactionError, setInteractionError] = useState(''),
+
     [operationError, setOperationError] = useState(''),
+
     [busy, setBusy] = useState(false);
+
   const lock = useRef(false),
+
     alive = useRef(true),
-    refreshInteractions = useRef<() => Promise<void>>(async () =>
-    {
-    });
+
+    refreshInteractions = useRef<() => Promise<void>>(async () => { });
+
   // 页签隐藏只改变下一次读取间隔，保留用户尚未提交的问题答案与审批上下文。
   const activeRef = useRef(active);
+
   activeRef.current = active;
-  useEffect(() =>
-  {
-    alive.current = true;
-    return () =>
-    {
-      alive.current = false
-    }
-  }, []);
-  useEffect(() =>
-  {
-    let stopped = false,
-      timer: ReturnType<typeof setTimeout> | undefined,
-      inFlight: Promise<void> | undefined;
-    setApprovals([]);
-    setQuestions([]);
-    setInteractionError('');
-    async function poll()
-    {
-      if (stopped || !current)
-        return;
-      if (inFlight)
-        return inFlight;
-      clearTimeout(timer);
-      inFlight = (async () =>
-      {
-        try
-        {
-          const [nextApprovals, nextQuestions] = await Promise.all([window.cbim.call('dispatch.approvals', identity), window.cbim.call('dispatch.questions', identity)]);
-          if (stopped)
-            return;
-          setApprovals(old => JSON.stringify(old) === JSON.stringify(nextApprovals) ? old : nextApprovals);
-          setQuestions(old => JSON.stringify(old) === JSON.stringify(nextQuestions) ? old : nextQuestions);
-          setInteractionError('');
-        }
-        catch (cause)
-        {
-          if (!stopped)
-            setInteractionError(cause instanceof Error ? cause.message : '成员交互读取失败，请重试')
-        }
-        finally
-        {
-          inFlight = undefined;
-          if (!stopped)
-            timer = setTimeout(() => void poll(), !activeRef.current || document.visibilityState === 'hidden' ? 5000 : 1000)
-        }
-      })();
-      return inFlight;
-    }
-    refreshInteractions.current = poll;
-    if (current)
-      void poll();
-    return () =>
-    {
-      stopped = true;
-      clearTimeout(timer);
-      refreshInteractions.current = async () =>
-      {
-      }
-    };
-  }, [workspaceId, rootSessionId, task.taskId, runId, current]);
-  useEffect(() =>
-  {
-    if (active)
-      void refreshInteractions.current()
-  }, [active]);
+
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, []);
+
+  useEffect(() => { let stopped = false, timer: ReturnType<typeof setTimeout> | undefined, inFlight: Promise<void> | undefined; setApprovals([]); setQuestions([]); setInteractionError(''); async function poll() { if (stopped || !current) return; if (inFlight) return inFlight; clearTimeout(timer); inFlight = (async () => { try { const [nextApprovals, nextQuestions] = await Promise.all([window.cbim.call('dispatch.approvals', identity), window.cbim.call('dispatch.questions', identity)]); if (stopped) return; setApprovals(old => JSON.stringify(old) === JSON.stringify(nextApprovals) ? old : nextApprovals); setQuestions(old => JSON.stringify(old) === JSON.stringify(nextQuestions) ? old : nextQuestions); setInteractionError(''); } catch (cause) { if (!stopped) setInteractionError(cause instanceof Error ? cause.message : '成员交互读取失败，请重试') } finally { inFlight = undefined; if (!stopped) timer = setTimeout(() => void poll(), !activeRef.current || document.visibilityState === 'hidden' ? 5000 : 1000) } })(); return inFlight; } refreshInteractions.current = poll; if (current) void poll(); return () => { stopped = true; clearTimeout(timer); refreshInteractions.current = async () => { } }; }, [workspaceId, rootSessionId, task.taskId, runId, current]);
+
+  useEffect(() => { if (active) void refreshInteractions.current() }, [active]);
+
   /** 串行提交本成员操作并刷新观察；失败继续抛给问题卡，卸载不会撤销已提交的后端操作。 */
   async function operate(action: 'dispatch.executionStop' | 'dispatch.approve' | 'dispatch.answerQuestion', args: Record<string, unknown>)
   {
     if (lock.current)
+
       throw Error('正在处理另一项成员操作，请稍后重试');
+
     lock.current = true;
+
     setBusy(true);
+
     setOperationError('');
+
     try
     {
       await window.cbim.call(...checkedIpcCall(action, { ...identity, ...args }));
+
       await refreshInteractions.current();
+
       await refresh()
     }
     catch (cause)
     {
       if (alive.current)
+
         setOperationError(cause instanceof Error ? cause.message : '成员操作失败，请重试');
+
       throw cause
     }
     finally
     {
       lock.current = false;
+
       if (alive.current)
+
         setBusy(false)
     }
   }
   return <div className="member-run-detail">
-    {current && <div className="member-run-actions"><button disabled={busy} onClick={() => void operate('dispatch.executionStop', {}).catch(() =>
-    {
-    })}><Icon name="stop" size={16} />停止成员执行</button><small>仅停止此任务，不回滚已完成操作</small></div>}
-    {(error || interactionError || operationError) && <div className="member-error" role="alert">{operationError || error || interactionError}<button onClick={() =>
-    {
-      setOperationError('');
-      void refresh();
-      void refreshInteractions.current()
-    }}><Icon name="refresh" size={16} />重新读取</button></div>}
+    {current && <div className="member-run-actions"><button disabled={busy} onClick={() => void operate('dispatch.executionStop', {}).catch(() => { })}><Icon name="stop" size={16} />停止成员执行</button><small>仅停止此任务，不回滚已完成操作</small></div>}
+    {(error || interactionError || operationError) && <div className="member-error" role="alert">{operationError || error || interactionError}<button onClick={() => { setOperationError(''); void refresh(); void refreshInteractions.current() }}><Icon name="refresh" size={16} />重新读取</button></div>}
     {loading && <p role="status" className="member-muted">正在读取成员执行记录…</p>}
     {hasMore && <p role="status" className="member-muted">正在加载后续记录…</p>}
-    {current && approvals.map(approval => <section className="member-approval" key={approval.id} aria-label="成员操作确认"><strong>允许 {task.assignee.name} 执行 {approval.name}？</strong><pre>{JSON.stringify(approval.input, null, 2)}</pre><div><button disabled={busy} onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: true }).catch(() =>
-    {
-    })}><Icon name="confirm" size={16} />允许一次</button><button disabled={busy} title="仅当前成员的本次运行有效，不影响主会话或其它成员" onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: true, allowAll: true }).catch(() =>
-    {
-    })}><Icon name="confirm" size={16} />本次任务全部通过</button><button disabled={busy} onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: false }).catch(() =>
-    {
-    })}><Icon name="close" size={16} />拒绝</button></div></section>)}
+    {current && approvals.map(approval => <section className="member-approval" key={approval.id} aria-label="成员操作确认"><strong>允许 {task.assignee.name} 执行 {approval.name}？</strong><pre>{JSON.stringify(approval.input, null, 2)}</pre><div><button disabled={busy} onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: true }).catch(() => { })}><Icon name="confirm" size={16} />允许一次</button><button disabled={busy} title="仅当前成员的本次运行有效，不影响主会话或其它成员" onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: true, allowAll: true }).catch(() => { })}><Icon name="confirm" size={16} />本次任务全部通过</button><button disabled={busy} onClick={() => void operate('dispatch.approve', { approvalId: approval.id, allow: false }).catch(() => { })}><Icon name="close" size={16} />拒绝</button></div></section>)}
     {current && questions.map(question => <QuestionCard key={question.id} request={question} onAnswer={answers => operate('dispatch.answerQuestion', { questionId: question.id, answers })} />)}
     {run && <>
       <MemberRunTranscript run={run} workspaceId={workspaceId} memberName={task.assignee.name} active={active} />

@@ -19,12 +19,14 @@ export class StrictJsonError extends SyntaxError
   public constructor(reason: 'invalid-syntax' | 'duplicate-key', key?: string)
   {
     super(reason === 'duplicate-key' ? `重复 JSON 字段：${key}` : 'JSON 格式无效');
+
     this.reason = reason;
+
     this.key = key;
+
     this.name = 'StrictJsonError';
   }
 }
-
 /** 键排序的显式策略；不同历史序列化协议可保留各自规则。 */
 export interface JsonKeyOrder
 {
@@ -34,7 +36,6 @@ export interface JsonKeyOrder
   /** 仅省略对象的 undefined 属性；数组顺序、空位及元素保持原义。 */
   omitUndefinedProperties?: boolean;
 }
-
 /** JSON 格式化、严格解析和键排序；业务字段与错误映射由消费者决定。 方法不依赖 this，可作为回调传递。 */
 export class JsonUtils
 {
@@ -42,7 +43,6 @@ export class JsonUtils
   private constructor()
   {
   }
-
   /**
      * 拒绝注释、尾逗号、坏语法和同一对象中的重复键（含转义后同名键）。
      * 不改字段、不做 schema、危险键过滤或深度/大小限制；资源上限与输入来源由调用方负责。
@@ -51,29 +51,19 @@ export class JsonUtils
   public static ParseStrictJson(text: string): any
   {
     const errors: ParseError[] = [];
+
     const tree = parseTree(text, errors, { disallowComments: true, allowTrailingComma: false });
+
     if (errors.length || !tree)
+
       throw new StrictJsonError('invalid-syntax');
-    const visit = (node: JsonNode) =>
-    {
-      if (node.type === 'object')
-      {
-        const seen = new Set();
-        for (const property of node.children || [])
-        {
-          const key = property.children![0].value;
-          if (seen.has(key))
-            throw new StrictJsonError('duplicate-key', key);
-          seen.add(key);
-        }
-      }
-      for (const child of node.children || [])
-        visit(child);
-    };
+
+    const visit = (node: JsonNode) => { if (node.type === 'object') { const seen = new Set(); for (const property of node.children || []) { const key = property.children![0].value; if (seen.has(key)) throw new StrictJsonError('duplicate-key', key); seen.add(key); } } for (const child of node.children || []) visit(child); };
+
     visit(tree);
+
     return getNodeValue(tree);
   }
-
   /**
        * 保留 JSON.stringify 原语义及属性顺序，不作校验、深拷贝或 canonical 排序。
        * 循环引用与 BigInt 仍抛错；顶层不可序列化值沿旧入口行为返回 "undefined\n"，不是合法 JSON。
@@ -82,7 +72,6 @@ export class JsonUtils
   {
     return JSON.stringify(value, null, 2) + '\n';
   }
-
   /**
        * 不修改输入，只遍历自身可枚举字符串键；整数键仍遵循 JS 对象枚举规则。
        * 面向既有 JSON 快照，不做 Schema/危险键过滤、循环检测、深度限制或自定义 toJSON 处理。
@@ -90,19 +79,8 @@ export class JsonUtils
        */
   public static OrderJsonValue(value: unknown, policy: JsonKeyOrder): unknown
   {
-    const visit = (item: unknown): unknown =>
-    {
-      if (Array.isArray(item))
-        return item.map(visit);
-      if (item && typeof item === 'object')
-        return Object.fromEntries(
-          Object.entries(item)
-            .filter(([, entry]) => !policy.omitUndefinedProperties || entry !== undefined)
-            .sort(([a], [b]) => policy.compareKeys(a, b))
-            .map(([key, entry]) => [key, visit(entry)])
-        );
-      return item;
-    };
+    const visit = (item: unknown): unknown => { if (Array.isArray(item)) return item.map(visit); if (item && typeof item === 'object') return Object.fromEntries(Object.entries(item).filter(([, entry]) => !policy.omitUndefinedProperties || entry !== undefined).sort(([a], [b]) => policy.compareKeys(a, b)).map(([key, entry]) => [key, visit(entry)])); return item; };
+
     return visit(value);
   }
 }

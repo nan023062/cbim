@@ -10,5 +10,6 @@ export type SettingsSectionId = typeof settingsSections[number]['id'];
 export function findSettingsSections(query: string)
 {
   const words = query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+
   return settingsSections.filter(item => words.every(word => (item.label + ' ' + item.description + ' ' + item.keywords).toLocaleLowerCase().includes(word)))
 }

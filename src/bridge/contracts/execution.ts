@@ -29,7 +29,6 @@ export interface QueueInsertRequest
 
   expectedRunId: string
 }
-
 export { repositoryToolScopeSchema } from '../../logic/tools/rules/scope-schema';
 
 export type { RepositoryToolScope } from '../../logic/tools/rules/scope-schema';

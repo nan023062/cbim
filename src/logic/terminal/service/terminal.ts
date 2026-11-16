@@ -21,9 +21,13 @@ export class TerminalSessions
   Start(key: string, cwd: string, command: string)
   {
     if (typeof command !== 'string' || !command.trim() || command.length > 16000)
+
       throw Error('请输入有效命令');
+
     if (this.entries.get(key)?.running)
+
       throw Error('上一条命令仍在运行');
+
     const entry:
       {
         process?: ChildProcess;
@@ -34,53 +38,55 @@ export class TerminalSessions
 
         exitCode: number | null
       } = { output: '', running: true, exitCode: null };
+
     this.entries.set(key, entry);
+
     // 同时约束 PowerShell 管道及原生命令的控制台代码页；保留 -Command 的文本错误流，避免 EncodedCommand 将错误序列化为 CLIXML。
     const script = '$cbimUtf8=[System.Text.UTF8Encoding]::new($false);[Console]::InputEncoding=$cbimUtf8;[Console]::OutputEncoding=$cbimUtf8;$OutputEncoding=$cbimUtf8;\n' + command;
+
     const child = spawn(process.platform === 'win32' ? 'powershell.exe' : '/bin/sh', process.platform === 'win32' ? ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script] : ['-c', command], { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+
     entry.process = child;
+
     // setEncoding 持有每条流独立的未完整字符，末尾自动冲刷；不能对每个 Buffer 单独 toString。
-    const append = (chunk: string) =>
-    {
-      entry.output = (entry.output + chunk).slice(-200000)
-    };
+    const append = (chunk: string) => { entry.output = (entry.output + chunk).slice(-200000) };
+
     child.stdout?.setEncoding('utf8').on('data', append);
+
     child.stderr?.setEncoding('utf8').on('data', append);
-    child.once('error', e =>
-    {
-      entry.output += e.message;
-      entry.running = false
-    });
-    child.once('close', code =>
-    {
-      entry.exitCode = code;
-      entry.running = false
-    });
+
+    child.once('error', e => { entry.output += e.message; entry.running = false });
+
+    child.once('close', code => { entry.exitCode = code; entry.running = false });
+
     return this.Read(key);
   }
-
   Read(key: string)
   {
     const entry = this.entries.get(key);
+
     return entry ? { output: entry.output, running: entry.running, exitCode: entry.exitCode } : { output: '', running: false, exitCode: null }
   }
-
   Close(key: string)
   {
     const e = this.entries.get(key);
+
     if (e?.process && e.running)
     {
       if (process.platform === 'win32' && e.process.pid)
+
         spawn('taskkill', ['/pid', String(e.process.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+
       else
+
         e.process.kill('SIGTERM')
     }
     this.entries.delete(key)
   }
-
   CloseAll()
   {
     for (const key of this.entries.keys())
+
       this.Close(key)
   }
 }

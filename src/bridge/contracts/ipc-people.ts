@@ -3,6 +3,7 @@
  * 设计原因：只注入本机提交来源；岗位配置和模块绑定由各自服务维护，不借登记启动模型。类型不替代身份和权限校验。
  */
 import { type WorkspaceMemberDetail, type WorkspaceMemberList, type WorkspaceMemberPreview, type WorkspaceMemberReceipt, workspaceMemberCommitInputSchema, workspaceMemberGetInputSchema, workspaceMemberListInputSchema, workspaceMemberLookupSchema, workspaceMemberPreviewInputSchema } from '../../logic/team/rules/workspace-member';
+
 import { type ModuleOwnershipDetail, type ModuleOwnershipPage, type ModuleOwnershipPreview, type ModuleOwnershipReceipt, moduleOwnershipByMemberInputSchema, moduleOwnershipCommitInputSchema, moduleOwnershipGetInputSchema, moduleOwnershipListInputSchema, moduleOwnershipLookupSchema, moduleOwnershipPreviewInputSchema } from '../../logic/workspace/rules/module-ownership';
 
 export const peopleIpcRequests = { 'workspace.members.list': workspaceMemberListInputSchema, 'workspace.members.get': workspaceMemberGetInputSchema, 'workspace.members.preview': workspaceMemberPreviewInputSchema, 'workspace.members.receipt': workspaceMemberLookupSchema, 'workspace.members.commit': workspaceMemberCommitInputSchema, 'workspace.ownerships.list': moduleOwnershipListInputSchema, 'workspace.ownerships.get': moduleOwnershipGetInputSchema, 'workspace.ownerships.byMember': moduleOwnershipByMemberInputSchema, 'workspace.ownerships.preview': moduleOwnershipPreviewInputSchema, 'workspace.ownerships.receipt': moduleOwnershipLookupSchema, 'workspace.ownerships.commit': moduleOwnershipCommitInputSchema, };

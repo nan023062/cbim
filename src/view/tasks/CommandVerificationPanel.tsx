@@ -3,8 +3,11 @@
  * 设计原因：通信失败不等于事务未提交；前置增删显示原保存数量，不以现在的图推断原结果，挂载不请求、查询不恢复或改写原工具失败。
  */
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+
 import type { CommandResultSummary, CommandVerificationReport } from '../../bridge/contracts/command-verification';
+
 import { CommandVerificationController, commandVerificationKey, commandVerificationStale, type CommandVerificationSelection, type CommandVerificationState } from './command-verification-state';
+
 import './command-verification.css';
 
 export interface CommandVerificationView extends CommandVerificationState
@@ -13,7 +16,6 @@ export interface CommandVerificationView extends CommandVerificationState
 
   inspect: () => Promise<void>
 }
-
 const outcomeLabels = { succeeded: '原工具已返回成功', failed: '原工具已返回失败', denied: '原工具已拒绝', unknown: '原工具结果尚未确认', not_authorized: '原调用未记录执行授权' };
 
 const commandLabels = { committed: '原事务已保存', absent: '未查到原命令的已保存回执', unverifiable: '原事务仍无法核实', not_applicable: '该工具不适用本项核实' };
@@ -28,30 +30,47 @@ function ResultSummary({ result }: { result: CommandResultSummary })
   switch (result.toolName)
   {
     case 'cbim_goal_plan':
+
       return <p>已保存计划第 {result.planRevision} 版，{result.criterionCount} 项验收条件、{result.assignmentCount} 项分工。</p>;
+
     case 'cbim_goal_review':
+
       return <p>已保存审阅第 {result.reviewRevision} 版，决定：{({ complete: '完成', replan: '重新规划', blocked: '阻塞', awaiting_user: '等待用户' })[result.decision]}。本次查询不重新验收。</p>;
+
     case 'cbim_dispatch_task':
+
       return <p>已登记任务 <code>{result.taskId}</code>（原状态：{result.disposition === 'queued' ? '排队' : '等待前置'}），不代表成员已经执行。</p>;
+
     case 'cbim_dispatch_cancel':
+
       return <p>原撤销事务包含 {result.cancelled.total} 个待执行任务；不表示撤回已有业务影响。</p>;
+
     case 'cbim_dispatch_replace_dependency':
+
       return <p>已保存任务 <code>{result.taskId}</code> 的前置替换，原结果来自 <code>{result.sourceTaskId}</code>。</p>;
+
     case 'cbim_dispatch_add_dependency':
+
       return <p>已为任务 <code>{result.taskId}</code> 追加前置 <code>{result.sourceTaskId}</code>，原状态为等待。</p>;
+
     case 'cbim_dispatch_revise_dependencies':
+
       return <p>已保存任务 <code>{result.taskId}</code> 的前置修订：退役 {result.removedCount} 条，新增 {result.addedCount} 条，原状态为{result.status === 'waiting' ? '等待前置' : '排队'}。不代表成员已执行。</p>;
+
     case 'cbim_dispatch_resume':
+
       return <p>已保存任务 <code>{result.taskId}</code> 的检查点续执行预约；预约不代表已经启动。</p>;
+
     case 'cbim_dispatch_abandon_checkpoint':
+
       return <p>已放弃任务 <code>{result.taskId}</code> 的原检查点，原租约 {result.previousLeaseEpoch} → {result.nextLeaseEpoch}；不是回滚或交付成功。</p>;
   }
 }
-
 /** 纯展示层与桌面装配共用，原工具失败始终保留，不提供重试或恢复按钮。 */
 export function CommandVerificationPanel({ selection, state }: { selection: CommandVerificationSelection; state: CommandVerificationView })
 {
   const { report, loading, error, stale } = state;
+
   return <section className="command-verification" aria-label="原命令核实" data-testid="command-verification-panel" data-run-id={selection.runId} data-tool-call-id={selection.toolCallId} data-command-state={report?.command.state ?? 'idle'}>
     <header><strong>原命令核实</strong><button type="button" aria-label={report ? '重新核实原命令' : '核实原命令'} disabled={loading} onClick={() => void state.inspect()}>{loading ? '正在核实…' : report ? '重新核实' : '核实原命令'}</button></header>
     {!report && <p>只读取原调用及保存记录，不重发操作。</p>}
@@ -70,13 +89,16 @@ export function CommandVerificationPanel({ selection, state }: { selection: Comm
     </>}
   </section>;
 }
-
 /** 原身份改变才建立新控制器；轮询只更新日志序号提示，不读回原报告。 */
 export function MainCommandVerification({ selection, latestSeq }: { selection: CommandVerificationSelection; latestSeq: number })
 {
   const key = commandVerificationKey(selection),
+
     controller = useMemo(() => new CommandVerificationController(selection, request => window.cbim.call('dispatch.commandReport', request)), [key]);
+
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
+
   useEffect(() => () => controller.Cancel(), [controller]);
+
   return <CommandVerificationPanel selection={selection} state={{ ...state, stale: commandVerificationStale(state.report, latestSeq) || !!state.error, inspect: () => controller.Inspect() }} />;
 }

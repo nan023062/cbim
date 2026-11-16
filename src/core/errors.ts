@@ -7,10 +7,10 @@ export class Fault extends Error
   constructor(public code: string, message: string)
   {
     super(message);
+
     this.name = code;
   }
 }
-
 /** 抛出包含调用方错误码的 Fault，不重试、不翻译错误，也不改变任何业务状态。 */
 export function fail(code: string, message: string): never
 {

@@ -4,7 +4,9 @@
  * 职责边界：只展示公开事实，不接受路径或 PID，不重跑脚本或改变原任务失败状态。
  */
 import { Icon } from '../components/Icon';
+
 import { useEffect, useRef, useState } from 'react';
+
 import { isolatedExecutionReportSchema, isolatedExecutionCleanupReceiptSchema, type IsolatedExecutionRun, type IsolatedExecutionReport, type IsolatedExecutionItem, type IsolatedExecutionCleanup } from '../../bridge/contracts/isolated-executions';
 
 const states = { active: '原宿主仍在运行', cleanup_available: '原资源已核实，可清理', cleaned: '原资源已清理', unverifiable: '资源尚不可核实' };
@@ -19,84 +21,33 @@ const files = { present: '原目录存在', absent: '原目录已不存在', cha
 export function IsolatedExecutionPanel({ identity, instanceId }: { identity: IsolatedExecutionRun; instanceId?: string })
 {
   const key = JSON.stringify([identity, instanceId]),
+
     current = useRef(key),
+
     alive = useRef(true);
+
   current.current = key;
+
   const [report, setReport] = useState<IsolatedExecutionReport>(),
+
     [busy, setBusy] = useState(false),
+
     [error, setError] = useState(''),
+
     [fresh, setFresh] = useState(false),
+
     [message, setMessage] = useState('');
+
   const pending = useRef(new Map<string, IsolatedExecutionCleanup>());
-  useEffect(() =>
-  {
-    alive.current = true;
-    return () =>
-    {
-      alive.current = false
-    }
-  }, []);
+
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, []);
+
   const valid = () => alive.current && current.current === key;
-  const inspect = async () =>
-  {
-    setBusy(true);
-    setFresh(false);
-    setError('');
-    setMessage('');
-    try
-    {
-      const value = isolatedExecutionReportSchema.parse(await window.cbim.call('dispatch.isolatedExecutionReport', identity));
-      if (Object.entries(identity).some(([key, expected]) => value.identity[key as keyof IsolatedExecutionRun] !== expected))
-        throw Error('核实身份不匹配');
-      if (valid())
-      {
-        setReport(value);
-        setFresh(true)
-      }
-    }
-    catch (error)
-    {
-      if (valid())
-        setError('核实失败：' + String(error) + '；请重新核实原执行。')
-    }
-    finally
-    {
-      if (valid())
-        setBusy(false)
-    }
-  };
-  const cleanup = async (item: IsolatedExecutionItem) =>
-  {
-    if (!instanceId || !fresh || !item.cleanupAllowed || busy)
-      return;
-    const input = { ...identity, instanceId, executionId: item.executionId, basis: item.cleanupBasis ?? item.basis, commandId: item.cleanupCommandId ?? pending.current.get(item.executionId)?.commandId ?? crypto.randomUUID() };
-    pending.current.set(item.executionId, input);
-    setBusy(true);
-    setFresh(false);
-    setError('');
-    try
-    {
-      const receipt = isolatedExecutionCleanupReceiptSchema.parse(await window.cbim.call('dispatch.isolatedExecutionCleanup', input));
-      if (receipt.executionId !== input.executionId || receipt.commandId !== input.commandId)
-        throw Error('原清理回执不匹配');
-      if (valid())
-      {
-        pending.current.delete(item.executionId);
-        setReport(undefined);
-        setMessage('原资源清理已完成，原任务结果保持不变。')
-      }
-    }
-    catch (error)
-    {
-      if (valid())
-        setError('清理结果尚未确认：' + String(error) + '；请先核实，保留并继续原清理请求。')
-    }
-    finally
-    {
-      if (valid())
-        setBusy(false)
-    }
-  };
+
+  const inspect = async () => { setBusy(true); setFresh(false); setError(''); setMessage(''); try { const value = isolatedExecutionReportSchema.parse(await window.cbim.call('dispatch.isolatedExecutionReport', identity)); if (Object.entries(identity).some(([key, expected]) => value.identity[key as keyof IsolatedExecutionRun] !== expected)) throw Error('核实身份不匹配'); if (valid()) { setReport(value); setFresh(true) } } catch (error) { if (valid()) setError('核实失败：' + String(error) + '；请重新核实原执行。') } finally { if (valid()) setBusy(false) } };
+
+  const cleanup = async (item: IsolatedExecutionItem) => { if (!instanceId || !fresh || !item.cleanupAllowed || busy) return; const input = { ...identity, instanceId, executionId: item.executionId, basis: item.cleanupBasis ?? item.basis, commandId: item.cleanupCommandId ?? pending.current.get(item.executionId)?.commandId ?? crypto.randomUUID() }; pending.current.set(item.executionId, input); setBusy(true); setFresh(false); setError(''); try { const receipt = isolatedExecutionCleanupReceiptSchema.parse(await window.cbim.call('dispatch.isolatedExecutionCleanup', input)); if (receipt.executionId !== input.executionId || receipt.commandId !== input.commandId) throw Error('原清理回执不匹配'); if (valid()) { pending.current.delete(item.executionId); setReport(undefined); setMessage('原资源清理已完成，原任务结果保持不变。') } } catch (error) { if (valid()) setError('清理结果尚未确认：' + String(error) + '；请先核实，保留并继续原清理请求。') } finally { if (valid()) setBusy(false) } };
+
   return <section className="execution-report" aria-label="隔离执行资源" data-testid="isolated-execution-panel">
     <header><h4>隔离执行资源</h4><button disabled={busy} onClick={() => void inspect()} data-testid="isolation-inspect"><Icon name="search" size={16} />核实隔离资源</button></header>
     <p className="member-muted">核实只读取原记录与平台事实。清理只回收已确认退出的原资源，不重跑程序或改变原任务结果。</p>

@@ -5,6 +5,7 @@
 import { z } from 'zod';
 
 const id = z.string().min(1).max(512),
+
   revision = z.number().int().positive().safe();
 
 export const memberTopicContextSchema = z.object({ version: z.literal(1), workspaceId: id, rootSessionId: id, scopeId: id, sessionId: id, agentId: id, inputRevision: revision.max(32), priorTasks: z.array(z.object({ taskId: id, planRevision: revision, resultId: id }).strict()).max(20), omittedTasks: z.number().int().nonnegative().safe() }).strict();

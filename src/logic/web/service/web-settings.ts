@@ -4,11 +4,17 @@
  * 设计原因：密钥不进入工具参数、模型上下文或返回值；并发保存以 revision 校验，系统加密不可用时不回退明文。
  */
 import fs from 'node:fs/promises';
+
 import { SerialQueue } from '../../../core/utility';
+
 import { z } from 'zod';
+
 import { atomic } from '../../../core/platform/node/files';
+
 import { fail } from '../../../core/errors';
+
 import { webConfigureInput, type WebSettingsView } from '..';
+
 import type { SecretCipher } from '../../../core/contracts/secrets';
 
 const schema = z.object({ revision: z.number().int().positive(), enabled: z.boolean(), encryptedKey: z.string().optional(), browserRobotsPolicy: z.enum(['allow', 'respect']).default('allow') }).strict();
@@ -24,7 +30,6 @@ export class WebSettings
   constructor(private readonly filename: string, private readonly cipher?: SecretCipher)
   {
   }
-
   async Init()
   {
     try
@@ -34,43 +39,29 @@ export class WebSettings
     catch (error)
     {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+
         fail('WEB_SETTINGS_INVALID', '网页配置损坏，请检查设置文件')
     }
   }
-
   Read(): WebSettingsView
   {
     return { revision: this.state.revision, provider: 'brave', enabled: this.state.enabled, hasKey: !!this.state.encryptedKey, secureStorage: this.cipher?.Available() === true, browserRobotsPolicy: this.state.browserRobotsPolicy }
   }
-
   Configure(raw: unknown): Promise<WebSettingsView>
   {
-    return this.queue.Run(async () =>
-    {
-      const input = webConfigureInput.parse(raw);
-      if (input.revision !== this.state.revision)
-        fail('WEB_SETTINGS_CONFLICT', '网页设置已改变，请刷新后保存');
-      if (input.clearKey && input.apiKey)
-        fail('WEB_SETTINGS_INPUT', '不能同时保存和移除密钥');
-      if (input.apiKey && !this.cipher?.Available())
-        fail('WEB_SECRET_UNAVAILABLE', '系统安全存储不可用，未保存密钥');
-      const encryptedKey = input.clearKey ? undefined : input.apiKey ? this.cipher!.Encrypt(input.apiKey) : this.state.encryptedKey;
-      if (input.enabled && !encryptedKey)
-        fail('WEB_SEARCH_CONFIG', '请先配置 Brave Search API 密钥');
-      const state = { revision: this.state.revision + 1, enabled: input.enabled, encryptedKey, browserRobotsPolicy: input.browserRobotsPolicy ?? this.state.browserRobotsPolicy };
-      await atomic(this.filename, JSON.stringify(state));
-      this.state = state;
-      return this.Read();
-    });
+    return this.queue.Run(async () => { const input = webConfigureInput.parse(raw); if (input.revision !== this.state.revision) fail('WEB_SETTINGS_CONFLICT', '网页设置已改变，请刷新后保存'); if (input.clearKey && input.apiKey) fail('WEB_SETTINGS_INPUT', '不能同时保存和移除密钥'); if (input.apiKey && !this.cipher?.Available()) fail('WEB_SECRET_UNAVAILABLE', '系统安全存储不可用，未保存密钥'); const encryptedKey = input.clearKey ? undefined : input.apiKey ? this.cipher!.Encrypt(input.apiKey) : this.state.encryptedKey; if (input.enabled && !encryptedKey) fail('WEB_SEARCH_CONFIG', '请先配置 Brave Search API 密钥'); const state = { revision: this.state.revision + 1, enabled: input.enabled, encryptedKey, browserRobotsPolicy: input.browserRobotsPolicy ?? this.state.browserRobotsPolicy }; await atomic(this.filename, JSON.stringify(state)); this.state = state; return this.Read(); });
   }
-
   /** 只供主进程固定 API 适配器读取；错误不附带原密钥或加密字节。 */
   Resolve(): string
   {
     if (!this.state.enabled || !this.state.encryptedKey)
+
       fail('WEB_SEARCH_CONFIG', '网页搜索未启用，请在设置中配置 Brave Search API');
+
     if (!this.cipher?.Available())
+
       fail('WEB_SECRET_UNAVAILABLE', '系统安全存储不可用');
+
     try
     {
       return this.cipher.Decrypt(this.state.encryptedKey)

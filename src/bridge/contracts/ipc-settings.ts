@@ -4,15 +4,25 @@
  * 设计原因：设置仅改变配置或未来周期默认值，不向页面暴露运行许可或保存凭据。类型不替代身份和权限校验。
  */
 import { z } from 'zod';
+
 import { webConfigureInput, type WebSettingsView } from './web';
+
 import { ipcId, noIpcArgs } from './ipc-shapes';
+
 import { type DiscoveredModel } from './models';
+
 import { type LlmSettings, connectionSchema, definition } from './models';
+
 import { type GitHubFeedbackStatus, githubFeedbackConfigSchema } from './github-feedback';
+
 import { type AdmissionPolicy, type AdmissionRead, admissionConfigureSchema, admissionCursorSchema } from '../../logic/runtime/rules/admission';
+
 import { type RuntimeRead, type RuntimeSnapshot } from '../../logic/runtime/rules/types';
+
 import { type ScopeBudgetPolicy, scopeBudgetPolicySchema } from '../../logic/budget/rules/scope-budget';
+
 import { modelActionSchemas, type ModelActionResults } from './model-actions';
+
 import { loopEngineSchema, type EnginePackageSettings } from './engines';
 
 export const settingsIpcRequests = { 'engines.settings': noIpcArgs, 'engines.check': noIpcArgs, 'engines.install': z.object({ kind: loopEngineSchema, revision: z.number().int().nonnegative(), identity: z.string().regex(/^[a-f0-9]{64}$/) }).strict(), 'engines.configure': z.object({ kind: loopEngineSchema, revision: z.number().int().nonnegative(), action: z.enum(['enable', 'disable', 'remove']) }).strict(), ...modelActionSchemas, 'web.settings': noIpcArgs, 'web.configure': webConfigureInput, 'runtime.snapshot': noIpcArgs, 'runtime.read': z.object({ cursor: z.object({ streamId: ipcId, revision: z.number().int().nonnegative() }).strict().optional() }).strict().optional(), 'admission.read': z.object({ cursor: admissionCursorSchema.optional() }).strict().optional(), 'admission.settings': noIpcArgs, 'admission.configure': admissionConfigureSchema, 'budget.settings': noIpcArgs, 'budget.configure': scopeBudgetPolicySchema, 'models.list': noIpcArgs, 'github.feedback.status': noIpcArgs, 'github.feedback.cancel': noIpcArgs, 'github.feedback.disconnect': noIpcArgs, 'github.feedback.begin': githubFeedbackConfigSchema, 'github.feedback.poll': z.object({ flowId: z.string().uuid() }).strict(), };

@@ -7,16 +7,27 @@
  * 职责边界：这里只声明事实形状；权限、知识核实、磁盘提交和模型执行由各自服务负责。
  */
 import { type AutomaticExecutionBinding } from '../../team/rules/automatic-execution';
+
 import type { CandidateReview } from './candidate-review';
+
 import type { MemberHelpRecord } from './member-help';
+
 import type { QueuedTaskCancellation } from './queued-task-cancel';
+
 import type { DependencyReplacement } from './queued-dependency-replacement';
+
 import type { DependencyAddition } from './queued-dependency-addition';
+
 import type { DependencyRevision } from './queued-dependency-revision';
+
 import type { MemberCheckpointRecord } from './member-checkpoint';
+
 import type { MemberResumeRequest } from './queued-member-resume';
+
 import type { CheckpointAbandonment } from './checkpoint-handoff';
+
 import type { WorkflowSelection } from './workflow-selection';
+
 import type { OwnerExecutionBinding } from '../../team/rules/member-execution-binding';
 
 export type GraphIdentity =
@@ -25,7 +36,6 @@ export type GraphIdentity =
 
     rootSessionId: string
   };
-
 export type AgentRef =
   {
     agentId: string;
@@ -37,7 +47,6 @@ export type AgentRef =
     /** 名称是显示快照，不可代替成员身份。 */
     name: string;
   };
-
 export type ModuleBinding =
   {
     moduleId: string;
@@ -58,8 +67,7 @@ export type ModuleBinding =
       id: string;
 
       version: string
-    }
-    |
+    } |
     {
       kind: 'general';
 
@@ -70,7 +78,6 @@ export type ModuleBinding =
       reason: string
     };
   };
-
 export type SessionRootNode =
   {
     kind: 'session-root';
@@ -85,7 +92,6 @@ export type SessionRootNode =
 
     createdAt: string;
   };
-
 export type TaskStatus = 'planned' | 'queued' | 'running' | 'waiting' | 'result_ready' | 'blocked' | 'failed' | 'cancelled' | 'interrupted' | 'checkpointed';
 
 export type TaskNode =
@@ -167,7 +173,6 @@ export type TaskNode =
 
       acceptance: 'not_evaluated';
     };
-
     /** 正常结束后可靠交接的求助；任务保持 blocked，主调度须创建新任务，不可恢复此运行。 */
     help?: MemberHelpRecord;
 
@@ -200,7 +205,6 @@ export type TaskNode =
 
     updatedAt: string;
   };
-
 export type GraphEdge =
   {
     edgeId: string;
@@ -234,14 +238,12 @@ export type GraphEdge =
         reviewRequired?: true;
       }
     });
-
 export type GraphCursor = GraphIdentity &
 {
   streamId: string;
 
   seq: number
 };
-
 /** 当前图内的成员活动投影，不代表该成员在所有会话中的全局状态。 */
 export type AgentGraphView =
   {
@@ -259,33 +261,27 @@ export type AgentGraphView =
 
     waitingTaskIds: string[];
   };
+export type GraphChange = |
+{
+  type: 'root.upserted';
 
-export type GraphChange =
-  |
-  {
-    type: 'root.upserted';
+  root: SessionRootNode
+} |
+{
+  type: 'task.upserted';
 
-    root: SessionRootNode
-  }
-  |
-  {
-    type: 'task.upserted';
+  task: TaskNode
+} |
+{
+  type: 'edge.upserted';
 
-    task: TaskNode
-  }
-  |
-  {
-    type: 'edge.upserted';
+  edge: GraphEdge
+} |
+{
+  type: 'agent.upserted';
 
-    edge: GraphEdge
-  }
-  |
-  {
-    type: 'agent.upserted';
-
-    agent: AgentGraphView
-  };
-
+  agent: AgentGraphView
+};
 export type GraphCause = 'graph.created' | 'task.created' | 'task.dispatched' | 'task.checkpointed' | 'task.resume_requested' | 'task.started' | 'task.waiting' | 'task.result_ready' | 'task.blocked' | 'task.failed' | 'task.cancelled' | 'task.interrupted' | 'task.revised' | 'task.reconciled' | 'dependency.changed' | 'message.accepted' | 'message.processed' | 'agent.state_changed';
 
 /** 一次可靠提交的原子批次；changes 只包含变化对象的完整新快照。 */
@@ -309,7 +305,6 @@ export type GraphEventBatch =
 
     changes: GraphChange[];
   };
-
 export type GraphSnapshot =
   {
     version: 1;
@@ -326,34 +321,30 @@ export type GraphSnapshot =
 
     agents: AgentGraphView[];
   };
-
 /** cursor 指向已经完整返回的位置；delta 不拆批，reset 不改变图身份。 */
-export type GraphDelta =
-  |
-  {
-    mode: 'noop';
+export type GraphDelta = |
+{
+  mode: 'noop';
 
-    cursor: GraphCursor
-  }
-  |
-  {
-    mode: 'delta';
+  cursor: GraphCursor
+} |
+{
+  mode: 'delta';
 
-    from: GraphCursor;
+  from: GraphCursor;
 
-    cursor: GraphCursor;
+  cursor: GraphCursor;
 
-    batches: GraphEventBatch[];
+  batches: GraphEventBatch[];
 
-    hasMore: boolean
-  }
-  |
-  {
-    mode: 'reset';
+  hasMore: boolean
+} |
+{
+  mode: 'reset';
 
-    reason: 'initial' | 'stream_changed' | 'cursor_ahead' | 'history_compacted';
+  reason: 'initial' | 'stream_changed' | 'cursor_ahead' | 'history_compacted';
 
-    snapshot: GraphSnapshot;
+  snapshot: GraphSnapshot;
 
-    cursor: GraphCursor
-  };
+  cursor: GraphCursor
+};

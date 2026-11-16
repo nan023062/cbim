@@ -3,9 +3,13 @@
  * 设计原因：每次查询都有明确截至时间，历史缺口、在途和价格未知分别表达；默认不回扫日志，不将消耗统计当作账单或任务验收。
  */
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+
 import type { ScopeUsageInput, ScopeUsageReport, ScopeUsageRun } from '../../bridge/contracts/scope-usage';
+
 import { tokenCount } from '../../bridge/contracts/usage';
+
 import { ScopeUsageController, scopeUsageKey, scopeUsageGroup, type ScopeUsageState } from './scope-usage-state';
+
 import './scope-usage.css';
 
 const money = (value: number | undefined) => value === undefined ? '价格未知' : `$${value.toFixed(6)}`;
@@ -20,8 +24,11 @@ const tokensState = { reported: '原生汇总', partial: '部分已报告', miss
 export function ScopeUsageSummary({ report }: { report: ScopeUsageReport })
 {
   const { totals } = report,
+
     main = scopeUsageGroup(report.runs.filter(run => run.kind === 'main')),
+
     member = scopeUsageGroup(report.runs.filter(run => run.kind === 'member'));
+
   return <div className="scope-usage-summary" data-testid="scope-usage-summary">
     <p className="scope-usage-muted">截至 {new Date(report.checkedAt).toLocaleString()} · 按需快照，运行变化后请刷新。</p>
     {report.coverage === 'legacy' && <p role="status">旧周期没有完整主运行归属，只显示可核实部分，不能视为完整统计。</p>}
@@ -39,7 +46,6 @@ export function ScopeUsageSummary({ report }: { report: ScopeUsageReport })
     <p className="scope-usage-muted">推理已包含在输出中，不重复计入总数；累计消耗不同于上下文占用。费用是已报告估算，不是供应商账单或预算限制，也不代表业务验收。</p>
   </div>;
 }
-
 /** 读取入口只操作本控制器；保持之前报告时明确提示过期，不把错误渲染成零。 */
 export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsageState; OnRead(): void })
 {
@@ -49,13 +55,16 @@ export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsag
   {state.report ? <ScopeUsageSummary report={state.report} /> : <p className="scope-usage-muted">按需核对本周期主 Agent 与执行成员的记录。未读取不表示没有消耗。</p>}
 </>
 }
-
 /** 实例与周期键绑定；挂载或切换不会读取，卸载后迟到响应不会显示在另一个周期。 */
 export function ScopeUsagePanel({ identity }: { identity: ScopeUsageInput })
 {
   const key = scopeUsageKey(identity),
+
     controller = useMemo(() => new ScopeUsageController(identity, input => window.cbim.call('dispatch.scopeUsage', input)), [key]);
+
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
+
   useEffect(() => () => controller.Cancel(), [controller]);
+
   return <section className="scope-usage-panel" aria-label="目标周期用量" data-testid="scope-usage-panel" data-scope-id={identity.scopeId}><ScopeUsageReadView state={state} OnRead={() => void controller.Read()} /></section>;
 }

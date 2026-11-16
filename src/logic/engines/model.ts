@@ -3,7 +3,9 @@
  * 设计原因：引擎身份归执行选型，不进入通用模型连接；兼容旧快照中缺省的 engine，禁止补写影响历史哈希。
  */
 import type { ResolvedLlm, ResolvedModelOperation } from '../models';
+
 import type { LoopEngine } from './catalog/supported-engines';
+
 import type { ModelRolesSnapshot } from './model-roles';
 
 /** apiKey 只在执行准备期间存在；持久化只使用 profile。engine 缺省时保留缺省。 */
@@ -15,7 +17,6 @@ export interface ResolvedEngineModel
 
     modelRoles?: ModelRolesSnapshot
   };
-
   apiKey: string;
 
   /** 各额外角色的凭据仅在可信执行装配中使用，不持久化。 */

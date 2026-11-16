@@ -59,5 +59,4 @@ export type AdmissionRead =
 
     snapshot: AdmissionSnapshot
   };
-
 export const admissionReadSchema = z.discriminatedUnion('kind', [z.object({ kind: z.literal('noop'), cursor: admissionCursorSchema }).strict(), z.object({ kind: z.literal('snapshot'), snapshot: admissionSnapshotSchema }).strict()]);

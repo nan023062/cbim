@@ -8,12 +8,20 @@ import path from 'node:path';
 export function updateUserRoot(args: string[], environment: string | undefined)
 {
   const values = args.filter(arg => arg.startsWith('--cbim-user-data-root='));
+
   if (values.length > 1 || values.length && !args.includes('--updated'))
+
     throw Error('更新重启用户目录参数无效');
+
   const root = values.length ? values[0].slice('--cbim-user-data-root='.length) : environment;
+
   if (root === undefined)
+
     return;
+
   if (!root || root.length > 700 || /["\x00-\x1f]/.test(root) || !path.isAbsolute(root))
+
     throw Error('用户目录必须是有效的绝对路径，且长度不超过 700 字符');
+
   return path.resolve(root);
 }

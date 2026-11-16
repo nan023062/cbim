@@ -7,14 +7,23 @@
  * IPC 边界：操作联合与表单请求经对应Schema配对，原命令回执控制器不变。
  */
 import { Icon } from '../components/Icon';
+
 import { checkedIpcCall } from '../../bridge/contracts/ipc-call';
+
 import { useEffect, useRef, useState } from 'react';
+
 import { ModalFrame } from '../components/ModalFrame';
+
 import { moduleGovernanceListSchema, moduleGovernanceRegisterInputSchema, moduleGovernanceObserveInputSchema, moduleGovernanceProposeInputSchema, moduleGovernanceDecideInputSchema, moduleGovernanceApplyInputSchema, moduleGovernanceReceiptSchema, type ModuleGovernanceIdentity, type ModuleGovernanceList, type ModuleGovernanceObservation, type ModuleGovernanceReceipt, } from '../../bridge/contracts/governance';
+
 import { createGovernancePendingStore, checkedGovernanceReceipt, checkedGovernanceUnaccepted, isFirstGovernanceRejection, type GovernancePending } from './governance-pending';
+
 import { GovernanceOrigin } from './GovernanceOrigin';
+
 import { GovernanceDecisionFeedback, GovernanceDecisionForm, GovernanceResponseDetails } from './GovernanceFeedback';
+
 import { governanceResponsesCurrent } from './governance-feedback';
+
 import './module-governance.css';
 
 const decisions = { approve: '批准', reject: '驳回', defer: '暂缓' } as const;
@@ -37,29 +46,47 @@ interface Props
 
   OnApplied?(): Promise<void>
 }
-
 /** 打开时固定工作区实例和模块；查看历史不启动实施，卸载使所有迟到结果失效。 */
 export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, OnApplied: onApplied }: Props)
 {
   const target = useRef({ ...identity, moduleId }).current,
+
     alive = useRef(true),
+
     lock = useRef(false),
+
     sequence = useRef(0);
+
   const store = useRef(createGovernancePendingStore(localStorage)).current;
+
   const [view, setView] = useState<ModuleGovernanceList>(),
+
     [pending, setPending] = useState<GovernancePending>(),
+
     [busy, setBusy] = useState(false),
+
     [storageError, setStorageError] = useState(''),
+
     [error, setError] = useState(''),
+
     [notice, setNotice] = useState('');
+
   const [observation, setObservation] = useState<ModuleGovernanceObservation>(),
+
     [statement, setStatement] = useState(''),
+
     [body, setBody] = useState(''),
+
     [reason, setReason] = useState(''),
+
     [alternatives, setAlternatives] = useState(''),
+
     [invariants, setInvariants] = useState(''),
+
     [rollback, setRollback] = useState('');
+
   const [receipt, setReceipt] = useState<ModuleGovernanceReceipt>();
+
   /** 仅为新提案草稿选择原意见 ID；不持有批准、冻结证明或自动迁移评价。 */
   const [responseChoices, setResponseChoices] = useState<
     {
@@ -69,25 +96,36 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       comment: string
     }[]>([]);
+
   const selection = useRef<
     {
       proposalId?: string;
 
       observationId?: string
     }>({});
+
   const selected = view?.selected,
+
     proposal = selected?.proposal,
+
     latest = selected?.decisions.at(-1);
+
   const blocked = busy || !!pending || !!storageError || !view;
+
   async function load(next = selection.current)
   {
     const seq = ++sequence.current;
+
     const result = moduleGovernanceListSchema.parse(await window.cbim.call('governance.list', { ...target, ...next }));
+
     if (result.identity.workspaceId !== target.workspaceId || result.identity.instanceId !== target.instanceId || result.moduleId !== target.moduleId || result.selected && result.selected.proposal.proposalId !== next.proposalId || result.selectedObservation && result.selectedObservation.observationId !== next.observationId)
+
       throw Error('治理视图与当前目标不一致，未显示迟到结果');
+
     if (alive.current && seq === sequence.current)
     {
       selection.current = next;
+
       setView(result)
     }
     return result;
@@ -96,11 +134,17 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
   {
     // 新操作不能沿用上次成功提示；回复丢失时，只表达当前原命令仍待核实。
     if (lock.current)
+
       return;
+
     lock.current = true;
+
     setBusy(true);
+
     setError('');
+
     setNotice('');
+
     try
     {
       await action()
@@ -108,72 +152,73 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     catch (cause)
     {
       if (alive.current)
+
         setError(message(cause))
     }
     finally
     {
       lock.current = false;
+
       if (alive.current)
+
         setBusy(false)
     }
   }
-  useEffect(() =>
-  {
-    alive.current = true;
-    try
-    {
-      setPending(store.Read(target.workspaceId))
-    }
-    catch (cause)
-    {
-      setStorageError(message(cause))
-    }
-    void exclusive(async () =>
-    {
-      await load()
-    });
-    return () =>
-    {
-      alive.current = false;
-      sequence.current++
-    };
-  }, []);
+  useEffect(() => { alive.current = true; try { setPending(store.Read(target.workspaceId)) } catch (cause) { setStorageError(message(cause)) } void exclusive(async () => { await load() }); return () => { alive.current = false; sequence.current++ }; }, []);
 
   /** 只对完整原回执解除本地待确认；pending 实施仍需继续查原 journal，不新建命令。 */
   async function accept(raw: unknown, original: GovernancePending)
   {
     const checked = checkedGovernanceReceipt(raw, original);
+
     if (!alive.current)
+
       return;
+
     setReceipt(checked);
+
     if (checked.action === 'apply' && checked.record.state === 'pending')
     {
       setNotice('原实施意图已保存，知识提交尚未确认；请继续查询原回执。');
+
       return
     }
     store.Remove(original);
+
     setPending(undefined);
+
     setNotice(checked.action === 'apply' ? applicationLabels[checked.record.state] : checked.action === 'decide' ? '人工决定已记录，尚未实施；批准不会自动写入知识。' : '原治理命令已确认。');
+
     if (original.moduleId !== target.moduleId)
     {
       setNotice('另一个模块的原治理命令已核实，本面板仍显示当前模块。');
+
       await load();
+
       return
     }
     let next = selection.current;
+
     if (checked.action === 'observe')
     {
       setObservation(checked.record);
+
       setBody(checked.record.overview.text);
+
       setReason('');
+
       setAlternatives('');
+
       setInvariants('');
+
       setRollback('');
+
       next = { observationId: checked.record.observationId };
     }
     if (checked.action === 'propose')
     {
       next = { proposalId: checked.record.proposalId };
+
       setResponseChoices([])
     }
     if (checked.action === 'apply' && checked.record.state === 'committed')
@@ -188,27 +233,42 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
       }
     }
     else
+
       await load(next);
   }
   async function submit(action: GovernancePending['action'], fields: Record<string, unknown>)
   {
     if (blocked)
+
       return;
+
     await exclusive(async () =>
     {
       const commandId = crypto.randomUUID(),
+
         request = inputs[action].parse({ ...identity, commandId, ...fields });
+
       const expected: NonNullable<GovernancePending['expected']> = {};
+
       for (const key of ['protectionId', 'observationId', 'proposalId', 'decisionId'] as const)
+
         if (typeof fields[key] === 'string')
+
           expected[key] = fields[key] as string;
+
       if (typeof fields.expectedBasis === 'string')
+
         expected.basis = fields.expectedBasis;
+
       const original: GovernancePending = { ...target, commandId, action, ...(Object.keys(expected).length ? { expected } : {}) };
+
       store.Save(original);
+
       setPending(original);
+
       // 只处理首次 RPC 明确预受理拒绝；接收回执/刷新发生错误时不能借相同错误码清除记录。
       let result: unknown;
+
       try
       {
         result = await window.cbim.call(...checkedIpcCall(`governance.${action}`, request))
@@ -218,6 +278,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
         if (alive.current && isFirstGovernanceRejection(cause))
         {
           store.Remove(original);
+
           setPending(undefined)
         }
         throw cause
@@ -228,62 +289,35 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
   async function inspectPending()
   {
     if (!pending)
+
       return;
+
     const original = pending;
-    await exclusive(async () =>
-    {
-      const result = await window.cbim.call('governance.receipt', { workspaceId: original.workspaceId, commandId: original.commandId });
-      if (result)
-        await accept(result, original);
-      else
-        setNotice('尚未查到原命令回执，不能推断未受理。原记录继续保留。')
-    })
+
+    await exclusive(async () => { const result = await window.cbim.call('governance.receipt', { workspaceId: original.workspaceId, commandId: original.commandId }); if (result) await accept(result, original); else setNotice('尚未查到原命令回执，不能推断未受理。原记录继续保留。') })
   }
   async function releaseUnaccepted()
   {
     if (!pending)
+
       return;
+
     const original = pending;
-    await exclusive(async () =>
-    {
-      checkedGovernanceUnaccepted(await window.cbim.call('governance.unaccepted', { workspaceId: original.workspaceId, instanceId: original.instanceId, commandId: original.commandId, action: original.action }), original);
-      if (!alive.current)
-        return;
-      store.Remove(original);
-      setPending(undefined);
-      setNotice('已核实原实例退役且命令未受理，待确认记录已解除。');
-      await load()
-    })
+
+    await exclusive(async () => { checkedGovernanceUnaccepted(await window.cbim.call('governance.unaccepted', { workspaceId: original.workspaceId, instanceId: original.instanceId, commandId: original.commandId, action: original.action }), original); if (!alive.current) return; store.Remove(original); setPending(undefined); setNotice('已核实原实例退役且命令未受理，待确认记录已解除。'); await load() })
   }
   async function selectProposal(proposalId: string)
   {
-    await exclusive(async () =>
-    {
-      await load({ proposalId })
-    })
+    await exclusive(async () => { await load({ proposalId }) })
   }
   async function inspectApplication(commandId: string)
   {
-    await exclusive(async () =>
-    {
-      const result = moduleGovernanceReceiptSchema.parse(await window.cbim.call('governance.receipt', { workspaceId: target.workspaceId, commandId }));
-      if (result.commandId !== commandId || result.identity.workspaceId !== target.workspaceId || result.action !== 'apply' || result.record.proposalId !== proposal?.proposalId)
-        throw Error('历史实施回执与选定提案不一致');
-      if (alive.current)
-        setReceipt(result)
-    })
+    await exclusive(async () => { const result = moduleGovernanceReceiptSchema.parse(await window.cbim.call('governance.receipt', { workspaceId: target.workspaceId, commandId })); if (result.commandId !== commandId || result.identity.workspaceId !== target.workspaceId || result.action !== 'apply' || result.record.proposalId !== proposal?.proposalId) throw Error('历史实施回执与选定提案不一致'); if (alive.current) setReceipt(result) })
   }
-  return <ModalFrame label="模块知识治理" onRequestClose={() =>
-  {
-    if (!busy)
-      onClose()
-  }}><section className="modal module-governance" data-testid="module-governance-panel">
+  return <ModalFrame label="模块知识治理" onRequestClose={() => { if (!busy) onClose() }}><section className="modal module-governance" data-testid="module-governance-panel">
     <header><div><small>静态业务架构 · 模块知识</small><h2>知识治理</h2><code>{moduleId}</code></div><button disabled={busy} onClick={onClose}><Icon name="close" size={16} />关闭</button></header>
     <p>登记保护范围后，正文修改需经过提案、人工决定和单独实施。这里只验证知识变更；不执行项目业务，也不代替架构语义验收。</p>
-    <button disabled={busy} onClick={() => void exclusive(async () =>
-      {
-        await load()
-      })}><Icon name="refresh" size={16} />刷新治理状态</button>
+    <button disabled={busy} onClick={() => void exclusive(async () => { await load() })}><Icon name="refresh" size={16} />刷新治理状态</button>
     {(error || storageError) && <p className="error-text" role="alert">{error || storageError}</p>}{notice && <p role="status">{notice}</p>}
     {pending && <aside className="governance-pending"><b>原治理操作待确认</b><p>{pending.moduleId} · {pending.action}</p><code>{pending.commandId}</code><p>切换页面不会重发。请查询原回执后继续。</p><button data-testid="governance-query-pending" disabled={busy} onClick={() => void inspectPending()}><Icon name="search" size={16} />查询原命令回执</button>{pending.instanceId !== identity.instanceId && <button disabled={busy} onClick={() => void releaseUnaccepted()}><Icon name="search" size={16} />核实未受理并解除</button>}</aside>}
     {view && <>
@@ -295,10 +329,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
         {observation && <fieldset disabled={blocked}><legend>基于观察创建精确提案</legend><small>观察 {observation.observationId} · {observation.validation.structural ? '结构检查通过' : '结构存在问题'} · 架构仍需 review</small><label>修改后的模块正文<textarea className="governance-body" aria-label="治理提案正文" value={body} onChange={event => setBody(event.target.value)} /></label><label>修改理由<textarea aria-label="治理修改理由" value={reason} onChange={event => setReason(event.target.value)} maxLength={8000} /></label><label>替代方案（每行一项）<textarea aria-label="治理替代方案" value={alternatives} onChange={event => setAlternatives(event.target.value)} /></label><label>保持不变的约束（每行一项）<textarea aria-label="治理不变量" value={invariants} onChange={event => setInvariants(event.target.value)} /></label><label>恢复说明<textarea aria-label="治理恢复说明" value={rollback} onChange={event => setRollback(event.target.value)} maxLength={8000} /></label><button data-testid="governance-propose" disabled={body === observation.overview.text || !reason.trim() || !lines(alternatives).length || !lines(invariants).length || !rollback.trim()} onClick={() => void submit('propose', { protectionId: observation.protectionId, observationId: observation.observationId, expectedProtectionRevision: observation.protectionRevision, expectedKnowledgeRevision: observation.knowledgeRevision, newOverviewText: body, reason, alternatives: lines(alternatives), invariants: lines(invariants), rollbackNotes: rollback, ...(responseChoices.length ? { respondsToDecisionIds: responseChoices.map(item => item.decisionId) } : {}) })}><Icon name="confirm" size={16} />保存精确提案</button></fieldset>}
       </>}
       <section aria-label="治理历史"><h3>提案历史</h3>{!view.proposals.length && <p>暂无提案。</p>}{view.proposals.map(item => <button className="governance-history-item" key={item.proposalId} data-testid="governance-history-proposal" data-proposal-id={item.proposalId} disabled={busy} onClick={() => void selectProposal(item.proposalId)}><span>{item.reason}</span><small>{new Date(item.createdAt).toLocaleString()} · 决定版本 {item.decisionRevision}</small></button>)}
-        <details><summary>观察记录（{view.observations.length}）</summary>{view.observations.map(item => <article key={item.observationId}><p>{item.statement}</p><GovernanceOrigin origin={item.origin} /><code>{item.knowledgeRevision}</code><button disabled={busy} onClick={() => void exclusive(async () =>
-          {
-            await load({ ...selection.current, observationId: item.observationId })
-          })}><Icon name="inspect" size={16} />查看原观察依据</button></article>)}</details>
+        <details><summary>观察记录（{view.observations.length}）</summary>{view.observations.map(item => <article key={item.observationId}><p>{item.statement}</p><GovernanceOrigin origin={item.origin} /><code>{item.knowledgeRevision}</code><button disabled={busy} onClick={() => void exclusive(async () => { await load({ ...selection.current, observationId: item.observationId }) })}><Icon name="inspect" size={16} />查看原观察依据</button></article>)}</details>
         {view.selectedObservation && <details open><summary>原观察依据</summary><p>{view.selectedObservation.statement}</p><GovernanceOrigin origin={view.selectedObservation.origin} /><p>结构：{view.selectedObservation.validation.structural ? '通过' : '有问题'}；业务验证：未执行</p><pre>{view.selectedObservation.overview.text}</pre></details>}
       </section>
       {proposal && <section className="governance-proposal" aria-label="精确治理提案"><h3>提案与决定</h3><code>{proposal.proposalId}</code><GovernanceOrigin origin={proposal.origin} /><p>{proposal.reason}</p><details open><summary>逐份核对原文与修改后正文</summary><div className="governance-diff"><div><h4>修改前</h4><pre>{proposal.change.beforeText}</pre></div><div><h4>修改后</h4><pre>{proposal.change.afterText}</pre></div></div></details><p>替代方案：{proposal.alternatives.join('；')}</p><p>不变量：{proposal.invariants.join('；')}</p><p>恢复说明：{proposal.rollbackNotes}</p><code>依据 {proposal.basis}</code>

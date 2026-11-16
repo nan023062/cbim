@@ -6,17 +6,29 @@
  * 职责边界：只传输既有事实，不创建恢复许可；后端完整任务与事务不变量另行核验。
  */
 import { collaborationPolicySchema } from '../../team/rules/automatic-execution';
+
 import { z } from 'zod';
+
 import type { DispatchScope } from './dispatch-scope';
+
 import { dispatchScopeGoalSchema } from './scope-goal';
+
 import { dispatchScopeWaitSchema } from './scope-continuation';
+
 import { scopeContinuationRecordSchema } from './scope-continuation-record';
+
 import { scopeRunTrackingSchema } from './scope-run-tracking';
+
 import { scopeBudgetSchema } from '../../budget/rules/scope-budget';
+
 import { scopeHumanDecisionsSchema } from './human-decisions';
+
 import { scopeRecoverySchema } from './scope-recovery';
+
 import { scopeReplanSchema } from './scope-replan';
+
 import { topicInterruptionSchema } from './topic-interruption';
+
 import { scopeActiveInputSchema } from './scope-active-input';
 
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
@@ -30,28 +42,40 @@ export type PublicDispatchScope = z.infer<typeof publicDispatchScopeSchema>;
 export function projectMainScope(scope: DispatchScope): PublicDispatchScope
 {
   if (!scope || typeof scope !== 'object' || Array.isArray(scope))
+
     return scope as unknown as PublicDispatchScope;
+
   const result: PublicDispatchScope = { scopeId: scope.scopeId, workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, status: scope.status, createdAt: scope.createdAt };
+
   for (const key of ['followupOf', 'executionPolicy', 'goal', 'runTracking', 'budget', 'humanDecisions', 'wait', 'continuations', 'activeInputs', 'topicInterruptions', 'closedAt', 'outcome'] as const)
+
     if (scope[key] !== undefined)
+
       Object.assign(result, { [key]: scope[key] });
+
   if (scope.recovery !== undefined)
   {
     if (!scope.recovery || typeof scope.recovery !== 'object' || Array.isArray(scope.recovery))
+
       result.recovery = scope.recovery;
+
     else
     {
       const { recoveryId, acceptedAt, source, operation, observation, input, options, dispositionId } = scope.recovery;
+
       result.recovery = { recoveryId, acceptedAt, source, operation, observation, input, options, ...(dispositionId !== undefined ? { dispositionId } : {}) }
     }
   }
   if (scope.replan !== undefined)
   {
     if (!scope.replan || typeof scope.replan !== 'object' || Array.isArray(scope.replan))
+
       result.replan = scope.replan;
+
     else
     {
       const { replanId, acceptedAt, source, operation, input, options, dispositionId } = scope.replan;
+
       result.replan = { replanId, acceptedAt, source, operation, input, options, ...(dispositionId !== undefined ? { dispositionId } : {}) }
     }
   }

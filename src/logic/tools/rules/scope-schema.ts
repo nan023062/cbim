@@ -4,7 +4,9 @@
  * 职责边界：范围只描述可信装配已绑定的目标，不携带地址、令牌或授权，也不从模型参数签发能力。
  */
 import { z } from 'zod';
+
 import { connectorIdSchema } from '../../connectors/rules/definition';
+
 import { githubFeedbackScopeSchema } from '../../feedback';
 
 const workspaceId = z.string();

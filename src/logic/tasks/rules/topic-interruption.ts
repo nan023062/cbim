@@ -3,6 +3,7 @@
  * 设计原因：先保存原请求再停止参与者，停止与接收输入是两件事；状态由原等待/接续推导，不能用重试创建第二份指令。
  */
 import { z } from 'zod';
+
 import { goalContinuationRequestSchema } from './scope-continuation';
 
 export const topicInterruptionRequestSchema = goalContinuationRequestSchema.omit({ waitId: true, expectedGoalRevision: true }).strict();
@@ -17,5 +18,6 @@ export type TopicInterruption = z.infer<typeof topicInterruptionSchema>;
 export function pendingTopicInterruption(scope: { topicInterruptions?: readonly TopicInterruption[]; continuations?: readonly { continuationId: string }[] }): TopicInterruption | undefined
 {
   const last = scope.topicInterruptions?.at(-1);
+
   return last && !scope.continuations?.some(item => item.continuationId === last.request.commandId) ? last : undefined;
 }

@@ -3,6 +3,7 @@
  * 设计原因：embedding 只有输入容量、向量维度与输入计价；同一供应商的生成和向量操作可共用凭据，但端点必须明确配置。
  */
 import { z } from 'zod';
+
 import { modelEndpointSchema } from './endpoint';
 
 export const embeddingModelSchema = z.object({ id: z.string().trim().min(1).max(160), name: z.string().trim().max(160), enabled: z.boolean(), inputTokens: z.number().int().min(1).max(2000000), dimensions: z.number().int().min(1).max(65536), /** USD / 百万输入 token；缺省为未知，0 才表示免费。 */ inputPrice: z.number().finite().nonnegative().optional() }).strict();

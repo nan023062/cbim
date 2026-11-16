@@ -5,8 +5,11 @@
  * 接续模型选项保留可选引擎，旧记录缺省沿用 Pi；主轮选型不覆盖成员岗位。
  */
 import { z } from 'zod';
+
 import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
+
 import { continuationAttachmentIdsSchema, continuationAttachmentManifestSchema, assertContinuationAttachmentManifest } from './scope-continuation-attachments';
+
 import { memberPauseSchema } from './member-pause';
 
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
@@ -41,17 +44,7 @@ export const scopeContinuationLookupSchema = goalContinuationRequestSchema.pick(
 
 export type ScopeContinuationLookup = z.infer<typeof scopeContinuationLookupSchema>;
 
-export const scopeContinuationSchema = z.object({ continuationId: z.string().uuid(), acceptedAt: z.string().datetime(), wait: dispatchScopeWaitSchema, inputRevision: z.number().int().min(2).max(32), input, runId: id, options: scopeContinuationOptionsSchema, attachmentManifest: continuationAttachmentManifestSchema.optional() }).strict().superRefine((value, context) =>
-{
-  try
-  {
-    assertContinuationAttachmentManifest(value.input, value.attachmentManifest)
-  }
-  catch
-  {
-    context.addIssue({ code: 'custom', message: '补充附件引用与可信快照清单不一致' })
-  }
-});
+export const scopeContinuationSchema = z.object({ continuationId: z.string().uuid(), acceptedAt: z.string().datetime(), wait: dispatchScopeWaitSchema, inputRevision: z.number().int().min(2).max(32), input, runId: id, options: scopeContinuationOptionsSchema, attachmentManifest: continuationAttachmentManifestSchema.optional() }).strict().superRefine((value, context) => { try { assertContinuationAttachmentManifest(value.input, value.attachmentManifest) } catch { context.addIssue({ code: 'custom', message: '补充附件引用与可信快照清单不一致' }) } });
 
 export type ScopeContinuation = z.infer<typeof scopeContinuationSchema>;
 

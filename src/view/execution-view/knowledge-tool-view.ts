@@ -8,11 +8,17 @@ import { knowledgePreviewOutputSchema, objectPreviewOutputSchema, knowledgeCommi
 export function knowledgeToolView(name: string, result: unknown, workspaceId: string)
 {
   if (!result || typeof result !== 'object' || !('content' in result) || !Array.isArray(result.content) || result.content.length !== 1 || 'isError' in result && result.isError === true)
+
     return undefined;
+
   const block = result.content[0];
+
   if (block?.type !== 'text' || typeof block.text !== 'string')
+
     return undefined;
+
   let value: unknown;
+
   try
   {
     value = JSON.parse(block.text)
@@ -24,13 +30,17 @@ export function knowledgeToolView(name: string, result: unknown, workspaceId: st
   if (name === 'cbim_object_preview' || name === 'cbim_knowledge_preview')
   {
     const parsed = (name === 'cbim_object_preview' ? objectPreviewOutputSchema : knowledgePreviewOutputSchema).safeParse(value);
+
     if (parsed.success && parsed.data.request.workspaceId === workspaceId)
+
       return { kind: 'preview' as const, validation: parsed.data.validation };
   }
   if (name === 'cbim_object_commit' || name === 'cbim_knowledge_commit')
   {
     const parsed = (name === 'cbim_object_commit' ? objectCommitOutputSchema : knowledgeCommitOutputSchema).safeParse(value);
+
     if (parsed.success && parsed.data.workspaceId === workspaceId)
+
       return { kind: 'committed' as const, receipt: parsed.data };
   }
   return undefined;

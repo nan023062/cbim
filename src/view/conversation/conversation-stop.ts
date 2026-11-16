@@ -9,7 +9,6 @@ export interface ConversationStopTarget
 
   taskId: string
 }
-
 type StopToken = Readonly<ConversationStopTarget &
 {
   generation: number
@@ -29,42 +28,49 @@ export class ConversationStopGate
   Observe(target: ConversationStopTarget | undefined): void
   {
     const next = target ? key(target) : '';
+
     if (next !== this.target)
     {
       this.target = next;
+
       this.generation++
     }
   }
-
   /** 同一会话只有一个在途停止；切换到其他会话仍可发出它自己的停止。 */
   Begin(target: ConversationStopTarget): StopToken | undefined
   {
     const id = key(target);
+
     if (id !== this.target || this.requests.has(id))
+
       return;
+
     const token = Object.freeze({ ...target, generation: this.generation });
+
     this.requests.set(id, token);
+
     return token
   }
-
   Pending(target: ConversationStopTarget): boolean
   {
     return this.requests.has(key(target))
   }
-
   /** 迟到回包仅可更新原视图代次的错误和刷新状态；请求本身仍按原身份结束。 */
   IsCurrent(token: StopToken): boolean
   {
     return key(token) === this.target && token.generation === this.generation
   }
-
   /** 仅消费原标记，不能用迟到的旧请求清除同身份下一次请求。 */
   Finish(token: StopToken): boolean
   {
     const id = key(token);
+
     if (this.requests.get(id) !== token)
+
       return false;
+
     this.requests.delete(id);
+
     return true
   }
 }

@@ -7,7 +7,9 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
+
   hash = z.string().regex(/^[a-f0-9]{64}$/),
+
   integer = z.number().int().nonnegative().safe();
 
 const money = z.number().finite().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -66,7 +68,6 @@ export interface RequestBudgetRecord
 
   change: ModelRequestBudgetChange
 }
-
 export const requestBudgetQuerySchema = z.object({ workspaceId: id, rootSessionId: id, scopeId: id }).strict();
 
 export const requestBudgetReportSchema = requestBudgetQuerySchema.extend({ policyRevision: integer.min(1), requests: integer, reported: integer, inFlight: integer, unknown: integer, denied: integer, notSent: integer, tokens: integer, reservedTokens: integer, estimatedCostUsd: money, costComplete: z.boolean(), reservedCostUsd: money, overrun: integer, lastDenial: requestBudgetDenialSchema.optional(), lastDeniedTokens: integer.optional(), lastDeniedCostUsd: money.optional() }).strict();

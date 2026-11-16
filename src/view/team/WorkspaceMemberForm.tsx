@@ -6,12 +6,19 @@
  * 提交前按该供应商的实际兼容接口与型号范围核对，和后端采纳快照保持一致。
  */
 import { Icon } from '../components/Icon';
+
 import { EngineModelPicker } from '../components/EngineModelPicker';
+
 import { providerSupportsEngine } from '../../bridge/contracts/engines';
+
 import { type AgentModelSelection } from '../../bridge/contracts/agent-settings';
+
 import { useState } from 'react';
+
 import type { LlmSettings } from '../../bridge/contracts/models';
+
 import { workspaceMemberChangeInputSchema } from '../../bridge/contracts/workspace-members';
+
 import type { WorkspaceMember, WorkspaceMemberChangeInput } from '../../bridge/contracts/workspace-members';
 
 /** onPreview 只表达人工选择，成员 revision 固定为打开表单时读到的版本。 */
@@ -47,50 +54,70 @@ export interface WorkspaceMemberFormProps
 
   onClose: () => void
 }
-
 export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, models, target, nextState, disabled, onEdit, onPreview, onClose }: WorkspaceMemberFormProps)
 {
   const register = kind === 'register',
+
     editable = register || kind === 'update';
+
   const [name, setName] = useState(register ? '' : member?.name ?? ''),
+
     [position, setPosition] = useState(register ? '' : member?.position ?? ''),
+
     [instructions, setInstructions] = useState(register ? '' : member?.adaptation.instructions ?? '');
+
   const [references, setReferences] = useState(register ? '' : member?.adaptation.references.join('\n') ?? ''),
+
     [agent, setAgent] = useState(() => register && agents.some(item => item.id === initialAgentId) ? initialAgentId! : ''),
+
     [model, setModel] = useState<AgentModelSelection | null>(() => register ? agents.find(item => item.id === initialAgentId)?.runtime ?? null : null),
+
     [reason, setReason] = useState(''),
+
     [error, setError] = useState('');
-  const change = (fn: () => void) =>
-  {
-    onEdit();
-    setError('');
-    fn()
-  };
+
+  const change = (fn: () => void) => { onEdit(); setError(''); fn() };
+
   async function prepare()
   {
     try
     {
       const runtimePolicy = model ? { engine: model.engine, profileId: model.profileId, modelId: model.modelId } : undefined;
+
       if (model && !models?.profiles.some(p => p.id === model.profileId && providerSupportsEngine(model.engine, p, model.modelId) && p.models.some(m => m.enabled && m.id === model.modelId)))
+
         throw Error('所选引擎或模型不可用，请重新选择');
+
       const adaptation = { instructions, references: references.split('\n').map(line => line.trim()).filter(Boolean) };
+
       let input: unknown;
+
       if (register)
       {
         if (!runtimePolicy)
+
           throw Error('请明确选择岗位模型');
+
         input = { kind, agentId: agent, name, position, adaptation, runtimePolicy, reason }
       }
       else
       {
         if (!member)
+
           throw Error('请先读取岗位');
+
         const base = { kind, memberId: member.memberId, expectedRevision: member.revision, reason };
+
         if (kind === 'update')
+
           input = { ...base, patch: { ...(name !== member.name ? { name } : {}), ...(position !== member.position ? { position } : {}), ...(JSON.stringify(adaptation) !== JSON.stringify(member.adaptation) ? { adaptation } : {}), ...(runtimePolicy ? { runtimePolicy } : {}) } };
+
         else if (kind === 'adopt')
+
           input = { ...base, target };
+
         else
+
           input = { ...base, nextState }
       }
       await onPreview(workspaceMemberChangeInputSchema.parse(input));
@@ -100,18 +127,10 @@ export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, mode
       setError(cause instanceof Error ? cause.message : String(cause))
     }
   }
-  return <form className="workspace-member-form" onSubmit={event =>
-  {
-    event.preventDefault();
-    void prepare()
-  }}><h3>{register ? '登记项目岗位' : kind === 'update' ? '修改岗位' : kind === 'adopt' ? '明确采纳新版本' : nextState === 'retired' ? '退休岗位' : nextState === 'suspended' ? '暂停岗位' : '启用岗位'}</h3>
+  return <form className="workspace-member-form" onSubmit={event => { event.preventDefault(); void prepare() }}><h3>{register ? '登记项目岗位' : kind === 'update' ? '修改岗位' : kind === 'adopt' ? '明确采纳新版本' : nextState === 'retired' ? '退休岗位' : nextState === 'suspended' ? '暂停岗位' : '启用岗位'}</h3>
     <p className="inline-note">1. 填写变更 → 2. 核对预览 → 3. 确认保存。预览不会修改岗位。</p>
     <fieldset disabled={disabled}>
-      {register && <label>静态 Agent<select aria-label="静态 Agent" value={agent} onChange={event => change(() =>
-      {
-        setAgent(event.target.value);
-        setModel(agents.find(item => item.id === event.target.value)?.runtime ?? null)
-      })}><option value="">请选择专业能力</option>{agents.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+      {register && <label>静态 Agent<select aria-label="静态 Agent" value={agent} onChange={event => change(() => { setAgent(event.target.value); setModel(agents.find(item => item.id === event.target.value)?.runtime ?? null) })}><option value="">请选择专业能力</option>{agents.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       {editable && <><label>岗位名称<input aria-label="岗位名称" value={name} maxLength={100} onChange={event => change(() => setName(event.target.value))} /></label><label>岗位职责<textarea aria-label="岗位职责" value={position} maxLength={500} onChange={event => change(() => setPosition(event.target.value))} /></label><label>岗位适配说明<textarea aria-label="岗位适配说明" value={instructions} maxLength={8000} onChange={event => change(() => setInstructions(event.target.value))} /></label><label>参考知识 ID（每行一项）<textarea aria-label="参考知识 ID" value={references} onChange={event => change(() => setReferences(event.target.value))} /></label>
         <EngineModelPicker modelLabel="岗位模型" key={agent} models={models} value={model} required={register} emptyLabel={register ? '请选择引擎' : '保留已采纳配置'} onChange={value => change(() => setModel(value))} /><p>模型配置修改不会自动影响已采纳岗位。同一模型的新配置请使用“采纳当前模型配置”。</p></>}
       {kind === 'adopt' && <p>仅重新采纳{target === 'capability' ? '原静态 Agent 的工作原则及可用 Skill' : '当前岗位已选择的供应商/模型配置'}，另一侧保持原版本。</p>}

@@ -3,9 +3,13 @@
  * 设计原因：请求只选择已有任务/通道与公开运行选项；后端核实成员归属、知识、租约和原生会话，命令回执不等于执行完成。
  */
 import { z } from 'zod';
+
 import { graphIdentityInput } from './dispatch-commands';
+
 import type { GraphCursor, TaskNode } from './graph-types';
+
 import type { DispatchRunStatus } from './dispatch-execution';
+
 import type { MemberRunBinding } from '../../execution/rules/member-run';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
@@ -34,7 +38,6 @@ export interface MemberStartReceipt
 
   cursor: GraphCursor
 }
-
 /** 无提示词、凭据、工具正文或磁盘会话路径的观察视图。 */
 export interface MemberExecutionView
 {

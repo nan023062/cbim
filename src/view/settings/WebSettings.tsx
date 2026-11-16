@@ -4,7 +4,9 @@
  * 设计原因：密钥输入仅发送给本机安全存储，保存后清空；界面只展示已配置状态，冲突需重新读取。
  */
 import { Icon } from '../components/Icon';
+
 import { useEffect, useState } from 'react';
+
 import type { SettingsIpcResponses } from '../../bridge/contracts/ipc-settings';
 
 const api = window.cbim;
@@ -12,50 +14,47 @@ const api = window.cbim;
 export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {})
 {
   const [settings, setSettings] = useState<SettingsIpcResponses['web.settings']>(),
+
     [enabled, setEnabled] = useState(false),
+
     [key, setKey] = useState(''),
+
     [busy, setBusy] = useState(false),
+
     [message, setMessage] = useState('');
+
   const [robots, setRobots] = useState<'allow' | 'respect'>('allow');
+
   const unsaved = !!settings && (enabled !== settings.enabled || robots !== settings.browserRobotsPolicy || !!key);
-  useEffect(() =>
-  {
-    onDirtyChange?.(unsaved);
-    return () => onDirtyChange?.(false)
-  }, [unsaved, onDirtyChange]);
+
+  useEffect(() => { onDirtyChange?.(unsaved); return () => onDirtyChange?.(false) }, [unsaved, onDirtyChange]);
+
   function accept(value: SettingsIpcResponses['web.settings'])
   {
     setSettings(value);
+
     setEnabled(value.enabled);
+
     setRobots(value.browserRobotsPolicy)
   }
-  useEffect(() =>
-  {
-    let live = true;
-    void api.call('web.settings').then(value =>
-    {
-      if (live)
-        accept(value)
-    }).catch((error: Error) =>
-    {
-      if (live)
-        setMessage(error.message)
-    });
-    return () =>
-    {
-      live = false
-    }
-  }, []);
+  useEffect(() => { let live = true; void api.call('web.settings').then(value => { if (live) accept(value) }).catch((error: Error) => { if (live) setMessage(error.message) }); return () => { live = false } }, []);
+
   async function save(clearKey = false)
   {
     if (!settings)
+
       return;
+
     setBusy(true);
+
     setMessage('');
+
     try
     {
       accept(await api.call('web.configure', { revision: settings.revision, enabled: clearKey ? false : enabled, clearKey, apiKey: !clearKey && key.trim() ? key.trim() : undefined, browserRobotsPolicy: robots }));
+
       setKey('');
+
       setMessage(clearKey ? '密钥已移除，搜索已关闭。' : '网页设置已保存。')
     }
     catch (error)
@@ -77,26 +76,7 @@ export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean
       <label><input type="checkbox" checked={enabled} disabled={busy} onChange={event => setEnabled(event.target.checked)} />启用 Brave 网页搜索</label>
       <label>API 密钥<input type="password" autoComplete="off" value={key} disabled={busy || !settings.secureStorage} placeholder={settings.hasKey ? '已保存；留空保留' : 'Brave Search API key'} onChange={event => setKey(event.target.value)} /></label>
       {!settings.secureStorage && <p>系统安全存储不可用，不能保存或使用密钥。</p>}
-      <button disabled={busy} onClick={async () =>
-      {
-        if (unsaved && !confirm('重新读取会放弃未保存的网页设置，继续吗？'))
-          return;
-        setBusy(true);
-        try
-        {
-          accept(await api.call('web.settings'));
-          setKey('');
-          setMessage('已读取当前设置。')
-        }
-        catch (error)
-        {
-          setMessage(error instanceof Error ? error.message : String(error))
-        }
-        finally
-        {
-          setBusy(false)
-        }
-      }}><Icon name="refresh" size={16} />重新读取设置</button>
+      <button disabled={busy} onClick={async () => { if (unsaved && !confirm('重新读取会放弃未保存的网页设置，继续吗？')) return; setBusy(true); try { accept(await api.call('web.settings')); setKey(''); setMessage('已读取当前设置。') } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }}><Icon name="refresh" size={16} />重新读取设置</button>
       <button disabled={busy || enabled && !settings.hasKey && !key.trim()} onClick={() => void save()}><Icon name="confirm" size={16} />保存网页设置</button>
       {settings.hasKey && <button disabled={busy} onClick={() => void save(true)}><Icon name="remove" size={16} />移除密钥并关闭</button>}
       {message && <p role="status">{message}</p>}

@@ -5,6 +5,7 @@
  * 职责边界：结果是操作事实，不是专业验收；隔离输出不自动回写原工程。
  */
 import { z } from 'zod';
+
 import { executionPathSchema } from '../../workspace/rules/execution-scope';
 
 export const scopedReadToolName = 'cbim_scoped_read' as const;
@@ -13,11 +14,7 @@ export const scopedNodeToolName = 'cbim_scoped_node' as const;
 
 export const scopedReadInputSchema = z.object({ path: executionPathSchema }).strict();
 
-export const scopedNodeInputSchema = z.object({ entry: executionPathSchema, files: z.array(executionPathSchema).min(1).max(64), args: z.array(z.string().max(2048).refine(v => !v.includes('\0'))).max(16), outputs: z.array(executionPathSchema).max(16) }).strict().superRefine((v, c) =>
-{
-  if (!v.files.includes(v.entry) || !/\.(?:js|cjs|mjs)$/.test(v.entry) || new Set(v.files.map(v => v.toLowerCase())).size !== v.files.length || new Set(v.outputs.map(v => v.toLowerCase())).size !== v.outputs.length)
-    c.addIssue({ code: 'custom', message: '入口必须在唯一快照文件内，且为 Node 脚本；输出路径不能重复' });
-});
+export const scopedNodeInputSchema = z.object({ entry: executionPathSchema, files: z.array(executionPathSchema).min(1).max(64), args: z.array(z.string().max(2048).refine(v => !v.includes('\0'))).max(16), outputs: z.array(executionPathSchema).max(16) }).strict().superRefine((v, c) => { if (!v.files.includes(v.entry) || !/\.(?:js|cjs|mjs)$/.test(v.entry) || new Set(v.files.map(v => v.toLowerCase())).size !== v.files.length || new Set(v.outputs.map(v => v.toLowerCase())).size !== v.outputs.length) c.addIssue({ code: 'custom', message: '入口必须在唯一快照文件内，且为 Node 脚本；输出路径不能重复' }); });
 
 export type ScopedNodeInput = z.infer<typeof scopedNodeInputSchema>;
 

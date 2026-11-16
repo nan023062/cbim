@@ -4,11 +4,17 @@
  * 职责边界：这里只持有无密钥的执行快照和原生会话定位，不进入公开任务图，也不把 completed 视为业务验收。
  */
 import type { MemberRunBinding } from '../../execution/rules/member-run';
+
 import type { ResolvedEngineModel } from '../../engines';
+
 import type { ChatPermission } from '../../tools/rules/policy/types';
+
 import type { PreparedDispatchKnowledge } from './execution-context';
+
 import type { TaskNode } from './graph-types';
+
 import type { MemberCheckpointProof, MemberResumeFrom } from './member-checkpoint';
+
 import type { MemberTopicContext } from './member-topic-context';
 
 /** starting 是已持久化领取意图，running 须有真实启动事实；completed 不保证存在交付候选。 */
@@ -64,7 +70,6 @@ export interface DispatchRun
 
     sessionFile?: string
   };
-
   /** 领取事务生成的 UTC ISO 8601 时间；不等于模型已开始生成。 */
   createdAt: string;
 

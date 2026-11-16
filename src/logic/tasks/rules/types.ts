@@ -4,6 +4,7 @@
  * 设计原因：任务身份独立于某次模型执行；正式成员保存原负责人绑定供日志核验，旧缺省不推断岗位，不把定义当自动验收。
  */
 import { type AutomaticExecutionBinding } from '../../team/rules/automatic-execution';
+
 import type { OwnerExecutionBinding } from '../../team/rules/member-execution-binding';
 
 /** 不随运行重试改变的任务定义；恢复必须与最初持久化的定义一致。 */

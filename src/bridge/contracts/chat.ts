@@ -11,15 +11,21 @@ export type { ChatAttachment, ChatAttachmentPreview } from '../../logic/material
 export function pastedLocalPaths(text: string): string[] | undefined
 {
   if (!text.trim() || text.length > 32768 * 12 || text.includes('\0'))
+
     return;
+
   const lines = text.trim().split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
   if (!lines.length || lines.length > 12)
+
     return;
+
   const paths = lines.map(line => /^(["']).*\1$/.test(line) ? line.slice(1, -1) : line);
+
   if (paths.every(value => /^(?:[a-z]:[\\/]|\/(?!\/)|file:\/\/\/)/i.test(value) && value.length <= 32768))
+
     return paths;
 }
-
 /** 此资料导入协议不包含正文、凭据或来源证明；本地路径/剪贴板图片分别使用受限专用入口。 */
 export type ChatMaterialImport =
   {

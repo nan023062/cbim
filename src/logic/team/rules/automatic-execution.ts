@@ -4,10 +4,13 @@
  * 职责边界：纯数据契约，不授予工具权限；是否可兜底还须核实可信周期、当前模块与实际模型。
  */
 import { z } from 'zod';
+
 import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
+
 import { projectRootModuleId } from '../../workspace/rules/project-root';
 
 const id = z.string().min(1).max(512),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 const model = z.object({ profileId: z.string().uuid(), modelId: z.string().min(1).max(160), configurationHash: digest, engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional() }).strict();
@@ -24,15 +27,7 @@ export const collaborationPolicySchema = z.discriminatedUnion('mode', [z.object(
 
 export type CollaborationPolicy = z.infer<typeof collaborationPolicySchema>;
 
-export const automaticExecutionBindingSchema = z.object({
-  version: z.literal(1), kind: z.literal('automatic'), scopeId: id, workspaceId: id,
-  agentId: z.literal('cbim:executor'), teamId: id, capabilityHash: digest, knowledgeRevision: id, model,
-  reason: z.enum(['unassigned_owner', 'no_modules']), moduleIds: z.array(id).min(1).max(50),
-}).strict().superRefine((value, context) =>
-{
-  if (new Set(value.moduleIds).size !== value.moduleIds.length || (value.reason === 'no_modules' ? (value.moduleIds.length !== 1 || value.moduleIds[0] !== implicitProjectModuleId) : value.moduleIds.includes(implicitProjectModuleId)))
-    context.addIssue({ code: 'custom', message: '自动兜底原因与模块范围不一致' });
-});
+export const automaticExecutionBindingSchema = z.object({ version: z.literal(1), kind: z.literal('automatic'), scopeId: id, workspaceId: id, agentId: z.literal('cbim:executor'), teamId: id, capabilityHash: digest, knowledgeRevision: id, model, reason: z.enum(['unassigned_owner', 'no_modules']), moduleIds: z.array(id).min(1).max(50), }).strict().superRefine((value, context) => { if (new Set(value.moduleIds).size !== value.moduleIds.length || (value.reason === 'no_modules' ? (value.moduleIds.length !== 1 || value.moduleIds[0] !== implicitProjectModuleId) : value.moduleIds.includes(implicitProjectModuleId))) context.addIssue({ code: 'custom', message: '自动兜底原因与模块范围不一致' }); });
 
 export type AutomaticExecutionBinding = z.infer<typeof automaticExecutionBindingSchema>;
 
@@ -40,12 +35,15 @@ export type AutomaticExecutionBinding = z.infer<typeof automaticExecutionBinding
 export function sameAutomaticExecutionForModules(a: AutomaticExecutionBinding | undefined, b: AutomaticExecutionBinding | undefined, ids: readonly string[]): boolean
 {
   if (!a || !b)
+
     return a === b;
+
   return automaticExecutionBindingSchema.safeParse(a).success && automaticExecutionBindingSchema.safeParse(b).success &&
+
     a.scopeId === b.scopeId && a.workspaceId === b.workspaceId && a.agentId === b.agentId && a.teamId === b.teamId && a.capabilityHash === b.capabilityHash && a.knowledgeRevision === b.knowledgeRevision && a.reason === b.reason &&
+
     a.model.profileId === b.model.profileId && a.model.modelId === b.model.modelId && a.model.configurationHash === b.model.configurationHash && b.moduleIds.length === ids.length && ids.every(id => a.moduleIds.includes(id) && b.moduleIds.includes(id));
 }
-
 /** 历史的结构归属检查不读当前状态；不意味着现在仍允许领取。 */
 export function automaticExecutionBindingMatches(binding: AutomaticExecutionBinding, workspaceId: string, scopeId: string | undefined, agentId: string, ids: readonly string[]): boolean
 {

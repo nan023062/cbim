@@ -4,58 +4,54 @@
  * 设计原因：设置通过版本化可靠提交才生效；隐藏分类保留草稿并退订实时数量，降低额度不终止现有任务，也不把容量等同费用预算。
  */
 import { useEffect, useState } from 'react';
+
 import { admissionPolicySchema, type AdmissionPolicy } from '../../bridge/contracts/admission';
+
 import { useAdmission, refreshAdmission } from '../tasks/useAdmission';
+
 import '../tasks/admission.css';
 
 /** 本机设置不需要模型参与，不能从页面直接领取或释放执行名额。 */
 export function AdmissionSettings({ active = true, onDirtyChange }: { active?: boolean; onDirtyChange?: (dirty: boolean) => void })
 {
   const feed = useAdmission(active),
+
     [policy, setPolicy] = useState<AdmissionPolicy>(),
+
     [value, setValue] = useState('4'),
+
     [busy, setBusy] = useState(false),
+
     [error, setError] = useState(''),
+
     [notice, setNotice] = useState('');
+
   const unsaved = !!policy && value !== String(policy.maxConcurrentRuns);
-  useEffect(() =>
-  {
-    onDirtyChange?.(unsaved);
-    return () => onDirtyChange?.(false)
-  }, [unsaved, onDirtyChange]);
-  useEffect(() =>
-  {
-    let alive = true;
-    void window.cbim.call('admission.settings').then(raw =>
-    {
-      const saved = admissionPolicySchema.parse(raw);
-      if (alive)
-      {
-        setPolicy(saved);
-        setValue(String(saved.maxConcurrentRuns))
-      }
-    }).catch((error: Error) =>
-    {
-      if (alive)
-        setError(error.message)
-    });
-    return () =>
-    {
-      alive = false
-    }
-  }, []);
+
+  useEffect(() => { onDirtyChange?.(unsaved); return () => onDirtyChange?.(false) }, [unsaved, onDirtyChange]);
+
+  useEffect(() => { let alive = true; void window.cbim.call('admission.settings').then(raw => { const saved = admissionPolicySchema.parse(raw); if (alive) { setPolicy(saved); setValue(String(saved.maxConcurrentRuns)) } }).catch((error: Error) => { if (alive) setError(error.message) }); return () => { alive = false } }, []);
+
   async function reload()
   {
     if (unsaved && !confirm('刷新会放弃未保存的并发设置，继续吗？'))
+
       return;
+
     setBusy(true);
+
     setError('');
+
     setNotice('');
+
     try
     {
       const next = admissionPolicySchema.parse(await window.cbim.call('admission.settings'));
+
       setPolicy(next);
+
       setValue(String(next.maxConcurrentRuns));
+
       await refreshAdmission()
     }
     catch (error)
@@ -70,16 +66,25 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
   async function save()
   {
     if (!policy || busy)
+
       return;
+
     setBusy(true);
+
     setError('');
+
     setNotice('');
+
     try
     {
       const next = admissionPolicySchema.parse(await window.cbim.call('admission.configure', { revision: policy.revision, maxConcurrentRuns: Number(value) }));
+
       setPolicy(next);
+
       setValue(String(next.maxConcurrentRuns));
+
       setNotice('已保存。新运行按此上限领取名额；正在执行的任务继续运行。');
+
       await refreshAdmission()
     }
     catch (error)
@@ -92,7 +97,9 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
     }
   }
   const count = Number(value),
+
     valid = /^\d+$/.test(value) && Number.isInteger(count) && count >= 1 && count <= 32;
+
   return <section className="repository-settings" aria-label="运行并发设置" data-testid="admission-settings"><h2>运行并发</h2>
     <p>所有工作区的主 Agent 和执行 Agent 共用运行名额。默认最多 4 个；等待中的任务不占名额，也不会调用模型。</p>
     {feed.data && <div className="admission-settings-counts" role="status" data-testid="admission-counts"><span>已占用 {feed.data.occupied.length} / 上限 {feed.data.policy.maxConcurrentRuns}</span><span>等待 {feed.data.waiting.length} 项</span>{feed.data.occupied.length > feed.data.policy.maxConcurrentRuns && <span>上限已降低，等待现有运行结束后再准入。</span>}</div>}

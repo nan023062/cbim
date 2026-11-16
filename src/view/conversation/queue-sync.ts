@@ -14,26 +14,31 @@ export class QueueProjection
   Apply(delta: QueueDelta)
   {
     if (delta.epoch === this.cursor?.epoch && delta.revision <= this.cursor.revision)
+
       return this.items;
+
     if (!delta.order)
+
       return this.items;
+
     const versions = delta.reset ? {} : { ...this.cursor?.items },
+
       byId = new Map((delta.reset ? [] : this.items).map(x => [x.id, x]));
+
     for (const change of delta.upserts ?? [])
     {
       byId.set(change.item.id, change.item);
+
       versions[change.item.id] = change.version
     }
-    const next = delta.order.map(id =>
-    {
-      const item = byId.get(id);
-      if (!item)
-        throw Error('队列增量不完整，请重新打开会话');
-      return item
-    });
+    const next = delta.order.map(id => { const item = byId.get(id); if (!item) throw Error('队列增量不完整，请重新打开会话'); return item });
+
     this.cursor = { epoch: delta.epoch, revision: delta.revision, items: Object.fromEntries(delta.order.map(id => [id, versions[id]])) };
+
     if (next.length !== this.items.length || next.some((x, i) => x !== this.items[i]))
+
       this.items = next;
+
     return this.items;
   }
 }

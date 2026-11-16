@@ -5,7 +5,9 @@
  * 设计原因：验证开发者定义的领域 Loop 也可经统一协议独立构建、安装与调度，冷壳无需认识本实现。
  */
 import { engineDescriptor } from '../../../engines';
+
 import type { EngineAdapter, EngineAdapterOptions } from '../../rules/engine-adapter';
+
 import { MemoryEngine } from './engine';
 
 export const engineAdapter: EngineAdapter = Object.freeze({ protocol: 1, id: 'memory', version: '1.1.1', descriptor: engineDescriptor('memory'), create: (options: EngineAdapterOptions) => new MemoryEngine(options) });

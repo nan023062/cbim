@@ -5,8 +5,11 @@
  * IPC 边界：预算和反馈的动态入口验证操作请求；开启/停止共享各自使用确定签名。
  */
 import { Icon } from '../components/Icon';
+
 import { checkedIpcCall } from '../../bridge/contracts/ipc-call';
+
 import { useEffect, useState } from 'react';
+
 import type { GitHubFeedbackStatus } from '../../bridge/contracts/github-feedback';
 
 const api = window.cbim;
@@ -15,69 +18,29 @@ const api = window.cbim;
 export function GitHubFeedbackSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void } = {})
 {
   const [status, setStatus] = useState<GitHubFeedbackStatus>(),
+
     [error, setError] = useState(''),
+
     [busy, setBusy] = useState(false);
+
   const [clientId, setClientId] = useState(''),
+
     [owner, setOwner] = useState('nan023062'),
+
     [repo, setRepo] = useState('cbim'),
+
     [visibility, setVisibility] = useState<'public' | 'private'>('public');
-  useEffect(() =>
-  {
-    let live = true;
-    void api.call('github.feedback.status').then((value: GitHubFeedbackStatus) =>
-    {
-      if (live)
-      {
-        setStatus(value);
-        setClientId(value.config.clientId);
-        setOwner(value.config.owner);
-        setRepo(value.config.repo);
-        setVisibility(value.config.visibility)
-      }
-    }).catch((e: Error) =>
-    {
-      if (live)
-        setError(e.message)
-    });
-    return () =>
-    {
-      live = false
-    }
-  }, []);
-  useEffect(() =>
-  {
-    if (!status?.flow || busy)
-      return;
-    let live = true;
-    const flow = status.flow;
-    const timer = setTimeout(() =>
-    {
-      void api.call('github.feedback.poll', { flowId: flow.id }).then((value: GitHubFeedbackStatus) =>
-      {
-        if (live)
-        {
-          setStatus(value);
-          setError('')
-        }
-      }).catch((e: Error) =>
-      {
-        if (live)
-        {
-          setStatus(value => value ? { ...value, flow: undefined } : value);
-          setError(e.message)
-        }
-      })
-    }, Math.max(250, flow.nextPollAt - Date.now()));
-    return () =>
-    {
-      live = false;
-      clearTimeout(timer)
-    };
-  }, [status, busy]);
+
+  useEffect(() => { let live = true; void api.call('github.feedback.status').then((value: GitHubFeedbackStatus) => { if (live) { setStatus(value); setClientId(value.config.clientId); setOwner(value.config.owner); setRepo(value.config.repo); setVisibility(value.config.visibility) } }).catch((e: Error) => { if (live) setError(e.message) }); return () => { live = false } }, []);
+
+  useEffect(() => { if (!status?.flow || busy) return; let live = true; const flow = status.flow; const timer = setTimeout(() => { void api.call('github.feedback.poll', { flowId: flow.id }).then((value: GitHubFeedbackStatus) => { if (live) { setStatus(value); setError('') } }).catch((e: Error) => { if (live) { setStatus(value => value ? { ...value, flow: undefined } : value); setError(e.message) } }) }, Math.max(250, flow.nextPollAt - Date.now())); return () => { live = false; clearTimeout(timer) }; }, [status, busy]);
+
   async function change(action: 'begin' | 'cancel' | 'disconnect')
   {
     setBusy(true);
+
     setError('');
+
     try
     {
       setStatus(await api.call(...checkedIpcCall(`github.feedback.${action}`, action === 'begin' ? { clientId: clientId.trim(), owner: owner.trim(), repo: repo.trim(), visibility, autoSubmit: true } : {})))
@@ -92,12 +55,11 @@ export function GitHubFeedbackSettings({ onDirtyChange }: { onDirtyChange?: (dir
     }
   }
   const unsaved = !!status && !status.flow && !status.connected && (clientId !== status.config.clientId || owner !== status.config.owner || repo !== status.config.repo || visibility !== status.config.visibility);
-  useEffect(() =>
-  {
-    onDirtyChange?.(unsaved);
-    return () => onDirtyChange?.(false)
-  }, [unsaved, onDirtyChange]);
+
+  useEffect(() => { onDirtyChange?.(unsaved); return () => onDirtyChange?.(false) }, [unsaved, onDirtyChange]);
+
   const locked = busy || !!status?.flow || !!status?.connected;
+
   return <section className="repository-settings" aria-label="GitHub 反馈连接"><h2>GitHub 反馈</h2>
     <p>「BUG 反馈」「需求许愿」按你填写的上下文直接创建 Issue，成功后不追加结果消息或处理进度。</p>
     {error && <p className="shell-alert" role="alert">{error}</p>}

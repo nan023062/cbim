@@ -8,16 +8,23 @@ import type { RuntimeSnapshot } from '../../bridge/contracts/runtime';
 export function runningConversations(snapshot: RuntimeSnapshot): Record<string, string[]>
 {
   const result: Record<string, string[]> = {},
+
     ready = new Set(snapshot.workspaces.filter(item => item.availability === 'ready').map(item => item.workspaceId));
+
   for (const run of snapshot.runs)
   {
     if (run.status !== 'running' || !ready.has(run.workspaceId))
+
       continue;
+
     const root = run.memberBinding?.rootSessionId ?? run.conversationBinding?.rootSessionId;
+
     if (root)
     {
       const ids = result[run.workspaceId] ??= [];
+
       if (!ids.includes(root))
+
         ids.push(root)
     }
   }

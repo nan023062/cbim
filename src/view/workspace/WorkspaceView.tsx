@@ -5,36 +5,62 @@
  * 设计原因：模块选择展示业务职责，文件选择复用知识事务；负责人默认隐式解析，显式设置留在详情。旧岗位、责任及会话证据不随目录浏览改变。
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+
 import type { Snapshot, WorkspaceView } from '../../bridge/contracts/workspace';
+
 import { projectRootModuleId } from '../../bridge/contracts/workspace';
+
 import { Icon } from '../components/Icon';
+
 import { Empty } from '../components/Empty';
+
 import type { TreeAction as KnowledgeTreeAction } from '../components/TreeActions';
+
 import { ModuleSourceTree } from './ModuleSourceTree';
+
 import { SourceFilePreview } from './SourceFilePreview';
+
 import type { SourceTarget } from '../../bridge/contracts/ipc-workspace';
+
 import { KnowledgeFilePreview } from '../knowledge/KnowledgeFilePreview';
+
 import { useGovernanceLaunch, GovernanceStatus } from '../knowledge/GovernanceLaunch';
+
 import { ArchitectureEditor, type EditableKind } from '../knowledge/ArchitectureEditor';
+
 import { WorkspaceResourceTransfer } from '../resources/WorkspaceResourceTransfer';
+
 import { ModuleGovernancePanel } from '../governance/ModuleGovernancePanel';
+
 import { ModuleOwnershipPanel } from './ModuleOwnershipPanel';
+
 import { WorkspaceMembers } from '../team/WorkspaceMembers';
+
 import { buildTeamModel } from '../team/team-model';
+
 import { InlineModuleOwner, useInlineModuleOwners } from './InlineModuleOwner';
+
 import './workspace-view.css';
 
 /** 浏览不保存负责人；文件提交后刷新同一工作区快照，草稿由扩展页签统一保护。 */
 export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refresh, onStarted }: { workspace: WorkspaceView; tabId: string; dirty: React.RefObject<Set<string>>; snapshot?: Snapshot; refresh?: () => Promise<void>; onStarted?: (taskId: string, title: string) => void })
 {
   const id = workspace.id,
+
     [query, setQuery] = useState(''),
+
     [chosen, setChosen] = useState(projectRootModuleId),
+
     [file, setFile] = useState('');
+
   const [source, setSource] = useState<SourceTarget>();
+
   const current = snapshot?.workspaceId === id ? snapshot : undefined,
+
     tree = current?.validation?.tree,
+
     node = tree?.nodes[chosen];
+
   const [editor, setEditor] = useState<
     {
       kind: EditableKind;
@@ -45,66 +71,79 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
 
       mode?: 'edit' | 'delete'
     }>(),
+
     [transfer, setTransfer] = useState<'publish' | 'import'>(),
+
     [message, setMessage] = useState(''),
+
     [error, setError] = useState('');
+
   const [governance, setGovernance] = useState<string>(),
+
     [ownership, setOwnership] = useState<
       {
         moduleId?: string;
 
         memberId?: string
       }>(),
+
     [registration, setRegistration] = useState<
       {
         moduleId: string;
 
         agentId: string
       }>();
+
   const agents = useMemo(() => Object.values(buildTeamModel(current, workspace.name).nodes).filter(item => item.kind === 'agent').map(item => ({ id: item.id, name: item.name, runtime: item.runtime })), [current, workspace.name]);
+
   const owners = useInlineModuleOwners(current ? { workspaceId: id, instanceId: current.instanceId } : undefined, agents, current?.revision);
-  const onDirtyChange = useCallback((value: boolean) =>
-  {
-    value ? dirty.current.add(tabId) : dirty.current.delete(tabId)
-  }, [dirty, tabId]);
-  useEffect(() => () =>
-  {
-    dirty.current.delete(tabId)
-  }, [dirty, tabId]);
+
+  const onDirtyChange = useCallback((value: boolean) => { value ? dirty.current.add(tabId) : dirty.current.delete(tabId) }, [dirty, tabId]);
+
+  useEffect(() => () => { dirty.current.delete(tabId) }, [dirty, tabId]);
+
   const launch = useGovernanceLaunch({ workspaceId: id, kind: 'business', disabled: !current || workspace.state !== 'running', onStarted });
-  useEffect(() =>
-  {
-    setSource(undefined);
-    setFile('');
-    setChosen(projectRootModuleId)
-  }, [id]);
-  useEffect(() =>
-  {
-    setSource(undefined)
-  }, [current?.revision, current?.instanceId]);
+
+  useEffect(() => { setSource(undefined); setFile(''); setChosen(projectRootModuleId) }, [id]);
+
+  useEffect(() => { setSource(undefined) }, [current?.revision, current?.instanceId]);
+
   function selectSource(target: SourceTarget)
   {
     if (dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
+
       return;
+
     setFile('');
+
     setChosen(target.moduleId);
+
     setSource(target)
   }
   function select(path: string, kind: 'folder' | 'file')
   {
     if (dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
+
       return;
+
     setSource(undefined);
+
     setFile(kind === 'file' ? path : '');
+
     const owner = Object.keys(tree?.nodes ?? {}).filter(id => path === id || path.startsWith(id + '/')).sort((a, b) => b.length - a.length)[0];
+
     setChosen(owner ?? projectRootModuleId)
   }
   async function saved(objects: string[])
   {
     setEditor(undefined);
+
     setMessage('知识已更新，已有任务记录保持不变。');
+
     if (objects[0])
+
       select(objects[0], 'folder');
+
     try
     {
       await refresh?.()
@@ -117,22 +156,23 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
   /** 回调固定所点行的模块身份；先保护未提交草稿，编辑/删除仍由原事务弹窗预览。 */
   function nodeActions(target: string): KnowledgeTreeAction[]
   {
-    const wrap = (work: () => void) => () =>
-    {
-      if (dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？'))
-        return;
-      work()
-    };
+    const wrap = (work: () => void) => () => { if (dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？')) return; work() };
+
     if (target === '.cbim/workspace')
+
       return [
         { id: 'business-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) },
         { id: 'module-new', label: '新建工程模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
         { id: 'ownerships', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({})) },
         { id: 'architecture-publish', label: '发布架构', icon: 'upload', disabled: !tree?.roots.length, OnSelect: wrap(() => setTransfer('publish')) },
         { id: 'architecture-import', label: '使用模板', icon: 'download', OnSelect: wrap(() => setTransfer('import')) },
+
       ];
+
     if (!tree?.nodes[target])
+
       return [];
+
     return [
       { id: 'module-child', label: '新建子模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
       { id: 'module-edit', label: '编辑模块', icon: 'edit', OnSelect: wrap(() => setEditor({ kind: 'module', id: target })) },
@@ -140,31 +180,19 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
       { id: 'module-governance', label: '知识治理记录', icon: 'knowledge', OnSelect: wrap(() => setGovernance(target)) },
       { id: 'module-ownership', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({ moduleId: target })) },
       { id: 'workflow-new', label: '新建 Workflow', icon: 'flow', OnSelect: wrap(() => setEditor({ kind: 'workflow', parentId: target })) },
+
     ];
   }
-  const definition = (() =>
-  {
-    try
-    {
-      return JSON.parse(current?.files.find(item => item.path === node?.id + '/module.json')?.text ?? '{}')
-    }
-    catch
-    {
-      return {}
-    }
-  })();
+  const definition = (() => { try { return JSON.parse(current?.files.find(item => item.path === node?.id + '/module.json')?.text ?? '{}') } catch { return {} } })();
+
   if (current && registration)
-    return <WorkspaceMembers key={id + current.instanceId} workspace={workspace} agents={agents} initialRegistration={{ agentId: registration.agentId }} returnLabel="返回模块负责人" onRegistered={memberId =>
-    {
-      setOwnership({ moduleId: registration.moduleId, memberId });
-      setRegistration(undefined)
-    }} onClose={() =>
-    {
-      setOwnership({ moduleId: registration.moduleId });
-      setRegistration(undefined)
-    }} />;
+
+    return <WorkspaceMembers key={id + current.instanceId} workspace={workspace} agents={agents} initialRegistration={{ agentId: registration.agentId }} returnLabel="返回模块负责人" onRegistered={memberId => { setOwnership({ moduleId: registration.moduleId, memberId }); setRegistration(undefined) }} onClose={() => { setOwnership({ moduleId: registration.moduleId }); setRegistration(undefined) }} />;
+
   if (current && ownership)
+
     return <ModuleOwnershipPanel key={id + current.instanceId} identity={{ workspaceId: id, instanceId: current.instanceId }} initialModuleId={ownership.moduleId} initialMemberId={ownership.memberId} registration={{ agents, onSelect: (moduleId, agentId) => setRegistration({ moduleId, agentId }) }} onClose={() => setOwnership(undefined)} />;
+
   return <div className="knowledge-tools business-management"><GovernanceStatus launch={launch} />
   {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
   <div className="inline-search"><Icon name="search" /><input aria-label="搜索项目模块" placeholder="搜索模块…" value={query} onChange={e => setQuery(e.target.value)} /></div>

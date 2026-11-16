@@ -7,6 +7,7 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const scopedExecutionAuthorizationSchema = z.object({ toolCallId: z.string().min(1).max(128), inputHash: digest, allowedSeq: z.number().int().positive() }).strict();

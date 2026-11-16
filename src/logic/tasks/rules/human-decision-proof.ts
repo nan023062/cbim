@@ -7,21 +7,22 @@
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { JsonUtils } from '../../../core/utility';
+
 import { hash } from '../../../core/platform/node/serialization';
+
 import { humanDecisionProofSchema, type HumanDecisionProof, type HumanDecisionPreview } from './human-decisions';
 
 function normalized(value: unknown): unknown
 {
   return JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true })
 }
-
 /** 去除候选菜单及显示正文，保留用于决定的固定事实；未就绪预览不能签发可提交证明。 */
 export function humanDecisionProof(preview: HumanDecisionPreview): HumanDecisionProof
 {
   const { workspaceId, rootSessionId, scopeId } = preview.identity;
+
   return humanDecisionProofSchema.parse({ identity: { workspaceId, rootSessionId, scopeId }, source: preview.source, candidates: preview.candidates.map(({ agentName: _name, summary: _summary, baselines: _choices, manifest: _manifest, ...proof }) => proof), limitations: preview.limitations, allowedDecisions: preview.allowedDecisions });
 }
-
 /** 数组顺序是已显示内容的一部分，必须由服务稳定构造；仅规范对象键和缺省字段。 */
 export function humanDecisionBasis(raw: HumanDecisionProof): string
 {

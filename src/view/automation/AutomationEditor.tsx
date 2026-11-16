@@ -3,24 +3,35 @@
  * 设计原因：表单只保存显式配置，不启动模型；权限独立可见，日程固定时区，草稿不随后台轮询覆盖；取消编辑前核对是否有未保存修改。
  */
 import { Icon } from '../components/Icon';
+
 import { useState } from 'react';
+
 import type { AutomationCatalog, AutomationDefinition, AutomationSchedule } from '../../bridge/contracts/automation';
 
 export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: { initial: AutomationDefinition; catalog: AutomationCatalog; busy: boolean; onSave: (value: AutomationDefinition) => void; onCancel: () => void })
 {
   const [value, setValue] = useState(initial),
+
     [error, setError] = useState('');
+
   const changed = JSON.stringify(value) !== JSON.stringify(initial);
+
   function cancel()
   {
     if (!changed || confirm('放弃尚未保存的自动化设置？'))
+
       onCancel()
   }
   const patch = (part: Partial<AutomationDefinition>) => setValue(old => ({ ...old, ...part }));
+
   const executor = value.executor,
+
     agentId = executor.kind === 'main' ? 'cbim:main' : catalog.agents.find(a => a.memberId === executor.memberId)?.agentId;
+
   const skills = catalog.skills.filter(s => s.agentIds.includes(agentId ?? '')),
+
     schedule = value.schedule;
+
   function setSchedule(kind: AutomationSchedule['kind'])
   {
     patch({ schedule: kind === 'manual' ? { kind } : kind === 'interval' ? { kind, minutes: 60 } : kind === 'daily' ? { kind, time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } : { kind, at: new Date(Date.now() + 3600000).toISOString() } });
@@ -30,22 +41,22 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
     if (!value.name.trim() || !value.prompt.trim())
     {
       setError('请填写任务名称和提示上下文');
+
       return
     }
     if (value.executor.kind === 'member' && !value.moduleIds.length)
     {
       setError('团队岗位执行需要至少选择一个模块');
+
       return
     }
     setError('');
+
     onSave(value);
   }
   const localOnce = schedule.kind === 'once' ? new Date(Date.parse(schedule.at) - new Date(schedule.at).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
-  return <form className="automation-editor" onSubmit={e =>
-  {
-    e.preventDefault();
-    submit()
-  }}>
+
+  return <form className="automation-editor" onSubmit={e => { e.preventDefault(); submit() }}>
   <h2>自动化设置</h2><p>绑定当前工作区。默认 Agent 使用主 Agent 设置；团队岗位使用其已采纳的引擎和模型。</p>
   <fieldset disabled={busy}>
    <label>任务名称<input value={value.name} maxLength={120} required onChange={e => patch({ name: e.target.value })} /></label>
@@ -60,12 +71,7 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
    <label>执行计划<select value={schedule.kind} onChange={e => setSchedule(e.target.value as AutomationSchedule['kind'])}><option value="manual">仅手动运行</option><option value="interval">固定间隔</option><option value="daily">每天</option><option value="once">指定时间执行一次</option></select></label>
    {schedule.kind === 'interval' && <label>间隔（分钟）<input type="number" min={1} max={525600} required value={schedule.minutes} onChange={e => patch({ schedule: { ...schedule, minutes: Number(e.target.value) } })} /></label>}
    {schedule.kind === 'daily' && <><label>每天时间<input type="time" required value={schedule.time} onChange={e => patch({ schedule: { ...schedule, time: e.target.value } })} /></label><p>时区：{schedule.timezone}</p></>}
-   {schedule.kind === 'once' && <label>本地时间<input type="datetime-local" required value={localOnce} onChange={e =>
-      {
-        const date = new Date(e.target.value);
-        if (Number.isFinite(date.getTime()))
-          patch({ schedule: { ...schedule, at: date.toISOString() } })
-      }} /></label>}
+   {schedule.kind === 'once' && <label>本地时间<input type="datetime-local" required value={localOnce} onChange={e => { const date = new Date(e.target.value); if (Number.isFinite(date.getTime())) patch({ schedule: { ...schedule, at: date.toISOString() } }) }} /></label>}
    <label className="automation-check"><input type="checkbox" checked={value.enabled} onChange={e => patch({ enabled: e.target.checked })} />启用计划</label>
   </fieldset>
   {error && <p role="alert">{error}</p>}<div className="automation-actions automation-save"><button className="solid-button" type="submit" disabled={busy}><Icon name="confirm" size={16} />{busy ? '正在保存…' : '保存任务'}</button><button type="button" disabled={busy} onClick={cancel}><Icon name="close" size={16} />取消</button><small>{changed ? '有未保存的修改' : '保存只更新配置，不立即运行'}</small></div>

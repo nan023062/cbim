@@ -3,14 +3,23 @@
  * 设计原因：用户可以核实影响并明确决定下一步，但这些观察不能覆盖旧失败、签署业务验收或自动启动修复。主与成员共用面板，身份不互相伪装。
  */
 import { Icon } from '../components/Icon';
+
 import { useState } from 'react';
+
 import type { EffectObservationInput, EffectDispositionRecord } from '../../bridge/contracts/effect-observation';
+
 import type { ExecutionReport } from '../../bridge/contracts/dispatch';
+
 import { effectSelectionKey, type EffectDecision } from './effect-observation-state';
+
 import { useEffectObservation } from './useEffectObservation';
+
 import { effectRecoveryTarget } from './effect-recovery-state';
+
 import { useRecoverySource, type ExecutionRecoveryContext } from './useExecutionRecovery';
+
 import { ExecutionRecoveryForm } from './ExecutionRecoveryForm';
+
 import './effect-observation.css';
 
 const decisions: Record<EffectDecision, string> = { inspect_more: '继续核实', repair_in_new_cycle: '新业务修复', leave_unresolved: '保留未解决' };
@@ -26,16 +35,21 @@ export function EffectDispositionSummary({ record }: { record: EffectDisposition
 {
   return <div className="effect-disposition-summary" data-testid="effect-selected-disposition"><strong>{decisions[record.request.decision]}</strong><p>{record.request.reason}</p><small>本机明确保存 · {new Date(record.recordedAt).toLocaleString()} · 非业务验收</small><code>{record.dispositionId}</code></div>
 }
-
 /** 仅按钮读取当前影响；原失败提示位于面板之外，后续结果独立列出。 */
 export function EffectObservationPanel({ identity, anchor, context }: { identity: EffectObservationInput; anchor: string; context?: ExecutionRecoveryContext })
 {
   const { controller, snapshot, read, draft, attempt, selected, fresh } = useEffectObservation(identity, anchor);
+
   const report = read?.report,
+
     pending = controller.IsPending(draft?.commandId),
+
     locked = !!draft?.commandId && attempt?.phase !== 'rejected';
+
   const eligible = context ? effectRecoveryTarget(identity, report, fresh, selected, context.state) : { reason: '当前视图没有主会话恢复上下文。' };
+
   const creation = useRecoverySource(identity.workspaceId, identity.rootSessionId, identity.subject, eligible, context?.state.openScope ? '当前目标尚未结束。' : '', !!selected, context);
+
   return <section className="effect-observation" data-testid="effect-observation-panel" data-run-id={identity.subject.runId} data-source-kind={identity.subject.kind} data-call-ids={identity.subject.toolCallIds.join(',')}>
     <header><strong>核实原调用影响</strong><button title="只读、不重跑、不写库" data-testid="effect-observe" disabled={read?.loading} onClick={() => void controller.Observe(identity)}>{read?.loading ? '正在读取…' : report ? '重新核实影响（只读）' : '核实当前影响（只读）'}</button></header>
     <p>只读核对原记录和明确文件；不重发旧操作，也不更改原结果。</p>
@@ -89,15 +103,20 @@ export function EffectObservationPanel({ identity, anchor, context }: { identity
     {read?.relations && read.relations.identity.dispositionId === selected?.dispositionId && <div data-testid="effect-relations"><h4>由本处置关联的后续周期</h4>{read.relations.links.length ? read.relations.links.map(link => <article key={link.scopeId}><strong>{link.kind === 'inspection' ? '独立只读核实' : '独立业务修复'}</strong><p>{link.status === 'closed' ? ({ completed: '新目标已结束', failed: '新任务失败', cancelled: '新任务已停止', interrupted: '新任务中断' }[link.outcome!]) : link.status === 'waiting' ? '等待补充' : '新任务进行中'} · {link.taskIds.length} 个任务节点</p><code>{link.scopeId}</code>{context && <button onClick={() => context.showScope(link.scopeId)}><Icon name="inspect" size={16} />查看新周期</button>}</article>) : <p>尚无关联周期；保存处置不会自动创建任务。</p>}<p>新任务的结果不改变原工具的成功、失败或未知状态。</p></div>}
   </section>;
 }
-
 /** 从已经明确加载的成员报告选择原调用；不默认选最新，不使用模型自报的文件路径。 */
 export function MemberEffectObservation({ report, anchor, context }: { report: ExecutionReport; anchor: string; context?: ExecutionRecoveryContext })
 {
   const [ids, setIds] = useState<string[]>([]),
+
     runId = report.identity.runId;
+
   const valid = ids.filter(id => report.tools.items.some(x => x.toolCallId === id));
+
   if (!runId || !report.tools.available)
+
     return null;
+
   const identity: EffectObservationInput = { workspaceId: report.identity.workspaceId, rootSessionId: report.identity.rootSessionId, subject: { kind: 'member_run', taskId: report.identity.taskId, runId, toolCallIds: valid } };
+
   return <section className="effect-member-select"><details><summary>选择要核实影响的原调用</summary>{report.tools.items.map(call => <label key={call.toolCallId}><input type="checkbox" data-effect-call={call.toolCallId} checked={valid.includes(call.toolCallId)} disabled={!valid.includes(call.toolCallId) && valid.length >= 16} onChange={e => setIds(e.target.checked ? [...valid, call.toolCallId] : valid.filter(id => id !== call.toolCallId))} />{call.toolName} · {outcomes[call.status]} · <code>{call.toolCallId}</code></label>)}</details>{valid.length > 0 && <EffectObservationPanel key={effectSelectionKey(identity)} identity={identity} anchor={anchor} context={context} />}</section>;
 }

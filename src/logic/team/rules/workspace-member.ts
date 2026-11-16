@@ -6,8 +6,11 @@
  * 审计兼容：保留旧桌面来源，主工具另保存原根会话、周期、实例和调用身份，不伪装为本机点击。
  */
 import { z } from 'zod';
+
 import { generationSnapshotFields, checkGenerationSnapshot } from '../../models';
+
 import { loopEngineSchema, engineSupportsApi, engineLabel, modelRolesSelectionSchema, modelRolesSnapshotSchema, modelRolesMatch } from '../../engines';
+
 import { capabilitySourceRefSchema, sourceSelectionSchema, knowledgeSourceReadStateSchema, sourceRefMatches, sourceSelectionMatches, sourceReadStateMatches } from '../../workspace/rules/knowledge-source';
 
 /** 累计容量包括退休岗位和全部审计；超限拒绝新写入，不删除历史或截断采纳正文。 */
@@ -16,10 +19,13 @@ export const workspaceMemberLimits = { members: 256, changes: 4096, capabilityBy
 const id = z.string().min(1).max(512).refine(value => !!value.trim(), '身份不能为空白');
 
 const uuid = z.string().uuid(),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   time = z.string().datetime();
 
 const revision = z.number().int().positive().safe(),
+
   seq = z.number().int().positive().safe();
 
 const text = (max: number) => z.string().min(1).max(max).refine(value => !!value.trim(), '文本不能为空白');
@@ -47,12 +53,7 @@ export const workspaceMemberModelRefSchema = z.object({ profileId: uuid, modelId
 export type WorkspaceMemberModelRef = z.infer<typeof workspaceMemberModelRefSchema>;
 
 /** 字段对应实际解析后的公开 profile；仅依赖公开引擎标识，不接受密钥、hasKey、默认选择或 enabled 伪运行事实。 */
-export const workspaceMemberModelSnapshotSchema = z.object({ engine: loopEngineSchema.optional(), ...generationSnapshotFields.shape, modelRoles: modelRolesSnapshotSchema.optional() }).strict().superRefine((value, context) =>
-{
-  checkGenerationSnapshot(value, context);
-  if (!engineSupportsApi(value.engine ?? 'pi', value.api))
-    context.addIssue({ code: 'custom', message: engineLabel(value.engine ?? 'pi') + ' 不支持所选接口' });
-});
+export const workspaceMemberModelSnapshotSchema = z.object({ engine: loopEngineSchema.optional(), ...generationSnapshotFields.shape, modelRoles: modelRolesSnapshotSchema.optional() }).strict().superRefine((value, context) => { checkGenerationSnapshot(value, context); if (!engineSupportsApi(value.engine ?? 'pi', value.api)) context.addIssue({ code: 'custom', message: engineLabel(value.engine ?? 'pi') + ' 不支持所选接口' }); });
 
 export type WorkspaceMemberModelSnapshot = z.infer<typeof workspaceMemberModelSnapshotSchema>;
 
@@ -65,13 +66,8 @@ export function workspaceMemberEngine(ref: WorkspaceMemberModelRef & { snapshot?
 {
   return ref.engine ?? ref.snapshot?.engine
 }
-
 /** 保存真实原则与有效继承 Skill；整库知识 revision 是采集出处，不是能力内容的独立代次。 */
-export const workspaceMemberCapabilitySchema = z.object({ workspaceId: id, teamId: id, agentId: id, name: text(512), knowledgeRevision: id, source: z.enum(['builtin', 'workspace']), principles: z.string(), effectiveSkills: z.array(z.object({ skillId: id, ownerId: id, inherited: z.boolean(), content: z.string() }).strict()).max(workspaceMemberLimits.skills) }).strict().superRefine((value, context) =>
-{
-  if (value.agentId === 'cbim:main' || value.source === 'builtin' && value.agentId !== 'cbim:executor' || value.source === 'workspace' && !value.agentId.startsWith('.cbim/team/') || new Set(value.effectiveSkills.map(item => item.skillId)).size !== value.effectiveSkills.length || byteLength(value) > workspaceMemberLimits.capabilityBytes)
-    context.addIssue({ code: 'custom', message: '岗位能力身份、有效 Skill 或容量无效' });
-});
+export const workspaceMemberCapabilitySchema = z.object({ workspaceId: id, teamId: id, agentId: id, name: text(512), knowledgeRevision: id, source: z.enum(['builtin', 'workspace']), principles: z.string(), effectiveSkills: z.array(z.object({ skillId: id, ownerId: id, inherited: z.boolean(), content: z.string() }).strict()).max(workspaceMemberLimits.skills) }).strict().superRefine((value, context) => { if (value.agentId === 'cbim:main' || value.source === 'builtin' && value.agentId !== 'cbim:executor' || value.source === 'workspace' && !value.agentId.startsWith('.cbim/team/') || new Set(value.effectiveSkills.map(item => item.skillId)).size !== value.effectiveSkills.length || byteLength(value) > workspaceMemberLimits.capabilityBytes) context.addIssue({ code: 'custom', message: '岗位能力身份、有效 Skill 或容量无效' }); });
 
 export type WorkspaceMemberCapability = z.infer<typeof workspaceMemberCapabilitySchema>;
 
@@ -79,11 +75,7 @@ export const workspaceMemberAdoptionSchema = z.object({ captureId: uuid, capture
 
 export type WorkspaceMemberAdoption = z.infer<typeof workspaceMemberAdoptionSchema>;
 
-export const workspaceMemberSchema = z.object({ workspaceId: id, memberId: uuid, revision: revision.max(workspaceMemberLimits.changes), name: text(100), position: text(500), adaptation: workspaceMemberAdaptationSchema, state: workspaceMemberStateSchema, adoption: workspaceMemberAdoptionSchema, runtimePolicy: workspaceMemberRuntimePolicySchema, createdAt: time, updatedAt: time }).strict().superRefine((value, context) =>
-{
-  if (value.workspaceId !== value.adoption.configuration.workspaceId || Date.parse(value.updatedAt) < Date.parse(value.createdAt) || Date.parse(value.adoption.capturedAt) > Date.parse(value.updatedAt))
-    context.addIssue({ code: 'custom', message: '岗位身份或时间不一致' });
-});
+export const workspaceMemberSchema = z.object({ workspaceId: id, memberId: uuid, revision: revision.max(workspaceMemberLimits.changes), name: text(100), position: text(500), adaptation: workspaceMemberAdaptationSchema, state: workspaceMemberStateSchema, adoption: workspaceMemberAdoptionSchema, runtimePolicy: workspaceMemberRuntimePolicySchema, createdAt: time, updatedAt: time }).strict().superRefine((value, context) => { if (value.workspaceId !== value.adoption.configuration.workspaceId || Date.parse(value.updatedAt) < Date.parse(value.createdAt) || Date.parse(value.adoption.capturedAt) > Date.parse(value.updatedAt)) context.addIssue({ code: 'custom', message: '岗位身份或时间不一致' }); });
 
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;
 
@@ -115,15 +107,7 @@ export const workspaceMemberFieldSchema = z.enum(['name', 'position', 'adaptatio
 
 export type WorkspaceMemberField = z.infer<typeof workspaceMemberFieldSchema>;
 
-export const workspaceMemberPreviewSchema = z.object({ identity: workspaceMemberIdentitySchema, change: workspaceMemberChangeInputSchema, registryCursor: workspaceRegistryCursorSchema.nullable(), basis: digest, checkedAt: time, previousRevision: z.number().int().nonnegative().safe(), previousMember: workspaceMemberSchema.optional(), sourceSelection: sourceSelectionSchema.optional(), proposed: workspaceMemberProposedSchema, changedFields: z.array(workspaceMemberFieldSchema).min(1).max(6).refine(items => new Set(items).size === items.length) }).strict().superRefine((value, context) =>
-{
-  const old = value.previousMember,
-    configuration = value.proposed.capability.configuration;
-  if (value.sourceSelection && !sourceSelectionMatches(value.sourceSelection, value.identity.workspaceId, configuration.source === 'builtin' ? 'cbim:executor' : { kind: 'agent', sourceId: configuration.agentId }) || value.proposed.capability.sourceRef && !sourceRefMatches(value.proposed.capability.sourceRef, value.identity.workspaceId, configuration.source === 'builtin' ? 'cbim:executor' : { kind: 'agent', sourceId: configuration.agentId }))
-    context.addIssue({ code: 'custom', message: '预览来源选择不属于岗位能力' });
-  if (value.proposed.capability.configuration.workspaceId !== value.identity.workspaceId || value.registryCursor && value.registryCursor.workspaceId !== value.identity.workspaceId || (value.change.kind === 'register' ? old !== undefined || value.previousRevision !== 0 : !old || old.memberId !== value.change.memberId || old.revision !== value.change.expectedRevision || old.revision !== value.previousRevision || old.workspaceId !== value.identity.workspaceId))
-    context.addIssue({ code: 'custom', message: '预览岗位、版本或工作区不一致' });
-});
+export const workspaceMemberPreviewSchema = z.object({ identity: workspaceMemberIdentitySchema, change: workspaceMemberChangeInputSchema, registryCursor: workspaceRegistryCursorSchema.nullable(), basis: digest, checkedAt: time, previousRevision: z.number().int().nonnegative().safe(), previousMember: workspaceMemberSchema.optional(), sourceSelection: sourceSelectionSchema.optional(), proposed: workspaceMemberProposedSchema, changedFields: z.array(workspaceMemberFieldSchema).min(1).max(6).refine(items => new Set(items).size === items.length) }).strict().superRefine((value, context) => { const old = value.previousMember, configuration = value.proposed.capability.configuration; if (value.sourceSelection && !sourceSelectionMatches(value.sourceSelection, value.identity.workspaceId, configuration.source === 'builtin' ? 'cbim:executor' : { kind: 'agent', sourceId: configuration.agentId }) || value.proposed.capability.sourceRef && !sourceRefMatches(value.proposed.capability.sourceRef, value.identity.workspaceId, configuration.source === 'builtin' ? 'cbim:executor' : { kind: 'agent', sourceId: configuration.agentId })) context.addIssue({ code: 'custom', message: '预览来源选择不属于岗位能力' }); if (value.proposed.capability.configuration.workspaceId !== value.identity.workspaceId || value.registryCursor && value.registryCursor.workspaceId !== value.identity.workspaceId || (value.change.kind === 'register' ? old !== undefined || value.previousRevision !== 0 : !old || old.memberId !== value.change.memberId || old.revision !== value.change.expectedRevision || old.revision !== value.previousRevision || old.workspaceId !== value.identity.workspaceId)) context.addIssue({ code: 'custom', message: '预览岗位、版本或工作区不一致' }); });
 
 export type WorkspaceMemberPreview = z.infer<typeof workspaceMemberPreviewSchema>;
 
@@ -139,11 +123,7 @@ export const workspaceMemberActorSchema = z.union([z.object({ kind: z.literal('l
 
 export type WorkspaceMemberActor = z.infer<typeof workspaceMemberActorSchema>;
 
-export const workspaceMemberChangeSchema = z.object({ version: z.literal(1), request: workspaceMemberCommitInputSchema, changeId: uuid, registryCursor: workspaceRegistryCursorSchema, previousRevision: z.number().int().nonnegative().safe(), previousMemberHash: digest.nullable(), sourceSelection: sourceSelectionSchema.optional(), next: workspaceMemberSchema, actor: workspaceMemberActorSchema, committedAt: time }).strict().superRefine((value, context) =>
-{
-  if (value.request.workspaceId !== value.next.workspaceId || value.registryCursor.workspaceId !== value.next.workspaceId || value.next.revision !== value.previousRevision + 1 || value.next.updatedAt !== value.committedAt || (value.request.change.kind === 'register' ? value.previousRevision !== 0 || value.previousMemberHash !== null : value.request.change.memberId !== value.next.memberId || value.request.change.expectedRevision !== value.previousRevision || value.previousMemberHash === null) || byteLength(value) > workspaceMemberLimits.eventBytes)
-    context.addIssue({ code: 'custom', message: '登记审计身份、版本或容量不一致' });
-});
+export const workspaceMemberChangeSchema = z.object({ version: z.literal(1), request: workspaceMemberCommitInputSchema, changeId: uuid, registryCursor: workspaceRegistryCursorSchema, previousRevision: z.number().int().nonnegative().safe(), previousMemberHash: digest.nullable(), sourceSelection: sourceSelectionSchema.optional(), next: workspaceMemberSchema, actor: workspaceMemberActorSchema, committedAt: time }).strict().superRefine((value, context) => { if (value.request.workspaceId !== value.next.workspaceId || value.registryCursor.workspaceId !== value.next.workspaceId || value.next.revision !== value.previousRevision + 1 || value.next.updatedAt !== value.committedAt || (value.request.change.kind === 'register' ? value.previousRevision !== 0 || value.previousMemberHash !== null : value.request.change.memberId !== value.next.memberId || value.request.change.expectedRevision !== value.previousRevision || value.previousMemberHash === null) || byteLength(value) > workspaceMemberLimits.eventBytes) context.addIssue({ code: 'custom', message: '登记审计身份、版本或容量不一致' }); });
 
 export type WorkspaceMemberChange = z.infer<typeof workspaceMemberChangeSchema>;
 
@@ -155,12 +135,7 @@ export const workspaceMemberListInputSchema = workspaceMemberIdentitySchema.exte
 
 export type WorkspaceMemberListInput = z.infer<typeof workspaceMemberListInputSchema>;
 
-export const workspaceMemberListSchema = z.object({ identity: workspaceMemberIdentitySchema, registryCursor: workspaceRegistryCursorSchema.nullable(), offset: z.number().int().nonnegative().safe(), total: z.number().int().min(0).max(workspaceMemberLimits.members), items: z.array(workspaceMemberSummarySchema).max(workspaceMemberLimits.listPage), nextOffset: z.number().int().positive().safe().optional() }).strict().superRefine((value, context) =>
-{
-  const end = value.offset + value.items.length;
-  if (value.registryCursor && value.registryCursor.workspaceId !== value.identity.workspaceId || !value.registryCursor && value.total !== 0 || value.offset > value.total || end > value.total || (end < value.total ? value.items.length === 0 || value.nextOffset !== end : value.nextOffset !== undefined) || new Set(value.items.map(item => item.memberId)).size !== value.items.length)
-    context.addIssue({ code: 'custom', message: '岗位分页与登记游标不一致' });
-});
+export const workspaceMemberListSchema = z.object({ identity: workspaceMemberIdentitySchema, registryCursor: workspaceRegistryCursorSchema.nullable(), offset: z.number().int().nonnegative().safe(), total: z.number().int().min(0).max(workspaceMemberLimits.members), items: z.array(workspaceMemberSummarySchema).max(workspaceMemberLimits.listPage), nextOffset: z.number().int().positive().safe().optional() }).strict().superRefine((value, context) => { const end = value.offset + value.items.length; if (value.registryCursor && value.registryCursor.workspaceId !== value.identity.workspaceId || !value.registryCursor && value.total !== 0 || value.offset > value.total || end > value.total || (end < value.total ? value.items.length === 0 || value.nextOffset !== end : value.nextOffset !== undefined) || new Set(value.items.map(item => item.memberId)).size !== value.items.length) context.addIssue({ code: 'custom', message: '岗位分页与登记游标不一致' }); });
 
 export type WorkspaceMemberList = z.infer<typeof workspaceMemberListSchema>;
 
@@ -170,12 +145,7 @@ export type WorkspaceMemberGetInput = z.infer<typeof workspaceMemberGetInputSche
 
 const current = z.object({ status: z.enum(['same', 'changed', 'missing', 'invalid']), adoptedHash: digest, currentHash: digest.optional(), issue: z.string().max(2000).optional() }).strict();
 
-export const workspaceMemberCurrentDiffSchema = z.object({ checkedAt: time, capability: current.extend({ knowledgeRevision: id.optional() }).strict(), model: current }).strict().superRefine((value, context) =>
-{
-  for (const item of [value.capability, value.model])
-    if (item.status === 'same' ? item.currentHash !== item.adoptedHash : item.status === 'changed' ? !item.currentHash || item.currentHash === item.adoptedHash : item.currentHash !== undefined)
-      context.addIssue({ code: 'custom', message: '当前差异与指纹不一致' });
-});
+export const workspaceMemberCurrentDiffSchema = z.object({ checkedAt: time, capability: current.extend({ knowledgeRevision: id.optional() }).strict(), model: current }).strict().superRefine((value, context) => { for (const item of [value.capability, value.model]) if (item.status === 'same' ? item.currentHash !== item.adoptedHash : item.status === 'changed' ? !item.currentHash || item.currentHash === item.adoptedHash : item.currentHash !== undefined) context.addIssue({ code: 'custom', message: '当前差异与指纹不一致' }); });
 
 export type WorkspaceMemberCurrentDiff = z.infer<typeof workspaceMemberCurrentDiffSchema>;
 

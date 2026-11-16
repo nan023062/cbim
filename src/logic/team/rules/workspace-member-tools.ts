@@ -3,9 +3,11 @@
  * 设计原因：复用岗位事务但不开放模型选型；登记只能继承静态 Agent 的既有配置，能力采纳与来源采纳分别表达。
  */
 import { z } from 'zod';
+
 import { workspaceMemberChangeInputSchema, workspaceMemberCurrentDiffSchema, workspaceMemberIdentitySchema, workspaceMemberListSchema, workspaceMemberReceiptSchema, workspaceMemberStateSchema, workspaceRegistryCursorSchema } from './workspace-member';
 
 const uuid = z.string().uuid(),
+
   hash = z.string().regex(/^[a-f0-9]{64}$/);
 
 const [register, update, adopt, state] = workspaceMemberChangeInputSchema.options;
@@ -57,7 +59,6 @@ export interface MemberToolBinding
 
   runId: string
 }
-
 /** 本轮真实调用 ID 在门禁后独立传递；业务参数不能指定它。 */
 export interface WorkspaceMemberToolsPort
 {

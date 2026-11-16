@@ -4,7 +4,6 @@
  * 职责边界：队列负责执行顺序，集合只跟踪已启动操作；停止接单、取消、重试和物理退出由消费者负责。
  * 实现形式：实例类与回执契约；各实例独立拥有队列、集合或计时器。
  */
-
 /** 同一实例按提交顺序执行，失败后继续；不适用于写失败必须永久停止的证据日志。 */
 export class SerialQueue
 {
@@ -15,24 +14,23 @@ export class SerialQueue
   public Run<T>(work: () => T | PromiseLike<T>): Promise<T>
   {
     const result = this.tail.then(work);
+
     this.tail = result.then(
-      () =>
-      {
-      },
-      () =>
-      {
-      }
+
+      () => { },
+
+      () => { }
+
     );
+
     return result;
   }
-
   /** 等待调用时已提交的任务结束，不收集错误，也不禁止后续入队；错误由各次 run 的调用者处理。 */
   public Drain(): Promise<void>
   {
     return this.tail;
   }
 }
-
 /** 调用方创建 Promise 并提供结算入口；关联表不定义协议成功、错误映射或重试策略。 */
 export interface PendingReply<T>
 {
@@ -42,13 +40,14 @@ export interface PendingReply<T>
   /** 拒绝原请求；不自动重试或停止进程。 */
   reject: (error: Error) => void;
 }
-
 /** 每实例独立管理 ID 与计时器；超时动作由协议适配器决定，不自动杀进程或重发。 */
 export class PendingRequests<K, T = unknown>
 {
   /** 尚未取出的请求及计时器；计时器触发本身不删除请求。 */
   private readonly entries = new Map<
+
     K,
+
     PendingReply<T> &
     {
       timer: ReturnType<typeof setTimeout>;
@@ -59,34 +58,40 @@ export class PendingRequests<K, T = unknown>
   public Register(id: K, reply: PendingReply<T>, timeoutMs: number, onTimeout: () => void): void
   {
     if (this.entries.has(id))
+
       throw Error('Duplicate pending request');
+
     const timer = setTimeout(onTimeout, timeoutMs);
+
     this.entries.set(id, { ...reply, timer });
   }
-
   /** 先移除并清理计时器再交还结算入口；未知或重复回包返回 undefined，不触发回调。 */
   public Take(id: K): PendingReply<T> | undefined
   {
     const entry = this.entries.get(id);
+
     if (!entry)
+
       return undefined;
+
     clearTimeout(entry.timer);
+
     this.entries.delete(id);
+
     return entry;
   }
-
   /** 按登记顺序清理并拒绝；工厂可保留逐请求错误身份，工厂/reject 须不抛错，不代表进程已退出。 */
   public RejectAll(error: Error | (() => Error)): void
   {
     for (const entry of this.entries.values())
     {
       clearTimeout(entry.timer);
+
       entry.reject(typeof error === 'function' ? error() : error);
     }
     this.entries.clear();
   }
 }
-
 /** 实例内跟踪已开始的 Promise；等待当前快照，不替代业务取消、动态排空或资源退出屏障。 */
 export class InFlightOperations
 {
@@ -98,27 +103,23 @@ export class InFlightOperations
   {
     return this.pending.size;
   }
-
   /** 原样返回同一个 Promise；按身份去重，完成或失败后自动移除，不改写结果、不重试。 */
   public Track<T>(operation: Promise<T>): Promise<T>
   {
     if (!this.pending.has(operation))
     {
       this.pending.add(operation);
+
       void operation.then(
-        () =>
-        {
-          this.pending.delete(operation);
-        },
-        () =>
-        {
-          this.pending.delete(operation);
-        }
+
+        () => { this.pending.delete(operation); },
+
+        () => { this.pending.delete(operation); }
+
       );
     }
     return operation;
   }
-
   /** 只等调用时快照，吞吐中的新任务不延长等待；错误仍由原调用者观察，不封闭集合。 */
   public async Drain(): Promise<void>
   {

@@ -4,37 +4,55 @@
  * 设计原因：普通问答不创建计划；真实身份和代次限定证据。完整出口固定模型明确选择的原清单，并要求JSON同身份；交付前重核全集合，保存前冻结依据，坏输出不回滚版本。
  */
 import type { CodeCheckRecord } from './code-check';
+
 import { zodToJsonSchema } from 'zod-to-json-schema';
+
 import type { TaskProgress } from './progress';
+
 import type { ToolReceipt } from '../../tools/rules/types';
+
 import type { ArtifactBaselineRef } from './artifact-baseline';
+
 import { checkedJsonToolResult } from '../../tools/rules/results';
+
 import { fail } from '../../../core/errors';
+
 import { assertWorkflowPlan, evaluateWorkflowDelivery, selectWorkflowValidations, type WorkflowProgressContext } from './workflow-evidence';
+
 import type { ProgressValidationPort } from './validation';
+
 import type { ProgressManifestPort } from './output-manifest';
+
 import { completeOutputRequired, completeOutputProof } from './complete-output-evidence';
+
 import { progressToolInputSchemas, type ProgressPlanInput, type ProgressStepInput, type ProgressDeliveryInput } from './progress-schema';
+
 import { isProgressEvidence, memberToolContract, memberToolOutputSchema, progressToolIdentitySchema, type MemberToolName, type ProgressToolIdentity, type ProgressOutputBasis } from '../../tasks/rules/member-tool-output';
 
 const definitions = {
   cbim_task_inspect: { description: '读取本会话执行计划、本轮可引用的成功工具回执及已装配的产物验证事实。rejected 是检查已执行但不符合要求，不能满足交付出口。普通问答无需创建计划。', schema: progressToolInputSchemas.cbim_task_inspect },
+
   cbim_task_plan: { description: '创建或修订执行计划。expectedVersion 初次为 0；修订清除旧证据并保留历史。责任是描述，不会派发其他 Agent。', schema: progressToolInputSchemas.cbim_task_plan },
+
   cbim_task_step: { description: '更新步骤；reported_done 必须引用 cbim_task_inspect 返回的本轮有效 evidenceIds。完成声明仍需人工判断。', schema: progressToolInputSchemas.cbim_task_step },
+
   cbim_delivery_prepare: { description: '准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，产物验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。', schema: progressToolInputSchemas.cbim_delivery_prepare },
 };
-
 /** 工具只维护执行记录，不修改项目或知识；参数校验可在授权前独立调用。 */
 export function progressTool(name: string, input: unknown)
 {
   if (!Object.hasOwn(definitions, name))
+
     return undefined;
+
   const definition = definitions[name as keyof typeof definitions];
+
   if (!definition)
+
     return undefined;
+
   return { args: definition.schema.parse(input), effects: ['maintenance'] as const, native: false };
 }
-
 /** 仅暴露本实现的参数协议；名称、输入 Schema 和描述不构成工具执行授权。 */
 export const progressToolSchemas = Object.entries(definitions).map(([name, d]) => ({ name, description: d.description, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...memberToolContract(name as MemberToolName) }));
 
@@ -46,7 +64,6 @@ export class TaskProgressTools
   {
     return progressToolSchemas
   }
-
   private state?: TaskProgress;
 
   private evidence = new Map<string, ToolReceipt>();
@@ -67,162 +84,214 @@ export class TaskProgressTools
   constructor(previous: TaskProgress | undefined, private save: (state: TaskProgress) => Promise<void>, private readonly ports: { identity: ProgressToolIdentity; Artifacts?(): ArtifactBaselineRef[]; workflow?: WorkflowProgressContext; validations?: ProgressValidationPort; manifests?: ProgressManifestPort; codeChecks?: { Records(): CodeCheckRecord[] }; /** 真正执行交付时再同步核在途副作用，防止已获 gate 后才出现写入；不请求权限或执行 I/O。 */ AssertDeliveryReady?(): void; })
   {
     this.state = previous ? structuredClone(previous) : undefined;
+
     this.workflow = ports.workflow ? structuredClone(ports.workflow) : undefined;
+
     this.identity = structuredClone(ports.identity);
+
     if (!progressToolIdentitySchema.safeParse(this.identity).success)
+
       fail('TASK_PROGRESS_IDENTITY', '执行进度必须绑定真实工作区、任务与运行')
   }
-
   /** 只返回当前计划副本；可信采集端口用它核实版本，不允许工具或调用方直接修改计划。 */
   Current(): TaskProgress | undefined
   {
     return this.state ? structuredClone(this.state) : undefined
   }
-
   /** 审批前同步检查；返回的版本必须在审批后由 invalidate 同队列重新比较。 */
   BeforeEffects(): number | undefined
   {
     if (!this.workflow?.bindings.length)
+
       return;
+
     const version = assertWorkflowPlan(this.workflow.bindings, this.planEstablished ? this.state : undefined, this.workflow.task);
+
     return version;
   }
-
   private Serial<T>(work: () => Promise<T>): Promise<T>
   {
     const next = this.tail.then(work);
-    this.tail = next.catch(() =>
-    {
-    });
+
+    this.tail = next.catch(() => { });
+
     return next
   }
-
   /** 保存前隔离内存状态；返回原值交唯一 wire 校验，save 的坏回包不能冒充回滚或污染已知计划。 */
   private async Persist(next: TaskProgress)
   {
     const committed = structuredClone(next);
+
     await this.save(next);
+
     this.state = committed;
+
     return next
   }
-
   /** 新轮次或任何写入/命令放行前使证据失效；失败/取消也不能假设产物未改变。 */
   Invalidate(reason: string, expectedPlanVersion?: number)
   {
-    return this.Serial(async () =>
-    {
-      if (expectedPlanVersion !== undefined && this.state?.version !== expectedPlanVersion)
-        fail('WORKFLOW_PLAN_STALE', '审批期间执行计划已变化，请基于当前计划重新发起此操作');
-      this.generation++;
-      this.evidence.clear();
-      if (!this.state)
-        return;
-      await this.Persist({ ...this.state, version: this.state.version + 1, state: 'executing', reason, delivery: undefined, steps: this.state.steps.map(s => ({ ...s, state: s.state === 'reported_done' ? 'pending' : s.state, evidence: [] })) });
-    })
+    return this.Serial(async () => { if (expectedPlanVersion !== undefined && this.state?.version !== expectedPlanVersion) fail('WORKFLOW_PLAN_STALE', '审批期间执行计划已变化，请基于当前计划重新发起此操作'); this.generation++; this.evidence.clear(); if (!this.state) return; await this.Persist({ ...this.state, version: this.state.version + 1, state: 'executing', reason, delivery: undefined, steps: this.state.steps.map(s => ({ ...s, state: s.state === 'reported_done' ? 'pending' : s.state, evidence: [] })) }); })
   }
-
   /** 只接收运行时生成的业务回执；外部仓库资料、任务记录、派发、目标审阅与候选工具不能替代实际业务交付证据。 */
   /** 历史报告可读取缺哈希的旧回执；当前证据必须有明确成功结果和真实三身份。忽略不可引用项，不删除原日志。 */
   Record(receipt: ToolReceipt, generation: number)
   {
     if (generation === this.generation && isProgressEvidence(receipt, this.identity))
+
       this.evidence.set(receipt.toolCallId, structuredClone(receipt))
   }
-
   /** 桥的一次性 gate 之后调用；状态版本和证据再次核验，返回可序列化工具结果。 */
   Call(name: string, input: unknown)
   {
     return this.Serial(async () =>
     {
       const parsed = progressTool(name, input);
+
       if (!parsed)
+
         throw Error('未知任务工具');
+
       const args = structuredClone(parsed.args) as ProgressPlanInput | ProgressStepInput | ProgressDeliveryInput;
+
       const basis: ProgressOutputBasis = { codeChecks: this.ports.codeChecks?.Records(), previous: this.Current(), expected: undefined, evidence: structuredClone([...this.evidence.values()]), ...(this.workflow ? { workflow: structuredClone(this.workflow) } : {}), ...(this.ports.validations ? { validations: structuredClone(this.ports.validations.Records()) } : {}) };
+
       const expectedInput = structuredClone(args);
+
       let result: unknown;
+
       if (name === 'cbim_task_inspect')
       {
         basis.expected = { plan: this.Current() ?? null, evidence: structuredClone([...this.evidence.values()]), ...(this.workflow?.bindings.length ? { workflowContracts: structuredClone(this.workflow.bindings) } : {}), ...(basis.validations ? { validations: basis.validations.map(record => structuredClone(record.result)) } : {}) };
+
         basis.artifactsAvailable = !!this.ports.Artifacts;
+
         // 外部端口值不先 clone/parse；它必须以原 JSON wire 通过严格 Schema，不把 toJSON 或缺字段隐藏在预处理里。
         result = { ...basis.expected as object, ...(this.ports.Artifacts ? { artifacts: this.ports.Artifacts() } : {}) };
       }
       else
       {
         if (args.expectedVersion !== (this.state?.version ?? 0))
+
           throw Error('任务计划版本已变化，请重新读取');
+
         if (name === 'cbim_task_plan')
         {
           const draft = args as ProgressPlanInput;
+
           if (new Set(draft.steps.map(s => s.id)).size !== draft.steps.length)
+
             throw Error('步骤 ID 不能重复');
+
           const next: TaskProgress = { version: draft.expectedVersion + 1, goal: draft.goal, reason: draft.reason, acceptance: draft.acceptance, state: 'executing', steps: draft.steps.map(s => ({ ...s, state: 'pending', evidence: [] })) };
+
           basis.expected = structuredClone(next);
+
           result = await this.Persist(next);
+
           this.planEstablished = true;
+
           this.generation++;
+
           this.evidence.clear();
         }
         else
         {
           if (!this.state)
+
             throw Error('请先创建任务计划');
+
           const next = structuredClone(this.state);
+
           next.version++;
+
           if (name === 'cbim_task_step')
           {
             const draft = args as ProgressStepInput,
+
               step = next.steps.find(s => s.id === draft.id);
+
             if (!step)
+
               throw Error('步骤不存在');
+
             if (draft.state === 'reported_done' && !draft.evidenceIds.length)
+
               throw Error('缺少执行证据，不能报告完成');
+
             if (draft.evidenceIds.some(id => !this.evidence.has(id)))
+
               throw Error('证据不存在、已过期或不属于本轮');
+
             Object.assign(step, { state: draft.state, evidence: draft.evidenceIds });
+
             next.state = 'executing';
+
             delete next.delivery;
           }
           else
           {
             this.ports?.AssertDeliveryReady?.();
+
             if (next.steps.some(s => s.state !== 'reported_done' || !s.evidence.length || s.evidence.some(id => !this.evidence.has(id))))
+
               throw Error('仍有未完成步骤或缺失有效证据');
+
             const draft = args as ProgressDeliveryInput;
+
             next.state = 'awaiting_review';
+
             next.delivery = { summary: draft.summary, limitations: draft.limitations };
+
             if (draft.manifestId && !completeOutputRequired(this.workflow?.bindings ?? []))
+
               fail('MANIFEST_UNDECLARED', '本轮未声明完整交付要求，不能把观察引用作为出口');
+
             if (this.workflow?.bindings.length)
             {
               if (!this.planEstablished || next.goal !== this.workflow.task.goal || JSON.stringify(next.acceptance) !== JSON.stringify(this.workflow.task.acceptance))
+
                 fail('WORKFLOW_PLAN_REQUIRED', 'Workflow 交付要求本轮保存与原任务一致的计划');
+
               const selected = [...new Set(next.steps.flatMap(step => step.evidence))].map(id => this.evidence.get(id)!);
+
               const validations = selectWorkflowValidations(this.workflow.bindings, selected, this.workflow.identity, basis.validations ?? []);
+
               const complete = completeOutputRequired(this.workflow.bindings);
+
               if (complete && (!draft.manifestId || !this.ports.manifests))
+
                 fail('MANIFEST_REQUIRED', '完整交付必须明确选择原清单并装配真实复核端口');
+
               const manifest = complete ? this.ports.manifests!.Select(draft.manifestId!, draft.expectedVersion) : undefined;
+
               if (manifest)
+
                 basis.manifest = completeOutputProof(manifest);
+
               // 先核所有引用是否同一集合，再做文件读取；不能验证后自动换绑另一清单。
               next.delivery.workflow = evaluateWorkflowDelivery(this.workflow.bindings, selected, this.workflow.identity, basis.validations, basis.manifest, basis.codeChecks);
+
               if (validations.length)
               {
                 if (!this.ports.validations)
+
                   fail('WORKFLOW_VALIDATION_UNAVAILABLE', '本轮没有可信文件验证端口');
+
                 await this.ports.validations.VerifyCurrent(validations);
+
                 this.ports.AssertDeliveryReady?.()
               }
               if (manifest)
               {
                 await this.ports.manifests!.VerifyCurrent(manifest);
+
                 this.ports.AssertDeliveryReady?.()
               }
             }
           }
           basis.expected = structuredClone(next);
+
           result = await this.Persist(next);
         }
       }

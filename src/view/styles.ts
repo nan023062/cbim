@@ -4,55 +4,107 @@
  * 新增页面样式时同步本清单；CSS 仍由各责任目录维护，不在此重复定义规则。
  */
 import './shell/shell.css';
+
 import './automation/automation.css';
+
 import './components/agent-model-form.css';
+
 import './components/repository-scope.css';
+
 import './components/sidebar.css';
+
 import './conversation/conversation-entries.css';
+
 import './conversation/conversation-topics.css';
+
 import './conversation/conversation.css';
+
 import './conversation/inline-conversation.css';
+
 import './conversation/session-tabs.css';
+
 import './conversation/usage.css';
+
 import './diagnostics/diagnostics.css';
+
 import './execution-view/knowledge-tool-view.css';
+
 import './execution-view/message-queue.css';
+
 import './execution-view/questions.css';
+
 import './governance/module-governance.css';
+
 import './knowledge/architecture-editor.css';
+
 import './knowledge/knowledge-files.css';
+
 import './knowledge/knowledge-source.css';
+
 import './resources/repository-connections.css';
+
 import './resources/workspace-transfer.css';
+
 import './runtime/runtime-overview.css';
+
 import './settings/appearance.css';
+
 import './settings/budget-settings.css';
+
 import './settings/models.css';
+
 import './settings/settings.css';
+
 import './shell/extensions.css';
+
 import './shell/workspace-list.css';
+
 import './tasks/admission.css';
+
 import './tasks/artifact-report.css';
+
 import './tasks/command-verification.css';
+
 import './tasks/controlled-file.css';
+
 import './tasks/effect-observation.css';
+
 import './tasks/execution-report.css';
+
 import './tasks/human-continuation.css';
+
 import './tasks/human-decisions.css';
+
 import './tasks/member-activity.css';
+
 import './tasks/member-checkpoint.css';
+
 import './tasks/member-dependency.css';
+
 import './tasks/member-validation.css';
+
 import './tasks/office-scene.css';
+
 import './tasks/owner-execution.css';
+
 import './tasks/scope-goal.css';
+
 import './tasks/scope-replan.css';
+
 import './tasks/scope-usage.css';
+
 import './tasks/task-graph.css';
+
 import './team/agent-history.css';
+
 import './team/team-view.css';
+
 import './team/workspace-members.css';
+
 import './updates/software-updates.css';
+
 import './workspace/module-ownership.css';
+
 import './workspace/workspace-view.css';
+
 import './components/interface.css';

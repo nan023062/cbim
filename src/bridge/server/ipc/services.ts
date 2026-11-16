@@ -8,32 +8,59 @@
  * 请求预算只公开只读摘要；预留和终态仅由真实运行装配端口持有。
  */
 import type { WebSettings } from '../../../logic/web/service';
+
 import type { WorkspaceAutomations } from '../../../logic/automation/service/service';
+
 import type { Catalog } from '../../../logic/workspace/service/catalog';
+
 import type { Workspace } from '../../../logic/workspace/service/workspace';
+
 import type { Paths } from '../../../logic/workspace/service/paths';
+
 import type { MainAgentSettings } from '../../../logic/team/settings/main-agent-settings';
+
 import type { LlmProfiles } from '../../../logic/models/service';
+
 import type { EngineModelProfiles } from '../../../logic/engines/service';
+
 import type { EnginePackages } from '../../../logic/engines/packages';
+
 import type { ResourceRepositories } from '../../../logic/resources/service';
+
 import type { RepositoryConnections } from '../../../logic/connectors/service/repository-connections';
+
 import type { GitHubFeedback } from '../../../logic/feedback/service';
+
 import type { ModuleGovernanceService } from '../../../logic/governance/service/module-governance';
+
 import type { WorkspaceExecutionManager } from '../../../logic/conversation/runtime/execution-manager';
+
 import type { WorkspaceDispatchService } from '../../../logic/dispatch/runtime/dispatch-service';
+
 import type { MemberExecutionManager } from '../../../logic/team/runtime/member-execution';
+
 import type { AgentHistoryService } from '../../../logic/history/runtime/agent-history';
+
 import type { RuntimeCursor, RuntimeRead, RuntimeSnapshot } from '../../../logic/runtime/rules/types';
+
 import type { Catalog as CatalogData, WorkspaceView } from '../../contracts/workspace';
+
 import type { AdmissionSettings } from '../../../logic/runtime/settings/admission-settings';
+
 import type { BudgetSettings } from '../../../logic/budget/settings/budget-settings';
+
 import type { WorkspaceMembers } from '../../../logic/team/service/workspace-members';
+
 import type { ModuleOwnerships } from '../../../logic/workspace/service/module-ownerships';
+
 import type { ControlledFiles } from '../../../logic/file-operations/service/controlled-files';
+
 import type { IsolatedExecutions } from '../../../logic/file-operations/service/isolated-executions';
+
 import type { ChatMaterialImports } from '../../../logic/materials/service/chat-material-imports';
+
 import type { AdmissionCursor, AdmissionRead } from '../../../logic/runtime/rules/admission';
+
 import type { ModelRequestBudgetService } from '../../../logic/budget/runtime/model-request-budget-service';
 
 /** 应用向路由提供的内部服务；工作区调用始终携带身份，生命周期仍由应用实现管理。 */
@@ -73,7 +100,6 @@ export interface ApplicationServices
   {
     Read(cursor?: AdmissionCursor): AdmissionRead
   };
-
   readonly admissionSettings: AdmissionSettings;
 
   /** 应用设置只为未来周期提供默认策略，不修改当前周期的冻结额度或发放启动许可。 */
@@ -88,7 +114,6 @@ export interface ApplicationServices
 
     Rename(workspaceId: string, name: string): void
   };
-
   /** 仅观察已运行实例；路由重命名时同步实例显示名，不负责增删实例。 */
   readonly running: ReadonlyMap<string, Workspace>;
 

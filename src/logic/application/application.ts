@@ -7,48 +7,91 @@
  * 初始化：字段初值只含独立容器、标记及监管/准入对象，无跨字段读取；构造体内的服务装配顺序保持原样。
  */
 import path from 'node:path';
+
 import { WebSettings } from '../web/service';
+
 import { WebService } from '../web/service';
+
 import type { BrowserReader } from '../../core/platform/node/web';
+
 import { WorkspaceAutomations } from '../automation/service/service';
+
 import type { ControlledFileTransport } from '../file-operations/platform/files/controlled-file-protocol';
+
 import type { ModelRequestBudgetService } from '../budget/runtime/model-request-budget-service';
+
 import type { ControlledFiles } from '../file-operations/service/controlled-files';
+
 import type { IsolatedExecutions } from '../file-operations/service/isolated-executions';
+
 import { LlmProfiles, type SecretCipher } from '../models/service';
+
 import { EngineModelProfiles } from '../engines/service';
+
 import { MainAgentSettings } from '../team/settings/main-agent-settings';
+
 import { AdmissionSettings } from '../runtime/settings/admission-settings';
+
 import { BudgetSettings } from '../budget/settings/budget-settings';
+
 import { GitHubFeedback } from '../feedback/service';
+
 import { createExecutionManager } from './assembly/execution';
+
 import { EnginePackages } from '../engines/packages';
+
 import type { EngineArtifactsPort } from '../updates/engine-artifacts';
+
 import type { EngineRuntimeResolver } from '../execution/rules/engine-runtime';
+
 import { createMemberServices } from './assembly/member-dispatch';
+
 import { FileDispatchStore } from '../dispatch/storage/dispatch-store';
+
 import type { WorkspaceDispatchService } from '../dispatch/runtime/dispatch-service';
+
 import type { MemberExecutionManager } from '../team/runtime/member-execution';
+
 import { WorkspaceExecutionLease } from '../execution/admission/workspace-lease';
+
 import { AutoCollaboration } from '../dispatch/runtime/auto-collaboration';
+
 import { GlobalRuntimeManager } from '../runtime/monitoring/global-runtime';
+
 import { GlobalRunAdmission } from '../execution/admission/run-admission';
+
 import type { WorkspaceAdmission } from './assembly/execution-admission';
+
 import { WorkspaceRuntimeMonitor } from './assembly/runtime-monitor';
+
 import { ChatInputs } from '../materials/service/chat-inputs';
+
 import { ChatMaterialImports } from '../materials/service/chat-material-imports';
+
 import { createAgentHistory } from '../history/service/assembly';
+
 import type { AgentHistoryService } from '../history/runtime/agent-history';
+
 import type { WorkspaceExecutionManager } from '../conversation/runtime/execution-manager';
+
 import { Catalog } from '../workspace/service/catalog';
+
 import { Paths } from '../workspace/service/paths';
+
 import { exists } from '../../core/platform/node/files';
+
 import { fail } from '../../core/errors';
+
 import { Rules } from '../knowledge/rules/knowledge';
+
 import { Workspace } from '../workspace/service/workspace';
+
 import { ResourceRepositories } from '../resources/service';
+
 import { RepositoryConnections } from '../connectors/service/repository-connections';
+
 import type { WorkspaceMembers } from '../team/service/workspace-members';
+
 import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
 
 /** 宿主可选能力的装配契约；不从页面或模型参数构造。 */
@@ -66,7 +109,6 @@ interface ApplicationPlatform
   /** 静态网页不足时使用的浏览器适配；Node 宿主可不提供。 */
   webBrowser?: BrowserReader;
 }
-
 /** 业务服务的唯一生命周期所有者；Bridge 子类只补充通信分发，不复制本类状态。 */
 export class Application
 {
@@ -134,56 +176,52 @@ export class Application
   private RetireAdmission(id: string)
   {
     this.admissionOwners.get(id)?.();
+
     this.admissionOwners.delete(id);
   }
-
   /** 绑定一次工作区打开；退役只撤销票据与通知，不删除尚未释放的实际占用。 */
   private BindAdmission(workspace: Workspace, lease: WorkspaceExecutionLease): WorkspaceAdmission
   {
     const id = workspace.entry.id,
+
       ownerEpoch = ++this.nextAdmissionEpoch,
+
       controller = new AbortController();
+
     let current = true;
+
     const release = lease.ObserveRelease(() => this.admission.Wake());
-    this.admissionOwners.set(id, () =>
-    {
-      current = false;
-      controller.abort(Error('工作区执行代际已退役'));
-      release();
-      this.admission.RetireOwner(id, ownerEpoch);
-    });
+
+    this.admissionOwners.set(id, () => { current = false; controller.abort(Error('工作区执行代际已退役')); release(); this.admission.RetireOwner(id, ownerEpoch); });
+
     return {
       manager: this.admission,
+
       ownerEpoch,
+
       signal: controller.signal,
-      IsCurrent: () =>
-        current && !this.stopping && workspace.state === 'running' && this.running.get(id) === workspace,
+
+      IsCurrent: () => current && !this.stopping && workspace.state === 'running' && this.running.get(id) === workspace,
     };
   }
-
   /** 进入工作区关闭或重启屏障，返回仅退出本次计数的闭包。 */
   private Retire(id: string)
   {
     this.retiring.set(id, (this.retiring.get(id) ?? 0) + 1);
-    return () =>
-    {
-      const count = this.retiring.get(id)! - 1;
-      if (count)
-        this.retiring.set(id, count);
-      else
-        this.retiring.delete(id);
-    };
-  }
 
+    return () => { const count = this.retiring.get(id)! - 1; if (count) this.retiring.set(id, count); else this.retiring.delete(id); };
+  }
   /** 拒绝应用退出及工作区退役期间的新服务请求，不隐式打开或恢复工程。 */
   private AssertServiceAvailable(id: string)
   {
     if (this.stopping)
+
       fail('SHUTTING_DOWN', 'CBIM 正在退出');
+
     if (this.retiring.has(id))
+
       fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
   }
-
   /** 应用数据与工作区目录的可信定位器，保持调用方传入的同一实例。 */
   public readonly paths: Paths;
 
@@ -240,364 +278,547 @@ export class Application
   {
     return this.stopping;
   }
-
   /** 装配应用级服务；仅可信宿主提供资源根、密钥适配和平台端口，持久配置由 init 读取。 */
   // 可信文件传输同时供旧运行恢复与新 Agent 业务装配；公开对话参数不能替换该端口。
   public constructor(paths: Paths, assetsRoot: string, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
   {
     this.paths = paths;
-    this.platform = platform;
-    if (platform.engineArtifacts)
-      this.enginePackages = new EnginePackages(
-        path.join(paths.userRoot, 'engine-installations.json'),
-        platform.engineArtifacts
-      );
-    this.webSettings = new WebSettings(path.join(paths.userRoot, 'web-search.json'), secretCipher);
-    this.web = new WebService(this.webSettings, undefined, undefined, platform.webBrowser);
-    this.models = new LlmProfiles(path.join(paths.userRoot, 'llm.json'), secretCipher);
-    this.engineModels = new EngineModelProfiles(this.models);
-    this.mainAgentSettings = new MainAgentSettings(
-      (id) => path.join(paths.Project(id), 'main-agent.json'),
-      (identity) =>
-      {
-        this.AssertServiceAvailable(identity.workspaceId);
-        this.Workspace(identity.workspaceId).Assert(identity);
-      },
-      this.engineModels
-    );
-    this.githubFeedback = new GitHubFeedback(path.join(paths.userRoot, 'github-feedback'), secretCipher);
-    this.admissionSettings = new AdmissionSettings(
-      path.join(paths.userRoot, 'run-admission.json'),
-      this.admission
-    );
-    this.budgetSettings = new BudgetSettings(path.join(paths.userRoot, 'scope-budget.json'));
-    this.catalog = new Catalog(paths);
-    this.rules = new Rules(assetsRoot);
-    this.resources = new ResourceRepositories(paths);
-    this.repositoryConnections = new RepositoryConnections(
-      path.join(paths.userRoot, 'repository-connections.json'),
-      this.resources,
-      (id) =>
-      {
-        this.AssertServiceAvailable(id);
-        const ws = this.Workspace(id);
-        ws.Assert();
-        return ws;
-      }
-    );
-    this.chatMaterials = new ChatMaterialImports((id) =>
-    {
-      this.AssertServiceAvailable(id);
-      const ws = this.Workspace(id);
-      ws.Assert();
-      return ws;
-    }, this.repositoryConnections);
-  }
 
+    this.platform = platform;
+
+    if (platform.engineArtifacts)
+
+      this.enginePackages = new EnginePackages(
+
+        path.join(paths.userRoot, 'engine-installations.json'),
+
+        platform.engineArtifacts
+
+      );
+
+    this.webSettings = new WebSettings(path.join(paths.userRoot, 'web-search.json'), secretCipher);
+
+    this.web = new WebService(this.webSettings, undefined, undefined, platform.webBrowser);
+
+    this.models = new LlmProfiles(path.join(paths.userRoot, 'llm.json'), secretCipher);
+
+    this.engineModels = new EngineModelProfiles(this.models);
+
+    this.mainAgentSettings = new MainAgentSettings(
+
+      (id) => path.join(paths.Project(id), 'main-agent.json'),
+
+      (identity) => { this.AssertServiceAvailable(identity.workspaceId); this.Workspace(identity.workspaceId).Assert(identity); },
+
+      this.engineModels
+
+    );
+
+    this.githubFeedback = new GitHubFeedback(path.join(paths.userRoot, 'github-feedback'), secretCipher);
+
+    this.admissionSettings = new AdmissionSettings(
+
+      path.join(paths.userRoot, 'run-admission.json'),
+
+      this.admission
+
+    );
+
+    this.budgetSettings = new BudgetSettings(path.join(paths.userRoot, 'scope-budget.json'));
+
+    this.catalog = new Catalog(paths);
+
+    this.rules = new Rules(assetsRoot);
+
+    this.resources = new ResourceRepositories(paths);
+
+    this.repositoryConnections = new RepositoryConnections(
+
+      path.join(paths.userRoot, 'repository-connections.json'),
+
+      this.resources,
+
+      (id) => { this.AssertServiceAvailable(id); const ws = this.Workspace(id); ws.Assert(); return ws; }
+
+    );
+
+    this.chatMaterials = new ChatMaterialImports((id) => { this.AssertServiceAvailable(id); const ws = this.Workspace(id); ws.Assert(); return ws; }, this.repositoryConnections);
+  }
   /** 自动化仅在当前打开实例调度，关闭先停止新触发，再排空主/成员运行。 */
   public Automations(id: string)
   {
     this.AssertServiceAvailable(id);
+
     this.Workspace(id).Assert();
+
     const service = this.automationServices.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '工作区自动化尚未就绪');
+
     return service;
   }
-
   /** 成员图与邮箱每工作区只有一个写入服务，沿用已持有的工作区锁。 */
   public MemberDispatch(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const service = this.dispatchers.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '工作区成员服务尚未就绪');
+
     return service;
   }
-
   /** 岗位登记和旧命令查询只访问已打开工作区；旧实例回执由服务先查，不据当前来源重建。 */
   public WorkspaceMembers(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const service = this.memberRegistries.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '工作区岗位登记尚未就绪');
+
     return service;
   }
-
   /** 模块责任共用岗位与派发日志；未接到业务执行策略，查询不启动任何运行。 */
   public WorkspaceOwnerships(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const service = this.ownershipRegistries.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '工作区模块责任尚未就绪');
+
     return service;
   }
-
   /** 明确绑定工作区的成员执行入口；不依赖界面选中状态或普通对话的活动任务。 */
   public MemberExecution(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const service = this.memberExecutions.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '工作区成员执行服务尚未就绪');
+
     return service;
   }
-
   /** 每个工作区实例唯一的执行管理器；调用必须显式指定工作区。 */
   public Execution(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const manager = this.executions.get(id);
+
     if (!manager)
+
       fail('SERVICE_NOT_READY', '工作区执行服务尚未就绪');
+
     return manager;
   }
-
   /** 明确工作区的只读角色历史；没有执行、审批或恢复模型的副作用。 */
   public AgentHistory(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     const history = this.histories.get(id);
+
     if (!history)
+
       fail('SERVICE_NOT_READY', '工作区 Agent 历史尚未就绪');
+
     return history;
   }
-
   /** 取得当前工作区已装配的请求预算服务，不恢复或重发历史请求。 */
   public RequestBudgets(id: string)
   {
     this.AssertServiceAvailable(id);
+
     this.Workspace(id).Assert();
+
     const service = this.requestBudgetServices.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '请求预算服务尚未就绪');
+
     return service;
   }
-
   /** 只取得已打开工作区的原隔离记录，查询不启动程序或隐式清理。 */
   public IsolatedExecutions(id: string)
   {
     this.AssertServiceAvailable(id);
+
     this.Workspace(id).Assert();
+
     const service = this.isolatedExecutionServices.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '隔离资源服务尚未就绪');
+
     return service;
   }
-
   /** 原报告不隐式打开工作区；平台缺省只禁新写入，不影响已保存历史查询。 */
   public ControlledFiles(id: string)
   {
     this.AssertServiceAvailable(id);
+
     this.Workspace(id).Assert();
+
     const service = this.controlledFileServices.get(id);
+
     if (!service)
+
       fail('SERVICE_NOT_READY', '受控文件服务尚未就绪');
+
     return service;
   }
-
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
   public async Init(options: { /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */ restore?: boolean; } = {})
   {
     await this.enginePackages?.Init();
+
     await this.webSettings.Init();
+
     await this.catalog.Init();
+
     await this.rules.Init();
+
     await this.resources.Init();
+
     await this.repositoryConnections.Init();
+
     await this.admissionSettings.Init();
+
     await this.budgetSettings.Init();
+
     if (options.restore !== false)
+
       await this.Restore();
   }
-
   /** 合并登记簿与当前实例视图；未打开的工作区只检查目录是否存在。 */
   public async List()
   {
     const data = await this.catalog.Read();
+
     return {
       ...data,
+
       warning: this.catalog.warning,
+
       entries: await Promise.all(
+
         data.entries.map(
-          async (e) =>
-            this.running.get(e.id)?.View() || {
-              ...e,
-              state: (await exists(e.path)) ? 'registered' : 'missing',
-              tasks: [],
-            }
+
+          async (e) => this.running.get(e.id)?.View() || { ...e, state: (await exists(e.path)) ? 'registered' : 'missing', tasks: [], }
+
         )
+
       ),
     };
   }
-
   /** 仅取得已登记在运行集合中的实例；调用方继续按业务需要核实其就绪状态。 */
   public Workspace(id: string)
   {
     const ws = this.running.get(id);
+
     if (!ws)
+
       fail('NOT_RUNNING', '工作区未运行，请由用户在桌面打开');
+
     return ws;
   }
-
   /** 只取得已就绪工作区的私有治理服务；不把计划或决定接到模型执行入口。 */
   public Governance(id: string)
   {
     this.AssertServiceAvailable(id);
+
     const ws = this.Workspace(id);
+
     ws.Assert();
+
     return ws.governance;
   }
-
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
   public async Open(id: string, restart = false)
   {
     if (this.stopping)
+
       fail('SHUTTING_DOWN', 'CBIM 正在退出');
+
     if (this.opening.has(id))
+
       return this.opening.get(id)!;
+
     this.AssertServiceAvailable(id);
+
     const pending = (async () =>
     {
       const entry = (await this.catalog.Read()).entries.find((x) => x.id === id);
+
       if (!entry)
+
         fail('NOT_REGISTERED', '工作区未登记');
+
       let ws = this.running.get(id);
+
       if (restart || ws?.state !== 'running')
       {
         const release = this.Retire(id);
+
         try
         {
           // 退役先阻止旧代际的新活动；后续异步排空期间不能再进入新业务。
           this.chatMaterials.RetireWorkspace(id);
+
           this.repositoryConnections.RetireWorkspace(id);
+
           this.RetireAdmission(id);
+
           await this.automationServices.get(id)?.scheduler.Close();
+
           this.automationServices.delete(id);
+
           await this.collaborations.get(id)?.Close();
+
           this.collaborations.delete(id);
+
           await this.executions.get(id)?.Close();
+
           this.executions.delete(id);
+
           await this.memberExecutions.get(id)?.Close();
+
           this.memberExecutions.delete(id);
+
           await this.controlledFileServices.get(id)?.Close();
+
           this.controlledFileServices.delete(id);
+
           await this.isolatedExecutionServices.get(id)?.Close();
+
           this.isolatedExecutionServices.delete(id);
+
           this.requestBudgetServices.delete(id);
+
           await ws?.PrepareClose();
+
           await this.dispatchers.get(id)?.Close();
+
           this.dispatchers.delete(id);
+
           this.memberRegistries.delete(id);
+
           this.ownershipRegistries.delete(id);
+
           this.monitors.get(id)?.Close();
+
           await this.histories.get(id)?.Close();
+
           this.histories.delete(id);
+
           await ws?.Close();
+
           // 旧实例成功关闭后才替换；新 Store 在 Workspace 持锁阶段加载。
           ws = new Workspace(entry, this.paths, this.rules);
+
           this.running.set(id, ws);
+
           const history = createAgentHistory(ws, (message) => this.monitors.get(id)?.HistoryIssue(message));
+
           this.histories.set(id, history);
+
           const monitor = new WorkspaceRuntimeMonitor(this.runtime, id, entry.name, history);
+
           this.monitors.set(id, monitor);
+
           try
           {
             ws.AttachDispatchStore(
+
               new FileDispatchStore(
+
                 path.join(this.paths.Project(id), 'dispatch'),
+
                 id,
+
                 monitor.dispatchObserver
+
               )
+
             );
+
             await ws.Open({ beforeDispatchLoad: () => monitor.InitializeHistory() });
+
             const lease = new WorkspaceExecutionLease(),
+
               admission = this.BindAdmission(ws, lease),
               {
                 dispatch: service,
+
                 members,
+
                 workspaceMembers,
+
                 moduleOwnerships,
+
                 controlledFiles,
+
                 isolatedExecutions,
+
                 requestBudgets,
+
                 businessRuns,
               } = createMemberServices(
+
                 ws,
+
                 this.engineModels,
+
                 lease,
+
                 monitor.dispatchObserver,
+
                 admission,
+
                 () => this.budgetSettings.Read(),
+
                 this.platform.controlledFiles,
+
                 this.enginePackages ?? this.platform.engineRuntimes
+
               ),
+
               execution = createExecutionManager(
+
                 ws,
+
                 this.engineModels,
+
                 lease,
+
                 () => this.collaborations.get(id),
+
                 service,
+
                 admission,
+
                 this.repositoryConnections,
                 { service: moduleOwnerships, members: workspaceMembers },
+
                 requestBudgets,
+
                 this.githubFeedback,
+
                 this.web,
+
                 this.enginePackages ?? this.platform.engineRuntimes,
+
                 this.platform.controlledFiles,
                 { runs: businessRuns, controlledFiles, isolatedExecutions }
+
               );
+
             this.dispatchers.set(id, service);
+
             this.executions.set(id, execution);
+
             this.memberExecutions.set(id, members);
+
             this.memberRegistries.set(id, workspaceMembers);
+
             this.ownershipRegistries.set(id, moduleOwnerships);
+
             this.controlledFileServices.set(id, controlledFiles);
+
             this.isolatedExecutionServices.set(id, isolatedExecutions);
+
             this.requestBudgetServices.set(id, requestBudgets);
+
             await monitor.Initialize(ws, service, execution, members);
+
             const collaboration = new AutoCollaboration(
+
               ws,
+
               service,
+
               members,
+
               execution,
+
               lease,
+
               (root, error) => monitor.CollaborationIssue(root, error)
+
             );
+
             this.collaborations.set(id, collaboration);
+
             await collaboration.Initialize();
+
             const automations = new WorkspaceAutomations(
+
               ws,
+
               execution,
+
               service,
+
               collaboration,
+
               (permission) => this.ChatOptions(id, { permission, collaborationMode: 'team' }, [])
+
             );
+
             this.automationServices.set(id, automations);
+
             await automations.scheduler.Initialize();
           }
           catch (error)
           {
             // 知识库打开成功不代表内部服务已就绪。等待恢复若中途失败，阻止半就绪服务接受请求；下次 open 走统一关闭/重建路径。
             this.RetireAdmission(id);
+
             monitor.Unavailable(error);
+
             ws.error = '工作区服务初始化失败：' + (error instanceof Error ? error.message : String(error));
+
             ws.state = 'failed';
+
             throw error;
           }
         }
@@ -606,16 +827,13 @@ export class Application
           release();
         }
       }
-      await this.catalog.Update((d) =>
-      {
-        const item = d.entries.find((e) => e.id === id);
-        if (item)
-          item.lastOpened = new Date().toISOString();
-        d.recent = [id, ...d.recent.filter((x) => x !== id)].slice(0, 30);
-      });
+      await this.catalog.Update((d) => { const item = d.entries.find((e) => e.id === id); if (item) item.lastOpened = new Date().toISOString(); d.recent = [id, ...d.recent.filter((x) => x !== id)].slice(0, 30); });
+
       return ws;
     })();
+
     this.opening.set(id, pending);
+
     try
     {
       return await pending;
@@ -625,44 +843,71 @@ export class Application
       this.opening.delete(id);
     }
   }
-
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
   public async Stop(id: string)
   {
     const release = this.Retire(id);
+
     this.chatMaterials.RetireWorkspace(id);
+
     this.repositoryConnections.RetireWorkspace(id);
+
     this.RetireAdmission(id);
+
     try
     {
-      await this.opening.get(id)?.catch(() =>
-      {
-      });
+      await this.opening.get(id)?.catch(() => { });
+
       this.RetireAdmission(id);
+
       await this.automationServices.get(id)?.scheduler.Close();
+
       this.automationServices.delete(id);
+
       await this.collaborations.get(id)?.Close();
+
       this.collaborations.delete(id);
+
       await this.executions.get(id)?.Close();
+
       this.executions.delete(id);
+
       await this.memberExecutions.get(id)?.Close();
+
       this.memberExecutions.delete(id);
+
       await this.controlledFileServices.get(id)?.Close();
+
       this.controlledFileServices.delete(id);
+
       await this.isolatedExecutionServices.get(id)?.Close();
+
       this.isolatedExecutionServices.delete(id);
+
       this.requestBudgetServices.delete(id);
+
       await this.running.get(id)?.PrepareClose();
+
       await this.dispatchers.get(id)?.Close();
+
       this.dispatchers.delete(id);
+
       this.memberRegistries.delete(id);
+
       this.ownershipRegistries.delete(id);
+
       this.monitors.get(id)?.Close();
+
       await this.histories.get(id)?.Close();
+
       this.histories.delete(id);
+
       this.monitors.delete(id);
+
       const ws = this.running.get(id);
+
       await ws?.Close();
+
       this.running.delete(id);
     }
     finally
@@ -670,23 +915,26 @@ export class Application
       release();
     }
   }
-
   /** 先关闭目标工作区，再移除登记和监管投影；不删除用户工程文件。 */
   public async Remove(id: string)
   {
     await this.Stop(id);
+
     await this.catalog.Remove(id);
+
     this.runtime.Forget(id);
   }
-
   /** 仍按原策略恢复全部已登记工作区；与界面手动打开合并，退出后不再开始新的恢复。 */
   public async Restore()
   {
     const d = await this.catalog.Read();
+
     for (const entry of d.entries)
     {
       if (this.stopping)
+
         break;
+
       try
       {
         await this.Open(entry.id);
@@ -697,106 +945,95 @@ export class Application
       }
     }
   }
-
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
   public async Shutdown()
   {
     if (this.shutdownPromise)
+
       return this.shutdownPromise;
+
     this.stopping = true;
+
     for (const id of this.admissionOwners.keys())
+
       this.RetireAdmission(id);
-    this.shutdownPromise = (async () =>
-    {
-      await this.githubFeedback.Close();
-      await this.chatMaterials.Close();
-      await this.repositoryConnections.Close();
-      await Promise.allSettled([...this.opening.values()]);
-      for (const id of this.admissionOwners.keys())
-        this.RetireAdmission(id);
-      await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close()));
-      this.automationServices.clear();
-      await Promise.all([...this.collaborations.values()].map((x) => x.Close()));
-      this.collaborations.clear();
-      await Promise.all(
-        [...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())
-      );
-      this.executions.clear();
-      this.memberExecutions.clear();
-      await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close()));
-      this.controlledFileServices.clear();
-      await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close()));
-      this.isolatedExecutionServices.clear();
-      await this.platform.controlledFiles?.Close();
-      await Promise.all([...this.running.values()].map((w) => w.PrepareClose()));
-      await Promise.all([...this.dispatchers.values()].map((x) => x.Close()));
-      this.dispatchers.clear();
-      this.memberRegistries.clear();
-      this.ownershipRegistries.clear();
-      for (const monitor of this.monitors.values())
-        monitor.Close();
-      await Promise.all([...this.histories.values()].map((x) => x.Close()));
-      this.histories.clear();
-      this.monitors.clear();
-      const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close()));
-      await this.resources.Close();
-      this.running.clear();
-      const failed = results.find((r) => r.status === 'rejected');
-      if (failed?.status === 'rejected')
-        throw failed.reason;
-    })();
-    void this.shutdownPromise.catch((error) =>
-    {
-      if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code))
-        this.shutdownPromise = undefined;
-    });
+
+    this.shutdownPromise = (async () => { await this.githubFeedback.Close(); await this.chatMaterials.Close(); await this.repositoryConnections.Close(); await Promise.allSettled([...this.opening.values()]); for (const id of this.admissionOwners.keys()) this.RetireAdmission(id); await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.Close())); this.automationServices.clear(); await Promise.all([...this.collaborations.values()].map((x) => x.Close())); this.collaborations.clear(); await Promise.all([...this.executions.values(), ...this.memberExecutions.values()].map((x) => x.Close())); this.executions.clear(); this.memberExecutions.clear(); await Promise.all([...this.controlledFileServices.values()].map((x) => x.Close())); this.controlledFileServices.clear(); await Promise.all([...this.isolatedExecutionServices.values()].map((x) => x.Close())); this.isolatedExecutionServices.clear(); await this.platform.controlledFiles?.Close(); await Promise.all([...this.running.values()].map((w) => w.PrepareClose())); await Promise.all([...this.dispatchers.values()].map((x) => x.Close())); this.dispatchers.clear(); this.memberRegistries.clear(); this.ownershipRegistries.clear(); for (const monitor of this.monitors.values()) monitor.Close(); await Promise.all([...this.histories.values()].map((x) => x.Close())); this.histories.clear(); this.monitors.clear(); const results = await Promise.allSettled([...this.running.values()].map((w) => w.Close())); await this.resources.Close(); this.running.clear(); const failed = results.find((r) => r.status === 'rejected'); if (failed?.status === 'rejected') throw failed.reason; })();
+
+    void this.shutdownPromise.catch((error) => { if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code)) this.shutdownPromise = undefined; });
+
     return this.shutdownPromise;
   }
-
   /** 默认选择转为独立引擎及明确模型身份，校验协议后仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   public async ModelOptions(input: any = {})
   {
     if (input?.provider && input?.model && !input.profileId)
+
       return input;
+
     const { profile } = await this.engineModels.Resolve(
+
       input?.profileId,
+
       input?.model,
+
       input?.engine,
+
       input?.modelRoles
+
     );
+
     return {
       ...input,
+
       engine: profile.engine ?? 'pi',
+
       provider: 'cbim-' + profile.id,
+
       model: profile.model,
+
       profileId: profile.id,
     };
   }
-
   /** 发送前验证图片能力；队列只保存工作区快照 ID，启动时再检查当前模型。 */
   public async ChatOptions(id: string, input: any, attachments: unknown)
   {
     if (!input?.profileId && !input?.provider && !input?.model && !input?.engine)
     {
       const workspace = this.Workspace(id),
+
         setting = await this.mainAgentSettings.Read({ workspaceId: id, instanceId: workspace.instanceId });
+
       if (setting.selection)
+
         input = {
           ...input,
+
           engine: setting.selection.engine,
+
           profileId: setting.selection.profileId,
+
           model: setting.selection.modelId,
+
           ...(setting.selection.modelRoles === undefined ? {} : { modelRoles: setting.selection.modelRoles }),
         };
     }
     const options = await this.ModelOptions(input);
+
     const images = await new ChatInputs(this.Workspace(id)).Images(attachments);
+
     if (
+
       images.length &&
+
       options.profileId &&
+
       !(await this.models.Resolve(options.profileId, options.model)).profile.vision
+
     )
+
       throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
+
     return { ...options, attachmentIds: attachments ?? [] };
   }
 }

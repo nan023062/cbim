@@ -4,6 +4,7 @@
  * 职责边界：声明不授予命令权限；源码范围沿用同一 Workflow 的完整 artifactScope。
  */
 import { z } from 'zod';
+
 import { artifactScopePathSchema } from './artifact-scope';
 
 export const codeCheckLimits = { checks: 8, timeoutMs: 300000, outputBytes: 256 * 1024, tailBytes: 4096 } as const;

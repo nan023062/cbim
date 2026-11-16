@@ -3,8 +3,11 @@
  * 设计原因：文件观察与执行日志核实采用不同依据；不自动选最新、不定时扫描，不因字节一致签署验收或恢复运行。
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+
 import type { GraphCursor, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
+
 import { ArtifactReportController, artifactSelectionKey, type ArtifactReportState, type ArtifactSelection } from './artifact-report-state';
+
 import './artifact-report.css';
 
 export interface ArtifactPanelState extends ArtifactReportState
@@ -17,7 +20,6 @@ export interface ArtifactPanelState extends ArtifactReportState
 
   select: (id: string) => void
 }
-
 const fileLabels = { matches: '内容一致', changed: '内容已变化', missing: '文件缺失', unverifiable: '不可核实' };
 
 const logLabels = { verified: '日志已核实', missing: '运行日志缺失', incomplete: '运行日志不完整', invalid: '运行日志无效', identity_mismatch: '运行身份不匹配', unavailable: '日志暂时不可读' };
@@ -26,8 +28,11 @@ const logLabels = { verified: '日志已核实', missing: '运行日志缺失', 
 export function ArtifactReportPanel({ state, taskId, runId }: { state: ArtifactPanelState; taskId: string; runId: string })
 {
   const { report, selectedId, loading, error, stale } = state,
+
     verification = report?.verification;
+
   const selected = report?.baselines.find(item => item.baselineId === selectedId);
+
   return <section className="artifact-report" aria-label="文件基线核实" data-testid="artifact-baseline-panel" data-task-id={taskId} data-run-id={runId} data-baseline-id={selectedId}>
     <header><h4>文件基线核实</h4><button data-testid="artifact-baseline-list-load" disabled={loading} onClick={() => void state.list()}>{report ? '重新加载列表' : '加载基线列表'}</button></header>
     <p className="member-muted">只核实执行成员显式采集的文件。加载列表不读取业务文件，选择后点击复核。</p>
@@ -56,16 +61,22 @@ export function ArtifactReportPanel({ state, taskId, runId }: { state: ArtifactP
     </>}
   </section>;
 }
-
 /** 绑定所选真实轮次；图变化只提示报告过期，没有轮询、模型调用或磁盘写入。 */
 export function MemberArtifactReport({ identity, task, graphCursor, scope }: { identity: ArtifactSelection; task: TaskNode; graphCursor?: GraphCursor; scope?: ScopeSummary })
 {
   const version = JSON.stringify([task.revision, task.planRevision, task.status, graphCursor, scope?.status, scope?.goalRevision]);
+
   const current = useRef(version);
+
   current.current = version;
+
   const key = artifactSelectionKey(identity);
+
   const controller = useMemo(() => new ArtifactReportController(identity, input => window.cbim.call('dispatch.artifactReport', input), () => current.current), [key]);
+
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
+
   useEffect(() => () => controller.Cancel(), [controller]);
+
   return <ArtifactReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, list: () => controller.List(), inspect: () => controller.Inspect(), select: id => controller.Select(id) }} />;
 }

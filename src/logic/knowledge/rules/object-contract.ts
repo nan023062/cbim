@@ -4,8 +4,11 @@
  * 职责边界：结构解析不执行写入；路径、版本、权限和事务校验仍由 ObjectCrud 及知识服务负责。
  */
 import { z } from 'zod';
+
 import { moduleSections } from '../../workspace/rules/module-outline';
+
 import { agentModelSelectionSchema } from '../../team/rules/agent-runtime';
+
 import type { KnowledgeCommit, Preview } from './types';
 
 export const reservedObjectSlugs = ['skills', 'workflows', 'references', 'scripts', 'assets', 'archive', 'node_modules'];
@@ -31,7 +34,6 @@ export interface ObjectPreview extends Preview
 
   notice: string
 }
-
 /** 知识事务回执；空目录清理警告不改变已提交的知识结果。 */
 export interface ObjectCommit extends KnowledgeCommit
 {

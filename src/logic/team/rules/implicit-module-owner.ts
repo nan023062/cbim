@@ -8,13 +8,19 @@ import type { ModuleOwnership } from '../../workspace/rules/module-ownership';
 export function implicitModuleOwner(owners: readonly ModuleOwnership[] | undefined, moduleId: string): ModuleOwnership | undefined
 {
   if (!moduleId.startsWith('.cbim/workspace/') || moduleId.split('/').some(part => !part || part === '.' || part === '..'))
+
     return;
+
   let current = moduleId;
+
   while (current !== '.cbim/workspace')
   {
     const owner = owners?.find(value => value.moduleId === current && value.ownerMemberId !== null);
+
     if (owner)
+
       return owner;
+
     current = current.slice(0, current.lastIndexOf('/'));
   }
 }

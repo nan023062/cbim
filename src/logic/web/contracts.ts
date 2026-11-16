@@ -29,7 +29,6 @@ export interface WebSettingsView
   /** 默认 allow：浏览器按普通访问读取正文；respect：所有浏览器请求核实 robots。与搜索开关独立。 */
   browserRobotsPolicy: 'allow' | 'respect';
 }
-
 /** 实例绑定主进程网络服务；取消后不交付迟到结果，不接受自定义请求头、代理或 API 地址。 */
 export interface WebToolsPort
 {

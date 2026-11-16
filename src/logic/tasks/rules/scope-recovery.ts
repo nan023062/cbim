@@ -3,10 +3,15 @@
  * 设计原因：异常周期保持封存，新主原生上下文与执行实例只通过一次性意图创建；用户观察是陈述，不改写旧回执，也不代表人工业务验收或可写重试许可。
  */
 import { z } from 'zod';
+
 import { graphIdentityInput } from './dispatch-commands';
+
 import { scopeContinuationOptionsSchema } from './scope-continuation';
+
 import { executionReportSchema } from './execution-report';
+
 import { freshContextSchema } from './fresh-context';
+
 import { effectMemberSubjectSchema, effectMainSubjectSchema } from './effect-observation';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
@@ -16,11 +21,13 @@ const sourceScopeId = z.string().min(1).max(512).refine(value => value.trim() ==
 const text = z.string().max(64_000).refine(value => value.trim().length > 0, '核实说明不能为空');
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   revision = z.number().int().positive().safe();
 
 const legacySource = z.object({ scopeId: id, taskId: id, runId: id.optional(), reportBasis: digest }).strict();
 
 const memberSource = effectMemberSubjectSchema.extend({ reportBasis: digest }).strict(),
+
   mainSource = effectMainSubjectSchema.extend({ reportBasis: digest }).strict();
 
 /** 旧无 kind 字段的请求保持原结构；新请求的周期归属由服务派生。 */
@@ -67,13 +74,7 @@ const mainRecordedSource = mainSource.extend({ scopeId: sourceScopeId, ...facts,
 /** 递归来源由原业务运行身份确定，没有旧 TaskNode 的修订号；与旧协议明确区分。 */
 const recursiveRecordedSource = memberRecordedSource.omit({ taskRevision: true, planRevision: true }).extend({ executionModel: z.literal('agent-tools-v1') }).strict();
 
-export const recoveryRecordedSourceSchema = z.union([legacyRecordedSource, memberRecordedSource, recursiveRecordedSource, mainRecordedSource]).superRefine((v, c) =>
-{
-  if ('kind' in v && ((v.logPrefixHash === undefined) !== (v.throughSeq === undefined)))
-    c.addIssue({ code: 'custom', message: '新核实来源的日志指纹与序号须成对' });
-  if ('kind' in v && v.kind === 'main_run' && ((v.sourceGoalRevision === undefined) !== (v.sourceInputRevision === undefined) || v.sourcePlanRevision !== undefined && v.sourceGoalRevision === undefined))
-    c.addIssue({ code: 'custom', message: '主来源目标版本不完整' });
-});
+export const recoveryRecordedSourceSchema = z.union([legacyRecordedSource, memberRecordedSource, recursiveRecordedSource, mainRecordedSource]).superRefine((v, c) => { if ('kind' in v && ((v.logPrefixHash === undefined) !== (v.throughSeq === undefined))) c.addIssue({ code: 'custom', message: '新核实来源的日志指纹与序号须成对' }); if ('kind' in v && v.kind === 'main_run' && ((v.sourceGoalRevision === undefined) !== (v.sourceInputRevision === undefined) || v.sourcePlanRevision !== undefined && v.sourceGoalRevision === undefined)) c.addIssue({ code: 'custom', message: '主来源目标版本不完整' }); });
 
 export const scopeRecoverySchema = z.object({ recoveryId: z.string().uuid(), acceptedAt: z.string().datetime(), source: recoveryRecordedSourceSchema, operation: z.literal('inspect_effects'), observation, input, options, context: recoveryContextSchema, dispositionId: z.string().uuid().optional() }).strict();
 
@@ -89,25 +90,27 @@ export function isMainRecoverySource<T extends RecoveryRequestSource | ScopeReco
 {
   return 'kind' in value && value.kind === 'main_run'
 }
-
 /** 从持久事实提取原请求字段，legacy 次序与旧 Manager 的指纹提取保持一致。 */
 export function recoveryRequestSource(value: ScopeRecovery['source']): RecoveryRequestSource
 {
   if (!('kind' in value))
+
     return { scopeId: value.scopeId, taskId: value.taskId, ...(value.runId ? { runId: value.runId } : {}), reportBasis: value.reportBasis };
+
   if (value.kind === 'member_run')
+
     return { kind: value.kind, taskId: value.taskId, runId: value.runId, toolCallIds: [...value.toolCallIds], reportBasis: value.reportBasis };
+
   return { kind: value.kind, runId: value.runId, toolCallIds: [...value.toolCallIds], reportBasis: value.reportBasis };
 }
-
 /** 报告基线不参与草稿归属；旧数组 key 原样保留，新分支明确区分主/成员与调用顺序。 */
 export function recoverySourceKey(value: RecoverySourceSelection | RecoveryRequestSource | ScopeRecovery['source']): string
 {
   return !('kind' in value) ? JSON.stringify([value.scopeId, value.taskId, value.runId]) : JSON.stringify([value.kind, value.kind === 'member_run' ? value.taskId : null, value.runId, value.toolCallIds]);
 }
-
 export function recoverySourceSelection(value: RecoveryRequestSource): RecoverySourceSelection
 {
   const { reportBasis: _, ...selection } = value;
+
   return selection
 }

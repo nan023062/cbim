@@ -5,17 +5,29 @@
  * 模型选择使用同一静态目录及 V2 角色契约；发送、排队与续聊不能另存三引擎枚举或丢弃向量选型。
  */
 import { z } from 'zod';
+
 import { loopEngineSchema, modelRolesSelectionSchema } from './engines';
+
 import { ipcId, workspaceIdArgs, taskIdArgs, runIdArgs, questionAnswers } from './ipc-shapes';
+
 import { type ConversationThreadView, type RunSummary } from '../../logic/execution/rules/types';
+
 import { type ChatApproval } from '../../logic/tools/rules/policy/types';
+
 import { type HumanContinuationReceipt, humanContinuationLookupSchema, humanContinuationRequestSchema } from '../../logic/tasks/rules/human-continue';
+
 import { type QueueDelta, type QueuedMessage } from '../../logic/tasks/rules/queue';
+
 import { type GoalContinuationReceipt, goalContinuationRequestSchema, scopeContinuationLookupSchema } from '../../logic/tasks/rules/scope-continuation';
+
 import { topicInterruptionRequestSchema } from '../../logic/tasks/rules/topic-interruption';
+
 import { type RecoveryReceipt, recoveryLookupSchema, recoveryRequestSchema } from '../../logic/tasks/rules/scope-recovery';
+
 import { type ReplanReceipt, replanLookupSchema, replanRequestSchema } from '../../logic/tasks/rules/scope-replan';
+
 import { type TaskSpec } from '../../logic/tasks/rules/types';
+
 import { type PendingQuestion } from '../../logic/tools/rules/questions';
 
 export const loopIpcRequests = { 'loop.prepare': workspaceIdArgs.extend({ task: z.object({ goal: z.string(), moduleId: ipcId, agentId: ipcId, workflowId: ipcId, responsiblePerson: z.string().optional(), acceptance: z.array(z.string()) }).strict() }).strict(), 'loop.choices': workspaceIdArgs, 'loop.thread': taskIdArgs, 'loop.threadView': taskIdArgs, 'loop.start': z.never(), 'loop.queue': taskIdArgs, 'loop.queueDelta': taskIdArgs.extend({ cursor: z.object({ epoch: ipcId, revision: z.number().int().nonnegative(), items: z.record(z.number()) }).strict().optional() }).strict(), 'loop.enqueue': taskIdArgs.extend({ followupOf: ipcId.optional(), message: z.string(), attachments: z.array(z.string()).optional(), options: z.object({ engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional(), provider: z.string().optional(), model: z.string().optional(), profileId: z.string().optional(), permission: z.enum(['read', 'ask', 'execute']).optional(), collaborationMode: z.enum(['auto', 'team']).optional(), allowNativeExecution: z.boolean().optional(), turnTimeoutMs: z.number().optional() }).strict().optional() }).strict(), 'loop.chat': workspaceIdArgs.extend({ message: z.string(), attachments: z.array(z.string()).optional(), options: z.object({ engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional(), provider: z.string().optional(), model: z.string().optional(), profileId: z.string().optional(), permission: z.enum(['read', 'ask', 'execute']).optional(), collaborationMode: z.enum(['auto', 'team']).optional(), allowNativeExecution: z.boolean().optional(), turnTimeoutMs: z.number().optional() }).strict().optional() }).strict(), 'loop.resume': runIdArgs.extend({ message: z.string(), attachments: z.array(z.string()).optional(), options: z.object({ engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional(), provider: z.string().optional(), model: z.string().optional(), profileId: z.string().optional(), permission: z.enum(['read', 'ask', 'execute']).optional(), collaborationMode: z.enum(['auto', 'team']).optional(), allowNativeExecution: z.boolean().optional(), turnTimeoutMs: z.number().optional() }).strict().optional(), reconciledToolIds: z.array(z.string()).optional() }).strict(), 'loop.queueChange': taskIdArgs.extend({ queueId: ipcId, action: z.enum(['first', 'up', 'down', 'remove']) }).strict(), 'loop.queueEdit': taskIdArgs.extend({ queueId: ipcId, message: z.string(), expected: z.string() }).strict(), 'loop.queueMove': taskIdArgs.extend({ queueId: ipcId, beforeId: ipcId.optional() }).strict(), 'loop.queueInsert': taskIdArgs.extend({ queueId: ipcId, expectedRunId: ipcId }).strict(), 'loop.queueContinue': taskIdArgs, 'loop.goalContinue': goalContinuationRequestSchema, 'loop.topicInterrupt': topicInterruptionRequestSchema, 'loop.goalContinuation': scopeContinuationLookupSchema, 'loop.humanContinue': humanContinuationRequestSchema, 'loop.humanContinuation': humanContinuationLookupSchema, 'loop.recoveryStart': recoveryRequestSchema, 'loop.recoveryReceipt': recoveryLookupSchema, 'loop.replanStart': replanRequestSchema, 'loop.replanReceipt': replanLookupSchema, 'loop.questions': taskIdArgs, 'loop.approvals': taskIdArgs, 'loop.answerQuestion': taskIdArgs.extend({ questionId: ipcId, answers: questionAnswers }).strict(), 'loop.approve': taskIdArgs.extend({ approvalId: ipcId, allow: z.boolean(), allowAll: z.boolean().optional() }).strict(), 'loop.stop': taskIdArgs, 'loop.inspect': runIdArgs, 'loop.list': workspaceIdArgs, };
@@ -46,7 +58,6 @@ export interface LoopIpcResponses
 
     runId: string
   };
-
   'loop.resume':
   {
     workspaceId: string;
@@ -59,7 +70,6 @@ export interface LoopIpcResponses
 
     queueId?: string
   };
-
   'loop.queueChange': void;
 
   'loop.queueEdit': void;
@@ -116,6 +126,5 @@ export interface LoopIpcResponses
     task?: never
   })[];
 }
-
 /** 选择器源自知识 JSON，只公开当前可展示的标识、名称和流程列表。 */
 export const loopChoicesSchema = z.object({ modules: z.array(z.object({ id: z.string(), name: z.string(), workflows: z.array(z.object({ id: z.string(), name: z.string() })) })), agents: z.array(z.object({ id: z.string(), name: z.string() })), people: z.array(z.never()), structural: z.boolean().optional() });

@@ -4,11 +4,15 @@
  * 职责边界：纯数据协议，不保存共享地址、令牌、原生路径或资源正文；共享服务的连接身份只能由本机服务提供。
  */
 import { z } from 'zod';
+
 import { connectorIdSchema, resourceRepositoryConnectorDefinitionSchema } from './definition';
 
 const id = z.string().min(1),
+
   uuid = z.string().uuid(),
+
   hash = z.string().regex(/^[a-f0-9]{64}$/),
+
   revision = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 
 const identityShape = { workspaceId: id, instanceId: uuid };
@@ -51,6 +55,7 @@ export const repositoryConnectionUnacceptedSchema = z.object({ identity, action:
 
 const connection = z.object({
   connectorId: connectorIdSchema, name: z.string(), summary: z.string(), provider: z.enum(['cindy_plugin', 'resource_repository_v1']), definitionHash: hash.optional(), repositoryId: uuid.optional(), grantRevision: revision, grant: repositoryConnectionGrantSchema.optional(),
+
   status: z.enum(['ready', 'not_shared', 'not_granted', 'definition_changed', 'repository_changed', 'unsupported', 'definition_missing']),
 }).strict();
 

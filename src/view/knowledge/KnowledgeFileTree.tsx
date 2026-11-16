@@ -5,10 +5,15 @@
  * 每棵树只渲染一个根；右上角展开/折叠图标只管理本地 closed 集合，不提交知识或运行。
  */
 import { useMemo, useState } from 'react';
+
 import type { Snapshot } from '../../bridge/contracts/workspace';
+
 import { Icon } from '../components/Icon';
+
 import { knowledgeFileTree, type KnowledgeTreeNode } from './knowledge-file-tree';
+
 import './knowledge-files.css';
+
 import { TreeActions, type TreeAction } from '../components/TreeActions';
 
 export type KnowledgeTreeAction = TreeAction;
@@ -16,21 +21,22 @@ export type KnowledgeTreeAction = TreeAction;
 export function KnowledgeFileTree({ snapshot, root, label, selected, onSelect, query = '', labels = {}, actions }: { snapshot: Snapshot; root: string; label: string; selected?: string; onSelect: (path: string, kind: 'folder' | 'file') => void; query?: string; labels?: Record<string, string>; actions?: (node: KnowledgeTreeNode) => readonly KnowledgeTreeAction[] })
 {
   const tree = useMemo(() => knowledgeFileTree(snapshot.files, root, query, labels), [snapshot, root, query, labels]);
+
   const [closed, setClosed] = useState<Set<string>>(new Set());
+
   const folders = (node: KnowledgeTreeNode): string[] => node.kind === 'folder' ? [node.path, ...node.children.flatMap(folders)] : [];
+
   const branch = (node: KnowledgeTreeNode) =>
   {
     const open = !closed.has(node.path) || !!query,
+
       name = node.path === root ? label : node.name,
+
       items = node.kind === 'folder' ? actions?.(node) ?? [] : [];
+
     return <li key={node.path}><div className={'knowledge-file-row' + (selected === node.path ? ' selected' : '')}>
    <button className="knowledge-file-name" title={name + ' · ' + node.path} data-knowledge-path={node.path} onClick={() => onSelect(node.path, node.kind)}><Icon name={node.kind === 'folder' ? 'folder' : 'knowledge'} size={15} /><span>{name}</span></button>
-   {node.kind === 'folder' && <button className="knowledge-file-toggle" title={(open ? '折叠 ' : '展开 ') + name} aria-label={(open ? '折叠 ' : '展开 ') + name} aria-expanded={open} onClick={() => setClosed(old =>
-      {
-        const next = new Set(old);
-        next.has(node.path) ? next.delete(node.path) : next.add(node.path);
-        return next
-      })}><Icon name="chevron" size={13} /></button>}
+   {node.kind === 'folder' && <button className="knowledge-file-toggle" title={(open ? '折叠 ' : '展开 ') + name} aria-label={(open ? '折叠 ' : '展开 ') + name} aria-expanded={open} onClick={() => setClosed(old => { const next = new Set(old); next.has(node.path) ? next.delete(node.path) : next.add(node.path); return next })}><Icon name="chevron" size={13} /></button>}
    {!!items.length && <TreeActions name={name} actions={items} />}
   </div>{node.kind === 'folder' && open && <ul>{node.children.map(branch)}</ul>}</li>;
   };

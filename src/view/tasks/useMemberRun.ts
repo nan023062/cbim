@@ -3,6 +3,7 @@
  * 设计原因：串行分页避免每秒重复回读全量日志；作用域代际丢弃晚到响应，后台降频，结算且分页读完后停止轮询。卸载只结束观察，不停止成员。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { applyMemberEvents, emptyMemberEvents, memberEventKey, memberPollDelay, type MemberEventState } from './member-event-state';
 
 /**
@@ -12,53 +13,75 @@ import { applyMemberEvents, emptyMemberEvents, memberEventKey, memberPollDelay, 
 export function useMemberRun(workspaceId: string, rootSessionId: string, taskId: string, runId?: string, enabled = true, active = true)
 {
   const scope = { workspaceId, rootSessionId, taskId, runId: runId ?? '' },
+
     key = memberEventKey(scope);
+
   const [state, setState] = useState<MemberEventState>(() => emptyMemberEvents(scope)),
+
     [error, setError] = useState<
       {
         key: string;
 
         text: string
       }>({ key, text: '' });
+
   const current = useRef<
     {
       key: string;
 
       refresh: () => Promise<void>
     } | undefined>(undefined);
+
   const activeRef = useRef(active);
+
   activeRef.current = active;
-  const refresh = useCallback(async () =>
-  {
-    if (current.current?.key === key)
-      await current.current.refresh()
-  }, [key]);
+
+  const refresh = useCallback(async () => { if (current.current?.key === key) await current.current.refresh() }, [key]);
+
   useEffect(() =>
   {
     let stopped = false,
+
       timer: ReturnType<typeof setTimeout> | undefined,
+
       inFlight: Promise<void> | undefined,
+
       projection = emptyMemberEvents(scope);
+
     const controller = { key, refresh: pull };
+
     current.current = controller;
+
     setState(projection);
+
     setError({ key, text: '' });
+
     async function pull(): Promise<void>
     {
       if (stopped || !enabled || !runId)
+
         return;
+
       if (inFlight)
+
         return inFlight;
+
       clearTimeout(timer);
+
       inFlight = (async () =>
       {
         let failed = false;
+
         try
         {
           const reply = await window.cbim.call('dispatch.executionEvents', { workspaceId, rootSessionId, taskId, runId, cursor: projection.cursor, limit: 200 });
+
           if (stopped || current.current !== controller)
+
             return;
+
           let next: MemberEventState;
+
           // 协议错误只清空下次请求的游标；界面保留已展示正文并提示，等待权威 reset 恢复。
           try
           {
@@ -67,11 +90,13 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
           catch (cause)
           {
             projection = emptyMemberEvents(scope);
+
             throw cause
           }
           if (next !== projection)
           {
             projection = next;
+
             setState(next)
           }
           setError(old => old.key === key && !old.text ? old : { key, text: '' });
@@ -79,41 +104,39 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
         catch (cause)
         {
           failed = true;
+
           if (!stopped && current.current === controller)
+
             setError({ key, text: cause instanceof Error ? cause.message : '成员运行读取失败，请重试' })
         }
         finally
         {
           inFlight = undefined;
+
           const nextDelay = memberPollDelay(projection, !activeRef.current || document.visibilityState === 'hidden', failed);
+
           if (!stopped && enabled && runId && nextDelay !== undefined)
+
             timer = setTimeout(() => void pull(), nextDelay);
         }
       })();
+
       return inFlight;
     }
-    const visible = () =>
-    {
-      if (document.visibilityState === 'visible')
-        void pull()
-    };
+    const visible = () => { if (document.visibilityState === 'visible') void pull() };
+
     if (enabled && runId)
+
       void pull();
+
     document.addEventListener('visibilitychange', visible);
-    return () =>
-    {
-      stopped = true;
-      clearTimeout(timer);
-      document.removeEventListener('visibilitychange', visible);
-      if (current.current === controller)
-        current.current = undefined
-    };
+
+    return () => { stopped = true; clearTimeout(timer); document.removeEventListener('visibilitychange', visible); if (current.current === controller) current.current = undefined };
   }, [workspaceId, rootSessionId, taskId, runId, key, enabled]);
-  useEffect(() =>
-  {
-    if (active)
-      void refresh()
-  }, [active, refresh]);
+
+  useEffect(() => { if (active) void refresh() }, [active, refresh]);
+
   const matching = memberEventKey(state.scope) === key;
+
   return { run: matching ? state.run : undefined, loading: !!runId && enabled && (!matching || !state.run), hasMore: matching && state.hasMore, error: error.key === key ? error.text : '', refresh };
 }

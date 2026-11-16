@@ -8,5 +8,6 @@ import { Icon } from '../components/Icon';
 export function InteractionModeToggle({ office, review, onToggle }: { office: boolean; review: boolean; onToggle: () => void })
 {
   const label = office ? (review ? '切换到工作审阅' : '切换到对话') : '切换到办公室';
+
   return <button className="interaction-mode-toggle" type="button" data-testid="interaction-mode-toggle" aria-label={label} title={label} aria-pressed={office} onClick={onToggle}><Icon name={office ? 'team' : 'chat'} size={18} /></button>;
 }

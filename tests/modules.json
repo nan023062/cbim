@@ -1133,6 +1133,18 @@
         "integration": []
       }
     },
+    "tooling/source-format": {
+      "roots": [
+        "scripts/source-format.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/source-format.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
     "tooling/method-names": {
       "roots": [
         "scripts/check-method-names.mjs"

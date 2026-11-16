@@ -4,37 +4,33 @@
  * 设计原因：弹窗不切换全局页面，保留对话与表单草稿；只消费同一份状态，日志作为纯文本展示。
  */
 import { useEffect, useId, useRef, useState } from 'react';
+
 import { desktopVersionLabel, type DesktopUpdateStatus } from '../../bridge/contracts/desktop-updates';
+
 import { Icon } from '../components/Icon';
+
 import type { SoftwareUpdateController } from './useSoftwareUpdates';
+
 import './software-updates.css';
 
 /** 原生模态框限制焦点，Escape／关闭返回原入口；查看日志不检查网络、不下载或安装。 */
 export function SoftwareUpdates({ updates, onClose }: { updates: SoftwareUpdateController; onClose: () => void })
 {
   const dialog = useRef<HTMLDialogElement>(null),
+
     title = useId();
+
   const { status, error, pending, act } = updates;
+
   const currentVersion = status ? desktopVersionLabel(status.currentVersion, status.currentResourceVersion) : '';
+
   const targetVersion = status?.release ? desktopVersionLabel(status.release.version, status.release.resourceVersion) : currentVersion;
-  useEffect(() =>
-  {
-    const element = dialog.current,
-      previous = document.activeElement as HTMLElement | null;
-    element?.showModal();
-    return () =>
-    {
-      element?.close();
-      if (previous?.isConnected)
-        previous.focus()
-    };
-  }, []);
+
+  useEffect(() => { const element = dialog.current, previous = document.activeElement as HTMLElement | null; element?.showModal(); return () => { element?.close(); if (previous?.isConnected) previous.focus() }; }, []);
+
   const busy = pending || !!status && ['checking', 'downloading', 'installing'].includes(status.phase);
-  return <dialog ref={dialog} className="software-updates-dialog" aria-labelledby={title} onCancel={e =>
-  {
-    e.preventDefault();
-    onClose()
-  }}>
+
+  return <dialog ref={dialog} className="software-updates-dialog" aria-labelledby={title} onCancel={e => { e.preventDefault(); onClose() }}>
     <header><div><p className="overline">CBIM Assistant</p><h2 id={title}>版本与更新</h2></div><button className="icon-button" aria-label="关闭版本与更新" autoFocus onClick={onClose}><Icon name="close" /></button></header>
     {!status ? <p role="status">{error ? '暂时无法显示版本信息。' : '正在读取版本…'}</p> : <>
       <p className="software-current-version">当前版本 {currentVersion} · Windows x64</p>
@@ -57,13 +53,16 @@ export function SoftwareUpdates({ updates, onClose }: { updates: SoftwareUpdateC
     {error && <div className="software-update-error" role="alert"><p>{error}</p><button onClick={() => void updates.refresh()}><Icon name="retry" size={16} />重试读取状态</button></div>}
   </dialog>;
 }
-
 /** 提醒只打开更新详情；关闭提醒仅对该版本的当前窗口有效，不影响侧栏更新图标。 */
 export function SoftwareUpdateNotice({ status, onOpen }: { status?: DesktopUpdateStatus; onOpen: () => void })
 {
   const [dismissed, setDismissed] = useState('');
+
   const target = status?.release ? desktopVersionLabel(status.release.version, status.release.resourceVersion) : '';
+
   if (!status?.enabled || !status.release || !['available', 'downloading', 'ready', 'installing'].includes(status.phase) || dismissed === target && status.phase !== 'installing')
+
     return null;
+
   return <div className="software-update-notice" role="status"><span>{status.phase === 'installing' ? '下载已校验，正在准备自动安装重启' : status.phase === 'downloading' ? `正在后台下载更新${status.progress === undefined ? '' : ` ${status.progress}%`}` : status.phase === 'ready' ? (status.error ? '安装未完成，请查看并重试' : '更新已就绪，等待重启安装') : '发现 CBIM 新版'} · {target}</span><button onClick={onOpen}><Icon name="inspect" size={16} />查看更新</button>{status.phase !== 'installing' && <button aria-label="稍后提醒" onClick={() => setDismissed(target)}><Icon name="clock" size={16} />稍后</button>}</div>;
 }

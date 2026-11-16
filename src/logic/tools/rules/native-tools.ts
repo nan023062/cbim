@@ -5,6 +5,7 @@
  * 预检按所选引擎裁剪真实能力；Codex 通过宿主复用 Pi 文件/命令操作，Claude Code 不提供独立 ls，不能以 Pi 清单承诺该能力。
  */
 import type { RunToolDescriptor } from './policy/tool-policy';
+
 import type { LoopEngine } from '../../engines';
 
 const definitions: Readonly<Record<string, RunToolDescriptor>> = { read: { effects: ['read'], native: true }, grep: { effects: ['read'], native: true }, find: { effects: ['read'], native: true }, ls: { effects: ['read'], native: true }, bash: { effects: ['command'], native: true }, write: { effects: ['business-write'], native: true }, edit: { effects: ['business-write'], native: true } };
@@ -13,9 +14,9 @@ const definitions: Readonly<Record<string, RunToolDescriptor>> = { read: { effec
 export function nativeToolDescriptor(name: string): RunToolDescriptor | undefined
 {
   const value = Object.hasOwn(definitions, name) ? definitions[name] : undefined;
+
   return value ? { effects: [...value.effects], native: value.native } : undefined
 }
-
 /** 按真实引擎公开规范名称；Claude Code 无独立 ls，预检不能承诺未注册能力。ask/execute 仍逐次授权。 */
 export function nativeToolNames(allowExecution: boolean, engine: LoopEngine = 'pi'): string[]
 {

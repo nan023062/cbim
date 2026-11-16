@@ -69,6 +69,8 @@ jobs:
         run: pnpm check:architecture
       - name: Check method names
         run: pnpm check:method-names
+      - name: Check source layout
+        run: pnpm check:source-format
       - name: Check module test ownership and isolation
         run: pnpm check:test-modules
       - name: Build website and verify brand once

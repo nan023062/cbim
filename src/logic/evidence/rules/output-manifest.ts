@@ -6,12 +6,17 @@
  * 职责边界：普通缺失不说明操作原因；可选操作证明必须另核原日志，不保存正文，不声称原子快照、业务验收或恢复资格。
  */
 import { z } from 'zod';
+
 import { artifactScopeBindingsSchema, artifactScopeLimits, artifactScopePathSchema, preparedArtifactTransitions } from '../../workspace/rules/artifact-scope';
+
 import { artifactBaselineStagedSchema, artifactReportInputSchema } from './artifact-baseline';
+
 import { artifactTransitionProofSchema } from '../../file-operations/rules/artifact-transition';
 
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   seq = z.number().int().nonnegative().safe();
 
 const callId = z.string().min(1).max(128).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
@@ -31,43 +36,7 @@ export type OutputManifestEntry = z.infer<typeof outputManifestEntrySchema>;
 const root = z.object({ relativePath: artifactScopePathSchema, state: z.enum(['file', 'directory', 'missing']) }).strict();
 
 /** roots 对全部声明逐项观察；entries 包含存在的根自身及全部后代，不能用分页或截断数组充当完整集合。 */
-export const outputManifestSnapshotSchema = z.object({ scopes: artifactScopeBindingsSchema, roots: z.array(root).min(1).max(artifactScopeLimits.roots), entries: z.array(outputManifestEntrySchema).max(artifactScopeLimits.entries) }).strict().superRefine((value, context) =>
-{
-  const issue = (message: string) => context.addIssue({ code: 'custom', message }),
-    declared = value.scopes.flatMap(item => item.scope.roots);
-  const paths = value.entries.map(entry => entry.relativePath),
-    roots = value.roots.map(item => item.relativePath);
-  if (new Set(paths.map(path => path.toLowerCase())).size !== paths.length || paths.some((path, index) => index > 0 && paths[index - 1] >= path) || new Set(roots).size !== roots.length)
-    issue('清单条目须唯一并按路径完整排序');
-  if (value.roots.length !== declared.length || declared.some(item => !value.roots.some(root => root.relativePath === item.path)))
-    issue('根观察未完整对应全部冻结声明');
-  for (const observed of value.roots)
-  {
-    const expected = declared.find(item => item.path === observed.relativePath),
-      entry = value.entries.find(item => item.relativePath === observed.relativePath);
-    if (!expected || (observed.state === 'missing' ? !!entry : !entry || entry.kind !== observed.state || expected.kind !== observed.state))
-      issue('根类型与真实条目或冻结声明不符');
-    if (observed.state === 'missing' && value.entries.some(item => item.relativePath.startsWith(observed.relativePath + '/')))
-      issue('缺失根不能包含后代');
-  }
-  for (const entry of value.entries)
-  {
-    const owners = declared.filter(root => entry.relativePath === root.path || root.kind === 'directory' && entry.relativePath.startsWith(root.path + '/'));
-    if (owners.length !== 1)
-    {
-      issue('清单含范围外或重复归属条目');
-      continue
-    }
-    if (entry.relativePath !== owners[0].path)
-    {
-      const parent = entry.relativePath.slice(0, entry.relativePath.lastIndexOf('/'));
-      if (!value.entries.some(value => value.relativePath === parent && value.kind === 'directory'))
-        issue('清单缺少条目的父目录')
-    }
-  }
-  if (value.entries.reduce((sum, entry) => sum + (entry.kind === 'file' ? entry.byteLength : 0), 0) > artifactScopeLimits.totalBytes)
-    issue('清单总文件字节超过32 MiB');
-});
+export const outputManifestSnapshotSchema = z.object({ scopes: artifactScopeBindingsSchema, roots: z.array(root).min(1).max(artifactScopeLimits.roots), entries: z.array(outputManifestEntrySchema).max(artifactScopeLimits.entries) }).strict().superRefine((value, context) => { const issue = (message: string) => context.addIssue({ code: 'custom', message }), declared = value.scopes.flatMap(item => item.scope.roots); const paths = value.entries.map(entry => entry.relativePath), roots = value.roots.map(item => item.relativePath); if (new Set(paths.map(path => path.toLowerCase())).size !== paths.length || paths.some((path, index) => index > 0 && paths[index - 1] >= path) || new Set(roots).size !== roots.length) issue('清单条目须唯一并按路径完整排序'); if (value.roots.length !== declared.length || declared.some(item => !value.roots.some(root => root.relativePath === item.path))) issue('根观察未完整对应全部冻结声明'); for (const observed of value.roots) { const expected = declared.find(item => item.path === observed.relativePath), entry = value.entries.find(item => item.relativePath === observed.relativePath); if (!expected || (observed.state === 'missing' ? !!entry : !entry || entry.kind !== observed.state || expected.kind !== observed.state)) issue('根类型与真实条目或冻结声明不符'); if (observed.state === 'missing' && value.entries.some(item => item.relativePath.startsWith(observed.relativePath + '/'))) issue('缺失根不能包含后代'); } for (const entry of value.entries) { const owners = declared.filter(root => entry.relativePath === root.path || root.kind === 'directory' && entry.relativePath.startsWith(root.path + '/')); if (owners.length !== 1) { issue('清单含范围外或重复归属条目'); continue } if (entry.relativePath !== owners[0].path) { const parent = entry.relativePath.slice(0, entry.relativePath.lastIndexOf('/')); if (!value.entries.some(value => value.relativePath === parent && value.kind === 'directory')) issue('清单缺少条目的父目录') } } if (value.entries.reduce((sum, entry) => sum + (entry.kind === 'file' ? entry.byteLength : 0), 0) > artifactScopeLimits.totalBytes) issue('清单总文件字节超过32 MiB'); });
 
 export type OutputManifestSnapshot = z.infer<typeof outputManifestSnapshotSchema>;
 
@@ -82,13 +51,7 @@ export const outputManifestIdentitySchema = outputManifestRefSchema.pick({ manif
 export type OutputManifestIdentity = z.infer<typeof outputManifestIdentitySchema>;
 
 /** 交付固定原成功采集的引用和日志顺序；不复制正文或全部条目到每一份人工意见。 */
-export const outputManifestProofSchema = outputManifestRefSchema.extend({ capturedSeq: seq.min(1), finishedSeq: seq.min(1) }).strict().refine(value => value.capturedSeq < value.finishedSeq).superRefine((value, context) =>
-{
-  const expected = preparedArtifactTransitions(value.scopes),
-    operations = value.operations ?? [];
-  if (operations.length !== expected.length || expected.some(item => operations.filter(op => op.moduleId === item.moduleId && op.operationIndex === item.operationIndex && JSON.stringify(op.operation) === JSON.stringify(item.operation)).length !== 1) || operations.some(op => op.scopeHash !== value.scopeHash || op.knowledgeRevision !== value.knowledgeRevision || op.finishedSeq >= value.capturedSeq) || operations.length && operations.at(-1)!.afterManifestHash !== value.manifestHash)
-    context.addIssue({ code: 'custom', message: '完整交付必须覆盖全部冻结删除/移动要求，且原操作早于所选清单并保持同一最终集合' });
-});
+export const outputManifestProofSchema = outputManifestRefSchema.extend({ capturedSeq: seq.min(1), finishedSeq: seq.min(1) }).strict().refine(value => value.capturedSeq < value.finishedSeq).superRefine((value, context) => { const expected = preparedArtifactTransitions(value.scopes), operations = value.operations ?? []; if (operations.length !== expected.length || expected.some(item => operations.filter(op => op.moduleId === item.moduleId && op.operationIndex === item.operationIndex && JSON.stringify(op.operation) === JSON.stringify(item.operation)).length !== 1) || operations.some(op => op.scopeHash !== value.scopeHash || op.knowledgeRevision !== value.knowledgeRevision || op.finishedSeq >= value.capturedSeq) || operations.length && operations.at(-1)!.afterManifestHash !== value.manifestHash) context.addIssue({ code: 'custom', message: '完整交付必须覆盖全部冻结删除/移动要求，且原操作早于所选清单并保持同一最终集合' }); });
 
 export type OutputManifestProof = z.infer<typeof outputManifestProofSchema>;
 
@@ -111,7 +74,6 @@ export interface ProgressManifestPort
 
   VerifyCurrent(record: OutputManifestRecord): Promise<void>
 }
-
 export const outputManifestQuerySchema = artifactReportInputSchema.omit({ baselineId: true }).extend({ manifestId: id.optional() }).strict();
 
 export type OutputManifestQuery = z.infer<typeof outputManifestQuerySchema>;

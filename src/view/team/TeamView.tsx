@@ -5,19 +5,33 @@
  * 主 Agent 配置入口与对话栏读写同一设置；传递自定义 Agent 的默认引擎/模型到岗位登记入口，图谱展示不启动运行或改写历史岗位。
  */
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
+
 import type { Snapshot, WorkspaceView } from '../../bridge/contracts/workspace';
+
 import { Icon } from '../components/Icon';
+
 import type { TreeAction as KnowledgeTreeAction } from '../components/TreeActions';
+
 import { TeamTree } from './TeamTree';
+
 import { KnowledgeFilePreview } from '../knowledge/KnowledgeFilePreview';
+
 import { useGovernanceLaunch, GovernanceStatus } from '../knowledge/GovernanceLaunch';
+
 import { MarkdownMessage } from '../execution-view/MarkdownMessage';
+
 import { ArchitectureEditor } from '../knowledge/ArchitectureEditor';
+
 import { WorkspaceResourceTransfer } from '../resources/WorkspaceResourceTransfer';
+
 import { AgentSessionHistory } from './AgentSessionHistory';
+
 import { MainAgentEditor } from './MainAgentEditor';
+
 import { WorkspaceMembers } from './WorkspaceMembers';
+
 import { availableTeamSkills, buildTeamModel, TEAM_ROOT } from './team-model';
+
 import './team-view.css';
 
 type Editor =
@@ -30,7 +44,6 @@ type Editor =
 
     mode?: 'edit' | 'delete'
   };
-
 type Transfer =
   {
     mode: 'publish' | 'import';
@@ -41,102 +54,126 @@ type Transfer =
 
     targetParentId?: string
   };
-
 /** refresh 在知识事务提交后重新读取工作区快照；不从本地表单臆造已经生效的定义。 */
 export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted }: { snapshot?: Snapshot; workspace: WorkspaceView; refresh?: () => Promise<void>; dirty?: React.RefObject<Set<string>>; tabId?: string; onStarted?: (taskId: string, title: string) => void })
 {
   const current = snapshot?.workspaceId === workspace.id ? snapshot : undefined;
+
   const model = useMemo(() => buildTeamModel(current, workspace.name), [current, workspace.name]);
+
   const [query, setQuery] = useState(''),
+
     [chosen, setChosen] = useState(TEAM_ROOT),
+
     [skillId, setSkillId] = useState('');
+
   const [file, setFile] = useState('');
-  const onDirtyChange = useCallback((value: boolean) =>
-  {
-    if (dirty && tabId)
-      value ? dirty.current.add(tabId) : dirty.current.delete(tabId)
-  }, [dirty, tabId]);
+
+  const onDirtyChange = useCallback((value: boolean) => { if (dirty && tabId) value ? dirty.current.add(tabId) : dirty.current.delete(tabId) }, [dirty, tabId]);
+
   const [editor, setEditor] = useState<Editor>(),
+
     [transfer, setTransfer] = useState<Transfer>(),
+
     [error, setError] = useState('');
+
   const [history, setHistory] = useState<
     {
       workspaceId: string;
 
       agentId?: string
     }>();
+
   const [members, setMembers] = useState(false),
+
     [mainSettings, setMainSettings] = useState(false);
-  useEffect(() =>
-  {
-    setChosen(TEAM_ROOT);
-    setFile('');
-    setSkillId('');
-    setQuery('');
-    setEditor(undefined);
-    setTransfer(undefined);
-    setHistory(undefined);
-    setMembers(false);
-    setMainSettings(false);
-    setError('')
-  }, [workspace.id]);
+
+  useEffect(() => { setChosen(TEAM_ROOT); setFile(''); setSkillId(''); setQuery(''); setEditor(undefined); setTransfer(undefined); setHistory(undefined); setMembers(false); setMainSettings(false); setError('') }, [workspace.id]);
+
   const node = model.nodes[chosen] ?? model.nodes[TEAM_ROOT];
+
   const skills = availableTeamSkills(model, node.id),
+
     skill = skills.find(item => item.id === skillId);
+
   const agents = Object.values(model.nodes).filter(item => item.kind === 'agent');
+
   const canEdit = !!current && workspace.state === 'running';
+
   const launch = useGovernanceLaunch({ workspaceId: workspace.id, kind: 'team', disabled: !canEdit, onStarted });
+
   function select(id: string)
   {
     if (dirty && tabId && dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
+
       return;
+
     setChosen(id);
+
     setSkillId('');
+
     setFile('')
   }
   function selectPath(path: string, kind: 'folder' | 'file')
   {
     if (dirty && tabId && dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
+
       return;
+
     const owner = Object.keys(model.nodes).filter(id => path === id || path.startsWith(id + '/')).sort((a, b) => b.length - a.length)[0] ?? TEAM_ROOT;
+
     setChosen(owner);
+
     setSkillId('');
+
     setFile(kind === 'file' ? path : '')
   }
   /** 节点菜单直接捕获真实 Agent/Skill 所属路径，不以当前右侧选择替换目标。 */
   function nodeActions(target: string): KnowledgeTreeAction[]
   {
-    const wrap = (work: () => void) => () =>
-    {
-      if (dirty && tabId && dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？'))
-        return;
-      work()
-    };
+    const wrap = (work: () => void) => () => { if (dirty && tabId && dirty.current.has(tabId) && !confirm('存在未提交的知识草稿，继续打开节点操作？')) return; work() };
+
     const ownSkill = model.skills.find(item => item.id === target),
+
       item = model.nodes[target];
+
     if (ownSkill)
+
       return [
         { id: 'skill-edit', label: '编辑 Skill', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id })) },
         { id: 'skill-delete', label: '删除 Skill', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id, parentId: ownSkill.ownerId, mode: 'delete' })) },
         { id: 'skill-publish', label: '发布 Skill 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'skill', objectId: ownSkill.id })) },
+
       ];
+
     if (!item || item.kind === 'builtin')
+
       return [];
+
     const actions: KnowledgeTreeAction[] = [
       { id: 'skill-new', label: '新增 Skill', icon: 'sparkles', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', parentId: item.id })) },
       { id: 'talent-import', label: '从人才市场下载', icon: 'download', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'import', kind: item.kind === 'agent' ? 'skill' : undefined, targetParentId: item.id })) },
+
     ];
+
     if (item.kind === 'agent')
+
       actions.push(
         { id: 'agent-edit', label: '编辑 Agent', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id })) },
         { id: 'agent-delete', label: '删除 Agent', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id, parentId: item.parentId, mode: 'delete' })) },
         { id: 'agent-publish', label: '发布 Agent 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'agent', objectId: item.id })) },
         { id: 'agent-history', label: '执行历史', icon: 'clock', OnSelect: wrap(() => setHistory({ workspaceId: workspace.id, agentId: item.id })) },
+
       );
+
     else
+
       actions.unshift({ id: 'agent-new', label: '新建 Agent', icon: 'plus', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', parentId: item.id })) });
+
     if (item.kind === 'team')
+
       actions.push({ id: 'team-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) }, { id: 'team-publish', label: '发布整个团队', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'team', objectId: TEAM_ROOT })) });
+
     return actions;
   }
   async function reload()
@@ -144,6 +181,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
     try
     {
       await refresh?.();
+
       setError('')
     }
     catch (cause)
@@ -152,7 +190,9 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
     }
   }
   if (members)
+
     return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id, workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item => item.kind === 'agent').map(item => ({ id: item.id, name: item.name, runtime: item.runtime }))} onClose={() => setMembers(false)} /></div>;
+
   return <div className="view-page team-management">
     <GovernanceStatus launch={launch} />
     <div className="team-toolbar">
@@ -176,32 +216,13 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
         <h3>配置资料</h3><div className="team-definition-actions">{current?.files.filter(item => item.path.startsWith(node.id + '/') && Object.keys(model.nodes).filter(id => item.path.startsWith(id + '/')).sort((a, b) => b.length - a.length)[0] === node.id).map(item => <button key={item.path} onClick={() => selectPath(item.path, 'file')}><Icon name="file" size={15} />{item.path.slice(node.id.length + 1)}</button>)}</div>
         <h3>可用 Skill <small>自有及父链继承</small></h3>
         <div className="team-skill-list">{skills.length ? skills.map((item, index) => <button key={`${item.id}-${index}`} className={skill?.id === item.id ? 'selected' : ''} onClick={() => setSkillId(item.id)}><span className="team-skill-title"><Icon name="sparkles" size={16} /><b>{item.name}</b></span><small>{item.inherited ? '继承' : '自有'} · {model.nodes[item.ownerId]?.name ?? item.ownerId}</small><span>{item.purpose}</span></button>) : <p>尚无 Skill 定义。可以为当前节点添加共享方法。</p>}</div>
-        {skill && <section className="team-skill-detail" aria-label="Skill 定义详情"><h3>{skill.name}</h3><p>{skill.purpose}</p><code>{skill.id}</code><p>所属节点：{model.nodes[skill.ownerId]?.name ?? skill.ownerId}</p><div className="team-definition-actions">{skill.inherited ? <button title="前往所属节点管理" aria-label="前往所属节点管理" onClick={() =>
-          {
-            setChosen(skill.ownerId);
-            setSkillId(skill.id)
-          }}><Icon name="arrow" size={16} /></button> : <><button title="编辑 Skill" aria-label="编辑 Skill" disabled={!canEdit} onClick={() => setEditor({ kind: 'skill', id: skill.id })}><Icon name="edit" size={16} /></button><button title="删除 Skill" aria-label="删除 Skill" disabled={!canEdit} onClick={() => setEditor({ kind: 'skill', id: skill.id, parentId: skill.ownerId, mode: 'delete' })}><Icon name="trash" size={16} /></button><button title="发布 Skill 到人才市场" aria-label="发布 Skill 到人才市场" disabled={!canEdit} onClick={() => setTransfer({ mode: 'publish', kind: 'skill', objectId: skill.id })}><Icon name="upload" size={16} /></button></>}</div>{skill.available ? <MarkdownMessage text={skill.body} workspaceId={workspace.id} /> : <p role="alert">Skill 正文缺失，当前不能展示完整方法。</p>}</section>}
+        {skill && <section className="team-skill-detail" aria-label="Skill 定义详情"><h3>{skill.name}</h3><p>{skill.purpose}</p><code>{skill.id}</code><p>所属节点：{model.nodes[skill.ownerId]?.name ?? skill.ownerId}</p><div className="team-definition-actions">{skill.inherited ? <button title="前往所属节点管理" aria-label="前往所属节点管理" onClick={() => { setChosen(skill.ownerId); setSkillId(skill.id) }}><Icon name="arrow" size={16} /></button> : <><button title="编辑 Skill" aria-label="编辑 Skill" disabled={!canEdit} onClick={() => setEditor({ kind: 'skill', id: skill.id })}><Icon name="edit" size={16} /></button><button title="删除 Skill" aria-label="删除 Skill" disabled={!canEdit} onClick={() => setEditor({ kind: 'skill', id: skill.id, parentId: skill.ownerId, mode: 'delete' })}><Icon name="trash" size={16} /></button><button title="发布 Skill 到人才市场" aria-label="发布 Skill 到人才市场" disabled={!canEdit} onClick={() => setTransfer({ mode: 'publish', kind: 'skill', objectId: skill.id })}><Icon name="upload" size={16} /></button></>}</div>{skill.available ? <MarkdownMessage text={skill.body} workspaceId={workspace.id} /> : <p role="alert">Skill 正文缺失，当前不能展示完整方法。</p>}</section>}
         </>}
       </section>
     </div>}
     <p className="view-footnote">组织树仅展示静态定义，历史单独只读查询。编辑与导入先预览再提交；能力归属、Skill 继承与历史浏览不授予执行权限。</p>
     {mainSettings && <MainAgentEditor key={workspace.instanceId} workspace={workspace} onClose={() => setMainSettings(false)} />}
-    {current && editor && <ArchitectureEditor workspaceId={workspace.id} snapshot={current} {...editor} onClose={() => setEditor(undefined)} onSaved={objects =>
-    {
-      const saved = editor;
-      setEditor(undefined);
-      if (saved.mode === 'delete')
-        select(saved.parentId ?? TEAM_ROOT);
-      else if (saved.kind === 'agent' && objects[0])
-        select(objects[0]);
-      else if (saved.kind === 'skill' && objects[0])
-      {
-        if (saved.parentId)
-          setChosen(saved.parentId);
-        setSkillId(objects[0])
-      }
-      void reload()
-    }} />}
+    {current && editor && <ArchitectureEditor workspaceId={workspace.id} snapshot={current} {...editor} onClose={() => setEditor(undefined)} onSaved={objects => { const saved = editor; setEditor(undefined); if (saved.mode === 'delete') select(saved.parentId ?? TEAM_ROOT); else if (saved.kind === 'agent' && objects[0]) select(objects[0]); else if (saved.kind === 'skill' && objects[0]) { if (saved.parentId) setChosen(saved.parentId); setSkillId(objects[0]) } void reload() }} />}
     {current && transfer && <WorkspaceResourceTransfer workspaceId={workspace.id} snapshot={current} {...transfer} category="talent" onClose={() => setTransfer(undefined)} onApplied={() => void reload()} />}
   </div>;
 }

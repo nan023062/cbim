@@ -4,10 +4,15 @@
  * 设计原因：跨进程只传角色、模块、目标及负责人/流程预期，不接收伪造实例、岗位正文或来源证明；旧请求形状仅保留原命令查询兼容，新许可另由可信服务和 Store 强制。
  */
 import { type AutomaticExecutionBinding } from '../../team/rules/automatic-execution';
+
 import { z } from 'zod';
+
 import type { AgentInstance, AgentSessionBinding } from '../../team/rules/agent-types';
+
 import type { AgentRef, GraphCursor } from './graph-types';
+
 import { workflowSelectionsSchema, validateWorkflowSelections } from './workflow-selection';
+
 import { ownerExecutionSelectionSchema } from '../../team/rules/member-execution-binding';
 
 const identifier = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
@@ -26,20 +31,9 @@ export const dispatchTaskFields = z.object({ assigneeAgentId: text.max(512), mod
 
 export const dispatchTaskInput = openGraphInput.extend({
   expectedParentRevision: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+
   // 缺省只供原命令查询兼容；新工具、服务和 Store 各自要求选择，不能由解析兼容取得新派发许可。
-  task: dispatchTaskFields.superRefine((value, context) =>
-  {
-    try
-    {
-      validateWorkflowSelections(value.moduleIds, value.workflowSelections)
-    }
-    catch
-    {
-      context.addIssue({ code: 'custom', message: 'Workflow 选择不属于本次任务模块' })
-    }
-    if (value.ownerSelection && (value.ownerSelection.expectedOwners.length !== value.moduleIds.length || !value.moduleIds.every(id => value.ownerSelection!.expectedOwners.some(owner => owner.moduleId === id))))
-      context.addIssue({ code: 'custom', message: '负责人选择必须精确对应任务模块' })
-  }),
+  task: dispatchTaskFields.superRefine((value, context) => { try { validateWorkflowSelections(value.moduleIds, value.workflowSelections) } catch { context.addIssue({ code: 'custom', message: 'Workflow 选择不属于本次任务模块' }) } if (value.ownerSelection && (value.ownerSelection.expectedOwners.length !== value.moduleIds.length || !value.moduleIds.every(id => value.ownerSelection!.expectedOwners.some(owner => owner.moduleId === id)))) context.addIssue({ code: 'custom', message: '负责人选择必须精确对应任务模块' }) }),
 }).strict();
 
 export type OpenGraphInput = z.infer<typeof openGraphInput>;
@@ -55,7 +49,6 @@ export interface OpenGraphReceipt
 
   cursor: GraphCursor
 }
-
 /** member 的活动和任务引用限定于本图；agentSessionIds 仅包含当前通道，不是全局实例详情。 */
 export interface CreateMemberReceipt extends OpenGraphReceipt
 {
@@ -63,7 +56,6 @@ export interface CreateMemberReceipt extends OpenGraphReceipt
 
   session: AgentSessionBinding
 }
-
 /** 成功仅代表派发已可靠排队，尚未交给大脑执行。 */
 export interface DispatchReceipt
 {

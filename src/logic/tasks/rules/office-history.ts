@@ -5,6 +5,7 @@
 import { z } from 'zod';
 
 const id = z.string().min(1).max(512),
+
   offset = z.number().int().min(0).max(100000000).default(0);
 
 const version = z.string().regex(/^[a-f0-9]{64}$/);

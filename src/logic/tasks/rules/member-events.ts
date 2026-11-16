@@ -3,9 +3,13 @@
  * 设计原因：图状态与执行日志分别保留权威序号；只公开目标、执行状态和受限工具摘要，不暴露冻结知识、原生会话或凭据。
  */
 import { z } from 'zod';
+
 import type { RunStatus, StoredEvent } from '../../execution/rules/types';
+
 import type { TaskSpec } from './types';
+
 import type { TaskProgress } from '../../evidence/rules/progress';
+
 import { memberTaskInput } from './member-commands';
 
 /** 序号是单个 run 已读到的连续日志前缀；0 表示尚未读事件，与任务图批次 seq 无关。 */
@@ -15,7 +19,6 @@ export interface MemberEventCursor
 
   seq: number
 }
-
 const runId = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 /** 按事件条数分页，默认 200、最大 500；调用入口须同时核对 cursor.runId 与请求运行一致。 */
@@ -40,41 +43,37 @@ export interface MemberRunView
 
   taskProgress?: TaskProgress;
 }
-
 /**
  * reset 从空前缀重建，delta 续读，事件的受限字段经投影替换而不跳号；hasMore 时继续分页。
  * noop 仍包含运行快照：最后一个日志事件之后，调度终态事务可能才完成。
  */
-export type MemberEventsRead =
-  |
-  {
-    mode: 'reset';
+export type MemberEventsRead = |
+{
+  mode: 'reset';
 
-    run: MemberRunView;
+  run: MemberRunView;
 
-    cursor: MemberEventCursor;
+  cursor: MemberEventCursor;
 
-    events: StoredEvent[];
+  events: StoredEvent[];
 
-    hasMore: boolean
-  }
-  |
-  {
-    mode: 'delta';
+  hasMore: boolean
+} |
+{
+  mode: 'delta';
 
-    run: MemberRunView;
+  run: MemberRunView;
 
-    cursor: MemberEventCursor;
+  cursor: MemberEventCursor;
 
-    events: StoredEvent[];
+  events: StoredEvent[];
 
-    hasMore: boolean
-  }
-  |
-  {
-    mode: 'noop';
+  hasMore: boolean
+} |
+{
+  mode: 'noop';
 
-    run: MemberRunView;
+  run: MemberRunView;
 
-    cursor: MemberEventCursor
-  };
+  cursor: MemberEventCursor
+};

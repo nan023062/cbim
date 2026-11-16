@@ -4,10 +4,15 @@
  * 设计原因：保留原有 loop-engine/tasks 数据格式及 fsync 语义，目录重构不迁移或重放历史任务。
  */
 import fs from 'node:fs/promises';
+
 import path from 'node:path';
+
 import type { RunStorage } from '../rules/storage';
+
 import type { TaskSpec } from '../../tasks/rules/types';
+
 import { safeId } from '../ports/identity';
+
 import { RunJournal } from './run-journal';
 
 /** 应用装配的文件存储；实例不缓存历史，查询总是核验已落盘日志。 */
@@ -17,19 +22,17 @@ export class FileRunStorage implements RunStorage
   async ReserveTask(directory: string, taskId: string)
   {
     await fs.mkdir(directory, { recursive: true });
+
     await fs.mkdir(path.join(directory, safeId(taskId)))
   }
-
   CreateJournal(directory: string, task: TaskSpec, runId: string)
   {
     return new RunJournal(directory, task, runId)
   }
-
   Read(directory: string)
   {
     return RunJournal.Read(directory)
   }
-
   List(directory: string)
   {
     return fs.readdir(directory)

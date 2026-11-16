@@ -12,37 +12,44 @@ export class ConnectorRegistry
   constructor(private entries: ConnectorDefinition[])
   {
   }
-
   List(query = '')
   {
     const q = query.toLowerCase();
+
     return this.entries.filter(c => !q || `${c.id} ${c.name} ${c.summary}`.toLowerCase().includes(q))
   }
-
   Get(id: string)
   {
     return this.entries.find(c => c.id === id)
   }
-
   Ids()
   {
     return new Set(this.entries.map(c => c.id.toLowerCase()))
   }
-
   Duplicates()
   {
     const ids = new Set<string>(),
+
       providers = new Set<string>(),
+
       duplicates: string[] = [];
+
     for (const c of this.entries)
     {
       const id = c.id.toLowerCase(),
+
         provider = isResourceRepositoryConnector(c)
+
           ? JSON.stringify(['resource_repository_v1', c.repository.repositoryId.toLowerCase()])
+
           : JSON.stringify(['plugin', c.plugin.ghost_id, c.plugin.namespace]);
+
       if (ids.has(id) || providers.has(provider))
+
         duplicates.push(c.id);
+
       ids.add(id);
+
       providers.add(provider);
     }
     return duplicates;

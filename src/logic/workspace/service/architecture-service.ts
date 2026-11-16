@@ -4,8 +4,11 @@
  * 职责边界：这里只维护工作区唯一的静态团队/业务知识，不创建成员实例或改写任何主会话任务图；已派发任务继续持有自己的知识基线并由执行层复核版本。
  */
 import { z } from 'zod';
+
 import { ObjectCrud, objectOperation } from '../../knowledge/rules/object-crud';
+
 import type { KnowledgeWorkspace } from '../../knowledge/rules/ports';
+
 import type { ObjectPreview as ArchitecturePreview, ObjectCommit as ArchitectureCommit } from '../../knowledge/rules/object-crud';
 
 const identifier = z.string().min(1).max(512).regex(/^\S+$/);
@@ -25,22 +28,26 @@ export class ArchitectureService
   {
     this.objects = new ObjectCrud(workspace)
   }
-
   /** 只缓存对象预览；不要求真人登记，所有正式知识到 commit 才写入，未知输入仍严格拒绝。 */
   async Preview(raw: unknown): Promise<ArchitecturePreview>
   {
     const input = previewInput.parse(raw);
+
     this.workspace.Assert(input);
+
     const preview = await this.objects.Preview(input.revision, input.operations);
+
     this.workspace.Assert(input);
+
     return { ...preview, notice: '仅预览。请核对差异和校验结果，再手动确认提交；校验失败不能提交，不删除业务源码或资源。' };
   }
-
   /** 按预览时冻结的完整事务提交；旧实例、旧知识版本、失效校验和被篡改计划均由原事务链拒绝。 */
   async Commit(raw: unknown): Promise<ArchitectureCommit>
   {
     const input = commitInput.parse(raw);
+
     this.workspace.Assert(input);
+
     return this.objects.Commit(input.planId);
   }
 }

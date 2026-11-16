@@ -4,8 +4,11 @@
  * 金额展示保留六位有效数字，不改账本值；极小正金额保留科学记数，不能显示成明确零费用。
  */
 import { Icon } from '../components/Icon';
+
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
+
 import type { RequestBudgetDenial, ScopeBudgetSummary } from '../../bridge/contracts/scope-budget';
+
 import { RequestBudgetController, type RequestBudgetQuery } from './request-budget-state';
 
 const reasons: Record<RequestBudgetDenial, string> = { token_reserve: '剩余 Token 不足本次保守预留', cost_reserve: '剩余本地估算费用不足本次预留', usage_unverifiable: '前序请求用量未核实或超过原预留', unpriced: '冻结模型价格不完整', capacity: '请求审计容量已满' };
@@ -17,9 +20,13 @@ export const requestBudgetMoney = (value: number) => '$' + Number(value.toPrecis
 export function RequestBudgetPanel({ query, budget }: { query: RequestBudgetQuery; budget: ScopeBudgetSummary })
 {
   const controller = useMemo(() => new RequestBudgetController(query, budget.policy.revision, q => window.cbim.call('dispatch.requestBudget', q)), [query.workspaceId, query.rootSessionId, query.scopeId, budget.policy.revision]);
+
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
+
   useEffect(() => () => controller.Dispose(), [controller]);
+
   const report = state.report;
+
   return <div data-testid="request-budget-panel"><button disabled={state.busy} onClick={() => void controller.Load()}><Icon name="refresh" size={16} />刷新请求账本</button>
     {state.error && <p role="alert">{state.error}</p>}
     {!report ? <p className="scope-goal-muted">尚未读取逐请求账本。</p> : <>

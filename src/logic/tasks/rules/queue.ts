@@ -7,7 +7,9 @@
  * 引擎与模型一起冻结到排队项；启动时不能按当前界面选型切换另一引擎。
  */
 import { z } from 'zod';
+
 import { continuationAttachmentManifestSchema } from './scope-continuation-attachments';
+
 import { loopEngineSchema, modelRolesSelectionSchema } from '../../engines';
 
 const options = z.object({ engine: loopEngineSchema.optional(), modelRoles: modelRolesSelectionSchema.optional(), provider: z.string(), model: z.string(), profileId: z.string().optional(), attachmentIds: z.array(z.string().uuid()).max(12).optional(), permission: z.enum(['read', 'ask', 'execute']).optional(), collaborationMode: z.enum(['auto', 'team']).optional(), allowNativeExecution: z.boolean().optional(), turnTimeoutMs: z.number().optional() });
@@ -25,7 +27,6 @@ export interface QueueCursor
 
   items: Record<string, number>
 }
-
 export interface QueueDelta
 {
   epoch: string;

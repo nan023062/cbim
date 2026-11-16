@@ -4,11 +4,15 @@
  * 设计原因：实际字节与 Win32 句柄由 Main 持有；唯一 Store 只验证可信事实和阶段链，不将备份路径或正文公开。
  */
 import { z } from 'zod';
+
 import { controlledFileBindingSchema, controlledFileContentFactSchema, controlledFilePathSchema, controlledFileWriteToolName, fileCompensationActorSchema, fileCompensationInputSchema } from './controlled-file-operation';
 
 const id = z.string().min(1).max(512).refine(v => v.trim() === v && !/[\x00-\x1f\x7f]/.test(v)),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   time = z.string().datetime(),
+
   positive = z.number().int().positive().safe();
 
 /** allowedSeq 只来自 Runtime 自身可靠保存的授权事件，不接受引擎 emit 或模型输入。 */
@@ -42,6 +46,7 @@ export const controlledFileIntentSchema = z.discriminatedUnion('kind', [controll
 export type ControlledFileIntent = z.infer<typeof controlledFileIntentSchema>;
 
 const base = { version: z.literal(1), operationId: digest, recordedAt: time },
+
   reasonCode = z.string().min(1).max(100).regex(/^[A-Z0-9_]+$/);
 
 export const controlledFileChangeSchema = z.discriminatedUnion('phase', [z.object({ ...base, phase: z.literal('prepared'), revision: z.literal(1), previousRevision: z.literal(0), intent: controlledFileIntentSchema }).strict(), z.object({ ...base, phase: z.literal('executing'), revision: z.literal(2), previousRevision: z.literal(1), intentHash: digest }).strict(), z.object({ ...base, phase: z.literal('applied'), revision: z.literal(3), previousRevision: z.literal(2), intentHash: digest, observedAfter: controlledFileContentFactSchema, fileIdentity: controlledFileIdentitySchema }).strict(), z.object({ ...base, phase: z.literal('not_applied'), revision: z.union([z.literal(2), z.literal(3)]), previousRevision: z.union([z.literal(1), z.literal(2)]), intentHash: digest, reasonCode, confirmation: z.literal('write_not_issued') }).strict(), z.object({ ...base, phase: z.literal('unknown'), revision: z.literal(3), previousRevision: z.literal(2), intentHash: digest, reasonCode }).strict(),]);

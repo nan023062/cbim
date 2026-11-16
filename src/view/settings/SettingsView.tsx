@@ -5,19 +5,33 @@
  * 生命周期：离开设置中心才卸载全部表单；搜索只筛选入口，不提交或清空当前页面。
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+
 import '../components/sidebar.css';
+
 import { Icon } from '../components/Icon';
+
 import { ModelSettings } from './ModelSettings';
+
 import { AdmissionSettings } from './AdmissionSettings';
+
 import { BudgetSettings } from './BudgetSettings';
+
 import { WebSettings } from './WebSettings';
+
 import { ResourceSettings } from './ResourceSettings';
+
 import { AccountSettings } from './AccountSettings';
+
 import { AppearanceSettings } from './AppearanceSettings';
+
 import { AboutSettings } from './AboutSettings';
+
 import { findSettingsSections, settingsSections, type SettingsSectionId } from './settings-sections';
+
 import type { AppearanceController } from './useAppearance';
+
 import type { SoftwareUpdateController } from '../updates/useSoftwareUpdates';
+
 import './settings.css';
 
 export interface SettingsViewProps
@@ -40,31 +54,33 @@ export interface SettingsViewProps
 
   onOpenUpdates: () => void;
 }
-
 /** 导航状态由外壳持有，支持账号菜单和资源页面直达；不重新创建更新或外观控制器。 */
 export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionChange, onBack, appearance, updates, onOpenUpdates }: SettingsViewProps)
 {
   const drafts = useRef(new Set<string>());
-  const report = useCallback((key: string, value: boolean) =>
-  {
-    value ? drafts.current.add(key) : drafts.current.delete(key);
-    onDirtyChange?.(drafts.current.size > 0)
-  }, [onDirtyChange]);
+
+  const report = useCallback((key: string, value: boolean) => { value ? drafts.current.add(key) : drafts.current.delete(key); onDirtyChange?.(drafts.current.size > 0) }, [onDirtyChange]);
+
   const reporters = useMemo(() => Object.fromEntries(['models', 'runtime', 'budget', 'web', 'accounts', 'resources'].map(key => [key, (value: boolean) => report(key, value)])), [report]);
+
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
   const [query, setQuery] = useState(''),
+
     [visited, setVisited] = useState<SettingsSectionId[]>([section]);
+
   const content = useRef<HTMLDivElement>(null);
+
   const found = findSettingsSections(query),
+
     active = settingsSections.find(item => item.id === section)!;
-  useEffect(() =>
-  {
-    setVisited(old => old.includes(section) ? old : [...old, section]);
-    content.current?.scrollTo(0, 0)
-  }, [section]);
+
+  useEffect(() => { setVisited(old => old.includes(section) ? old : [...old, section]); content.current?.scrollTo(0, 0) }, [section]);
+
   function open(id: SettingsSectionId)
   {
     onSectionChange(id);
+
     setQuery('')
   }
   function panel(id: SettingsSectionId)
@@ -72,20 +88,35 @@ export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionC
     switch (id)
     {
       case 'models':
+
         return <ModelSettings onDirtyChange={reporters.models} />;
+
       case 'accounts':
+
         return <AccountSettings onDirtyChange={reporters.accounts} />;
+
       case 'appearance':
+
         return <AppearanceSettings appearance={appearance} />;
+
       case 'runtime':
+
         return <AdmissionSettings onDirtyChange={reporters.runtime} active={section === 'runtime'} />;
+
       case 'budget':
+
         return <BudgetSettings onDirtyChange={reporters.budget} />;
+
       case 'web':
+
         return <WebSettings onDirtyChange={reporters.web} />;
+
       case 'resources':
+
         return <ResourceSettings onDirtyChange={reporters.resources} />;
+
       case 'about':
+
         return <AboutSettings updates={updates} onOpenUpdates={onOpenUpdates} />;
     }
   }

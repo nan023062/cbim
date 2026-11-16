@@ -5,6 +5,7 @@
  * 失效边界：预算读取/保存开始及 cancel 时推进代次；旧结果与 finally 不能覆盖新页面，IPC 不因此取消。
  */
 import { AsyncGeneration, SubscriptionSet } from '../foundations/utility';
+
 import { scopeBudgetPolicySchema, type ScopeBudgetPolicy } from '../../bridge/contracts/scope-budget';
 
 export interface BudgetSettingsDraft
@@ -17,7 +18,6 @@ export interface BudgetSettingsDraft
 
   enforcement?: 'request'
 }
-
 export interface BudgetSettingsState extends BudgetSettingsDraft
 {
   policy?: ScopeBudgetPolicy;
@@ -28,22 +28,29 @@ export interface BudgetSettingsState extends BudgetSettingsDraft
 
   notice: string
 }
-
 /** 空白项代表未配置；禁用时清除额度，不把隐藏值作为新的运行限制。 */
 export function budgetSettingsInput(draft: BudgetSettingsDraft, revision: number): ScopeBudgetPolicy
 {
   const tokens = draft.tokens.trim(),
+
     cost = draft.estimatedCostUsd.trim();
+
   if (draft.enabled && tokens && !/^\d+$/.test(tokens))
+
     throw Error('Token 额度必须是正整数。');
+
   if (draft.enabled && cost && !/^(?:\d+\.?\d*|\.\d+)$/.test(cost))
+
     throw Error('美元额度必须是正数。');
+
   const parsed = scopeBudgetPolicySchema.safeParse({ revision, enabled: draft.enabled, ...(draft.enforcement === 'request' ? { enforcement: 'request' } : {}), limits: draft.enabled ? { ...(tokens ? { tokens: Number(tokens) } : {}), ...(cost ? { estimatedCostUsd: Number(cost) } : {}) } : {} });
+
   if (!parsed.success)
+
     throw Error('启用时至少填写一项：正整数 Token 或正数美元额度。');
+
   return parsed.data;
 }
-
 type Call = (action: 'budget.settings' | 'budget.configure', input?: unknown) => Promise<unknown>;
 
 const fields = (policy: ScopeBudgetPolicy): BudgetSettingsDraft => ({ enabled: policy.enabled, enforcement: policy.enforcement, tokens: policy.limits.tokens === undefined ? '' : String(policy.limits.tokens), estimatedCostUsd: policy.limits.estimatedCostUsd === undefined ? '' : String(policy.limits.estimatedCostUsd) });
@@ -60,61 +67,67 @@ export class BudgetSettingsController
   constructor(private readonly call: Call)
   {
   }
-
   snapshot = () => this.state;
 
-  subscribe = (listener: () => void) =>
-  {
-    return this.listeners.Subscribe(listener)
-  };
+  subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: Partial<BudgetSettingsState>)
   {
     this.state = { ...this.state, ...value };
+
     this.listeners.Notify()
   }
-
   Edit(value: Partial<BudgetSettingsDraft>)
   {
     if (!this.state.busy)
+
       this.Publish({ ...value, error: '', notice: '' })
   }
-
   Cancel()
   {
     this.generation.Advance();
+
     this.state = { ...this.state, busy: false }
   }
-
   async Load()
   {
     if (this.state.busy)
+
       return;
+
     const ticket = this.generation.Advance();
+
     this.Publish({ busy: true, error: '', notice: '' });
+
     try
     {
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.settings'));
+
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ policy, ...fields(policy) })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ error: error instanceof Error ? error.message : String(error) })
     }
     finally
     {
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ busy: false })
     }
   }
-
   async Save()
   {
     if (this.state.busy || !this.state.policy)
+
       return;
+
     let input: ScopeBudgetPolicy;
+
     try
     {
       input = budgetSettingsInput(this.state, this.state.policy.revision)
@@ -122,24 +135,31 @@ export class BudgetSettingsController
     catch (error)
     {
       this.Publish({ error: error instanceof Error ? error.message : String(error) });
+
       return
     }
     const ticket = this.generation.Advance();
+
     this.Publish({ busy: true, error: '', notice: '' });
+
     try
     {
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.configure', input));
+
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ policy, ...fields(policy), notice: '已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。' })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ error: (error instanceof Error ? error.message : String(error)) + '；草稿已保留。若保存结果未知，请刷新设置核实后再提交。' })
     }
     finally
     {
       if (this.generation.IsCurrent(ticket))
+
         this.Publish({ busy: false })
     }
   }

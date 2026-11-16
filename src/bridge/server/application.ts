@@ -4,8 +4,11 @@
  * 实现形式：实例适配类，继承同一业务 Application；重载签名与实现保持连续。
  */
 import { Application as ApplicationRuntime } from '../../logic/application/application';
+
 import type { ApplicationServices } from './ipc/services';
+
 import type { IpcAction, IpcResponse } from '../contracts/ipc-call';
+
 import { dispatchApplication } from './ipc/dispatch';
 
 /** 可替换业务实例的桥接适配，仅将消息委托给独立路由。 */

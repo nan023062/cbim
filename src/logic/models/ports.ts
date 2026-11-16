@@ -4,6 +4,7 @@
  * 设计原因：各引擎只依赖运行快照，平台经端口提供加密；纯模型契约不导入配置服务或主进程实现。
  */
 import type { LlmDefinition, LlmModel } from './config';
+
 import type { ResolvedEmbedding } from './embedding';
 
 /** 平台加密端口；不可用时拒绝保存密钥，不回退到明文。 */
@@ -18,10 +19,8 @@ export interface ResolvedLlm
 
     model: string
   };
-
   apiKey: string
 }
-
 /** 单个已解析操作；操作能力由 profile 的协议与 kind 明确区分，凭据不进入公开快照。 */
 export interface ResolvedModelOperation
 {

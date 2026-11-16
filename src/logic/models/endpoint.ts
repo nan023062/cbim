@@ -5,8 +5,4 @@
 import { z } from 'zod';
 
 /** 只接收 HTTPS 或本机 HTTP 基址，不接收内嵌凭据、查询参数与片段。 */
-export const modelEndpointSchema = z.string().trim().url().refine(value =>
-{
-  const u = new URL(value);
-  return !u.username && !u.password && !u.search && !u.hash && (u.protocol === 'https:' || u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname))
-}, '接口地址须为 HTTPS，或本机 HTTP；不能包含凭据、查询参数或片段');
+export const modelEndpointSchema = z.string().trim().url().refine(value => { const u = new URL(value); return !u.username && !u.password && !u.search && !u.hash && (u.protocol === 'https:' || u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)) }, '接口地址须为 HTTPS，或本机 HTTP；不能包含凭据、查询参数或片段');

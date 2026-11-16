@@ -4,12 +4,17 @@
  * 设计原因：业务重规划独立于只读 recovery，冻结用户新目标、权限与真实核实证据；旧未知事实不被更正，人工约束必须传递到新计划。
  */
 import { z } from 'zod';
+
 import { graphIdentityInput } from './dispatch-commands';
+
 import { scopeContinuationOptionsSchema } from './scope-continuation';
+
 import { freshContextSchema } from './fresh-context';
 
 const id = z.string().min(1).max(512),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   revision = z.number().int().positive().safe();
 
 const source = z.object({ inspectionScopeId: id, expectedBasis: digest }).strict();

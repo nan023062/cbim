@@ -3,6 +3,7 @@
  * 设计原因：静态角色可跨主会话复用甚至被删除；页面不能按名称合并执行实例，分页重叠须去重，异步返回的错误归属必须拒绝。
  */
 import type { AgentHistoryIdentity, AgentHistorySessionIdentity, AgentHistoryRun, AgentHistorySession, AgentHistoryPage } from '../../bridge/contracts/agent-history';
+
 import type { MemberEventScope } from '../tasks/member-event-state';
 
 type HistoryItem = AgentHistorySession | AgentHistoryRun;
@@ -21,20 +22,25 @@ export function mergeHistoryPage<T extends HistoryItem>(previous: AgentHistoryPa
   for (const item of page.items)
   {
     if (item.workspaceId !== identity.workspaceId || item.agentId !== identity.agentId || ('sessionId' in identity && item.sessionId !== identity.sessionId))
+
       throw Error('执行历史归属不一致，请重新读取');
   }
   const items = append ? [...(previous?.items ?? [])] : [];
+
   for (const item of page.items)
   {
     const index = items.findIndex(old => itemKey(old) === itemKey(item));
+
     if (index < 0)
+
       items.push(item);
+
     else
+
       items[index] = item
   }
   return { items, nextCursor: page.nextCursor, diagnostics: [...new Set([...(append ? previous?.diagnostics ?? [] : []), ...page.diagnostics])] };
 }
-
 /** 事件协议沿用成员公开投影；旧记录缺少 root 时保持空值，不根据静态角色补造主会话身份。 */
 export function historyEventScope(run: AgentHistoryRun): MemberEventScope
 {

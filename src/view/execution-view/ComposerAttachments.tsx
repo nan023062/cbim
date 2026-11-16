@@ -5,7 +5,9 @@
  * 来源参考：Cindy ComposerAttachments.tsx，Apache-2.0，许可见 legal。
  */
 import { useEffect, useRef, useState } from 'react';
+
 import type { ChatAttachment, ChatAttachmentPreview } from '../../bridge/contracts/chat';
+
 import { Icon } from '../components/Icon';
 
 const kinds = { file: '文件', folder: '目录清单', link: '链接指针', web: '网页摘录', connector: '链接器定义', repository_resource: '仓库静态资料' };
@@ -14,72 +16,55 @@ const kinds = { file: '文件', folder: '目录清单', link: '链接指针', we
 function AttachmentImage({ item, workspaceId }: { item: ChatAttachment; workspaceId: string })
 {
   const [image, setImage] = useState<ChatAttachmentPreview['image']>(),
+
     [error, setError] = useState('');
-  useEffect(() =>
-  {
-    let live = true;
-    setImage(undefined);
-    setError('');
-    if (item.kind === 'file' && /^(图片快照|剪贴板图片)/.test(item.note ?? ''))
-      void window.cbim.call('chat.preview', { id: workspaceId, attachmentId: item.id }).then(value =>
-      {
-        if (live)
-          setImage(value.image)
-      }).catch((error: Error) =>
-      {
-        if (live)
-          setError(error.message)
-      });
-    return () =>
-    {
-      live = false
-    };
-  }, [item.id, item.kind, item.note, workspaceId]);
+
+  useEffect(() => { let live = true; setImage(undefined); setError(''); if (item.kind === 'file' && /^(图片快照|剪贴板图片)/.test(item.note ?? '')) void window.cbim.call('chat.preview', { id: workspaceId, attachmentId: item.id }).then(value => { if (live) setImage(value.image) }).catch((error: Error) => { if (live) setError(error.message) }); return () => { live = false }; }, [item.id, item.kind, item.note, workspaceId]);
+
   return image ? <img className="attachment-thumbnail" alt={item.name} src={`data:${image.mimeType};base64,${image.data}`} /> : <span title={error || undefined}><Icon name={item.kind === 'folder' ? 'folder' : item.kind === 'connector' ? 'plug' : 'knowledge'} size={22} />{error && <small>预览失败</small>}</span>;
 }
-
 export function ComposerAttachments({ items, workspaceId, disabled, onRemove }: { items: ChatAttachment[]; workspaceId: string; disabled: boolean; onRemove: (id: string) => void })
 {
   const [preview, setPreview] = useState<ChatAttachmentPreview>(),
+
     [error, setError] = useState(''),
+
     [loading, setLoading] = useState('');
+
   const dialog = useRef<HTMLDialogElement>(null),
+
     request = useRef(0);
-  useEffect(() =>
-  {
-    request.current++;
-    setPreview(undefined);
-    setError('');
-    setLoading('');
-    return () =>
-    {
-      request.current++
-    }
-  }, [workspaceId]);
-  useEffect(() =>
-  {
-    if (preview)
-      dialog.current?.showModal()
-  }, [preview]);
+
+  useEffect(() => { request.current++; setPreview(undefined); setError(''); setLoading(''); return () => { request.current++ } }, [workspaceId]);
+
+  useEffect(() => { if (preview) dialog.current?.showModal() }, [preview]);
+
   async function show(item: ChatAttachment)
   {
     const token = ++request.current;
+
     setLoading(item.id);
+
     setError('');
+
     try
     {
       const result = await window.cbim.call('chat.preview', { id: workspaceId, attachmentId: item.id });
+
       if (token === request.current)
+
         setPreview(result)
     }
     catch (e: any)
     {
       if (token === request.current)
+
         setError(e.message)
     }
     finally
     {
       if (token === request.current)
+
         setLoading('')
     }
   }

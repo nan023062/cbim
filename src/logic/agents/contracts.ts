@@ -3,8 +3,11 @@
  * 设计原因：记录读取及运行门禁不加载调度器实现，不通过聚合出口隐藏反向类型依赖。
  */
 import { z } from 'zod';
+
 import type { ScopeActiveInputPayload, ScopeActiveInputToken, ScopeActiveInputSendReceipt } from '../tasks/rules/scope-active-input';
+
 import type { EngineEvent, RunSummary, TaskSpec } from '../execution/rules/types';
+
 import type { EngineCapability } from '../execution/rules/engine-tools';
 
 export const agentCallToolName = 'cbim_agent_call';
@@ -29,7 +32,6 @@ export interface AgentCallReference
 
   runId: string
 }
-
 /** 父子日志共用严格引用格式；不接受任意路径、额外身份或自己调用自己的引用。 */
 export const agentCallReferenceSchema = z.object({ version: z.literal(1), workspaceId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/), callerTaskId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/), callerRunId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/), toolCallId: z.string().min(1).max(512), taskId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/), runId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/) }).strict();
 
@@ -37,11 +39,13 @@ export const agentCallReferenceSchema = z.object({ version: z.literal(1), worksp
 export function checkedAgentCallReference(value: unknown, task: { workspaceId: string; taskId: string }, runId: string): AgentCallReference
 {
   const ref = agentCallReferenceSchema.parse(value);
+
   if (ref.workspaceId !== task.workspaceId || ref.taskId !== task.taskId || ref.runId !== runId || ref.callerTaskId === ref.taskId || ref.callerRunId === ref.runId)
+
     throw Error('Agent 调用引用与子运行身份不一致');
+
   return ref;
 }
-
 export interface AgentCallContext
 {
   task: TaskSpec;
@@ -50,13 +54,11 @@ export interface AgentCallContext
 
   depth: number
 }
-
 /** 调用协议只限定深度；真实并发和预算由 execution 准入与根账本持有。 */
 export interface AgentCallLimits
 {
   maxDepth: number
 }
-
 export interface AgentToolContext
 {
   task: TaskSpec;
@@ -69,7 +71,6 @@ export interface AgentToolContext
 
   Emit(event: EngineEvent): Promise<void>
 }
-
 export interface AgentToolsBinding
 {
   /** 由当前调用的人工决定收紧工具副作用；返回拒绝理由，不授予任何新权限。 */
@@ -83,7 +84,6 @@ export interface AgentToolsBinding
 
   Stop(): Promise<void>
 }
-
 /** 根运行的输入和收尾边界；回执仍由既有目标服务持久化，不复制队列状态。 */
 export interface AgentLifecycle
 {
@@ -97,7 +97,6 @@ export interface AgentLifecycle
 
   Failed(error: unknown): Promise<void>;
 }
-
 /** 可信准入失败的数值快照；只携带约束，不携带模型正文或凭据。 */
 export class AgentConstraintError extends Error
 {

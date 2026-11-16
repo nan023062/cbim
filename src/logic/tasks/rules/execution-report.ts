@@ -3,9 +3,13 @@
  * 设计原因：派发状态、运行日志与工具回执分别表达不同事实；递归依据只公开原登记状态，不伪造旧任务版本；共用工具回执结构并保留旧记录的缺失哈希事实，不把可读取结构当成交付证据或续执行授权。
  */
 import { z } from 'zod';
+
 import { memberTaskInput } from './member-commands';
+
 import { graphIdentityInput } from './dispatch-commands';
+
 import { toolScopeSchema } from '../../tools/rules/scope-schema';
+
 import { toolReceiptSchema, toolReceiptEffectSchema } from '../../tools/rules/receipt-schema';
 
 const id = z.string().min(1).max(128);
@@ -29,25 +33,7 @@ const receipt = toolReceiptSchema;
 export const executionReportInputSchema = memberTaskInput.extend({ runId: id.regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/).optional(), cursor: cursor.optional(), limit: z.number().int().min(1).max(100).default(50) }).strict();
 
 /** 只公开有界身份、状态和回执摘要；不包含原始工具参数、输出、知识正文或原生会话路径。 */
-export const executionReportSchema = z.object({
-  identity: memberTaskInput.extend({ runId: id.optional() }).strict(), checkedAt: z.string().datetime(),
-  basis: z.object({ key: z.string().regex(/^[a-f0-9]{64}$/), graphCursor: graphIdentityInput.extend({ streamId: id, seq }).strict(), executionModel: z.literal('agent-tools-v1').optional(), taskRevision: seq.optional(), planRevision: seq.optional(), taskStatus: z.enum(['planned', 'queued', 'running', 'waiting', 'result_ready', 'blocked', 'failed', 'cancelled', 'interrupted', 'checkpointed']).optional(), scopeId: id.optional(), scopeStatus: z.enum(['active', 'waiting', 'closed']).optional(), goalRevision: seq.optional(), runStatus: z.enum(['starting', 'running', 'completed', 'failed', 'cancelled', 'interrupted', 'active', 'closed']).optional(), logSeq: seq.optional() }).strict().superRefine((basis, context) =>
-  {
-    if (basis.executionModel)
-    {
-      if (basis.taskRevision !== undefined || basis.taskStatus !== undefined)
-        context.addIssue({ code: 'custom', message: '递归调用不得伪造旧任务版本或状态' })
-    }
-    else if (basis.taskRevision === undefined || basis.planRevision === undefined || basis.taskStatus === undefined || basis.runStatus === 'active' || basis.runStatus === 'closed')
-      context.addIssue({ code: 'custom', message: '旧任务报告缺少真实版本/状态' })
-  }),
-  consistency: z.enum(['stable', 'changed_during_read']), execution: z.enum(['not_started', 'in_flight', 'settled', 'unknown']),
-  log: z.object({ state: z.enum(['not_expected', 'not_selected', 'verified', 'missing', 'incomplete', 'invalid', 'identity_mismatch', 'unavailable']), hasTerminal: z.boolean().optional(), summaryStatus: runStatus.optional() }).strict(),
-  tools: z.object({ available: z.boolean(), total: seq, counts: z.object({ succeeded: seq, failed: seq, denied: seq, unknown: seq, not_authorized: seq }).strict(), items: z.array(z.object({ toolCallId: id, toolName: short, status: z.enum(['succeeded', 'failed', 'denied', 'unknown', 'not_authorized']), effects: z.array(effect), scope, proposedSeq: seq.optional(), allowedSeq: seq.optional(), finishedSeq: seq.optional(), receipt: receipt.optional() }).strict()).max(100), nextCursor: cursor.optional(), paginationReset: z.boolean() }).strict(),
-  candidate: z.object({ resultId: id, runId: id, planRevision: seq, acceptance: z.literal('not_evaluated') }).strict().optional(),
-  issues: z.array(z.object({ code: id, severity: z.enum(['info', 'warning', 'danger']), message: short }).strict()).max(32),
-  next: z.object({ kind: z.enum(['observe', 'inspect_effects', 'new_cycle_only']), reason: short }).strict(),
-}).strict();
+export const executionReportSchema = z.object({ identity: memberTaskInput.extend({ runId: id.optional() }).strict(), checkedAt: z.string().datetime(), basis: z.object({ key: z.string().regex(/^[a-f0-9]{64}$/), graphCursor: graphIdentityInput.extend({ streamId: id, seq }).strict(), executionModel: z.literal('agent-tools-v1').optional(), taskRevision: seq.optional(), planRevision: seq.optional(), taskStatus: z.enum(['planned', 'queued', 'running', 'waiting', 'result_ready', 'blocked', 'failed', 'cancelled', 'interrupted', 'checkpointed']).optional(), scopeId: id.optional(), scopeStatus: z.enum(['active', 'waiting', 'closed']).optional(), goalRevision: seq.optional(), runStatus: z.enum(['starting', 'running', 'completed', 'failed', 'cancelled', 'interrupted', 'active', 'closed']).optional(), logSeq: seq.optional() }).strict().superRefine((basis, context) => { if (basis.executionModel) { if (basis.taskRevision !== undefined || basis.taskStatus !== undefined) context.addIssue({ code: 'custom', message: '递归调用不得伪造旧任务版本或状态' }) } else if (basis.taskRevision === undefined || basis.planRevision === undefined || basis.taskStatus === undefined || basis.runStatus === 'active' || basis.runStatus === 'closed') context.addIssue({ code: 'custom', message: '旧任务报告缺少真实版本/状态' }) }), consistency: z.enum(['stable', 'changed_during_read']), execution: z.enum(['not_started', 'in_flight', 'settled', 'unknown']), log: z.object({ state: z.enum(['not_expected', 'not_selected', 'verified', 'missing', 'incomplete', 'invalid', 'identity_mismatch', 'unavailable']), hasTerminal: z.boolean().optional(), summaryStatus: runStatus.optional() }).strict(), tools: z.object({ available: z.boolean(), total: seq, counts: z.object({ succeeded: seq, failed: seq, denied: seq, unknown: seq, not_authorized: seq }).strict(), items: z.array(z.object({ toolCallId: id, toolName: short, status: z.enum(['succeeded', 'failed', 'denied', 'unknown', 'not_authorized']), effects: z.array(effect), scope, proposedSeq: seq.optional(), allowedSeq: seq.optional(), finishedSeq: seq.optional(), receipt: receipt.optional() }).strict()).max(100), nextCursor: cursor.optional(), paginationReset: z.boolean() }).strict(), candidate: z.object({ resultId: id, runId: id, planRevision: seq, acceptance: z.literal('not_evaluated') }).strict().optional(), issues: z.array(z.object({ code: id, severity: z.enum(['info', 'warning', 'danger']), message: short }).strict()).max(32), next: z.object({ kind: z.enum(['observe', 'inspect_effects', 'new_cycle_only']), reason: short }).strict(), }).strict();
 
 export type ExecutionReportInput = z.input<typeof executionReportInputSchema>;
 

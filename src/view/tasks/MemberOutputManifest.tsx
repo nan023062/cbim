@@ -3,10 +3,15 @@
  * 设计原因：与旧选定文件面板分开，加载列表不扫描；用户选择后再读全部范围，避免默认最新或误认业务验收。
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+
 import type { GraphCursor, ScopeSummary, TaskNode } from '../../bridge/contracts/dispatch';
+
 import type { OutputManifestSnapshot } from '../../bridge/contracts/output-manifest';
+
 import { ManifestReportController, manifestSelectionKey, type ManifestReportState, type ManifestSelection } from './output-manifest-state';
+
 import { ArtifactTransitionProofs } from './ArtifactTransitionProofs';
+
 import './artifact-report.css';
 
 export interface ManifestPanelState extends ManifestReportState
@@ -19,7 +24,6 @@ export interface ManifestPanelState extends ManifestReportState
 
   Select(id: string): void
 }
-
 /** 不分页截取集合；细节折叠只改变显示，不省略完整根和条目。 */
 function Snapshot({ label, value }: { label: string; value: OutputManifestSnapshot })
 {
@@ -28,13 +32,15 @@ function Snapshot({ label, value }: { label: string; value: OutputManifestSnapsh
     {value.entries.map(entry => <article key={entry.relativePath} data-manifest-path={entry.relativePath}><strong>{entry.relativePath}</strong><span>{entry.kind === 'directory' ? '目录' : entry.byteLength.toLocaleString() + ' 字节'}</span>{entry.kind === 'file' && <code>{entry.sha256}</code>}</article>)}
   </details>;
 }
-
 /** 相同清单仅表示声明范围的当前观察相同，不表示整个工作区或业务质量已验收。 */
 export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestPanelState; taskId: string; runId: string })
 {
   const { report, selectedId, loading, error, stale } = state,
+
     verification = report?.verification,
+
     selected = report?.manifests.find(item => item.manifestId === selectedId);
+
   return <section className="artifact-report" aria-label="完整产物清单" data-testid="output-manifest-panel" data-task-id={taskId} data-run-id={runId}>
     <header><h4>声明范围内完整产物清单</h4><button data-testid="output-manifest-list" disabled={loading} onClick={() => void state.List()}>{report ? '重新加载清单' : '加载清单列表'}</button></header>
     <p className="member-muted">加载列表只读原记录。选择清单后，重新观察声明根下全部受支持文件和目录，包括新增条目与空目录。</p>
@@ -59,16 +65,22 @@ export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestP
     </>}
   </section>;
 }
-
 /** 图或任务变化只显示过期，切换运行取消迟到结果；无定时扫描或模型调用。 */
 export function MemberOutputManifest({ identity, task, graphCursor, scope }: { identity: ManifestSelection; task: TaskNode; graphCursor?: GraphCursor; scope?: ScopeSummary })
 {
   const version = JSON.stringify([task.revision, task.planRevision, task.status, graphCursor, scope?.status, scope?.goalRevision]),
+
     current = useRef(version);
+
   current.current = version;
+
   const key = manifestSelectionKey(identity),
+
     controller = useMemo(() => new ManifestReportController(identity, input => window.cbim.call('dispatch.manifestReport', input), () => current.current), [key]);
+
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
+
   useEffect(() => () => controller.Cancel(), [controller]);
+
   return <ManifestReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, List: () => controller.List(), Inspect: () => controller.Inspect(), Select: id => controller.Select(id) }} />;
 }

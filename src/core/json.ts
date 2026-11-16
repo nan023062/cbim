@@ -4,6 +4,7 @@
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { JsonUtils, StrictJsonError } from './utility';
+
 import { fail } from './errors';
 
 /** 不改变字段及资源限制；只将已知解析失败转换为原 JSON 领域错误，其他异常原样传播。 */
@@ -16,7 +17,9 @@ export function parseJson(text: string)
   catch (error)
   {
     if (error instanceof StrictJsonError)
+
       fail('JSON', error.message);
+
     throw error;
   }
 }

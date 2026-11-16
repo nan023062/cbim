@@ -7,9 +7,13 @@
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import { JsonUtils } from '../../../core/utility';
+
 import { isDeepStrictEqual as equal } from 'node:util';
+
 import { hash } from '../../../core/platform/node/serialization';
+
 import { artifactScopeBindingsSchema, type ArtifactScopeBinding } from '../../workspace/rules/artifact-scope';
+
 import { outputManifestRefSchema, outputManifestSnapshotSchema, type OutputManifestSnapshot, type OutputManifestStaged, type OutputManifestRef } from './output-manifest';
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
@@ -25,8 +29,12 @@ export const outputManifestHash = (snapshot: OutputManifestSnapshot) => hash(JSO
 export function outputManifestReference(manifest: OutputManifestStaged): OutputManifestRef
 {
   const { version: _version, binding: _binding, snapshot, ...ref } = manifest,
+
     files = snapshot.entries.filter(entry => entry.kind === 'file');
+
   if (!equal(ref.scopes, snapshot.scopes) || ref.scopeHash !== outputManifestScopeHash(snapshot.scopes) || ref.manifestHash !== outputManifestHash(snapshot) || ref.entryCount !== snapshot.entries.length || ref.fileCount !== files.length || ref.byteLength !== files.reduce((sum, file) => sum + file.byteLength, 0))
+
     throw Error('完整产物清单的范围、数量或摘要不一致');
+
   return outputManifestRefSchema.parse(ref);
 }

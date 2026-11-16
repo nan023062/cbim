@@ -5,6 +5,7 @@
  * 失效边界：load/dispose 推进代次；响应身份与额度策略版本仍独立核验，读取失败不解释为零消耗。
  */
 import { AsyncGeneration, SubscriptionSet } from '../foundations/utility';
+
 import { requestBudgetReportSchema, type RequestBudgetReport } from '../../bridge/contracts/scope-budget';
 
 export type RequestBudgetQuery =
@@ -15,7 +16,6 @@ export type RequestBudgetQuery =
 
     scopeId: string
   };
-
 export interface RequestBudgetState
 {
   busy: boolean;
@@ -24,7 +24,6 @@ export interface RequestBudgetState
 
   report?: RequestBudgetReport
 }
-
 /** 一个实例只绑定一个目标；dispose 使未完成读取失效，不取消或修改后端事实。 */
 export class RequestBudgetController
 {
@@ -37,44 +36,50 @@ export class RequestBudgetController
   constructor(private readonly query: RequestBudgetQuery, private readonly revision: number, private readonly call: (query: RequestBudgetQuery) => Promise<unknown>)
   {
   }
-
   snapshot = () => this.state;
 
-  subscribe = (listener: () => void) =>
-  {
-    return this.listeners.Subscribe(listener)
-  };
+  subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: RequestBudgetState)
   {
     this.state = value;
+
     this.listeners.Notify()
   }
-
   Dispose()
   {
     this.generation.Advance();
+
     this.listeners.Clear();
+
     this.state = { ...this.state, busy: false }
   }
-
   async Load()
   {
     if (this.state.busy)
+
       return;
+
     const generation = this.generation.Advance();
+
     this.Publish({ ...this.state, busy: true, error: '' });
+
     try
     {
       const report = requestBudgetReportSchema.parse(await this.call({ ...this.query }));
+
       if (report.workspaceId !== this.query.workspaceId || report.rootSessionId !== this.query.rootSessionId || report.scopeId !== this.query.scopeId || report.policyRevision !== this.revision)
+
         throw Error('请求账本返回了其它目标或策略的记录');
+
       if (this.generation.IsCurrent(generation))
+
         this.Publish({ busy: false, error: '', report })
     }
     catch (error)
     {
       if (this.generation.IsCurrent(generation))
+
         this.Publish({ ...this.state, busy: false, error: (error instanceof Error ? error.message : String(error)) + '；未将读取失败计为零消耗。' })
     }
   }

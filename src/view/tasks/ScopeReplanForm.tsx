@@ -4,19 +4,28 @@
  * 处置关联：新来源须先明确选择新业务修复处置；切换处置使预览失效，旧无关联核实仍按原协议读取。
  */
 import { Icon } from '../components/Icon';
+
 import type { ScopeReplanView } from './useScopeReplan';
+
 import { EffectObservationPanel } from './EffectObservationPanel';
+
 import { effectSelectionKey } from './effect-observation-state';
+
 import './scope-replan.css';
 
 /** 纯显示组件；显示、展开及权限选择均不调用模型，只有显式提交才创建独立业务周期。 */
 export function ScopeReplanForm({ state }: { state: ScopeReplanView })
 {
   if (!state.visible)
+
     return null;
+
   const attempt = state.record?.attempt,
+
     phase = attempt?.phase,
+
     preview = state.previewState?.result;
+
   return <section className="scope-replan" data-testid="scope-replan-form" data-inspection-scope={state.inspectionScopeId} data-replan-phase={state.pending ? 'pending' : phase ?? 'draft'}>
     <h4>新建业务任务</h4><p className="scope-goal-muted">依据这次只读核实，在当前会话创建独立业务周期。保留旧记录，由成员执行新的业务工作；不会重放旧任务或更改原核实周期的只读权限。</p>
     {state.effectSource && <details className="replan-effect-source" data-testid="replan-effect-source"><summary>原调用影响与修复处置{state.dispositionId ? ' · 已明确选择' : ''}</summary><p>先保存或选择“新业务修复”处置。保存不启动任务，最终创建仍须通过以下条件核验。</p><EffectObservationPanel key={effectSelectionKey(state.effectSource)} identity={state.effectSource} anchor={state.effectAnchor ?? ''} /></details>}

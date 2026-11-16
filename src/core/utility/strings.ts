@@ -4,7 +4,6 @@
  * 职责边界：完整帧与尾部限制由调用方指定，不隐式 trim、转码或补齐 EOF 消息。
  * 实现形式：StringUtils 静态工具类、LineFramer 实例缓冲器及策略接口；各输入流独立。
  */
-
 /** 消费者定义文本帧限制，字符/字节计量及协议策略保持在调用方。 */
 export interface LineFramePolicy
 {
@@ -14,7 +13,6 @@ export interface LineFramePolicy
   /** 每次消费完全部完整帧后验证未终止尾部；不能把尾部当作已完成消息。 */
   checkRemainder: (text: string) => void;
 }
-
 /** 单输入流的增量文本缓冲；按 LF 分帧并保留未终止尾部，不共享状态。 */
 export class LineFramer
 {
@@ -29,7 +27,6 @@ export class LineFramer
   {
     this.policy = policy;
   }
-
   /**
      * 同步依次交付完整帧；检查或接收回调抛错即停止，已交付帧不撤回，后续完整帧不提前丢弃。
      * 不 trim、不解析 JSON、不 flush EOF；不支持回调重入 push，同一实例仅供一个输入流使用。
@@ -37,18 +34,22 @@ export class LineFramer
   public Push(chunk: string, receive: (line: string) => void): void
   {
     this.remainder += chunk;
+
     let offset: number;
+
     while ((offset = this.remainder.indexOf('\n')) >= 0)
     {
       const line = this.remainder.slice(0, offset);
+
       this.remainder = this.remainder.slice(offset + 1);
+
       this.policy.checkLine(line);
+
       receive(line);
     }
     this.policy.checkRemainder(this.remainder);
   }
 }
-
 /** 精确字符串算法；凭据来源、协议和错误屏障由消费者决定。 方法不依赖 this，可作为回调传递。 */
 export class StringUtils
 {
@@ -56,7 +57,6 @@ export class StringUtils
   private constructor()
   {
   }
-
   /** 精确、区分大小写地替换所有凭据文本；空/缺失凭据不改输入，不识别正则、转义或凭据来源。 */
   public static RedactLiteral(text: string, secret: string | undefined): string
   {

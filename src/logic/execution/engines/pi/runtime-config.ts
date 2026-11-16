@@ -11,15 +11,19 @@ import type { LlmModel } from '../../../models';
 export function buildPiRuntimeSettings(model?: Pick<LlmModel, 'contextWindow' | 'workingContextWindow' | 'compactionPercent'>)
 {
   const capacity = model?.contextWindow ?? 128000;
+
   const budget = Math.min(model?.workingContextWindow ?? capacity, capacity);
+
   const reserveTokens = model?.compactionPercent === undefined && budget === capacity ? undefined :
+
     Math.max(1, Math.ceil(capacity - budget * ((model?.compactionPercent ?? 90) / 100)));
+
   return {
     transport: 'sse', retry: { enabled: true, maxRetries: 6, baseDelayMs: 2000, provider: { maxRetries: 0 } },
+
     ...(reserveTokens === undefined ? {} : { compaction: { reserveTokens } })
   };
 }
-
 /** 无推理模型强制 off；未设置的推理模型使用 Pi 的默认 medium，恢复时不继承旧模型档位。 */
 export function requestedThinkingLevel(model: { reasoning: boolean; thinkingLevel?: LlmModel['thinkingLevel'] })
 {

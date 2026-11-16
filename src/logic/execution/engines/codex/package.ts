@@ -5,7 +5,9 @@
  * 设计原因：宿主提供已冻结依赖和可信端口，App Server 协议与原生工具适配由包独立维护。
  */
 import { CodexEngine } from './engine';
+
 import { engineDescriptor } from '../../../engines';
+
 import type { EngineAdapter, EngineAdapterOptions } from '../../rules/engine-adapter';
 
 export const engineAdapter: EngineAdapter = Object.freeze({ protocol: 1, id: 'codex', version: '1.1.1', descriptor: engineDescriptor('codex'), create: (options: EngineAdapterOptions) => new CodexEngine({ ...options, nativeToolsRuntime: options.runtime?.dependencies?.pi ?? options.nativeToolsRuntime }) });

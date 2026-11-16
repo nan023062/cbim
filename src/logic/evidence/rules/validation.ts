@@ -5,14 +5,21 @@
  * 设计原因：工具成功不代表结构通过；身份、要求和文件指纹来自可信冻结上下文，不接受模型传入 Schema、路径或结论。
  */
 import { z } from 'zod';
+
 import { artifactFileFactSchema, artifactBaselineStagedSchema } from './artifact-baseline';
+
 import { toolReceiptSchema } from '../../tools/rules/receipt-schema';
+
 import { jsonValidationLimits } from '../../workspace/rules/json-validation-schema';
+
 import { outputManifestIdentitySchema } from './output-manifest';
 
 const id = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/),
+
   logical = z.string().min(1).max(512),
+
   seq = z.number().int().nonnegative().safe(),
+
   hash = z.string().regex(/^[a-f0-9]{64}$/);
 
 const binding = artifactBaselineStagedSchema.innerType().shape.binding;

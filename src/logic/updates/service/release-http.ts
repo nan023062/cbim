@@ -5,36 +5,7 @@
  */
 import { ByteUtils, ByteLimitError } from '../../../core/utility';
 
-export type ReleaseRequest = (endpoint: string, options:
-  {
-    method: 'GET';
-
-    signal: AbortSignal
-  }) => Promise<
-    {
-      status: number;
-
-      data: unknown
-    }>;
+export type ReleaseRequest = (endpoint: string, options: { method: 'GET'; signal: AbortSignal }) => Promise<{ status: number; data: unknown }>;
 
 /** 只接受本产品的公开 Release 列表；不会发送 OAuth Token、请求正文或跟随重定向。 */
-export const releaseRequest: ReleaseRequest = async (endpoint, options) =>
-{
-  const url = new URL(endpoint);
-  if (url.origin !== 'https://api.github.com' || url.username || url.password || url.hash || url.pathname !== '/repos/nan023062/cbim/releases' || options.method !== 'GET')
-    throw Error('更新源地址无效');
-  const signal = AbortSignal.any([options.signal, AbortSignal.timeout(20000)]);
-  const response = await fetch(url, { method: 'GET', redirect: 'error', signal, headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'CBIM-desktop-updater', 'X-GitHub-Api-Version': '2026-03-10' } });
-  let bytes: Uint8Array;
-  try
-  {
-    bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal })
-  }
-  catch (error)
-  {
-    if (error instanceof ByteLimitError)
-      throw Error('更新列表过大');
-    throw error
-  }
-  return { status: response.status, data: JSON.parse(Buffer.from(bytes).toString('utf8')) };
-};
+export const releaseRequest: ReleaseRequest = async (endpoint, options) => { const url = new URL(endpoint); if (url.origin !== 'https://api.github.com' || url.username || url.password || url.hash || url.pathname !== '/repos/nan023062/cbim/releases' || options.method !== 'GET') throw Error('更新源地址无效'); const signal = AbortSignal.any([options.signal, AbortSignal.timeout(20000)]); const response = await fetch(url, { method: 'GET', redirect: 'error', signal, headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'CBIM-desktop-updater', 'X-GitHub-Api-Version': '2026-03-10' } }); let bytes: Uint8Array; try { bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal }) } catch (error) { if (error instanceof ByteLimitError) throw Error('更新列表过大'); throw error } return { status: response.status, data: JSON.parse(Buffer.from(bytes).toString('utf8')) }; };

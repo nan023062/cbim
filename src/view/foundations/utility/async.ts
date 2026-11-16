@@ -13,13 +13,11 @@ export class AsyncGeneration
   {
     return this.current;
   }
-
   /** 作废全部旧标记并返回新标记；由调用方决定在新请求、切换或销毁时调用。 */
   Advance(): symbol
   {
     return this.current = Symbol();
   }
-
   /** 只判断标记是否属于本实例当前代次；成功、失败与清理分支分别在原位置检查。 */
   IsCurrent(token: symbol): boolean
   {

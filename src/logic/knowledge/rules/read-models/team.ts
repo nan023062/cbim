@@ -5,9 +5,13 @@
  * 读取边界：本类属于 knowledge-read-models 的私有实现，跨模块经 knowledge/read-models 入口访问；团队岗位和执行状态不归此视图维护。
  */
 import path from 'node:path';
+
 import { context, data, content } from './snapshot';
+
 import { parseJson } from '../../../../core/json';
+
 import { fail } from '../../../../core/errors';
+
 import type { Snapshot } from '../types';
 
 /** 实例固定绑定一个快照；刷新知识后由调用方创建新的领域视图。 */
@@ -16,31 +20,31 @@ export class Team
   constructor(private snapshot: Snapshot)
   {
   }
-
   /** authors 仅作历史来源说明；authorPeople 固定为空以兼容旧查询响应，不再读取或关联真人。 */
   async Agents(query = '')
   {
     const s = this.snapshot,
+
       index = parseJson(s.validation!.indexes['.cbim/team/registry.json']);
+
     return {
-      ...context(s), teamRootId: '.cbim/team', groups: index.groups.map((g: any) => ({
-        ...g, agents: g.agents.filter((a: any) => !query || `${a.id} ${a.summary}`.toLowerCase().includes(query.toLowerCase())).map((a: any) =>
-        {
-          const d = data(s, a.id + '/agent.json');
-          return { ...a, name: d.name, authors: d.authors, authorPeople: [] }
-        })
-      })), indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/team/registry.json')?.text === s.validation!.indexes['.cbim/team/registry.json']
+      ...context(s), teamRootId: '.cbim/team', groups: index.groups.map((g: any) => ({ ...g, agents: g.agents.filter((a: any) => !query || `${a.id} ${a.summary}`.toLowerCase().includes(query.toLowerCase())).map((a: any) => { const d = data(s, a.id + '/agent.json'); return { ...a, name: d.name, authors: d.authors, authorPeople: [] } }) })), indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/team/registry.json')?.text === s.validation!.indexes['.cbim/team/registry.json']
     };
   }
-
   async Agent(id: string)
   {
     const s = this.snapshot;
+
     if (!Object.hasOwn(s.validation!.skills || {}, id))
+
       fail('OBJECT_NOT_FOUND', 'Agent 不存在或定义未通过校验，请先查询团队注册表与问题清单');
+
     const definition = data(s, id + '/agent.json'),
+
       effective = s.validation!.skills![id];
+
     const conflicts = s.validation!.issues.filter(i => i.severity === 'error' && i.code === 'skill_conflict' && i.path === id + '/agent.json');
+
     return { ...context(s), id, definition, definitionFile: s.files.find(f => f.path === id + '/agent.json'), principles: content(s, id, definition.work_principles), skillChain: effective.chain, skillConflicts: conflicts, skills: effective.entries.map(e => ({ ...e, id: path.posix.dirname(e.reference), inherited: e.owner !== id, content: content(s, e.owner, path.posix.relative(e.owner, e.reference)) })), skillSelectionValid: conflicts.length === 0 };
   }
 }

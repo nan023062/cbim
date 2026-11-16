@@ -8,13 +8,17 @@
 import { z } from 'zod';
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),
+
   logical = z.string().trim().min(1).max(512);
 
 const callId = z.string().min(1).max(128).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const seq = z.number().int().nonnegative().safe(),
+
   positive = seq.min(1),
+
   digest = z.string().regex(/^[a-f0-9]{64}$/),
+
   time = z.string().datetime();
 
 export const artifactLimits = { sources: 16, files: 16, fileBytes: 8 * 1024 * 1024, totalBytes: 32 * 1024 * 1024, baselines: 8 } as const;
@@ -45,18 +49,7 @@ export const artifactSourceCallSchema = z.object({ toolCallId: callId, toolName:
 export type ArtifactSourceCall = z.infer<typeof artifactSourceCallSchema>;
 
 /** 暂存事件不预造自己的日志序号；只有真实成功结束回执匹配后才成为可引用记录。 */
-export const artifactBaselineStagedSchema = z.object({ version: z.literal(1), baselineId: id, captureToolCallId: callId, binding, knowledgeRevision: logical, progressVersion: positive, capturedAt: time, lastEffectSeq: seq, sourceCalls: z.array(artifactSourceCallSchema).min(1).max(artifactLimits.sources), files: z.array(artifactCapturedFileSchema).min(1).max(artifactLimits.files) }).strict().superRefine((value, context) =>
-{
-  const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
-  const calls = value.sourceCalls.map(call => call.toolCallId),
-    covered = value.files.flatMap(file => file.sourceToolCallIds);
-  if (!unique(calls) || !unique(covered) || !unique(value.files.map(file => file.relativePath)) || calls.includes(value.captureToolCallId))
-    issue('基线来源、文件及采集调用不能重复或自引用');
-  if (calls.length !== covered.length || !calls.every(call => covered.includes(call)))
-    issue('来源与文件关联必须完整对应');
-  if (value.files.reduce((sum, file) => sum + file.byteLength, 0) > artifactLimits.totalBytes)
-    issue('采集文件总字节超限');
-});
+export const artifactBaselineStagedSchema = z.object({ version: z.literal(1), baselineId: id, captureToolCallId: callId, binding, knowledgeRevision: logical, progressVersion: positive, capturedAt: time, lastEffectSeq: seq, sourceCalls: z.array(artifactSourceCallSchema).min(1).max(artifactLimits.sources), files: z.array(artifactCapturedFileSchema).min(1).max(artifactLimits.files) }).strict().superRefine((value, context) => { const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message }); const calls = value.sourceCalls.map(call => call.toolCallId), covered = value.files.flatMap(file => file.sourceToolCallIds); if (!unique(calls) || !unique(covered) || !unique(value.files.map(file => file.relativePath)) || calls.includes(value.captureToolCallId)) issue('基线来源、文件及采集调用不能重复或自引用'); if (calls.length !== covered.length || !calls.every(call => covered.includes(call))) issue('来源与文件关联必须完整对应'); if (value.files.reduce((sum, file) => sum + file.byteLength, 0) > artifactLimits.totalBytes) issue('采集文件总字节超限'); });
 
 export type ArtifactBaselineStaged = z.infer<typeof artifactBaselineStagedSchema>;
 

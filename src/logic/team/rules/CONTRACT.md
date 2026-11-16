@@ -201,7 +201,7 @@ workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 ### V2 角色引用与采纳
 
@@ -210,3 +210,8 @@ AgentModelSelection 和 WorkspaceMemberModelRef 可包含 version:2 的额外 mo
 ## 递归 Agent 历史索引
 
 AgentHistoryRecord 可保存严格 agentCall 原父引用。新业务子运行的 kind=task/source=member，journal=loop；只有显式引用与当前子身份一致才允许这种组合，旧成员仍 journal=member。主记录不能伪装为子调用，新索引不补造旧引用，也不保存原生路径或凭据。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

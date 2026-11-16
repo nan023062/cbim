@@ -2,12 +2,13 @@
  * 作用定位：前端域的 JSON 比较工具，供页面控制器核对请求、预览和回执中的值。
  * 设计原因：组合共享 Core 的排序算法并保留前端比较策略，业务身份和接受条件仍由各控制器判断。
  * 职责边界：只比较值，不校验 Schema、不生成持久指纹、不读写状态或发起请求。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 
 /** 策略属于前端比较契约，不改变后端其他调用方的字典序或字段保留规则。 */
-const orderedJson=(value:unknown)=>orderJsonValue(value,{compareKeys:(left,right)=>left.localeCompare(right),omitUndefinedProperties:true});
+const orderedJson=(value:unknown)=>JsonUtils.orderJsonValue(value,{compareKeys:(left,right)=>left.localeCompare(right),omitUndefinedProperties:true});
 
 /**
  * 比较对象键排序后的 JSON 文本，不修改输入；数组次序保留，对象 undefined 属性省略。

@@ -4,8 +4,9 @@
  * 职责边界：不读取磁盘、不写知识、不授予权限。Workflow 条件随原正文保留并独立严格解析；完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.preview/commit 统一验证。
  * 可复用 Team/Agent 包剔除本机 runtime 引用，避免把无效供应商身份带到另一台机器。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import path from 'node:path';
 import {z} from 'zod';
 import {hash,json} from '../../../core/platform/node/serialization';
@@ -32,7 +33,7 @@ const moduleDefinition=z.object({id:label,name:z.string().regex(/^(?:[0-9]+_)?[a
 const removed=['不携带真人花名册、账号和凭据','清除作者、连接器和模块维护关系绑定','清除业务源码目录定位；导入后须在目标项目重新确认'];
 function check(condition:unknown,message:string):asserts condition{if(!condition)fail('RESOURCE_PACKAGE',message)}
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:false});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:false});
 /** 指纹涵盖所有静态定义；不覆盖或传递任何执行授权。 */
 export function workspacePackageFingerprint(value:Omit<WorkspacePackage,'fingerprint'>|WorkspacePackage){const {fingerprint:_,...body}=value as WorkspacePackage;return hash(JSON.stringify(ordered(body)))}
 function cleanPath(value:string){return value===value.trim()&&!/[\\:\x00-\x1f?#%<>"|*]/.test(value)&&!value.startsWith('/')&&value.split('/').every(part=>part&&part!=='.'&&part!=='..'&&!part.endsWith('.')&&!part.endsWith(' ')&&!/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))}

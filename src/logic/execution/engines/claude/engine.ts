@@ -6,8 +6,9 @@
  * 职责边界：配置与历史仅属于 CBIM；禁用外部设置/插件/MCP，不借用其他客户端账号。停止中止请求和工具，异常不重放。
  * SDK 路径来自可信运行包，凭据与原生历史继续归原 agentHome，不写入 E 缓存。
  * 超时按 SDK 模型增量及工具 Hook 的进展续期；连续静默才关闭 Query，取消仍按显式停止处理。
+ * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {redactLiteral} from '../../../../core/utility';
+import {StringUtils} from '../../../../core/utility';
 import fs from 'node:fs/promises';
 import {RunInactivityTimer} from '../run-inactivity';
 import path from 'node:path';
@@ -116,11 +117,11 @@ export class ClaudeCodeEngine implements AgentEngine {
     if(!identified.length||identified.some(entry=>entry.sessionId!==this.nativeId))throw Error('Claude Code 恢复文件与原会话身份不一致');
     return entries;
   }
-  private redact(text:string){const key=this.options.llm?.apiKey;return redactLiteral(text,key)}
+  private redact(text:string){const key=this.options.llm?.apiKey;return StringUtils.redactLiteral(text,key)}
   private async emit(event:EngineEvent){
     this.inactivity?.observe(event);
     const key=this.options.llm?.apiKey;const encoded=JSON.stringify(event);
-    try{await this.context!.emit(key?JSON.parse(redactLiteral(encoded,key)):event)}catch(error){this.fatal=error instanceof Error?error:Error(String(error));this.query?.close();throw error}
+    try{await this.context!.emit(key?JSON.parse(StringUtils.redactLiteral(encoded,key)):event)}catch(error){this.fatal=error instanceof Error?error:Error(String(error));this.query?.close();throw error}
   }
   /** 只认 SDK result 作为本轮终态；进程提前退出、无绑定或超时保持失败/中断，不凭文本猜测成功。 */
   async run(message:string){

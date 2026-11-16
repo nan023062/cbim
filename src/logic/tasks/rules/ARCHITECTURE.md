@@ -5296,12 +5296,12 @@ TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 
 ### 图结构算法边界
 
-graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。
+graph-rules 的 acyclic 委托后端 GraphUtils.isDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。
 
 ## 指定话题补充与排空
 
@@ -5333,3 +5333,8 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ### 递归工具迁移收口
 
 新输入可携带 attachmentManifest，prepare/accept 必须保持清单一致；旧无清单哈希和重放不变。Agent 重规划证明新增严格 agent-tools-v1 分支，使用 inspectionRunId、sourceAcceptance，不补造旧计划或 review。Store 核对精确源运行、已完成核实及模块范围。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `GraphUtils.isDirectedAcyclic`、`JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

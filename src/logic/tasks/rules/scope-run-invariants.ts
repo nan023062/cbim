@@ -2,8 +2,9 @@
  * 作用定位：在派发事务提交和重放时核验周期主运行清单的完整归属及追加边界。
  * 设计原因：登记不能依赖当前进程集合；文本补充和人工接续共用旧等待前缀与主轮计数，防止重复归属、补造旧统计或丢失无日志意图。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {fail} from '../../../core/errors';
 import type {DispatchState,DispatchMutation} from '../../dispatch/rules/dispatch-storage';
 import type {DispatchScope} from './dispatch-scope';
@@ -12,7 +13,7 @@ import {scopeFreshContext} from './fresh-context';
 
 const equal=(left:unknown,right:unknown):boolean=>{
   /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const normalize=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
+const normalize=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
   return JSON.stringify(normalize(left))===JSON.stringify(normalize(right));
 };
 function valid(value:unknown,message:string):asserts value{if(!value)fail('GRAPH_INPUT_INVALID',message)}

@@ -6,8 +6,9 @@
  * 职责边界：这是执行知识而非权限快照，不含模型凭据；指纹只能证明内容一致，不能代替知识来源、权限和产物基线复核。
  * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches,type AutomaticExecutionBinding} from '../../team/rules/automatic-execution';
 import {z} from 'zod';
 import {hash} from '../../../core/platform/node/serialization';
@@ -70,7 +71,7 @@ const shape=z.object({version:z.literal(1),workspaceId:id,knowledgeRevision:id,
 
 /** 为序列化字段排序，数组顺序仍有业务含义；调用者须先保证输入为可序列化快照。 */
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
 /** 创建或复核指纹；仅排除根 fingerprint，不排除正文中的同名知识字段。 */
 export function dispatchKnowledgeFingerprint(value:Omit<PreparedDispatchKnowledge,'fingerprint'>|PreparedDispatchKnowledge):string{
   const {fingerprint:_,...body}=value as PreparedDispatchKnowledge;

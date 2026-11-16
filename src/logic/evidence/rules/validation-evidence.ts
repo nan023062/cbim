@@ -5,8 +5,9 @@
  * 设计原因：结果正文和 succeeded 回执都不能单独声明通过；要求、基线、真实调用、文件字节指纹及事件顺序必须一致。
  * 职责边界：不读文件，不判断当前字节；外层完整 canonical 身份/终态与异步文件重核仍不可省略。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {fail} from '../../../core/errors';
 import {hash} from '../../../core/platform/node/serialization';
 import {workflowContractSchema,type WorkflowContract} from '../../workspace/rules/workflow-contract';
@@ -20,7 +21,7 @@ import {validationInputSchema,validationOutputSchema,validationResultSchema,vali
 export interface ValidationWorkflowBinding {moduleId:string;workflowId:string;workflowVersion:string;contract:WorkflowContract}
 function valid(value:unknown,message:string):asserts value{if(!value)fail('VALIDATION_EVIDENCE_INVALID',message)}
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
 const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const effect=(event:ArtifactEvidenceEvent)=>event.type==='tool.allowed'&&Array.isArray(event.data.effects)&&event.data.effects.some(value=>['business-write','knowledge-write','command'].includes(String(value)));
 /** 模型只引用 module/condition ID；旧 JSON 哈希不变，CSV/PNG 将类型与参数共同签入，避免跨验证器解释旧证明。 */

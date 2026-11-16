@@ -1046,3 +1046,8 @@ Workflow 的 `delivery.requiredCodeChecks` 冻结检查 ID、目的、program、
 
 ## 显式业务调用的基本交付
 validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Workflow 的业务 Agent。仍核原目标、连续 canonical、成功计划/交付回执、实际步骤证据及副作用结束顺序；不构造虚假 Workflow 或证明。历史无约定调用不传此选项，保留原兼容规则。返回 undefined 仅表示没有额外 Workflow 证明，不表示跳过基本交付校验。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

@@ -2,9 +2,10 @@
  * 作用定位：官方记忆领域 Agent Loop，使用生成和 embedding 双模型管理受控知识，不依赖厂商 Agent SDK。
  * 设计原因：模型决定、权限审批、工具回执、索引更新顺序执行；失败和重复动作立即收口，限制八次决定及总执行时间。
  * 职责边界：仅操作注入能力，正式知识不直接读写；索引派生且按代隔离，未知结果不重放。每个实例只运行一轮。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import {randomUUID} from 'node:crypto';
-import {orderJsonValue,parseStrictJson} from '../../../../core/utility';
+import {JsonUtils} from '../../../../core/utility';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../rules/types';
 import type {EngineAdapterOptions} from '../../rules/engine-adapter';
 import {runtimeEngineTools,type EngineToolsPort,type EngineToolSchema} from '../../rules/engine-tools';
@@ -64,7 +65,7 @@ export class MemoryEngine implements AgentEngine {
         await session.append({type:'message',message:result});messages.push(result);
         await this.emit({type:'message',data:{role:'assistant',text:result.content??'',...(call?{toolCallIds:[call.id]}:{})}});
         if(!call){await session.append({type:'turn.completed',runId:context.runId});return {status:'completed'}}
-        const input=parseStrictJson(call.function.arguments),fingerprint=JSON.stringify(orderJsonValue({name:call.function.name,input},{compareKeys:(a,b)=>a<b?-1:a>b?1:0}));
+        const input=JsonUtils.parseStrictJson(call.function.arguments),fingerprint=JSON.stringify(JsonUtils.orderJsonValue({name:call.function.name,input},{compareKeys:(a,b)=>a<b?-1:a>b?1:0}));
         if(seen.has(fingerprint))throw Error('记忆引擎检测到重复工具请求，已停止；不换 ID 重做');seen.add(fingerprint);
         const outcome=await this.invoke(call.function.name,input,call.id);
         const toolMessage:MemoryMessage={role:'tool',tool_call_id:call.id,content:JSON.stringify(outcome.result)};

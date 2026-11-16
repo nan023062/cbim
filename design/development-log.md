@@ -1,3 +1,20 @@
+## 2026-11-16：源码阅读整理——共享 Core 工具库
+
+- 来源：用户明确要求按文档 05 整理代码与文件，以便先熟悉源码。基线 `a87be67c`，工作分支 `refactor/2026-11-16`。已分页核实开放 Issues 为 #65、#94、#95；没有对应源码阅读整理工单，本步按直接要求实施，不创建或改写无关 Issue。PR #96 的同一基线已合并且完整 CI 43810478834 通过，该旧证据不替代本次修改验证。
+- C3/L2：先完整阅读本工具目录及直接消费者，以便携机制为首片。JSON、字符串、字节和图算法分别迁为 JsonUtils、StringUtils、ByteUtils、GraphUtils；SerialQueue、PendingRequests、InFlightOperations、LineFramer 保留实例状态。成员按私有/公开和字段/属性/构造/方法分区，补充真实中文语义，展开原压缩控制流。
+- 迁移全部独立函数消费者及相关测试，utility 不保留旧函数导出。仍在使用的 Node `serialization.json` 直接引用 JsonUtils.formatJson，保留函数身份、序列化字节和原消费者契约；没有包装第二套实现。没有移动业务目录或改变事务、权限、恢复、比较器、取消及真实排空策略。
+- 同步文件头和调用边界说明、utility 的逐类阅读表与契约，以及 20 个受影响目录的 CONTRACT/ARCHITECTURE。完整改动可通过本条对应提交与其父提交比较；先读 `src/core/utility/CONTRACT.md`，再读 index、json/strings/bytes/graphs 和 async，最后看消费者差异。
+- 验证选择：10 个 utility 单元覆盖算法与实例状态；6 个原消费者契约覆盖历史字节、错误、流取消、脱敏和 RPC；前端比较、任务图、资源存储/HTTP 与记忆引擎/协议补足直接消费者。22 文件 / 104 用例通过，报告 `build/source-reading-core-tests.json`。
+
+```powershell
+pnpm exec vitest run tests/unit/foundations/utility/bounded-bytes.test.ts tests/unit/foundations/utility/graphs.test.ts tests/unit/foundations/utility/in-flight.test.ts tests/unit/foundations/utility/json-order.test.ts tests/unit/foundations/utility/json-text.test.ts tests/unit/foundations/utility/line-framer.test.ts tests/unit/foundations/utility/pending-requests.test.ts tests/unit/foundations/utility/redaction.test.ts tests/unit/foundations/utility/serial-queue.test.ts tests/unit/foundations/utility/strict-json.test.ts tests/utility-body-consumers.test.ts tests/utility-json-contract.test.ts tests/utility-json-order-contract.test.ts tests/utility-redaction-contract.test.ts tests/utility-rpc-framing-contract.test.ts tests/utility-serialization-contract.test.ts tests/unit/frontend/foundations/utility/json.test.ts tests/dispatch-graph.test.ts tests/resource-store.test.ts tests/resource-repository.test.ts tests/unit/logic/execution/memory-protocol.test.ts tests/unit/logic/execution/memory-engine.test.ts --reporter=default --reporter=json --outputFile=build/source-reading-core-tests.json
+```
+
+- `pnpm typecheck` 通过；`pnpm check:architecture` 通过：135 目录 / 837 代码样式文件、1674 维护文件 / 7938 依赖、0 环 / 0 违规；`pnpm check:test-modules` 通过：541 文件（174 unit / 166 contract / 201 integration），归属未变。另核对 6 个 utility 源码的分区配对；后续仅修正文案与元组换行，并重新生成对应文档，无行为变化。
+- 编辑工具首次拒绝同路径 delete/add 的补丁，未改文件；一次性迁移脚本首次未加载 JS 文件而停止，修正读取范围后完成。两者均为编辑工具问题，不是测试失败。辅助脚本与测试报告仅留在忽略的 build 目录，不进入产品或正式工程工具。
+- 四问：保护 JSON 字节/错误、实例状态与取消契约；组织变化限制在基础类和显式调用入口；验证由本片公共 API 和真实消费者确定；同类算法从对应静态类扩展，有状态能力从实例类扩展。第五问无新增规则候选，执行已存在的文档 05。
+- 本片完成的是共享工具库及调用入口的整理，不代表全仓 782 个源码脚本已逐成员整理。未运行全量回归、桌面、构建、安装升级或发布；人工 review 尚未进行。本轮更广泛的系统可持续性评估仍需结合后续逐模块阅读，不能以无环或本片测试代替。
+
 ## 2026-11-16：标准上移 docs，解除对具体方案的反向引用
 
 - 来源：用户要求 docs 不引用 design，并允许标准、规范和准则迁入 docs；本步仅调整文档，不实施源码重构。

@@ -6,8 +6,9 @@
  * 设计原因：存储重放与新提交共用局部结构规则；多段检查点和预约按原运行顺序核对，依赖增删保留原版本与退役边，不以创建顺序代替防环。
  * 职责边界：结构通过不等于任务已获授权，调度层仍需核实来源。
  * 历史维护字段仅兼容原记录；新执行资格不再依赖真人，岗位责任和冻结身份校验继续生效。
+ * 算法入口：通过 Core GraphUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {isDirectedAcyclic} from '../../../core/utility';
+import {GraphUtils} from '../../../core/utility';
 import {automaticExecutionBindingSchema,automaticExecutionBindingMatches} from '../../team/rules/automatic-execution';
 import {z} from 'zod';
 import {candidateReviewSchema} from './candidate-review';
@@ -94,7 +95,7 @@ export function validateGraphCursor(value:unknown){shape(cursor,value)}
 function unique(values:string[],label:string){if(new Set(values).size!==values.length)fail('GRAPH_INPUT_INVALID',`${label}出现重复身份`)}
 function sameMember(left:AgentRef,right:AgentRef){return left.agentId===right.agentId&&left.agentInstanceId===right.agentInstanceId&&left.agentSessionId===right.agentSessionId}
 function acyclic(nodes:string[],edges:[string,string][],code:string){
-  if(!isDirectedAcyclic(nodes,edges))fail(code,code==='GRAPH_WAIT_CYCLE'?'任务等待关系形成互等':'任务派发与依赖形成循环');
+  if(!GraphUtils.isDirectedAcyclic(nodes,edges))fail(code,code==='GRAPH_WAIT_CYCLE'?'任务等待关系形成互等':'任务派发与依赖形成循环');
 }
 /** 仅当前计划的真实候选可满足前置；有固定 resultId 时不能换用其它结果。 */
 export function usableResult(task:TaskNode,planRevision:number,resultId?:string){return task.status==='result_ready'&&task.result?.planRevision===planRevision&&task.planRevision===planRevision&&(!resultId||task.result.resultId===resultId)}

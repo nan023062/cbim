@@ -6,8 +6,9 @@
  * 设计原因：任务图引用不足以恢复执行知识；从同一快照按原 Workflow 与岗位绑定冻结原则、有效 Skill、岗位职责和适应内容，不能改选或刷新旧任务。引用文字不自动读取，权限和模型由可信领取入口处理。
  * 职责边界：只读知识与应用内置规范；提示词接收可信当前话题资料，不读取整个主会话历史。岗位与资料不能扩大工具权限。
  * 读取边界：冻结模块与正文时只消费 knowledge/read-models 的公开读取能力，不依赖领域模型的私有文件。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {resolveExecutionModules} from './automatic-context';
 import {hash} from '../../../core/platform/node/serialization';
 import {fail} from '../../../core/errors';
@@ -29,7 +30,7 @@ const standardIds=['business-execution','common-rules'];
 export type DispatchKnowledgeWorkspace=Pick<KnowledgeWorkspace,'entry'|'assert'|'snapshot'|'read'|'rules'>;
 /** 比较规范化 JSON，知识定义的对象字段排列不改变业务绑定，数组顺序保持原义。 */
 function canonical(value:unknown):string{
-  const order=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
+  const order=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
   return JSON.stringify(order(value));
 }
 function sameBindings(task:TaskNode,prepared:PreparedDispatchKnowledge){

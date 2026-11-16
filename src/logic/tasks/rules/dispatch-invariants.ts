@@ -7,8 +7,9 @@
  * 职责边界：不启动模型、不访问文件、不签发权限；新话题上下文引用须匹配原办公室/角色，原生通道不跨任务复用，历史无协议不补造。人工保存与接续不能冒充完成。
  * 执行模型允许可选 engine，并核对 Claude Code/Codex 的协议要求；缺省字段不回写旧记录。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {z} from 'zod';
 import {candidateAccepted} from './candidate-review';
 import {hash,json} from '../../../core/platform/node/serialization';
@@ -59,7 +60,7 @@ const sameGraph=(a:GraphIdentity,b:GraphIdentity)=>a.workspaceId===b.workspaceId
 const sameAgent=(a:AgentRef,b:AgentRef)=>a.agentId===b.agentId&&a.agentInstanceId===b.agentInstanceId&&a.agentSessionId===b.agentSessionId;
 /** JSON 属性顺序不影响身份；数组顺序仍是冻结输入的一部分。 */
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:false});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:false});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 function valid(condition:unknown,message:string):asserts condition {if(!condition)fail('GRAPH_INPUT_INVALID',message)}
 function lookupTask(state:DispatchState,ref:GraphIdentity,taskId:string){return state.graphs.find(graph=>sameGraph(graph.identity,ref))?.tasks.find(task=>task.taskId===taskId)}

@@ -77,3 +77,8 @@ class N_src_core_platform_node_digest_ts["digest.ts"] {
 ## 原生互斥锁
 
 locking.ts 提供 KernelLock，使用 Windows mutex 或 POSIX flock。保留 Global\\CBIM 命名、scope/id 键、错误与进程内 held 集合；创建目录、重试、事务顺序与释放时机由消费者决定。工作区、资源、执行和反馈消费者直接导入此唯一构造器，旧锁转发入口已移除。koffi 只按固定安装包或 node_modules 路径加载；便携 Core 和前端不得导入。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.formatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

@@ -4,7 +4,7 @@
 
 ## JSON 比较
 
-`equalJson(left, right)` 调用共享 orderJsonValue，显式用 localeCompare 排列键、略去对象 undefined、保持数组顺序，再比较 JSON.stringify 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。比较策略保留在视图适配，算法与后端共享。
+`equalJson(left, right)` 调用共享 JsonUtils.orderJsonValue，显式用 localeCompare 排列键、略去对象 undefined、保持数组顺序，再比较 JSON.stringify 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。比较策略保留在视图适配，算法与后端共享。
 
 真实消费者为岗位登记、模块责任、目标接续、人工决定、人工继续五个控制器。它们原有的同类本地算法收敛到此入口；身份、版本、原请求匹配、回执合法性及未知结果处理仍归各控制器。
 
@@ -49,3 +49,8 @@ async.ts 的 AsyncGeneration 提供 capture、advance、isCurrent。每实例持
 ## 本地 JSON 记录
 
 storage.ts 的 JsonRecordStorage 注入 TextStorage、键及字节上限，每次读写直接调用端口，不缓存或恢复。read 将 null/空串视为缺失，其余按 UTF-8 上限检查后 JSON.parse；write 先序列化、检查，再 setItem；超过上限使用调用方文案，读写/序列化错误原样传播。输入和返回仍须业务校验；只适用原来将空串视为缺失的消费者。岗位与模块负责人是当前消费者，128 条数、schema/身份、损坏锁定及先更新内存后写盘顺序均留在控制器。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

@@ -111,3 +111,8 @@ memory-index 只接收已授权的完整知识搜索快照。分块保留 path/h
 ## 模块运行资源
 
 Rules 以显式 assetsRoot 加载 business、capability、connector 的 Schema；Builtins 从同一根目录内的白名单读取规范。Bridge/CLI 注入开发或 R 包中的 assets 根，所有消费者通过 rules.assetsRoot 传递。保持只读 ID、版本摘要与真实路径越界检查；不回退读取 design、不依赖开发仓库。design/business 的旧 Schema 仅为历史参考。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

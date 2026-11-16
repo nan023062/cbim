@@ -4,8 +4,9 @@
  * 设计原因：选中文件哈希不能消除命令、动态目录集合或未知工具影响；首次只支持完整成功的单文件操作及本机任务维护工具。
  * 职责边界：本模块不读文件或原生会话，调用方仍须复核当前字节、知识、受管原生历史及磁盘完整性。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {fail} from '../../../core/errors';
 import {hash,json} from '../../../core/platform/node/serialization';
 import {toolReceipt} from '../../tools/rules/receipts';
@@ -17,7 +18,7 @@ const maintenance=new Set(['cbim_task_plan','cbim_task_step','cbim_task_inspect'
 type Binding=MemberCheckpointStaged['binding'];
 function check(value:unknown,message:string):asserts value{if(!value)fail('MEMBER_CHECKPOINT_INVALID',message)}
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 /** 孤立结束或未决 proposed 不能被文件覆盖洗白；明确拒绝的调用须保留可信否决回执。 */
 function closedTools(events:readonly ArtifactEvidenceEvent[],binding:Binding,pendingId?:string){

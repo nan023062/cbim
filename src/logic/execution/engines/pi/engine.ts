@@ -15,8 +15,9 @@
  * 请求预算：可信端口启用时，启动前安装父进程代理；终态与工具授权都受可靠结算屏障约束，停止先结束实际请求。
  * 受管包的 CLI 路径在上层冻结到 process 参数；会话包身份由外层包装器核对，本适配器继续只负责 Pi 协议。
  * 超时窗口按模型增量及工具实际进展续期；重试通知不续期，停止和关闭释放本轮计时器。
+ * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {redactLiteral} from '../../../../core/utility';
+import {StringUtils} from '../../../../core/utility';
 import type {EngineRuntimePackage} from '../../rules/engine-runtime';
 import fs from 'node:fs/promises';
 import {runtimeEngineTools,nativeToolsDisabled} from '../../rules/engine-tools';
@@ -226,7 +227,7 @@ export class PiEngine implements AgentEngine {
         else if(['select','input','editor'].includes(event.method))this.rpc?.send({type:'extension_ui_response',id:event.id,cancelled:true});return;
     }
   }
-  private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?redactLiteral(value,key):value}
+  private redact(value:string){const key=this.options.llm?.apiKey;return key&&this.options.llm?.profile.auth==='api-key'?StringUtils.redactLiteral(value,key):value}
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
   async steer(message:string,images:import('../../rules/types').InputImage[],signal:AbortSignal){
     const assertReady=()=>{

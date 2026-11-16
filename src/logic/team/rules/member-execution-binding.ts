@@ -3,8 +3,9 @@
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：请求只提交预期，实际绑定由登记重建；稳定岗位、静态角色与每次执行实例不能互相代替。
  * 职责边界：不读文件、模型或凭据，不声明来源当前有效；旧缺省仅用于历史读取，新许可由领域规则核实。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {z} from 'zod';
 import {capabilitySourceRefSchema,knowledgeSourceRefSchema,sourceRefMatches} from '../../workspace/rules/knowledge-source';
 
@@ -39,7 +40,7 @@ export type OwnerExecutionBinding=z.infer<typeof ownerExecutionBindingSchema>;
 /** 将已核实绑定投影为请求预期；不生成新身份或更改原记录。 */
 export function ownerExecutionSelectionFor(binding:OwnerExecutionBinding):OwnerExecutionSelection{return {version:1,memberId:binding.memberId,expectedMemberRevision:binding.memberRevision,expectedCapabilityHash:binding.capability.capabilityHash,expectedConfigurationHash:binding.model.configurationHash,expectedOwners:binding.owners.map(({sourceRef:_,...owner})=>({...owner}))}}
 const equal=(a:unknown,b:unknown):boolean=>{
-  const order=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
+  const order=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:false});
   return JSON.stringify(order(a))===JSON.stringify(order(b));
 };
 /** 输入的 owners 次序不改变责任集合，输出仍保留原输入，不借比较裁剪或排序回包。 */

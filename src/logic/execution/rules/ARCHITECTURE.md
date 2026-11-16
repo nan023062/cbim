@@ -747,3 +747,8 @@ MainToolContext 随 ConversationAgentBinding 归属 execution/rules，供新递�
 ### 递归工具迁移收口
 
 AgentBusinessRun.request 可选保存新业务原目标与验收要求；旧记录仍可读取。新增登记核对 request 形状，重规划子调用必须保留原要求且模块不超出已核实范围；关闭不能改写原 request。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

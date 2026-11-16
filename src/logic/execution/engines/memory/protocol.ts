@@ -1,9 +1,10 @@
 /**
  * 作用定位：记忆 Loop 的模型结果与私有对话消息协议，隔离供应商 JSON 与可执行工具决定。
  * 设计原因：只接纳完整单结果、单工具调用，截断、额外调用和未知工具不能变成可执行动作；私有推理不持久化。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import {z} from 'zod';
-import {parseStrictJson} from '../../../../core/utility';
+import {JsonUtils} from '../../../../core/utility';
 const toolCall=z.object({id:z.string().min(1).max(128),type:z.literal('function'),function:z.object({name:z.string().regex(/^cbim_[a-z0-9_]+$/),arguments:z.string().max(262144)}).strict()}).strict();
 export const memoryMessageSchema=z.union([
   z.object({role:z.literal('user'),content:z.string()}).strict(),
@@ -20,7 +21,7 @@ export function memoryDecision(value:Record<string,any>,allowed:ReadonlySet<stri
   const result=memoryMessageSchema.parse({role:'assistant',content:choice.message.content??null,...(choice.message.tool_calls?{tool_calls:choice.message.tool_calls}:{})}) as Extract<MemoryMessage,{role:'assistant'}>;
   if(result.tool_calls){
     if(choice.finish_reason!=='tool_calls')throw Error('工具决定与完成原因不一致');
-    for(const call of result.tool_calls){if(!allowed.has(call.function.name))throw Error('记忆模型请求未提供的工具');const input=parseStrictJson(call.function.arguments);if(!input||typeof input!=='object'||Array.isArray(input))throw Error('记忆工具参数必须为对象')}
+    for(const call of result.tool_calls){if(!allowed.has(call.function.name))throw Error('记忆模型请求未提供的工具');const input=JsonUtils.parseStrictJson(call.function.arguments);if(!input||typeof input!=='object'||Array.isArray(input))throw Error('记忆工具参数必须为对象')}
   }else if(choice.finish_reason!=='stop'||!result.content?.trim())throw Error('记忆模型没有完整回答');
   return result;
 }

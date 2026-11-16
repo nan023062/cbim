@@ -2,9 +2,10 @@
  * 目录归属：logic/materials/service；显式资料导入与附件快照。
  * 作用定位：桌面明确导入目录、URL 指针和网页时，生成有界文本及真实来源事实。
  * 设计原因：字节/目录/摘录规则在 Main 决定，utility 负责有界流与 reader 取消；既不执行网页脚本，也不把首层清单称为完整目录。
+ * 算法入口：通过 Core ByteUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import fs from 'node:fs/promises';
-import {readBoundedBytes,ByteLimitError} from '../../../core/utility';
+import {ByteUtils, ByteLimitError} from '../../../core/utility';
 import {fail} from '../../../core/errors';
 import {hash} from '../../../core/platform/node/serialization';
 import {continuationSourceLimits,continuationSourceUrlSchema,type ContinuationSourceProof} from '../../tasks/rules/continuation-source-snapshot';
@@ -42,7 +43,7 @@ export async function readUrlSource(kind:'link'|'web',value:string,signal:AbortS
     if(!/^(text\/[a-z0-9.+-]+|application\/json)$/.test(mediaType)||mediaType.length>256)fail('ATTACHMENT_WEB_TYPE','此地址不是可读取的文本网页，请添加为链接');
     const declared=response.headers.get('content-length');if(declared&&Number(declared)>continuationSourceLimits.webResponseBytes)fail('ATTACHMENT_WEB_LIMIT','网页响应超过 1 MiB，请改为添加链接');
     let raw:Uint8Array;
-    try{raw=await readBoundedBytes(response.body,{maxBytes:continuationSourceLimits.webResponseBytes,signal:combined})}
+    try{raw=await ByteUtils.readBoundedBytes(response.body,{maxBytes:continuationSourceLimits.webResponseBytes,signal:combined})}
     catch(error){if(error instanceof ByteLimitError)fail('ATTACHMENT_WEB_LIMIT','网页响应超过 1 MiB，请改为添加链接');throw error}
     const total=raw.byteLength;let decoded:string;try{decoded=new TextDecoder('utf-8',{fatal:true}).decode(raw)}catch{fail('ATTACHMENT_WEB_ENCODING','网页不是有效 UTF-8 文本，请改为添加链接')}
     const html=mediaType==='text/html';if(html)decoded=decoded.replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi,'').replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();

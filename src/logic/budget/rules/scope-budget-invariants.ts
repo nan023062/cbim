@@ -4,15 +4,16 @@
  * 设计原因：单独保存“允许”会被后续运行误用；证明必须和唯一新增主运行或成员领取一起提交，拒绝只能记录原因，不能消费等待或改变目标。
  * 职责边界：这里核对已有证明及跨对象关系，不重新读取日志或判断模型账单；可信观察由调度层在同一事务内取得。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {fail} from '../../../core/errors';
 import type {DispatchMutation,DispatchState} from '../../dispatch/rules/dispatch-storage';
 import type {DispatchScope} from '../../tasks/rules/dispatch-scope';
 import {evaluateScopeBudget,scopeBudgetSchema,type ScopeBudgetObservation} from './scope-budget';
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const normalize=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
+const normalize=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a.localeCompare(b),omitUndefinedProperties:true});
 const equal=(left:unknown,right:unknown)=>JSON.stringify(normalize(left))===JSON.stringify(normalize(right));
 function valid(value:unknown,message:string):asserts value {if(!value)fail('GRAPH_INPUT_INVALID',message)}
 function memberRuns(state:DispatchState,scope:DispatchScope){

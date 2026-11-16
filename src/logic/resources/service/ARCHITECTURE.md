@@ -231,3 +231,8 @@ ResourceRepositoryPaths 只要求 userRoot、installRoot、protectedRoots，宿�
 RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限制原字节，显式取消挂起 reader 并释放锁/监听；保留 #70 已修复的 Node 22 信号转发缺口。取消或超时不交付半截 JSON。8 秒期限、CANCELLED/TIMEOUT/SIZE/CONNECTION/PROTOCOL 分类、令牌、仓库身份和不重试语义仍由 request 决定；基础流不接触 URL 或凭据。
 
 链接器、人才市场和业务模板共用 `ResourceRepositories` 的当前仓库。未登录使用本机目录；已连接服务器仓库沿用现有账号会话抽象。界面尚未实现的账户服务不会被本模块冒充为云上传。仓库快照绑定 `repositoryId` 与 `revision`，资源整体 JSON 最多 8 MiB、单项正文最多 2 MiB。
+
+
+## 共享算法调用边界
+
+本目录通过 Core 公开入口调用 `ByteUtils.readBoundedBytes`、`JsonUtils.formatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

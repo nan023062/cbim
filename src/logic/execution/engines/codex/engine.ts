@@ -6,8 +6,9 @@
  * 超时只统计本轮连续无进展时长；同线程旧轮通知不能续期，工具及模型增量沿共享计时器处理。
  * 职责边界：原生线程 ID 来自服务端实际回执，首次绑定后固定；异常和取消也在进程排空后补登记真实文件，故障不重放操作。
  * Codex EXE 与宿主 Pi 工具库分别接收固定包，保持账号/原生历史目录及原 RPC 进程收尾。
+ * 算法入口：通过 Core StringUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {redactLiteral} from '../../../../core/utility';
+import {StringUtils} from '../../../../core/utility';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {AgentEngine,EngineContext,EngineEvent} from '../../rules/types';
@@ -41,7 +42,7 @@ export class CodexEngine implements AgentEngine {
   private inactivity?:RunInactivityTimer;
   private done?:{resolve:(result:{status:'completed'|'cancelled'|'failed';error?:string})=>void;reject:(error:Error)=>void};
   constructor(private options:CodexOptions){}
-  private redact(text:string){const key=this.options.llm?.apiKey;return redactLiteral(text,key)}
+  private redact(text:string){const key=this.options.llm?.apiKey;return StringUtils.redactLiteral(text,key)}
   private fail(error:Error){this.fatal??=Error(this.redact(error.message));this.tools?.stop();if(!this.stopped)this.done?.reject(this.fatal)}
   private async emit(event:EngineEvent){this.inactivity?.observe(event);try{await this.context!.emit(JSON.parse(this.redact(JSON.stringify(event))))}catch(error){this.fail(error instanceof Error?error:Error(String(error)));throw error}}
   async start(context:EngineContext){

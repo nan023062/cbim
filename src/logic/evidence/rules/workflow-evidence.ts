@@ -8,8 +8,9 @@
  * 设计原因：工具调用事实必须与固定模块约定、当前运行及最后副作用的真实结束边界一致；并发早读不能替代写入后的验证，不能相信模型自报 pass 或只检查内存状态。
  * 职责边界：仅作确定性记录校验；选定 必验文件的当前字节另由平台端口复核，不执行脚本、不签发权限或宣称覆盖整个模块。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {selectCodeCheck,verifyCodeChecks,type CodeCheckRecord} from './code-check';
 import {fail} from '../../../core/errors';
 import {hash} from '../../../core/platform/node/serialization';
@@ -35,7 +36,7 @@ export interface WorkflowRunIdentity {workspaceId:string;taskId:string;runId:str
 export interface WorkflowProgressContext {bindings:WorkflowContractBinding[];task:Pick<TaskSpec,'goal'|'acceptance'>;identity:WorkflowRunIdentity}
 function valid(value:unknown,code:string,message:string):asserts value{if(!value)fail(code,message)}
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered=(value:unknown):unknown=>orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
+const ordered=(value:unknown):unknown=>JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true});
 const same=(a:unknown,b:unknown)=>JSON.stringify(ordered(a))===JSON.stringify(ordered(b));
 const hex=(value:unknown)=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 /** 单次操作的分类由真实注册端口提供；本函数不从模型参数猜测副作用。 */

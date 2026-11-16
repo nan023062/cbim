@@ -4,12 +4,13 @@
  * 算法边界：复用后端 orderJsonValue，保留字符序、原 undefined 规则及历史序列化字节；业务身份与指纹内容仍在本模块。
  * 设计原因：菜单、正文预览和时钟不是批准对象；只对固定目标、候选、选择观察与不可移除限制计算 basis。
  * 职责边界：纯函数不读取日志、不认证 actor；调用方必须先从可信来源重建事实，哈希本身不授予任何权限。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
-import {orderJsonValue} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {hash} from '../../../core/platform/node/serialization';
 import {humanDecisionProofSchema,type HumanDecisionProof,type HumanDecisionPreview} from './human-decisions';
 
-function normalized(value:unknown):unknown{return orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true})}
+function normalized(value:unknown):unknown{return JsonUtils.orderJsonValue(value,{compareKeys:(a,b)=>a<b?-1:a>b?1:0,omitUndefinedProperties:true})}
 /** 去除候选菜单及显示正文，保留用于决定的固定事实；未就绪预览不能签发可提交证明。 */
 export function humanDecisionProof(preview:HumanDecisionPreview):HumanDecisionProof{
   const {workspaceId,rootSessionId,scopeId}=preview.identity;

@@ -2,6 +2,7 @@
  * 作用定位：ResourceRepositories：统一三类资源的仓库选择、账号占位与共享生命周期。
  * 设计原因：链接器、人才市场和模板共用当前身份的仓库；显式共享生成短期读写/只读凭据，代际退役会取消旧读取，登录占位不被当成账号连接。
  * 程序更新缓存与安装/用户数据一并排除在可配置资源仓库之外；发布代码不能成为可编辑业务资料库。
+ * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,7 +13,7 @@ import {z} from 'zod';
 export interface ResourceRepositoryPaths {readonly userRoot:string;readonly installRoot:string;readonly protectedRoots?:readonly string[]}
 import {atomic} from '../../../core/platform/node/files';
 import {fail} from '../../../core/errors';
-import {formatJson as json} from '../../../core/utility';
+import {JsonUtils} from '../../../core/utility';
 import {LocalRepository,type RepositoryStore,saveSchema,removeSchema} from './resource-store';
 import {RemoteRepository,repositoryUrl,serveRepository} from './resource-http';
 import type {RepositoryStatus,RepositorySession,ResourceLibrarySnapshot} from '..';
@@ -69,7 +70,7 @@ export class ResourceRepositories{
       if(root.split(/[\\/]/).some(part=>part.toLowerCase()==='.cbim'))fail('PATH','资源仓库不能放在项目 .cbim 正式知识目录中');
       const repo=new LocalRepository(root),snapshot=await repo.initialize();config={mode:'local',location:root,repositoryId:snapshot.repositoryId};
     }else{const url=repositoryUrl(request.location),target=new URL(url),ownHosts=new Set(['localhost','127.0.0.1','[::1]',...Object.values(networkInterfaces()).flatMap(list=>list?.map(n=>n.address)||[])]);if(this.sharing&&Number(target.port)===this.sharing.port&&ownHosts.has(target.hostname))fail('SELF_CONNECTION','此地址属于本窗口正在共享的仓库，请继续使用本地模式；可用另一个客户端连接');const snapshot=await new RemoteRepository(url,request.token).read();config={mode:'remote',location:url,repositoryId:snapshot.repositoryId,token:request.token}}
-    if(config.mode==='local'){await atomic(this.settingsFile,json(config));this.localConfig=config}const oldSharing=this.retireSharing();this.config=config;this.configError=undefined;await oldSharing?.close();return this.status();
+    if(config.mode==='local'){await atomic(this.settingsFile,JsonUtils.formatJson(config));this.localConfig=config}const oldSharing=this.retireSharing();this.config=config;this.configError=undefined;await oldSharing?.close();return this.status();
   }
   read(){return this.serial(async()=>{const result=await this.store().read();this.identity(result.repositoryId);return result})}
   save(args:unknown){const request=saveSchema.parse(args);return this.serial(async()=>{this.identity(request.repositoryId);return this.store().save(request)})}

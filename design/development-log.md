@@ -1,3 +1,17 @@
+## 2026-11-16 — #94 成员坏回包验证迁入原调用问答
+
+基线 639948f3，Issue #94 / PR #96。迁移 member-tool-contract-pi 两项真实 Pi 集成：只读后求助、写入及真实基线采集后求助。确定性供应商通过 cbim_agent_call/cbim_agent_reply 执行，同一个子 task/run 内暂停和回答；QuestionTools 的实际 request 已消费父级答案后，仅损坏传给严格输出包装器的返回值。
+
+保留验证：原问题与正确答案只记一次、错误输出不泄漏损坏字段、原生会话记录 TOOL_OUTPUT_INVALID、实际 read/write 与基线采集、未准备交付时不得得到 verified、无旧派工图/第二成员运行、重启后文件时间/原生与 canonical 日志/问答请求计数不变。新设计不再要求旧 task.help_requested/task.checkpoint_requested 暂存后结束轮次；写后“checkpoint”场景现在是原调用内问答，不能据此宣称已支持跨进程恢复等待。
+
+测试夹具显式冻结含文件范围和交付证据要求的 Workflow，避免无约束 Workflow 的结构核验被误当作交付要求；采集版本读取真实 cbim_task_inspect，不硬编码写前 plan.version。公共 seedMainToolContract 新增可选 Workflow 正文参数，原消费者缺省行为不变。
+
+验证：
+- pnpm exec vitest run tests/member-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-member-output.json：help 通过，checkpoint 暴露旧固定版本并失败。
+- 修正为真实 inspect 版本后 pnpm exec vitest run tests/member-tool-contract-pi.test.ts -t checkpoint --reporter=default --reporter=json --outputFile=build/recursive-member-output-checkpoint.json：checkpoint 通过；help 未重跑，按明确选择器排除。两项各有通过证据，无永久 skip。
+- pnpm check:test-modules：540 文件边界通过，归属不变。本切片未修改产品源码或架构依赖。
+- 全量 CI、桌面安装/升级、合并与公开发布尚未完成；其余迁移仍跟踪 Issue #94。
+
 ## 2026-11-15 — #94 自动派工/结果回流测试迁入递归 Agent 链路
 
 基线 836173f3，继续用户授权的 PR #96 / 0.1.21 发布修复。原 `application-collaboration-pi.test.ts` 仍用 cbim_dispatch_task 识别主 Agent，等待额外的 member-results / goal-repair 轮次；新设计通过同一个主运行的普通工具返回结果。

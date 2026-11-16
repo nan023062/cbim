@@ -8,7 +8,7 @@ const value=(body:Request,id:string)=>{const m=body.messages.find(m=>m.role==='t
 export const pauseQueuedGoal='PAUSE_QUEUED_FOLLOWUP: 此独立要求不能充当暂停问题的答复';
 export const pauseQuestion={questions:[{question:'已保存 A 的真实文件依据，是否继续原调用并核实后继？',options:[{label:'继续核实'},{label:'停止'}]}]};
 /** 仅脚本化模型输出；暂停保持实际 Pi 原 task/run，依赖数据经过真实文件工具传递。 */
-export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestion=false,endWhileWaiting=false){
+export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestion=false,endWhileWaiting=false,invalidateByCommand=false){
  const queued:Request[]=[],main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],byChild:Request[][]=[[],[],[]];
  let selection:OwnerExecutionSelection|undefined,moduleId='',childIndex=-1,release!:()=>void;
  const gate=new Promise<void>(resolve=>release=resolve);if(!holdAfterAnswer)release();
@@ -30,14 +30,15 @@ export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestio
    else if(turn===3&&secondQuestion){state.waitingAgain=value(body,'pause-answer');assert.equal(state.waitingAgain.status,'waiting');tool('pause-relay-again','cbim_ask_user_question',state.waitingAgain.questions)}
    else if(turn===4&&secondQuestion)tool('pause-answer-again','cbim_agent_reply',{callId:'pause-call-0',questionId:state.waitingAgain.questionId,result:value(body,'pause-relay-again')});
    else if(turn===(secondQuestion?5:3)){state.result=value(body,secondQuestion?'pause-answer-again':'pause-answer');state.results.push(state.result);if(state.result.error)reply('原成果变化或执行失败，后继未启动。');else{assert.equal(state.result.status,'completed');call(1)}}
-   else if(turn===(secondQuestion?6:4)){const result=value(body,'pause-call-1');assert.equal(result.status,'completed');state.results.push(result);call(2)}
+   else if(turn===(secondQuestion?6:4)){const result=value(body,'pause-call-1');state.results.push(result);if(result.error)reply('后继调用条件已变化，未切换岗位或模型执行。');else{assert.equal(result.status,'completed');call(2)}}
    else if(turn===(secondQuestion?7:5)){const result=value(body,'pause-call-2');assert.equal(result.status,'completed');state.results.push(result);reply('原调用已完成，三个阶段的真实依据已返回。')}
    else throw Error('Unexpected main replay '+turn);
   }else{
-   assert.ok(childIndex>=0);const index=childIndex,requests=byChild[index],actualTurn=requests.length,turn=index===0&&secondQuestion&&actualTurn>=8?actualTurn-2:actualTurn;
+   assert.ok(childIndex>=0);const index=childIndex,requests=byChild[index],actualTurn=requests.length,turn=index===0&&secondQuestion&&actualTurn>=8?actualTurn-2:index===0&&invalidateByCommand&&actualTurn>=5?actualTurn-1:actualTurn;
    requests.push(body);member.push(body);sequence.push('child'+index+':'+turn);
    if(index===0){
-    if(secondQuestion&&actualTurn===6)tool('pause-ask-again','cbim_ask_user_question',{questions:[{question:'原 A 已重新读取，是否继续最终交付？',options:[{label:'继续核实'},{label:'停止'}]}]});
+    if(invalidateByCommand&&actualTurn===4)tool('pause-unsafe-command','bash',{command: `node -e "require('fs').appendFileSync('${data.files[0]}','UNSAFE_AFTER_CAPTURE')"`});
+    else if(secondQuestion&&actualTurn===6)tool('pause-ask-again','cbim_ask_user_question',{questions:[{question:'原 A 已重新读取，是否继续最终交付？',options:[{label:'继续核实'},{label:'停止'}]}]});
     else if(secondQuestion&&actualTurn===7){if(value(body,'pause-ask-again').cancelled)reply('已放弃继续，不提交完成交付。');else tool('pause-last-read','read',{path:data.files[0]})}
     else if(turn===0)tool('pause-plan','cbim_task_plan',{expectedVersion:0,goal:'按原调用核实阶段 '+index,acceptance:['真实文件与原采集字节一致'],reason:'保留实际文件依据',steps:[{id:'verify',title:'核实原文件',owner:'执行者'}]});
     else if(turn===1)tool('pause-write','write',{path:data.files[0],content:data.facts[0]});
@@ -45,8 +46,8 @@ export async function recursivePauseProvider(holdAfterAnswer=false,secondQuestio
     else if(turn===3)tool('pause-capture','cbim_task_artifact_capture',{expectedTaskProgressVersion:2,sourceToolCallIds:['pause-write','pause-read']});
     else if(turn===4){assert.equal(value(body,'pause-capture').state,'captured');tool('pause-ask','cbim_ask_user_question',pauseQuestion)}
     else if(turn===5){state.continued=true;await gate;tool('pause-reread','read',{path:data.files[0]})}
-    else if(turn===6)tool('pause-step','cbim_task_step',{expectedVersion:2,id:'verify',state:'reported_done',evidenceIds:[secondQuestion?'pause-last-read':'pause-reread']});
-    else if(turn===7)tool('pause-delivery','cbim_delivery_prepare',{expectedVersion:3,summary:'已在原调用中复核',limitations:['需主调用验证原采集字节']});
+    else if(turn===6)tool('pause-step','cbim_task_step',{expectedVersion:invalidateByCommand?3:2,id:'verify',state:'reported_done',evidenceIds:[secondQuestion?'pause-last-read':'pause-reread']});
+    else if(turn===7)tool('pause-delivery','cbim_delivery_prepare',{expectedVersion:invalidateByCommand?4:3,summary:'已在原调用中复核',limitations:['需主调用验证原采集字节']});
     else if(turn===8)reply('原文件读取与交付完成。');
     else throw Error('Unexpected paused child replay '+turn);
    }else{

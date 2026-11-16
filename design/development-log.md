@@ -3286,3 +3286,11 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - topic-interruption 的真实 Pi 验证改为显式停止原主循环再 resume 对话；继续前重新读取实际文件，不重建旧话题重规划；唯一已完成子调用身份和 canonical/native 不变。旧话题中断命令的兼容服务测试仍保留。
 - scope-continuation 四项迁移到原工具提问/答复：完成后重开、二次求助的旧题拒绝、答案已接收后停止、独立排队要求不作为答案且仅原任务结束后执行。未把进程内暂停包装成重启恢复旧检查点。
 - build/recursive-interruption.json 1/1、build/recursive-continuation.json 4/4 通过；pnpm typecheck 与 pnpm check:test-modules 通过。共享暂停供应商仅对明确排队标识响应额外根请求，正常子调用路径保留；历史默认 activeInputProvider 行为未改。
+
+
+## 2026-11-16：检查点退出与暂停期间配置变化（Issue #94 / PR #96）
+
+- member-checkpoint 四项迁移为同一递归调用的完成、停止、关闭重开及命令使旧采集失效。真实 bash 修改采集后的文件，后续步骤与交付均成功保存，但原采集仍被 ARTIFACT_BASELINE_STALE 拒绝；不靠失败步骤或模型假报来制造拒绝。
+- owner-execution-checkpoint 三项改为原调用冻结负责人/模型、暂停时换负责人、答复后改模型。已经启动的调用继续使用原冻结身份与 4096 请求上限；下一次调用分别被 AGENT_BUSINESS_OWNER / AGENT_CONFIGURATION_CHANGED 拒绝，不接管或切换执行。
+- 首次 checkpoint 测试将尚未封口 canonical 的读取投影误认为实时 running，改为检查持久 active 登记、真实在途问答及无终态事件；命令失效用例的进度版本增加一，确保拒绝来自旧采集而非未提交交付。build/recursive-checkpoint-exit-followup.json 3/4，build/recursive-checkpoint-command.json 补跑 1/1。owner 初轮 2/3，按冻结在途/新调用复核的真实契约修正断言后 build/recursive-owner-pause-change.json 1/1。pnpm typecheck、pnpm check:test-modules 通过。
+- 完整 CI 43798125917（30a98c15）结束失败：分片 1 为 1110/22/0，分片 2 为 868/13/0，分片 4 为 788/18/1（通过/失败/待定）；分片 3 达 30 分钟任务上限，仅留下选择清单和执行日志，无完整 JSON。不能给出全量准确失败总数，也不把本地修复从旧 CI 数字相减冒充当前结果。制品与日志留在 build/ci-43798125917。

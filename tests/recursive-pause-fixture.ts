@@ -10,8 +10,8 @@ import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import type {PendingQuestion} from '../src/logic/tools/rules/questions';
 
 /** 真实应用集成夹具：仅本地模型输出可控，不构造运行状态或旧派工图。 */
-export async function prepareRecursivePause(secondQuestion=false,holdAfterAnswer=false){
- const f=await fixture(),provider=await recursivePauseProvider(holdAfterAnswer,secondQuestion);let app=f.app;
+export async function prepareRecursivePause(secondQuestion=false,holdAfterAnswer=false,invalidateByCommand=false){
+ const f=await fixture(),provider=await recursivePauseProvider(holdAfterAnswer,secondQuestion,false,invalidateByCommand);let app=f.app;
  try{
   const {entry}=await seedMemberCheckpoint(app,f.a,provider);
   const start=await app.dispatch('loop.chat',{id:entry.id,message:'依次完成 A、B、C，在 A 原调用内暂停求助',options:{permission:'execute',turnTimeoutMs:60000}});

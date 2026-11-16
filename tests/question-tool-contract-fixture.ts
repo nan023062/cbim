@@ -12,7 +12,7 @@ import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execu
 import {registerExplicitFixtureOwner} from './explicit-owner-fixture';
 
 export async function questionWait(check:()=>Promise<boolean>,label:string,timeout=40000){const until=Date.now()+timeout;while(Date.now()<until){if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('提问工具验收等待超时：'+label)}
-export const questionRun=(user:string,workspaceId:string,taskId:string,runId:string)=>new FileRunStorage().read(path.join(user,workspaceId,'dispatch','runs','tasks',taskId,runId));
+export const questionRun=(user:string,workspaceId:string,taskId:string,runId:string)=>new FileRunStorage().read(path.join(user,workspaceId,'loop-engine','tasks',taskId,runId));
 export async function seedQuestionContract(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
   await fs.mkdir(project,{recursive:true});await fs.writeFile(path.join(project,'question-input.txt'),data.fact);
   const models=await app.models.save({profile:{name:'Local question contract fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:data.model,enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});

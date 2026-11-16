@@ -1,3 +1,14 @@
+## 2026-11-16 — #94 原调用求助经主 Agent 转交用户
+
+question-tool-contract 的四种真实 Pi 情况迁入同一主运行：主偏好问题 → cbim_agent_call → 子 Agent 原调用 waiting → 主 Agent 向用户转交原题 → cbim_agent_reply → 原子执行继续。子 Agent 没有独立用户问题卡；旧 dispatch.questions/answerQuestion 拒绝该身份。取消问题返回 cancelled 并由父级转交，与停止整个任务不同；坏回包仅在真实答案已消费后注入，保留 TOOL_OUTPUT_INVALID 和不重问。主/子原日志、唯一登记、实际文件证据、重启不重放仍检查。
+
+问答回执不能完成业务步骤，真实 read 回执才可进入步骤证据与 delivery。退出旧 goal_plan/goal_review 二次主轮；result_check 核验不冒充人工验收。旧 GoalTools 严格证据校验仍由原服务/契约套件负责。此次只改测试，不修改产品行为。
+
+验证：
+- pnpm exec vitest run tests/question-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-question-relay-fixed.json：stop 通过，其他 3 项因夹具错误假设证据错误码必须包含 EVIDENCE 失败；实际工具明确返回“证据不存在、已过期或不属于本轮”。
+- 改为匹配实际拒绝语义后，-t 'complete|cancel-question|invalid-output'（build/recursive-question-relay-answers.json）3/3 通过。四种情况各有通过证据，无永久跳过；初次误将旧入口当空列表的错误也已改为明确拒绝断言。
+- pnpm typecheck、pnpm check:test-modules 通过。完整 CI /桌面安装升级/合并发布未通过。
+
 ## 2026-11-16 — #94 修复递归业务 Agent 历史归档与重开
 
 基线 ac264383，CI 43786781920 的 main-session-instance-pi 仍等待旧二次主轮。迁移该真实 Pi 场景后暴露产品缺口：AgentHistoryService、索引契约和 WorkspaceRuntimeMonitor 都把 memberBinding 等同于旧 dispatch/runs 路径，导致新 loop-engine 业务子运行归档失败、全局 complete=false。

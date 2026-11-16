@@ -3177,3 +3177,10 @@ coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际�
 - pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员' --reporter=default --reporter=json --outputFile=build/recursive-request-budget.json：2 通过，1 旧拒绝计数断言失败。改为核对实际父子共同门禁的两次拒绝，而非只计旧成员下一轮。
 - pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员.*(member-block|complete)' --reporter=default --reporter=json --outputFile=build/recursive-request-budget-fixed.json：2/2 通过；main-block 已通过且不受结果复核断言变化影响，未重复。
 - pnpm check:test-modules 通过；无产品源码变化。持久等待补充预算用例尚未迁移，不将以上三项报告为整个文件或全量 CI 通过。
+
+
+## 2026-11-16 · #94 Agent 数据契约的架构验收缺口
+- CI 43790338820 的 core-layer-contracts 仍把 agents/contracts 限定为装配层可读，和已登记的细粒度公开引用冲突；用量及证据服务因此被误判。逐项核实该文件仅依赖 Zod 和规则类型，没有引擎或应用实现。
+- 只允许 agents/contracts 这个明确入口；Agent 对象、问答协调及聚合入口仍限制在 execution/assembly。同时将 contracts 纳入纯规则的禁止反向导入检查，并明确禁止 assembly，不能通过开放整个目录掩盖依赖。
+- pnpm exec vitest run tests/core-layer-contracts.test.ts --reporter=default --reporter=json --outputFile=build/recursive-contract-boundary-final.json：2/2 通过；新增边界断言后复验，无产品代码改动。
+- ee9c3047 的 CI 43790338820 四片报告为 782/31/1、771/36/0、1135/23/1、866/42/0（通过/失败/待执行）；报告记录 132 失败，片 1/3/4 缺 terminal-state，不是完整通过。全部报告已下载 build/ci-43790338820/。后续提交修复不能倒填该次结果。

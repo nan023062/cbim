@@ -4,13 +4,13 @@ import path from 'node:path';
 
 it('领域规则不反向导入服务、具体引擎、Bridge、View 或 Electron，包括类型依赖',()=>{
   const walk=(directory:string):string[]=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(directory,e.name)):[path.join(directory,e.name)]);
-  const files=walk('src/logic').filter(p=>p.endsWith('.ts')&&/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(path.resolve(p).replaceAll('\\','/')));
+  const files=walk('src/logic').filter(p=>p.endsWith('.ts')&&(/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(path.resolve(p).replaceAll('\\','/'))||path.resolve(p).replaceAll('\\','/').endsWith('/logic/agents/contracts.ts')));
   expect(files.length).toBeGreaterThan(0);
   for(const file of files){
     const source=fs.readFileSync(file,'utf8');
     for(const match of source.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g)){
       const target=match[1].startsWith('.')?path.resolve(path.dirname(file),match[1]).replaceAll('\\','/'):match[1];
-      expect(target,`${file}: ${match[1]}`).not.toMatch(/(?:\/src\/(?:bridge|view)\/)|(?:\/src\/logic\/[^/]+\/(?:service|engines|storage|settings|platform|runtime)\/)|^electron(?:\/|$)/);
+      expect(target,`${file}: ${match[1]}`).not.toMatch(/(?:\/src\/(?:bridge|view)\/)|(?:\/src\/logic\/[^/]+\/(?:service|engines|storage|settings|platform|runtime|assembly)\/)|^electron(?:\/|$)/);
     }
   }
 });
@@ -30,8 +30,8 @@ it('编排仅在 execution/assembly 选择具体引擎，不直接取得应用�
       const target=path.resolve(path.dirname(file),match[1]).replaceAll('\\','/');
       // engines 的便携公开入口仅含静态描述与选型规则；具体适配器仍限制在 execution/assembly。
       const pure=['core/utility','core/errors','core/json','core/platform/node/serialization','logic/models','logic/engines','logic/web','logic/feedback'].some(p=>target===root+'/'+p);
-      // 递归装配仅引用已登记的 Agent 值对象、问答协调和契约；不开放整个目录。
-      const agentBoundary=assembly&&(target===root+'/logic/agents'||['agent','exchange','contracts'].some(name=>target===root+'/logic/agents/'+name));
+      // 公共父子引用是无运行时依赖的细粒度数据契约；只有装配可引用 Agent 对象与问答协调。
+      const agentBoundary=target===root+'/logic/agents/contracts'||assembly&&(target===root+'/logic/agents'||['agent','exchange'].some(name=>target===root+'/logic/agents/'+name));
       expect(pure||agentBoundary||/\/logic\/[^/]+\/(rules|ports)(\/|$)/.test(target)||orchestration(target)||(assembly&&target.startsWith(root+'/logic/execution/engines/')),`${file}: ${match[1]}`).toBe(true);
     }
   }

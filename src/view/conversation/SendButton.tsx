@@ -21,6 +21,7 @@ interface SendButtonProps
   /** 持久等待没有运行可停止，明确显示取消开放目标。 */
   stopLabel?: string
 }
+
 export const SendButton = forwardRef<HTMLButtonElement, SendButtonProps>(function SendButton({ disabled, onClick, isStreaming = false, queued = false, continuing = false, stopLabel }, ref)
 {
   const currentAction = isStreaming ? 'stop' : continuing ? 'continue' : queued ? 'queue' : 'send',

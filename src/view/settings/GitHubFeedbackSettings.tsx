@@ -54,6 +54,7 @@ export function GitHubFeedbackSettings({ onDirtyChange }: { onDirtyChange?: (dir
       setBusy(false)
     }
   }
+
   const unsaved = !!status && !status.flow && !status.connected && (clientId !== status.config.clientId || owner !== status.config.owner || repo !== status.config.repo || visibility !== status.config.visibility);
 
   useEffect(() => { onDirtyChange?.(unsaved); return () => onDirtyChange?.(false) }, [unsaved, onDirtyChange]);

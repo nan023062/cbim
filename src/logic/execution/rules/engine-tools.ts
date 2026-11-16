@@ -11,6 +11,7 @@ export interface EngineToolSchema
 
   inputSchema: Record<string, unknown>
 }
+
 /** 已发布引擎包直接消费 list/call；保留固定协议名，不改动模型可见的工具名称。 */
 export interface EngineToolsPort
 {
@@ -19,6 +20,7 @@ export interface EngineToolsPort
   /** 身份来自已授权的原生工具调用，不能从模型参数推断。 */
   call(name: string, args: Record<string, unknown>, signal: AbortSignal, toolCallId?: string): Promise<unknown>;
 }
+
 /** 一轮运行的可信能力声明；id 仅用于诊断，指令不能授予工具目录以外的权限。 */
 export interface EngineCapability
 {
@@ -31,14 +33,17 @@ export interface EngineCapability
   /** 本轮只能使用显式能力工具时关闭全部原生文件与命令，不能由模型输入更改。 */
   disableNativeTools?: boolean;
 }
+
 export interface EngineCapabilities
 {
   capabilities?: readonly EngineCapability[]
 }
+
 export function nativeToolsDisabled(context: EngineCapabilities): boolean
 {
   return context.capabilities?.some(capability => capability.disableNativeTools === true) ?? false;
 }
+
 /** 启动时捕获一次工具路由；失败不会重试写操作，也不会注册未注入的成员能力。 */
 export async function runtimeEngineTools(context: EngineCapabilities, knowledge: EngineToolsPort): Promise<EngineToolsPort>
 {

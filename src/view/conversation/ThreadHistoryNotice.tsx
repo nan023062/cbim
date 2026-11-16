@@ -12,6 +12,7 @@ export function threadResumeRun(runs: readonly RunSummary[], resumeRunId?: strin
 {
   return resumeRunId ? runs.find(run => run.runId === resumeRunId) : undefined
 }
+
 /** 解释空闲会话的续接阻断；发送资格和提示共用判断，不能因旧轮次可读而回退。 */
 export function threadRecoveryReason(run?: RunSummary): string | undefined
 {
@@ -33,6 +34,7 @@ export function threadRecoveryReason(run?: RunSummary): string | undefined
 
   return undefined;
 }
+
 /** 导航不触发模型或修改原执行；新对话由外壳创建，原页签仍持有草稿和附件。 */
 export function ThreadRecoveryNotice({ reason, disabled, onInspect, onNewConversation }: { reason: string; disabled: boolean; onInspect: () => void; onNewConversation: () => void })
 {
@@ -43,6 +45,7 @@ export function ThreadRecoveryNotice({ reason, disabled, onInspect, onNewConvers
     <button disabled={disabled} onClick={onNewConversation}><Icon name="conversation" size={16} />新建对话继续</button>
   </section>;
 }
+
 export function ThreadHistoryNotice({ issues }: { issues: ConversationThreadView['issues'] })
 {
   if (!issues.length)

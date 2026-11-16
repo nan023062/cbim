@@ -26,6 +26,7 @@ export function waitingHumanDecisions(scope: DispatchScope, waitId = scope.wait?
 
   return [...latest.values()].filter(record => record.proof.source.waitId === waitId).sort((a, b) => a.criterionId < b.criterionId ? -1 : a.criterionId > b.criterionId ? 1 : 0);
 }
+
 /** 只有当前输入版本的最近接续可用；文本补充与之后的等待不自动借用更早的人工意图。 */
 export function currentHumanContinuation(scope: DispatchScope): ScopeHumanContinuation | undefined
 {
@@ -33,6 +34,7 @@ export function currentHumanContinuation(scope: DispatchScope): ScopeHumanContin
 
   return latest && isHumanContinuation(latest) && scope.goal && latest.inputRevision === goalInputRevision(scope.goal) ? latest : undefined;
 }
+
 /** 证据与返工引用共用身份门禁；返回意见本身，接受或拒绝用途由调用方进一步限制。 */
 export function referencedHumanDecision(scope: DispatchScope, reference: { decisionId: string; continuationId: string }): HumanDecisionRecord | undefined
 {
@@ -50,6 +52,7 @@ export function referencedHumanDecision(scope: DispatchScope, reference: { decis
 
   return record;
 }
+
 /** 接受不能跨业务主体变更；拒绝/补证可触发新分工，但不据此满足人工项。 */
 export function humanContinuationSubjectMatches(scope: DispatchScope): boolean
 {

@@ -57,10 +57,12 @@ export class EnginePackages implements EngineRuntimeResolver
   constructor(private readonly file: string, private readonly artifacts: EngineArtifactsPort)
   {
   }
+
   Init()
   {
     return this.initialized ??= (async () => { try { const stat = await fs.lstat(this.file); if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024) throw Error('本机引擎安装清单无效'); this.state = stateSchema.parse(JSON.parse(await fs.readFile(this.file, 'utf8'))) } catch (error: any) { if (error.code !== 'ENOENT') throw error } if (new Set(this.state.entries.map(item => item.kind)).size !== this.state.entries.length || this.state.entries.some(item => new Set(item.installed).size !== item.installed.length || item.active && !item.installed.includes(item.active))) throw Error('本机引擎安装清单冲突'); })()
   }
+
   private async Save(next: State)
   {
     next.revision = this.state.revision + 1;
@@ -69,6 +71,7 @@ export class EnginePackages implements EngineRuntimeResolver
 
     this.state = next
   }
+
   private Trusted(artifact: EngineArtifact)
   {
     const descriptor = engineDescriptor(loopEngineSchema.parse(artifact.kind));
@@ -79,6 +82,7 @@ export class EnginePackages implements EngineRuntimeResolver
 
     return artifact;
   }
+
   private Closure(root: EngineArtifact, available: EngineArtifact[])
   {
     const result: EngineArtifact[] = [],
@@ -93,6 +97,7 @@ export class EnginePackages implements EngineRuntimeResolver
 
     return result;
   }
+
   /** 包服务核验和复用既有缓存；安装与真实首次运行都通过此入口报告短期状态。 */
   private async Prepare(artifact: EngineArtifact)
   {
@@ -118,6 +123,7 @@ export class EnginePackages implements EngineRuntimeResolver
       this.preparations.delete(progress)
     }
   }
+
   async Read(): Promise<EnginePackageSettings>
   {
     await this.Init();
@@ -128,10 +134,12 @@ export class EnginePackages implements EngineRuntimeResolver
 
     return { managed: true, revision: this.state.revision, items };
   }
+
   async List()
   {
     return (await this.Read()).items
   }
+
   async Check()
   {
     await this.Init();
@@ -140,17 +148,20 @@ export class EnginePackages implements EngineRuntimeResolver
 
     return this.List()
   }
+
   /** 用户显式动作；整个依赖闭包准备完成才改活动指针，其他引擎的活动版本不随依赖下载改变。 */
   Install(kind: LoopEngine, expected?: { revision: number; identity: string })
   {
     return this.queue.Run(async () => { await this.Init(); this.AssertRevision(expected?.revision); return this.InstallNow(kind, true, expected?.identity) })
   }
+
   private AssertRevision(revision?: number)
   {
     if (revision !== undefined && revision !== this.state.revision)
 
       throw Error('引擎设置已变化，请刷新后再操作')
   }
+
   private async InstallNow(kind: LoopEngine, explicit: boolean, expectedIdentity?: string)
   {
     loopEngineSchema.parse(kind);
@@ -247,11 +258,13 @@ export class EnginePackages implements EngineRuntimeResolver
       this.busy.delete(kind)
     }
   }
+
   /** 停用与移除均拒绝正在运行的引用和活动依赖；移除不删除历史包字节或模型设置。 */
   SetEnabled(kind: LoopEngine, enabled: boolean, remove = false, revision?: number)
   {
     return this.queue.Run(async () => { await this.Init(); this.AssertRevision(revision); loopEngineSchema.parse(kind); if (!enabled) { if ([...this.references].some(([key, count]) => key.startsWith(kind + ':') && count > 0)) throw Error('引擎仍有运行引用，请先结束任务'); const versions = await this.artifacts.List(); for (const item of this.state.entries) { if (item.kind === kind || !item.enabled || !item.active) continue; const artifact = versions.available.find(v => v.kind === item.kind && v.identity === item.active); if (artifact && this.Closure(artifact, versions.available).some(v => v.kind === kind)) throw Error('仍被启用的 ' + item.kind + ' 引擎依赖，请先停用它') } } const next = structuredClone(this.state); let item = next.entries.find(value => value.kind === kind); if (!item) { item = { kind, enabled, installed: [] }; next.entries.push(item) } item.enabled = enabled; if (remove) delete item.active; await this.Save(next); })
   }
+
   /** 每次装配固定活动版本及其准确依赖。升级不会改变已返回地址；缺包明确失败，不改选 latest。 */
   async ResolveEngine(raw: string): Promise<EngineRuntimePackage>
   {

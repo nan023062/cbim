@@ -32,6 +32,7 @@ async function directory(home: string, name: string)
 
   return root
 }
+
 async function read(root: string, file: string, limit: number)
 {
   if (path.dirname(file) !== root || await fs.realpath(file) !== file)
@@ -93,6 +94,7 @@ async function read(root: string, file: string, limit: number)
     await handle.close()
   }
 }
+
 async function create(file: string, value: string)
 {
   const handle = await fs.open(file, 'wx', 0o600);
@@ -108,6 +110,7 @@ async function create(file: string, value: string)
     await handle.close()
   }
 }
+
 /** 每轮独占现有宿主租约保护的会话；不修复尾行、不截断旧历史，也不重放其中的调用。 */
 export class MemorySession
 {
@@ -121,6 +124,7 @@ export class MemorySession
 
     this.messages = messages
   }
+
   static async Open(home: string, context: EngineContext)
   {
     const root = await directory(home, 'sessions'),
@@ -223,6 +227,7 @@ export class MemorySession
 
     return new MemorySession(id, file, root, text, []);
   }
+
   /** 每条先同步到磁盘；失败不尝试重写。模型和工具只消费已经保存的消息。 */
   async Append(entry: { type: 'turn.started'; runId: string } | { type: 'turn.completed'; runId: string } | { type: 'message'; message: MemoryMessage })
   {
@@ -269,12 +274,14 @@ export class MemorySession
       this.messages.push(structuredClone(entry.message));
   }
 }
+
 /** 完整缓存以不可变 key 单独存储；缺失才生成，损坏直接报告，不自行删除或循环下载/重建。 */
 export class MemoryIndexCache
 {
   constructor(private readonly home: string)
   {
   }
+
   async Load(plan: MemoryIndexPlan): Promise<MemoryIndex | undefined>
   {
     const root = await directory(this.home, 'memory-index'),
@@ -303,6 +310,7 @@ export class MemoryIndexCache
 
     return finishMemoryIndex(plan, value.vectors);
   }
+
   /** 完整临时文件同步后原子落盘；磁盘失败不影响正式知识。旧代保留，缓存清理留给后续显式管理。 */
   async Save(index: MemoryIndex)
   {

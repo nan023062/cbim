@@ -74,6 +74,7 @@ export interface ProgressManifestPort
 
   VerifyCurrent(record: OutputManifestRecord): Promise<void>
 }
+
 export const outputManifestQuerySchema = artifactReportInputSchema.omit({ baselineId: true }).extend({ manifestId: id.optional() }).strict();
 
 export type OutputManifestQuery = z.infer<typeof outputManifestQuerySchema>;

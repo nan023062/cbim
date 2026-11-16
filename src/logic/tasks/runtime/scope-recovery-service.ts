@@ -50,6 +50,7 @@ export type RecoveryLaunch =
 
     signal?: AbortSignal
   };
+
 /** fresh 只存在于本次提交的内存返回值；持久回执不能被用作重复启动许可。 */
 export type AcceptedRecovery =
   {
@@ -59,17 +60,20 @@ export type AcceptedRecovery =
 
     fresh: boolean
   };
+
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
 
     fail(code, message)
 }
+
 export class ScopeRecoveryService
 {
   constructor(private owner: Owner, private store: DispatchStore, private logs?: Pick<ScopeGoalPorts, 'InspectMember'>, private budgets?: import('../../budget/runtime/scope-budget-service').ScopeBudgetService, private effects?: EffectObservationService)
   {
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   {
     const parsed = schema.safeParse(raw);
@@ -80,6 +84,7 @@ export class ScopeRecoveryService
 
     return parsed.data
   }
+
   private Identity(state: DispatchState, identity: GraphIdentity)
   {
     this.owner.Assert();
@@ -92,6 +97,7 @@ export class ScopeRecoveryService
 
     return graph;
   }
+
   private Found(state: DispatchState, input: RecoveryLookup)
   {
     this.Identity(state, input);
@@ -104,18 +110,21 @@ export class ScopeRecoveryService
 
     return scope;
   }
+
   private Receipt(scope: DispatchScope): RecoveryReceipt
   {
     const { context, ...recovery } = scope.recovery!;
 
     return { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, recovery: { ...recovery, runId: context.initialRunId } };
   }
+
   private SameRequest(scope: DispatchScope, input: RecoveryRequest)
   {
     const saved = scope.recovery!;
 
     check(sameGoalValue(recoveryRequestSource(saved.source), input.source) && saved.dispositionId === input.dispositionId && saved.operation === input.operation && sameGoalValue(saved.observation, input.observation) && sameGoalValue(saved.input, input.input) && sameGoalValue(saved.options, input.options), 'RECOVERY_COMMAND_CONFLICT', '同一核实命令已经绑定不同来源、正文或模型配置');
   }
+
   /** 只查询已提交意图；即使新周期已经关闭，也不重新准备、修复日志或启动模型。 */
   async Inspect(raw: RecoveryLookup): Promise<RecoveryReceipt | undefined>
   {
@@ -125,6 +134,7 @@ export class ScopeRecoveryService
 
     return scope ? this.Receipt(scope) : undefined
   }
+
   /** 上下文边界按持久 scope 插入顺序选择；不得按时间或“最新可读运行”绕过新链异常。 */
   async LatestContext(raw: GraphIdentity): Promise<RecoveryContext | undefined>
   {
@@ -138,6 +148,7 @@ export class ScopeRecoveryService
 
     return scope ? structuredClone(scopeFreshContext(scope)) : undefined;
   }
+
   /** 即使旧启动意图尚未产生日志，也纳入下一次 fresh 上下文的隔离集合；普通旧聊天可以尚无任务图。 */
   async PriorRunIds(raw: GraphIdentity): Promise<string[]>
   {
@@ -149,12 +160,14 @@ export class ScopeRecoveryService
 
     return [...new Set((state.scopes ?? []).filter(s => s.rootSessionId === identity.rootSessionId && s.workspaceId === identity.workspaceId).flatMap(s => { const context = scopeFreshContext(s); return [...(s.runTracking?.mainRunIds ?? []), ...(s.continuations ?? []).map(c => c.runId), ...(context ? [context.initialRunId, ...context.excludedRunIds] : [])] }))].sort();
   }
+
   private Workspace(state: DispatchState, identity: GraphIdentity)
   {
     this.owner.Assert();
 
     check(identity.workspaceId === this.owner.entry.id && state.workspaceId === identity.workspaceId, 'RECOVERY_IDENTITY', '核实请求不属于当前工作区')
   }
+
   /** 预检不消费启动权；accept 在取得真实 runId 后必须重新执行相同检查。 */
   async Preflight(raw: RecoveryRequest)
   {
@@ -162,6 +175,7 @@ export class ScopeRecoveryService
 
     return this.Report(await this.store.Read(), input)
   }
+
   private async Report(state: DispatchState, input: RecoveryRequest)
   {
     const graph = this.Identity(state, input);
@@ -227,6 +241,7 @@ export class ScopeRecoveryService
 
     return { ...input.source, taskRevision: report.basis.taskRevision, planRevision: report.basis.planRevision, scopeOutcome: source.outcome, reportExecution: report.execution, logState: report.log.state, unknownToolCount: report.tools.counts.unknown } satisfies ScopeRecovery['source'];
   }
+
   /** 新周期、当前软限额策略及首轮证明同事务提交；同命令变参拒绝，重复不读日志或提供 fresh。 */
   async Accept(raw: RecoveryRequest, trusted: RecoveryLaunch): Promise<AcceptedRecovery>
   {

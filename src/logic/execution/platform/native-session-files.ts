@@ -24,6 +24,7 @@ export interface NativeSessionFingerprint
 
   sha256: string
 }
+
 const same = (a: import('node:fs').Stats, b: import('node:fs').Stats) => a.dev === b.dev && a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs && a.ctimeMs === b.ctimeMs;
 
 export class NativeSessionFiles
@@ -31,6 +32,7 @@ export class NativeSessionFiles
   constructor(private readonly root: string, private readonly assert: () => void, private readonly engine: LoopEngine = 'pi')
   {
   }
+
   /** sessionFile/nativeSessionId 仅来自可信运行记录；调用前必须关闭其原生进程，信号覆盖读取全过程。 */
   async Read(session: { nativeSessionId: string; sessionFile?: string }, signal: AbortSignal): Promise<NativeSessionFingerprint>
   {

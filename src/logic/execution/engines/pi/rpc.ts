@@ -27,6 +27,7 @@ export class PiRpc
 
     checkRemainder: text => { if (text.length > 32 * 1024 * 1024) throw Error('Pi 事件超过大小限制') },
   });
+
   private pending = new PendingRequests<string, any>();
 
   private exitPromise?: Promise<void>;
@@ -34,6 +35,7 @@ export class PiRpc
   constructor(private onEvent: (event: any) => void, private onExit: (error: Error) => void, private redact: (message: string) => string = message => message)
   {
   }
+
   Start(config: PiCommand, cwd: string, args: string[], env: NodeJS.ProcessEnv)
   {
     this.child = spawn(config.command, [...config.args, ...args], { cwd, env: { ...env, ...config.env }, windowsHide: true, shell: false, stdio: 'pipe' });
@@ -63,6 +65,7 @@ export class PiRpc
       }
     });
   }
+
   /** 使用独立命令 ID 等待对应回复；超时只报告未知结果，不自动重试。 */
   Request(type: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any>
   {
@@ -74,6 +77,7 @@ export class PiRpc
 
     return new Promise((resolve, reject) => { this.pending.Register(id, { resolve, reject }, timeoutMs, () => { this.pending.Take(id); reject(Error(`Pi ${type} 请求超时；不自动重放`)) }); this.Send({ ...data, id, type }); });
   }
+
   Send(value: unknown)
   {
     if (this.dead || !this.child)
@@ -82,6 +86,7 @@ export class PiRpc
 
     this.child.stdin.write(JSON.stringify(value) + '\n')
   }
+
   private Fail(error: Error)
   {
     error = Error(this.redact(error.message));
@@ -96,6 +101,7 @@ export class PiRpc
 
     this.onExit(error);
   }
+
   /** 关闭 stdin 并等待子进程退出，超过宽限期后终止子进程。 */
   async Close()
   {

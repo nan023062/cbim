@@ -26,6 +26,7 @@ export interface MemberCheckpointView
 
   total?: number;
 }
+
 export const checkpointPhaseLabels = { parked: '已保存检查点', queued: '等待续执行', resumed: '续执行轮次已登记', sealed: '检查点已封存', abandoned: '已为交接放弃' } as const;
 
 /** 核完整链后优先展示所选运行自己保存的检查点，否则展示其来源段；默认最新段，历史段仅供阅读。 */

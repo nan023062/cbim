@@ -25,6 +25,7 @@ export class FileObjectStorage implements ObjectStorage
   constructor(private owner: { entry: { id: string; path: string }; paths: StoragePaths })
   {
   }
+
   async AssertAbsent(id: string)
   {
     try
@@ -40,6 +41,7 @@ export class FileObjectStorage implements ObjectStorage
         throw e
     }
   }
+
   async AssertKnowledgeOnly(id: string, files: KnowledgeFile[]): Promise<void>
   {
     try
@@ -68,6 +70,7 @@ export class FileObjectStorage implements ObjectStorage
         throw e
     }
   }
+
   private PlanPath(id: string)
   {
     if (!/^[0-9a-f-]{36}$/.test(id))
@@ -76,10 +79,12 @@ export class FileObjectStorage implements ObjectStorage
 
     return path.join(this.owner.paths.Local(this.owner.entry.id, 'cache'), 'object-plans', id + '.json')
   }
+
   SavePlan(id: string, plan: ObjectPlan)
   {
     return atomic(this.PlanPath(id), json(plan))
   }
+
   async ReadPlan(id: string): Promise<ObjectPlan>
   {
     try
@@ -91,6 +96,7 @@ export class FileObjectStorage implements ObjectStorage
       fail('PLAN', '预览不存在，请重新预览')
     }
   }
+
   /** 只做 rmdir；发现非空、已删除目录时保留现场，不删除任何文件。 */
   async PruneEmpty(id: string): Promise<void>
   {

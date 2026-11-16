@@ -40,14 +40,17 @@ function children(node: Node): Node[]
 {
   return 'childNodes' in node ? node.childNodes : [];
 }
+
 function tag(node: Node): string
 {
   return 'tagName' in node ? node.tagName : '';
 }
+
 function attr(node: Node, name: string): string | undefined
 {
   return 'attrs' in node ? node.attrs.find((item) => item.name === name)?.value : undefined;
 }
+
 /** 文档大小由传输限制；迭代扫描有界节点，正文递归深度最多 100，异常深层页面拒绝。 */
 export function htmlMarkdown(html: string, base: string): { title: string; markdown: string; login: boolean; challenge: boolean }
 {
@@ -69,6 +72,7 @@ export function htmlMarkdown(html: string, base: string): { title: string; markd
 
     pending.push(...children(node).slice().reverse());
   }
+
   const text = (node: Node, depth = 0): string => { if (depth > 100) throw Error('WEB_CONTENT: 页面嵌套过深'); if ('value' in node) return node.value; return children(node).map((child) => text(child, depth + 1)).join(''); };
 
   const titleNode = nodes.find((node) => tag(node) === 'title'),
@@ -117,6 +121,7 @@ export function htmlMarkdown(html: string, base: string): { title: string; markd
     challenge,
   };
 }
+
 export function truncateParagraphs(value: string, maxChars: number): { markdown: string; truncated: boolean }
 {
   const points = Array.from(value);

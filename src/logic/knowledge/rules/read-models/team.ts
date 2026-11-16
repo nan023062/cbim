@@ -20,6 +20,7 @@ export class Team
   constructor(private snapshot: Snapshot)
   {
   }
+
   /** authors 仅作历史来源说明；authorPeople 固定为空以兼容旧查询响应，不再读取或关联真人。 */
   async Agents(query = '')
   {
@@ -31,6 +32,7 @@ export class Team
       ...context(s), teamRootId: '.cbim/team', groups: index.groups.map((g: any) => ({ ...g, agents: g.agents.filter((a: any) => !query || `${a.id} ${a.summary}`.toLowerCase().includes(query.toLowerCase())).map((a: any) => { const d = data(s, a.id + '/agent.json'); return { ...a, name: d.name, authors: d.authors, authorPeople: [] } }) })), indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/team/registry.json')?.text === s.validation!.indexes['.cbim/team/registry.json']
     };
   }
+
   async Agent(id: string)
   {
     const s = this.snapshot;

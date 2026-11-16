@@ -22,6 +22,7 @@ export interface TaskStep
   /** 仅允许引用本轮、最近一次副作用之后的成功工具回执。 */
   evidence: string[];
 }
+
 /** 程序按真实回执产生的 Workflow 条件结果；产物条件另绑定准确文件字节，二者都不代表人工验收。 */
 export interface WorkflowEvidenceProof
 {
@@ -54,6 +55,7 @@ export interface WorkflowEvidenceProof
   /** 仅明确要求完整出口时存在；固定原完整集合，不能由下游重选未变子集。 */
   manifest?: OutputManifestProof;
 }
+
 export interface TaskProgress
 {
   /** 每次修改递增，工具必须携带期望版本，拒绝覆盖过期计划。 */

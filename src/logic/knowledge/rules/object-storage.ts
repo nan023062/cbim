@@ -15,6 +15,7 @@ export type ObjectPlan = ObjectPlanV2 |
 
   deletedRoots: string[]
 };
+
 export interface ObjectStorage
 {
   AssertAbsent(id: string): Promise<void>;

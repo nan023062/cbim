@@ -19,6 +19,7 @@ export interface TaskView
 
   error?: string
 }
+
 /** 知识正文及内容哈希；path 是服务返回的知识标识，不授权 Agent 的原生工具直接访问磁盘。 */
 export interface KnowledgeFile
 {
@@ -28,6 +29,7 @@ export interface KnowledgeFile
 
   hash: string
 }
+
 /** 单文件预期变更；text 为 null 表示删除，否则为完整新正文。 */
 export interface Change
 {
@@ -35,6 +37,7 @@ export interface Change
 
   text: string | null
 }
+
 /** 绑定 workspaceId、instanceId 和读取 revision；requestId 提供同一内容的幂等提交。 */
 export interface ChangeRequest
 {
@@ -48,6 +51,7 @@ export interface ChangeRequest
 
   changes: Change[]
 }
+
 /** 程序确定性校验问题；warning 不阻断结构通过，error 阻断提交。 */
 export interface Issue
 {
@@ -59,6 +63,7 @@ export interface Issue
 
   path?: string
 }
+
 /** 校验及派生索引；structural 只表示结构合格，架构仍需 review、业务验证未执行。 */
 export interface Validation
 {
@@ -72,6 +77,7 @@ export interface Validation
 
     roots: string[]
   };
+
   skills?: Record<string,
     {
       chain: string[];
@@ -96,6 +102,7 @@ export interface Validation
 
   business: 'not-run'
 }
+
 /** 正式模块包含树节点；children 为模块 ID，sources 描述目录归属而非运行时依赖。 */
 export interface ModuleNode
 {
@@ -116,6 +123,7 @@ export interface ModuleNode
 
   virtual?: boolean
 }
+
 /** 同一知识版本的正文快照；revision 由所有文件内容共同决定。 */
 export interface Snapshot
 {
@@ -129,11 +137,13 @@ export interface Snapshot
 
   validation?: Validation
 }
+
 /** 领域查询唯一所需能力；不暴露提交、维护任务、路径或实例生命周期。 */
 export interface KnowledgeSnapshotReader
 {
   Snapshot(): Promise<Snapshot>
 }
+
 /** 提交完成的持久化回执；结构校验通过不等于业务验收通过。 */
 export interface KnowledgeCommit
 {
@@ -149,6 +159,7 @@ export interface KnowledgeCommit
 
   changed: string[]
 }
+
 /** 尚未提交的计划与差异；确认提交仍会重新检查版本与规则。 */
 export interface Preview
 {

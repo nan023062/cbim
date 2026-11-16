@@ -24,6 +24,7 @@ export interface ManifestPanelState extends ManifestReportState
 
   Select(id: string): void
 }
+
 /** 不分页截取集合；细节折叠只改变显示，不省略完整根和条目。 */
 function Snapshot({ label, value }: { label: string; value: OutputManifestSnapshot })
 {
@@ -32,6 +33,7 @@ function Snapshot({ label, value }: { label: string; value: OutputManifestSnapsh
     {value.entries.map(entry => <article key={entry.relativePath} data-manifest-path={entry.relativePath}><strong>{entry.relativePath}</strong><span>{entry.kind === 'directory' ? '目录' : entry.byteLength.toLocaleString() + ' 字节'}</span>{entry.kind === 'file' && <code>{entry.sha256}</code>}</article>)}
   </details>;
 }
+
 /** 相同清单仅表示声明范围的当前观察相同，不表示整个工作区或业务质量已验收。 */
 export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestPanelState; taskId: string; runId: string })
 {
@@ -65,6 +67,7 @@ export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestP
     </>}
   </section>;
 }
+
 /** 图或任务变化只显示过期，切换运行取消迟到结果；无定时扫描或模型调用。 */
 export function MemberOutputManifest({ identity, task, graphCursor, scope }: { identity: ManifestSelection; task: TaskNode; graphCursor?: GraphCursor; scope?: ScopeSummary })
 {

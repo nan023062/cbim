@@ -24,6 +24,7 @@ export interface ArtifactReportState
   /** 发起读取时界面看到的图/任务版本；变化只提示过期，不自动扫描文件。 */
   sourceVersion?: string;
 }
+
 export const artifactSelectionKey = (identity: ArtifactSelection) => JSON.stringify([identity.workspaceId, identity.rootSessionId, identity.taskId, identity.runId]);
 
 /** 校验服务器白名单与结果自洽性；相同哈希只表示所列文件字节，不代表验收或整个工作区。 */
@@ -83,6 +84,7 @@ export function checkedArtifactReport(raw: unknown, request: ArtifactReportInput
   }
   return value;
 }
+
 /** 一个控制器只属于一个真实 run；订阅、选择与取消均不访问 IPC。 */
 export class ArtifactReportController
 {
@@ -95,10 +97,12 @@ export class ArtifactReportController
   constructor(readonly identity: ArtifactSelection, private read: (input: ArtifactReportInput) => Promise<unknown>, private version: () => string = () => '')
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(next: ArtifactReportState)
@@ -107,6 +111,7 @@ export class ArtifactReportController
 
     this.listeners.Notify()
   }
+
   /** 卸载只忽略读取结果；后端只读调用不产生可重放操作。 */
   Cancel()
   {
@@ -114,6 +119,7 @@ export class ArtifactReportController
 
     this.value = { ...this.value, loading: false }
   }
+
   /** 用户选择不读取文件；更换选项清除旧观察，防止旧基线结果留在新选项下面。 */
   Select(id: string)
   {
@@ -131,11 +137,13 @@ export class ArtifactReportController
 
     this.Publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
   }
+
   /** 只列本轮真实记录，不自动选择最新基线或连带读取业务文件。 */
   async List()
   {
     await this.Pull()
   }
+
   /** 只有明确选择才有文件读取；双击合并为同一在途查询，错误保留上次报告供辨认。 */
   async Inspect()
   {
@@ -143,6 +151,7 @@ export class ArtifactReportController
 
       await this.Pull(this.value.selectedId)
   }
+
   private async Pull(baselineId?: string)
   {
     if (this.value.loading)

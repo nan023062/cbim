@@ -16,6 +16,7 @@ export function context(s: Snapshot)
 {
   return { workspaceId: s.workspaceId, instanceId: s.instanceId, revision: s.revision, structural: s.validation!.structural, issues: s.validation!.issues }
 }
+
 export function data(s: Snapshot, p: string)
 {
   const f = s.files.find(f => f.path === p);
@@ -26,6 +27,7 @@ export function data(s: Snapshot, p: string)
 
   return parseJson(f.text)
 }
+
 export function content(s: Snapshot, owner: string, reference: unknown)
 {
   if (typeof reference !== 'string')

@@ -38,6 +38,7 @@ export interface MemberStartReceipt
 
   cursor: GraphCursor
 }
+
 /** 无提示词、凭据、工具正文或磁盘会话路径的观察视图。 */
 export interface MemberExecutionView
 {

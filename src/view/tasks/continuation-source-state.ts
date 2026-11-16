@@ -21,6 +21,7 @@ export function checkedMaterialTargets(raw: unknown, workspaceId: string)
 
   return value.targets;
 }
+
 /** 后续分页锁定首次真实 revision，换源或换共享实例须重新显式读取。 */
 export function checkedMaterialPage(raw: unknown, workspaceId: string, request: { target: RepositoryToolTarget; expectedRevision?: string; offset?: number })
 {

@@ -22,6 +22,7 @@ export interface AppearanceController
 
   retry: () => void;
 }
+
 /** 初始化不写存储；系统监听随外壳释放，保存失败仍允许本窗口预览并显式重试。 */
 export function useAppearance(): AppearanceController
 {
@@ -52,6 +53,7 @@ export function useAppearance(): AppearanceController
       setError('本机存储不可用，本次外观修改仅在当前窗口生效。请稍后重试保存。')
     }
   }
+
   function update(patch: Partial<AppearancePreferences>)
   {
     const next = { ...current.current, ...patch };
@@ -62,5 +64,6 @@ export function useAppearance(): AppearanceController
 
     persist(next)
   }
+
   return { value, resolvedTheme, error, update, reset: () => update({ ...defaultAppearance }), retry: () => persist(current.current) };
 }

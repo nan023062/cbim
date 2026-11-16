@@ -28,6 +28,7 @@ export interface ReplanModel
 
   label: string
 }
+
 export interface ScopeReplanView
 {
   visible: boolean;
@@ -75,6 +76,7 @@ export interface ScopeReplanView
 
   showCreated: () => void;
 }
+
 /** 原生隔离/日志核验仍由后端负责；前端仅为明确已完成的 inspection 来源构造可读身份。 */
 export function replanTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, modelKey = ''): { target?: ReplanTarget; reason: string }
 {
@@ -111,6 +113,7 @@ export function replanTarget(workspaceId: string, rootSessionId: string | undefi
 
   return { target: { workspaceId, rootSessionId, inspectionScopeId: scope.scopeId, graphCursor, inspectionGoalRevision: scope.goal.revision, anchor: JSON.stringify([summary.stamp, graphCursor, modelKey]) }, reason: '' };
 }
+
 /** 两处面板只消费本 Hook，不独立调用预览或生成命令；切换来源仅影响观察对象。 */
 export function useScopeReplan(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, model: ReplanModel | undefined, refresh: () => void, showScope: (scopeId: string) => void): ScopeReplanView
 {

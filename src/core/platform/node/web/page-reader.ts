@@ -39,6 +39,7 @@ function status(response: PublicHttpResponse)
 
     throw Error('WEB_REDIRECT: 来源跳转未获允许');
 }
+
 /** 每个读取器独占有界缓存和域名时间表；时间均为毫秒，缓存过期后重新核实 robots。 */
 export class WebPageReader
 {
@@ -77,6 +78,7 @@ export class WebPageReader
   constructor(private readonly client: Pick<PublicHttp, 'Read'> = new PublicHttp(), private readonly timing: { Now(): number; Wait(ms: number, signal: AbortSignal): Promise<void>; interval: number; } = { Now: () => Date.now(), Wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, private readonly browser?: BrowserReader, private readonly userAgent = 'PublicWebReader/1.0')
   {
   }
+
   private Remember<T>(map: Map<string, T>, key: string, value: T)
   {
     if (map.size >= 1000 && !map.has(key))
@@ -85,6 +87,7 @@ export class WebPageReader
 
     map.set(key, value);
   }
+
   private async Pace(url: URL, signal: AbortSignal, crawlDelay = 0)
   {
     signal.throwIfAborted();
@@ -112,6 +115,7 @@ export class WebPageReader
 
     signal.throwIfAborted();
   }
+
   private async Allowed(url: URL, signal: AbortSignal)
   {
     let entry = this.robots.get(url.origin);
@@ -150,6 +154,7 @@ export class WebPageReader
 
     return (entry.rules.getCrawlDelay(this.userAgent) ?? 0) * 1000;
   }
+
   /** 每次捕获宿主 robots 策略，默认允许浏览器读取。策略分隔缓存；取消、公网和限流边界不变。 */
   async Fetch(raw: PageReadInput, signal: AbortSignal, options: { browserRobotsPolicy?: BrowserRobotsPolicy } = {})
   {
@@ -234,6 +239,7 @@ export class WebPageReader
       }
     }
   }
+
   /** 静态读取本身不启动浏览器；只有 fetch 的单一出口决定是否兜底，避免循环重试。 */
   private async FetchStatic(raw: PageReadInput, signal: AbortSignal, policy: BrowserRobotsPolicy)
   {

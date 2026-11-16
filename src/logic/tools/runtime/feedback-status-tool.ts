@@ -31,26 +31,31 @@ const messages: Record<FeedbackAvailability['code'], string> = {
 
   GITHUB_SETTINGS: '无法核实本机 GitHub 设置。请查看设置页和本机日志；不能据此判断账号未连接。',
 };
+
 /** registered 由本轮实际 FeedbackTools 实例确定；check 由桌面服务注入，模型不能提供状态、仓库或凭据。 */
 export class FeedbackStatusTool
 {
   constructor(private workspaceId: string, private registered: boolean, private check?: () => Promise<FeedbackConnectionCheck>)
   {
   }
+
   Has(name: string)
   {
     return name === 'cbim_feedback_status'
   }
+
   List()
   {
     return [{ name: 'cbim_feedback_status', version: 1, effects: ['read'] as const, description: '只读核实当前反馈连接与本轮提交／核实工具可用性。反馈工具缺失或连接后仍不可用时先调用；不查询 Issue 或处理进度、不连接账号、不提交或重发。knowledge 工具目录不包含本入口或反馈提交工具。', inputSchema: zodToJsonSchema(feedbackReceiptInputSchema) as Record<string, unknown>, outputSchema: zodToJsonSchema(feedbackAvailabilitySchema) as Record<string, unknown> }]
   }
+
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name) || !feedbackReceiptInputSchema.safeParse(input).success)
 
       fail('GITHUB_FEEDBACK_INPUT', '反馈状态查询不接受身份、仓库、凭据或授权参数')
   }
+
   /** 精确只读分类，使用工作区范围，不借用或创建 GitHub 写授权。 */
   Describe(name: string, input: unknown): RunToolDescriptor
   {
@@ -58,6 +63,7 @@ export class FeedbackStatusTool
 
     return { effects: ['read'], native: false, contractVersion: 1, scope: { kind: 'workspace', workspaceId: this.workspaceId } }
   }
+
   /** 本轮装配不随登录中途变化；已登录但未装配时要求新一轮。连接状态不证明原 Issue 是否提交。 */
   async Snapshot(): Promise<FeedbackAvailability>
   {
@@ -79,6 +85,7 @@ export class FeedbackStatusTool
 
     return { code, submitAvailable: this.registered, receiptAvailable: this.registered, ...(connection.repository ? { repository: connection.repository } : {}), message: messages[code] };
   }
+
   async Call(name: string, input: unknown, signal: AbortSignal)
   {
     this.Parse(name, input);

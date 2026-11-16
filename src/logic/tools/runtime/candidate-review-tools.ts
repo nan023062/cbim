@@ -21,20 +21,24 @@ export class CandidateReviewTools
   constructor(private binding: MainToolOutputBinding, private save: (input: CandidateReviewInput, callId: string, signal: AbortSignal) => Promise<TaskNode>)
   {
   }
+
   Has(name: string)
   {
     return name === 'cbim_dispatch_review'
   }
+
   List()
   {
     return [{ name: 'cbim_dispatch_review', description: '主 Agent 核对成员交付的证据、限制及任务验收要求后，按 taskId/expectedRevision/resultId 保存 accept 或 reject 及理由。accept 只允许后继使用此候选，不代表最终目标完成或用户验收；reject 保留原候选，须明确取消/替换未启动后继并派发返工任务。成功后结束主轮，调度才继续；结果未知先用 cbim_dispatch_inspect 查该任务 candidateReview，不重发。', inputSchema: zodToJsonSchema(candidateReviewInputSchema) as Record<string, unknown>, outputSchema: zodToJsonSchema(taskNodeSchema) as Record<string, unknown> }];
   }
+
   Describe(_name: string, input: unknown)
   {
     candidateReviewInputSchema.parse(input);
 
     return { effects: ['maintenance'] as const, native: false }
   }
+
   async Call(name: string, input: unknown, signal: AbortSignal, id?: string)
   {
     signal.throwIfAborted();

@@ -53,6 +53,7 @@ export function SoftwareUpdates({ updates, onClose }: { updates: SoftwareUpdateC
     {error && <div className="software-update-error" role="alert"><p>{error}</p><button onClick={() => void updates.refresh()}><Icon name="retry" size={16} />重试读取状态</button></div>}
   </dialog>;
 }
+
 /** 提醒只打开更新详情；关闭提醒仅对该版本的当前窗口有效，不影响侧栏更新图标。 */
 export function SoftwareUpdateNotice({ status, onOpen }: { status?: DesktopUpdateStatus; onOpen: () => void })
 {

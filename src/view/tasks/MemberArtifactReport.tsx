@@ -20,6 +20,7 @@ export interface ArtifactPanelState extends ArtifactReportState
 
   select: (id: string) => void
 }
+
 const fileLabels = { matches: '内容一致', changed: '内容已变化', missing: '文件缺失', unverifiable: '不可核实' };
 
 const logLabels = { verified: '日志已核实', missing: '运行日志缺失', incomplete: '运行日志不完整', invalid: '运行日志无效', identity_mismatch: '运行身份不匹配', unavailable: '日志暂时不可读' };
@@ -61,6 +62,7 @@ export function ArtifactReportPanel({ state, taskId, runId }: { state: ArtifactP
     </>}
   </section>;
 }
+
 /** 绑定所选真实轮次；图变化只提示报告过期，没有轮询、模型调用或磁盘写入。 */
 export function MemberArtifactReport({ identity, task, graphCursor, scope }: { identity: ArtifactSelection; task: TaskNode; graphCursor?: GraphCursor; scope?: ScopeSummary })
 {

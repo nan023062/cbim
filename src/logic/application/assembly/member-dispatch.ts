@@ -112,6 +112,7 @@ export function createMemberDispatch(workspace: Workspace, observer?: DispatchOb
 
   return new WorkspaceDispatchService(workspace, workspace.dispatchStore);
 }
+
 /**
  * 应用级装配入口，每个工作区仅创建一次。members 须先关闭并结算，之后由 dispatch 关闭共享 store。
  * prepare 固定公开模型参数和凭据，create 不重新读取默认设置；没有已保存模型时拒绝启动。
@@ -265,6 +266,7 @@ export function createMemberServices(workspace: Workspace, models: EngineModelPr
       }
     };
   };
+
   const members = new MemberExecutionManager(workspace, store, {
     artifacts: {
       InspectAgent: inspectMember, NormalizePath: normalizeArtifact, CheckFiles: (files, signal) => artifactFiles.CheckFiles(files, signal), AcquireRead: () => { workspace.Assert(); return lease.Acquire('artifact-report:' + randomUUID(), 'read') }

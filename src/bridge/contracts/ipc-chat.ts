@@ -29,6 +29,7 @@ export interface ChatIpcResponses
 
     targets: RepositoryToolTarget[]
   };
+
   'chat.materialList': RepositoryListOutput;
 
   'chat.import': ChatAttachment;
@@ -37,6 +38,7 @@ export interface ChatIpcResponses
   {
     cancelled: boolean
   };
+
   'chat.connectors':
   {
     id: string;

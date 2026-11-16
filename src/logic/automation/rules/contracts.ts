@@ -53,6 +53,7 @@ export interface AutomationStorage
 
   Write(state: AutomationState): Promise<void>
 }
+
 /** bind 必须先于模型启动完成，用于持久记录真实主任务身份；未知结果不能自行重试。 */
 export interface AutomationRunner
 {
@@ -64,6 +65,7 @@ export interface AutomationRunner
 
   Stop(taskId: string): Promise<void>;
 }
+
 export interface AutomationCatalog
 {
   workspaceId: string;

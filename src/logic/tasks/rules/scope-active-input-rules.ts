@@ -23,18 +23,21 @@ export function scopedActiveInputHash(input: ScopeActiveInputPayload): string
 {
   return hash(json({ message: input.message, attachmentIds: input.attachmentIds ?? [], ...(input.attachmentManifest ? { attachmentManifest: input.attachmentManifest } : {}) }))
 }
+
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 function fixed(value: ScopeActiveInput)
 {
   const { insertionId, queueId, runId, preparedAt, baseGoalRevision, baseInputRevision, inputHash, messageBytes, messageCharacters, attachmentIds, attachmentManifest } = value;
 
   return { insertionId, queueId, runId, preparedAt, baseGoalRevision, baseInputRevision, inputHash, messageBytes, messageCharacters, ...(attachmentIds === undefined ? {} : { attachmentIds }), ...(attachmentManifest ? { attachmentManifest } : {}) }
 }
+
 /** 返回本次真实接受的周期；调用者据此启用精确 active 增版转换，不能当成通用 supplement 豁免。 */
 export function validateScopeActiveInputs(previous: DispatchState, next: DispatchState, mutation: DispatchMutation): Set<string>
 {

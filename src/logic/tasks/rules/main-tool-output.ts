@@ -75,6 +75,7 @@ export interface MainToolOutputBinding
 
   runId: string
 }
+
 /** input 已经通过该工具的严格输入校验；命令算法在装配层，Core 仅比较可信预期值。 */
 export interface MainToolOutputExpectation
 {
@@ -84,6 +85,7 @@ export interface MainToolOutputExpectation
 
   expectedCommandId?: string
 }
+
 /** 返回 Schema 供 checkedJsonToolResult 使用；所有判断都针对一次序列化后的同一份 wire。 */
 export function mainToolOutputSchema(name: MainToolName, expected: MainToolOutputExpectation): z.ZodTypeAny
 {
@@ -91,6 +93,7 @@ export function mainToolOutputSchema(name: MainToolName, expected: MainToolOutpu
 
   return schema.superRefine((value: unknown, context: z.RefinementCtx) => validateMainToolOutput(name, value, expected, (message) => context.addIssue({ code: 'custom', message })));
 }
+
 /** 只验证公开可证事实；无回执字段的 command/run 不伪造，历史任务允许属于同主会话的旧周期。 */
 function validateMainToolOutput(name: MainToolName, value: unknown, expected: MainToolOutputExpectation, issue: (message: string) => void): void
 {

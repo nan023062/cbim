@@ -21,6 +21,7 @@ export class AgentBusinessRuns
   constructor(private readonly store: DispatchStore, private readonly assertCurrent: () => void, private readonly inspect: (taskId: string, runId: string) => Promise<RunSummary>)
   {
   }
+
   /** 从本调用向根读取实际父工具及原日志；不接受模型提供来源链。 */
   async Start(value: Omit<AgentBusinessRun, 'lineage'>): Promise<void>
   {
@@ -75,6 +76,7 @@ export class AgentBusinessRuns
 
     await this.store.Transact(agentBusinessRunCommand(record), async () => { this.assertCurrent(); return { agentBusinessRuns: [record], receipt: record } });
   }
+
   /** 仅实际 Runtime.close 成功后调用；保存未知保留准入，不重做执行。 */
   async Close(value: Pick<AgentBusinessRun, 'binding' | 'parent' | 'scopeId'>): Promise<void>
   {

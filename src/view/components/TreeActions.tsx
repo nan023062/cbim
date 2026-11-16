@@ -18,6 +18,7 @@ export interface TreeAction
 
   OnSelect(): void
 }
+
 /** 操作只在点击后通知宿主；点击外部或 Escape 收起，保留原节点选择。 */
 export function TreeActions({ name, actions }: { name: string; actions: readonly TreeAction[] })
 {

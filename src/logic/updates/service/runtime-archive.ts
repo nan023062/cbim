@@ -39,6 +39,7 @@ export async function extractRuntimeArchive(archive: string, destination: string
 
   await new Promise<void>((resolve, reject) => { let ended = false; const abort = () => fail(signal.reason ?? Error('更新已取消')); const fail = (error: unknown) => { if (ended) return; ended = true; zip.close(); signal.removeEventListener('abort', abort); reject(error) }; signal.addEventListener('abort', abort, { once: true }); zip.on('error', fail); zip.on('end', () => { if (ended) return; ended = true; signal.removeEventListener('abort', abort); if (seen.size !== expected.size) reject(Error('更新包缺少文件')); else resolve() }); zip.on('entry', (entry: Entry) => { void (async () => { signal.throwIfAborted(); const name = entry.fileName, isDirectory = name.endsWith('/'); runtimeRelativePath(isDirectory ? name.slice(0, -1) : name); const mode = (entry.externalFileAttributes >>> 16) & 0xf000; if (mode && mode !== 0x8000 && mode !== 0x4000 || entry.generalPurposeBitFlag & 1) throw Error('更新包包含链接、设备或加密文件'); if (isDirectory) { if (mode === 0x8000 || entry.uncompressedSize !== 0 || !files.some(file => file.path.startsWith(name))) throw Error('更新包目录无效'); zip.readEntry(); return; } const file = expected.get(name); if (!file || seen.has(name.toLowerCase()) || mode === 0x4000 || entry.uncompressedSize !== file.bytes) throw Error('更新包文件清单不符'); seen.add(name.toLowerCase()); const target = path.join(destination, name); await fs.mkdir(path.dirname(target), { recursive: true }); const input = await new Promise<NodeJS.ReadableStream>((done, failed) => zip.openReadStream(entry, (error, stream) => error ? failed(error) : done(stream!))); let bytes = 0; const hash = createHash('sha256'); const guard = new Transform({ transform(chunk: Buffer, _encoding, done) { bytes += chunk.length; if (bytes > file.bytes) { done(Error('更新文件超过声明大小')); return; } hash.update(chunk); expanded += chunk.length; progress(total ? expanded / total * 100 : 100); done(null, chunk) } }); await pipeline(input, guard, createWriteStream(target, { flags: 'wx', mode: 0o600 }), { signal }); if (bytes !== file.bytes || hash.digest('hex') !== file.sha256) throw Error('更新文件校验失败'); zip.readEntry(); })().catch(fail) }); if (signal.aborted) abort(); else zip.readEntry(); });
 }
+
 /** 每次装载均核对内容和集合；不把“缓存目录存在”视作已验证。 */
 export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[], signal?: AbortSignal)
 {
@@ -107,6 +108,7 @@ export async function verifyRuntimeDirectory(root: string, files: RuntimeFile[],
       count++;
     }
   }
+
   await walk(root);
 
   if (count !== expected.size)

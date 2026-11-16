@@ -36,5 +36,6 @@ export function TeamTree({ model, query, selected, onSelect, actions }: { model:
    <TreeActions name={node.kind === 'team' ? '团队架构' : node.name} actions={actions(id)} />
   </div>{open && !!children.length && <ul>{children.map(branch)}</ul>}</li>;
   };
+
   return <nav className="knowledge-file-tree" aria-label="团队组织树"><div className="knowledge-file-actions"><button title="展开全部" aria-label="展开全部" onClick={() => setClosed(new Set())}><Icon name="expand" size={17} /></button><button title="折叠全部" aria-label="折叠全部" onClick={() => setClosed(new Set(Object.keys(model.nodes)))}><Icon name="collapse" size={17} /></button></div><ul>{branch(TEAM_ROOT)}</ul>{query && !visible.size && <p>没有匹配的团队或 Agent。</p>}</nav>;
 }

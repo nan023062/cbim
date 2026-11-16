@@ -28,6 +28,7 @@ export class RuntimeJournal
   constructor(private readonly directory: string, private readonly initial: { digest: string; resourceVersion: number })
   {
   }
+
   Read(): RuntimeState
   {
     const initialized = fs.existsSync(this.directory + '.initialized');
@@ -78,6 +79,7 @@ export class RuntimeJournal
 
     return state;
   }
+
   private Write(state: RuntimeState)
   {
     stateSchema.parse(state);
@@ -143,6 +145,7 @@ export class RuntimeJournal
 
     return state;
   }
+
   /** 只允许显式点击后的激活；缓存发现或普通退出不调用此入口。 */
   Authorize(candidate: { digest: string; resourceVersion: number })
   {
@@ -158,6 +161,7 @@ export class RuntimeJournal
 
     return this.Write({ ...state, sequence: state.sequence + 1, highestResource: candidate.resourceVersion, pending: { ...candidate, stage: 'authorized', dataAccessed: false, transaction: randomUUID() } });
   }
+
   /** 在导入候选代码和打开原用户数据前同步持久化；失败不得继续装载。 */
   AccessData(expected: string)
   {
@@ -169,6 +173,7 @@ export class RuntimeJournal
 
     return this.Write({ ...state, sequence: state.sequence + 1, pending: { ...state.pending, stage: 'data-access', dataAccessed: true } });
   }
+
   /** 业务入口与窗口真实就绪后确认同一候选；单纯进程存活不构成确认。 */
   Confirm(expected: string)
   {
@@ -188,6 +193,7 @@ export class RuntimeJournal
 
     return this.Write({ ...state, sequence: state.sequence + 1, previous: state.confirmed, confirmed: expected, pending: undefined });
   }
+
   /** 仅加载前验证失败可自动退回；一旦放行数据，保留事务供冷壳恢复界面处理。 */
   RejectBeforeData(expected: string)
   {
@@ -199,6 +205,7 @@ export class RuntimeJournal
 
     return this.Write({ ...state, sequence: state.sequence + 1, pending: undefined, quarantined: [...state.quarantined, expected].slice(-100) });
   }
+
   /** 恢复界面的明确重试只重试同一候选，不倒退数据格式或自动再次执行任务。 */
   RetryPending()
   {

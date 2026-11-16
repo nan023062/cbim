@@ -30,6 +30,7 @@ export interface WorkspaceIpcResponses
 
     entries: WorkspaceView[]
   };
+
   'add': WorkspaceEntry;
 
   'relocate': WorkspaceEntry;
@@ -62,6 +63,7 @@ export interface WorkspaceIpcResponses
 
     files: string[]
   };
+
   'architecture.preview': ObjectPreview;
 
   'architecture.commit': ObjectCommit;

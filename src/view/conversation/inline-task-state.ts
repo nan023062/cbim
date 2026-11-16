@@ -17,6 +17,7 @@ function sameMainGraph(run: RunSummary, graph: GraphSnapshot | undefined): graph
 
   return !!graph && !!task && task.mode === 'chat' && task.agentId === 'cbim:main' && !run.memberBinding && !!binding && binding.agentId === 'cbim:main' && binding.workspaceId === task.workspaceId && binding.rootSessionId === task.taskId && graph.identity.workspaceId === task.workspaceId && graph.identity.rootSessionId === task.taskId && graph.cursor.workspaceId === task.workspaceId && graph.cursor.rootSessionId === task.taskId && graph.root.identity.workspaceId === task.workspaceId && graph.root.identity.rootSessionId === task.taskId && graph.root.agent.agentInstanceId === binding.agentInstanceId;
 }
+
 /** 没有完整成功证据、图尚未追齐或来自另一条流时，只保留原工具记录。 */
 export function inlineDispatchedTask(run: RunSummary, toolCallId: string, graph: GraphSnapshot | undefined): TaskNode | undefined
 {
@@ -89,11 +90,13 @@ export function inlineDispatchedTask(run: RunSummary, toolCallId: string, graph:
     /* 旧或不完整输出仍在原工具轨道中可读，不借名称补造关联。 */
   }
 }
+
 /** 依赖消费只取边上已保存的 resultId；源任务产生候选不代表接收者已经读取。 */
 export function inlineDependencies(task: TaskNode, graph: GraphSnapshot): { id: string; text: string; received: boolean }[]
 {
   return graph.edges.filter(e => e.kind === 'dependency' && e.enabled && e.toNodeId === task.nodeId && e.identity.workspaceId === task.identity.workspaceId && e.identity.rootSessionId === task.identity.rootSessionId).map(edge => { const source = graph.tasks.find(t => t.nodeId === edge.fromNodeId), received = edge.kind === 'dependency' && !!edge.condition.resultId; return { id: edge.edgeId, received, text: `${received ? '已接收前置候选' : '等待前置成果'} · ${source ? source.assignee.name + '：' + source.goal : '原前置任务'}` }; });
 }
+
 /** 系统回注保留真实来源，只给本会话的已知任务装配只读导航；不把回注伪装成新工具执行。 */
 export function inlineHandoffTasks(run: RunSummary, graph: GraphSnapshot | undefined): TaskNode[]
 {

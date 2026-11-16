@@ -15,6 +15,7 @@ export interface SourceSnapshotReader
 {
   WithSourceSnapshot<T>(use: (snapshot: Snapshot) => Promise<T>): Promise<T>
 }
+
 /** 实现方负责实例状态、路径边界、并发控制、版本检查、事务恢复和物理写入。 */
 export interface KnowledgeWorkspace
 {
@@ -27,6 +28,7 @@ export interface KnowledgeWorkspace
 
     path: string
   };
+
   readonly instanceId: string;
 
   readonly paths: Paths;
@@ -36,6 +38,7 @@ export interface KnowledgeWorkspace
   {
     assetsRoot: string
   };
+
   readonly tasks: Map<string, TaskView>;
 
   state: string;

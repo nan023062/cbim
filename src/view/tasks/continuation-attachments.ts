@@ -21,6 +21,7 @@ export function continuationAttachments(value: unknown): ChatAttachment[]
 
   return items;
 }
+
 /** 保留完整原顺序，拒绝超量与正文等私有字段，不静默裁剪用户选择。 */
 export function appendContinuationAttachments(current: readonly ChatAttachment[], picked: unknown): ChatAttachment[]
 {
@@ -30,6 +31,7 @@ export function appendContinuationAttachments(current: readonly ChatAttachment[]
 
   return continuationAttachments([...current, ...additions.filter(item => !ids.has(item.id))]);
 }
+
 /** 空列表仅表示未选择；发送时省略 attachmentIds，保留旧纯文本请求形状。 */
 export function continuationFiles(value: unknown): ChatAttachment[]
 {
@@ -41,6 +43,7 @@ export function continuationFiles(value: unknown): ChatAttachment[]
 
   return items;
 }
+
 /** 选择器或本地存储只能提供文件元数据，拒绝正文、跨种类及超量结果，不静默裁剪用户选择。 */
 export function appendContinuationFiles(current: readonly ChatAttachment[], picked: unknown): ChatAttachment[]
 {

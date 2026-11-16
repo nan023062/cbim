@@ -19,6 +19,7 @@ export class Paths implements StoragePaths
   constructor(readonly userRoot = path.join(os.homedir(), '.cbim'), readonly installRoot = path.resolve('.'), readonly protectedRoots: readonly string[] = [])
   {
   }
+
   async Identity(input: string)
   {
     if (!input?.trim())
@@ -51,6 +52,7 @@ export class Paths implements StoragePaths
 
     return { id: hash(canonical), path: real };
   }
+
   Project(id: string)
   {
     if (!/^[a-f0-9]{64}$/.test(id))
@@ -59,10 +61,12 @@ export class Paths implements StoragePaths
 
     return path.join(this.userRoot, id)
   }
+
   Local(id: string, kind: 'memory' | 'task-records' | 'logs' | 'cache' | 'transactions')
   {
     return path.join(this.Project(id), kind)
   }
+
   async Knowledge(root: string, relative: string)
   {
     if (!relative.startsWith('.cbim/') || relative.includes('\\') || relative.split('/').some(x => !x || x === '.' || x === '..') || /[:\x00]/.test(relative))

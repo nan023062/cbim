@@ -37,6 +37,7 @@ export interface ArtifactEvidenceEvent
 
   data: Record<string, unknown>
 }
+
 type Binding = ArtifactBaselineStaged['binding'];
 
 type Issue =
@@ -45,6 +46,7 @@ type Issue =
 
     message: string
   };
+
 const effects = z.array(z.enum(['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'external-write', 'command']));
 
 const authorization = z.object({ id: z.string().min(1).max(128), name: z.string().min(1).max(512), effects, scope: toolScopeSchema }).passthrough();
@@ -71,6 +73,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('ARTIFACT_EVIDENCE_INVALID', message)
 }
+
 function bound(events: readonly ArtifactEvidenceEvent[], binding: Binding)
 {
   let previous = 0;
@@ -98,6 +101,7 @@ function bound(events: readonly ArtifactEvidenceEvent[], binding: Binding)
     }
   }
 }
+
 /** 采集与 Workflow 共用唯一 proposed→allowed→finished 核验，只需工作区/任务/运行身份；Pi 的 started 不作为授权前提。 */
 export function artifactSucceededCall(events: readonly ArtifactEvidenceEvent[], binding: Pick<Binding, 'workspaceId' | 'taskId' | 'runId'>, id: string)
 {
@@ -134,6 +138,7 @@ export function artifactSucceededCall(events: readonly ArtifactEvidenceEvent[], 
 
   return { proposed: p, allowed: a, finished: f, receipt: r };
 }
+
 /** 严格提取 read/write/edit 原始单文件参数，返回的 path 仍须经平台受限采集端口处理。 */
 export function artifactSources(events: readonly ArtifactEvidenceEvent[], binding: Binding, ids: readonly string[]): { sources: Array<ArtifactSourceCall & { path: string }>; lastEffectSeq: number }
 {
@@ -148,6 +153,7 @@ export function artifactSources(events: readonly ArtifactEvidenceEvent[], bindin
 
   return { sources, lastEffectSeq: events.reduce((value, event) => altered(event) ? event.seq : value, 0) };
 }
+
 /** 所有路径比较只作词法规范化，不能读取当前文件；删除文件不应抹掉历史采集事实。 */
 export function verifyArtifactBaselines(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, normalizePath: (path: string) => string, selectedBaselineId?: string): { records: ArtifactBaselineRecord[]; refs: ArtifactBaselineRef[]; issues: Issue[]; impact: 'selected_files_only' | 'unknown' }
 {

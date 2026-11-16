@@ -68,6 +68,7 @@ export interface ModuleOwnerRunBinding
 
   runId: string
 }
+
 /** 领域方法只执行一次；运行关闭与 Store 生命周期由 Main 实现核实。 */
 export interface ModuleOwnershipToolsPort
 {

@@ -44,6 +44,7 @@ type Editor =
 
     mode?: 'edit' | 'delete'
   };
+
 type Transfer =
   {
     mode: 'publish' | 'import';
@@ -54,6 +55,7 @@ type Transfer =
 
     targetParentId?: string
   };
+
 /** refresh 在知识事务提交后重新读取工作区快照；不从本地表单臆造已经生效的定义。 */
 export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted }: { snapshot?: Snapshot; workspace: WorkspaceView; refresh?: () => Promise<void>; dirty?: React.RefObject<Set<string>>; tabId?: string; onStarted?: (taskId: string, title: string) => void })
 {
@@ -114,6 +116,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
 
     setFile('')
   }
+
   function selectPath(path: string, kind: 'folder' | 'file')
   {
     if (dirty && tabId && dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
@@ -128,6 +131,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
 
     setFile(kind === 'file' ? path : '')
   }
+
   /** 节点菜单直接捕获真实 Agent/Skill 所属路径，不以当前右侧选择替换目标。 */
   function nodeActions(target: string): KnowledgeTreeAction[]
   {
@@ -183,6 +187,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
 
     return actions;
   }
+
   async function reload()
   {
     try
@@ -196,6 +201,7 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
       setError(`已完成操作，但团队视图刷新失败：${cause instanceof Error ? cause.message : String(cause)}`)
     }
   }
+
   if (members)
 
     return <div className="view-page team-management"><WorkspaceMembers key={JSON.stringify([workspace.id, workspace.instanceId])} workspace={workspace} agents={Object.values(model.nodes).filter(item => item.kind === 'agent').map(item => ({ id: item.id, name: item.name, runtime: item.runtime }))} onClose={() => setMembers(false)} /></div>;

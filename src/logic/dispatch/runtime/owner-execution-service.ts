@@ -46,21 +46,25 @@ export interface OwnerExecutionModelPorts
 
   WithConfigurations<T>(refs: readonly WorkspaceMemberModelRef[], use: (profiles: readonly WorkspaceMemberModelSnapshot[]) => Promise<T>): Promise<T>;
 }
+
 export type ExecutionSelection = OwnerExecutionSelection |
 {
   automaticScopeId: string
 };
+
 export interface OwnerExecutionContext
 {
   snapshot: Snapshot;
 
   profiles: readonly WorkspaceMemberModelSnapshot[]
 }
+
 export class OwnerExecutionService
 {
   constructor(private readonly owner: OwnerExecutionWorkspace, private readonly store: DispatchStore, private readonly models?: OwnerExecutionModelPorts)
   {
   }
+
   /** 任何新来源或生命周期核验前只查原命令；回执不授权重做准备或启动。 */
   async Replay<T>(command: { commandId: string; fingerprint: string }): Promise<{ receipt: T } | undefined>
   {
@@ -76,6 +80,7 @@ export class OwnerExecutionService
 
     return { receipt: old.receipt as T };
   }
+
   /** 同一知识串行快照先读 hint，后续事务必须重新核 hint 的全部版本，不把 hint 当许可。 */
   WithSnapshot<T>(use: (snapshot: Snapshot, hint: DispatchState) => Promise<T>, alive: () => void = () => { }): Promise<T>
   {
@@ -85,6 +90,7 @@ export class OwnerExecutionService
 
     return this.owner.WithSourceSnapshot(async snapshot => { this.owner.Assert(); alive(); const hint = await this.store.Read(); alive(); return use(snapshot, hint) });
   }
+
   /** 多岗位一次持模型锁；只有调用方随后进入 Store 事务，不能从事务内调用本方法。 */
   WithContext<T>(select: (hint: DispatchState) => readonly ExecutionSelection[], use: (context: OwnerExecutionContext) => Promise<T>, alive: () => void = () => { }): Promise<T>
   {
@@ -94,6 +100,7 @@ export class OwnerExecutionService
 
     return this.WithSnapshot(async (snapshot, hint) => { const selections = select(hint), refs = selections.map(selection => { if ('automaticScopeId' in selection) { const policy = hint.scopes?.find(scope => scope.scopeId === selection.automaticScopeId)?.executionPolicy; if (policy?.mode !== 'auto') fail('OWNER_SELECTION_REQUIRED', '团队模式需要人工确认模块及负责岗位'); return policy.model } const member = hint.workspaceMembers?.find(item => item.memberId === selection.memberId); if (!member) fail('OWNER_MEMBER_UNAVAILABLE', '负责岗位不存在'); return { profileId: member.runtimePolicy.profileId, modelId: member.runtimePolicy.modelId, engine: workspaceMemberEngine(member.runtimePolicy), ...(member.runtimePolicy.modelRoles === undefined ? {} : { modelRoles: member.runtimePolicy.modelRoles }) }; }); return this.models!.WithConfigurations(refs, async profiles => { alive(); return use({ snapshot, profiles }) }); }, alive);
   }
+
   /** 在最终 Store state 核登记、来源、同快照能力与实际模型；不读取或取得其它串行域。 */
   async Resolve(state: DispatchState, context: OwnerExecutionContext, selection: OwnerExecutionSelection, moduleIds: readonly string[], agentId?: string): Promise<OwnerExecutionBinding>
   {
@@ -127,6 +134,7 @@ export class OwnerExecutionService
 
     return binding;
   }
+
   /** 可信首轮使用明确模型配置冻结 auto；旧入口不传模式时保持团队规则。 */
   async Policy(options: { collaborationMode?: 'auto' | 'team'; profileId?: string; model: string; engine?: WorkspaceMemberModelRef['engine']; modelRoles?: WorkspaceMemberModelRef['modelRoles'] }): Promise<CollaborationPolicy>
   {
@@ -144,6 +152,7 @@ export class OwnerExecutionService
 
     return { mode: 'auto', model: { profileId: options.profileId, modelId: options.model, configurationHash: workspaceMemberModelHash(profile), ...(options.engine === undefined ? {} : { engine: options.engine }), ...(options.modelRoles === undefined ? {} : { modelRoles: structuredClone(options.modelRoles) }) } };
   }
+
   /** 模型不能指定自动模式；缺岗位选择只可引用已保存的可信周期。 */
   Selection(state: DispatchState, scopeId: string, selection?: OwnerExecutionSelection): ExecutionSelection
   {
@@ -153,6 +162,7 @@ export class OwnerExecutionService
 
     return fail('MAIN_EXECUTION_REQUIRED', '未指定自定义负责 Agent 时，请由主 Agent 在当前会话直接执行；独立派发需要真实 ownerSelection');
   }
+
   /** 新任务只绑定自定义岗位；旧兜底数据可读但不再授予启动或恢复许可。 */
   async ResolveExecution(state: DispatchState, context: OwnerExecutionContext, scopeId: string, selection: OwnerExecutionSelection | undefined, moduleIds: readonly string[], agentId: string): Promise<{ ownerBinding?: OwnerExecutionBinding; fallbackBinding?: AutomaticExecutionBinding }>
   {
@@ -162,6 +172,7 @@ export class OwnerExecutionService
 
     return fail('MAIN_EXECUTION_REQUIRED', '内置默认执行 Agent 已退役；未指定自定义 Agent 的模块由主 Agent 在当前会话执行，不创建成员任务');
   }
+
   async VerifyTask(state: DispatchState, context: OwnerExecutionContext, task: TaskNode): Promise<OwnerExecutionBinding | AutomaticExecutionBinding>
   {
     if (task.fallbackBinding)
@@ -194,10 +205,12 @@ export class OwnerExecutionService
 
     return current;
   }
+
   Selections(tasks: readonly TaskNode[]): ExecutionSelection[]
   {
     return tasks.map(task => { if (task.fallbackBinding) return { automaticScopeId: task.fallbackBinding.scopeId }; if (!task.ownerBinding) fail('OWNER_BINDING_REQUIRED', '旧任务未绑定负责岗位，请重新规划派发'); return ownerExecutionSelectionFor(task.ownerBinding) })
   }
+
   async Recheck(snapshot: Snapshot, alive: () => void = () => { })
   {
     this.owner.Assert();
@@ -212,6 +225,7 @@ export class OwnerExecutionService
 
     alive()
   }
+
   /** 一次发现各组当前可核实的模块、岗位/来源、能力、模型缺口；前提缺失明确待核实，不冒称通过或回退默认模型。相同错误码合并，不回显配置或秘密。 */
   async Discover(moduleIds: readonly string[], rawMatches?: ModuleOwnerMatches): Promise<OwnerExecutionDiscovery>
   {
@@ -345,6 +359,7 @@ export class OwnerExecutionService
       return ownerExecutionDiscoverySchema.parse({ workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, readOnly: true, checkedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, registryCursor: state.registryCursor ?? null, ownershipCursor: state.ownershipCursor ?? null, sourceCursor: state.sourceCursor ?? null, moduleIds: [...moduleIds], groups });
     });
   }
+
   /** 以原任务绑定为比较基准；当前观察不覆盖历史，也不授予领取许可。 */
   async InspectTask(raw: unknown): Promise<TaskOwnerInspectOutput>
   {

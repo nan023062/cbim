@@ -19,6 +19,7 @@ export interface KnowledgeGovernanceBinding
 
   decisionId: string
 }
+
 export interface KnowledgeJournalStatus
 {
   state: 'prepared' | 'committing' | 'committed' | 'rolled_back' | 'recovery_required';
@@ -31,6 +32,7 @@ export interface KnowledgeJournalStatus
 
   result?: KnowledgeCommit
 }
+
 /** 实现方只访问已初始化的私有账本，不持有另一个会回调知识存储的队列。 */
 export interface KnowledgeGovernanceAuthority
 {
@@ -43,6 +45,7 @@ export interface KnowledgeGovernanceAuthority
 
   Verify(current: Snapshot, preview: Preview, request: ChangeRequest, journal: (request: ChangeRequest) => Promise<KnowledgeJournalStatus | undefined>, intentId?: string): Promise<KnowledgeGovernanceBinding | undefined>;
 }
+
 /** 回调已经处于知识串行屏障内；不得再次调用 Workspace.Commit/preview 或排队的治理入口。 */
 export interface KnowledgeGovernanceTransaction
 {

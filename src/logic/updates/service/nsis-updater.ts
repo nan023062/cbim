@@ -77,6 +77,7 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
 
     this.pending = result;
   }
+
   async Download(progress: (percent: number) => void)
   {
     if (this.closed || !this.updater || !this.pending)
@@ -93,6 +94,7 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
 
     this.downloaded = true;
   }
+
   Install()
   {
     if (this.closed || !this.updater || !this.downloaded || this.error)
@@ -101,6 +103,7 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
 
     this.updater.quitAndInstall(true, true)
   }
+
   Close()
   {
     this.closed = true;

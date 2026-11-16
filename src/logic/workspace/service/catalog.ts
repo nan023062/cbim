@@ -33,6 +33,7 @@ export class Catalog
   constructor(readonly paths: Paths)
   {
   }
+
   async Init()
   {
     await fs.mkdir(this.paths.userRoot, { recursive: true, mode: 0o700 });
@@ -47,6 +48,7 @@ export class Catalog
 
       await fs.chmod(this.paths.userRoot, 0o700);
   }
+
   async Read(): Promise<Data>
   {
     const p = path.join(this.paths.userRoot, 'workspaces.json');
@@ -75,6 +77,7 @@ export class Catalog
       return empty()
     }
   }
+
   async Update(edit: (data: Data) => void)
   {
     let lock: KernelLock | undefined;
@@ -123,6 +126,7 @@ export class Catalog
       lock.Close()
     }
   }
+
   async Add(root: string)
   {
     const identity = await this.paths.Identity(root);
@@ -145,6 +149,7 @@ export class Catalog
 
     return entry;
   }
+
   /** 仅修改登记显示名，不移动目录、不改变工作区身份或历史关联。 */
   async Rename(id: string, name: string)
   {
@@ -158,10 +163,12 @@ export class Catalog
 
     return entry;
   }
+
   async Remove(id: string)
   {
     await this.Update(d => { d.entries = d.entries.filter(x => x.id !== id); d.recent = d.recent.filter(x => x !== id) })
   }
+
   async Relocate(id: string, newPath: string, confirm: boolean)
   {
     if (!confirm)

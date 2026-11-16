@@ -52,10 +52,12 @@ export class WorkspaceAutomations
     };
     this.scheduler = new AutomationScheduler(new FileAutomations(path.join(workspace.paths.Project(workspace.entry.id), 'automations.json'), workspace.entry.id), runner);
   }
+
   Assert(raw: unknown)
   {
     this.workspace.Assert(automationIdentitySchema.parse(raw))
   }
+
   /** 只列当前有效知识和启用岗位；默认主 Agent 始终由前端独立显示，失效引用保存或启动时拒绝。 */
   async Catalog(): Promise<AutomationCatalog>
   {
@@ -110,6 +112,7 @@ export class WorkspaceAutomations
     }
     return { workspaceId: this.workspace.entry.id, agents, modules, skills };
   }
+
   private async Prepare(definition: AutomationDefinition)
   {
     const catalog = await this.Catalog(),

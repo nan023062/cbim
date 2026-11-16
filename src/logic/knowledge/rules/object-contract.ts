@@ -34,6 +34,7 @@ export interface ObjectPreview extends Preview
 
   notice: string
 }
+
 /** 知识事务回执；空目录清理警告不改变已提交的知识结果。 */
 export interface ObjectCommit extends KnowledgeCommit
 {

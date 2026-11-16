@@ -27,6 +27,7 @@ export class TopicInterruptionService
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Snapshot'>, private readonly store: DispatchStore)
   {
   }
+
   private Scope(state: DispatchState, request: TopicInterruptionRequest): DispatchScope
   {
     this.owner.Assert();
@@ -39,6 +40,7 @@ export class TopicInterruptionService
 
     return scope;
   }
+
   /** 相同命令只查原记录；已完成话题不可重开，调用方应另建关联话题。 */
   async Prepare(raw: TopicInterruptionRequest): Promise<DispatchScope>
   {
@@ -60,6 +62,7 @@ export class TopicInterruptionService
 
     return this.Scope(await this.store.Read(), request);
   }
+
   /** summary 来自已停止主运行的 canonical；成员真实终态和图游标在提交时再次核对。 */
   async Park(request: TopicInterruptionRequest, summary: RunSummary): Promise<DispatchScope>
   {

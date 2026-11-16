@@ -32,6 +32,7 @@ export interface ArtifactCapturePort
 
   CaptureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>;
 }
+
 /** 每个运行独立拥有；门闩直到本工具结束或拒绝才释放，bridge丢失结束事件时保留阻断直到收尾。 */
 export class RunArtifactCapture
 {
@@ -47,6 +48,7 @@ export class RunArtifactCapture
 
       consumed: boolean
     };
+
   private controller = new AbortController();
 
   constructor(private readonly binding: MemberRunBinding, private readonly port: ArtifactCapturePort, private readonly context: { Current(): TaskProgress | undefined; AssertReady(toolCallId: string): void; Save(baseline: ArtifactBaselineStaged): Promise<void>; })
@@ -55,6 +57,7 @@ export class RunArtifactCapture
 
     this.tools = new ArtifactTools(this.binding, { knowledgeRevision: port.knowledgeRevision, Capture: (input, id) => this.Capture(input, id) })
   }
+
   /** beforeTool 的同步入口；在其它操作进入异步审批之前预占，不能等待写入结束后偷偷补采。 */
   Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
@@ -82,6 +85,7 @@ export class RunArtifactCapture
 
     this.reserved = { id, input: parsed.data, consumed: false };
   }
+
   /** 只有已持久化的事件进入采集事实；不保留消息或推理正文的第二份副本。 */
   Observed(event: StoredEvent)
   {
@@ -93,15 +97,18 @@ export class RunArtifactCapture
 
       this.reserved = undefined;
   }
+
   Stop()
   {
     this.controller.abort(Error('运行已停止，文件采集取消'))
   }
+
   /** 进度查询只返回已确认基线引用；旧进度、新副作用和后续修订不会改写历史字节记录。 */
   Refs(): ArtifactBaselineRef[]
   {
     return verifyArtifactBaselines(this.events, this.binding, this.port.knowledgeRevision, this.port.NormalizePath).refs
   }
+
   private async Capture(input: ArtifactCaptureInput, id: string): Promise<ArtifactBaselineStaged>
   {
     const reserved = this.reserved;

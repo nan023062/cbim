@@ -35,6 +35,7 @@ function checkOwnerChoice(value: z.infer<typeof expectedOwnerFields>, context: z
 
     context.addIssue({ code: 'custom', message: '显式、父级继承或模型匹配的执行依据不一致' });
 }
+
 export const expectedModuleOwnerSchema = expectedOwnerFields.superRefine(checkOwnerChoice);
 
 export type ExpectedModuleOwner = z.infer<typeof expectedModuleOwnerSchema>;
@@ -54,6 +55,7 @@ export function ownerExecutionSelectionFor(binding: OwnerExecutionBinding): Owne
 {
   return { version: 1, memberId: binding.memberId, expectedMemberRevision: binding.memberRevision, expectedCapabilityHash: binding.capability.capabilityHash, expectedConfigurationHash: binding.model.configurationHash, expectedOwners: binding.owners.map(({ sourceRef: _, ...owner }) => ({ ...owner })) }
 }
+
 const equal = (a: unknown, b: unknown): boolean => { const order = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false }); return JSON.stringify(order(a)) === JSON.stringify(order(b)); };
 
 /** 输入的 owners 次序不改变责任集合，输出仍保留原输入，不借比较裁剪或排序回包。 */
@@ -69,6 +71,7 @@ export function ownerExecutionSelectionMatches(selection: OwnerExecutionSelectio
 
   return equal(sort(selection), sort(expected));
 }
+
 /** 仅在原计划覆盖本次模块时比较其精确岗位与关系；缺省只等于缺省，不能作为新业务通配。 */
 export function sameOwnerExecutionForModules(planned: OwnerExecutionBinding | undefined, actual: OwnerExecutionBinding | undefined, moduleIds: readonly string[]): boolean
 {
@@ -85,6 +88,7 @@ export function sameOwnerExecutionForModules(planned: OwnerExecutionBinding | un
 
   return equal(a, b) && right.length === moduleIds.length && moduleIds.every(id => { const x = left.find(owner => owner.moduleId === id), y = right.find(owner => owner.moduleId === id); return !!x && !!y && equal(x, y) });
 }
+
 /** 局部身份校验不查询当前登记；历史展示必须与自身 workspace/Agent/模块对应。 */
 export function ownerExecutionBindingMatches(binding: OwnerExecutionBinding, workspaceId: string, agentId: string, moduleIds: readonly string[]): boolean
 {

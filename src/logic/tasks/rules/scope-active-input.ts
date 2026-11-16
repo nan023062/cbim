@@ -59,10 +59,12 @@ export function scopeActiveInputStatus(scope: { activeInputs?: readonly ScopeAct
 
     return 'pending';
 }
+
 export function scopeHasUnresolvedActiveInput(scope: { activeInputs?: readonly ScopeActiveInput[] }): boolean
 {
   return scopeActiveInputStatus(scope) !== undefined
 }
+
 /** 两种历史只按实际输入版本合并，不按时间猜顺序；旧无 activeInputs 等同原等待续接规则。 */
 export function validateScopeInputHistory(scope: { goal?: { inputRevision?: number }; continuations?: readonly { inputRevision: number }[]; activeInputs?: readonly ScopeActiveInput[] }): void
 {

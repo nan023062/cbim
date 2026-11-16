@@ -24,10 +24,12 @@ export interface ReplanTarget extends ReplanPreviewInput
 
     seq: number
   };
+
   inspectionGoalRevision: number;
 
   dispositionId?: string
 }
+
 export interface ReplanAttempt
 {
   request: ReplanRequest;
@@ -42,6 +44,7 @@ export interface ReplanAttempt
 
   error?: string;
 }
+
 /** 同一 inspectionScopeId 只保留一次已受理的新业务命令；权限不继承聊天输入区。 */
 export interface ReplanDraft
 {
@@ -53,6 +56,7 @@ export interface ReplanDraft
 
   attempt?: ReplanAttempt
 }
+
 export interface ReplanPreviewState
 {
   target: ReplanTarget;
@@ -65,6 +69,7 @@ export interface ReplanPreviewState
 
   error: string
 }
+
 export interface ReplanState
 {
   records: readonly ReplanDraft[];
@@ -73,6 +78,7 @@ export interface ReplanState
 
   error: string
 }
+
 export interface ReplanPorts
 {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
@@ -85,6 +91,7 @@ export interface ReplanPorts
 
   uuid: () => string;
 }
+
 const key = (target: ReplanTarget | undefined) => target ? JSON.stringify([target.workspaceId, target.rootSessionId, target.inspectionScopeId, target.anchor, target.dispositionId]) : '';
 
 const draftKey = (draft: ReplanDraft | undefined) => JSON.stringify([draft?.message ?? '', draft?.permission ?? 'ask']);
@@ -102,6 +109,7 @@ export function replanRejected(error: unknown)
 {
   return /^(?:CAPACITY_BUSY|REPLAN_(?:INPUT_INVALID|IDENTITY|SOURCE_INVALID|BUSY|PROOF_INVALID|LEGACY|KNOWLEDGE_CHANGED|STALE|CONTEXT_CONFLICT)):/.test(textError(error))
 }
+
 /** 返回事实必须属于请求来源；eligible 才能携带创建资格，预览不是已生成的执行计划。 */
 export function checkedReplanPreview(raw: unknown, input: ReplanPreviewInput): ReplanPreview
 {
@@ -117,6 +125,7 @@ export function checkedReplanPreview(raw: unknown, input: ReplanPreviewInput): R
 
   return result;
 }
+
 /** 受理不表示执行已开始；同命令的来源、目标、权限、初始运行和受理时间不可被后续查询替换。 */
 export function checkedReplanReceipt(raw: unknown, request: ReplanRequest, proof: ReplanPreview, previous?: ReplanReceipt): ReplanReceipt
 {
@@ -144,6 +153,7 @@ export function checkedReplanReceipt(raw: unknown, request: ReplanRequest, proof
 
   return receipt;
 }
+
 /** 每个主会话一份索引；预览仅在内存且由显式点击产生，重开只恢复请求并查询未知结果。 */
 export class ScopeReplanController
 {
@@ -202,34 +212,42 @@ export class ScopeReplanController
       this.value = { records: [], error: '本地业务请求无法读取，未发送任务：' + textError(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return this.listeners.size === 0 && this.pending.size === 0 && !this.value.preview?.loading
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   Record(inspectionScopeId: string)
   {
     return this.value.records.find(item => item.inspectionScopeId === inspectionScopeId)
   }
+
   IsPending(record?: ReplanDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
+
   /** 历史选择、图或模型版本改变只作废预览，绝不改写冻结提交和它的迟到回执。 */
   ObserveTarget(target: ReplanTarget | undefined)
   {
@@ -249,6 +267,7 @@ export class ScopeReplanController
 
     this.Emit();
   }
+
   private Save(record: ReplanDraft, clearPreview = false): boolean
   {
     const records = [...this.value.records],
@@ -302,6 +321,7 @@ export class ScopeReplanController
 
     return true;
   }
+
   /** 独立保存新业务目标及明确权限；写入失败不发布更改，不影响聊天草稿或只读核实权限。 */
   Edit(inspectionScopeId: string, message: string, permission: 'ask' | 'execute')
   {
@@ -321,6 +341,7 @@ export class ScopeReplanController
 
     this.Save({ inspectionScopeId, message, permission, attempt: old?.attempt }, true);
   }
+
   /** 仅显式读取；返回后来源/图/草稿已改变则丢弃，不把迟到依据赋给新的目标。 */
   async Preview(target: ReplanTarget)
   {
@@ -364,12 +385,14 @@ export class ScopeReplanController
       }
     }
   }
+
   Ready(target: ReplanTarget | undefined): ReplanPreview | undefined
   {
     const preview = this.value.preview;
 
     return target && key(target) === key(this.target) && preview && key(preview.target) === key(target) && !preview.loading && !preview.error && preview.draftKey === draftKey(this.Record(target.inspectionScopeId)) && preview.result?.eligible ? preview.result : undefined;
   }
+
   /** 创建 UUID 只发生在最终提交；持久化的完整请求是后续查询/重试的唯一依据。 */
   async Submit(target: ReplanTarget, model: Omit<ReplanRequest['options'], 'permission'>)
   {
@@ -405,6 +428,7 @@ export class ScopeReplanController
 
       await this.Send(next);
   }
+
   private async Send(record: ReplanDraft)
   {
     const attempt = record.attempt!,
@@ -438,6 +462,7 @@ export class ScopeReplanController
       this.Emit()
     }
   }
+
   /** 查询 undefined 仍是未知；受理事实不因网络失败退回可编辑状态。 */
   async Query(inspectionScopeId: string)
   {
@@ -478,6 +503,7 @@ export class ScopeReplanController
       this.Emit()
     }
   }
+
   async Retry(inspectionScopeId: string)
   {
     const record = this.Record(inspectionScopeId);
@@ -492,12 +518,14 @@ export class ScopeReplanController
 
       await this.Send(next)
   }
+
   /** 恢复仅查未知命令；预览不持久为有效资格，重新进入草稿必须再次明确核验。 */
   async Restore()
   {
     await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.Query(item.inspectionScopeId)))
   }
 }
+
 /** 同 renderer 共享一个 root 控制器；工作区切换不能生成竞争写入同一本机索引的请求。 */
 export class ScopeReplanPool
 {
@@ -506,6 +534,7 @@ export class ScopeReplanPool
   constructor(private idleLimit = 16)
   {
   }
+
   Get(workspaceId: string, rootSessionId: string, ports: ReplanPorts)
   {
     const identity = JSON.stringify([workspaceId, rootSessionId]),

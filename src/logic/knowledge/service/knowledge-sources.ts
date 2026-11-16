@@ -35,6 +35,7 @@ export interface KnowledgeSourceWorkspace extends KnowledgeWorkspace
 
   WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
 }
+
 /** 只读取同次校验的有效注册表与原定义字节；模块可见性不等于 tree.nodes 中存在。 */
 export function sourceObservations(snapshot: Snapshot)
 {
@@ -75,12 +76,14 @@ export function sourceObservations(snapshot: Snapshot)
 
   return result;
 }
+
 /** 所有来源 heads 都从共享日志读取；本协调器不拥有第二份可变登记文件。 */
 export class KnowledgeSources implements KnowledgeSourceAuthority
 {
   constructor(readonly workspaceId: string, private readonly store: DispatchStore)
   {
   }
+
   async Build(request: ChangeRequest, current: Snapshot, projected: Snapshot, before: Record<string, string | null>, after: Record<string, string | null>, plan?: PlannedKnowledgeCommit): Promise<KnowledgeSourceJournal>
   {
     const state = await this.store.Read();
@@ -150,6 +153,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
     return result;
   }
+
   /** 原 prepared 已可靠保存才进入此入口；保存失败或未知不能开始知识文件写入。 */
   async Prepare(source: KnowledgeSourceJournal)
   {
@@ -159,6 +163,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
     await this.store.Transact(knowledgeSourceCommand(event), async current => { if (!isDeepStrictEqual(current.sourceCursor ?? null, source.transition.expectedSourceCursor)) fail('SOURCE_STALE', '来源登记已变化，未写入知识'); return { knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) } });
   }
+
   /** 只按原 journal 事实结算；不得在调用方的知识 rollback catch 内执行。 */
   async Settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string)
   {
@@ -188,6 +193,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
     await this.store.Transact(knowledgeSourceCommand(event), async () => ({ knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) }));
   }
+
   async Verify(source: KnowledgeSourceJournal, required: boolean)
   {
     const state = await this.store.Read(),
@@ -208,20 +214,24 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
       fail('SOURCE_JOURNAL_INVALID', '来源屏障与原知识事务不一致')
   }
+
   async Pending()
   {
     return (await this.store.Read()).knowledgeSourceTransitions?.filter(x => x.state === 'pending') ?? []
   }
+
   async Transitions()
   {
     return (await this.store.Read()).knowledgeSourceTransitions ?? []
   }
+
   AssertAvailable(state: DispatchState)
   {
     if (knowledgeSourcePending(state))
 
       fail('SOURCE_PENDING', '来源事务尚未核实，暂不能采纳或建立新责任')
   }
+
   Selection(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey): SourceSelection
   {
     this.AssertAvailable(state);
@@ -238,6 +248,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
     return knowledgeSourceSelection(state, source, observation.observation)
   }
+
   /** 首次观察仅在明确采纳事务中分配代次；预览不生成 UUID。 */
   Capture(state: DispatchState, selection: SourceSelection, consumer: { kind: 'workspace_member' | 'module_ownership'; changeId: string }, at: string): { ref: CapabilitySourceRef; event?: KnowledgeSourceCapture }
   {
@@ -265,6 +276,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
 
     return { ref: knowledgeSourceRef(event.generation), event };
   }
+
   Status(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey, saved?: CapabilitySourceRef): KnowledgeSourceReadState
   {
     const pending = knowledgeSourcePending(state);

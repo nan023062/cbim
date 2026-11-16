@@ -23,6 +23,7 @@ export function workspaceMemberCanonical(value: unknown): string
 
   return JSON.stringify(order(value));
 }
+
 const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === workspaceMemberCanonical(b);
 
 function valid(condition: unknown, message: string, code = 'MEMBER_AUDIT'): asserts condition
@@ -31,6 +32,7 @@ function valid(condition: unknown, message: string, code = 'MEMBER_AUDIT'): asse
 
     fail(code, message)
 }
+
 export const workspaceMemberModelHash = (snapshot: WorkspaceMemberModelSnapshot) => hash(workspaceMemberCanonical(snapshot));
 
 /** 整库 revision 是出处而不是能力内容；不因其他模块变化要求重新采纳同一能力。 */
@@ -40,6 +42,7 @@ export function workspaceMemberCapabilityHash(configuration: WorkspaceMemberCapa
 
   return hash(workspaceMemberCanonical(content))
 }
+
 export const workspaceMemberHash = (member: WorkspaceMember) => hash(workspaceMemberCanonical(member));
 
 /** 全工作区幂等命令命名空间；fingerprint 包含原 instance、完整变更和预览/CAS 依据。 */
@@ -47,6 +50,7 @@ export function workspaceMemberCommand(request: WorkspaceMemberCommitInput, acto
 {
   return { commandId: 'workspace-member-' + request.commandId, fingerprint: hash(workspaceMemberCanonical({ domain: 'workspace-member-v1', request, ...(actor?.kind === 'main_agent' ? { actor } : {}) })) }
 }
+
 /** 主写命令由真实运行与调用身份稳定派生；桌面旧命令和旧指纹保持兼容。 */
 export function workspaceMemberMainCommandId(workspaceId: string, actor: WorkspaceMemberActor)
 {
@@ -56,11 +60,13 @@ export function workspaceMemberMainCommandId(workspaceId: string, actor: Workspa
 
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-5${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
+
 /** 只去掉新登记时尚不存在的身份、采纳时间和版本；未选中的配置保持原保存事实。 */
 export function workspaceMemberProposed(member: WorkspaceMember): WorkspaceMemberProposed
 {
   return structuredClone({ name: member.name, position: member.position, adaptation: member.adaptation, state: member.state, capability: { configuration: member.adoption.configuration, capabilityHash: member.adoption.capabilityHash, ...(member.adoption.sourceRef ? { sourceRef: member.adoption.sourceRef } : {}) }, runtimePolicy: member.runtimePolicy });
 }
+
 /** 固定差异字段顺序；能力比较内容 hash，不把整库版本刷新当作岗位语义变化。 */
 export function workspaceMemberChangedFields(previous: WorkspaceMember | undefined, proposed: WorkspaceMemberProposed): WorkspaceMemberField[]
 {
@@ -74,6 +80,7 @@ export function workspaceMemberChangedFields(previous: WorkspaceMember | undefin
 
   return fields.filter(field => field === 'capability' ? old.capability.capabilityHash !== proposed.capability.capabilityHash || !equal(old.capability.sourceRef, proposed.capability.sourceRef) : !equal(old[field], proposed[field]));
 }
+
 /** 时钟、待生成身份及整库知识 revision 不进入依据；来源代次、定义内容、成员原版本与登记游标仍被冻结。 */
 export function workspaceMemberPreviewBasis(input: { workspaceId: string; change: WorkspaceMemberChangeInput; registryCursor: WorkspaceRegistryCursor | null; previousMember?: WorkspaceMember; proposed: WorkspaceMemberProposed; sourceSelection?: SourceSelection }): string
 {
@@ -85,6 +92,7 @@ export function workspaceMemberPreviewBasis(input: { workspaceId: string; change
   // 新 capture 的随机代次尚不存在，依据固定 selection；其余操作必须把已有 sourceRef 继续纳入摘要。
   return hash(workspaceMemberCanonical({ version: 1, workspaceId: input.workspaceId, change: input.change, registryCursor: input.registryCursor, previousMemberHash: input.previousMember ? workspaceMemberHash(input.previousMember) : null, ...(sourceSelection ? { sourceSelection } : {}), proposedDigest: hash(workspaceMemberCanonical({ ...input.proposed, capability: { configuration, capabilityHash: input.proposed.capability.capabilityHash, ...(!input.sourceSelection && input.proposed.capability.sourceRef ? { sourceRef: input.proposed.capability.sourceRef } : {}) } })) }));
 }
+
 /** 紧凑回执来自实际事件；后续编辑不重算或覆盖原命令回执。 */
 export function workspaceMemberReceipt(change: WorkspaceMemberChange): WorkspaceMemberReceipt
 {
@@ -92,6 +100,7 @@ export function workspaceMemberReceipt(change: WorkspaceMemberChange): Workspace
 
   return { identity: { workspaceId: request.workspaceId, instanceId: request.instanceId }, commandId: request.commandId, action: request.change.kind, changeId: change.changeId, memberId: next.memberId, previousRevision: change.previousRevision, memberRevision: next.revision, registryCursor: structuredClone(change.registryCursor), basis: request.expectedBasis, memberHash: workspaceMemberHash(next), committedAt: change.committedAt };
 }
+
 /** 结构只包含登记投影，避免 team 规则反向导入调度状态造成类型环。缺省为旧空日志。 */
 export interface WorkspaceMemberRegistry
 {
@@ -103,6 +112,7 @@ export interface WorkspaceMemberRegistry
 
   registryCursor?: WorkspaceRegistryCursor | null;
 }
+
 /** 严格检查新审计的目标变更；固定身份、原采纳和未选中的配置不允许顺带改变。 */
 function validateTransition(previous: WorkspaceMember | undefined, event: WorkspaceMemberChange, history: readonly WorkspaceMemberChange[])
 {
@@ -184,6 +194,7 @@ function validateTransition(previous: WorkspaceMember | undefined, event: Worksp
 
   valid(workspaceMemberChangedFields(previous, proposed).length > 0, '岗位没有语义变化', 'MEMBER_NO_CHANGE');
 }
+
 /** 仅追加一条严格审计并派生 head；不接收可绕过审计的成员 upsert，也不启动实例。 */
 export function applyWorkspaceMemberChange(state: WorkspaceMemberRegistry, raw: WorkspaceMemberChange): { workspaceMembers: WorkspaceMember[]; workspaceMemberChanges: WorkspaceMemberChange[]; registryCursor: WorkspaceRegistryCursor }
 {
@@ -232,6 +243,7 @@ export function applyWorkspaceMemberChange(state: WorkspaceMemberRegistry, raw: 
 
   return { workspaceMembers: nextMembers, workspaceMemberChanges: [...history, event], registryCursor: event.registryCursor };
 }
+
 /** 读取详情时可再次检查被持久化的独立快照，绝不据当前来源重写旧采纳。 */
 export function validateWorkspaceMember(member: WorkspaceMember): void
 {

@@ -54,6 +54,7 @@ export interface WorkspaceMemberFormProps
 
   onClose: () => void
 }
+
 export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, models, target, nextState, disabled, onEdit, onPreview, onClose }: WorkspaceMemberFormProps)
 {
   const register = kind === 'register',
@@ -127,6 +128,7 @@ export function WorkspaceMemberForm({ kind, member, agents, initialAgentId, mode
       setError(cause instanceof Error ? cause.message : String(cause))
     }
   }
+
   return <form className="workspace-member-form" onSubmit={event => { event.preventDefault(); void prepare() }}><h3>{register ? '登记项目岗位' : kind === 'update' ? '修改岗位' : kind === 'adopt' ? '明确采纳新版本' : nextState === 'retired' ? '退休岗位' : nextState === 'suspended' ? '暂停岗位' : '启用岗位'}</h3>
     <p className="inline-note">1. 填写变更 → 2. 核对预览 → 3. 确认保存。预览不会修改岗位。</p>
     <fieldset disabled={disabled}>

@@ -43,6 +43,7 @@ export function governanceCommandFingerprint(action: ModuleGovernanceReceipt['ac
 {
   return hash(json({ action, input, ...(origin ? { origin } : {}) }))
 }
+
 export const governanceLedgerLimit = 32 * 1024 * 1024;
 
 const same = (a: unknown, b: unknown) => json(a) === json(b);
@@ -53,6 +54,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GOVERNANCE_DATA', message)
 }
+
 /** 文件是用户应用数据，不属于 .cbim；正文、决定和身份均通过完整链校验后才供门禁使用。 */
 export class ModuleGovernanceStore
 {
@@ -65,10 +67,12 @@ export class ModuleGovernanceStore
   constructor(private readonly filename: string, readonly workspaceId: string)
   {
   }
+
   private get anchorFile()
   {
     return this.filename + '.anchor'
   }
+
   private async Bytes(file: string, limit: number)
   {
     try
@@ -92,6 +96,7 @@ export class ModuleGovernanceStore
       throw error
     }
   }
+
   async Init()
   {
     try
@@ -163,24 +168,28 @@ export class ModuleGovernanceStore
       fail('GOVERNANCE_DATA', '治理账本损坏，未解除已登记保护；请核实本地记录')
     }
   }
+
   private Current()
   {
     if (this.uncertain || !this.anchor)
 
       fail('GOVERNANCE_DATA', '治理账本写入结果未知，请重开核实原记录；当前保护未解除')
   }
+
   All(): readonly GovernanceCommand[]
   {
     this.Current();
 
     return structuredClone(this.commands)
   }
+
   Find(commandId: string)
   {
     this.Current();
 
     return structuredClone(this.commands.find(command => command.receipt.commandId === commandId))
   }
+
   /** 磁盘写入成功后才发布新状态；失败保留原账本，不静默裁剪历史。 */
   async Append(command: GovernanceCommand)
   {
@@ -223,6 +232,7 @@ export class ModuleGovernanceStore
       throw error
     }
   }
+
   private Validate(commands: GovernanceCommand[])
   {
     const ids = new Set<string>(),

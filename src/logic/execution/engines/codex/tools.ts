@@ -31,6 +31,7 @@ export interface CodexToolSpec
 
   inputSchema: Record<string, unknown>
 }
+
 /** 一个 run 只持有自己的调用身份及取消信号；重复 callId 不执行第二次。 */
 export async function codexTools(context: EngineContext, port: EngineToolsPort, native: EngineToolsPort, allowExecution: boolean, settle: () => Promise<void>)
 {
@@ -119,16 +120,25 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
 
     return { success: result.isError !== true, contentItems: result.content.map(block => block.type === 'text' ? { type: 'inputText', text: block.text } : { type: 'inputImage', imageUrl: 'data:' + block.mimeType + ';base64,' + block.data }) };
   }
+
   return {
-    registered, catalog, Call(input: Parameters<typeof invoke>[0])
+    registered,
+
+    catalog,
+
+    Call(input: Parameters<typeof invoke>[0])
     {
       const pending = invoke(input);
 
       return active.Track(pending)
-    }, Stop()
+    },
+
+    Stop()
     {
       controller.abort()
-    }, async Close()
+    },
+
+    async Close()
     {
       controller.abort();
 
@@ -136,6 +146,7 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     }
   };
 }
+
 function denied(text: string)
 {
   return { success: false, contentItems: [{ type: 'inputText', text }] }

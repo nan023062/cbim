@@ -20,6 +20,7 @@ export function commandReportContract()
 
   return { version: 1, outputSchema: zodToJsonSchema(commandVerificationReportSchema) as Record<string, unknown>, cancellation, recovery };
 }
+
 /** 只编码一次；坏返回不改成成功，不再次调用服务，也不回显私有正文。 */
 export function checkedCommandReportResult(value: unknown, identity: CommandVerificationInput)
 {

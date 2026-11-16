@@ -62,12 +62,14 @@ export function normalizeArtifactPath(root: string, raw: string): string
 
   return path.relative(root, file).split(path.sep).join('/');
 }
+
 /** 工作区所有者固定 root 和 assert；调用中的 paths 仍须全部通过平台检查，不能按来源回执跳过。 */
 export class ArtifactFiles
 {
   constructor(private readonly root: string, private readonly assert: () => void, private readonly secureRead?: (path: string, signal: AbortSignal) => { bytes: Buffer; fact: { byteLength: number; sha256: string } })
   {
   }
+
   private async Resolve(raw: string, signal: AbortSignal)
   {
     this.assert();
@@ -108,11 +110,13 @@ export class ArtifactFiles
 
     return { file, relativePath };
   }
+
   /** 输入与输出逐项对应；重复别名也占读取额度，调用方只能在可信指纹返回后归并。 */
   async CaptureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>
   {
     return this.ReadFiles(paths, signal, { readBytes: 0 });
   }
+
   /** 原授权路径的当前观察不要求成功基线；不存在与空文件分开，失败不读取正文或推断旧操作结果。 */
   async ObserveFiles(paths: readonly string[], signal: AbortSignal): Promise<EffectFileObservation[]>
   {
@@ -150,6 +154,7 @@ export class ArtifactFiles
     }
     return result;
   }
+
   /** 仅可信冻结要求调用；同一 Buffer 同时确定哈希、严格解析与验证，正文不离开平台端口。 */
   async ValidateFile(expected: ArtifactFileFact, schema: BoundedJsonSchema, signal: AbortSignal)
   {
@@ -167,6 +172,7 @@ export class ArtifactFiles
 
     return { artifact: fact, ...result };
   }
+
   /** CSV 使用同一安全句柄取得指纹与全部表格字节；解析不执行公式，错误不返回单元格正文。 */
   async ValidateTable(expected: ArtifactFileFact, schema: CsvTableSchema, signal: AbortSignal)
   {
@@ -184,6 +190,7 @@ export class ArtifactFiles
 
     return { artifact: fact, ...result };
   }
+
   /** PNG指纹与有界解码共用完整读取；像素不出平台，解码结束再次核停止与工作区有效性。 */
   async ValidateImage(expected: ArtifactFileFact, schema: PngImageSchema, signal: AbortSignal)
   {
@@ -201,6 +208,7 @@ export class ArtifactFiles
 
     return { artifact: fact, ...result };
   }
+
   /** 一份明确基线的逐文件只读结果；失败不抹去其它文件观察，所有读取共用总字节上限。 */
   async CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>
   {
@@ -234,6 +242,7 @@ export class ArtifactFiles
     }
     return result;
   }
+
   private async ReadFiles(paths: readonly string[], signal: AbortSignal, budget: { readBytes: number }): Promise<ArtifactFileFact[]>
   {
     if (!paths.length || paths.length > artifactFileLimits.files)
@@ -248,6 +257,7 @@ export class ArtifactFiles
 
     return result;
   }
+
   /** 哈希与可选的验证字节共用一个有界读取循环；原采集接口仍不保留或返回正文。 */
   private async ReadFile(raw: string, signal: AbortSignal, budget: { readBytes: number }, maxBytes: number, retainBytes: boolean)
   {

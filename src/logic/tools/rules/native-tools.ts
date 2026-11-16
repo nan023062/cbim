@@ -17,6 +17,7 @@ export function nativeToolDescriptor(name: string): RunToolDescriptor | undefine
 
   return value ? { effects: [...value.effects], native: value.native } : undefined
 }
+
 /** 按真实引擎公开规范名称；Claude Code 无独立 ls，预检不能承诺未注册能力。ask/execute 仍逐次授权。 */
 export function nativeToolNames(allowExecution: boolean, engine: LoopEngine = 'pi'): string[]
 {

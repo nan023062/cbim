@@ -14,6 +14,7 @@ function SourceReference({ value }: { value: CapabilitySourceRef })
 {
   return 'kind' in value ? <p>CBIM 内置执行者 · 内容指纹 <code>{value.contentHash}</code></p> : <p>{value.source.kind === 'agent' ? '团队能力' : '业务模块'}：<code>{value.source.sourceId}</code><br />来源代次：<code>{value.generationId}</code></p>;
 }
+
 /** 旧记录没有状态或已采纳引用时明确显示缺省，不能据当前路径补造旧身份。 */
 export function KnowledgeSourceDetails({ state, adopted }: { state?: KnowledgeSourceReadState; adopted?: CapabilitySourceRef })
 {
@@ -28,6 +29,7 @@ export function KnowledgeSourceDetails({ state, adopted }: { state?: KnowledgeSo
     <details><summary>查看来源依据</summary>{adopted && <><h4>已采纳</h4><SourceReference value={adopted} /></>}{current && <><h4>当前来源</h4><SourceReference value={current} /></>}{state?.status === 'pending' && <p>待核实事务：<code>{state.transitionId}</code></p>}{state?.status === 'untracked' && <p>本次观察：<code>{state.source.sourceId}</code><br />知识版本：<code>{state.observation.knowledgeRevision}</code></p>}<small>只能追踪已记录的受控变化，无法证明未留下事件的离线同字节删除重建。</small></details>
   </section>;
 }
+
 /** 预览的 expectedRef 只是版本预期；未追踪对象在真正提交后才有新代次。 */
 export function KnowledgeSourceSelection({ selection }: { selection?: SourceSelection })
 {

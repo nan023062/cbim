@@ -55,6 +55,7 @@ export interface HumanDecisionPorts
 
   AssertCurrent?(): void;
 }
+
 /** 只接已登记的运行身份；平台自行解析 canonical 路径，模型或客户端不能指定日志文件。 */
 export interface HumanEvidenceLogs
 {
@@ -62,6 +63,7 @@ export interface HumanEvidenceLogs
 
   InspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
 }
+
 /** 注入目标服务的完整历史候选校验；当前文件在本模块合并复核，不用简化摘要绕过真实回执。 */
 export type HumanCandidateValidator = (state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string) => Promise<RunSummary>;
 
@@ -71,6 +73,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 /** 仅当前输入版本已实际消费的人工意图生效；不能任选历史接受或穿越后续文本补充。 */
 export function consumedHumanDecision(scope: DispatchScope, reference: { decisionId: string; continuationId: string }, criterionId?: string): { continuation: ScopeHumanContinuation; record: HumanDecisionRecord }
 {
@@ -82,11 +85,13 @@ export function consumedHumanDecision(scope: DispatchScope, reference: { decisio
 
   return { continuation, record };
 }
+
 /** 计划可更新解释和运行版本，但已接受的业务主体不能被模型改写后继续借用旧接受。 */
 export function assertHumanSubject(scope: DispatchScope, continuation: ScopeHumanContinuation)
 {
   check(scope.goal?.plan && sameGoalValue(humanContinuationSubject(scope.goal.plan), continuation.subject), 'GOAL_HUMAN_SUBJECT_CHANGED', '目标、约束、验收或责任模块已变化，不能沿用此前人工接受');
 }
+
 /**
  * 所有接受项合并文件后一次核实；前后读取 canonical 和知识，外部文件变化不承诺跨存储原子隔离。
  * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 必验文件，不能只选未变的基线绕过。

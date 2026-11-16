@@ -33,6 +33,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 /** token 只能由本服务创建；fresh 不持久化，重查绝不重新取得发送权。 */
 export interface PreparedActiveInput
 {
@@ -42,6 +43,7 @@ export interface PreparedActiveInput
 
   fresh: boolean
 }
+
 export class ScopeActiveInputService
 {
   /** 发送沿原持久意图完成结算；原生回执不明保留 unknown，已接受后停止不得反悔。新旧运行共用此边界。 */
@@ -95,9 +97,11 @@ export class ScopeActiveInputService
       fail('QUEUE_INSERT_UNKNOWN', '原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')
     }
   }
+
   constructor(private readonly owner: Owner, private readonly store: DispatchStore)
   {
   }
+
   private Scope(state: DispatchState, identity: GraphIdentity, scopeId: string)
   {
     this.owner.Assert();
@@ -110,6 +114,7 @@ export class ScopeActiveInputService
 
     return scope;
   }
+
   /** 按原 run/queue 查询所有周期，不读取附件、发送消息或推测失败记录可重试。 */
   async Inspect(identity: GraphIdentity, runId: string, queueId: string): Promise<ScopeActiveInput | undefined>
   {
@@ -125,6 +130,7 @@ export class ScopeActiveInputService
 
     return records[0];
   }
+
   /** 事务返回前不得发送；pending 不修改目标，只预留版本/正文并阻止旧计划继续推进。 */
   async Prepare(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, raw: ScopeActiveInputPayload, signal: AbortSignal): Promise<PreparedActiveInput>
   {
@@ -166,6 +172,7 @@ export class ScopeActiveInputService
 
     return { record, token, fresh };
   }
+
   /** ACK 后取消不能撤销接收；只改变原 pending，重复结果返回同一事实，失败不自动重发。 */
   async Resolve(identity: GraphIdentity, token: ScopeActiveInputToken, outcome: { status: 'accepted'; input: ScopeActiveInputPayload; receipt: ScopeActiveInputSendReceipt } | { status: 'rejected' | 'unknown'; reason: string }): Promise<ScopeActiveInput>
   {

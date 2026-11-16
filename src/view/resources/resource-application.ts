@@ -26,6 +26,7 @@ export function applicableResourceKind(item: Pick<ResourceDefinition, 'kind' | '
     /* 旧 Markdown/JSON 文本不是可应用资源包。 */
   }
 }
+
 /** 已有 module/workflow 允许继续编辑，新增业务资源只使用完整 architecture。 */
 export function creatableResourceKinds(category: ResourceCategory): ResourceKind[]
 {

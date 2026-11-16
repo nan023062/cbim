@@ -43,6 +43,7 @@ export class QueuedDependencyReplacementService
   constructor(private readonly owner: DispatchKnowledgeWorkspace, private readonly store: DispatchStore, private readonly goals: ScopeGoalService, private readonly owners?: OwnerExecutionService)
   {
   }
+
   /** 身份由主轮闭包固定；版本/候选/停止任何核实失败都不改边，同命令只返回原回执，不再次排队或运行。 */
   async Replace(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
   {

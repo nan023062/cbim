@@ -73,6 +73,7 @@ export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false,
       onBusy(false)
     }
   }
+
   function select(next: 'link' | 'web' | 'connector')
   {
     setKind(next);
@@ -85,6 +86,7 @@ export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false,
 
       void window.cbim.call('chat.connectors', { id: workspaceId }).then(setConnectors).catch((e: Error) => setError(e.message))
   }
+
   function invokeSkill(skill: FeedbackSkillTitle)
   {
     if (disabled || busy || lock.current || skillsDisabled)
@@ -101,6 +103,7 @@ export function AttachmentMenu({ workspaceId, disabled, attachmentsFull = false,
 
     onSkill(skill)
   }
+
   const cannotAttach = disabled || busy || attachmentsFull;
 
   return <details ref={menu} className="chat-menu chat-add-menu" onKeyDown={e => { if (e.key === 'Escape') e.currentTarget.removeAttribute('open') }}><summary aria-label="添加上下文" title="添加上下文、BUG 反馈或需求许愿">＋</summary><div className="chat-menu-content"><div className="composer-menu-heading">添加到对话</div>

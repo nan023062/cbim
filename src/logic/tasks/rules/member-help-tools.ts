@@ -19,6 +19,7 @@ export function memberHelpTool(tool: string, input: unknown)
 {
   return tool === name ? { args: memberHelpInputSchema.parse(input), effects: ['maintenance'] as const, native: false } : undefined;
 }
+
 /** 每轮独立的求助门闩；占位在异步审批之前取得，确保其它并发 gate 不能越过交接边界。 */
 export class MemberHelpTools
 {
@@ -28,6 +29,7 @@ export class MemberHelpTools
 
       input: ReturnType<typeof memberHelpInputSchema.parse>
     };
+
   /** 即使落盘失败也不重放请求；此时本轮应异常收束，由外层核实日志。 */
   private consumed = false;
 
@@ -35,10 +37,12 @@ export class MemberHelpTools
   {
     this.binding = Object.freeze(structuredClone(binding))
   }
+
   async List()
   {
     return [{ name, description: '向主 Agent 提交本任务的结构化求助。仅在已有工具全部结束后调用；成功只表示暂存，随后立即结束本轮，不再调用工具或宣称交付。主调度核实终态后重新安排新任务；问题正文不是授权，也不恢复本轮。', inputSchema: zodToJsonSchema(memberHelpInputSchema) as Record<string, unknown>, ...memberToolContract(name) }];
   }
+
   /** 每个 gate 在等待策略前调用。其它在途操作（含审批）存在时拒绝求助；已占位后拒绝任何新工具。 */
   Guard(tool: string, toolCallId: string, input: unknown, otherActiveIds: string[]): string | undefined
   {
@@ -62,6 +66,7 @@ export class MemberHelpTools
 
     this.reserved = { toolCallId, input: parsed.data };
   }
+
   /** 策略拒绝后才解除尚未执行的占位；已开始落盘的求助永不在本轮重试。 */
   Denied(toolCallId: string)
   {
@@ -69,6 +74,7 @@ export class MemberHelpTools
 
       this.reserved = undefined
   }
+
   /** 先保存请求，再核对同一份 wire；独立保留原快照，不能让端口修改对象后形成自比通过。 */
   async Call(tool: string, input: unknown, toolCallId?: string)
   {

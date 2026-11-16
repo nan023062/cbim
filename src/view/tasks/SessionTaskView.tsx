@@ -55,6 +55,7 @@ export interface SessionTaskViewProps
 
   onChat: () => void;
 }
+
 /** 点击人物或历史任务只把原身份交回 Conversation，不在舞台右侧另开面板。 */
 export function SessionTaskView({ workspaceId, taskId, runs, queued, graph, graphLoading, graphError, scopeState, ...props }: SessionTaskViewProps)
 {

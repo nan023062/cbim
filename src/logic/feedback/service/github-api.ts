@@ -15,6 +15,7 @@ export interface GitHubReply
 
   data: unknown
 }
+
 /** 测试可注入本地替身；生产实现只允许 GitHub 官方两个固定主机。 */
 export type GitHubRequest = (endpoint: string, options: { method: 'GET' | 'POST'; token?: string; body?: Record<string, unknown>; signal: AbortSignal }) => Promise<GitHubReply>;
 

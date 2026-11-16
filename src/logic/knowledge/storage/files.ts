@@ -69,6 +69,7 @@ export async function readKnowledge(paths: Paths, root: string)
       }
     }
   }
+
   if (await exists(path.join(root, '.cbim')))
 
     await walk('.cbim');

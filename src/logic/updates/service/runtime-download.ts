@@ -53,6 +53,7 @@ export async function runtimeAssetResponse(url: string, signal: AbortSignal)
   }
   throw Error('更新附件跳转过多');
 }
+
 /** 完整传输、长度与 SHA-256 全部通过才返回；失败文件不会作为缓存重用。 */
 export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, signal: AbortSignal, onProgress: (percent: number) => void)
 {
@@ -117,6 +118,7 @@ export async function downloadRuntimePackage(pkg: RuntimePackage, file: string, 
     await output.close();
   }
 }
+
 /** 清单有独立大小限制，内容必须继续经过冷壳公钥验证。 */
 export async function downloadRuntimeManifest(tag: string, name: string, signal: AbortSignal)
 {

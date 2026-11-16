@@ -38,6 +38,7 @@ export interface WorkspaceMemberModels
 {
   Configuration(profileId: string, modelId: string, engine?: WorkspaceMemberModelRef['engine'], modelRoles?: WorkspaceMemberModelRef['modelRoles']): Promise<WorkspaceMemberModelSnapshot>
 }
+
 interface PreparedMember
 {
   preview: WorkspaceMemberPreview;
@@ -46,6 +47,7 @@ interface PreparedMember
 
   model?: WorkspaceMemberRuntimePolicy;
 }
+
 function input<T>(schema: z.ZodType<T>, raw: unknown): T
 {
   const value = schema.safeParse(raw);
@@ -56,16 +58,19 @@ function input<T>(schema: z.ZodType<T>, raw: unknown): T
 
   return value.data
 }
+
 function issue(error: unknown)
 {
   return error && typeof error === 'object' && 'code' in error ? String(error.code) : ''
 }
+
 /** 每个工作区实例只装配一次，共用派发存储；本服务没有执行、领取或停止模型的端口。 */
 export class WorkspaceMembers
 {
   constructor(private readonly owner: KnowledgeSourceWorkspace, private readonly store: DispatchStore, private readonly models: WorkspaceMemberModels, private readonly isCurrent: () => boolean = () => true)
   {
   }
+
   private Assert(identity: WorkspaceMemberIdentity)
   {
     if (identity.workspaceId !== this.owner.entry.id || identity.instanceId !== this.owner.instanceId)
@@ -78,20 +83,24 @@ export class WorkspaceMembers
 
       fail('MEMBER_UNAVAILABLE', '工作区正在关闭，未接受新的岗位登记');
   }
+
   private Identity()
   {
     return { workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId }
   }
+
   private SameWorkspace(workspaceId: string)
   {
     if (workspaceId !== this.owner.entry.id)
 
       fail('MEMBER_IDENTITY', '岗位登记不属于此工作区')
   }
+
   private Cursor(state: DispatchState)
   {
     return state.registryCursor ?? null
   }
+
   private Member(state: DispatchState, id: string)
   {
     const member = state.workspaceMembers?.find(value => value.memberId === id);
@@ -102,6 +111,7 @@ export class WorkspaceMembers
 
     return member
   }
+
   /** 登记列表不复制能力正文；后续页严格绑定游标，修改名称不会重新排序。 */
   async List(raw: unknown)
   {
@@ -131,6 +141,7 @@ export class WorkspaceMembers
 
     return workspaceMemberListSchema.parse({ identity: this.Identity(), registryCursor: cursor, offset, total: members.length, items, ...(end < members.length ? { nextOffset: end } : {}) });
   }
+
   /** 每次详情读取重新观察知识和公开模型配置；登记游标不作为外部来源的缓存键。 */
   async Get(raw: unknown)
   {
@@ -174,6 +185,7 @@ export class WorkspaceMembers
 
     return workspaceMemberDetailSchema.parse({ identity: this.Identity(), registryCursor: this.Cursor(state), member, currentDiff, sourceStatus });
   }
+
   /** 预览只读取来源，不生成岗位、采纳 ID 或审计记录。 */
   async Preview(raw: unknown)
   {
@@ -197,6 +209,7 @@ export class WorkspaceMembers
 
     return prepared.preview;
   }
+
   /** 原命令查询不会调用事务、知识读取、默认模型解析或重放；未找到不等于证明从未受理。 */
   async Receipt(raw: unknown): Promise<WorkspaceMemberReceipt | undefined>
   {
@@ -208,6 +221,7 @@ export class WorkspaceMembers
 
     return recorded ? this.CheckedReceipt(recorded.receipt, request.workspaceId, request.commandId) : undefined;
   }
+
   private CheckedReceipt(raw: unknown, workspaceId: string, commandId: string)
   {
     const parsed = workspaceMemberReceiptSchema.safeParse(raw);
@@ -218,6 +232,7 @@ export class WorkspaceMembers
 
     return parsed.data;
   }
+
   /** 主工具只读取同根会话的原审计；查询不依赖当前能力可用性，不重放提交。 */
   async MainReceipt(workspaceId: string, commandId: string, rootSessionId: string)
   {
@@ -235,6 +250,7 @@ export class WorkspaceMembers
 
     return this.Receipt({ workspaceId, commandId });
   }
+
   /** 可信桌面或受控主工具可调用；主工具不能选择模型，取消在写入前复核。先核原命令，再在 Store 串行事务内复验版本和来源；已落盘后的回包失败不撤回或重做。 */
   async Commit(raw: unknown, actor: WorkspaceMemberActor, assertCurrent?: () => void): Promise<WorkspaceMemberReceipt>
   {
@@ -276,6 +292,7 @@ export class WorkspaceMembers
 
     return adopting ? this.owner.WithSourceSnapshot(execute) : execute();
   }
+
   private async Capability(agentId: string, fixed?: Snapshot): Promise<WorkspaceMemberCapability>
   {
     const snapshot = fixed ?? await this.owner.Snapshot();
@@ -290,12 +307,14 @@ export class WorkspaceMembers
 
     return parsed.data;
   }
+
   private async Policy(ref: WorkspaceMemberModelRef & { snapshot?: WorkspaceMemberModelSnapshot }): Promise<WorkspaceMemberRuntimePolicy>
   {
     const snapshot = workspaceMemberModelSnapshotSchema.parse(await this.models.Configuration(ref.profileId, ref.modelId, workspaceMemberEngine(ref), ref.modelRoles));
 
     return { profileId: ref.profileId, modelId: ref.modelId, ...(ref.engine === undefined ? {} : { engine: ref.engine }), ...(ref.modelRoles === undefined ? {} : { modelRoles: structuredClone(ref.modelRoles) }), snapshot, configurationHash: workspaceMemberModelHash(snapshot) };
   }
+
   private async Prepare(state: DispatchState, request: WorkspaceMemberPreviewInput, fixed?: Snapshot): Promise<PreparedMember>
   {
     this.Assert(request);
@@ -428,6 +447,7 @@ export class WorkspaceMembers
 
     return { preview, knowledgeRevision, model };
   }
+
   /** 独立来源最后复验后立即返回 mutation；不宣称模型设置与知识存储拥有同一事务锁。 */
   private async VerifySources(prepared: PreparedMember, identity: WorkspaceMemberIdentity)
   {
@@ -453,6 +473,7 @@ export class WorkspaceMembers
     }
     this.Assert(identity);
   }
+
   private async SelectedCapability(agentId: string, snapshot?: Snapshot)
   {
     if (agentId === 'cbim:executor')
@@ -468,11 +489,13 @@ export class WorkspaceMembers
       fail('MEMBER_SOURCE_INVALID', '无法采纳当前角色能力，请检查角色、原则、有效 Skill 与知识结构')
     }
   }
+
   /** 旧采纳快照与账本保持可读，不再读取或重建已退役的内置能力。 */
   private async BuiltinStatus(_member: WorkspaceMember, _snapshot: Snapshot): Promise<KnowledgeSourceReadState>
   {
     return { status: 'invalid', issue: '内置默认执行 Agent 已退役，历史岗位保留；未配置自定义 Agent 的模块由主 Agent 直接执行' }
   }
+
   private async SelectedPolicy(ref: WorkspaceMemberModelRef & { snapshot?: WorkspaceMemberModelSnapshot })
   {
     try
@@ -484,6 +507,7 @@ export class WorkspaceMembers
       fail('MEMBER_MODEL_INVALID', '无法读取明确选定的公开模型配置，请检查供应商与已启用模型')
     }
   }
+
   private async Diff(member: WorkspaceMember): Promise<WorkspaceMemberCurrentDiff>
   {
     let capability: WorkspaceMemberCurrentDiff['capability'],

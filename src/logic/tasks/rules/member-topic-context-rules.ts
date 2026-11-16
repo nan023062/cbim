@@ -18,6 +18,7 @@ function local(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot)
 
     fail('MEMBER_TOPIC_CONTEXT_IDENTITY', '成员上下文不属于当前办公室话题');
 }
+
 /** 只冻结同角色、同话题已完成候选的引用；当前任务自身由原生当前任务历史负责，其他角色只沿明确前置引用。 */
 export function createMemberTopicContext(task: TaskNode, scope: DispatchScope, graph: GraphSnapshot, session: TeamSession): MemberTopicContext
 {
@@ -31,6 +32,7 @@ export function createMemberTopicContext(task: TaskNode, scope: DispatchScope, g
 
   return memberTopicContextSchema.parse({ version: 1, workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, sessionId: session.sessionId, agentId: session.agentId, inputRevision: scope.goal?.inputRevision ?? 1, priorTasks: prior.slice(-20).map(value => ({ taskId: value.taskId, planRevision: value.planRevision, resultId: value.result!.resultId })), omittedTasks: Math.max(0, prior.length - 20) });
 }
+
 /** 按原引用解析有界资料；任何身份或版本漂移拒绝启动，不退回最近话题。截断只影响提示词，不删归档。 */
 export function resolveMemberTopicContext(reference: MemberTopicContext, task: TaskNode, scope: DispatchScope, graph: GraphSnapshot): string
 {

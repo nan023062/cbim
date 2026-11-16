@@ -114,6 +114,7 @@ type Options =
 
     turnTimeoutMs?: number
   };
+
 /** 一个用户任务跨主轮和成员回注共享 scope；tasks 保留已回注的成员，供最终收束与释放。 */
 type Cycle =
   {
@@ -149,6 +150,7 @@ type Cycle =
 
     repairs?: GoalRepairSource[]
   };
+
 type Batch =
   {
     cycle: Cycle;
@@ -189,6 +191,7 @@ type Batch =
       message: string
     }
   };
+
 /** 应用按工作区装配一个；关闭必须早于主/成员执行管理器与派发存储。 */
 export class AutoCollaboration
 {
@@ -228,6 +231,7 @@ export class AutoCollaboration
 
     return this.Track(cycle, this.dispatch.activeInputs.Send(this.Identity(cycle), cycle.scopeId, runId, queueId, input, signal, send));
   }
+
   constructor(private owner: KnowledgeWorkspace, private dispatch: WorkspaceDispatchService, private members: MemberExecutionManager, private execution: WorkspaceExecutionManager, lease: WorkspaceExecutionLease, private reportIssue: (rootSessionId: string, error: unknown) => void = () => { })
   {
     this.releaseListener = lease.ObserveRelease(() => this.Schedule());
@@ -236,6 +240,7 @@ export class AutoCollaboration
       ValidateFollowup: async (rootSessionId, scopeId) => { const scope = await dispatch.goals.Inspect({ workspaceId: owner.entry.id, rootSessionId }, scopeId); if (scope.status !== 'closed') fail('TOPIC_FOLLOWUP_OPEN', '原话题尚未结束，请在话题内明确补充') }, InterruptTopic: (request, stopMain) => this.InterruptTopic(request, stopMain), ActiveInputReceipt: (rootSessionId, runId, queueId) => dispatch.activeInputs.Inspect({ workspaceId: owner.entry.id, rootSessionId }, runId, queueId), InsertActiveInput: (rootSessionId, runId, queueId, input, signal, send) => this.InsertActiveInput(rootSessionId, runId, queueId, input, signal, send), HoldMain: runId => dispatch.budgets.HoldMain(runId), Busy: id => this.Busy(id), Waiting: id => this.waitingSlots.has(id), HumanContinuationReceipt: query => dispatch.humanContinuations.Inspect(query), HumanContinuationPreflight: request => this.HumanContinuationPreflight(request), AcceptHumanContinuation: (request, task, runId, signal) => this.AcceptHumanContinuation(request, task, runId, signal), ReplanReceipt: query => dispatch.replans.Inspect(query), ReplanPreflight: request => this.ReplanPreflight(request), AcceptReplan: (request, task, context) => this.AcceptReplan(request, task, context), RecoveryReceipt: query => dispatch.recoveries.Inspect(query), RecoveryPreflight: request => this.RecoveryPreflight(request), AcceptRecovery: (request, task, context) => this.AcceptRecovery(request, task, context), RecoveryContext: rootSessionId => dispatch.recoveries.LatestContext({ workspaceId: owner.entry.id, rootSessionId }), RecoveryRunIds: rootSessionId => dispatch.recoveries.PriorRunIds({ workspaceId: owner.entry.id, rootSessionId }), ContinuationReceipt: query => dispatch.continuations.Inspect(query), ContinuationCheckpoint: request => this.ContinuationCheckpoint(request), AcceptContinuation: (request, task, runId, trusted) => this.AcceptContinuation(request, task, runId, trusted), Starting: (task, options, source, message, runId, queuedTopicId, followupOf) => this.Starting(task, source, options, message, options.attachmentIds, runId, queuedTopicId, followupOf), StartFailed: (task, source, error) => this.StartFailed(task, source, error), Settled: (task, _options, summary) => this.Settled(task, summary), Stop: id => this.Stop(id)
     });
   }
+
   /** 人工意见沿专用入口预检；普通补充和队列消息不能选择或消费决定。 */
   private async HumanContinuationPreflight(request: HumanContinuationRequest)
   {
@@ -249,6 +254,7 @@ export class AutoCollaboration
 
     return this.dispatch.humanContinuations.Preflight(request);
   }
+
   /** 取得真实运行租约后消费人工意图；停止共享受理屏障，提交之后失败只封存本次新运行。 */
   private AcceptHumanContinuation(request: HumanContinuationRequest, task: TaskSpec, runId: string, signal: AbortSignal): Promise<void>
   {
@@ -264,6 +270,7 @@ export class AutoCollaboration
 
     return pending.finally(() => { if (this.resuming.get(task.taskId) === pending) this.resuming.delete(task.taskId) });
   }
+
   /** 只预检正式重规划的核实证据；真正接受仍在运行租约内复核并持久化。 */
   private async ReplanPreflight(request: ReplanRequest)
   {
@@ -279,6 +286,7 @@ export class AutoCollaboration
 
     return { executionModel: 'executionModel' in value.proof ? value.proof.executionModel : 'legacy' as const, requiredModules: value.proof.requiredModules.map(module => module.moduleId), acceptance: 'sourceAcceptance' in value.proof ? [...value.proof.sourceAcceptance] : [] };
   }
+
   /** 新业务周期使用新的执行实例，既有只读周期和旧失败任务保持封存；停止共享受理屏障。 */
   private AcceptReplan(request: ReplanRequest, task: TaskSpec, context: { runId: string; nativeSessionId: string; excludedRunIds: string[]; signal?: AbortSignal }): Promise<void>
   {
@@ -307,6 +315,7 @@ export class AutoCollaboration
 
     return pending.finally(() => { if (this.resuming.get(task.taskId) === pending) this.resuming.delete(task.taskId) });
   }
+
   /** 读取来源报告仅预检；新运行意图在 runtime 的租约内再次核实，不能用预检结果直接启动。 */
   private async RecoveryPreflight(request: RecoveryRequest)
   {
@@ -322,6 +331,7 @@ export class AutoCollaboration
 
     return 'executionModel' in source && source.executionModel === 'agent-tools-v1' ? 'agent-tools-v1' as const : 'legacy' as const;
   }
+
   /** 新周期不复活旧成员；可靠意图先落盘，之后绑定同一主实例的全新原生上下文，等待停止屏障收束。 */
   private AcceptRecovery(request: RecoveryRequest, task: TaskSpec, context: { runId: string; nativeSessionId: string; excludedRunIds: string[]; signal?: AbortSignal }): Promise<void>
   {
@@ -372,6 +382,7 @@ export class AutoCollaboration
 
     return pending.finally(() => { if (this.resuming.get(task.taskId) === pending) this.resuming.delete(task.taskId) });
   }
+
   /** 只允许当前等待目标准备新运行；模型前的事务仍会复核，读取不授予重复启动权。 */
   private async InterruptTopic(request: TopicInterruptionRequest, stopMain: () => Promise<RunSummary>)
   {
@@ -471,6 +482,7 @@ export class AutoCollaboration
 
     return parked;
   }
+
   private async ContinuationCheckpoint(request: GoalContinuationRequest, mainLeaseHeld = false)
   {
     if (this.closed)
@@ -496,6 +508,7 @@ export class AutoCollaboration
 
     return structuredClone(scope.wait);
   }
+
   /** 可信运行时取得租约并生成 runId 后消费等待；恢复历史任务集合但不重新派发，预算沿用检查点。 */
   private AcceptContinuation(request: GoalContinuationRequest, task: TaskSpec, runId: string, trusted: TrustedContinuationInput = {}): Promise<void>
   {
@@ -563,6 +576,7 @@ export class AutoCollaboration
 
     return pending.finally(() => { if (this.resuming.get(task.taskId) === pending) this.resuming.delete(task.taskId) });
   }
+
   /** 公开请求前恢复等待占位及精确待回传批次；只启动新的主接收轮，不启动历史成员或消费人工等待。 */
   async Initialize()
   {
@@ -619,6 +633,7 @@ export class AutoCollaboration
     }
     this.Schedule();
   }
+
   /** 普通用户轮次原子打开周期并登记真实 runId；排队轮沿管理器固定队列身份，结果回注追加原周期，补充由 accept 事务登记。 */
   private async Starting(task: TaskSpec, source: RunInputSource | undefined, options: WorkspaceLoopOptions, message: string, attachmentIds?: string[], runId?: string, queuedTopicId?: string, followupOf?: string)
   {
@@ -683,6 +698,7 @@ export class AutoCollaboration
       fail('COLLABORATION_STOPPED', '协作调度已关闭')
     }
   }
+
   private async StartFailed(task: TaskSpec, source: RunInputSource | undefined, error: unknown)
   {
     for (const [id, ids] of this.preparedTasks)
@@ -716,6 +732,7 @@ export class AutoCollaboration
       await this.FinishCycle(cycle, code === 'COLLABORATION_STOPPED' ? 'cancelled' : 'failed');
     }
   }
+
   private Track<T>(cycle: Cycle, pending: Promise<T>): Promise<T>
   {
     cycle.operations.add(pending);
@@ -724,6 +741,7 @@ export class AutoCollaboration
 
     return pending
   }
+
   /** 在 beforeRun 和 tools 建立真实批次后取得；停止先撤销运行，关闭再等待控制面在途操作。 */
   MainToolContext(task: TaskSpec, runId: string): MainToolContext | undefined
   {
@@ -737,6 +755,7 @@ export class AutoCollaboration
       binding: Object.freeze(this.ToolBinding(batch)), AssertCurrent: signal => { this.AssertLive(batch, signal); if (this.batches.get(runId) !== batch) fail('COLLABORATION_STOPPED', '原主运行已退役，不能提交新的责任变更'); }, Track: operation => this.Track(batch.cycle, Promise.resolve().then(operation))
     };
   }
+
   /** 在真实周期已登记、工具批次创建前规划一个明确岗位任务；沿原派发与结算规则，不另启成员引擎。 */
   async PrepareAssignment(task: TaskSpec, runId: string, plan: GoalPlanInput, input: DispatchTaskInput['task'], signal: AbortSignal)
   {
@@ -774,6 +793,7 @@ export class AutoCollaboration
       return receipt;
     })());
   }
+
   /** 工具仅装入真实主聊天运行；身份来自运行时，CLI 或成员不会得到派发入口。 */
   Tools(task: TaskSpec, runId: string, options: WorkspaceLoopOptions): DispatchTools | undefined
   {
@@ -974,15 +994,18 @@ export class AutoCollaboration
       }, Resume: (input, call) => { this.AssertLive(batch, call.signal); cycle.workRequested = true; const commandId = mainToolCommandId('cbim_dispatch_resume', binding, call.toolCallId)!; return this.Track(cycle, this.members.RequestResume(this.Identity(batch), cycle.scopeId, batch.runId, commandId, input, () => this.AssertLive(batch, call.signal)).then(receipt => { const ids = receipt?.trackedTaskIds; if (Array.isArray(ids) && ids.every(id => typeof id === 'string')) for (const taskId of ids) { if (!batch.tasks.includes(taskId)) batch.tasks.push(taskId); cycle.tasks.add(taskId) } return receipt; })); }, Inspect: async taskId => { const graph = await this.dispatch.Snapshot(this.Identity(batch)); if (!taskId) return graph; const task = graph.tasks.find(t => t.taskId === taskId); if (!task) fail('TASK_NOT_FOUND', '任务不属于当前主会话'); return task; }
     }, goals, new CandidateReviewTools(binding, (input, id, signal) => { this.AssertLive(batch, signal); cycle.workRequested = true; return this.Track(cycle, this.dispatch.goals.ReviewCandidate(this.Identity(batch), cycle.scopeId, runId, 'candidate-review-' + hash(json({ runId, id })), input, () => this.AssertLive(batch, signal))) }), new OfficeHistoryTools(this.Identity(batch), (query, signal) => { this.AssertLive(batch, signal); return this.Track(cycle, this.dispatch.history.Read(this.Identity(batch), query, signal)) }));
   }
+
   private Identity(batch: { task: TaskSpec })
   {
     return { workspaceId: this.owner.entry.id, rootSessionId: batch.task.taskId }
   }
+
   /** 同一闭包用于实际命令和公开回包核验，不能从返回结果反推本轮身份。 */
   private ToolBinding(batch: Batch)
   {
     return { ...this.Identity(batch), scopeId: batch.cycle.scopeId, runId: batch.runId }
   }
+
   /** 等待票据仅绑定仍在本进程活动的原批次；通知只是重新核实，不直接启动成员或回注模型。 */
   private AdmissionWait(batch: Batch, taskId?: string): ExecutionAdmissionWait
   {
@@ -992,6 +1015,7 @@ export class AutoCollaboration
       scopeId: batch.cycle.scopeId, IsCurrent: isCurrent, OnReady: () => { if (isCurrent()) this.Schedule() }, RegisterWithdraw: (requestId, withdraw) => batch.admissions.set(requestId, { taskId, withdraw })
     };
   }
+
   private WithdrawAdmissions(batch: Batch, taskIds?: Set<string>)
   {
     for (const [key, value] of batch.admissions)
@@ -1003,6 +1027,7 @@ export class AutoCollaboration
         batch.admissions.delete(key)
       }
   }
+
   private RetireBatch(batch: Batch)
   {
     batch.stopped = true;
@@ -1013,6 +1038,7 @@ export class AutoCollaboration
 
       this.batches.delete(batch.runId)
   }
+
   private AssertLive(batch: Batch, signal: AbortSignal)
   {
     this.owner.Assert();
@@ -1021,6 +1047,7 @@ export class AutoCollaboration
 
       fail('COLLABORATION_STOPPED', '当前主轮已停止接收委派')
   }
+
   private async Assign(batch: Batch, input: DispatchTaskInput['task'], toolCallId: string, signal: AbortSignal)
   {
     this.AssertLive(batch, signal);
@@ -1058,11 +1085,13 @@ export class AutoCollaboration
     }
     return receipt;
   }
+
   /** 未关闭目标始终占本会话入口；持久等待不占模型槽，但普通用户队列不能借它续跑。 */
   Busy(taskId: string)
   {
     return this.cycles.has(taskId) || this.waitingSlots.has(taskId)
   }
+
   private Settled(task: TaskSpec, summary?: RunSummary)
   {
     if (!summary)
@@ -1110,6 +1139,7 @@ export class AutoCollaboration
     }
     this.Schedule();
   }
+
   /** 占用释放或可靠终态触发串行推进；不轮询日志，不等待模型长期 Promise。 */
   private Schedule()
   {
@@ -1121,10 +1151,12 @@ export class AutoCollaboration
 
     this.pending = this.pending.then(async () => { this.scheduled = false; for (const batch of [...this.batches.values()]) { if (this.closed) break; try { await this.Advance(batch) } catch (error) { const undelivered = this.batches.has(batch.runId); this.RetireBatch(batch); batch.cycle.ending = 'interrupted'; if (!this.closed) { this.reportIssue(batch.task.taskId, error); if (undelivered) await this.execution.PauseCollaboration(batch.task.taskId, '自动协作暂停，请核实成员和主会话结果后继续队列') } } } for (const cycle of [...this.cycles.values()]) if (cycle.ending && !cycle.closing && !cycle.interrupting) { try { await this.FinishCycle(cycle, cycle.ending) } catch (error) { this.reportIssue(cycle.task.taskId, error); await this.execution.PauseCollaboration(cycle.task.taskId, '调度周期未能关闭，请核实执行成员状态') } } }).catch(() => { this.scheduled = false });
   }
+
   private Ready(graph: GraphSnapshot, task: TaskNode)
   {
     return dependenciesReady(graph, task)
   }
+
   private async BudgetBlocked(batch: Batch, error: unknown)
   {
     this.RetireBatch(batch);
@@ -1135,6 +1167,7 @@ export class AutoCollaboration
 
     await this.execution.PauseCollaboration(batch.task.taskId, '当前目标软限额阻止新的运行，请查看周期额度与用量；原排队消息保留');
   }
+
   /** 先退役批次和撤销容量等待，再保存目标阻塞并暂停队列；迟到通知不能重新派发。 */
   private async MemberFailuresBlocked(batch: Batch, graph: GraphSnapshot): Promise<boolean>
   {
@@ -1156,6 +1189,7 @@ export class AutoCollaboration
 
     return true;
   }
+
   private async Advance(batch: Batch)
   {
     if (batch.stopped || batch.cycle.stopped || batch.cycle.ending || !batch.settled || this.closed)
@@ -1349,6 +1383,7 @@ export class AutoCollaboration
 
       await this.members.Acknowledge({ ...identity, agentSessionId: root.agentSessionId, messageId: result.messageId, commandId: 'auto-ack-' + hash(source.continuationId + ':' + result.messageId) });
   }
+
   /** 成功关闭先核实显式目标审阅；不靠停止未完任务凑出成功。门禁失败保留原因并暂停用户队列，异常关闭仍排空成员。 */
   private FinishCycle(cycle: Cycle, outcome: DispatchScopeOutcome): Promise<void>
   {
@@ -1503,6 +1538,7 @@ export class AutoCollaboration
 
     return cycle.closing;
   }
+
   /** 用户停止也关闭已恢复的等待目标；检查 park Promise 之后的占位，防止取消与等待提交竞争时漏掉目标。 */
   async Stop(taskId: string)
   {
@@ -1542,6 +1578,7 @@ export class AutoCollaboration
       throw error
     }
   }
+
   /** 应用退出排空活动执行；已提交安全等待留在日志中，重开只恢复占位，不等同用户取消。 */
   async Close()
   {

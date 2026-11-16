@@ -23,6 +23,7 @@ export async function exists(filename: string)
     return false;
   }
 }
+
 /**
  * 创建父目录并用独占 0600 临时文件替换目标；成功意味着内容 fsync 和 rename 已完成。
  * 写入或替换失败时清理本次临时文件；不串行化同一路径写入，调用者拥有并发及版本校验。
@@ -54,6 +55,7 @@ export async function atomic(filename: string, value: string): Promise<void>
     await fs.rm(temporary, { force: true });
   }
 }
+
 /** UTF-8 JSON 读取；不验证业务 Schema，T 仅是调用方类型承诺，解析和 I/O 失败原样传播。 */
 export async function readJson<T = any>(filename: string): Promise<T>
 {

@@ -54,6 +54,7 @@ function input<T>(schema: z.ZodType<T>, raw: unknown)
 
   return parsed.data
 }
+
 type ImportOperation =
   {
     workspaceId: string;
@@ -64,6 +65,7 @@ type ImportOperation =
 
     finished: boolean
   };
+
 /** 应用持有一份；退出或工作区退役先撤销在途导入，不恢复网络操作或重放旧 importId。 */
 export class ChatMaterialImports
 {
@@ -76,10 +78,12 @@ export class ChatMaterialImports
   constructor(private workspace: (id: string) => KnowledgeWorkspace, private repositories: RepositoryConnections)
   {
   }
+
   private Key(id: string, importId: string)
   {
     return id + ':' + importId
   }
+
   private Assert(owner: KnowledgeWorkspace, signal?: AbortSignal)
   {
     signal?.throwIfAborted();
@@ -94,6 +98,7 @@ export class ChatMaterialImports
 
       fail('ATTACHMENT_IMPORT_STALE', '工作区实例已变化，请重新选择资料')
   }
+
   private Operation(id: string, importId: string)
   {
     const key = this.Key(id, importId),
@@ -114,6 +119,7 @@ export class ChatMaterialImports
 
     return value;
   }
+
   /** 取消可以先于原请求抵达；重复 ID 不重新读来源，已写快照不宣称回滚。 */
   Cancel(raw: unknown)
   {
@@ -125,6 +131,7 @@ export class ChatMaterialImports
 
     return { cancelled: !operation.finished }
   }
+
   private Run<T>(id: string, importId: string, work: (owner: KnowledgeWorkspace, signal: AbortSignal) => Promise<T>): Promise<T>
   {
     const operation = this.Operation(id, importId);
@@ -145,6 +152,7 @@ export class ChatMaterialImports
 
     return this.pending.Track(pending);
   }
+
   /** 只展示真实已授权且共享就绪的连接；不发送 HTTP，不回传令牌或地址。 */
   async Targets(raw: unknown)
   {
@@ -160,6 +168,7 @@ export class ChatMaterialImports
 
     return { workspaceId: id, instanceId: owner.instanceId, targets: port ? [...port.targets] : [] };
   }
+
   /** 显式目录读取和正文导入都绑定用户选择的共享代次，不从最新连接猜测替换。 */
   List(raw: unknown)
   {
@@ -167,12 +176,14 @@ export class ChatMaterialImports
 
     return this.Run(request.id, request.importId, async (owner, signal) => { const port = await this.Port(owner, request.connectorId, request.connectionId, signal); const { id: _, importId: __, connectionId: ___, ...query } = request; return port.list(input(repositoryListInputSchema, query), signal); })
   }
+
   Import(raw: unknown)
   {
     const request = input(importSchema, raw);
 
     return this.Run(request.id, request.importId, async (owner, signal) => { const inputs = new ChatInputs(owner), selection = request.attachment; if (selection.kind !== 'repository_resource') return inputs.Add(selection, signal); const port = await this.Port(owner, selection.connectorId, selection.connectionId, signal), result = await port.capture(selection, signal); this.Assert(owner, signal); const excerpt = sourceExcerpt(result.resource.content); const saved = await inputs.SaveSource({ kind: 'repository_resource', name: result.resource.name, source: 'repository:' + result.target.repositoryId + '/' + result.resource.id, text: excerpt.text, note: '已授权资源仓库的静态资料；不安装、不执行' + (excerpt.truncated ? '；正文已截取前 64 KiB UTF-8' : ''), proof: { kind: 'repository_resource', capturedAt: new Date().toISOString(), savedTextBytes: excerpt.savedTextBytes, provider: 'resource_repository_v1', connectorId: result.target.connectorId, repositoryId: result.target.repositoryId, connectionId: result.target.connectionId, definitionHash: result.definitionHash, grantRevision: result.grantRevision, revision: result.revision, resourceId: result.resource.id, resourceKind: result.resource.kind, fullContentHash: hash(result.resource.content), fullContentBytes: Buffer.byteLength(result.resource.content), truncated: excerpt.truncated, readOnly: true, transport: 'http' } }, signal); await result.assertCurrent(signal); return saved; })
   }
+
   private async Port(owner: KnowledgeWorkspace, connectorId: string, connectionId: string, signal: AbortSignal)
   {
     this.Assert(owner, signal);
@@ -193,6 +204,7 @@ export class ChatMaterialImports
 
     return port;
   }
+
   /** 原生选择对话框无法强制关闭，但取消立即结束导入，迟到路径不再读取或保存。 */
   Pick(raw: unknown, select: () => Promise<string[]>)
   {
@@ -200,12 +212,14 @@ export class ChatMaterialImports
 
     return this.Run(request.id, request.importId, async (owner, signal) => { const files = await this.Selection(select, signal); this.Assert(owner, signal); if (files.length > 12) fail('ATTACHMENT_IMPORT_LIMIT', '最多选择12个附件，请减少选择后重试'); const inputs = new ChatInputs(owner), items = []; for (const file of files) { this.Assert(owner, signal); items.push(await inputs.Path(request.kind, file, signal)) } return items; })
   }
+
   private Selection(select: () => Promise<string[]>, signal: AbortSignal): Promise<string[]>
   {
     signal.throwIfAborted();
 
     return new Promise((resolve, reject) => { const cancel = () => reject(signal.reason); signal.addEventListener('abort', cancel, { once: true }); Promise.resolve().then(() => { signal.throwIfAborted(); return select() }).then(value => { signal.throwIfAborted(); resolve(value) }, reject).catch(reject).finally(() => signal.removeEventListener('abort', cancel)); });
   }
+
   RetireWorkspace(id: string)
   {
     for (const value of this.operations.values())
@@ -214,6 +228,7 @@ export class ChatMaterialImports
 
         value.controller.abort(Object.assign(Error('工作区已关闭，资料导入已取消'), { code: 'ATTACHMENT_IMPORT_CANCELLED' }))
   }
+
   async Close()
   {
     this.closed = true;

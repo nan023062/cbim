@@ -14,6 +14,7 @@ export interface KnowledgeTreeNode
 
   children: KnowledgeTreeNode[]
 }
+
 /** 无磁盘访问或缓存；文件与目录排序稳定，快照刷新后重新派生。 */
 export function knowledgeFileTree(files: readonly KnowledgeFile[], root: string, query = '', labels: Readonly<Record<string, string>> = {}): KnowledgeTreeNode
 {
@@ -41,6 +42,7 @@ export function knowledgeFileTree(files: readonly KnowledgeFile[], root: string,
 
     parts.forEach((name, index) => { const path = parent.path + '/' + name; let node = parent.children.find(child => child.path === path); if (!node) { node = { path, name: labels[path] ?? name, kind: index === parts.length - 1 ? 'file' : 'folder', children: [] }; parent.children.push(node) } parent = node });
   }
+
   const sort = (node: KnowledgeTreeNode) => { node.children.sort((a, b) => a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === 'folder' ? -1 : 1); node.children.forEach(sort) };
 
   sort(tree);

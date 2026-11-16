@@ -38,6 +38,7 @@ export interface CsvValidationOutcome
       keyword?: string
     }>
 }
+
 /** 单次完整解析；超出产品预算抛出错误而非截断出“已验证”结果。空行也是记录，不被忽略。 */
 function parseTable(text: string): string[][] | undefined
 {
@@ -155,6 +156,7 @@ function parseTable(text: string): string[][] | undefined
 
   return rows;
 }
+
 /** 同一实际文件的完整字节判定；无正文、单元格值或唯一键值返回调用者。 */
 export function validateCsvArtifact(rawSchema: CsvTableSchema, bytes: Uint8Array): CsvValidationOutcome
 {

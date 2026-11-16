@@ -20,6 +20,7 @@ export interface TopicInterruptionPorts
 
   lookup: (request: Pick<TopicInterruptionRequest, 'workspaceId' | 'rootSessionId' | 'scopeId' | 'commandId'>) => Promise<unknown>;
 }
+
 /** 回执必须精确匹配原请求，后续查询不能更换已受理运行或附件证明。 */
 export function checkedTopicInterruptionReceipt(raw: unknown, request: TopicInterruptionRequest, previous?: GoalContinuationReceipt): GoalContinuationReceipt
 {
@@ -33,6 +34,7 @@ export function checkedTopicInterruptionReceipt(raw: unknown, request: TopicInte
 
   return receipt;
 }
+
 export interface TopicInterruptionState
 {
   ready: boolean;
@@ -45,6 +47,7 @@ export interface TopicInterruptionState
 
   error: string
 }
+
 /** 一份控制器只拥有一个办公室、话题和输入版本；切换视图不能把旧响应写进新目标。 */
 export class TopicInterruptionController
 {
@@ -62,20 +65,24 @@ export class TopicInterruptionController
   {
     this.records = new JsonRecordStorage(ports.storage, 'cbim.topic-input.v1.' + JSON.stringify([target.workspaceId, target.rootSessionId, target.scopeId, target.expectedInputRevision]), 512 * 1024);
   }
+
   get snapshot()
   {
     return this.value
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   private Publish(value: Partial<TopicInterruptionState>)
   {
     this.value = { ...this.value, ...value };
 
     this.listeners.Notify()
   }
+
   private Validate(raw: unknown)
   {
     const request = topicInterruptionRequestSchema.parse(raw);
@@ -86,6 +93,7 @@ export class TopicInterruptionController
 
     return request;
   }
+
   private Run(work: () => Promise<void>): Promise<void>
   {
     if (this.inFlight)
@@ -100,20 +108,24 @@ export class TopicInterruptionController
 
     return pending;
   }
+
   /** 重开只读本机请求及原回执；可采纳服务器上尚未消费的原请求，但绝不自动重发。 */
   Restore(saved?: TopicInterruptionRequest): Promise<void>
   {
     return this.Run(async () => { try { const raw = this.records.Read('本机话题补充记录过大，请核实后继续'), local = raw ? this.Validate(raw) : undefined, canonical = saved ? this.Validate(saved) : undefined; if (local && canonical && !equalJson(local, canonical)) throw Error('本机补充与已保存的话题请求不同，请核实两份原请求'); const request = local ?? canonical; if (request && !local) this.records.Write(request, '补充超出本机记录上限，未发送'); this.Publish({ ready: true, request }); } catch (error) { this.blocked = true; throw error } if (this.value.request) await this.Lookup(); })
   }
+
   /** 普通草稿不传入此控制器；创建请求后，任何失败都保留冻结原文、有序附件身份及选型。 */
   Submit(message: string, options: TopicInterruptionRequest['options'], attachmentIds: readonly string[] = []): Promise<void>
   {
     return this.Run(async () => { if (!this.value.ready || this.blocked) throw Error('原补充记录尚未核实，未发送'); if (this.value.request) throw Error('已有提交记录，请查询或重试原请求'); const other = this.records.Read('本机话题补充记录过大，请核实后继续'); if (other) { this.Publish({ request: this.Validate(other) }); throw Error('此话题已有提交记录，未创建重复请求') } const request = this.Validate({ ...this.target, commandId: this.ports.uuid(), input: { message, ...(attachmentIds.length ? { attachmentIds: [...attachmentIds] } : {}) }, options }); this.records.Write(request, '补充超出本机记录上限，未发送'); this.Publish({ request }); this.Accept(await this.ports.submit(structuredClone(request)), request); })
   }
+
   private Accept(raw: unknown, request: TopicInterruptionRequest)
   {
     this.Publish({ receipt: checkedTopicInterruptionReceipt(raw, request, this.value.receipt), error: '' })
   }
+
   private async Lookup()
   {
     const request = this.value.request;
@@ -128,10 +140,12 @@ export class TopicInterruptionController
 
       this.Accept(receipt, request);
   }
+
   Query()
   {
     return this.Run(() => this.Lookup())
   }
+
   /** 只有用户明确点击才重试原请求；先查已受理结果，禁止换 ID、正文或权限。 */
   Retry()
   {

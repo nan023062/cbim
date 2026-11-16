@@ -64,12 +64,15 @@ export function useGovernanceLaunch({ workspaceId, kind, disabled, onStarted }: 
       setMessage(`启动结果未确认：${cause instanceof Error ? cause.message : String(cause)}。请在对话历史核实，避免重复启动。`)
     }
   }
+
   return { start, disabled: disabled || state !== 'ready', state, message, label: state === 'starting' ? '正在启动…' : state === 'started' ? '已启动治理' : '一键治理' };
 }
+
 export function GovernanceStatus({ launch }: { launch: ReturnType<typeof useGovernanceLaunch> })
 {
   return launch.message ? <p role={launch.state === 'unknown' ? 'alert' : 'status'}>{launch.message}</p> : null;
 }
+
 export function GovernanceLaunch(props: Parameters<typeof useGovernanceLaunch>[0])
 {
   const launch = useGovernanceLaunch(props);

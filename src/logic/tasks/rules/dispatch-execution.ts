@@ -70,6 +70,7 @@ export interface DispatchRun
 
     sessionFile?: string
   };
+
   /** 领取事务生成的 UTC ISO 8601 时间；不等于模型已开始生成。 */
   createdAt: string;
 

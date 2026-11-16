@@ -11,6 +11,7 @@ export interface AgentIdentity
 
   agentId: string
 }
+
 /** 固定知识版本的配置，不包含凭据、会话正文或运行期授权。 */
 export interface AgentConfigurationSnapshot extends AgentIdentity
 {
@@ -33,6 +34,7 @@ export interface AgentConfigurationSnapshot extends AgentIdentity
       content: string
     }>;
 }
+
 /** 成员活动摘要；排队任务尚未执行，不能因此宣称 working。 */
 export type AgentActivity = 'idle' | 'working' | 'waiting' | 'communicating';
 
@@ -71,6 +73,7 @@ export interface AgentInstance extends AgentIdentity
 
   communicatingMessageIds: string[];
 }
+
 /** 原生会话属于明确的成员及主会话；不使用最近一次会话猜测归属。 */
 export interface AgentSessionBinding extends AgentIdentity
 {

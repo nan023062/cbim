@@ -19,8 +19,10 @@ export interface ResolvedLlm
 
     model: string
   };
+
   apiKey: string
 }
+
 /** 单个已解析操作；操作能力由 profile 的协议与 kind 明确区分，凭据不进入公开快照。 */
 export interface ResolvedModelOperation
 {

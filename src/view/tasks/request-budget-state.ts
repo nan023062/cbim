@@ -16,6 +16,7 @@ export type RequestBudgetQuery =
 
     scopeId: string
   };
+
 export interface RequestBudgetState
 {
   busy: boolean;
@@ -24,6 +25,7 @@ export interface RequestBudgetState
 
   report?: RequestBudgetReport
 }
+
 /** 一个实例只绑定一个目标；dispose 使未完成读取失效，不取消或修改后端事实。 */
 export class RequestBudgetController
 {
@@ -36,6 +38,7 @@ export class RequestBudgetController
   constructor(private readonly query: RequestBudgetQuery, private readonly revision: number, private readonly call: (query: RequestBudgetQuery) => Promise<unknown>)
   {
   }
+
   snapshot = () => this.state;
 
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
@@ -46,6 +49,7 @@ export class RequestBudgetController
 
     this.listeners.Notify()
   }
+
   Dispose()
   {
     this.generation.Advance();
@@ -54,6 +58,7 @@ export class RequestBudgetController
 
     this.state = { ...this.state, busy: false }
   }
+
   async Load()
   {
     if (this.state.busy)

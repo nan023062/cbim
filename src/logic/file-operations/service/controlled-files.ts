@@ -69,6 +69,7 @@ export class ControlledFiles
   {
     this.blobs = new ControlledFileBlobs(path.join(owner.paths.Project(owner.entry.id), 'controlled-files', 'blobs'))
   }
+
   private Assert(identity?: { workspaceId: string; instanceId: string })
   {
     this.owner.Assert(identity);
@@ -77,6 +78,7 @@ export class ControlledFiles
 
       fail('CONTROLLED_UNAVAILABLE', '工作区正在关闭，不能开始文件操作')
   }
+
   private Platform()
   {
     if (!this.transport)
@@ -85,10 +87,12 @@ export class ControlledFiles
 
     return this.transport
   }
+
   private ProtectedRoots()
   {
     return [this.owner.paths.userRoot, this.owner.paths.installRoot, ...(this.owner.paths.protectedRoots ?? [])]
   }
+
   private Tracked<T>(signal: AbortSignal | undefined, use: (signal: AbortSignal) => Promise<T>): Promise<T>
   {
     const controller = new AbortController();
@@ -105,6 +109,7 @@ export class ControlledFiles
 
     return result
   }
+
   /** 工厂冻结真实已领取上下文；以后岗位变化不替换原运行配置，写前仍核原 run/lease 和停止。 */
   ForRun(run: BusinessRunSource, scopeId: string): ControlledFileRunPort | undefined
   {
@@ -122,6 +127,7 @@ export class ControlledFiles
       scopeId, Write: (input, authorization, signal, assertCurrent) => this.Write(saved, scopeId, input, authorization, signal, assertCurrent), ConfirmNotApplied: async authorization => { await this.Platform().Drain(this.owner.entry.path); const head = controlledFileOperation(await this.store.Read(), controlledFileOperationId(saved.binding, authorization.toolCallId)); if (head?.phase !== 'not_applied' || head.intent.kind !== 'member_write') return false; const origin = head.intent.origin; return equal(origin.binding, saved.binding) && origin.scopeId === scopeId && origin.workspaceInstanceId === this.owner.instanceId && origin.toolCallId === authorization.toolCallId && origin.inputHash === authorization.inputHash && origin.allowedSeq === authorization.allowedSeq; }, Drain: () => this.Platform().Drain(this.owner.entry.path)
     };
   }
+
   /** Runtime 的一次性授权是唯一入口；重复 operation 先查询原记录，不再读取或改写业务文件。 */
   Write(run: BusinessRunSource, scopeId: string, input: ControlledFileWriteInput, authorization: { toolCallId: string; inputHash: string; allowedSeq: number }, signal: AbortSignal, assertCurrent: () => void)
   {
@@ -131,12 +137,14 @@ export class ControlledFiles
 
     return this.Tracked(signal, async active => { const operationId = controlledFileOperationId(origin.binding, origin.toolCallId), request = { relativePath: frozen.path, expectedBefore: frozen.expectedBefore, after: fact(Buffer.from(frozen.content, 'utf8')) }, fingerprint = controlledFileRequestFingerprint(origin, request), prior = controlledFileOperation(await this.store.Read(), operationId); if (prior) { if (prior.intent.kind !== 'member_write' || prior.intent.requestFingerprint !== fingerprint) fail('CONTROLLED_COMMAND_CONFLICT', '原调用已经绑定不同请求'); return controlledFileWriteApplied(prior) } const alive = () => { active.throwIfAborted(); this.Assert(); assertCurrent() }; alive(); return this.Platform().WithExclusiveExisting(this.owner.entry.path, frozen.path, this.ProtectedRoots(), active, async file => { const before = await file.ReadBefore(); alive(); if (!equal(before.fact, request.expectedBefore)) fail('CONTROLLED_BEFORE_CHANGED', '当前文件已经偏离 expectedBefore，未写入'); const pair = await this.blobs.SavePair(operationId, before.bytes, Buffer.from(frozen.content, 'utf8')); alive(); const at = now(), intent: ControlledWritePrepared = { version: 1, kind: 'member_write', operationId, origin, request, requestFingerprint: fingerprint, fileIdentity: before.identity, ...pair, preparedAt: at }; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, Buffer.from(frozen.content, 'utf8'), alive); return controlledFileWriteApplied(head); }); });
   }
+
   private async Phase(change: ControlledFileChange, assertCurrent?: () => void)
   {
     const command = controlledFilePhaseCommand(change);
 
     await this.store.Transact(command, async state => { assertCurrent?.(); const mutation = { controlledFileChanges: [change], receipt: controlledFilePhaseReceipt(change) }; projectControlledFileMutation(state, mutation, command); return mutation })
   }
+
   /** prepared 保存未知不进入此处；executing 保存失败也不发送写。已发送后的任何错误只追加 unknown，不回滚。 */
   private async Execute(intent: ControlledFileIntent, file: ExclusiveControlledFile, bytes: Uint8Array, alive: () => void): Promise<ControlledFileOperation>
   {
@@ -189,6 +197,7 @@ export class ControlledFiles
 
     return controlledFileOperation(await this.store.Read(), operationId)!;
   }
+
   private Original(state: DispatchState, id: string, identity: { workspaceId: string; rootSessionId: string })
   {
     const value = controlledFileOperation(state, id);
@@ -202,6 +211,7 @@ export class ControlledFiles
       intent: ControlledWritePrepared
     }
   }
+
   private Settled(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
   {
     const b = original.intent.origin.binding,
@@ -212,10 +222,12 @@ export class ControlledFiles
 
     return !!run && equal(run.binding, b) && scope?.status === 'closed' && !['starting', 'running', 'active'].includes(run.status) && !state.members.some(m => m.activeRunId === b.runId)
   }
+
   private Available(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
   {
     return original.phase === 'applied' && this.Settled(state, original) && (state.controlledFileChanges ?? []).filter(c => c.phase === 'prepared' && c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === original.intent.operationId).every(c => controlledFileOperation(state, c.operationId)?.phase === 'not_applied') && fileCompensationRevision(state, original.intent.operationId) < controlledFileLimits.compensations
   }
+
   /** 原 canonical 授权和持久化附录分别核对；没有记录不能据此声称原工具没有副作用。 */
   async Report(raw: unknown)
   {
@@ -286,11 +298,13 @@ export class ControlledFiles
 
     return publicValue(controlledFileReportSchema.parse({ version: 1, identity: input, checkedAt: now(), ledger, readOnly: true, acceptance: 'not_evaluated' }));
   }
+
   /** 显式只读预览取得短租约与原文件句柄，核实备份及原 after；释放句柄后依据可能过期，不能代替实际提交再核。 */
   Preview(raw: unknown): Promise<FileCompensationPreview>
   {
     return this.Tracked(undefined, signal => this.PreviewInternal(raw, signal))
   }
+
   private async PreviewInternal(raw: unknown, signal: AbortSignal): Promise<FileCompensationPreview>
   {
     const input = fileCompensationPreviewInputSchema.parse(raw);
@@ -350,6 +364,7 @@ export class ControlledFiles
     }
     return publicValue(fileCompensationPreviewSchema.parse({ version: 1, identity: input, checkedAt: now(), eligible: !!basis, ...(basis ? { basis } : {}), operationRevision: original.revision, compensationRevision, source, observed, restore, issues, limitations: ['仅恢复原文件默认数据流字节，不恢复元数据、外部副作用或业务验收', '写入期间 IO 或进程退出可能留下部分字节；未知操作不会自动回滚'], readOnly: true, acceptance: 'not_evaluated' }));
   }
+
   /** 已保存原命令优先于新实例/当前文件；新补偿只接受桌面明确来源，不由模型调用。 */
   Compensate(raw: unknown)
   {
@@ -365,6 +380,7 @@ export class ControlledFiles
 
     return this.Tracked(undefined, async signal => { const operationId = fileCompensationId(input), fingerprint = fileCompensationRequestFingerprint(input, actor), state = await this.store.Read(), prior = controlledFileOperation(state, operationId); if (prior) { if (prior.intent.kind !== 'desktop_compensation' || prior.intent.requestFingerprint !== fingerprint) fail('FILE_COMPENSATION_COMMAND_CONFLICT', '原补偿命令绑定不同请求'); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(prior))) } let release: (() => void) | undefined, submitted = false; try { this.Assert(input); signal.throwIfAborted(); const original = this.Original(state, input.operationId, input); if (!this.Available(state, original)) fail('FILE_COMPENSATION_SOURCE', '原操作尚未可靠完成、已补偿或仍在途'); if (original.revision !== input.expectedOperationRevision || fileCompensationRevision(state, input.operationId) !== input.expectedCompensationRevision) fail('FILE_COMPENSATION_CHANGED', '补偿依据已变化'); release = this.lease.Acquire('file-compensation:' + operationId, 'execute'); this.heldReleases.add(release); const bytes = await this.blobs.Read(original.intent.before); await this.blobs.Read(original.intent.intendedAfter); return await this.Platform().WithExclusiveExisting(this.owner.entry.path, original.intent.request.relativePath, this.ProtectedRoots(), signal, async file => { const current = await file.ReadBefore(), basis = fileCompensationBasis({ original, compensationRevision: input.expectedCompensationRevision, fileIdentity: current.identity, observedBefore: current.fact }); if (!equal(current.identity, original.intent.fileIdentity) || !equal(current.fact, content(original.intent.intendedAfter)) || basis !== input.expectedBasis) fail('FILE_COMPENSATION_CHANGED', '当前文件不再等于预览的原 after'); const at = now(), intent: FileCompensationPrepared = { version: 1, kind: 'desktop_compensation', operationId, request: input, actor, requestFingerprint: fingerprint, original: { operationId: original.intent.operationId, intentHash: controlledFileIntentHash(original.intent), appliedRevision: 3, appliedEventHash: controlledFileChangeHash(original.change) }, compensationRevision: input.expectedCompensationRevision + 1, previewBasis: basis, relativePath: original.intent.request.relativePath, fileIdentity: current.identity, observedBefore: current.fact, before: original.intent.intendedAfter, intendedAfter: original.intent.before, preparedAt: at }; const alive = () => { signal.throwIfAborted(); this.Assert(input) }; alive(); submitted = true; await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive); const head = await this.Execute(intent, file, bytes, alive); return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head))); }); } catch (error) { if (!submitted && code(error) !== 'CONTROLLED_FILE_DRAIN_PENDING') { const known = ['STALE_INSTANCE', 'CONTROLLED_UNAVAILABLE', 'CONTROLLED_FILE_NOT_FOUND', 'FILE_COMPENSATION_SOURCE', 'FILE_COMPENSATION_CHANGED', 'WORKSPACE_EXECUTION_BUSY', 'CONTROLLED_BEFORE_CHANGED', 'CONTROLLED_PLATFORM_UNSUPPORTED', 'CONTROLLED_BLOB_INVALID', 'CONTROLLED_BLOB_PATH']; if (known.includes(code(error))) fail('FILE_COMPENSATION_PRE_ACCEPT_REJECTED', '尚未保存补偿意图，当前身份、文件或来源不符合条件') } throw error } finally { if (release) { await this.transport?.Drain(this.owner.entry.path); release(); this.heldReleases.delete(release) } } })
   }
+
   /** 按稳定本机 commandId 只读原阶段；缺记录不证明未执行，也不创建子进程、补偿或第二个命令。 */
   async Receipt(raw: unknown)
   {
@@ -388,6 +404,7 @@ export class ControlledFiles
 
     return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head)))
   }
+
   /** 停止后仅排空原操作；无法确认 child 退出时保留租约与服务实例，调用方不得继续关闭 Store。 */
   async Close()
   {

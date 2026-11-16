@@ -58,6 +58,7 @@ export interface LoopIpcResponses
 
     runId: string
   };
+
   'loop.resume':
   {
     workspaceId: string;
@@ -70,6 +71,7 @@ export interface LoopIpcResponses
 
     queueId?: string
   };
+
   'loop.queueChange': void;
 
   'loop.queueEdit': void;
@@ -126,5 +128,6 @@ export interface LoopIpcResponses
     task?: never
   })[];
 }
+
 /** 选择器源自知识 JSON，只公开当前可展示的标识、名称和流程列表。 */
 export const loopChoicesSchema = z.object({ modules: z.array(z.object({ id: z.string(), name: z.string(), workflows: z.array(z.object({ id: z.string(), name: z.string() })) })), agents: z.array(z.object({ id: z.string(), name: z.string() })), people: z.array(z.never()), structural: z.boolean().optional() });

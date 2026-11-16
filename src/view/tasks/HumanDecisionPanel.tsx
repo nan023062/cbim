@@ -31,11 +31,13 @@ function ReconsiderationSummary({ value }: { value: HumanReconsideration })
 {
   return <div data-testid="human-reconsideration" data-status={value.status}><strong>{reconsiderLabels[value.status]}</strong><p>旧接受不自动沿用。请明确选择当前成果、核实后提交新意见；保存后仍需独立继续。</p><ul>{value.checks.map(check => <li key={check.key} data-check={check.key} data-state={check.state}><strong>{checkLabels[check.key]}：</strong>{check.message}</li>)}</ul>{!value.canReconsider && <p className="human-warning">当前不能关联提交。可退出对照后，独立核实并决定当前成果。</p>}</div>;
 }
+
 /** 同时展示目录范围与条目数量；不把旧文件子集的观察包装成完整核实。 */
 function ManifestSummary({ manifest }: { manifest: NonNullable<HumanDecisionPreview['candidates'][number]['manifest']> })
 {
   return <div data-testid="human-manifest-scope"><p>完整范围：{manifest.entryCount} 个条目，含 {manifest.fileCount} 个文件。目录包含全部后代。</p><ul>{manifest.scopes.flatMap(binding => binding.scope.roots.map(root => <li key={binding.moduleId + ':' + root.path}><code>{root.path}</code> · {root.kind === 'directory' ? '完整目录' : '文件'}</li>))}</ul><ArtifactTransitionProofs operations={manifest.operations} /><details><summary>原清单身份</summary><p>采集于 {new Date(manifest.capturedAt).toLocaleString()}</p><p>清单 <code>{manifest.manifestId}</code></p><p>集合指纹 <code>{manifest.manifestHash}</code></p></details></div>;
 }
+
 /** 两处卡片只接收同一个 Hook 视图；点击操作不会通过组件自身创建命令。 */
 export function HumanDecisionPanel({ state }: { state: HumanDecisionsView })
 {

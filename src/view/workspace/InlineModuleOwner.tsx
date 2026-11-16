@@ -63,6 +63,7 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
       }
     }
   }
+
   useEffect(() => { const token = ++epoch.current; setData(undefined); setError(''); setMessage(''); if (!controllers || !identity) return; const notify = () => tick(value => value + 1), off = [controllers.members.Subscribe(notify), controllers.ownerships.Subscribe(notify)]; setLoading(true); void (async () => { await controllers.members.Restore(); await controllers.ownerships.Restore(); if (epoch.current === token) await load(token) })().finally(() => { if (epoch.current === token) setLoading(false) }); return () => { epoch.current++; off.forEach(unsubscribe => unsubscribe()) }; }, [controllers, identity?.instanceId, revision]);
 
   async function choose(moduleId: string, value: string)
@@ -107,6 +108,7 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
       }
     }
   }
+
   async function refresh()
   {
     if (lock.current || !controllers)
@@ -138,10 +140,12 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
         setLoading(false)
     }
   }
+
   const blocked = !!controllers && (controllers.members.blocked || controllers.ownerships.blocked);
 
   return { data, choices: inlineOwnerChoices(agents, data?.members ?? []), disabled: !data || loading || blocked, loading, blocked, error: error || controllers?.members.snapshot.error || controllers?.ownerships.snapshot.error, message, choose, refresh };
 }
+
 export type InlineModuleOwners = ReturnType<typeof useInlineModuleOwners>;
 
 /** 未显式配置时展示自动解析：父级、模型匹配与主 Agent 兜底；提交中不乐观切换，旧内置岗位也按自动解析展示，其他历史缺失岗位仍显示原身份且可明确解除。 */

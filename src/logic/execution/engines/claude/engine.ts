@@ -62,6 +62,7 @@ export interface ClaudeOptions
   /** 可信测试注入；生产始终使用 CBIM 自带 SDK，不接受公开运行参数指定可执行文件。 */
   loadSdk?: typeof loadClaudeSdk;
 }
+
 /** 清除外部 Claude 账号、宿主注入和 Node 启动脚本；本轮凭据只由实际模型快照提供。 */
 export function claudeEnvironment(home: string, llm: ResolvedEngineModel, proxy?: { url: string; token: string }): NodeJS.ProcessEnv
 {
@@ -81,6 +82,7 @@ export function claudeEnvironment(home: string, llm: ResolvedEngineModel, proxy?
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1', CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1', CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(llm.profile.maxTokens)
   };
 }
+
 export class ClaudeCodeEngine implements AgentEngine
 {
   readonly kind = 'claude-code';
@@ -111,6 +113,7 @@ export class ClaudeCodeEngine implements AgentEngine
   constructor(private options: ClaudeOptions)
   {
   }
+
   /** 先核模型及受管恢复文件，再启动无输入的 Query；已有会话先绑定；新会话在 result 前核实实际持久文件。 */
   async start(context: EngineContext)
   {
@@ -189,6 +192,7 @@ export class ClaudeCodeEngine implements AgentEngine
           await new Promise<void>(resolve => { wake = resolve })
       }
     }
+
     const sdk = await (this.options.loadSdk ?? loadClaudeSdk)(this.options.runtime);
 
     this.query = sdk.query({
@@ -218,6 +222,7 @@ export class ClaudeCodeEngine implements AgentEngine
 
     await emit({ type: 'engine.status', data: { label: 'Claude Code 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.expected } });
   }
+
   /** 从当前 CBIM 配置目录核实原生实际文件；只匹配固定 UUID，不使用最近会话或猜测目录编码。 */
   private async FindSession()
   {
@@ -256,6 +261,7 @@ export class ClaudeCodeEngine implements AgentEngine
 
     await this.BindSession(candidates[0]);
   }
+
   private async BindSession(file: string)
   {
     await this.CheckPath(file, true);
@@ -270,6 +276,7 @@ export class ClaudeCodeEngine implements AgentEngine
 
     this.bound = true;
   }
+
   private async CheckPath(file: string, existing: boolean)
   {
     const root = await fs.realpath(this.options.agentHome),
@@ -298,6 +305,7 @@ export class ClaudeCodeEngine implements AgentEngine
         throw Error('Claude Code 会话文件不可核实')
     }
   }
+
   private async ReadSession(file: string): Promise<Record<string, any>[]>
   {
     const text = new TextDecoder('utf-8', { fatal: true }).decode(await fs.readFile(file));
@@ -320,12 +328,14 @@ export class ClaudeCodeEngine implements AgentEngine
 
     return entries;
   }
+
   private Redact(text: string)
   {
     const key = this.options.llm?.apiKey;
 
     return StringUtils.RedactLiteral(text, key)
   }
+
   private async Emit(event: EngineEvent)
   {
     this.inactivity?.Observe(event);
@@ -347,6 +357,7 @@ export class ClaudeCodeEngine implements AgentEngine
       throw error
     }
   }
+
   /** 只认 SDK result 作为本轮终态；进程提前退出、无绑定或超时保持失败/中断，不凭文本猜测成功。 */
   async run(message: string)
   {
@@ -417,6 +428,7 @@ export class ClaudeCodeEngine implements AgentEngine
       this.inactivity?.Dispose()
     }
   }
+
   private async Consume(event: SDKMessage)
   {
     // thinking 和工具参数只更新时间，不进入公开消息；子任务的真实输出同样代表本轮进展。
@@ -465,6 +477,7 @@ export class ClaudeCodeEngine implements AgentEngine
         throw Error('Claude Code 未启用本轮必需工具，已停止运行');
     }
   }
+
   /** 停止先封住工具及供应商传输，再中断原生循环；没有进程终态不表示副作用被撤销。 */
   async stop()
   {
@@ -487,6 +500,7 @@ export class ClaudeCodeEngine implements AgentEngine
       this.endInput?.()
     }
   }
+
   async close()
   {
     this.inactivity?.Dispose();

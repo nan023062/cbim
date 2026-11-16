@@ -55,6 +55,7 @@ export class IsolatedExecutions
   {
     this.records = new FileIsolationRecords(path.join(owner.paths.Project(owner.entry.id), 'isolated-executions'))
   }
+
   private Assert()
   {
     this.owner.Assert();
@@ -63,6 +64,7 @@ export class IsolatedExecutions
 
       fail('ISOLATION_UNAVAILABLE', '工作区正在关闭，不能开始核实或清理')
   }
+
   private Platform()
   {
     const host = process as NodeJS.Process &
@@ -73,6 +75,7 @@ export class IsolatedExecutions
     };
     return new Win32IsolationRecovery(host.resourcesPath && !host.defaultApp ? path.join(host.resourcesPath, 'koffi') : requireRuntime.resolve('koffi'))
   }
+
   private async Run(identity: IsolatedExecutionRun)
   {
     this.Assert();
@@ -97,6 +100,7 @@ export class IsolatedExecutions
 
     return { run, task }
   }
+
   private async Source(run: BusinessRunSource, origin: IsolationOrigin, scopeId: string | undefined)
   {
     if (!equal(run.binding, origin.binding) || origin.permission !== run.permission || origin.scopeId !== scopeId || hash(JSON.stringify(preparedExecutionScope(run.prepared.modules.map(m => ({ contract: m.workflowContract }))))) !== origin.scopeHash)
@@ -113,6 +117,7 @@ export class IsolatedExecutions
 
       fail('ISOLATION_ORIGIN', '原隔离调用缺少唯一可靠授权');
   }
+
   /** 工厂冻结完整运行来源；每个工具调用各持一个生命周期对象，不能凭参数重用旧执行。 */
   ForRun(run: BusinessRunSource, scopeId: string, scope: ExecutionScope)
   {
@@ -122,6 +127,7 @@ export class IsolatedExecutions
 
     return async (raw: ScopedExecutionAuthorization): Promise<IsolationLifecycle> => { this.Assert(); const authorization = scopedExecutionAuthorizationSchema.parse(raw), origin = isolationOriginSchema.parse({ ...authorization, workspaceInstanceId: this.owner.instanceId, scopeId, binding: saved.binding, scopeHash, permission: saved.permission }), operationId = isolationOperationId(saved.binding.runId, authorization.toolCallId); await this.Source(saved, origin, scopeId); if (await this.records.Read(saved.binding.runId, operationId)) fail('ISOLATION_ALREADY_RECORDED', '原调用已有隔离记录，不能重新执行'); let head: IsolationHead | undefined; const append = async (change: IsolationChange) => { head = await this.records.Append(saved.binding.runId, operationId, change, head?.revision ?? 0) }; return { Prepared: async (resource, requestHash) => { this.Assert(); await append({ kind: 'prepared', record: { version: 1, origin, resource, requestHash, createdAt: new Date().toISOString() } }) }, Started: async process => { this.Assert(); await append({ kind: 'started', process }) }, Settled: () => append({ kind: 'settled' }), Cleaned: () => append({ kind: 'cleaned' }) }; }
   }
+
   private async Item(head: IsolationHead, run: BusinessRunSource, scopeId: string | undefined): Promise<IsolatedExecutionItem>
   {
     const { record, revision, phase } = head,
@@ -208,6 +214,7 @@ export class IsolatedExecutions
 
     return { ...facts, basis: hash(JSON.stringify([head.checksum, facts])) };
   }
+
   /** 显式查询只访问所选运行；没有新协议记录不能据此判定旧调用未执行。 */
   async Report(raw: unknown)
   {
@@ -230,6 +237,7 @@ export class IsolatedExecutions
     }
     return isolatedExecutionReportSchema.parse({ identity, checkedAt: new Date().toISOString(), items, issues })
   }
+
   /** 已登记的清理只可按原 commandId 显式继续；每次重核原物理资源，不重发原业务程序。 */
   Cleanup(raw: unknown)
   {
@@ -241,6 +249,7 @@ export class IsolatedExecutions
 
     return pending
   }
+
   /** 成员先完成原收尾，随后等待已受理的显式清理，最后才释放工作区锁。 */
   async Close()
   {

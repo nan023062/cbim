@@ -23,6 +23,7 @@ function check(value: unknown, message: string): asserts value
 
     fail('MODEL_REQUEST_BUDGET_AUDIT', message)
 }
+
 /** 仅新预留和发送意图要求当前在途身份；既有请求终态不能被停止或后来配置变化抹掉。 */
 function live(state: DispatchState, intent: RequestBudgetIntent)
 {
@@ -64,6 +65,7 @@ function live(state: DispatchState, intent: RequestBudgetIntent)
   }
   return scope;
 }
+
 /** 附录每次只保存一条事件和对应窄回执；旧缺省保留，任何请求历史都不因新事务被删除。 */
 export function projectModelRequestBudgetMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand): Pick<DispatchState, 'modelRequestBudgetChanges'>
 {

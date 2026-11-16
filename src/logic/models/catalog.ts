@@ -20,6 +20,7 @@ export interface DiscoveredModel
   /** 输入模态声明；缺失保持未知，由用户在模型设置中确认。 */
   vision?: boolean;
 }
+
 /** 只接受有限正整数容量及有限长度标识，不传播接口中任意字段。 */
 export function parseModelCatalog(data: unknown): DiscoveredModel[]
 {

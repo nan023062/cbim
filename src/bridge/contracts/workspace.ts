@@ -18,6 +18,7 @@ export interface Bridge
   /** 原生拖入或粘贴的 File 经 preload 解析路径；不接受字符串路径。 */
   ImportFiles(id: string, files: File[]): Promise<import('./chat').ChatAttachment[]>
 }
+
 declare global
 {
   interface Window

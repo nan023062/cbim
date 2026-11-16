@@ -39,6 +39,7 @@ export class CheckpointAbandonmentService
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: DispatchStore, private readonly ports?: MemberCheckpointHistoryPorts)
   {
   }
+
   private Request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput)
   {
     const parsed = abandonCheckpointInputSchema.safeParse(raw),
@@ -57,6 +58,7 @@ export class CheckpointAbandonmentService
 
     return { input, fixed, command };
   }
+
   private async Lookup(command: { commandId: string; fingerprint: string }): Promise<AbandonCheckpointReceipt | undefined>
   {
     const prior = await this.store.CommandReceipt(command.commandId);
@@ -70,11 +72,13 @@ export class CheckpointAbandonmentService
       return prior.receipt as AbandonCheckpointReceipt
     }
   }
+
   /** 只查原命令，供回包未知后的进程内撤票使用；不重新执行事务或要求当前来源仍有效。 */
   Receipt(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput): Promise<AbandonCheckpointReceipt | undefined>
   {
     return this.Lookup(this.Request(identity, scopeId, mainRunId, commandId, raw).command)
   }
+
   /** 原命令先于生命周期和来源校验；新请求的所有等待后检查停止，提交后不反悔为“未发生”。 */
   async Abandon(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
   {

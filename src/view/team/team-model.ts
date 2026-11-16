@@ -38,6 +38,7 @@ export interface TeamNodeView
 
   children: string[];
 }
+
 /** Skill 属于一个组织节点；可用性只表示快照中有正文，不代表授权执行。 */
 export interface TeamSkillView
 {
@@ -55,6 +56,7 @@ export interface TeamSkillView
 
   available: boolean
 }
+
 export interface TeamModel
 {
   nodes: Record<string, TeamNodeView>;
@@ -63,22 +65,27 @@ export interface TeamModel
 
   issues: string[]
 }
+
 function record(value: unknown): Record<string, unknown>
 {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 }
+
 function text(value: unknown): string
 {
   return typeof value === 'string' ? value : ''
 }
+
 function strings(value: unknown): string[]
 {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
 }
+
 function parent(id: string): string
 {
   return id.slice(0, id.lastIndexOf('/'))
 }
+
 function referencePath(owner: string, reference: string): string | undefined
 {
   if (!reference || reference.startsWith('/') || reference.includes('\\') || reference.split('/').some(part => !part || part === '.' || part === '..'))
@@ -87,6 +94,7 @@ function referencePath(owner: string, reference: string): string | undefined
 
   return `${owner}/${reference}`;
 }
+
 /** 保留空 Team/分组；损坏的定义单独报告，不能静默伪造成可编辑 Agent。 */
 export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: string): TeamModel
 {
@@ -112,6 +120,7 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
 
       group(parent(id));
   }
+
   group(TEAM_ROOT);
 
   for (const [path, raw] of files)
@@ -206,6 +215,7 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
 
       nodes[node.parentId]?.children.push(node.id)
   }
+
   const priority = (id: string) => id === MAIN_AGENT ? 0 : 1;
 
   for (const node of Object.values(nodes))
@@ -214,6 +224,7 @@ export function buildTeamModel(snapshot: Snapshot | undefined, workspaceName: st
 
   return { nodes, skills, issues };
 }
+
 /** 自有 Skill 优先展示，然后沿父链到 Team 根；继承项只能跳到所属节点维护。 */
 export function availableTeamSkills(model: TeamModel, nodeId: string): Array<TeamSkillView & { inherited: boolean }>
 {
@@ -236,6 +247,7 @@ export function availableTeamSkills(model: TeamModel, nodeId: string): Array<Tea
   }
   return result;
 }
+
 /** 搜索保留祖先路径；组织树可排除内置角色，完整模型及 Skill 父链保持不变。 */
 export function visibleTeamNodes(model: TeamModel, query: string, includeBuiltins = true): Set<string>
 {

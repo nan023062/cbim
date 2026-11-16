@@ -52,6 +52,7 @@ function imageMime(buffer: Buffer)
 
     return 'image/webp';
 }
+
 const imageSchema = z.object({ type: z.literal('image'), mimeType: z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']), data: z.string().max(7 * 1024 * 1024) }).strict();
 
 const savedFileSchema = z.object({ id: z.string().uuid(), kind: z.literal('file'), name: z.string().min(1).max(512), source: z.string().min(1).max(32768), note: z.string().max(1024).optional(), text: z.string().max(64000), image: imageSchema.optional() }).strict();
@@ -69,15 +70,18 @@ export interface PreparedContinuationInput
 
   manifest: ContinuationAttachmentManifest
 }
+
 export class ChatInputs
 {
   constructor(private workspace: KnowledgeWorkspace)
   {
   }
+
   private Directory()
   {
     return path.join(this.workspace.paths.Project(this.workspace.entry.id), 'chat-inputs')
   }
+
   private async Save(kind: ChatAttachment['kind'], name: string, source: string, text: string, note?: string, image?: z.infer<typeof imageSchema>, signal = new AbortController().signal)
   {
     this.workspace.Assert();
@@ -94,6 +98,7 @@ export class ChatInputs
 
     return item;
   }
+
   /** 仅可信 Main 来源读取器调用；IPC 不接收 proof。保存成功后取消只阻止交付，不声称磁盘快照已回滚。 */
   async SaveSource(value: unknown, signal: AbortSignal)
   {
@@ -113,6 +118,7 @@ export class ChatInputs
 
     return { id, kind, name, source, ...(note === undefined ? {} : { note }) } satisfies ChatAttachment;
   }
+
   /** 原生选择/拖入或明确粘贴路径共用快照；拒绝真实路径中的知识库目录，文件夹不递归扫描。 */
   async Path(kind: 'file' | 'folder', value: string, signal = new AbortController().signal)
   {
@@ -223,6 +229,7 @@ export class ChatInputs
     }
     return this.Save(kind, path.basename(file), file, text, stat.size > 64000 ? '保存的文本快照，可能截取' : undefined, undefined, signal);
   }
+
   /** 明确粘贴的绝对本地路径；先核全部存在与种类，再保存，不允许 UNC/设备/相对路径隐式访问。 */
   async PastedPaths(values: string[])
   {
@@ -275,6 +282,7 @@ export class ChatInputs
 
     return items;
   }
+
   /** 剪贴板没有磁盘路径；保留独立来源 URI、原名称、采集时间与原图片字节，沿原视觉输入链发送。 */
   async ClipboardImage(input: { name: string; mimeType: string; data: string })
   {
@@ -296,6 +304,7 @@ export class ChatInputs
 
     return this.Save('file', name, source, '图片内容通过独立视觉输入提供。', `剪贴板图片 · ${image.mimeType} · ${capturedAt}`, image);
   }
+
   /** 仅公开登记项的显示字段；损坏注册表明确拒绝，不透传任意 JSON。 */
   async Connectors()
   {
@@ -307,6 +316,7 @@ export class ChatInputs
 
     return entries
   }
+
   /** 预览已登记快照，不接受 renderer 指定的任意磁盘路径。 */
   async Preview(id: unknown): Promise<ChatAttachmentPreview>
   {
@@ -328,6 +338,7 @@ export class ChatInputs
     }
     return { ...value, image: value.image ? { mimeType: value.image.mimeType, data: value.image.data } : undefined };
   }
+
   /** 从当前工作区快照恢复图片，排队与续聊均不重读源文件；每条消息最多 20 MiB。 */
   async Images(ids: unknown = [])
   {
@@ -369,6 +380,7 @@ export class ChatInputs
     }
     return images;
   }
+
   /** 普通对话与运行中插入同样校验受管快照；连接器旧入口只提供明确的静态引用，不充当采集证明。 */
   private async ConversationSnapshot(id: string)
   {
@@ -408,6 +420,7 @@ export class ChatInputs
     }
     return item;
   }
+
   /** 有界读取私有快照；不解引用用户源文件，不把缺失/坏快照转成空附件。 */
   private async ContinuationSnapshot(id: string, signal: AbortSignal): Promise<Buffer>
   {
@@ -494,6 +507,7 @@ export class ChatInputs
       throw error
     }
   }
+
   /**
        * 只在原命令尚未受理时准备安全等待补充。每个 ID 仅打开一次保存快照，展开文本、图片和清单来自同一读取。
        * 专用错误只用于受理前拒绝；停止及工作区生命周期异常保持原错误，不伪称命令从未发生。
@@ -618,6 +632,7 @@ export class ChatInputs
 
     return { message: expanded, images, manifest: manifest.data };
   }
+
   /** 链接仅保存 URL；网页才主动请求公开页面，不带登录凭据，不执行脚本。 */
   async Add(input: unknown, signal = new AbortController().signal)
   {
@@ -641,6 +656,7 @@ export class ChatInputs
 
     return this.SaveSource({ kind: request.kind, ...value }, signal);
   }
+
   /** 附件来源和正文明确标记为用户提供的资料，不冒充系统指令。 */
   async Message(message: string, ids: unknown = [])
   {

@@ -72,6 +72,7 @@ export interface AgentBusinessServices
 
   isolatedExecutions: import('../../file-operations/service/isolated-executions').IsolatedExecutions;
 }
+
 /** 要求来自调用参数，来源/岗位/Workflow 来自当前可信知识；异步准备结束仍重新核实原基线。 */
 export async function prepareAgentBusiness(input: { workspace: Workspace; dispatch: WorkspaceDispatchService; member: WorkspaceMember; model: ResolvedEngineModel; taskId: string; rootSessionId: string; message: string; permission: 'read' | 'ask' | 'execute'; storage: RunStorage; business: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; signal: AbortSignal; scopeId: string; reference: (taskId: string, runId: string) => AgentCallReference; businessServices?: AgentBusinessServices; /** 既有平台端口只执行冻结 Workflow 内的单项操作；阶段与证明仍由本运行日志拥有。 */ artifactTransitions?: ExecutionServices['artifactTransitions']; }): Promise<{ task: TaskSpec; launch: MemberRunLaunch; services: Partial<ExecutionServices>; BeforeRun(runId: string): Promise<void>; Close(): Promise<void>; Verify(summary: RunSummary, signal: AbortSignal): Promise<unknown> }>
 {

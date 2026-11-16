@@ -22,6 +22,7 @@ function usage(input: number, output: number, cacheRead: number, cacheWrite: num
 
   return requestBudgetUsageSchema.parse({ input, output, cacheRead, cacheWrite, totalTokens });
 }
+
 function openai(value: any, responses: boolean)
 {
   if (!value || typeof value !== 'object')
@@ -57,6 +58,7 @@ function openai(value: any, responses: boolean)
 
   return usage(input - read - write, output, read, write, value.total_tokens);
 }
+
 /** 完整 JSON 操作复用相同计量规则；向量只有输入，不能补造输出或缓存用量。 */
 export function modelJsonUsage(value: unknown, kind: 'generation' | 'embedding'): RequestBudgetUsage
 {
@@ -72,6 +74,7 @@ export function modelJsonUsage(value: unknown, kind: 'generation' | 'embedding')
 
   return usage(integer(u.prompt_tokens), 0, 0, 0, u.total_tokens);
 }
+
 /** 单个响应一份解析器；限制按原始字节计，UTF-8 损坏、额外终态或终态后数据均不接受。 */
 export class RequestBudgetUsageStream
 {
@@ -98,6 +101,7 @@ export class RequestBudgetUsageStream
   constructor(private readonly api: GenerationBudgetModel['api'])
   {
   }
+
   /** 返回可立即转发的非终态帧；终态只由 finish 在完整 EOF 后提供。 */
   Push(bytes: Uint8Array): string[]
   {
@@ -139,6 +143,7 @@ export class RequestBudgetUsageStream
 
     return out;
   }
+
   Finish(): { usage: RequestBudgetUsage; terminal: string }
   {
     this.pending += this.decoder.decode();
@@ -149,6 +154,7 @@ export class RequestBudgetUsageStream
 
     return { usage: this.result, terminal: this.terminal };
   }
+
   private Accept(frame: string): boolean
   {
     const lines = frame.split(/\r\n|\r|\n/),

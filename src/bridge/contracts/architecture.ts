@@ -19,6 +19,7 @@ export interface ArchitecturePreviewRequest
 
   operations: ObjectOperation[];
 }
+
 /** 提交仅接受预览 ID，不能在确认时偷换正文、操作或版本。 */
 export interface ArchitectureCommitRequest
 {
@@ -28,6 +29,7 @@ export interface ArchitectureCommitRequest
 
   planId: string
 }
+
 export type ArchitecturePreview = ObjectPreview;
 
 export type ArchitectureCommit = ObjectCommit;

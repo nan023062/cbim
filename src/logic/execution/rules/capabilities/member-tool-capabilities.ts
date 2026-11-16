@@ -28,6 +28,7 @@ export interface MemberToolPorts
 
   scopedExecutionTools?: Pick<import('./run-scoped-execution').RunScopedExecution, 'List' | 'Call'>;
 }
+
 /** 只注册本轮已装配的能力；保留原调用 ID 和取消信号，不提供原始平台端口。 */
 export function memberToolCapabilities(ports: MemberToolPorts): EngineCapability[]
 {

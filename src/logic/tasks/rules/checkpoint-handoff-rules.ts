@@ -24,6 +24,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 /**
  * 已保存的放弃可成为换边来源，但不能仅凭 cancelled 或一个审计字段放行。
  * 只读同一快照的原身份、证明及信封；核完整运行链并返回最新完成段供服务核 canonical，绝不消费恢复预约。
@@ -68,6 +69,7 @@ export function abandonedCheckpointSource(state: DispatchState, identity: GraphI
 
   return run;
 }
+
 /** 无文件 IO、不修改输入；原 checkpoint 交接信封可独立 ACK，不作为服务前后比较的可变 stamp。 */
 export function checkpointAbandonmentSelection(state: DispatchState, identity: GraphIdentity, scopeId: string, mainRunId: string, input: AbandonCheckpointInput)
 {

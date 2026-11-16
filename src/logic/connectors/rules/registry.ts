@@ -12,20 +12,24 @@ export class ConnectorRegistry
   constructor(private entries: ConnectorDefinition[])
   {
   }
+
   List(query = '')
   {
     const q = query.toLowerCase();
 
     return this.entries.filter(c => !q || `${c.id} ${c.name} ${c.summary}`.toLowerCase().includes(q))
   }
+
   Get(id: string)
   {
     return this.entries.find(c => c.id === id)
   }
+
   Ids()
   {
     return new Set(this.entries.map(c => c.id.toLowerCase()))
   }
+
   Duplicates()
   {
     const ids = new Set<string>(),

@@ -38,6 +38,7 @@ function diagnostic(label: string, error: unknown)
 
   return label + (typeof code === 'string' && /^[A-Z_0-9]{1,60}$/.test(code) ? `（${code}）` : '');
 }
+
 /** 一次工作区打开对应一个观察器；装配方先排空业务服务再关闭观察器，保证最后的运行事实仍被计入。 */
 export class WorkspaceRuntimeMonitor
 {
@@ -60,25 +61,30 @@ export class WorkspaceRuntimeMonitor
       Failed: error => this.Issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error),
     };
   }
+
   /** 工作区本身无法运行；与部分历史文件损坏的监控降级分开。 */
   Unavailable(error: unknown)
   {
     this.global.Unavailable(this.workspaceId, this.epoch, diagnostic('工作区无法打开，请查看工作区错误', error))
   }
+
   private Issue(source: string, label: string, error: unknown)
   {
     this.global.Issue(this.workspaceId, this.epoch, source, diagnostic(label, error))
   }
+
   /** 派生历史索引失败不回抛到执行链，查询页与全局监管均保留可见诊断。 */
   HistoryIssue(message: string)
   {
     this.global.Issue(this.workspaceId, this.epoch, 'agent-history', message)
   }
+
   /** 自动协作暂停保留为可查询诊断，不把协调错误吞掉或伪装成任务已完成。 */
   CollaborationIssue(rootSessionId: string, error: unknown)
   {
     this.Issue('collaboration:' + rootSessionId, '自动协作暂停，请核实主会话与成员任务后继续', error)
   }
+
   /**
        * 由 Workspace 的可信 beforeDispatchLoad 阶段调用；先装载磁盘索引，防止 Store 投影提前写入后被误判为持久索引重复。
        * 复用历史服务的初始化 promise；后续 initialize 再调用不会重复读取，也不缓存、遗漏或重播已提交观察事件。
@@ -87,6 +93,7 @@ export class WorkspaceRuntimeMonitor
   {
     await this.history?.Initialize()
   }
+
   /**
        * 每次工作区装配调用一次：历史索引已在 Store 加载前恢复；这里复核初始化完成，再接订阅和回补两套运行日志，成员 initialize 只收口中断。
        * 各来源恢复失败记录为独立 issue，其他来源继续恢复；最终 ready 不表示统计一定完整。
@@ -126,6 +133,7 @@ export class WorkspaceRuntimeMonitor
 
     this.global.Ready(id, epoch);
   }
+
   private async RestoreRuns(workspace: Workspace)
   {
     const project = workspace.paths.Project(this.workspaceId);
@@ -138,6 +146,7 @@ export class WorkspaceRuntimeMonitor
 
     ]);
   }
+
   /** 旧成员日志固定成员目录；新递归业务日志核对原父引用后保留 loop 路径，拒绝跨目录复制造成重复计量。 */
   private async RestoreRunDirectory(workspace: Workspace, root: string, source: 'run' | 'member-run')
   {
@@ -226,6 +235,7 @@ export class WorkspaceRuntimeMonitor
       }
     }
   }
+
   /** 调用者先停止运行、排空日志和派发事务；最后一个完成事件仍会进入全局历史。 */
   Close()
   {

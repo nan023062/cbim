@@ -226,11 +226,13 @@ export class WorkspaceDispatchService
 
     this.checkpointAbandonment = new CheckpointAbandonmentService(owner, store, checkpointHistory);
   }
+
   /** 原任务与当前岗位观察分开返回，不刷新或领取旧待办。 */
   OwnerInspect(raw: unknown)
   {
     return this.owners.InspectTask(raw)
   }
+
   /** 仅读原 canonical 与已提交命令，不打开工作区、不重放，也不改变原未知或验收状态。 */
   CommandReport(raw: unknown, signal?: AbortSignal)
   {
@@ -238,6 +240,7 @@ export class WorkspaceDispatchService
 
     return this.commandVerification.Read(raw, signal)
   }
+
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
   CancelQueued(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: CancelQueuedTasksInput): Promise<CancelQueuedTasksReceipt>
   {
@@ -245,31 +248,37 @@ export class WorkspaceDispatchService
 
     return this.queuedCancellation.Cancel(identity, scopeId, runId, commandId, input)
   }
+
   /** 主轮显式修订未启动前置；停止检查覆盖证据读取前后，成功只返回待跟踪集合，不启动执行。 */
   ReplaceQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
   {
     return this.queuedDependencyReplacement.Replace(identity, scopeId, runId, commandId, input, () => { this.Check(identity.workspaceId); assertCurrent?.() })
   }
+
   /** 只加强尚未领取待办的前置门禁；后继闭包、知识和停止均在提交内复核，不启动成员。 */
   AddQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
   {
     return this.queuedDependencyAddition.Add(identity, scopeId, runId, commandId, input, () => { this.Check(identity.workspaceId); assertCurrent?.() })
   }
+
   /** 同一未领取目标原子增删多条前置；完整闭包重新核实，成功不创建运行或改原信封。 */
   ReviseQueuedDependencies(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
   {
     return this.queuedDependencyRevision.Revise(identity, scopeId, runId, commandId, input, () => { this.Check(identity.workspaceId); assertCurrent?.() })
   }
+
   /** 原回执优先；只明确封存未消费检查点，新执行仍由岗位派发与领取门禁决定。 */
   AbandonCheckpoint(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
   {
     return this.checkpointAbandonment.Abandon(identity, scopeId, runId, commandId, input, () => { this.Check(identity.workspaceId); assertCurrent() })
   }
+
   /** 回包损坏或停止后仅查原命令；不启动历史核验或重复处置事务。 */
   CheckpointAbandonmentReceipt(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput)
   {
     return this.checkpointAbandonment.Receipt(identity, scopeId, runId, commandId, input)
   }
+
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
   async Initialize()
   {
@@ -277,6 +286,7 @@ export class WorkspaceDispatchService
 
     await this.store.Read()
   }
+
   /**
        * 主用户任务开始时冻结本轮正文与附件身份；跨模型回合复用同一周期，不从旧 TaskSpec 推断本轮输入。
        * followupOf 来自明确新任务入队，创建时核实同根且关闭；原话题永不重开，关联不可改变。
@@ -324,6 +334,7 @@ export class WorkspaceDispatchService
 
     return scope;
   }
+
   /** beforeRun 同事务核实软限额并登记回注轮次；拒绝先保存 blocked 再抛错，旧周期不补造清单或策略。 */
   async RegisterMainRun(identity: GraphIdentity, scopeId: string, runId: string): Promise<DispatchScope>
   {
@@ -349,6 +360,7 @@ export class WorkspaceDispatchService
 
     return scope;
   }
+
   /**
        * 必须先等待本周期成员终态；业务成功要求主运行摘要与显式审阅通过同事务复核，不允许取消未完任务后伪装成功。
        * 失败/取消可原子取消未执行任务并释放执行实例；mainSummary 只能由可信运行结算传入，不能由模型或公开 IPC 伪造。
@@ -453,6 +465,7 @@ export class WorkspaceDispatchService
       return { scopes: [closed], members, messages, batch: changes.length ? this.Batch(graph.identity, command.commandId, 'agent.state_changed', changes, graph) : undefined, receipt: closed };
     });
   }
+
   /**
        * 可信协调器在主运行释放占用后请求停泊；与当前审阅、图及成员终态一起核实并提交，不关闭或释放执行实例。
        * mainRunIds 来自本周期真实运行集合，仅用于冻结预算；模型和公开 IPC 不提供此接口。
@@ -481,6 +494,7 @@ export class WorkspaceDispatchService
 
     return current;
   }
+
   /** 应用恢复时只登记已保存的等待槽；不读取模型上下文、重放消息或自动续跑。 */
   async WaitingScopes(): Promise<DispatchScope[]>
   {
@@ -488,6 +502,7 @@ export class WorkspaceDispatchService
 
     return (await this.store.Read()).scopes?.filter(scope => scope.status === 'waiting') ?? []
   }
+
   /** 重启先结算旧运行；仅保留可核实的已完成待回传批次，其他 active 封存，waiting 不自动消费。 */
   async RecoverScopes(): Promise<void>
   {
@@ -514,6 +529,7 @@ export class WorkspaceDispatchService
         await this.CloseScope({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, 'interrupted');
       }
   }
+
   private Check(workspaceId: string)
   {
     if (this.closed)
@@ -526,6 +542,7 @@ export class WorkspaceDispatchService
 
       fail('GRAPH_IDENTITY_MISMATCH', '派发目标不属于当前工作区');
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
   {
     const parsed = schema.safeParse(input);
@@ -536,6 +553,7 @@ export class WorkspaceDispatchService
 
     return parsed.data;
   }
+
   private Graph(state: DispatchState, rootSessionId: string)
   {
     const graph = state.graphs.find(g => g.identity.rootSessionId === rootSessionId);
@@ -546,19 +564,23 @@ export class WorkspaceDispatchService
 
     return graph;
   }
+
   private Command<T extends { commandId: string }>(operation: string, input: T)
   {
     // 保留旧命令指纹的盐值以兼容已保存回执；此字段不是认证主体，真实来源由入口和运行工具回执核验。
     return dispatchCommand(operation, input);
   }
+
   private Batch(identity: GraphIdentity, commandId: string, cause: GraphEventBatch['cause'], changes: GraphChange[], graph?: GraphSnapshot): GraphEventBatch
   {
     return { version: 1, identity, streamId: graph?.cursor.streamId ?? randomUUID(), seq: (graph?.cursor.seq ?? 0) + 1, eventId: randomUUID(), commandId, cause, committedAt: new Date().toISOString(), changes };
   }
+
   private Cursor(batch: GraphEventBatch): GraphCursor
   {
     return { ...batch.identity, streamId: batch.streamId, seq: batch.seq }
   }
+
   /** 读取之后再次核验知识版本；外部知识编辑不能在派发准备时静默换入另一基线。 */
   private async Recheck(snapshot: Snapshot)
   {
@@ -568,6 +590,7 @@ export class WorkspaceDispatchService
 
       fail('KNOWLEDGE_REVISION_CONFLICT', '知识在派发准备期间变化，请重新读取后派发');
   }
+
   /** 创建主会话根及主成员通道；相同图的新请求复用根，重发原命令返回原回执。 */
   async OpenGraph(raw: unknown): Promise<OpenGraphReceipt>
   {
@@ -577,6 +600,7 @@ export class WorkspaceDispatchService
 
     return this.store.Transact(this.Command('open', input), async state => { this.Check(input.workspaceId); const existing = state.graphs.find(g => g.identity.rootSessionId === input.rootSessionId); if (existing) return { receipt: { agent: existing.root.agent, cursor: existing.cursor } }; const snapshot = await this.owner.Snapshot(); const prepared = prepareMember(state, resolveConversationAgent(snapshot), input.rootSessionId); const identity = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId }; const batch = this.Batch(identity, input.commandId, 'graph.created', [{ type: 'root.upserted', root: { kind: 'session-root', nodeId: 'session:' + input.rootSessionId, identity, agent: prepared.agent, revision: 1, createdAt: new Date().toISOString() } }, { type: 'agent.upserted', agent: { agentInstanceId: prepared.agent.agentInstanceId, agentId: prepared.agent.agentId, name: prepared.agent.name, revision: 1, state: 'idle', waitingTaskIds: [] } },]); await this.Recheck(snapshot); return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { agent: prepared.agent, cursor: this.Cursor(batch) } }; });
   }
+
   /**
        * 为普通主对话可靠取得当前根会话的主实例。先保存图根，再保存独立 conversation 通道；稳定命令键让并发调用和重启复用同一身份。
        * 不创建业务任务、不改活动状态、不改绑旧根或原生历史；主对话原生位置仍由执行层核对同根 Loop 日志。
@@ -599,6 +623,7 @@ export class WorkspaceDispatchService
 
     return this.store.Transact(this.Command('conversation.bind', input), async state => { this.Check(identity.workspaceId); const graph = this.Graph(state, identity.rootSessionId); const snapshot = await this.owner.Snapshot(); const prepared = prepareMember(state, resolveConversationAgent(snapshot), identity.rootSessionId, 'conversation'); if (graph.root.agent.agentId !== prepared.agent.agentId || graph.root.agent.agentInstanceId !== prepared.agent.agentInstanceId) fail('CONVERSATION_IDENTITY', '主对话实例与任务图根不一致'); await this.Recheck(snapshot); const binding: ConversationAgentBinding = { ...identity, teamId: prepared.member.teamId, agentId: prepared.member.agentId, agentInstanceId: prepared.member.agentInstanceId, agentSessionId: prepared.session.agentSessionId }; return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], receipt: binding }; });
   }
+
   /** 为已建图注册角色与会话；只返回本次成员，不暴露其其他根会话通道。 */
   async CreateMember(raw: unknown): Promise<CreateMemberReceipt>
   {
@@ -632,6 +657,7 @@ export class WorkspaceDispatchService
       return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { member, session: prepared.session, agent: prepared.agent, cursor: batch ? this.Cursor(batch) : graph.cursor } };
     });
   }
+
   /** 可信桌面或绑定主轮的协调器从主会话派发任务；身份从根取得，不接受模型冒充其他成员递归派发。 */
   async DispatchTask(raw: unknown, trustedScopeId?: string, assertCurrent?: () => void): Promise<DispatchReceipt>
   {
@@ -781,6 +807,7 @@ export class WorkspaceDispatchService
       return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, messages: [{ kind: 'assignment', messageId, commandId: input.commandId, identity: graph.identity, from: graph.root.agent, to: prepared.agent, taskId, planRevision: 1, createdAt: now, delivery: 'pending' }], receipt: { commandId: input.commandId, taskId, messageId, cursor: this.Cursor(batch), disposition: waiting ? 'waiting' : 'queued', ...(fallbackBinding ? { fallbackBinding } : {}) } };
     }), alive);
   }
+
   /** 首次只读不会创建任务图；公开查询不包含成员其他 Session、邮箱和模型凭据。 */
   Snapshot(raw: unknown)
   {
@@ -790,6 +817,7 @@ export class WorkspaceDispatchService
 
     return this.store.Snapshot(identity)
   }
+
   /** 无变化返回 noop，读取内存游标与已提交批次，不重复回读知识或整份日志。 */
   Delta(raw: unknown, cursor?: GraphCursor, limit?: number)
   {
@@ -799,6 +827,7 @@ export class WorkspaceDispatchService
 
     return this.store.Delta(identity, cursor, limit)
   }
+
   /** 同屏读取图、独立周期摘要与选中详情；读取不启动调度，周期变化不使审阅保存的图游标过期。 */
   SessionRead(raw: unknown)
   {
@@ -808,6 +837,7 @@ export class WorkspaceDispatchService
 
     return this.store.SessionRead(input)
   }
+
   /** 先阻止新请求，再等待已经入队的事务；由应用在释放工作区锁前调用。 */
   async Close()
   {

@@ -71,6 +71,7 @@ export class Win32ControlledFile
       throw e
     }
   }
+
   private Bool(value: number)
   {
     if (!value)
@@ -80,6 +81,7 @@ export class Win32ControlledFile
       error('CONTROLLED_WIN32_' + n)
     }
   }
+
   private OpenHandle(file: string, access: number, share: number, flags: number)
   {
     const h = this.api.open(file, access, share, null, 3, flags, null),
@@ -94,6 +96,7 @@ export class Win32ControlledFile
 
     return h
   }
+
   private Final(h: any)
   {
     const b = Buffer.alloc(65536),
@@ -106,6 +109,7 @@ export class Win32ControlledFile
 
     return b.subarray(0, n * 2).toString('utf16le')
   }
+
   private Info(h: any)
   {
     const b = Buffer.alloc(52);
@@ -114,6 +118,7 @@ export class Win32ControlledFile
 
     return { attributes: b.readUInt32LE(0), size: b.readUInt32LE(36) + b.readUInt32LE(32) * 2 ** 32, links: b.readUInt32LE(40), volumeId: b.readUInt32LE(28).toString(16), fileId: b.subarray(44, 52).toString('hex') }
   }
+
   private Target(relative: string, protectedRoots: readonly string[])
   {
     const parts = relative.split('/');
@@ -130,6 +135,7 @@ export class Win32ControlledFile
 
     return file;
   }
+
   private LockParents(file: string)
   {
     const drive = path.parse(this.root).root;
@@ -152,6 +158,7 @@ export class Win32ControlledFile
         error('CONTROLLED_PATH');
     }
   }
+
   private Missing(file: string)
   {
     try
@@ -168,6 +175,7 @@ export class Win32ControlledFile
     }
     error('CONTROLLED_TARGET_EXISTS')
   }
+
   private Open(protectedRoots: readonly string[])
   {
     if (!/^[A-Za-z]:\\/.test(this.root) || normal(fs.realpathSync(this.root)) !== normal(path.resolve(this.root)))
@@ -224,6 +232,7 @@ export class Win32ControlledFile
 
       this.DefaultStreamOnly();
   }
+
   private CheckedIdentity(): ControlledFileIdentity
   {
     if (!this.file)
@@ -245,6 +254,7 @@ export class Win32ControlledFile
 
     return value;
   }
+
   /** binary 只供只读快照使用；业务替换与命名空间操作继续严格 UTF-8。 */
   Read(binary = false)
   {
@@ -288,6 +298,7 @@ export class Win32ControlledFile
 
     return { identity, bytes, fact: { byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } satisfies ControlledContentFact };
   }
+
   Replace(bytes: Uint8Array)
   {
     if (this.readOnly || this.namespaceChange || this.applied || bytes.byteLength > controlledPlatformBytes)
@@ -327,6 +338,7 @@ export class Win32ControlledFile
 
     return result;
   }
+
   /** FileStreamInfo 仅允许一个默认数据流；枚举失败或过多返回同样拒绝，不跳过隐藏内容。 */
   private DefaultStreamOnly()
   {
@@ -342,6 +354,7 @@ export class Win32ControlledFile
 
       error('CONTROLLED_ALTERNATE_STREAM');
   }
+
   /** 使用打开时冻结的操作和同一文件句柄；源不存在或移动后同身份读回成功才报告平台事实。 */
   Transition()
   {
@@ -407,6 +420,7 @@ export class Win32ControlledFile
     }
     return { identity: before.identity, fact: before.fact, transition: structuredClone(transition), sourceMissing: true as const };
   }
+
   Close()
   {
     let failed = false;

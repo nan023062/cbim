@@ -10,6 +10,7 @@ export interface MemberValidationView
 
   state: 'passed' | 'rejected' | 'unconfirmed' | 'stale'
 }
+
 /** 仅当前 run 的已公开结果参与展示；截断或缺工具终态时保持未确认，不把其他轮次的完成借过来。 */
 export function memberValidationViews(run: RunSummary): MemberValidationView[]
 {

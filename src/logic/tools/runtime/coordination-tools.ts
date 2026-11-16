@@ -22,6 +22,7 @@ interface ReadPort
 
   Call(name: string, input: Record<string, unknown>, signal: AbortSignal, toolCallId?: string): Promise<unknown>;
 }
+
 const inspectRoutes = { state: 'cbim_goal_inspect', task: 'cbim_dispatch_inspect', owner: 'cbim_module_owner_inspect', member: 'cbim_member_inspect', governance: 'cbim_governance_get' };
 
 const receiptRoutes = { dispatch: 'cbim_dispatch_command_report', owner: 'cbim_module_owner_receipt', member: 'cbim_member_receipt', governance: 'cbim_governance_receipt' };
@@ -33,6 +34,7 @@ function nestedInputSchema(schema: Record<string, unknown>, index: number): Reco
 
   return JSON.parse(JSON.stringify(schema, (key, value) => key === '$ref' && typeof value === 'string' && (value === '#' || value.startsWith('#/')) ? prefix + value.slice(1) : value));
 }
+
 /** 旧族保留兼容，目录明确规范入口；不改变历史调用名、指纹或事务。 */
 export function coordinationCompatibility(tool: EngineToolSchema): EngineToolSchema
 {
@@ -44,6 +46,7 @@ export function coordinationCompatibility(tool: EngineToolSchema): EngineToolSch
 
   return route ? { ...tool, description: `兼容入口；新调用优先 ${inspect ? 'cbim_state_inspect' : 'cbim_receipt_inspect'} target=${route[0]}，input 使用本参数。` + (tool.description ?? '') } : tool;
 }
+
 export class CoordinationTools
 {
   private readonly routes = new Map<string,
@@ -65,14 +68,17 @@ export class CoordinationTools
 
           this.routes.set(tool.name, { port, tool });
   }
+
   Has(name: string)
   {
     return name === 'cbim_state_inspect' || name === 'cbim_receipt_inspect'
   }
+
   List()
   {
     return (['cbim_state_inspect', 'cbim_receipt_inspect'] as const).flatMap(name => { const definitions = name === 'cbim_state_inspect' ? inspectRoutes : receiptRoutes; const available = Object.entries(definitions).filter(([, original]) => this.routes.has(original)); const variants = available.map(([target, original], index) => { const route = this.routes.get(original); return { type: 'object', properties: { target: { const: target }, input: nestedInputSchema(route!.tool.inputSchema, index) }, required: ['target', 'input'], additionalProperties: false }; }); return variants.length ? [{ name, effects: ['read'] as const, description: name === 'cbim_state_inspect' ? '统一只读入口。target=state,input={} 一次返回当前目标/计划/图游标、所有任务版本与可引用候选；task 读指定任务；owner 查模块负责人和修复信息；member 查岗位差异；governance 查治理记录。各目标分别读取，只有 state 内版本来自同一存储快照。' : '统一原回执核实入口。target=dispatch 使用原 runId/toolCallId；owner/member 使用 commandId；governance 使用原命令身份。只查询，不重复写入；unknown/absent 不证明未执行、不允许盲重试。原生文件和命令没有这些领域账本，须检查实际运行记录和副作用。', inputSchema: { oneOf: variants } }] : []; })
   }
+
   private Resolve(name: string, raw: unknown)
   {
     if (!this.Has(name) || !raw || typeof raw !== 'object' || Array.isArray(raw))
@@ -103,12 +109,14 @@ export class CoordinationTools
 
     return { original, route, input: value.input as Record<string, unknown> };
   }
+
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     this.Resolve(name, input);
 
     return { effects: ['read'], native: false }
   }
+
   async Call(name: string, input: Record<string, unknown>, signal: AbortSignal, id?: string)
   {
     signal.throwIfAborted();

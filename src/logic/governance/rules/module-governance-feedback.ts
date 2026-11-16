@@ -16,6 +16,7 @@ export interface ModuleGovernanceResponseSource
 
   decisions: readonly ModuleGovernanceDecision[]
 }
+
 export interface ModuleGovernanceResponseTarget
 {
   workspaceId: string;
@@ -24,12 +25,14 @@ export interface ModuleGovernanceResponseTarget
 
   proposalId?: string
 }
+
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
 
     fail(code, message)
 }
+
 function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: string, sources: readonly ModuleGovernanceResponseSource[])
 {
   const found = sources.flatMap(source => source.decisions.filter(decision => decision.decisionId === decisionId).map(decision => ({ source, decision })));
@@ -56,6 +59,7 @@ function checkedSource(target: ModuleGovernanceResponseTarget, decisionId: strin
 
   return { proposal, decision, latest };
 }
+
 /** 创建时只接受各来源提案当下最新反馈；缺省仍返回 undefined，不给旧提案补造空引用字段。 */
 export function resolveModuleGovernanceResponses(target: ModuleGovernanceResponseTarget, ids: readonly string[] | undefined, sources: readonly ModuleGovernanceResponseSource[]): ModuleGovernanceResponseRef[] | undefined
 {
@@ -65,6 +69,7 @@ export function resolveModuleGovernanceResponses(target: ModuleGovernanceRespons
 
   return moduleGovernanceDecisionIdsSchema.parse(ids).map(id => { const { proposal, decision, latest } = checkedSource(target, id, sources); check(latest.decisionId === id, 'GOVERNANCE_FEEDBACK_STALE', '原反馈已被后续决定替代，请读取最新决定并重新准备方案'); return { decisionId: id, proposalId: proposal.proposalId, basis: proposal.basis, decisionRevision: decision.revision }; });
 }
+
 /**
  * historical 保留冻结引用并派生是否被替代；current 还要求其仍是最新决定。
  * 账本追加按当时已见记录使用 current；读取旧已提交 journal 不应套用后来来源的 current 门禁。
@@ -83,6 +88,7 @@ export function validateModuleGovernanceResponseSources(raw: ModuleGovernancePro
 
   return moduleGovernanceResponseRefsSchema.parse(proposal.respondsTo).map(reference => { const source = checkedSource(proposal, reference.decisionId, sources), { decision, latest } = source; check(reference.proposalId === source.proposal.proposalId && reference.basis === source.proposal.basis && reference.decisionRevision === decision.revision, 'GOVERNANCE_FEEDBACK_SOURCE', '冻结回应引用与原决定版本不一致'); const state = latest.decisionId === reference.decisionId ? 'current' : 'superseded'; if (mode === 'current') check(state === 'current', 'GOVERNANCE_FEEDBACK_STALE', '回应引用已被后续决定替代，当前批准、评价或实施不能沿用旧问题'); return { reference: structuredClone(reference), state, latestDecisionId: latest.decisionId, latestDecisionRevision: latest.revision, feedback: structuredClone(decision.feedback!), comment: decision.comment }; });
 }
+
 /** 评价只能明确引用本提案实际回应的意见，可只评价部分；没有评价不产生 addressed，也不要求全部已回应。 */
 export function validateModuleGovernanceAssessments(proposal: ModuleGovernanceProposal, raw: readonly ModuleGovernanceResponseAssessment[] | undefined): void
 {

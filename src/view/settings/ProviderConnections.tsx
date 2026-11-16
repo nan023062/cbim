@@ -39,6 +39,7 @@ export function ProviderConnections({ value, onChange }: { value: LlmDefinition;
     {llmApiSchema.options.map(api => { const connection = selectProviderConnection(value, { supportedApis: [api], fallbackApi: api }, value.defaultModel || undefined); return <p key={api} className="inline-note">{labels[api]}：{connection?.baseUrl ? `${labels[connection.api]} · ${connection.baseUrl}（${connection.source === 'primary' ? '主接口' : connection.source === 'explicit' ? '自定义' : '官方预设'}）` : '没有适用于当前默认模型的接口'}</p>; })}
   </>;
 }
+
 /** 测试已保存模型的明确操作与接口；选菜单不发请求，不依赖执行引擎。 */
 export function ProviderConnectionTest({ profile, busy, onTest }: { profile: LlmProfile; busy: boolean; onTest: (operation: ({ kind: 'generation'; modelId: string; api: LlmApi } | { kind: 'embedding'; modelId: string })) => void })
 {
@@ -56,6 +57,7 @@ export function ProviderConnectionTest({ profile, busy, onTest }: { profile: Llm
     {value?.kind === 'generation' && <label>测试接口<select aria-label={profile.name + ' 测试接口'} value={api} disabled={busy} onChange={event => setApi(event.target.value as LlmApi)}>{llmApiSchema.options.map(protocol => <option key={protocol} value={protocol} disabled={!selectProviderConnection(profile, { supportedApis: [protocol], fallbackApi: protocol }, value.id)}>{labels[protocol]}</option>)}</select></label>}
     <button disabled={busy || !value || !connection} onClick={() => value && onTest(value.kind === 'embedding' ? { kind: 'embedding', modelId: value.id } : { kind: 'generation', modelId: value.id, api })}>测试连接</button></div><p className="inline-note">{connection ? connection.baseUrl + ' · ' + labels[connection.api] + '（使用已保存配置；仅发送小样本请求）' : '当前模型没有兼容接口，请编辑供应商配置。'}</p></div>;
 }
+
 /** 回执说明实际接口与有限验证范围，不表示完整任务或工具能力已验证。 */
 export function connectionTestNotice(name: string, result: ModelActionResults['models.testConnection']): string
 {

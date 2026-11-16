@@ -20,6 +20,7 @@ export interface RecoveryModel
 
   label: string
 }
+
 /** 来源报告属于历史节点；开放周期和模型来自主会话，而不是历史筛选。 */
 export interface ExecutionRecoveryContext
 {
@@ -31,6 +32,7 @@ export interface ExecutionRecoveryContext
 
   showScope: (id: string) => void
 }
+
 export interface ExecutionRecoveryView
 {
   visible: boolean;
@@ -67,6 +69,7 @@ export interface ExecutionRecoveryView
 
   showCreated: () => void;
 }
+
 /** 准备草稿不借用旧报告；当前会话仍须空闲，所选节点与来源周期身份必须完整。 */
 export function recoverySourceReason(workspaceId: string, rootSessionId: string, task: TaskNode, runId: string | undefined, state: ScopeGoalState): string
 {
@@ -102,6 +105,7 @@ export function recoverySourceReason(workspaceId: string, rootSessionId: string,
 
   return '';
 }
+
 /** 只为完整归属、已关闭来源及空闲会话生成新请求；未知日志允许核实，但不等于未执行。 */
 export function recoveryTarget(workspaceId: string, rootSessionId: string, task: TaskNode, runId: string | undefined, report: ExecutionReport | undefined, stale: boolean, state: ScopeGoalState): { target?: RecoveryTarget; reason: string }
 {
@@ -136,6 +140,7 @@ export function recoveryTarget(workspaceId: string, rootSessionId: string, task:
 
   return { target: { workspaceId, rootSessionId, source: { scopeId: scope.scopeId, taskId: task.taskId, ...(runId ? { runId } : {}), reportBasis: report.basis.key } }, reason: '' };
 }
+
 /** 同一个 root 共用本机请求索引；卸载只停止观察，不撤销提交或丢失迟到回执。 */
 export function useExecutionRecovery(workspaceId: string, rootSessionId: string, task: TaskNode, runId: string | undefined, report: ExecutionReport | undefined, reportUnavailable: boolean, context?: ExecutionRecoveryContext, invalidateReport?: () => void): ExecutionRecoveryView
 {
@@ -147,6 +152,7 @@ export function useExecutionRecovery(workspaceId: string, rootSessionId: string,
 
   return useRecoverySource(workspaceId, rootSessionId, source, eligibility, prepareReason, !!report, context, invalidateReport);
 }
+
 /** 共用稳定请求控制器；新主来源直接传真实 run，不构造成员 TaskNode 或虚假 ExecutionReport。 */
 export function useRecoverySource(workspaceId: string, rootSessionId: string, source: RecoverySource | undefined, eligibility: { target?: RecoveryTarget; reason: string }, prepareReason: string, hasReport: boolean, context?: ExecutionRecoveryContext, invalidateReport?: () => void): ExecutionRecoveryView
 {

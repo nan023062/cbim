@@ -42,6 +42,7 @@ export interface BoundedJsonSchema
 
   maximum?: number;
 }
+
 export interface ValidationIssue
 {
   code: 'json_invalid' | 'schema_mismatch';
@@ -52,12 +53,14 @@ export interface ValidationIssue
 
   keyword?: string
 }
+
 export interface JsonValidationOutcome
 {
   outcome: 'passed' | 'rejected';
 
   issues: ValidationIssue[]
 }
+
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value) && [null, Object.prototype].includes(Object.getPrototypeOf(value));
 
 const scalar = (value: unknown): value is Scalar => value === null || typeof value === 'boolean' || typeof value === 'string' && value.length <= 4096 || typeof value === 'number' && Number.isFinite(value);
@@ -162,6 +165,7 @@ export function isBoundedJsonSchema(value: unknown): value is BoundedJsonSchema
     return false
   }
 }
+
 export const boundedJsonSchemaSchema = z.custom<BoundedJsonSchema>(isBoundedJsonSchema, '不支持或超过边界的 JSON 验证 Schema').describe('有界 JSON Schema 子集；显式 type，禁止引用、组合、pattern、format、脚本及数据转换');
 
 const escape = (value: string) => value.replaceAll('~', '~0').replaceAll('/', '~1');

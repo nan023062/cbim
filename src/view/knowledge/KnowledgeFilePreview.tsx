@@ -35,6 +35,7 @@ export function KnowledgeFilePreview({ snapshot, path, onSaved, onDirtyChange }:
  {editing && <FileEditor key={path} snapshot={snapshot} path={path} onDirtyChange={onDirtyChange} onClose={() => setEditing(false)} onSaved={onSaved} />}
  </section>;
 }
+
 /** 任何已发送提交只保留同一请求；显式重查/重送使用事务幂等身份，不重新预览制造新命令。 */
 function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snapshot: Snapshot; path: string; onDirtyChange?: (dirty: boolean) => void; onClose: () => void; onSaved?: () => Promise<void> })
 {
@@ -103,12 +104,14 @@ function FileEditor({ snapshot, path, onDirtyChange, onClose, onSaved }: { snaps
         setSaving(false)
     }
   }
+
   function close()
   {
     if (!saving && (!dirty && !attempt || confirm('保留已有提交事实，关闭并丢弃本机草稿？')))
 
       onClose()
   }
+
   return <ModalFrame label="编辑知识文件" onRequestClose={close}><section className="modal knowledge-file-editor"><header><h2>编辑知识文件</h2><button disabled={saving} onClick={close}><Icon name="close" size={16} />关闭</button></header><code>{path}</code><textarea aria-label="知识文件正文" spellCheck={false} value={draft} disabled={!!attempt} onChange={event => { version.current++; setPreview(undefined); setChecking(true); setDraft(event.target.value) }} />
  <p role="status">{checking ? '正在自动校验…' : preview?.validation.structural ? '结构校验通过' : '结构校验未通过'}</p>{preview?.validation.issues.map((issue, index) => <p className="knowledge-file-warning" key={index}>{issue.path} · {issue.message}</p>)}{error && <p role="alert">{error}</p>}
  {preview && <details><summary>查看实际修改预览</summary><pre>{preview.diff}</pre></details>}<button disabled={saving || !attempt && (!dirty || checking || !preview?.validation.structural)} onClick={() => void save()}>{saving ? '正在提交…' : attempt ? '使用原事务重试' : '提交已校验修改'}</button>

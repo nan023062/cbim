@@ -19,11 +19,13 @@ type TrackingScope =
 
     runTracking?: ScopeRunTracking
   };
+
 /** 只在新周期的可信首轮启动事务中创建；不能用于升级已存在的 legacy 周期。 */
 export function createScopeRunTracking(id: string): ScopeRunTracking
 {
   return scopeRunTrackingSchema.parse({ version: 1, mainRunIds: [id] })
 }
+
 /** 同身份重复为只读返回；新主轮只追加 active 周期。合法补充须先在同事务构造 active 的新周期。 */
 export function appendScopeMainRun<T extends TrackingScope>(scope: T, id: string): T
 {

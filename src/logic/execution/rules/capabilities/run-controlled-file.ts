@@ -33,6 +33,7 @@ export interface ControlledFileRunPort
 
   Drain(): Promise<void>;
 }
+
 export class RunControlledFile
 {
   private reserved?:
@@ -57,6 +58,7 @@ export class RunControlledFile
 
       safeNoWrite: boolean
     };
+
   /** 独立于在途调用；工具已返回失败也不能解除本轮写入、交付和检查点屏障。 */
   private unverified = new Set<string>();
 
@@ -72,6 +74,7 @@ export class RunControlledFile
 
     this.scopeId = port.scopeId
   }
+
   /** 在审批 await 之前预占；执行与工具终态都完成后才释放，伪早到 finished 不能解除实际 IO 占位。 */
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
@@ -104,6 +107,7 @@ export class RunControlledFile
 
     this.reserved = { id, input: structuredClone(parsed.data), inputHash: hash(JSON.stringify(input)), consumed: false, settled: false, finished: false, validated: false, failedEvent: false, safeNoWrite: false };
   }
+
   /** 只能由 Runtime 自身 beforeTool 的可靠 append 返回值调用；观察事件没有签发权。 */
   Authorize(id: string, seq: number)
   {
@@ -111,6 +115,7 @@ export class RunControlledFile
 
       this.reserved.allowedSeq = seq
   }
+
   Observed(type: string, id: unknown, isError = false)
   {
     const current = this.reserved;
@@ -140,6 +145,7 @@ export class RunControlledFile
       this.Release()
     }
   }
+
   private Release()
   {
     const current = this.reserved;
@@ -158,10 +164,12 @@ export class RunControlledFile
 
     this.reserved = undefined
   }
+
   get unverifiedCallIds()
   {
     return [...this.unverified]
   }
+
   /** 供交付端口和运行结算复核，不将原 failed 回执改写为 unknown 或成功。 */
   AssertVerified()
   {
@@ -169,10 +177,12 @@ export class RunControlledFile
 
       fail('CONTROLLED_FILE_REVIEW_REQUIRED', '原受控写结果待核实，本轮不能提交交付或安全交接')
   }
+
   Stop()
   {
     this.controller.abort(Error('运行已停止'))
   }
+
   /** 端口任何排空错误都表示物理退出未确认；统一稳定代码，外层不能按普通工具失败释放租约。 */
   async Drain()
   {
@@ -187,10 +197,12 @@ export class RunControlledFile
       fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，请保留工作区并核实原操作')
     }
   }
+
   async List()
   {
     return [{ name: controlledFileWriteToolName, version: 1, effects: ['business-write'] as const, description: '仅替换一个已存在的 UTF-8 普通文件，expectedBefore 必须来自实际读取。先可靠保存 before，再由独占句柄写入；只有 applied 是可靠成功，未知不得重试。此工具不自动回滚，也不替代实际 read、产物基线与验收。', inputSchema: zodToJsonSchema(controlledFileWriteInputSchema), outputSchema: zodToJsonSchema(controlledFileWriteOutputSchema), cancellation: { mode: 'preflight_only' as const, description: '停止阻止尚未开始的写入；发出内容写后可能部分写入，只有原记录可确认结果。' }, recovery: { mode: 'inspect_before_retry' as const, description: '桌面查询原任务/运行/调用的受控记录；原调用不重放，补偿须另行显式提交。' } }]
   }
+
   async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     if (name !== controlledFileWriteToolName || !id)

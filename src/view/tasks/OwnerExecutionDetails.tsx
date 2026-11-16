@@ -31,6 +31,7 @@ export function OwnerExecutionDetails({ binding, workspaceId, agentId, moduleIds
     </>}
   </section>;
 }
+
 /** 缺省与损坏分开；旧在途和历史结果不因没有新协议字段而被改显示为执行失败。 */
 export function MemberOwnerNotice({ task, compact = false }: { task: TaskNode; compact?: boolean })
 {
@@ -50,6 +51,7 @@ export function MemberOwnerNotice({ task, compact = false }: { task: TaskNode; c
 
   return <p className={view.needsReplan ? 'owner-execution-warning' : 'owner-execution-muted'} data-testid="owner-binding-legacy" data-needs-replan={view.needsReplan}>{view.needsReplan ? '旧任务尚无可信岗位绑定，不能新领取或续执行；请由主 Agent 按当前负责人重新规划。' : '旧执行记录未保存项目岗位绑定；保留当时的角色与结果，不自动补配当前负责人。'}</p>;
 }
+
 /** 直接展示原兜底事实及原因；不把自动身份显示为旧岗位缺失或人工责任确认。 */
 export function AutomaticExecutionDetails({ binding, workspaceId, scopeId, agentId, moduleIds }: { binding: AutomaticExecutionBinding; workspaceId: string; scopeId?: string; agentId: string; moduleIds: string[] })
 {

@@ -43,6 +43,7 @@ function SourceFolder({ target, name, selected, onFile }: { target: SourceTarget
   </ul>}
  </li>;
 }
+
 export function ModuleSourceTree({ snapshot, query, selected, source, onModule, onFile, actions }: { snapshot: Snapshot; query: string; selected: string; source?: SourceTarget; onModule: (id: string) => void; onFile: (target: SourceTarget) => void; actions: (id: string) => TreeAction[] })
 {
   const [closed, setClosed] = useState(new Set<string>()),
@@ -73,5 +74,6 @@ export function ModuleSourceTree({ snapshot, query, selected, source, onModule, 
    {open && <ul>{node.children.map(child => row(child, seen))}{node.sources.map((binding, index) => <SourceFolder key={index + ':' + binding.location} name={binding.location} target={{ workspaceId: snapshot.workspaceId, instanceId: snapshot.instanceId, revision: snapshot.revision, moduleId: id, source: binding.location.replaceAll('\\', '/'), path: '' }} selected={source} onFile={onFile} />)}</ul>}
   </li>;
   };
+
   return <nav className="knowledge-file-tree" aria-label="业务模块源码树"><div className="knowledge-file-row"><button className="knowledge-file-name" data-module-id=".cbim/workspace" onClick={() => onModule('.cbim/workspace')}><Icon name="module" size={15} /><span>业务模块</span></button><TreeActions name="业务模块" actions={actions('.cbim/workspace')} /></div><ul>{tree?.roots.map(id => row(id))}</ul>{!tree?.roots.some(id => matches(id)) && <p>{needle ? '没有匹配的模块。' : '暂无正式业务模块，请从根菜单创建。'}</p>}</nav>;
 }

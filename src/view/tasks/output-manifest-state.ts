@@ -22,6 +22,7 @@ export interface ManifestReportState
 
   sourceVersion?: string
 }
+
 export const manifestSelectionKey = (value: ManifestSelection) => JSON.stringify([value.workspaceId, value.rootSessionId, value.taskId, value.runId]);
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -92,6 +93,7 @@ export function checkedManifestReport(raw: unknown, request: OutputManifestQuery
   }
   return value;
 }
+
 /** 实例只绑定一个 run；构造、订阅、换选择和销毁均不触发文件读取。 */
 export class ManifestReportController
 {
@@ -104,10 +106,12 @@ export class ManifestReportController
   constructor(readonly identity: ManifestSelection, private read: (input: OutputManifestQuery) => Promise<unknown>, private version: () => string = () => '')
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: ManifestReportState)
@@ -116,12 +120,14 @@ export class ManifestReportController
 
     this.listeners.Notify()
   }
+
   Cancel()
   {
     this.generation.Advance();
 
     this.value = { ...this.value, loading: false }
   }
+
   /** 选择本身不扫描；清掉上一个选项的观察，未选择时不默认最新。 */
   Select(id: string)
   {
@@ -139,16 +145,19 @@ export class ManifestReportController
 
     this.Publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
   }
+
   async List()
   {
     await this.Pull()
   }
+
   async Inspect()
   {
     if (this.value.selectedId)
 
       await this.Pull(this.value.selectedId)
   }
+
   private async Pull(manifestId?: string)
   {
     if (this.value.loading)

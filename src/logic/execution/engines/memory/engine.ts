@@ -70,6 +70,7 @@ export class MemoryEngine implements AgentEngine
 
     this.cache = new MemoryIndexCache(options.agentHome)
   }
+
   async start(context: EngineContext)
   {
     if (this.context)
@@ -108,6 +109,7 @@ export class MemoryEngine implements AgentEngine
 
     await this.Emit({ type: 'session.bound', data: { sessionId: this.session.id, sessionFile: this.session.file, provider: this.options.provider, model: llm.profile.model } });
   }
+
   run(message: string)
   {
     if (this.work)
@@ -116,6 +118,7 @@ export class MemoryEngine implements AgentEngine
 
     return this.work = this.Execute(message)
   }
+
   private async Execute(message: string): Promise<{ status: 'completed' | 'cancelled' | 'failed'; error?: string }>
   {
     if (!this.context || !this.session || !this.tools)
@@ -255,6 +258,7 @@ export class MemoryEngine implements AgentEngine
       clearTimeout(deadline)
     }
   }
+
   private async Invoke(name: string, input: Record<string, unknown>, id: string = randomUUID()): Promise<{ result: ToolResult; knowledgeWrite: boolean }>
   {
     const signal = this.controller.signal;
@@ -293,6 +297,7 @@ export class MemoryEngine implements AgentEngine
 
     return { result, knowledgeWrite: decision.effects?.includes('knowledge-write') ?? false };
   }
+
   private async RefreshIndex()
   {
     const result = (await this.Invoke('cbim_knowledge_search', { query: '' })).result;
@@ -341,18 +346,21 @@ export class MemoryEngine implements AgentEngine
 
     return index;
   }
+
   private async Emit(event: EngineEvent)
   {
     await this.context!.emit(event);
 
     this.timer?.Observe(event)
   }
+
   async stop()
   {
     this.controller.abort();
 
     this.timer?.Dispose()
   }
+
   /** 等实际请求/工具与事件收口；失败历史保留 turn.started，不伪造完成记录或释放仍在执行的包引用。 */
   async close()
   {

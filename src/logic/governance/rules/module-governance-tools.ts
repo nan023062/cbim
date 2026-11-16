@@ -28,6 +28,7 @@ export function isGovernanceToolName(name: string): name is GovernanceToolName
 {
   return Object.prototype.hasOwnProperty.call(governanceToolEffects, name)
 }
+
 const utf8 = (text: string) => new TextEncoder().encode(text).length;
 
 const uuid = z.string().uuid(),
@@ -131,6 +132,7 @@ export interface GovernanceToolsPort
 
   Receipt(input: GovernanceReceiptInput, signal: AbortSignal): Promise<GovernanceReceiptOutput>;
 }
+
 function textPreview(text: string): z.infer<typeof preview>
 {
   const chars = Array.from(text),
@@ -139,10 +141,12 @@ function textPreview(text: string): z.infer<typeof preview>
 
   return { text: shown, totalCharacters: chars.length, truncated: chars.length > 256 }
 }
+
 function recent<T>(items: readonly T[])
 {
   return { total: items.length, truncated: items.length > governanceToolSummaryLimit, items: items.slice(-governanceToolSummaryLimit) }
 }
+
 /** 不做内容裁剪；JSON 转义也会占上下文，单正文编码超过 32 KiB 时同样只返回元数据。 */
 export function projectGovernanceBody(text: string, hash: string): GovernanceBodyView
 {
@@ -154,6 +158,7 @@ export function projectGovernanceBody(text: string, hash: string): GovernanceBod
 
   return bytes <= governanceToolBodyLimit && utf8(JSON.stringify(text)) <= 2 * governanceToolBodyLimit ? { state: 'complete', text, utf8Bytes: bytes, hash } : { state: 'oversized', utf8Bytes: bytes, hash, limitBytes: governanceToolBodyLimit, reason: bytes > governanceToolBodyLimit ? 'body_limit' : 'output_limit' };
 }
+
 /** 桌面领域事实投影为有界模型视图；不会选择“最新正文”代替显式记录，不暴露原实施请求。 */
 export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: GovernanceToolIdentity): GovernanceGetOutput
 {
@@ -217,6 +222,7 @@ export function projectGovernanceGet(raw: ModuleGovernanceList, rawIdentity: Gov
   }
   return result;
 }
+
 /** 只投影同主会话的已保存模型观察/提案；undefined 明确返回 unknown，不推定未受理。 */
 export function projectGovernanceReceipt(raw: ModuleGovernanceReceipt | undefined, rawIdentity: GovernanceToolIdentity, commandId: string): GovernanceReceiptOutput
 {

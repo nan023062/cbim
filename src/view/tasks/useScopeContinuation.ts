@@ -29,11 +29,13 @@ export interface ContinuationModel
 
   label: string
 }
+
 /** 核实周期的只读约束来自真实开放周期，不受用户查看历史或切换输入区权限影响。 */
 export function continuationModel(model: ContinuationModel | undefined, state: Pick<ScopeGoalState, 'openScope'>): ContinuationModel | undefined
 {
   return model && state.openScope?.readOnly ? { options: { ...model.options, permission: 'read' }, label: model.options.model + ' · 只读核实' } : model;
 }
+
 export interface ScopeContinuationView
 {
   workspaceId: string;
@@ -88,6 +90,7 @@ export interface ScopeContinuationView
 
   cancelImport: () => void;
 }
+
 /** 仅当前 waiting 且详情已与摘要核对时产生写入目标，模型等待申请和历史选择均不能构造恢复身份。 */
 export function continuationTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState): ContinuationTarget | undefined
 {
@@ -110,6 +113,7 @@ export function continuationTarget(workspaceId: string, rootSessionId: string | 
 
   return { workspaceId, rootSessionId, scopeId: scope.scopeId, waitId: scope.wait.waitId, expectedGoalRevision: scope.goal.revision, expectedInputRevision: scope.goal.inputRevision ?? 1 };
 }
+
 /** active 来自外壳的会话选择，不能用组件是否挂载替代；隐藏仅撤销未提交资料，不取消已经受理的目标继续。 */
 export function useScopeContinuation(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, model: ContinuationModel | undefined, refresh: () => void, active: boolean): ScopeContinuationView
 {

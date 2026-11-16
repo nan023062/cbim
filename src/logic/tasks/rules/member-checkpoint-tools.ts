@@ -17,6 +17,7 @@ export function memberCheckpointTool(name: string, input: unknown)
 {
   return name === memberCheckpointToolName ? { args: memberCheckpointInputSchema.parse(input), effects: ['maintenance'] as const, native: false } : undefined
 }
+
 export class MemberCheckpointTools
 {
   private readonly knowledgeRevision?: string;
@@ -28,10 +29,12 @@ export class MemberCheckpointTools
 
     this.knowledgeRevision = ports.knowledgeRevision
   }
+
   async List()
   {
     return [{ name: memberCheckpointToolName, description: '申请本运行的一次安全检查点（每任务最多16段）。只支持成功 read/write/edit 涉及的全部有界文件均由所选最新基线覆盖；不支持命令、目录扫描、未知或失败操作。调用后立即结束本轮，不能再使用工具；主调度核实正常关闭后决定是否预约最新段的一次续执行。本请求不是交付或已恢复。', inputSchema: zodToJsonSchema(memberCheckpointInputSchema) as Record<string, unknown>, ...memberToolContract(memberCheckpointToolName) }];
   }
+
   /** 输出错误不撤销暂存或解锁；成功正文仍仅是请求，可信结束与最终结算在运行时、调度器。 */
   async Call(name: string, input: unknown, toolCallId?: string)
   {

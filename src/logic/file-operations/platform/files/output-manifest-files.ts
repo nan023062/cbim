@@ -36,12 +36,14 @@ export class OutputManifestFiles
 
     this.files = guarded?.files ?? new ArtifactFiles(this.root, assert)
   }
+
   private Current(signal: AbortSignal)
   {
     this.assert();
 
     signal.throwIfAborted()
   }
+
   /** 逐级核路径；只有明确 ENOENT 才表示缺失，错误、链接或非目录祖先不能伪装成空集合。 */
   private async Locate(raw: string, signal: AbortSignal): Promise<{ file: string; stat: Stats } | undefined>
   {
@@ -104,6 +106,7 @@ export class OutputManifestFiles
 
     return { file: current, stat };
   }
+
   private async Scan(scopes: ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
     const roots: OutputManifestSnapshot['roots'] = [],
@@ -203,6 +206,7 @@ export class OutputManifestFiles
         }
       }
     };
+
     const declared = scopes.flatMap(value => value.scope.roots).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
     for (const root of declared)
@@ -215,6 +219,7 @@ export class OutputManifestFiles
 
     return outputManifestSnapshotSchema.parse({ scopes, roots, entries });
   }
+
   /** 两次完整观察共用15秒期限；最多读取两份32 MiB，出现变化不返回局部或截断清单。 */
   async Capture(raw: readonly ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
@@ -234,6 +239,7 @@ export class OutputManifestFiles
 
     return second;
   }
+
   /** 按原范围重新枚举，不只读旧路径；未知保持不可核实，不能当空清单或未变化。 */
   async Check(raw: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>
   {

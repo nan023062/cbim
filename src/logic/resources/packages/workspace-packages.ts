@@ -57,6 +57,7 @@ interface ImportPlan
 
     contentHash: string
   };
+
   createdRoots: string[];
 
   deletedRoots: string[];
@@ -77,6 +78,7 @@ interface ImportPlan
 
   result?: KnowledgeCommit
 }
+
 const changeRequest = z.object({ ...identity, revision: z.string().min(1), requestId: z.string().uuid(), changes: z.array(z.object({ path: z.string().min(1), text: z.string().nullable() }).strict()) }).strict();
 
 const receipt = z.object({ state: z.literal('committed'), ...identity, requestId: z.string().uuid(), revision: z.string(), changed: z.array(z.string()) }).strict();
@@ -94,6 +96,7 @@ export class WorkspacePackages
   constructor(private workspace: KnowledgeWorkspace, private repositories: ResourceRepositories)
   {
   }
+
   private async Source(repositoryId: string, repositoryRevision: string)
   {
     const snapshot = await this.repositories.Read();
@@ -108,6 +111,7 @@ export class WorkspacePackages
 
     return snapshot;
   }
+
   private PlanPath(id: string)
   {
     if (!z.string().uuid().safeParse(id).success)
@@ -116,12 +120,14 @@ export class WorkspacePackages
 
     return path.join(this.workspace.paths.Local(this.workspace.entry.id, 'cache'), 'resource-imports', id + '.json')
   }
+
   private async SavePlan(plan: ImportPlan)
   {
     plan.fingerprint = planFingerprint(plan);
 
     await atomic(this.PlanPath(plan.request.requestId), json(plan))
   }
+
   private async ReadPlan(id: string): Promise<ImportPlan>
   {
     let value: unknown;
@@ -165,6 +171,7 @@ export class WorkspacePackages
 
     return plan;
   }
+
   /** 用户明确发布后保存到当前本地/已连接服务器仓库；相同静态内容不重复创建资源。 */
   async Publish(raw: unknown): Promise<PublishWorkspaceResult>
   {
@@ -213,6 +220,7 @@ export class WorkspacePackages
 
     return { repository: saved, resourceId: resource.id, warnings: built.warnings, removedBindings: built.removedBindings };
   }
+
   /** 固定源资源及目标基线并持久化计划；仅返回差异，绝不直接应用知识。 */
   async Preview(raw: unknown): Promise<ImportWorkspacePreview>
   {
@@ -264,6 +272,7 @@ export class WorkspacePackages
 
     return { ...preview, planId: request.requestId, kind: pack.kind, mode: input.mode, targetRoot: planned.targetRoot, files: preview.changes.map(change => ({ path: change.path, action: change.text === null ? 'delete' : before.has(change.path) ? 'update' : 'create' })), warnings: planned.warnings, removedBindings: planned.removedBindings };
   }
+
   /**
        * 显式提交才写知识；同时复核源仓库/内容和目标版本，旧实例计划不能复用。
        * 已提交回执优先返回；若在知识提交后、缓存回执前崩溃，目标版本不同只能向知识幂等日志查询原请求，不能发起第二次写入。
@@ -278,6 +287,7 @@ export class WorkspacePackages
 
     return current;
   }
+
   private async CommitPlan(raw: unknown): Promise<KnowledgeCommit>
   {
     const input = commitInput.parse(raw);

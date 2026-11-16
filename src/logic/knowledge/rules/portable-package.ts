@@ -54,8 +54,10 @@ export interface WorkspacePackage
 
     purpose: string
   };
+
   fingerprint: string
 }
+
 export interface PackageSelection
 {
   kind: WorkspacePackageKind;
@@ -66,6 +68,7 @@ export interface PackageSelection
 
   summary: string
 }
+
 export interface PackagePlacement
 {
   mode: WorkspacePackageMode;
@@ -74,6 +77,7 @@ export interface PackagePlacement
 
   slug?: string
 }
+
 export interface PackageChanges
 {
   changes: Change[];
@@ -88,6 +92,7 @@ export interface PackageChanges
 
   removedBindings: string[]
 }
+
 const pp = path.posix;
 
 const packageShape = z.object({ format: z.literal('cbim-workspace-package'), version: z.literal(1), kind: z.enum(['team', 'agent', 'skill', 'architecture']), name: z.string().trim().min(1).max(100), summary: z.string().trim().max(1000), files: z.array(z.object({ path: z.string().min(1).max(1000), text: z.string().min(1).max(200000) }).strict()).min(1).max(512), skill: z.object({ name: z.string().min(1), purpose: z.string().min(1) }).strict().optional(), fingerprint: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
@@ -114,6 +119,7 @@ function check(condition: unknown, message: string): asserts condition
 
     fail('RESOURCE_PACKAGE', message)
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: false });
 
@@ -124,10 +130,12 @@ export function workspacePackageFingerprint(value: Omit<WorkspacePackage, 'finge
 
   return hash(JSON.stringify(ordered(body)))
 }
+
 function cleanPath(value: string)
 {
   return value === value.trim() && !/[\\:\x00-\x1f?#%<>"|*]/.test(value) && !value.startsWith('/') && value.split('/').every(part => part && part !== '.' && part !== '..' && !part.endsWith('.') && !part.endsWith(' ') && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))
 }
+
 /** Markdown 代码块内只是示例；只解析真实链接，不把路径字符串自动变成外部读取。 */
 function links(text: string, replace: (link: string) => string)
 {
@@ -135,6 +143,7 @@ function links(text: string, replace: (link: string) => string)
 
   return text.split('\n').map(line => { const mark = line.match(/^ {0,3}(`{3,}|~{3,})/); if (mark) { if (!fence) fence = mark[1][0]; else if (mark[1][0] === fence) fence = ''; return line } if (fence) return line; return line.replace(/(\]\(<?)([^\s)>]+)(>?(?:\s+"[^"]*")?\))/g, (_, a, link, b) => a + replace(link) + b).replace(/^(\s*\[[^\]]+\]:\s*<?)([^\s>]+)(>?)/, (_, a, link, b) => a + replace(link) + b) }).join('\n')
 }
+
 function localReference(owner: string, reference: string): string | undefined
 {
   if (reference.startsWith('#'))
@@ -163,6 +172,7 @@ function localReference(owner: string, reference: string): string | undefined
 
   return pp.normalize(pp.join(owner, clean));
 }
+
 function exactObject(text: string, schema: z.ZodTypeAny)
 {
   let value: unknown;
@@ -181,6 +191,7 @@ function exactObject(text: string, schema: z.ZodTypeAny)
 
   return result.data as any
 }
+
 /** 严格校验外部包，含大小、路径、大小写冲突、封闭引用、目录树以及不允许的项目字段。 */
 export function parseWorkspacePackage(content: string, kind?: string): WorkspacePackage
 {
@@ -376,6 +387,7 @@ export function parseWorkspacePackage(content: string, kind?: string): Workspace
 
   return pack;
 }
+
 /** 从已经通过工作区规则校验的知识创建包；独立 Agent 会冻结其实际可用的继承 Skill。 */
 export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSelection): { package: WorkspacePackage; warnings: string[]; removedBindings: string[] }
 {
@@ -579,6 +591,7 @@ export function buildWorkspacePackage(snapshot: Snapshot, selection: PackageSele
 
   return { package: pack, warnings: ['仅发布静态定义；请 review 正文，确认适用于其他项目。', ...(selection.kind === 'agent' ? ['独立 Agent 已将可用祖先 Skill 收入自身能力，导入时仍会检查与目标祖先的名称冲突。'] : [])], removedBindings: [...removed] };
 }
+
 /** 计算整包导入差异；能力默认新增，业务只允许完整根导入或显式整体替换。 */
 export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage, placement: PackagePlacement): PackageChanges
 {
@@ -632,6 +645,7 @@ export function planWorkspacePackage(snapshot: Snapshot, pack: WorkspacePackage,
 
     createdRoots.push(targetRoot);
   }
+
   // 废弃花名册仍属用户历史文件，整组替换不删除它，也不再核实旧人员的团队引用。
   const protectedFile = (id: string) => INDEXES.includes(id) || id === '.cbim/team/people.json';
 

@@ -17,6 +17,7 @@ export interface WorkspaceEntry
 
   previousIds?: string[]
 }
+
 /** 本机登记清单；内部工作区运行时的启动集合直接取 entries。 */
 export interface Catalog
 {
@@ -26,6 +27,7 @@ export interface Catalog
 
   recent: string[];
 }
+
 /** 提供界面的内部工作区运行快照；knowledgeErrors 是知识规则检查结果，与运行状态独立。 */
 export interface WorkspaceView extends WorkspaceEntry
 {

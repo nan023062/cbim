@@ -37,6 +37,7 @@ const outputs: Record<string, z.ZodTypeAny> = {
 
   cbim_knowledge_tool_catalog: knowledgeToolCatalogOutputSchema, cbim_knowledge_tool_describe: knowledgeToolDescribeOutputSchema,
 };
+
 for (const skill of builtinSkills)
 
   outputs['cbim_skill_' + skill.id.replaceAll('-', '_')] = builtinReadOutputSchema;
@@ -58,6 +59,7 @@ const recovery: Record<string, ToolRecovery> = {
 
   cbim_task_cancel: { mode: 'query_task', keyFields: ['taskId'], queryTool: 'cbim_task_status', description: '这里只请求取消指定维护任务；返回后查询真实终态，不代表已停止或回滚，不接受对话或成员任务 ID。' },
 };
+
 /** 只为本实现真实注册的工具提供元数据；不存在的名称不以默认 Schema 冒充支持。 */
 export function knowledgeToolContract(name: string)
 {

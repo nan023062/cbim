@@ -100,6 +100,7 @@ export interface SessionTaskReviewProps
   /** 显式核实中导航原任务引用；组件不持有局部任务选择。 */
   onSelectTask?: (id: string) => void;
 }
+
 /** 主根详情保留调度与知识治理的对话轮次、计划和停止入口；业务执行详情仅由任务节点展开。 */
 function RootTaskDetail({ history, pending, now, busy, stopping, onQueueChange, onQueueContinue, onStop, graph, scopeState, continuation, replan, humanDecisions, humanContinuation, recovery, onSelectTask, historyIssueCount = 0 }: Pick<SessionTaskReviewProps, 'now' | 'busy' | 'stopping' | 'onQueueChange' | 'onQueueContinue' | 'onStop' | 'graph' | 'scopeState' | 'continuation' | 'replan' | 'humanDecisions' | 'humanContinuation' | 'recovery' | 'onSelectTask' | 'historyIssueCount'> & { history: RunSummary[]; pending: QueuedMessage[] })
 {
@@ -136,6 +137,7 @@ function RootTaskDetail({ history, pending, now, busy, stopping, onQueueChange, 
     {!history.length && <p>{historyIssueCount ? '当前没有可读的主会话记录；待核实轮次与已有任务节点仍保留，不能据此判定未执行。' : '当前尚无可读的主会话记录。'}</p>}
   </div>;
 }
+
 /** 仅渲染指定原身份的详情，不创建办公室或另选最新成员任务。 */
 export function SessionTaskReview(props: SessionTaskReviewProps)
 {
@@ -161,6 +163,7 @@ export function SessionTaskReview(props: SessionTaskReviewProps)
 
   return <p role="alert">原任务详情暂不可读取。<button onClick={props.onChat}>返回对话</button></p>;
 }
+
 /** 原生模态核实框仅由显式核实入口打开；Escape/关闭恢复入口焦点，不关闭后台任务。 */
 export function SessionTaskReviewDialog({ onClose, ...props }: SessionTaskReviewProps & { onClose: () => void })
 {

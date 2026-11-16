@@ -34,6 +34,7 @@ export class AutomaticReturnService
   constructor(private owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, private store: DispatchStore, private goals: ScopeGoalService, private logs?: ScopeGoalPorts, private models?: OwnerExecutionModelPorts)
   {
   }
+
   private async ModelHash(options: AutomaticReturn['options'])
   {
     if (!this.models)
@@ -42,6 +43,7 @@ export class AutomaticReturnService
 
     return workspaceMemberModelHash(await this.models.Configuration(options.profileId, options.model, options.engine, options.modelRoles));
   }
+
   /** 真实主轮结算后、首次启动成员前保存；同批重复只查原记录，不刷新指纹或改变权限。 */
   async Record(identity: GraphIdentity, scopeId: string, summary: RunSummary, taskIds: string[], options: AutomaticReturn['options']): Promise<void>
   {
@@ -79,6 +81,7 @@ export class AutomaticReturnService
 
     await this.store.Transact({ commandId: 'auto-return-record-' + hash(json({ scopeId, runId: summary.runId })), fingerprint: hash(json({ scopeId, runId: summary.runId, taskIds, options })) }, async current => { this.owner.Assert(); const fresh = current.scopes?.find(value => value.scopeId === scopeId); if (!fresh || fresh.status !== 'active' || fresh.runTracking?.mainRunIds.at(-1) !== summary.runId) fail('AUTO_RETURN_UNSAFE', '批次保存前周期已变化'); return { scopes: [{ ...fresh, automaticReturns: [...(fresh.automaticReturns ?? []), record] }], receipt: true }; });
   }
+
   /** 只读完整核实；有新主轮意图、缺日志、旧成果变化或未消费集合不精确都拒绝，不补发旧命令。 */
   async Inspect(scope: DispatchScope)
   {
@@ -151,6 +154,7 @@ export class AutomaticReturnService
     }
     return { ...context, record, summary, repairs };
   }
+
   /** 每个活动周期独立核实；错误由宿主记录并封存，不能影响其他可证明安全的周期。 */
   async Scopes()
   {

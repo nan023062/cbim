@@ -40,6 +40,7 @@ export interface OutputManifestCapturePort
   /** 参数只来自可信冻结范围，结果必须完整；不能以返回子集作为成功。 */
   Capture(scopes: readonly ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>;
 }
+
 export class RunOutputManifestCapture
 {
   readonly tools: OutputManifestTools;
@@ -56,6 +57,7 @@ export class RunOutputManifestCapture
 
       consumed: boolean
     };
+
   /** 完整交付的门闩持有到真实工具结束，不能在文件复核后、候选落盘前放入其它调用。 */
   private deliveryOwner?: string;
 
@@ -73,6 +75,7 @@ export class RunOutputManifestCapture
 
     this.tools = new OutputManifestTools(this.binding, port.knowledgeRevision, this.scopes, { Capture: (input, id) => this.Capture(input, id), Inspect: () => this.Inspect() });
   }
+
   /** 同步预占先于任何异步审批，阻止读取期间插入其它操作。 */
   Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
@@ -114,6 +117,7 @@ export class RunOutputManifestCapture
 
     this.reserved = { id, input: parsed.data, consumed: false };
   }
+
   /** 只保留证据所需事件，不缓存消息正文；坏回包不让原暂存变成成功记录。 */
   Observed(event: StoredEvent)
   {
@@ -129,19 +133,23 @@ export class RunOutputManifestCapture
 
       this.deliveryOwner = undefined;
   }
+
   Stop()
   {
     this.controller.abort(Error('本轮已停止完整产物采集'))
   }
+
   private Inspect()
   {
     return verifyOutputManifests(this.events, this.binding, this.port.knowledgeRevision, this.scopes)
   }
+
   /** 只返回本轮完整有效记录；调用者不能以较新清单替换原明确选择。 */
   Select(manifestId: string, progressVersion: number): OutputManifestRecord
   {
     return selectCompleteOutput(this.Inspect(), this.bindings, manifestId, { ...this.binding, knowledgeRevision: this.port.knowledgeRevision, progressVersion })
   }
+
   /** 原验证/交付的授权范围内重读全集合；停止、进度与知识变化均拒绝，交付门闩由真实结束释放。 */
   async VerifyCurrent(record: OutputManifestRecord, name: 'cbim_delivery_prepare' | 'cbim_validation_run', signal: AbortSignal = new AbortController().signal): Promise<void>
   {
@@ -184,6 +192,7 @@ export class RunOutputManifestCapture
       this.reading = false
     }
   }
+
   private async Capture(input: OutputManifestInput, id: string): Promise<OutputManifestStaged>
   {
     const reserved = this.reserved;

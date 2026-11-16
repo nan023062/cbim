@@ -59,6 +59,7 @@ export function validateEnginePackage(engine: EnginePackage)
 
   validateRuntimeFiles(engine.package.files);
 }
+
 /** 由安装基础包携带；只有冷更可更换公钥与基础能力指纹。 */
 export interface ColdRuntime
 {
@@ -72,6 +73,7 @@ export interface ColdRuntime
 
   publicKey: string
 }
+
 /** payload 保留发布者签名时的准确 UTF-8 字节，避免不同 JSON 序列化产生歧义。 */
 export interface SignedRuntimeManifest
 {
@@ -79,6 +81,7 @@ export interface SignedRuntimeManifest
 
   signature: string
 }
+
 /** 限定 Windows 相对文件路径；拒绝 ADS、设备名、大小写别名和路径穿越。 */
 export function runtimeRelativePath(value: string)
 {
@@ -94,6 +97,7 @@ export function runtimeRelativePath(value: string)
 
   return value;
 }
+
 /** 完整清单决定目录终态；文件与目录不能互相遮蔽，禁止 Windows 大小写重复。 */
 export function validateRuntimeFiles(files: RuntimeFile[])
 {
@@ -133,6 +137,7 @@ export function validateRuntimeFiles(files: RuntimeFile[])
     }
   }
 }
+
 /** 仅允许本项目 Release 附件；制品不是模型或 IPC 提供的任意下载 URL。 */
 export function runtimePackageUrl(pkg: Pick<RuntimePackage, 'tag' | 'name'>)
 {
@@ -142,10 +147,12 @@ export function runtimePackageUrl(pkg: Pick<RuntimePackage, 'tag' | 'name'>)
 
   return `https://github.com/nan023062/cbim/releases/download/${pkg.tag}/${pkg.name}`;
 }
+
 export function runtimeManifestDigest(envelope: SignedRuntimeManifest)
 {
   return createHash('sha256').update(envelope.payload).digest('hex')
 }
+
 /** 首次发现时检查有效期；已确认的本地制品过期后仍可离线启动，签名和文件校验始终执行。 */
 export function verifyRuntimeManifest(raw: unknown, cold: ColdRuntime, options: { now?: number; installed?: boolean } = {}): { manifest: RuntimeManifest; envelope: SignedRuntimeManifest; digest: string }
 {

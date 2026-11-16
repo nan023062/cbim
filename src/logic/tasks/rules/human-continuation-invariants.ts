@@ -21,6 +21,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 const sameSet = (a: string[], b: string[]) => a.length === b.length && new Set(a).size === a.length && a.every(id => b.includes(id));
 
 /** 与周期联合事务共用；历史只校验消费时冻结的决定序列，不用后来的决定改写旧意图。 */
@@ -157,6 +158,7 @@ export function validateHumanContinuations(previous: DispatchState, next: Dispat
     }
   }
 }
+
 /** 独立命令前缀保证普通文本入口不能夹带人工来源；幂等仍由同一存储命令完成。 */
 export function validateHumanContinuationCommand(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand): void
 {

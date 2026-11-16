@@ -90,6 +90,7 @@ export function isMainRecoverySource<T extends RecoveryRequestSource | ScopeReco
 {
   return 'kind' in value && value.kind === 'main_run'
 }
+
 /** 从持久事实提取原请求字段，legacy 次序与旧 Manager 的指纹提取保持一致。 */
 export function recoveryRequestSource(value: ScopeRecovery['source']): RecoveryRequestSource
 {
@@ -103,11 +104,13 @@ export function recoveryRequestSource(value: ScopeRecovery['source']): RecoveryR
 
   return { kind: value.kind, runId: value.runId, toolCallIds: [...value.toolCallIds], reportBasis: value.reportBasis };
 }
+
 /** 报告基线不参与草稿归属；旧数组 key 原样保留，新分支明确区分主/成员与调用顺序。 */
 export function recoverySourceKey(value: RecoverySourceSelection | RecoveryRequestSource | ScopeRecovery['source']): string
 {
   return !('kind' in value) ? JSON.stringify([value.scopeId, value.taskId, value.runId]) : JSON.stringify([value.kind, value.kind === 'member_run' ? value.taskId : null, value.runId, value.toolCallIds]);
 }
+
 export function recoverySourceSelection(value: RecoveryRequestSource): RecoverySourceSelection
 {
   const { reportBasis: _, ...selection } = value;

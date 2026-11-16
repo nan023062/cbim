@@ -34,6 +34,7 @@ export interface DesktopIpcResponses
 
     exitCode: number | null
   };
+
   'terminal.read':
   {
     output: string;
@@ -42,6 +43,7 @@ export interface DesktopIpcResponses
 
     exitCode: number | null
   };
+
   'terminal.close': void;
 
   'github.feedback.openLogin': boolean;

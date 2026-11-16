@@ -76,6 +76,7 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
       fail(code, `治理${action === 'observe' ? '观察' : '提案'}未交付可核实结果；原 commandId=${commandId}。操作可能已保存，只查询原回执，不自动重试或新建命令。`);
     }
   };
+
   return {
     Get: async (raw, signal) => { current(signal); const input = governanceGetInputSchema.parse(raw), { view } = await workspace.governance.ReadForMain({ ...input, ...identity }, signal); current(signal); return projectGovernanceGet(view, publicIdentity) },
 

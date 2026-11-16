@@ -27,16 +27,19 @@ export interface GovernanceDecisionDraft
       explanation: string
     }>;
 }
+
 /** 新表单无默认评价或补证要求，不自动改变任何历史决定。 */
 export function newGovernanceDecisionDraft(): GovernanceDecisionDraft
 {
   return { comment: '', revisitCondition: '', includeFeedback: false, focus: 'evidence', expectedResponse: '', assessments: {} }
 }
+
 /** 审阅键覆盖原方案、最新决定及引用的当前状态；不用于授予后端权限。 */
 export function governanceDecisionReviewKey(selected: GovernanceSelected)
 {
   return JSON.stringify([selected.proposal.proposalId, selected.proposal.basis, selected.decisions.at(-1)?.revision ?? 0, selected.responseStates ?? []])
 }
+
 /** 缺失来源状态也不能乐观视为当前有效；已提交记录仍可查看，不以本函数撤销历史。 */
 export function governanceResponsesCurrent(selected: GovernanceSelected)
 {
@@ -46,6 +49,7 @@ export function governanceResponsesCurrent(selected: GovernanceSelected)
 
   return refs.length === states.length && refs.every(ref => states.some(state => state.reference.decisionId === ref.decisionId && state.reference.proposalId === ref.proposalId && state.reference.basis === ref.basis && state.reference.decisionRevision === ref.decisionRevision && state.state === 'current'));
 }
+
 /** 生成本次明确的字段；所有旧确认、额外评价和空说明在发起 IPC 前拒绝。 */
 export function governanceDecisionFields(selected: GovernanceSelected, draft: GovernanceDecisionDraft, decision: 'approve' | 'reject' | 'defer', reviewedKey?: string)
 {

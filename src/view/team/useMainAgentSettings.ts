@@ -74,5 +74,6 @@ export function useMainAgentSettings(workspaceId: string, instanceId?: string, a
         setBusy(false)
     }
   }
+
   return { value: value?.workspaceId === workspaceId && value.instanceId === instanceId ? value : undefined, error, busy, save };
 }

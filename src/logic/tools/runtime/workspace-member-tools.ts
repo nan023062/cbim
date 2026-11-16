@@ -30,19 +30,23 @@ const descriptions: Record<MemberToolName, string> = {
 
   cbim_member_receipt: '只读核实本根会话主工具原 commandId；unknown 不表示未执行，不授权重放。',
 };
+
 export class WorkspaceMemberTools
 {
   constructor(private readonly port: WorkspaceMemberToolsPort, private readonly binding: MemberToolBinding)
   {
   }
+
   Has(name: string): name is MemberToolName
   {
     return Object.hasOwn(memberToolInputs, name)
   }
+
   List()
   {
     return (Object.keys(memberToolInputs) as MemberToolName[]).map(name => ({ name, version: 1, description: descriptions[name], effects: [memberToolEffects[name]], inputSchema: zodToJsonSchema(memberToolInputs[name]), outputSchema: zodToJsonSchema(memberToolOutputs[name]), cancellation: { mode: 'preflight_only', description: '保存前复核停止，保存后不承诺回滚。' }, recovery: name === 'cbim_member_change_commit' ? { mode: 'inspect_before_retry', queryTool: 'cbim_member_receipt', keyFields: ['commandId'], description: '保留原命令，未知不得自动重放。' } : { mode: 'read_again', description: '只读核实当前事实，不启动执行。' } }))
   }
+
   Describe(name: string, raw: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
@@ -53,6 +57,7 @@ export class WorkspaceMemberTools
 
     return { effects: [memberToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
+
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
     if (!this.Has(name))

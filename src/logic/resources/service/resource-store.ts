@@ -46,15 +46,18 @@ export interface RepositoryStore
 
   Remove(args: unknown): Promise<ResourceLibrarySnapshot>
 }
+
 export class LocalRepository implements RepositoryStore
 {
   constructor(readonly root: string)
   {
   }
+
   private get file()
   {
     return path.join(this.root, 'cbim-resources.json')
   }
+
   private async Lock()
   {
     const key = hash(process.platform === 'win32' ? this.root.replaceAll('\\', '/').toLowerCase() : this.root);
@@ -76,6 +79,7 @@ export class LocalRepository implements RepositoryStore
     }
     return fail('BUSY', '仓库正由其他请求更新，请稍后重试')
   }
+
   private async CheckFile()
   {
     try
@@ -91,6 +95,7 @@ export class LocalRepository implements RepositoryStore
         throw e
     }
   }
+
   async Initialize()
   {
     const lock = await this.Lock();
@@ -118,6 +123,7 @@ export class LocalRepository implements RepositoryStore
       lock.Close()
     }
   }
+
   async Read(): Promise<ResourceLibrarySnapshot>
   {
     await this.CheckFile();
@@ -157,18 +163,21 @@ export class LocalRepository implements RepositoryStore
       fail('RESOURCE_DATA', '仓库内容格式无效，原文件已保留，请修复后重试')
     }
   }
+
   async Save(args: unknown)
   {
     const r = saveSchema.parse(args);
 
     return this.Update(r, data => { const index = r.id ? data.items.findIndex(i => i.id === r.id) : -1; if (r.id && index < 0) fail('NOT_FOUND', '资源已被删除，请刷新'); const item = { ...r.item, id: r.id || randomUUID(), updatedAt: new Date().toISOString() }; if (index < 0) data.items.push(item); else data.items[index] = item })
   }
+
   async Remove(args: unknown)
   {
     const r = removeSchema.parse(args);
 
     return this.Update(r, data => { if (!data.items.some(i => i.id === r.id)) fail('NOT_FOUND', '资源已被删除，请刷新'); data.items = data.items.filter(i => i.id !== r.id) })
   }
+
   private async Update(request: { repositoryId: string; revision: string }, edit: (data: ResourceLibrarySnapshot) => void)
   {
     const lock = await this.Lock();

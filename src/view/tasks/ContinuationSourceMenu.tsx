@@ -76,6 +76,7 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
         setTargets(result);
     }
   }
+
   async function load(offset = 0)
   {
     if (disabled || !target)
@@ -93,6 +94,7 @@ export function ContinuationSourceMenu({ state }: { state: ScopeContinuationView
       setResourceId('')
     }
   }
+
   return <section className="continuation-sources" data-testid="continuation-sources" aria-label="补充资料来源">
     <div className="scope-continuation-actions">
       <button disabled={disabled || full} data-testid="scope-continuation-folder" onClick={() => void state.importSource({ kind: 'folder' })}><Icon name="list" size={16} />目录清单</button>

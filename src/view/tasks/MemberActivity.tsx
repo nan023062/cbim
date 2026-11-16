@@ -44,6 +44,7 @@ export function memberTaskLabel(task: TaskNode)
 
   return memberReviewStage(task)?.label ?? (committedMemberCancellation(task) ? memberCancellationLabel : committedMemberHelp(task) ? '需要主调度协助' : checkpoint.phase === 'abandoned' ? checkpointPhaseLabels.abandoned : checkpoint.phase === 'queued' ? checkpointPhaseLabels.queued : task.status === 'queued' && task.activeRunId ? '正在启动' : memberTaskLabels[task.status])
 }
+
 /** 内联形式折叠时不读取成员日志；展开只观察公开过程，不重放派发或改变任务。 */
 export function MemberActivityCard({ workspaceId, rootSessionId, task, onSelectTask, active, inline = false }: { workspaceId: string; rootSessionId: string; task: TaskNode; onSelectTask: (id: string) => void; active: boolean; inline?: boolean })
 {
@@ -84,6 +85,7 @@ export function MemberActivityCard({ workspaceId, rootSessionId, task, onSelectT
     <footer>{run && <button aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? '收起过程' : '展开过程'}</button>}<button onClick={() => onSelectTask(task.taskId)}>查看任务详情 <Icon name="chevron" size={13} /></button></footer>
   </article>;
 }
+
 /** 限制同时观察的卡片数量；其余任务由图视图按需打开，避免每个任务各起一个常驻轮询。 */
 export function MemberActivity({ workspaceId, rootSessionId, tasks, onSelectTask, onViewAll, active = true }: { workspaceId: string; rootSessionId: string; tasks: TaskNode[]; onSelectTask: (id: string) => void; onViewAll?: () => void; active?: boolean })
 {

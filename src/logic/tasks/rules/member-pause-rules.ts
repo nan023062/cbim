@@ -27,6 +27,7 @@ function check(value: unknown, message: string): asserts value
 
     fail('GOAL_MEMBER_PAUSE_INVALID', message)
 }
+
 /** 原成员仍沿原权限；本次用户选择不能比原权限更低后又被恢复过程隐式扩大。 */
 export function assertMemberPausePermission(checkpoints: readonly { run: Pick<DispatchRun, 'permission'> }[], permission: DispatchRun['permission']): void
 {
@@ -36,6 +37,7 @@ export function assertMemberPausePermission(checkpoints: readonly { run: Pick<Di
 
     fail('GOAL_MEMBER_PAUSE_PERMISSION', '保留检查点的原权限高于本次选择；请明确选择允许原任务的权限，或停止等待后重新安排任务');
 }
+
 /** 只接受当前完整快照；文件、canonical 和 native 的真实性由调度端再次核实，不由模型清单证明。 */
 export function memberPauseSelection(state: DispatchState, scope: DispatchScope, pause: MemberPause)
 {

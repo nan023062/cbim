@@ -26,6 +26,7 @@ function valid(value: unknown, message: string): asserts value
 
     throw Error(message)
 }
+
 type Binding = ArtifactTransitionPrepared['binding'];
 
 /** 原运行和调用决定唯一操作标识；更换模型 toolCallId 仍必须经过真实授权和新前态。 */
@@ -33,6 +34,7 @@ export function artifactTransitionOperationId(binding: Binding, toolCallId: stri
 {
   return hash(JSON.stringify([binding.workspaceId, binding.rootSessionId, binding.taskId, binding.runId, toolCallId]))
 }
+
 /** 精确变换完整集合；不补父目录、不覆盖目标、不修改其它文件，调用方须再核平台真实 after。 */
 export function expectedArtifactTransitionSnapshot(raw: OutputManifestSnapshot, operation: ArtifactTransitionDefinition): OutputManifestSnapshot
 {
@@ -72,6 +74,7 @@ export function expectedArtifactTransitionSnapshot(raw: OutputManifestSnapshot, 
 
   return outputManifestSnapshotSchema.parse(after);
 }
+
 /** 仅从原 prepared 和实际 append 序号投影公开成功内容，不复制私有文件对象身份。 */
 export function artifactTransitionAppliedValue(prepared: ArtifactTransitionPrepared, sequences: { preparedSeq: number; executingSeq: number; appliedSeq: number }, after: { afterManifestHash: string; appliedAt: string }): ArtifactTransitionApplied
 {
@@ -79,6 +82,7 @@ export function artifactTransitionAppliedValue(prepared: ArtifactTransitionPrepa
 
   return artifactTransitionAppliedSchema.parse({ ...common, ...sequences, ...after });
 }
+
 const appliedEvent = z.object({ operationId: z.string().regex(/^[a-f0-9]{64}$/), executingSeq: z.number().int().positive().safe(), afterManifestHash: z.string().regex(/^[a-f0-9]{64}$/), afterSnapshot: outputManifestSnapshotSchema, appliedAt: z.string().datetime() }).strict();
 
 /** 已核清单由调用方按日志顺序传入，避免反向调用清单验证器形成依赖环。坏/未结束操作不产生证明。 */
@@ -182,6 +186,7 @@ export function verifyArtifactTransitions(events: readonly ArtifactEvidenceEvent
   }
   return proofs.sort((a, b) => a.finishedSeq - b.finishedSeq);
 }
+
 /** 只保留同一连续操作链且当前集合等于最后 after；普通写入、重规划或外部变化都不会自动采纳旧操作。 */
 export function currentArtifactTransitions(events: readonly ArtifactEvidenceEvent[], proofs: readonly ArtifactTransitionProof[], snapshot: OutputManifestSnapshot): ArtifactTransitionProof[]
 {

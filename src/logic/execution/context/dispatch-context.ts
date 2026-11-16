@@ -27,6 +27,7 @@ function assertSnapshot(snapshot: Snapshot)
 
     fail('KNOWLEDGE_INVALID', '派发需要通过结构校验的知识快照，请先处理知识问题');
 }
+
 /** 将知识服务的可用正文转换为固定内容；缺正文不能悄悄变成空专业规则。 */
 function textOf(body: ReturnType<typeof content>): string
 {
@@ -36,6 +37,7 @@ function textOf(body: ReturnType<typeof content>): string
 
   return body.text;
 }
+
 /** 仅用于建图和普通对话身份登记；知识异常也允许诊断，但不声称已加载可执行 Skill。正式任务必须走 resolveDispatchAgent。 */
 export function resolveConversationAgent(snapshot: Snapshot): AgentConfigurationSnapshot
 {
@@ -45,6 +47,7 @@ export function resolveConversationAgent(snapshot: Snapshot): AgentConfiguration
 
   return { workspaceId: snapshot.workspaceId, teamId: '.cbim/team', agentId: mainAgentId, knowledgeRevision: snapshot.revision, name: 'CBIM 主 Agent', source: 'builtin', principles: mainAgentInstructions, effectiveSkills: [] };
 }
+
 /** 仅解析独立派发的自定义角色；主 Agent 在原会话执行，退役角色仅保留历史身份。 */
 export async function resolveDispatchAgent(snapshot: Snapshot, agentId: string): Promise<AgentConfigurationSnapshot>
 {
@@ -80,6 +83,7 @@ export async function resolveDispatchAgent(snapshot: Snapshot, agentId: string):
     effectiveSkills: agent.skills.map(skill => ({ skillId: skill.id, ownerId: skill.owner, inherited: skill.inherited, content: textOf(skill.content) }))
   };
 }
+
 /**
  * 解析至少一个真实模块，核实本模块实际挂载的 Workflow；岗位及负责人由派发入口独立核实。
  * 显式选择只按逻辑 ID 查本模块清单；未选择的模块沿用首项或空清单 general，不回退失效选择、不继承父模块。

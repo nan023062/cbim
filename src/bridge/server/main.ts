@@ -127,6 +127,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
 
       return
     }
+
     const beforeInstall = async () => { runtime?.StopPreparingEngines(); terminals.CloseAll(); await application.Shutdown(); quitting = true };
 
     updates = runtime ? runtime.Updates(beforeInstall, installed) : new DesktopUpdates(app.getVersion(), typeof release.notes === 'string' ? release.notes : '', installed, latestDesktopRelease, new NsisUpdateInstaller(), beforeInstall);

@@ -13,11 +13,13 @@ class ViewLoadBoundary extends Component<{ label: string; retry: () => void; chi
   {
     return { failed: true }
   }
+
   render()
   {
     return this.state.failed ? <section role="alert"><p>{this.props.label}未能显示。可以重新加载此页面，或从导航返回。</p><button onClick={this.props.retry}>重新加载此页面</button></section> : this.props.children
   }
 }
+
 /** 在模块作用域声明；首次挂载才调用 loader。成功后的父层重绘与隐藏不会重建页面。 */
 export function deferredView<P extends object>(load: () => Promise<{ default: (props: P) => ReactNode }>, label: string): (props: P) => ReactNode
 {

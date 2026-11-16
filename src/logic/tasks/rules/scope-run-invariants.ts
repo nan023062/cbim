@@ -24,6 +24,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 旧意图仍能证明部分运行身份，但不用于补造 legacy 周期的完整清单。 */
 function recordedRuns(scope: DispatchScope): string[]
 {
@@ -31,6 +32,7 @@ function recordedRuns(scope: DispatchScope): string[]
 
   return [...(scope.runTracking?.mainRunIds ?? []), ...(context ? [context.initialRunId] : []), ...(scope.wait?.mainRunIds ?? []), ...(scope.continuations ?? []).flatMap(item => [item.runId, ...item.wait.mainRunIds])];
 }
+
 /** 只验证事实；不会读取 canonical 日志、计算用量或赋予执行权限。 */
 export function validateScopeRunTracking(previous: DispatchState, next: DispatchState, mutation: DispatchMutation): void
 {

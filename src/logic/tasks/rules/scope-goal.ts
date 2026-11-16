@@ -42,6 +42,7 @@ export interface DispatchScopeInput
 
   attachmentIds?: string[]
 }
+
 export const dispatchScopeInputSchema = z.object({ message, attachmentIds: attachments.optional() }).strict();
 
 const criterion = z.object({ id, text, kind: z.enum(['evidence', 'human']) }).strict();
@@ -187,6 +188,7 @@ export const dispatchScopeGoalSchema = z.object({ revision, inputRevision: input
 
     issue('完成申请仍有未满足验收项');
 });
+
 export type DispatchScopeGoal = z.infer<typeof dispatchScopeGoalSchema>;
 
 export type ScopeGoalPlan = NonNullable<DispatchScopeGoal['plan']>;
@@ -198,11 +200,13 @@ export function goalInputRevision(value: { inputRevision?: number }): number
 {
   return value.inputRevision ?? 1
 }
+
 /** 真实用户补充之后保留旧计划供回顾和 human 约束，但不可沿该计划派工或完成。 */
 export function goalNeedsReplan(goal: DispatchScopeGoal): boolean
 {
   return !!goal.plan && goalInputRevision(goal.plan) !== goalInputRevision(goal)
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
 
@@ -214,6 +218,7 @@ function valid(condition: unknown, message: string): asserts condition
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 提交与重放共用；supplement 来自已核实等待消费，activeSupplement 仅在 validateScopeActiveInputs 匹配真实 pending→accepted 时传入，二者互斥，不能作为普通决策提升输入版本的豁免。 */
 export function validateScopeGoalTransition(previous: DispatchScopeGoal | undefined, next: DispatchScopeGoal | undefined, isNew: boolean, supplement = false, activeSupplement = false, interruptedSupplement = false): void
 {

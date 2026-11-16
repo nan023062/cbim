@@ -31,6 +31,7 @@ export function continuationSourcePorts(workspaceId: string, call: Call, uuid: (
       signal.removeEventListener('abort', cancel)
     }
   }
+
   return {
     importSource: (selection, signal) => cancellable(signal, async importId => selection.kind === 'file' || selection.kind === 'folder' ? call('chat.pick', { id: workspaceId, kind: selection.kind, importId }) : [await call('chat.import', { id: workspaceId, importId, attachment: selection })]),
 

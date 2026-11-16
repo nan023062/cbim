@@ -28,6 +28,7 @@ function check(condition: unknown, code: string, message: string): asserts condi
 
     fail(code, message)
 }
+
 export const moduleOwnershipHash = (value: ModuleOwnership) => hash(moduleOwnershipCanonical(value));
 
 /** 区分误当首次设置与真正并发版本冲突；只诊断，不自动认领现有关系或改写调用方的预期。 */
@@ -45,6 +46,7 @@ export function assertModuleOwnershipExpectedBinding(change: ModuleOwnershipChan
 
   check(equal(change.expectedBinding, actual), 'OWNERSHIP_BINDING_STALE', '模块责任已被修改，原 expectedBinding 已过期。请重新 inspect 读取当前 binding 并核对变更意图，再预览；不要原样重试。');
 }
+
 /** 只取可信运行闭包；同一次调用的稳定命令不含可变化的工作区实例、时钟或随机重试 ID。 */
 export function moduleOwnershipMainCommandId(workspaceId: string, actor: ModuleOwnershipMainActor): string
 {
@@ -62,11 +64,13 @@ export function moduleOwnershipMainCommandId(workspaceId: string, actor: ModuleO
 
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+
 /** 全工作区命令命名空间；请求与真实来源都进入指纹，桌面与模型不能互换同一命令。 */
 export function moduleOwnershipCommand(request: ModuleOwnershipCommitInput, actor: ModuleOwnershipActor)
 {
   return { commandId: 'module-ownership-' + request.commandId, fingerprint: hash(moduleOwnershipCanonical({ domain: 'module-ownership-v1', request, actor })) }
 }
+
 export interface ModuleOwnershipBasisFacts
 {
   workspaceId: string;
@@ -87,6 +91,7 @@ export interface ModuleOwnershipBasisFacts
 
   sourceSelection?: SourceSelection;
 }
+
 /** 新观察的时钟不进入依据；原关系、明确选择、岗位版本、知识与实际任务影响均须一致。 */
 export function moduleOwnershipBasis(facts: ModuleOwnershipBasisFacts): string
 {
@@ -94,6 +99,7 @@ export function moduleOwnershipBasis(facts: ModuleOwnershipBasisFacts): string
 
   return hash(moduleOwnershipCanonical({ version: 1, ...rest, previousBindingHash: previous ? moduleOwnershipHash(previous) : null, ...(observedModule ? { observedModule: { knowledgeRevision: observedModule.knowledgeRevision, definitionHash: observedModule.definitionHash } } : {}) }));
 }
+
 /** 回执仅描述原审计，不按当前岗位名称、关系头或权限重新生成历史结果。 */
 export function moduleOwnershipReceipt(event: ModuleOwnershipChange): ModuleOwnershipReceipt
 {
@@ -103,6 +109,7 @@ export function moduleOwnershipReceipt(event: ModuleOwnershipChange): ModuleOwne
 
   return { identity: { workspaceId: request.workspaceId, instanceId: request.instanceId }, commandId: request.commandId, action: isModuleOwnershipSourceAdoption(request.change) ? 'adopt_source' : next.ownerMemberId === null ? 'unassign' : previousOwnerMemberId === null ? 'assign' : 'replace', actor: structuredClone(event.actor), changeId: event.changeId, moduleId: next.moduleId, bindingId: next.bindingId, previousRevision: event.previousRevision, revision: next.revision, previousOwnerMemberId, ownerMemberId: next.ownerMemberId, ownershipCursor: structuredClone(event.ownershipCursor), basis: request.expectedBasis, bindingHash: moduleOwnershipHash(next), committedAt: event.committedAt };
 }
+
 /** 结构化窄端口不导入 DispatchState，避免 workspace 与 tasks 产生类型环。 */
 export interface ModuleOwnershipRegistry
 {
@@ -116,6 +123,7 @@ export interface ModuleOwnershipRegistry
 
   ownershipCursor?: ModuleOwnershipCursor | null;
 }
+
 /** 单条追加，impact 必须由调用方从同事务前态真实任务计算；运行 actor 另由 tasks 层核对。 */
 export function applyModuleOwnershipChange(state: ModuleOwnershipRegistry, raw: ModuleOwnershipChange, impact: ModuleOwnershipImpact): { moduleOwnerships: ModuleOwnership[]; ownershipChanges: ModuleOwnershipChange[]; ownershipCursor: ModuleOwnershipCursor }
 {

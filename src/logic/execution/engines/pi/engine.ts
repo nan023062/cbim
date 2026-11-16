@@ -96,6 +96,7 @@ export interface PiOptions
   /** 在 beforeRun 登记后读取冻结策略；仅可信装配工厂提供，不能作为模型或 IPC 参数。 */
   requestBudget?(): Promise<RequestBudgetPort | undefined>;
 }
+
 /** 一次运行使用一个实例；启动失败也必须 close，以释放已创建的桥和子进程。 */
 export class PiEngine implements AgentEngine
 {
@@ -117,6 +118,7 @@ export class PiEngine implements AgentEngine
 
       reject: (error: Error) => void
     };
+
   private inactivity?: RunInactivityTimer;
 
   private assistantError?: string;
@@ -137,6 +139,7 @@ export class PiEngine implements AgentEngine
 
       cost: number
     };
+
   private closing = false;
 
   private stopped = false;
@@ -146,6 +149,7 @@ export class PiEngine implements AgentEngine
   constructor(private options: PiOptions)
   {
   }
+
   /** 准备配置并核对原生会话，等待 session.bound 落盘后返回；不在此发送本轮提示。 */
   async start(context: EngineContext)
   {
@@ -309,6 +313,7 @@ export class PiEngine implements AgentEngine
 
     await context.emit({ type: 'session.bound', data: { sessionId: state.sessionId, sessionFile: state.sessionFile, provider: this.options.provider, model: this.options.model } });
   }
+
   /** 等待 settled；输出和工具进展续期，连续静默才中断，不自行重发提示或工具。 */
   async run(message: string)
   {
@@ -367,6 +372,7 @@ export class PiEngine implements AgentEngine
       this.settlement = undefined
     }
   }
+
   private async Consume(event: any)
   {
     // 推理/参数增量只作为活性信号，既不记录正文，也不依赖 UI 状态文字是否变化。
@@ -536,12 +542,14 @@ export class PiEngine implements AgentEngine
         return;
     }
   }
+
   private Redact(value: string)
   {
     const key = this.options.llm?.apiKey;
 
     return key && this.options.llm?.profile.auth === 'api-key' ? StringUtils.RedactLiteral(value, key) : value
   }
+
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
   async steer(message: string, images: import('../../rules/types').InputImage[], signal: AbortSignal)
   {
@@ -576,6 +584,7 @@ export class PiEngine implements AgentEngine
       fail('QUEUE_INSERT_UNKNOWN', '插入结果未确认，队列将保持暂停，请先核实原运行记录，勿重复发送')
     }
   }
+
   /** 先保留停止意图，再请求原生 abort；请求失败则关闭进程，最终结算由 LoopRuntime 完成。 */
   async stop()
   {
@@ -596,6 +605,7 @@ export class PiEngine implements AgentEngine
         await this.rpc.Close()
       }
   }
+
   /** 关闭进程并排空已收到的事件；即使事件持久化失败也会关闭工具桥。 */
   async close()
   {

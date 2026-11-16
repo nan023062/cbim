@@ -32,6 +32,7 @@ export interface RunUsage
   /** 区分“未收到用量”和“供应商明确上报零消耗”。 */
   usageReported: boolean;
 }
+
 interface RunMeasurement
 {
   usage: RunUsage;
@@ -44,6 +45,7 @@ interface RunMeasurement
 
   timingComplete: boolean;
 }
+
 const number = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
 const record = (value: unknown): Record<string, unknown> | undefined => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
@@ -172,6 +174,7 @@ function measureRun(events: readonly StoredEvent[]): RunMeasurement
     reports, generationMs, outputForRate, timingComplete
   };
 }
+
 /**
  * 计算单个 runId 的已报告消耗，不要求运行成功或已经结束。
  * 调用方负责事件去重与跨轮求和；完整 run-usage 以覆盖方式收口，context 指标不参与累计消耗。
@@ -180,6 +183,7 @@ export function runUsage(events: readonly StoredEvent[]): RunUsage
 {
   return measureRun(events).usage
 }
+
 /** 兼容损坏/旧日志时间；仅累计每轮运行区间，不含轮次之间空闲。 */
 export function runDuration(run: RunSummary, now: number)
 {
@@ -189,6 +193,7 @@ export function runDuration(run: RunSummary, now: number)
 
   return Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : 0;
 }
+
 /** 任务展示口径：逐轮求和，速度只用有计时的消息；当前上下文只取最后一轮，压缩后允许下降或清空。 */
 export function taskUsage(runs: readonly RunSummary[], now: number)
 {
@@ -269,6 +274,7 @@ export function taskUsage(runs: readonly RunSummary[], now: number)
     cost: pricedRuns ? cost : undefined, costPartial, capacity, used, percent: capacity && used !== undefined ? used / capacity * 100 : undefined
   };
 }
+
 /** Cindy 风格紧凑单位；避免四舍五入得到 1000k。 */
 export function tokenCount(value: number)
 {
@@ -280,6 +286,7 @@ export function tokenCount(value: number)
 
   return String(Math.round(value))
 }
+
 /** 毫秒转换为任务时长文本；与轮次空闲时间无关。 */
 export function durationText(ms: number)
 {

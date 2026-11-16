@@ -27,6 +27,7 @@ export interface ArtifactTransitionToolPort
 
   Call(name: string, input: unknown, toolCallId?: string, signal?: AbortSignal): Promise<{ content: { type: 'text'; text: string }[] }>;
 }
+
 export const artifactTransitionInputSchema = z.object({ moduleId: logical, operationIndex: z.number().int().min(0).max(artifactScopeLimits.transitions - 1), beforeManifestId: id, expectedTaskProgressVersion: seq }).strict();
 
 export type ArtifactTransitionInput = z.infer<typeof artifactTransitionInputSchema>;

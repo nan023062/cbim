@@ -31,6 +31,7 @@ function RowSection<T>({ title, items, render }: { title: string; items: T[]; re
 
   return <section className="runtime-section"><h2>{title}<span>{items.length}</span></h2>{items.length ? <div className="runtime-rows">{items.slice(0, limit).map(render)}</div> : <p className="runtime-secondary">当前筛选下没有记录。</p>}{items.length > limit && <button onClick={() => setLimit(n => n + 50)}>再显示 50 项（还有 {items.length - limit} 项）</button>}</section>
 }
+
 /** 成员无根绑定时只沿真实派发节点找根；同名角色和最近时间均不能作为依据。 */
 function memberTarget(value: RuntimeMember, data: RuntimeSnapshot): RuntimeNavigationTarget | undefined
 {
@@ -42,6 +43,7 @@ function memberTarget(value: RuntimeMember, data: RuntimeSnapshot): RuntimeNavig
 
   return task ? runtimeTaskTarget(task) : undefined;
 }
+
 /** 统计保持全局口径；监管 complete 仅表示来源可用，不代表计量完整或业务验收。 */
 export function RuntimeMetrics({ data }: { data: RuntimeSnapshot })
 {
@@ -51,6 +53,7 @@ export function RuntimeMetrics({ data }: { data: RuntimeSnapshot })
   <div className="runtime-usage" data-testid="runtime-usage"><strong>全局已报告消耗</strong><span>{data.usage.usageReported ? tokenCount(data.usage.total) + ' Token' : '尚无用量报告'}</span><span>估算费用 {runtimePrice(data.usage.cost)}{data.usage.cost !== undefined && (data.usage.costPartial || data.usage.unreportedRuns > 0) ? '（已知部分）' : ''}</span><p>登记 {data.usage.runCount} 轮 · 已报告 {data.usage.reportedRuns} 轮 · 用量缺失 {data.usage.unreportedRuns} 轮 · 未计价 {data.usage.unpricedRuns} 轮</p><small>累计消耗不是上下文占用；估算不等于供应商账单。推理已计入输出，不重复相加。</small></div>
 </>
 }
+
 /** 组件卸载即退订；文档隐藏时连共享准入订阅也暂停，保留最近已确认数据。 */
 export function RuntimeOverview({ onOpen }: { onOpen: RuntimeOpen })
 {

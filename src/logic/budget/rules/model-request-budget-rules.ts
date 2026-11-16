@@ -34,6 +34,7 @@ export function requestBudgetReservation(model: RequestBudgetCapacity, maxOutput
 
   return { tokens, ...(cost === undefined ? {} : { estimatedCostUsd: cost }) };
 }
+
 /** 极小正价格不能因单位换算变成免费；未知价格保持缺省。 */
 function priced(weighted: number | undefined): number | undefined
 {
@@ -49,6 +50,7 @@ function priced(weighted: number | undefined): number | undefined
 
   return cost;
 }
+
 /** 向量协议不得把输出、缓存或推理分量混进已核实的输入用量。 */
 export function requestBudgetCost(model: RequestBudgetModel, usage: RequestBudgetUsage): number | undefined
 {
@@ -64,6 +66,7 @@ export function requestBudgetCost(model: RequestBudgetModel, usage: RequestBudge
 
   return priced(p ? usage.input * p.input + usage.output * p.output + usage.cacheRead * p.cacheRead + usage.cacheWrite * p.cacheWrite : undefined);
 }
+
 /** 只读容量投影，不为向量假造 contextWindow 或 maxTokens。 */
 export const requestBudgetInputCapacity = (model: RequestBudgetModel) => model.api === 'openai-embeddings' ? model.inputTokens : model.contextWindow;
 
@@ -90,6 +93,7 @@ export function requestBudgetRecords(changes: readonly ModelRequestBudgetChange[
   }
   return [...records.values()];
 }
+
 /** ownerInstanceId 只用于区分本进程真实在途与重启遗留，不修改原未决阶段。 */
 export function requestBudgetReport(records: readonly RequestBudgetRecord[], scope: { workspaceId: string; rootSessionId: string; scopeId: string; policyRevision: number }, ownerInstanceId: string): RequestBudgetReport
 {
@@ -165,11 +169,13 @@ export function requestBudgetReport(records: readonly RequestBudgetRecord[], sco
   }
   return report;
 }
+
 /** 只容忍同数量级浮点尾差；极小正额度不按零处理。 */
 function exceeds(value: number, limit: number)
 {
   return value > limit && value - limit > 4 * Number.EPSILON * Math.max(Math.abs(value), Math.abs(limit))
 }
+
 export function requestBudgetDecision(policy: ScopeBudgetPolicy, report: RequestBudgetReport, intent: Pick<RequestBudgetIntent, 'tokens' | 'estimatedCostUsd'>, records: readonly RequestBudgetRecord[]): RequestBudgetDenial | undefined
 {
   if (records.length >= modelRequestBudgetLimits.requests || report.requests >= modelRequestBudgetLimits.requestsPerScope)
@@ -195,6 +201,7 @@ export function requestBudgetDecision(policy: ScopeBudgetPolicy, report: Request
       return 'cost_reserve'
   }
 }
+
 /** 请求阶段占独立幂等键；不能用相同 ID 改正文摘要或把另一请求的结算套进来。 */
 export const requestBudgetCommand = (change: ModelRequestBudgetChange) => ({ commandId: 'model-request:' + change.requestId + ':' + change.revision, fingerprint: hash(json(change.phase === 'reserved' || change.phase === 'denied' ? { intent: change.intent } : change)) });
 

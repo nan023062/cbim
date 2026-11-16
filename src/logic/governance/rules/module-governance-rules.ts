@@ -20,6 +20,7 @@ export interface ModuleGovernanceFile
 
   hash: string
 }
+
 export interface ModuleGovernanceWriteRequest
 {
   workspaceId: string;
@@ -37,12 +38,14 @@ export interface ModuleGovernanceWriteRequest
     text: string | null
   }[]
 }
+
 function check(condition: unknown, code: string, message: string): asserts condition
 {
   if (!condition)
 
     fail(code, message)
 }
+
 function fileMap(files: readonly ModuleGovernanceFile[])
 {
   const map = new Map<string, ModuleGovernanceFile>(),
@@ -61,6 +64,7 @@ function fileMap(files: readonly ModuleGovernanceFile[])
   }
   return map;
 }
+
 function readFact(files: Map<string, ModuleGovernanceFile>, path: string)
 {
   const file = files.get(path);
@@ -69,6 +73,7 @@ function readFact(files: Map<string, ModuleGovernanceFile>, path: string)
 
   return file
 }
+
 function canonical(value: unknown): string
 {
   if (Array.isArray(value))
@@ -81,6 +86,7 @@ function canonical(value: unknown): string
 
   return JSON.stringify(value);
 }
+
 /** 名称型 UUID 绑定真实的一次主工具调用；不含重开后的工作区实例，查询原回执时仍可重算。 */
 export function moduleGovernanceMainCommandId(workspaceId: string, raw: ModuleGovernanceMainOrigin): string
 {
@@ -100,6 +106,7 @@ export function moduleGovernanceMainCommandId(workspaceId: string, raw: ModuleGo
 
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
+
 /** 只核持久来源与原命令的一致性，不凭记录字段认证主实例；实际运行身份必须由调用闭包核实。 */
 export function validateModuleGovernanceRecordOrigin(record: ModuleGovernanceObservation | ModuleGovernanceProposal): void
 {
@@ -113,6 +120,7 @@ export function validateModuleGovernanceRecordOrigin(record: ModuleGovernanceObs
 
   check(record.origin.toolName === (observation ? 'cbim_governance_observe' : 'cbim_governance_propose') && id === moduleGovernanceMainCommandId(record.workspaceId, record.origin), 'GOVERNANCE_IDENTITY', '治理来源与原工具命令不一致');
 }
+
 /** 模型写提案必须先取得自己主通道的真实观察；本机提案不受此约束，可明确审阅任何可信原观察。 */
 export function validateModuleGovernanceMainObservation(observation: ModuleGovernanceObservation, rawSource: ModuleGovernanceMainOrigin): void
 {
@@ -124,6 +132,7 @@ export function validateModuleGovernanceMainObservation(observation: ModuleGover
 
   check(source.toolName === 'cbim_governance_propose' && origin?.kind === 'main_agent' && origin.toolName === 'cbim_governance_observe' && origin.rootSessionId === source.rootSessionId && origin.agentInstanceId === source.agentInstanceId && origin.agentSessionId === source.agentSessionId, 'GOVERNANCE_SOURCE', '模型提案须引用同一主实例及逻辑通道登记的真实观察');
 }
+
 /** 只登记已被实际知识索引公开的 Module；现行 module.schema 的 overview 固定为 module.md，仍须解析真实定义核对绑定。 */
 export function moduleGovernanceBinding(moduleId: string, files: readonly ModuleGovernanceFile[], visibleModuleIds: readonly string[])
 {
@@ -155,6 +164,7 @@ export function moduleGovernanceBinding(moduleId: string, files: readonly Module
 
   return { definition: { path: definition.path, hash: definition.hash }, overview: { path: overview.path, hash: overview.hash } };
 }
+
 /** 时钟不参与 basis；精确正文、主体、版本和取舍说明均参与，不能用相同文件结果掩盖变更的方案。 */
 export function moduleGovernanceProposalBasis(proposal: Omit<ModuleGovernanceProposal, 'basis'> | ModuleGovernanceProposal): string
 {
@@ -162,6 +172,7 @@ export function moduleGovernanceProposalBasis(proposal: Omit<ModuleGovernancePro
 
   return hash(canonical(subject));
 }
+
 /** 提案必须从该保护对象的一次真实冻结观察形成；不能把新版本与更旧正文混在一起。 */
 export function validateModuleGovernanceProposal(raw: ModuleGovernanceProposal, rawProtection: ModuleGovernanceProtection, rawObservation: ModuleGovernanceObservation): void
 {
@@ -185,6 +196,7 @@ export function validateModuleGovernanceProposal(raw: ModuleGovernanceProposal, 
 
   check(p.basis === moduleGovernanceProposalBasis(p), 'GOVERNANCE_PROPOSAL', '提案依据与冻结内容不一致');
 }
+
 /** 同一不可变提案的决定连续追加；拒绝/暂缓不删除旧批准，最后一条才代表当前决定。 */
 export function validateModuleGovernanceDecisionAppend(previous: readonly ModuleGovernanceDecision[], rawNext: ModuleGovernanceDecision): void
 {
@@ -205,6 +217,7 @@ export function validateModuleGovernanceDecisionAppend(previous: readonly Module
     ids.add(record.decisionId);
   }
 }
+
 /** 授权对象必须由知识事务持锁读取真实私有账本；该类型不进入任何通用 CRUD 或模型输入 Schema。 */
 export interface ModuleGovernanceWriteAuthorization
 {
@@ -216,6 +229,7 @@ export interface ModuleGovernanceWriteAuthorization
 
   latestDecisionRevision: number
 }
+
 export interface ModuleGovernanceWriteInput
 {
   workspaceId: string;
@@ -235,6 +249,7 @@ export interface ModuleGovernanceWriteInput
 
   authorized?: ModuleGovernanceWriteAuthorization;
 }
+
 /**
  * 检查普通知识写与专属实施的同一最终投影。只许授权 intent 的唯一 overview 差异；派生索引由既有知识事务生成。
  * 不做存储读取或申请权限；调用方必须先核当前知识版本、完整结构、最新决定及 intent 的真实来源。
@@ -315,6 +330,7 @@ export function validateModuleGovernanceWrite(input: ModuleGovernanceWriteInput)
 
       check(path === protection.overview.path || path === '.cbim/team/registry.json' || path === '.cbim/workspace/registry.json', 'GOVERNANCE_PROTECTED', '受控实施不能夹带其他知识文件变更');
 }
+
 /** 只基于已核实治理绑定的 committed journal 推导下一保护基线；存储不得把 pending 意图当成此回执。 */
 export function advanceModuleGovernanceProtection(raw: ModuleGovernanceProtection, proposal: ModuleGovernanceProposal, rawReceipt: ModuleGovernanceKnowledgeReceipt): ModuleGovernanceProtection
 {

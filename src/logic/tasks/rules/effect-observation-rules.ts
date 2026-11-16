@@ -15,19 +15,23 @@ export function effectObservationBasis(report: Omit<EffectObservationReport, 'ba
 
   return hash(json(facts))
 }
+
 /** 新域固定命令前缀；原请求完整次序由 strict 输入 Schema 确定，不重算其它领域旧指纹。 */
 export function effectDispositionCommand(input: EffectDispositionInput)
 {
   return { commandId: 'effect-disposition-' + input.commandId, fingerprint: hash(json({ operation: 'effect.disposition', input })) }
 }
+
 export function effectDispositionRevision(state: { effectDispositions?: readonly EffectDispositionRecord[] }, rootSessionId: string): number
 {
   return (state.effectDispositions ?? []).filter(x => x.request.rootSessionId === rootSessionId).at(-1)?.revision ?? 0
 }
+
 export function effectDispositionReceipt(record: EffectDispositionRecord): EffectDispositionReceipt
 {
   return { workspaceId: record.request.workspaceId, rootSessionId: record.request.rootSessionId, record: structuredClone(record) }
 }
+
 /** 列表仅提供有界摘要；不截断原记录，末尾不保留被切断的 UTF-16 高代理字符。 */
 export function summarizeEffectDisposition(record: EffectDispositionRecord): EffectDispositionSummary
 {

@@ -30,6 +30,7 @@ export interface EffectSourcePorts
 {
   InspectMember(run: BusinessRunSource): Promise<RunSummary>
 }
+
 export type EffectSourceRead =
   {
     source: EffectObservationReport['source'];
@@ -42,6 +43,7 @@ export type EffectSourceRead =
 
     facts?: ReturnType<typeof executionToolFacts>
   };
+
 /** 当前根的真实身份/版本屏障；处置附录和信封迟到 ACK 不改变原执行事实。 */
 export function effectStateStamp(state: DispatchState, input: Pick<EffectObservationInput, 'workspaceId' | 'rootSessionId'>)
 {
@@ -49,6 +51,7 @@ export function effectStateStamp(state: DispatchState, input: Pick<EffectObserva
 
   return hash(json({ workspaceId: state.workspaceId, graph, scopes: state.scopes?.filter(s => s.workspaceId === input.workspaceId && s.rootSessionId === input.rootSessionId), runs: state.runs?.filter(r => r.binding.rootSessionId === input.rootSessionId), agentBusinessRuns: state.agentBusinessRuns?.filter(r => r.binding.rootSessionId === input.rootSessionId), members: state.members.filter(m => m.mainRootSessionId === input.rootSessionId || graph?.tasks.some(t => t.assignee.agentInstanceId === m.agentInstanceId)), sessions: state.sessions.filter(s => s.rootSessionId === input.rootSessionId) }));
 }
+
 /** 只在可信 Store 归属下读取指定原 run；不按最近可读日志补齐选择。 */
 export async function readEffectSource(state: DispatchState, input: EffectObservationInput, root: string, ports: EffectSourcePorts | undefined, commands: CommandVerificationService): Promise<EffectSourceRead>
 {

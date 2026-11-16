@@ -154,6 +154,7 @@ export interface MemberExecutionPorts
   /** 递归报告仅核原登记与固定 canonical，不进入旧成员恢复。 */
   InspectAgent?(run: AgentBusinessRun): Promise<RunSummary>;
 }
+
 export type PreparedEngine = Awaited<ReturnType<MemberExecutionPorts['Prepare']>>;
 
 /** 一个业务任务当前的进程句柄；done 包含运行关闭和终态事务，失败时句柄保留以阻止再次领取。 */
@@ -173,6 +174,7 @@ type Handle =
 
     finishDrain?: () => Promise<void>
   };
+
 const activeRun = (run: DispatchRun) => run.status === 'starting' || run.status === 'running';
 
 /** 每个活动工作区一个执行管理器，与派发服务共享 store；调用方须先关闭本管理器再关闭存储。 */
@@ -211,6 +213,7 @@ export class MemberExecutionManager
   {
     this.eventStreams = new MemberEventStreams(run => ports.Inspect(run))
   }
+
   /** 手动只读核实指定任务/轮次；不调用 initialize，不恢复、启动、确认消息或重写异常日志。 */
   async Report(raw: unknown): Promise<ExecutionReport>
   {
@@ -218,6 +221,7 @@ export class MemberExecutionManager
 
     return new ExecutionReportService(this.owner, this.store, run => this.ports.Inspect(run), this.ports.InspectAgent).Read(raw)
   }
+
   /** 必须明确指定运行；不传 baselineId 时只列举，不能猜测最近一份或启动采集。 */
   async ArtifactReport(raw: unknown): Promise<ArtifactReport>
   {
@@ -229,6 +233,7 @@ export class MemberExecutionManager
 
     return new ArtifactReportService(this.owner, this.store, { ...this.ports.artifacts, Inspect: run => this.ports.Inspect(run) }).Read(raw)
   }
+
   /** 列举不读业务文件，明确 manifestId 后才重新枚举原声明的全部范围。 */
   async ManifestReport(raw: unknown): Promise<OutputManifestReport>
   {
@@ -240,6 +245,7 @@ export class MemberExecutionManager
 
     return new OutputManifestReportService(this.owner, this.store, { ...this.ports.manifests, Inspect: run => this.ports.Inspect(run) }).Read(raw)
   }
+
   private CheckpointPorts(): MemberCheckpointVerificationPorts
   {
     if (!this.ports.artifacts || !this.ports.checkpoints)
@@ -248,11 +254,13 @@ export class MemberExecutionManager
 
     return { ...this.ports.artifacts, ...this.ports.checkpoints, Inspect: run => this.ports.Inspect(run) }
   }
+
   /** 当前主轮只预约，真正领取须在主轮结束后；不直接创建引擎或消费检查点。 */
   RequestResume(identity: { workspaceId: string; rootSessionId: string }, scopeId: string, mainRunId: string, commandId: string, input: ResumeMemberInput, assertCurrent: () => void): Promise<ResumeMemberReceipt>
   {
     return new MemberResumeService(this.owner, this.store, this.CheckpointPorts(), this.ports.owners).Request(identity, scopeId, mainRunId, commandId, input, () => { this.Check(identity.workspaceId); assertCurrent() })
   }
+
   private Check(workspaceId: string)
   {
     if (this.closing)
@@ -265,6 +273,7 @@ export class MemberExecutionManager
 
       fail('GRAPH_IDENTITY_MISMATCH', '成员任务不属于当前工作区');
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown, checkCurrent = true): z.output<S>
   {
     const result = schema.safeParse(input);
@@ -283,10 +292,12 @@ export class MemberExecutionManager
 
     return result.data
   }
+
   private Command(operation: string, input: { commandId: string })
   {
     return { commandId: input.commandId, fingerprint: hash(json({ operation, actor: 'desktop-local-user', input })) }
   }
+
   /** 观察已经落盘的大脑事实；回调失败不能阻止运行日志或扩大权限。 */
   Subscribe(listener: (event: StoredEvent) => void)
   {
@@ -294,6 +305,7 @@ export class MemberExecutionManager
 
     return () => { this.listeners.delete(listener) }
   }
+
   private Emit(event: StoredEvent)
   {
     for (const listener of this.listeners)
@@ -307,11 +319,13 @@ export class MemberExecutionManager
         /* 监控不参与事务 */
       }
   }
+
   /** 重启只将未结束的领取标为中断并增加租约代际，绝不自动调用模型或工具。 */
   Initialize()
   {
     return this.initialized ??= (async () => { const state = await this.store.Read(); for (const run of state.runs ?? []) if (activeRun(run)) await this.Settle(run, undefined, 'interrupted', '应用关闭前未确认执行终态，请核实产物后重新派发', true); })()
   }
+
   /**
        * 领取前同事务核实软限额；在途等待不占名额，拒绝先保存独立预算事实且不创建运行。
        * 返回已提交的领取回执，不等待模型开始或任务结束；后续状态由 inspect/events 查询。
@@ -352,6 +366,7 @@ export class MemberExecutionManager
       this.launches.delete(pending)
     }
   }
+
   /** 专用续执行领取；不会放宽普通首次启动，等待准入时检查点与待领信封保持不消费。 */
   async Resume(raw: unknown, wait: ExecutionAdmissionWait): Promise<MemberStartReceipt>
   {
@@ -388,6 +403,7 @@ export class MemberExecutionManager
       this.launches.delete(pending)
     }
   }
+
   private async StartInternal(input: z.infer<typeof memberStartInput>, wait?: ExecutionAdmissionWait, resuming = false): Promise<MemberStartReceipt>
   {
     let release: (() => void) | undefined,
@@ -686,6 +702,7 @@ export class MemberExecutionManager
       release?.()
     }
   }
+
   private async Execute(run: DispatchRun, task: TaskNode, engine: PreparedEngine, handle: Handle, release: () => void)
   {
     let summary: RunSummary | undefined,
@@ -801,6 +818,7 @@ export class MemberExecutionManager
       }
     }
   }
+
   /** 生成前保存真实启动；Codex 首次采用服务端 UUID，已有原生身份与恢复文件不得改绑。 */
   private async Ready(original: DispatchRun, sessionFile?: string, nativeSessionId?: string)
   {
@@ -820,6 +838,7 @@ export class MemberExecutionManager
 
     await this.store.Transact(command, async state => { const run = this.CurrentRun(state, original), { graph, task, member, session } = memberTask(state, run.binding.rootSessionId, run.binding.taskId); this.owner.Assert(); const now = new Date().toISOString(), updated = { ...task, status: 'running' as const, revision: task.revision + 1, updatedAt: now }, occupied = { ...member, activity: 'working' as const, communicatingMessageIds: [] }; return { runs: [{ ...run, status: 'running', startedAt: now, session: { nativeSessionId: native, sessionFile } }], members: [occupied], sessions: [{ ...session, nativeSessionId: native, lastTaskId: task.taskId, lastRunId: run.binding.runId }], batch: memberBatch(graph, command.commandId, 'task.started', [{ type: 'task.upserted', task: updated }, { type: 'agent.upserted', agent: memberView(graph, occupied, updated) }]), receipt: true }; });
   }
+
   /** 运行与租约都必须匹配；旧进程的迟到完成不能覆盖新成员占用。 */
   private CurrentRun(state: DispatchState, original: DispatchRun)
   {
@@ -833,6 +852,7 @@ export class MemberExecutionManager
 
     return run;
   }
+
   /** 同一事务结算运行与任务；失败/中断从本轮真实终态提取公开原因，不把工具错误当整轮失败。 */
   private async Settle(original: DispatchRun, summary: RunSummary | undefined, status: Exclude<DispatchRun['status'], 'starting' | 'running'>, error?: string, recovery = false)
   {
@@ -980,6 +1000,7 @@ export class MemberExecutionManager
       return { runs: [{ ...run, status, settledAt: now, error: updated.waitReason, ...(checkpointProof ? { checkpointProof } : {}) }], members: [released], sessions: [{ ...session, lastTaskId: task.taskId, lastRunId: run.binding.runId }], messages, batch: memberBatch(graph, command.commandId, ('task.' + taskStatus) as 'task.blocked', [{ type: 'task.upserted', task: updated }, { type: 'agent.upserted', agent: memberView(graph, released, updated) }]), receipt: true };
     });
   }
+
   /** 停止请求不直接宣称 cancelled；真实引擎收尾后才提交终态。 */
   async Stop(raw: unknown)
   {
@@ -1024,6 +1045,7 @@ export class MemberExecutionManager
 
     return { requested: true };
   }
+
   /** 内部协调端等待进程关闭、终态提交及占用释放；不触发启动或重放，结算异常向调用方保留。 */
   async WaitForSettlement(raw: unknown)
   {
@@ -1033,6 +1055,7 @@ export class MemberExecutionManager
 
     await this.handles.get(input.taskId)?.done;
   }
+
   /** 读取本图指定任务和安全运行摘要，不暴露内部模型凭据或会话文件。 */
   async Inspect(raw: unknown): Promise<MemberExecutionView>
   {
@@ -1043,6 +1066,7 @@ export class MemberExecutionManager
 
     return { task, runs: (state.runs ?? []).filter(r => r.binding.taskId === task.taskId && r.binding.rootSessionId === input.rootSessionId && r.binding.workspaceId === input.workspaceId).map(r => ({ binding: r.binding, status: r.status, permission: r.permission, model: r.model.model, createdAt: r.createdAt, startedAt: r.startedAt, settledAt: r.settledAt, error: r.error })) };
   }
+
   /** 只读取已派发任务的指定轮次；图身份、run 归属和游标一致后才访问缓存或日志。 */
   async Events(raw: unknown): Promise<MemberEventsRead>
   {
@@ -1067,6 +1091,7 @@ export class MemberExecutionManager
 
     return result;
   }
+
   /** 返回当前收件人的待处理信封；结果或求助正文通过同图 task.result/task.help 获取。 */
   async Messages(raw: unknown)
   {
@@ -1078,12 +1103,14 @@ export class MemberExecutionManager
 
     return state.outbox.filter(m => m.identity.rootSessionId === input.rootSessionId && m.to.agentSessionId === input.agentSessionId && m.delivery === 'pending')
   }
+
   private AssertRecipient(state: DispatchState, rootSessionId: string, agentSessionId: string)
   {
     if (!state.sessions.some(s => s.agentSessionId === agentSessionId && s.rootSessionId === rootSessionId))
 
       fail('MESSAGE_RECIPIENT_INVALID', '收件人不属于当前主会话')
   }
+
   /** 显式收件确认只消费 result/help，不领取任务、不恢复旧成员，也不签发业务验收或用户批准。 */
   async Acknowledge(raw: unknown)
   {
@@ -1091,6 +1118,7 @@ export class MemberExecutionManager
 
     return this.store.Transact(this.Command('member.ack', input), async state => { this.AssertRecipient(state, input.rootSessionId, input.agentSessionId); const message = state.outbox.find(m => m.messageId === input.messageId && m.identity.rootSessionId === input.rootSessionId && m.to.agentSessionId === input.agentSessionId); if (!message || message.kind === 'assignment') fail('MESSAGE_NOT_FOUND', '当前收件人没有此结果或求助信封'); return { messages: message.delivery === 'processed' ? [] : [{ ...message, delivery: 'processed' as const }], receipt: { messageId: message.messageId, delivery: 'processed' as const } }; })
   }
+
   private async Interaction(raw: unknown)
   {
     const input = this.Parse(memberTaskInput, raw);
@@ -1099,26 +1127,31 @@ export class MemberExecutionManager
 
     return input.taskId
   }
+
   /** 工具请求只归当前任务；调用方须展示具体参数，读取本身不授权。 */
   async PendingApprovals(raw: unknown)
   {
     return this.approvals.List(await this.Interaction(raw))
   }
+
   /** 可信用户决定仅作用于该任务当前运行；过期或其他任务的审批拒绝。 */
   async AnswerApproval(raw: unknown, id: string, allow: boolean, allowAll = false)
   {
     return this.approvals.Answer(await this.Interaction(raw), id, allow, allowAll)
   }
+
   /** 返回尚未提交答案的问题，停止会清除等待。 */
   async PendingQuestions(raw: unknown)
   {
     return this.questions.List(await this.Interaction(raw))
   }
+
   /** 答案按问题结构一次性校验和消费；不能因此提升工具权限。 */
   async AnswerQuestion(raw: unknown, id: string, answers: unknown)
   {
     return this.questions.Answer(await this.Interaction(raw), id, answers)
   }
+
   /**
        * 拒绝新请求，等待已接收的启动、停止及结算尝试后清理观察缓存；调用方随后关闭共享 DispatchStore。
        * 普通结算失败留给下次 initialize 核实；文件 child 排空未确认必须重抛并保留占用，不能继续关闭 Store。

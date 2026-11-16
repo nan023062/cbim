@@ -22,6 +22,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 仅完整合法的单次追加返回一个 edgeId；无追加返回空集合，失败不产生任何放行依据。 */
 export function validateQueuedDependencyAddition(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, command: DispatchCommand): ReadonlySet<string>
 {

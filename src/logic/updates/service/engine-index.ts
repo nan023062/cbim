@@ -25,6 +25,7 @@ export function engineIndexAsset(publicKey: string)
 
   return `latest-${createHash('sha256').update(key.export({ type: 'spki', format: 'der' })).digest('hex')}.json`;
 }
+
 /** 历史已接纳索引允许离线过期；签名和结构每次重开均复核。 */
 export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicKey' | 'platform'>, installed = false)
 {
@@ -106,6 +107,7 @@ export function verifyEngineIndex(raw: unknown, cold: Pick<ColdRuntime, 'publicK
 
     visited.add(id);
   }
+
   for (const ref of index.current)
 
     visit(ref.kind, ref.identity);

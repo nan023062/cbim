@@ -20,6 +20,7 @@ export interface AgentHistoryResponses
 
   'agentHistory.events': AgentHistoryEventsRead;
 }
+
 export type AgentHistoryAction = keyof AgentHistoryResponses;
 
 export type AgentHistoryRequest<A extends AgentHistoryAction> = z.input<(typeof agentHistoryRequests)[A]>;

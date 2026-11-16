@@ -32,6 +32,7 @@ export class AutomationScheduler
   constructor(private readonly store: AutomationStorage, private readonly runner: AutomationRunner, private readonly now: () => number = Date.now, private readonly pollMs = 5000)
   {
   }
+
   private Serial<T>(work: () => Promise<T>): Promise<T>
   {
     const result = this.tail.then(work);
@@ -40,16 +41,19 @@ export class AutomationScheduler
 
     return result
   }
+
   private Assert()
   {
     if (this.closing)
 
       fail('AUTOMATION_CLOSED', '自动化服务已关闭')
   }
+
   private Stamp()
   {
     return new Date(this.now()).toISOString()
   }
+
   private Watch()
   {
     if (!this.timer && !this.closing)
@@ -59,20 +63,24 @@ export class AutomationScheduler
       this.timer.unref?.()
     }
   }
+
   /** 只恢复记录和下一未来时刻；有原任务的记录继续只读观察，无身份的中断意图不重发。 */
   async Initialize()
   {
     await this.Serial(async () => { let changed = false; const state = await this.store.Read(); for (const run of state.runs) if (active(run) && !run.taskId) { run.status = 'interrupted'; run.finishedAt = this.Stamp(); run.message = '应用退出前启动未完成，未自动重放'; changed = true } for (const job of state.jobs) if (job.nextRunAt && Date.parse(job.nextRunAt) <= this.now()) { job.nextRunAt = nextAutomationAt(job.definition.schedule, this.now()); if (job.definition.schedule.kind === 'once') job.definition.enabled = false; changed = true } if (changed) await this.store.Write(state); if (state.jobs.some(job => job.definition.enabled) || state.runs.some(active)) this.Watch(); })
   }
+
   List()
   {
     return this.Serial(() => this.store.Read())
   }
+
   /** 定义版本 CAS；修改只影响未来执行，不修改已冻结的运行。 */
   Save(id: string | undefined, expectedRevision: number, definition: AutomationDefinition)
   {
     return this.Serial(async () => { this.Assert(); definition = automationDefinitionSchema.parse(definition); await this.runner.Validate(definition); const state = await this.store.Read(), old = state.jobs.find(job => job.id === id); if (old ? expectedRevision !== old.revision : expectedRevision !== 0) fail('AUTOMATION_STALE', '自动化已变化，请刷新后保存'); if (!old && state.jobs.length >= 100) fail('AUTOMATION_LIMIT', '每个工作区最多保存 100 项自动化'); if (definition.schedule.kind === 'once' && definition.enabled && Date.parse(definition.schedule.at) <= this.now()) fail('AUTOMATION_TIME', '一次执行时间必须在将来'); const job: AutomationJob = { id: old?.id ?? id ?? randomUUID(), workspaceId: state.workspaceId, revision: (old?.revision ?? 0) + 1, definition, createdAt: old?.createdAt ?? this.Stamp(), updatedAt: this.Stamp(), nextRunAt: definition.enabled ? nextAutomationAt(definition.schedule, this.now()) : undefined }; state.jobs = old ? state.jobs.map(item => item.id === job.id ? job : item) : [...state.jobs, job]; await this.store.Write(state); if (job.definition.enabled) this.Watch(); return structuredClone(job); })
   }
+
   private Job(state: AutomationState, id: string, revision: number)
   {
     const job = state.jobs.find(job => job.id === id);
@@ -83,11 +91,13 @@ export class AutomationScheduler
 
     return job
   }
+
   /** 手动运行也先持久意图；返回已受理记录，不等待模型或声称业务已完成。 */
   RunNow(id: string, revision: number)
   {
     return this.Serial(async () => { this.Assert(); const state = await this.store.Read(), job = this.Job(state, id, revision); if (state.runs.some(run => run.automationId === id && active(run))) fail('AUTOMATION_RUNNING', '该自动化仍有运行或未知结果，请先核实原任务'); return this.Claim(state, job, 'manual') })
   }
+
   private async Claim(state: AutomationState, job: AutomationJob, trigger: AutomationRun['trigger'])
   {
     const run: AutomationRun = { id: randomUUID(), automationId: job.id, definitionRevision: job.revision, definition: structuredClone(job.definition), trigger, startedAt: this.Stamp(), status: 'starting' };
@@ -127,10 +137,12 @@ export class AutomationScheduler
 
     return structuredClone(run);
   }
+
   private async UpdateRun(id: string, change: (run: AutomationRun) => void)
   {
     return this.Serial(async () => { const state = await this.store.Read(), run = state.runs.find(item => item.id === id); if (run) { change(run); await this.store.Write(state) } })
   }
+
   private async Launch(run: AutomationRun, controller: AbortController)
   {
     try
@@ -150,11 +162,13 @@ export class AutomationScheduler
       await this.UpdateRun(run.id, value => { value.status = controller.signal.aborted ? 'cancelled' : value.taskId ? 'unknown' : 'failed'; value.message = message(error); if (value.status !== 'unknown') value.finishedAt = this.Stamp() })
     }
   }
+
   /** 不重入 tick；原任务未结时跳过新计划时刻，避免积压补跑或重叠。 */
   Tick()
   {
     return this.Serial(async () => { if (this.closing) return; const state = await this.store.Read(); let changed = false; for (const run of state.runs) if (active(run) && run.taskId && !this.pending.has(run.id)) { try { const current = await this.runner.Inspect(run.taskId); if (current.status !== run.status || (current.message !== undefined && current.message !== run.message)) { run.status = current.status; if (current.message !== undefined) run.message = current.message; if (!active(run)) run.finishedAt = this.Stamp(); changed = true } } catch (error) { if (run.status !== 'unknown') { run.status = 'unknown'; run.message = message(error); changed = true } } } if (changed) await this.store.Write(state); for (const job of state.jobs) if (job.definition.enabled && job.nextRunAt && Date.parse(job.nextRunAt) <= this.now()) { if (state.runs.some(run => run.automationId === job.id && active(run))) { job.nextRunAt = nextAutomationAt(job.definition.schedule, this.now(), this.now()); if (job.definition.schedule.kind === 'once') job.definition.enabled = false; await this.store.Write(state); continue } await this.Claim(state, job, 'schedule'); } })
   }
+
   /** 暂停/删除先冻结未来触发并中止准备，再停止已绑定的真实任务；停止失败保留原记录。 */
   async Change(id: string, revision: number, action: 'pause' | 'resume' | 'remove')
   {
@@ -174,6 +188,7 @@ export class AutomationScheduler
     }
     return this.List();
   }
+
   /** 关闭不删除定义或重跑；先取消所有启动并等待，再让宿主按原顺序关闭会话与存储。 */
   async Close()
   {

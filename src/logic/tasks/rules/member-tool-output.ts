@@ -48,6 +48,7 @@ export interface ProgressToolIdentity
 
   runId: string
 }
+
 // 所有运行均装配进度工具；沿用日志路径既有 safeId 域（1..100 位，允许 _/- 开头），不能在此收窄旧任务身份。
 const runId = z.string().refine(value => { try { safeId(value); return true } catch { return false } }, '工作区、任务与运行须使用既有安全标识');
 
@@ -80,6 +81,7 @@ export interface ProgressOutputBasis
 
   manifest?: OutputManifestProof
 }
+
 export interface MemberToolOutputExpectation
 {
   binding: ProgressToolIdentity | MemberToolOutputBinding;
@@ -95,6 +97,7 @@ export interface MemberToolOutputExpectation
 
   progress?: ProgressOutputBasis;
 }
+
 /** 不持有历史或读取模型；作用域和本轮代次由可信调用方提供，排除治理、外部资料及内部记录工具。 */
 export function isProgressEvidence(receipt: unknown, identity: ProgressToolIdentity): receipt is ToolReceipt
 {
@@ -108,6 +111,7 @@ export function isProgressEvidence(receipt: unknown, identity: ProgressToolIdent
 
   return value.workspaceId === identity.workspaceId && value.taskId === identity.taskId && value.runId === identity.runId && value.scope.workspaceId === identity.workspaceId && value.outcome === 'succeeded' && !!value.resultHash && !!value.toolName.trim() && value.scope.kind !== 'repository' && !['cbim_repository_', 'cbim_governance_', 'cbim_module_owner_', 'cbim_task_', 'cbim_dispatch_', 'cbim_goal_'].some(prefix => value.toolName.startsWith(prefix)) && value.toolName !== 'cbim_delivery_prepare' && value.toolName !== questionToolName;
 }
+
 /** 公开的是实际协议和限制；求助、检查点的门闩不允许模型为了查询而继续调用工具。 */
 export function memberToolContract(name: MemberToolName)
 {
@@ -125,6 +129,7 @@ export function memberToolContract(name: MemberToolName)
 
   return { version: 1, effects: ['maintenance'] as const, outputSchema: zodToJsonSchema(memberToolOutputSchemas[name]) as Record<string, unknown>, cancellation, recovery };
 }
+
 /** 供 checkedJsonToolResult 在一次序列化后的原 wire 上检查，绝不采用解析器改写后的输出。 */
 export function memberToolOutputSchema(name: MemberToolName, expected: MemberToolOutputExpectation): z.ZodTypeAny
 {

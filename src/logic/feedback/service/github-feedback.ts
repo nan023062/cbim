@@ -45,6 +45,7 @@ type Binding =
 
     rootSessionId: string
   };
+
 type Ledger = z.infer<typeof ledgerSchema>;
 
 const unknown = () => fail('GITHUB_SUBMISSION_UNKNOWN', 'GitHub 提交结果待核实，已阻止本工作区继续提交。请调用 cbim_feedback_receipt 核实原提交，不要重新发送');
@@ -61,6 +62,7 @@ export class GitHubFeedback
   {
     this.auth = new GitHubFeedbackAuth(path.join(directory, 'connection.json'), cipher, request, now)
   }
+
   private Serial<T>(work: () => Promise<T>)
   {
     const next = this.queue.then(async () => { await fs.mkdir(this.directory, { recursive: true }); const lock = new KernelLock(this.directory, hash(path.resolve(this.directory).toLowerCase()), 'github-feedback'); try { return await work() } finally { lock.Close() } });
@@ -69,10 +71,12 @@ export class GitHubFeedback
 
     return next
   }
+
   private Filename(binding: { workspaceId: string })
   {
     return path.join(this.directory, 'submissions', hash(binding.workspaceId) + '.json')
   }
+
   private async Read(binding: Binding): Promise<Ledger>
   {
     try
@@ -94,10 +98,12 @@ export class GitHubFeedback
       return fail('GITHUB_LEDGER', '原反馈提交记录无法读取，未发起新提交，请检查本机记录')
     }
   }
+
   private Save(ledger: Ledger)
   {
     return atomic(this.Filename(ledger), JSON.stringify(ledger))
   }
+
   /** 仅桌面主会话调用，捕获原目标且每次使用前由工作区所有者检查实例仍有效。 */
   async Prepare(binding: Binding, assertCurrent: () => void): Promise<FeedbackToolsPort | undefined>
   {
@@ -117,6 +123,7 @@ export class GitHubFeedback
 
     return { scope: Object.freeze(scope), Submit: (input, signal) => this.Submit(fixed, scope, input, signal, assertCurrent), Receipt: signal => this.Receipt(fixed, scope, signal, assertCurrent) };
   }
+
   private Result(entry: Entry): FeedbackResult
   {
     if (entry.status !== 'submitted' || !entry.issueNumber)
@@ -125,6 +132,7 @@ export class GitHubFeedback
 
     return { status: 'submitted', operationId: entry.operationId }
   }
+
   private async Verify(identity: GitHubFeedbackIdentity, signal: AbortSignal)
   {
     const actual = await this.auth.VerifyIdentity(identity.config, identity.token, signal);
@@ -133,6 +141,7 @@ export class GitHubFeedback
 
       fail('GITHUB_IDENTITY_CHANGED', 'GitHub 账号或仓库身份已改变，未提交，请在设置中重新连接');
   }
+
   /** 串行、单次 POST；sending 是持久写屏障，任何不同调用 ID／正文都不能绕过未知结果。 */
   private Submit(binding: Binding, scope: FeedbackScope, raw: FeedbackInput, signal: AbortSignal, assertCurrent: () => void)
   {
@@ -266,6 +275,7 @@ export class GitHubFeedback
       return this.Result(entry);
     }))
   }
+
   /** 核实严格匹配原账号、不可变仓库 ID、标题／正文指纹和隐藏标记；不查开发处理状态。 */
   private IssueNumber(value: unknown, entry: Entry): number | undefined
   {
@@ -289,6 +299,7 @@ export class GitHubFeedback
 
     return issue.number;
   }
+
   private Receipt(binding: Binding, scope: FeedbackScope, signal: AbortSignal, assertCurrent: () => void)
   {
     return this.Serial(() => this.auth.WithConnection(scope, signal, async (identity, bounded) =>
@@ -359,6 +370,7 @@ export class GitHubFeedback
       return unknown();
     }))
   }
+
   /** 先取消授权与连接请求，再等待提交队列退出；保留 sending，不能把关闭视为未提交。 */
   async Close()
   {

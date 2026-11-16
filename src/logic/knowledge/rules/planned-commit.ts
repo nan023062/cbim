@@ -41,6 +41,7 @@ export type KnowledgePlanRef =
 
     planId: string
   };
+
 /** 仅不可变计划正文参与 hash；调用者必须剔除可变缓存，不能用旧 request-only 指纹升级意图。 */
 export function knowledgePlanHash(plan: Omit<ObjectPlanV2, 'planHash'> | Omit<PackagePlanV2, 'planHash'> | PlannedKnowledgeCommit)
 {
@@ -48,6 +49,7 @@ export function knowledgePlanHash(plan: Omit<ObjectPlanV2, 'planHash'> | Omit<Pa
 
   return hash(json(body))
 }
+
 /** 从原保存计划核验完整协议；此函数不读取路径，实际 loader 仍须检查归属、链接与大小。 */
 export function checkedKnowledgePlan(kind: KnowledgePlanRef['kind'], raw: unknown): PlannedKnowledgeCommit
 {

@@ -150,6 +150,7 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
         }
       }
     }
+
     trigger.current = () => { void poll() };
 
     const visible = () => { if (document.visibilityState === 'visible' && activeRef.current) void poll() };

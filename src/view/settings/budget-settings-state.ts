@@ -18,6 +18,7 @@ export interface BudgetSettingsDraft
 
   enforcement?: 'request'
 }
+
 export interface BudgetSettingsState extends BudgetSettingsDraft
 {
   policy?: ScopeBudgetPolicy;
@@ -28,6 +29,7 @@ export interface BudgetSettingsState extends BudgetSettingsDraft
 
   notice: string
 }
+
 /** 空白项代表未配置；禁用时清除额度，不把隐藏值作为新的运行限制。 */
 export function budgetSettingsInput(draft: BudgetSettingsDraft, revision: number): ScopeBudgetPolicy
 {
@@ -51,6 +53,7 @@ export function budgetSettingsInput(draft: BudgetSettingsDraft, revision: number
 
   return parsed.data;
 }
+
 type Call = (action: 'budget.settings' | 'budget.configure', input?: unknown) => Promise<unknown>;
 
 const fields = (policy: ScopeBudgetPolicy): BudgetSettingsDraft => ({ enabled: policy.enabled, enforcement: policy.enforcement, tokens: policy.limits.tokens === undefined ? '' : String(policy.limits.tokens), estimatedCostUsd: policy.limits.estimatedCostUsd === undefined ? '' : String(policy.limits.estimatedCostUsd) });
@@ -67,6 +70,7 @@ export class BudgetSettingsController
   constructor(private readonly call: Call)
   {
   }
+
   snapshot = () => this.state;
 
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
@@ -77,18 +81,21 @@ export class BudgetSettingsController
 
     this.listeners.Notify()
   }
+
   Edit(value: Partial<BudgetSettingsDraft>)
   {
     if (!this.state.busy)
 
       this.Publish({ ...value, error: '', notice: '' })
   }
+
   Cancel()
   {
     this.generation.Advance();
 
     this.state = { ...this.state, busy: false }
   }
+
   async Load()
   {
     if (this.state.busy)
@@ -120,6 +127,7 @@ export class BudgetSettingsController
         this.Publish({ busy: false })
     }
   }
+
   async Save()
   {
     if (this.state.busy || !this.state.policy)

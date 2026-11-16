@@ -39,6 +39,7 @@ const descriptions = {
 
   cbim_module_owner_receipt: '只读查询同一根会话主工具原 commandId 的不可变回执。可查旧周期；unknown不表示未受理，不由当前关系相同推断原命令成功，不重放提交。',
 };
+
 /** 必须每个实际主 run 独立构造；不进入工作区共享的知识工具缓存。 */
 export class ModuleOwnershipTools
 {
@@ -48,14 +49,17 @@ export class ModuleOwnershipTools
   {
     this.binding = Object.freeze({ ...binding })
   }
+
   Has(name: string): name is ModuleOwnershipToolName
   {
     return isModuleOwnershipToolName(name)
   }
+
   List()
   {
     return (Object.keys(inputs) as ModuleOwnershipToolName[]).map(name => ({ name, description: descriptions[name], version: 1, effects: [moduleOwnershipToolEffects[name]], inputSchema: zodToJsonSchema(inputs[name]) as Record<string, unknown>, outputSchema: zodToJsonSchema(outputs[name]) as Record<string, unknown>, cancellation: { mode: 'preflight_only' as const, description: '执行前与异步来源读取后复核停止；保存开始后不承诺中断或回滚。' }, recovery: name === 'cbim_module_owner_change_commit' ? { mode: 'inspect_before_retry' as const, queryTool: 'cbim_module_owner_receipt', keyFields: ['commandId'], description: '未确认结果只查询错误保留的原 commandId；不要换调用 ID 或重新提交。' } : name === 'cbim_module_owner_change_preview' ? { mode: 'new_preview' as const, description: '可显式重新预览当前事实；新依据不证明原未知提交未发生。' } : { mode: 'read_again' as const, description: '显式只读查询真实记录，不启动运行或重放写入。' } }))
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   {
     const result = schema.safeParse(raw);
@@ -66,6 +70,7 @@ export class ModuleOwnershipTools
 
     return result.data
   }
+
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
@@ -76,6 +81,7 @@ export class ModuleOwnershipTools
 
     return { effects: [moduleOwnershipToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
+
   /** 领域端口拿独立参数副本，避免返回值或端口变异同时修改预期依据。 */
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {

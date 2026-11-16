@@ -63,12 +63,14 @@ interface TransactionBody
 
   mutation: DispatchMutation;
 }
+
 interface TransactionRecord
 {
   body: TransactionBody;
 
   checksum: string
 }
+
 const clone = <T>(value: T): T => structuredClone(value);
 
 const sameGraph = (a: GraphIdentity, b: GraphIdentity) => a.workspaceId === b.workspaceId && a.rootSessionId === b.rootSessionId;
@@ -77,12 +79,14 @@ function text(value: unknown): value is string
 {
   return typeof value === 'string' && value.trim().length > 0
 }
+
 function valid(condition: unknown, message: string): asserts condition
 {
   if (!condition)
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 function unique<T>(items: T[], key: (item: T) => string, label: string)
 {
   const ids = new Set<string>();
@@ -96,6 +100,7 @@ function unique<T>(items: T[], key: (item: T) => string, label: string)
     ids.add(id)
   }
 }
+
 function upsert<T>(old: T[], updates: T[], key: (item: T) => string)
 {
   const map = new Map(old.map(item => [key(item), item]));
@@ -106,6 +111,7 @@ function upsert<T>(old: T[], updates: T[], key: (item: T) => string)
 
   return [...map.values()]
 }
+
 /**
  * 每工作区一个实例，由应用锁保护跨进程所有权；close 后不得复用。
  * 日志中的完整换行是提交记录边界，哈希链检查完整行损坏与顺序；未完成尾部只在恢复时截断。
@@ -152,6 +158,7 @@ export class FileDispatchStore implements DispatchStore
 
     this.state = { workspaceId, members: [], sessions: [], graphs: [], outbox: [], runs: [], scopes: [], workspaceMembers: [], workspaceMemberChanges: [], registryCursor: null, moduleOwnerships: [], ownershipChanges: [], ownershipCursor: null, knowledgeSourceGenerations: [], knowledgeSourceTransitions: [], knowledgeSourceChanges: [], sourceCursor: null };
   }
+
   private Available()
   {
     if (this.closing)
@@ -162,10 +169,12 @@ export class FileDispatchStore implements DispatchStore
 
       throw this.storageFailure;
   }
+
   private Init()
   {
     return this.initialization ??= this.Load().then(() => this.Observe(() => this.observer?.Loaded(clone(this.state)))).catch(error => { this.ObservationFailed(error); throw error })
   }
+
   /** 观察端异常与存储事务分离；失败处理自身也不能破坏已确认提交的回执。 */
   private ObservationFailed(error: unknown)
   {
@@ -178,6 +187,7 @@ export class FileDispatchStore implements DispatchStore
       /* 监控故障不改变权威存储 */
     }
   }
+
   private Observe(notify: () => void)
   {
     try
@@ -189,6 +199,7 @@ export class FileDispatchStore implements DispatchStore
       this.ObservationFailed(error)
     }
   }
+
   private CheckIdentity(identity: GraphIdentity)
   {
     if (!identity || identity.workspaceId !== this.workspaceId)
@@ -197,6 +208,7 @@ export class FileDispatchStore implements DispatchStore
 
     valid(text(identity.rootSessionId), '缺少主会话身份');
   }
+
   private Graph(identity: GraphIdentity)
   {
     this.CheckIdentity(identity);
@@ -209,6 +221,7 @@ export class FileDispatchStore implements DispatchStore
 
     return graph;
   }
+
   /** 内部管理快照；返回深拷贝，不允许调用方改写权威内存状态。 */
   async Read(): Promise<DispatchState>
   {
@@ -224,6 +237,7 @@ export class FileDispatchStore implements DispatchStore
 
     return clone(this.state)
   }
+
   /** 原命令查询只读日志恢复出的索引；不触发新事务，也不按当前知识或配置重算历史结果。 */
   async CommandReceipt(commandId: string): Promise<{ fingerprint: string; receipt: unknown } | undefined>
   {
@@ -241,6 +255,7 @@ export class FileDispatchStore implements DispatchStore
 
     return record ? clone({ fingerprint: record.fingerprint, receipt: record.receipt }) : undefined;
   }
+
   /** 内部原命令证据不重算当前业务状态；没有记录不是未执行证明，完整回执不得原样公开。 */
   async CommandEvidence(commandId: string): Promise<DispatchCommandEvidence | undefined>
   {
@@ -260,6 +275,7 @@ export class FileDispatchStore implements DispatchStore
 
     return clone(this.commands.get(commandId));
   }
+
   /** 只返回明确主会话的图，不暴露全工作区邮箱或其他会话正文。 */
   async Snapshot(identity: GraphIdentity): Promise<GraphSnapshot>
   {
@@ -275,6 +291,7 @@ export class FileDispatchStore implements DispatchStore
 
     return clone(this.Graph(identity))
   }
+
   /** 无变化时只生成游标响应；不重新打开日志或复制全部工作区状态。 */
   async Delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>
   {
@@ -292,6 +309,7 @@ export class FileDispatchStore implements DispatchStore
 
     return clone(readGraphDelta(graph, this.events.get(identity.rootSessionId) ?? [], cursor, limit));
   }
+
   /** 图和周期在一个屏障内同步取值；无变化不复制目标正文，不回读知识或运行日志。 */
   async SessionRead(raw: DispatchSessionReadInput): Promise<DispatchSessionRead>
   {
@@ -319,6 +337,7 @@ export class FileDispatchStore implements DispatchStore
 
     return clone({ graph: readGraphDelta(graph, this.events.get(root) ?? [], input.graphCursor, input.limit), scopes: readScopeDelta(scopes, this.scopeEvents.get(root) ?? [], input.scopeCursor, input.limit), detail: readScopeDetail(scopes, this.state.scopes ?? [], input.selectedScopeId, input.detailStamp), ...(this.state.teamSessions ? { teamSessions: this.state.teamSessions.filter(session => session.rootSessionId === root) } : {}) });
   }
+
   /**
        * 工作区级幂等查找先于 prepare；同键重发不会重新查知识或生成成员/任务 ID。
        * prepare 或领域校验失败不污染后续事务；实际写入失败会封闭本实例，须重新打开核实日志。
@@ -421,6 +440,7 @@ export class FileDispatchStore implements DispatchStore
 
     return pending;
   }
+
   /**
        * 停止接收新操作并等待已接受操作收尾；失败已由原调用报告，关闭仍应成功释放工作区生命周期。
        * 不在 close 重抛损坏/写入错误，避免应用无法释放工作区锁后重新打开核实日志。
@@ -435,6 +455,7 @@ export class FileDispatchStore implements DispatchStore
     }
     return this.closePromise;
   }
+
   private Publish(body: TransactionBody, checksum: string, next: DispatchState)
   {
     // 必须先取原前态；实时 fsync 与已验证 load 共用此处，后来的根版本不能改变原命令依据。
@@ -497,6 +518,7 @@ export class FileDispatchStore implements DispatchStore
       this.scopeEvents.set(root, events);
     }
   }
+
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
   private Project(mutation: DispatchMutation, command: DispatchCommand, protocol: DispatchExecutionProtocol): DispatchState
   {
@@ -622,6 +644,7 @@ export class FileDispatchStore implements DispatchStore
         valid(graph?.agents.some(agent => agent.agentId === session.agentId && next.members.some(member => member.agentInstanceId === agent.agentInstanceId && member.teamId === session.teamId)), '团队对话必须属于已有主会话和已登记角色');
       }
     }
+
     const checkAgent = (agent: AgentRef, identity: GraphIdentity) => { const session = next.sessions.find(s => s.agentSessionId === agent.agentSessionId); valid(session && session.agentId === agent.agentId && session.agentInstanceId === agent.agentInstanceId && session.rootSessionId === identity.rootSessionId && (session.purpose ?? 'task') === 'task', '图引用的成员任务通道与主会话不一致'); };
 
     for (const graph of next.graphs)
@@ -655,6 +678,7 @@ export class FileDispatchStore implements DispatchStore
       }
     return next;
   }
+
   private async Load()
   {
     let bytes: Buffer;

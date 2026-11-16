@@ -23,6 +23,7 @@ export function hasMemberHelp(summary: RunSummary): boolean
 {
   return summary.events.some(event => String(event.type) === 'task.help_requested' || event.type === 'tool.finished' && event.data?.name === 'cbim_task_help' && !event.data.isError);
 }
+
 const equal = (a: unknown, b: unknown) => json(a) === json(b);
 
 function valid(value: unknown): asserts value
@@ -31,6 +32,7 @@ function valid(value: unknown): asserts value
 
     fail('MEMBER_HELP_INVALID', '求助记录未通过完整运行、授权回执和工具结束检查，请核实后重新安排任务')
 }
+
 /**
  * 调用方须在引擎关闭后重读 canonical 日志。这里只核实并构造冻结记录，不启动任务、不消费邮件或签发用户授权。
  * failed/cancelled/未知副作用始终不能升级为安全求助；普通运行没有求助时返回 undefined。

@@ -16,6 +16,7 @@ export interface CommandVerificationView extends CommandVerificationState
 
   inspect: () => Promise<void>
 }
+
 const outcomeLabels = { succeeded: '原工具已返回成功', failed: '原工具已返回失败', denied: '原工具已拒绝', unknown: '原工具结果尚未确认', not_authorized: '原调用未记录执行授权' };
 
 const commandLabels = { committed: '原事务已保存', absent: '未查到原命令的已保存回执', unverifiable: '原事务仍无法核实', not_applicable: '该工具不适用本项核实' };
@@ -66,6 +67,7 @@ function ResultSummary({ result }: { result: CommandResultSummary })
       return <p>已放弃任务 <code>{result.taskId}</code> 的原检查点，原租约 {result.previousLeaseEpoch} → {result.nextLeaseEpoch}；不是回滚或交付成功。</p>;
   }
 }
+
 /** 纯展示层与桌面装配共用，原工具失败始终保留，不提供重试或恢复按钮。 */
 export function CommandVerificationPanel({ selection, state }: { selection: CommandVerificationSelection; state: CommandVerificationView })
 {
@@ -89,6 +91,7 @@ export function CommandVerificationPanel({ selection, state }: { selection: Comm
     </>}
   </section>;
 }
+
 /** 原身份改变才建立新控制器；轮询只更新日志序号提示，不读回原报告。 */
 export function MainCommandVerification({ selection, latestSeq }: { selection: CommandVerificationSelection; latestSeq: number })
 {

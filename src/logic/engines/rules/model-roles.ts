@@ -18,6 +18,7 @@ export interface RoleOperation
 
   connection?: ModelConnectionRequirement
 }
+
 /** primary 在旧字段中有唯一事实；额外角色必须完全匹配官方声明，不接受未登记字段或能力降级。 */
 export function additionalRoleOperations(declarations: readonly ModelRoleDescriptor[], selection: ModelRolesSelection | undefined): RoleOperation[]
 {

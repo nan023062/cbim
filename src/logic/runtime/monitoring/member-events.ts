@@ -24,6 +24,7 @@ export function memberPublicTask(task: TaskNode, root: string): TaskSpec
 {
   return { taskId: task.taskId, workspaceId: task.identity.workspaceId, root, goal: task.goal, moduleIds: task.modules.map(module => module.moduleId), agentId: task.assignee.agentId, acceptance: task.acceptance.map(item => item.text), ...(task.fallbackBinding ? { fallbackBinding: structuredClone(task.fallbackBinding) } : {}), ...(task.ownerBinding ? { ownerBinding: structuredClone(task.ownerBinding) } : {}) }
 }
+
 interface Stream
 {
   /** 首次登记时固定的身份与任务；read 使用传入的最新 DispatchRun 生成公开运行状态。 */
@@ -49,6 +50,7 @@ interface Stream
 
   progress?: TaskProgress;
 }
+
 /** 工作区执行管理器拥有的脱敏事件缓存；不承担请求授权，调用方先核验图、任务、run 及游标身份。 */
 export class MemberEventStreams
 {
@@ -58,11 +60,13 @@ export class MemberEventStreams
   constructor(private inspect: (run: DispatchRun) => Promise<RunSummary>)
   {
   }
+
   /** 在新执行开始前登记，允许其尚未创建日志时返回空前缀；历史日志损坏不能走该例外。 */
   Begin(run: DispatchRun, task: TaskSpec)
   {
     this.Stream(run, task).live = true
   }
+
   private Stream(run: DispatchRun, task: TaskSpec)
   {
     let stream = this.streams.get(run.binding.runId);
@@ -75,6 +79,7 @@ export class MemberEventStreams
     }
     return stream;
   }
+
   /** 输入必须是日志成功落盘后的原事件；失败只污染查询流，不能改变真实执行或全局监控。 */
   Append(run: DispatchRun, task: TaskSpec, event: StoredEvent)
   {
@@ -89,6 +94,7 @@ export class MemberEventStreams
       stream.failure = error instanceof Error ? error : Error('成员事件流无效')
     }
   }
+
   private Accept(stream: Stream, event: StoredEvent)
   {
     const binding = stream.run.binding;
@@ -132,6 +138,7 @@ export class MemberEventStreams
         stream.progress = next.data.progress as TaskProgress;
     }
   }
+
   private async Restore(stream: Stream, observed: DispatchRun)
   {
     const initiallyEmpty = stream.ordered.length === 0 && stream.pending.size === 0;
@@ -168,6 +175,7 @@ export class MemberEventStreams
       throw error;
     }
   }
+
   /**
        * 每个 run 首次成功恢复后只读内存；失败仅释放本次 load 供重试，已记录的流损坏不会被清除。
        * limit 按事件条数分页；缺省或超前游标重置到序号 0，返回副本，调用方不得跨 run 复用游标。
@@ -214,6 +222,7 @@ export class MemberEventStreams
 
     return structuredClone(!reset && !events.length ? { mode: 'noop', run: view, cursor: next } : { mode: reset ? 'reset' : 'delta', run: view, cursor: next, events, hasMore: next.seq < stream.ordered.length });
   }
+
   /** 工作区退役后释放公开投影；权威日志仍由存储保留。 */
   Clear()
   {

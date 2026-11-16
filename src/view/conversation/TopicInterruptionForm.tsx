@@ -47,6 +47,7 @@ export function TopicInterruptionForm({ scope, options, active, onRefresh, draft
     {state.request && <><button disabled={state.pending} onClick={() => void execute(() => controller.Query())}>查询原请求</button>{!state.receipt && scope.status !== 'closed' && <button disabled={!active || state.pending} onClick={() => void execute(() => controller.Retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
   </details>;
 }
+
 /** 旧历史恢复仍用原作用域草稿，普通对话不创建新的频道。 */
 export function LegacyTopicInterruptionForm(props: Omit<Parameters<typeof TopicInterruptionForm>[0], 'draft'>)
 {

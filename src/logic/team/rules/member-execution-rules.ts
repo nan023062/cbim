@@ -22,12 +22,14 @@ export interface OwnerExecutionRegistry extends KnowledgeSourceRegistry
 
   moduleOwnerships?: readonly ModuleOwnership[]
 }
+
 function check(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
 
     fail(code, message)
 }
+
 const equal = (a: unknown, b: unknown) => workspaceMemberCanonical(a) === workspaceMemberCanonical(b);
 
 /** 只重建本次精确模块的冻结身份；调用方须另外核同知识快照能力及同模型队列公开配置。 */
@@ -69,6 +71,7 @@ export function resolveOwnerExecutionSelection(state: OwnerExecutionRegistry, ra
 
   return ownerExecutionBindingSchema.parse({ version: 1, workspaceId: state.workspaceId, memberId: member.memberId, memberRevision: member.revision, memberHash: workspaceMemberHash(member), capability: { agentId: member.adoption.configuration.agentId, teamId: member.adoption.configuration.teamId, captureId: member.adoption.captureId, capabilityHash: member.adoption.capabilityHash, sourceRef: structuredClone(ref) }, model: { profileId: member.runtimePolicy.profileId, modelId: member.runtimePolicy.modelId, configurationHash: member.runtimePolicy.configurationHash }, owners });
 }
+
 /** 只用于新计划/派发/领取/预约；历史结果与既有运行结算不能用当前负责人反向否定。 */
 export function assertCurrentOwnerExecutionBinding(state: OwnerExecutionRegistry, binding: OwnerExecutionBinding, moduleIds: readonly string[]): void
 {

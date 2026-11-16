@@ -28,8 +28,10 @@ async function importFiles(id: string, files: File[])
 
   return result.value;
 }
+
 // 传输实现接收原始值；对页面暴露的 Bridge 仍限制操作与请求配对，主进程执行运行时解析。
 const bridge: Bridge = {
   ImportFiles: importFiles, call: async (action: string, args?: unknown) => { const result = await ipcRenderer.invoke('cbim:call', action, args); if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`); return result.value }
 };
+
 contextBridge.exposeInMainWorld('cbim', bridge);

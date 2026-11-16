@@ -52,6 +52,7 @@ export interface IsolatedNodeOptions
   /** 仅在本调用资源已确认退出并完成清理后通知；业务失败不等于资源未知。 */
   onSettled?: () => void
 }
+
 /** 单次调用独占一份输入／输出／profile；signal 只终止本次 Job，没有自动重放或向原工程写回。 */
 export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSignal, options: IsolatedNodeOptions = {}): Promise<IsolatedNodeResult>
 {
@@ -455,6 +456,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     }
   }
 }
+
 /** 只清理本调用 mkdtemp 的目录；OS/防病毒短暂持映像时仅重试删除，不重跑程序。owner最后删除，持续失败保留核实依据。 */
 async function removeOwnedRoot(root: string, temp: string)
 {

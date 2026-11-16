@@ -70,6 +70,7 @@ function validateSource(state: DispatchState, record: EffectDispositionRecord)
   }
   check(source.goalRevision === scope!.goal?.revision && source.inputRevision === (scope!.goal ? (scope!.goal.inputRevision ?? 1) : undefined) && source.goalPlanRevision === scope!.goal?.plan?.revision, '处置目标版本与来源周期不一致');
 }
+
 /** 无记录时保留旧缺省；记录存在时只能一条独立 append，命令与回执均从原输入重算。 */
 export function projectEffectDispositionMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand): Pick<DispatchState, 'effectDispositions'>
 {
@@ -111,6 +112,7 @@ export function projectEffectDispositionMutation(previous: DispatchState, mutati
 
   return { effectDispositions: next };
 }
+
 /** 新意图只引用既存处置，不回填旧意图；声明修复仍必须过完整 replan 门禁。 */
 export function validateEffectDispositionLink(state: DispatchState, scope: DispatchScope): void
 {

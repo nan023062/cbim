@@ -32,10 +32,12 @@ export function sourceJournalHash(source: KnowledgeSourceJournal)
 
   return hash(knowledgeSourceCanonical({ ...source, transition }))
 }
+
 export function sourceTransitionId(workspaceId: string, requestId: string)
 {
   return hash(json({ kind: 'knowledge-source', workspaceId, requestId }))
 }
+
 export function checkedSourceJournal(raw: unknown, before: Record<string, string | null>, after: Record<string, string | null>, request: ChangeRequest): KnowledgeSourceJournal
 {
   const parsed = knowledgeSourceJournalSchema.safeParse(raw);
@@ -62,6 +64,7 @@ export function checkedSourceJournal(raw: unknown, before: Record<string, string
   }
   return value;
 }
+
 /** 只在 Main 私有装配中实现；prepare 必须可靠保存后才允许写知识，settle 位于知识回滚 catch 之外。 */
 export interface KnowledgeSourceAuthority
 {

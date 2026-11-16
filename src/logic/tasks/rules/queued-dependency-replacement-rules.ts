@@ -23,6 +23,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(value => b.includes(value));
 
 const pending = (task: TaskNode) => ['planned', 'queued', 'waiting'].includes(task.status);

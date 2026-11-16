@@ -53,6 +53,7 @@ export interface ModelActionResults
 
     baseUrl: string
   };
+
   'models.testConnection':
   {
     ok: boolean;
@@ -67,9 +68,11 @@ export interface ModelActionResults
 
     dimensions?: number
   };
+
   'models.discover': string[];
 
   'models.discoverDetails': DiscoveredModel[];
 }
+
 /** 只识别自身精确键，原型属性或未知 action 不能进入模型路由。 */
 export const isModelAction = (action: string): action is ModelAction => Object.hasOwn(modelActionSchemas, action);

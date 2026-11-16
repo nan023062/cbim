@@ -22,6 +22,7 @@ function valid(v: unknown, message: string): asserts v
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 每批一个目标的一次原子修订；无新审计返回空许可，已有审计仍逐项检查不可变。 */
 export function validateQueuedDependencyRevision(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, command: DispatchCommand)
 {

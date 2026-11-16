@@ -28,6 +28,7 @@ export function validateWorkflowSelections(moduleIds: readonly string[], selecti
 
     fail('WORKFLOW_SELECTION_INVALID', 'Workflow 选择必须唯一且属于本次分配的模块');
 }
+
 /**
  * 比较目标模块上的选择模式；双方均缺省才相等，显式 ID 只与同 ID 相等。
  * 允许 planned 包含目标之外的模块，用于原有检查点子集匹配；角色和模块集合规则仍由调用方保持。
@@ -44,6 +45,7 @@ export function sameWorkflowSelectionsForModules(planned: readonly WorkflowSelec
 
   return moduleIds.every(moduleId => left.get(moduleId) === right.get(moduleId));
 }
+
 /** 公开节点的显式选择必须与冻结模块绑定一致；缺省并不声称已核实“当前首项”。 */
 export function validateTaskWorkflowSelections(selections: readonly WorkflowSelection[] | undefined, modules: readonly { moduleId: string; workflow: { kind: 'module' | 'general'; id: string } }[]): void
 {

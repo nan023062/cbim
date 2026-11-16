@@ -38,6 +38,7 @@ export interface ContinuationAttempt
 
   error?: string;
 }
+
 export interface ContinuationDraft
 {
   scopeId: string;
@@ -51,12 +52,14 @@ export interface ContinuationDraft
 
   attempt?: ContinuationAttempt
 }
+
 export interface ContinuationState
 {
   records: readonly ContinuationDraft[];
 
   error: string
 }
+
 export type ContinuationSourceSelection =
   {
     kind: 'file' | 'folder'
@@ -70,6 +73,7 @@ export interface ContinuationMaterialPage
 
   offset?: number
 }
+
 /** IO 端口允许测试真正的超时、重复请求与重开；不包含模型执行或知识路径。 */
 export interface ContinuationPorts
 {
@@ -91,6 +95,7 @@ export interface ContinuationPorts
 
   materialList?: (selection: ContinuationMaterialPage, signal: AbortSignal) => Promise<unknown>;
 }
+
 const textError = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 /** 成员核验仅在消费等待之前抛出这些确定拒绝；显式枚举，不把未来未知错误默认视为未提交。 */
@@ -105,6 +110,7 @@ export function continuationRejected(error: unknown)
 
   return !!code && memberPauseRejections.has(code) || /^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|GOAL_ATTACHMENT_[A-Z_]+|GOAL_CONTINUATION_INPUT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_CONTINUATION_UNAVAILABLE|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(message)
 }
+
 /** 回执还需核对冻结内容，不能只凭“成功”或某个 runId 确认另一目标的请求。 */
 export function checkedContinuationReceipt(raw: unknown, request: GoalContinuationRequest, previous?: GoalContinuationReceipt): GoalContinuationReceipt
 {
@@ -123,6 +129,7 @@ export function checkedContinuationReceipt(raw: unknown, request: GoalContinuati
 
   return receipt;
 }
+
 /** 每个主会话一份控制器；本地持久化失败时拒绝发送，不偷偷丢弃可能已提交的请求。 */
 export class ScopeContinuationController
 {
@@ -143,6 +150,7 @@ export class ScopeContinuationController
 
       abort: AbortController
     };
+
   readonly storageKey: string;
 
   constructor(readonly workspaceId: string, readonly rootSessionId: string, private ports: ContinuationPorts)
@@ -176,39 +184,48 @@ export class ScopeContinuationController
       this.value = { records: [], error: '本地补充记录无法读取，未发送请求：' + textError(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   /** 仅无视图观察且无请求在途时可被renderer缓存回收，重开再从本机记录恢复。 */
   get canRelease()
   {
     return this.listeners.size === 0 && this.pending.size === 0 && !this.importing
   }
+
   get isImporting()
   {
     return this.importing
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   Record(scopeId: string, waitId: string)
   {
     return this.value.records.find(item => item.scopeId === scopeId && item.waitId === waitId)
   }
+
   IsPending(record: ContinuationDraft | undefined)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Store()
   {
     if (this.unavailable)
@@ -217,6 +234,7 @@ export class ScopeContinuationController
 
     this.ports.storage.setItem(this.storageKey, JSON.stringify({ version: 1, workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, records: this.value.records }));
   }
+
   private Update(record: ContinuationDraft): boolean
   {
     const index = this.value.records.findIndex(item => item.scopeId === record.scopeId && item.waitId === record.waitId),
@@ -249,6 +267,7 @@ export class ScopeContinuationController
 
     return saved;
   }
+
   /** 编辑仅改变指定等待的草稿；结果未知或已受理的请求不允许换正文重发。 */
   Edit(target: ContinuationTarget, text: string)
   {
@@ -264,17 +283,20 @@ export class ScopeContinuationController
 
     this.Update({ ...old, scopeId: target.scopeId, waitId: target.waitId, text });
   }
+
   private CanEdit(target: ContinuationTarget)
   {
     const record = this.Record(target.scopeId, target.waitId);
 
     return !this.unavailable && target.workspaceId === this.workspaceId && target.rootSessionId === this.rootSessionId && (!record?.attempt || record.attempt.phase === 'rejected');
   }
+
   /** 主视图提供当前身份复核；切换、关闭或等待变化后的选择结果被丢弃，不写入旧目标或新目标。 */
   async PickFiles(target: ContinuationTarget, isCurrent: () => boolean)
   {
     await this.ImportSource(target, { kind: 'file' }, isCurrent);
   }
+
   /** 选择和目录分页共享同一在途锁；结果必须仍属于原等待且未取消才可进入公开草稿。 */
   private async Source<T>(target: ContinuationTarget, isCurrent: () => boolean, read: (signal: AbortSignal) => Promise<T>, accept?: (result: T) => void): Promise<T | undefined>
   {
@@ -323,6 +345,7 @@ export class ScopeContinuationController
       }
     }
   }
+
   /** 取消当前来源准备，不消费等待、不改变已选附件，也不取消运行或原生系统对话框本身。 */
   CancelImport(target?: ContinuationTarget)
   {
@@ -330,18 +353,22 @@ export class ScopeContinuationController
 
       this.sourceOperation?.abort.abort()
   }
+
   async ImportSource(target: ContinuationTarget, selection: ContinuationSourceSelection, isCurrent: () => boolean)
   {
     await this.Source(target, isCurrent, async signal => { const picked = this.ports.importSource ? await this.ports.importSource(selection, signal) : selection.kind === 'file' && this.ports.pickFiles ? await this.ports.pickFiles() : undefined; if (picked === undefined) throw Error('当前来源导入入口不可用'); const items = selection.kind === 'file' ? continuationFiles(picked) : continuationAttachments(picked); if (items.some(item => item.kind !== selection.kind)) throw Error('来源回包与原选择种类不一致'); return items; }, items => { const old = this.Record(target.scopeId, target.waitId), attachments = appendContinuationAttachments(old?.attachments ?? [], items); if (attachments.length) this.Update({ ...old, scopeId: target.scopeId, waitId: target.waitId, text: old?.text ?? '', attachments }); });
   }
+
   async MaterialTargets(target: ContinuationTarget, isCurrent: () => boolean): Promise<RepositoryToolTarget[] | undefined>
   {
     return this.Source(target, isCurrent, async signal => { if (!this.ports.materialTargets) throw Error('仓库资料入口不可用'); return checkedMaterialTargets(await this.ports.materialTargets(signal), this.workspaceId); });
   }
+
   async MaterialList(target: ContinuationTarget, selection: ContinuationMaterialPage, isCurrent: () => boolean): Promise<RepositoryListOutput | undefined>
   {
     return this.Source(target, isCurrent, async signal => { if (!this.ports.materialList) throw Error('仓库目录入口不可用'); return checkedMaterialPage(await this.ports.materialList(selection, signal), this.workspaceId, selection); });
   }
+
   /** 仅未提交或明确拒绝的草稿可移除附件，未知和已受理请求保持原顺序与身份。 */
   RemoveFile(target: ContinuationTarget, id: string)
   {
@@ -360,6 +387,7 @@ export class ScopeContinuationController
 
     this.Update({ ...draft, ...(attachments.length ? { attachments } : {}) });
   }
+
   /** 聊天发送在持久等待时显式转交正文与附件；先落盘再提交，不覆盖目标表单已有的不同草稿。 */
   async SubmitInput(target: ContinuationTarget, options: GoalContinuationRequest['options'], text: string, attachments: readonly ChatAttachment[]): Promise<void>
   {
@@ -384,6 +412,7 @@ export class ScopeContinuationController
     // 从此正文由可靠补充记录持有；即使请求被拒绝或通信未知，也可在原记录中修正或查询。
     await this.Submit(target, options);
   }
+
   /** 第一次提交前保存完整请求；重复点击由控制器锁及已有 attempt 双重挡住。 */
   async Submit(target: ContinuationTarget, options: GoalContinuationRequest['options'])
   {
@@ -424,6 +453,7 @@ export class ScopeContinuationController
     }
     await this.Send(next);
   }
+
   private async Send(record: ContinuationDraft)
   {
     const attempt = record.attempt!,
@@ -457,6 +487,7 @@ export class ScopeContinuationController
       this.Emit()
     }
   }
+
   /** 未知结果只能重发原命令与原正文；当前模型选择不会替换已冻结 options。 */
   async Retry(scopeId: string, waitId: string)
   {
@@ -472,6 +503,7 @@ export class ScopeContinuationController
 
     await this.Send(record)
   }
+
   /** 只读回执；undefined 不证明请求未执行，因此仍保持 unknown。 */
   async Query(scopeId: string, waitId: string)
   {
@@ -514,12 +546,14 @@ export class ScopeContinuationController
       this.Emit()
     }
   }
+
   /** 重开只补查未知请求，不自动发送；等待或选择变化也不会触发模型。 */
   async Restore()
   {
     await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.Query(item.scopeId, item.waitId)))
   }
 }
+
 /** 同一 renderer 重访工作区时复用在途控制器，避免旧回执覆盖新草稿；闲置历史采用有界缓存。 */
 export class ScopeContinuationPool
 {
@@ -528,6 +562,7 @@ export class ScopeContinuationPool
   constructor(private idleLimit = 16)
   {
   }
+
   Get(workspaceId: string, rootSessionId: string, ports: ContinuationPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]);

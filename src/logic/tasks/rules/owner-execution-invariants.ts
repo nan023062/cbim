@@ -40,6 +40,7 @@ function check(value: unknown, message: string, code = 'OWNER_BINDING_INVALID'):
 
     fail(code, message)
 }
+
 const taskAt = (state: DispatchState, task: Pick<TaskNode, 'identity' | 'taskId'>) => state.graphs.find(graph => graph.identity.rootSessionId === task.identity.rootSessionId)?.tasks.find(value => value.taskId === task.taskId);
 
 /** 历史关联按原登记事件核验，不重新要求当前 owner active/current。 */
@@ -68,6 +69,7 @@ function historical(state: DispatchState, binding: OwnerExecutionBinding)
   }
   return member;
 }
+
 /** 当前业务资格：新派发必须覆盖所选分配的完整模块；旧任务领取/恢复沿既有模块投影核验，不能默默升级绑定。 */
 function currentTask(previous: DispatchState, task: TaskNode, exactModules = false)
 {
@@ -91,6 +93,7 @@ function currentTask(previous: DispatchState, task: TaskNode, exactModules = fal
 
   check(goal.plan.assignments.some(assignment => assignment.agentId === task.assignee.agentId && (!exactModules || assignment.moduleIds.length === task.modules.length) && task.modules.every(module => assignment.moduleIds.includes(module.moduleId) && module.knowledgeRevision === goal.plan!.knowledgeRevision) && sameWorkflowSelectionsForModules(assignment.workflowSelections, task.workflowSelections, task.modules.map(module => module.moduleId)) && sameAutomaticExecutionForModules(assignment.fallbackBinding, task.fallbackBinding, task.modules.map(module => module.moduleId)) && sameOwnerExecutionForModules(assignment.ownerBinding, task.ownerBinding, task.modules.map(module => module.moduleId))), '任务负责岗位与当前目标计划不一致', 'OWNER_PLAN_STALE');
 }
+
 /** 新旧执行规则明确分离；历史前缀只兼容缺省，不豁免任何已存在绑定的不可变引用。 */
 export function validateOwnerExecutionMutation(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, protocol: DispatchExecutionProtocol): void
 {

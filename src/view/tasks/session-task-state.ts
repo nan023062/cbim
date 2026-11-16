@@ -13,6 +13,7 @@ export function sessionRuns(runs: RunSummary[], workspaceId: string, taskId?: st
 {
   return taskId ? runs.filter(run => run.task.workspaceId === workspaceId && run.task.taskId === taskId) : []
 }
+
 /** 根只是主会话显示锚点；主会话执行事实不能当作已派发给其他成员的业务任务。 */
 export function sessionRoot(history: RunSummary[], taskId: string, pending: number, graph?: GraphSnapshot, scopeState?: ScopeGoalState, historyIssueCount = 0)
 {

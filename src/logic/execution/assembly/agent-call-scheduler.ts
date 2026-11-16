@@ -43,6 +43,7 @@ export interface AgentSchedulerPorts
   /** 必须取得真实子执行名额，冻结目标定义/权限/模型，失败不得开始运行。 */
   Prepare(input: { agentId: string; message: string; business?: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; parent: AgentCallContext; signal: AbortSignal; reference: (taskId: string, runId: string) => AgentCallReference; RequestQuestion(input: unknown, signal: AbortSignal): Promise<unknown> }): Promise<{ agent: Agent; task: TaskSpec; runtime: Pick<LoopRuntime, 'Start' | 'Close'> & Partial<Pick<LoopRuntime, 'StartMember'>>; launch?: MemberRunLaunch; Verify?(summary: RunSummary, signal: AbortSignal): Promise<unknown>; BeforeRun?(runId: string): Promise<void>; Release(): void | Promise<void> }>;
 }
+
 const callInput = z.object({ agentId: z.string().min(1).max(512), message: z.string().trim().min(1).max(100000), business: z.object({ moduleIds: z.array(z.string().min(1)).min(1).max(50), acceptance: z.array(z.string().min(1)).max(100), workflowSelections: z.array(z.object({ moduleId: z.string().min(1), workflowId: z.string().min(1) }).strict()).max(50).optional() }).strict().optional() }).strict();
 
 const replyInput = z.object({ callId: z.string().min(1), questionId: z.string().min(1), result: questionResultSchema }).strict();
@@ -51,6 +52,7 @@ function errorResult(code: string, message: string, detail: Record<string, unkno
 {
   return { ...jsonToolResult(agentCallToolName, { error: { code, message, ...detail } }), details: { outcome: toolOutcome(detail.started === false ? 'rejected' : 'unknown') }, isError: true }
 }
+
 /** 单根运行共享调度器；调用键含父运行，避免不同 Agent 的原生工具 ID 碰撞。 */
 export class AgentCallScheduler
 {
@@ -104,6 +106,7 @@ export class AgentCallScheduler
 
     this.limits = Object.freeze({ ...limits });
   }
+
   /** 每个循环取得自己的工具绑定；停止只取消该调用者的直属调用，AbortSignal 继续向后代传播。 */
   Bind(context: AgentToolContext, depth = 0): AgentToolsBinding
   {
@@ -313,6 +316,7 @@ export class AgentCallScheduler
       }
     };
   }
+
   private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
     let prepared: Awaited<ReturnType<AgentSchedulerPorts['Prepare']>> | undefined,
@@ -381,6 +385,7 @@ export class AgentCallScheduler
       }
     }
   }
+
   /** 人工评价是原工具的两阶段等待：意见先可靠记入日志，用户明确继续才返回模型；不派发子任务。 */
   private async Review(context: AgentToolContext, callId: string, id: string, signal: AbortSignal): Promise<ToolResult>
   {
@@ -503,18 +508,21 @@ export class AgentCallScheduler
         }).code ?? (signal.aborted ? 'AGENT_CALL_CANCELLED' : 'AGENT_REVIEW_FAILED'), error instanceof Error ? error.message : String(error))
     }
   }
+
   private Capacity()
   {
     const usage = this.ports.Capacity?.();
 
     return usage ? { concurrent: usage.current, maxConcurrent: usage.limit } : {}
   }
+
   private Message(run: RunSummary): string
   {
     const messages = run.events.filter(event => event.type === 'message').map(event => typeof event.data.text === 'string' ? event.data.text : typeof event.data.content === 'string' ? event.data.content : '').filter(Boolean);
 
     return messages.join('\n\n').slice(-100000) || '执行已结束，详细过程见调用记录；没有可提取的公开文字回复。';
   }
+
   private async Drain(prefix = '')
   {
     for (const [key, value] of this.stranded)
@@ -530,6 +538,7 @@ export class AgentCallScheduler
       this.stranded.delete(key)
     }
   }
+
   async Close()
   {
     this.closed = true;

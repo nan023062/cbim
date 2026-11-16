@@ -16,6 +16,7 @@ export interface HumanDecisionTarget extends Omit<HumanDecisionPreviewInput, 'ba
 {
   anchor: string
 }
+
 export interface HumanDecisionAttempt
 {
   request: HumanDecisionRequest;
@@ -28,6 +29,7 @@ export interface HumanDecisionAttempt
 
   error?: string
 }
+
 export interface HumanDecisionDraft
 {
   scopeId: string;
@@ -46,6 +48,7 @@ export interface HumanDecisionDraft
 
   attempt?: HumanDecisionAttempt
 }
+
 export interface HumanDecisionPreviewState
 {
   anchor: string;
@@ -58,12 +61,14 @@ export interface HumanDecisionPreviewState
 
   error: string
 }
+
 export interface HumanDecisionState
 {
   records: readonly HumanDecisionDraft[];
 
   error: string
 }
+
 /** 端口没有启动模型或修改权限能力；本机持久化异常会阻止新的发送。 */
 export interface HumanDecisionPorts
 {
@@ -77,6 +82,7 @@ export interface HumanDecisionPorts
 
   uuid: () => string;
 }
+
 const identityKey = (scopeId: string, criterionId: string) => JSON.stringify([scopeId, criterionId]);
 
 const textError = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -88,6 +94,7 @@ export function humanDecisionRejected(error: unknown)
 {
   return /^(?:HUMAN_(?:INPUT_INVALID|IDENTITY|NOT_WAITING|SOURCE_INVALID|KNOWLEDGE_CHANGED|UNAVAILABLE|EVIDENCE_INVALID|STALE|LIMIT|REVISION_CONFLICT|DECISION_UNAVAILABLE|RECONSIDERATION_INVALID)|WORKSPACE_EXECUTION_BUSY):/.test(textError(error))
 }
+
 /** 预览不能借用另一人工项或另一组已选文件；无依据只显示问题，不能提交。 */
 export function checkedHumanDecisionPreview(raw: unknown, input: HumanDecisionPreviewInput): HumanDecisionPreview
 {
@@ -104,6 +111,7 @@ export function checkedHumanDecisionPreview(raw: unknown, input: HumanDecisionPr
 
   return value;
 }
+
 /** 回执必须确认冻结的内容；scope 后续状态可变，既有 record 本身不能被查询替换。 */
 export function checkedHumanDecisionReceipt(raw: unknown, request: HumanDecisionRequest, previous?: HumanDecisionReceipt): HumanDecisionReceipt
 {
@@ -117,6 +125,7 @@ export function checkedHumanDecisionReceipt(raw: unknown, request: HumanDecision
 
   return value;
 }
+
 /** 每 root 唯一控制器；同一人工项的未知提交保持冻结，其他项可各自查询预览。 */
 export class HumanDecisionController
 {
@@ -167,46 +176,57 @@ export class HumanDecisionController
       this.value = { records: [], error: '本地人工决定记录无法读取，未发送任何请求：' + textError(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return !this.listeners.size && !this.pending.size && ![...this.previews.values()].some(value => value.loading)
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   Record(scopeId: string, criterionId: string)
   {
     return this.value.records.find(value => value.scopeId === scopeId && value.criterionId === criterionId)
   }
+
   PreviewState(target: HumanDecisionTarget)
   {
     return this.previews.get(identityKey(target.scopeId, target.criterionId))
   }
+
   IsPending(record?: HumanDecisionDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
+
   Locked(record?: HumanDecisionDraft)
   {
     return this.IsPending(record) || !!record?.attempt && ['submitting', 'unknown'].includes(record.attempt.phase)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Belongs(target: HumanDecisionTarget)
   {
     return target.workspaceId === this.workspaceId && target.rootSessionId === this.rootSessionId
   }
+
   private Update(record: HumanDecisionDraft): boolean
   {
     const records = [...this.value.records],
@@ -252,6 +272,7 @@ export class HumanDecisionController
       return false
     }
   }
+
   /** 修改已成功记录的草稿表示准备新决定；原决定仍在后端历史中，不覆盖它。 */
   Edit(target: HumanDecisionTarget, change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>)
   {
@@ -263,6 +284,7 @@ export class HumanDecisionController
 
     this.Update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: record?.decision, ...change, attempt: undefined });
   }
+
   /** 明确清除旧候选选择才能核实返工成果；不改后端历史，也不能清除未知/在途请求。 */
   ResetBaselines(target: HumanDecisionTarget): boolean
   {
@@ -277,6 +299,7 @@ export class HumanDecisionController
 
     return this.Update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: [], ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: undefined });
   }
+
   /** 只有显式点击开始/退出对照；清空原选择和决定，未知请求保持冻结，不复制旧接受。 */
   async Reconsider(target: HumanDecisionTarget, decisionId?: string)
   {
@@ -294,6 +317,7 @@ export class HumanDecisionController
 
       await this.Preview(target);
   }
+
   CurrentPreview(target: HumanDecisionTarget): HumanDecisionPreview | undefined
   {
     const state = this.PreviewState(target),
@@ -302,6 +326,7 @@ export class HumanDecisionController
 
     return state && !state.loading && !state.error && state.anchor === target.anchor && state.input.reconsidersDecisionId === record?.reconsidersDecisionId && equal(selected(state.input.baselines), selected(record?.baselines ?? [])) && equal(selected(state.input.manifests ?? []), selected(record?.manifests ?? [])) ? state.result : undefined;
   }
+
   /** 明确点击才读取文件；选择变化可显示旧菜单，但旧观察不得用于提交。 */
   async Preview(target: HumanDecisionTarget)
   {
@@ -350,6 +375,7 @@ export class HumanDecisionController
       this.Emit()
     }
   }
+
   async Submit(target: HumanDecisionTarget)
   {
     const record = this.Record(target.scopeId, target.criterionId),
@@ -380,6 +406,7 @@ export class HumanDecisionController
 
       await this.Send(frozen);
   }
+
   private async Send(record: HumanDecisionDraft)
   {
     const attempt = record.attempt!,
@@ -424,6 +451,7 @@ export class HumanDecisionController
       this.Emit()
     }
   }
+
   /** 未知通信结果只重发已保存命令，不使用现在选择的验收项、文件或意见。 */
   async Retry(scopeId: string, criterionId: string)
   {
@@ -435,6 +463,7 @@ export class HumanDecisionController
 
     await this.Send(record)
   }
+
   /** 查不到回执不等于未提交，仍冻结；查询不会触发模型或新的人工决定。 */
   async Query(scopeId: string, criterionId: string)
   {
@@ -475,12 +504,14 @@ export class HumanDecisionController
       this.Emit()
     }
   }
+
   /** 重开仅补查未知请求；不重做预览或自动提交。 */
   async Restore()
   {
     await Promise.all(this.value.records.filter(value => value.attempt?.phase === 'unknown').map(value => this.Query(value.scopeId, value.criterionId)))
   }
 }
+
 /** 同一 renderer 中两个卡片及重访工作区复用控制器；仅回收完全闲置项。 */
 export class HumanDecisionPool
 {

@@ -26,6 +26,7 @@ interface KnowledgeEffectOwner
   {
     id: string
   };
+
   paths: StoragePaths;
 
   Assert(): void;
@@ -33,6 +34,7 @@ interface KnowledgeEffectOwner
   /** 只借用同一知识队列的 journal 读取，不获取 apply 或 preview 能力。 */
   Governed<T>(operation: (transaction: Pick<KnowledgeGovernanceTransaction, 'Journal'>) => Promise<T>): Promise<T>;
 }
+
 /** 原实例只参与比对，允许重开后读取原阶段；停止或关闭中断查询，不自动推进任何持久状态。 */
 export async function observeKnowledgeTransaction(owner: KnowledgeEffectOwner, reference: KnowledgeWriteReference, signal?: AbortSignal): Promise<KnowledgeTransactionObservation>
 {

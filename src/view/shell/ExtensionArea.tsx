@@ -31,6 +31,7 @@ type Panel =
 
     kind: Kind
   };
+
 const names: Record<Kind, string> = { empty: '新标签页', browser: '浏览器', terminal: '终端', team: '团队架构', knowledge: '业务架构', automation: '自动化', service: '工作区状态' };
 
 const icons: Record<Kind, string> = { empty: 'add', browser: 'browser', terminal: 'terminal', team: 'team', knowledge: 'knowledge', automation: 'workflow', service: 'inspect' };
@@ -60,6 +61,7 @@ export function ExtensionArea({ workspace, snapshot, dirty, open, request, onClo
 
     onOpen()
   }
+
   useEffect(() => { if (request && Object.hasOwn(names, request.kind)) add(request.kind as Kind) }, [request?.nonce]);
 
   const chosen = tabs.some(t => t.id === active) ? active : tabs[0]?.id;
@@ -78,11 +80,13 @@ export function ExtensionArea({ workspace, snapshot, dirty, open, request, onClo
 
     setTabs(old => old.filter(x => x.id !== t.id))
   }
+
   return <aside className="extension-area" hidden={!open} aria-label="右侧扩展区"><header className="extension-tabs"><div role="tablist" aria-label="扩展页签">{tabs.map(t => <div key={t.id} className={t.id === chosen ? 'active' : ''}><button role="tab" id={'extension-tab-' + t.id} aria-controls={'extension-panel-' + t.id} tabIndex={t.id === chosen ? 0 : -1} aria-selected={t.id === chosen} onKeyDown={event => { const index = tabs.findIndex(item => item.id === t.id); const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : -1; if (next < 0) return; event.preventDefault(); setActive(tabs[next].id); document.getElementById('extension-tab-' + tabs[next].id)?.focus(); }} onClick={() => setActive(t.id)}><Icon name={icons[t.kind]} size={16} />{names[t.kind]}</button><button aria-label={'关闭扩展 ' + names[t.kind]} onClick={() => void close(t)}><Icon name="close" size={16} /></button></div>)}</div><button aria-label="新增扩展页签" onClick={() => add()}><Icon name="plus" size={16} /></button><button aria-label="收起扩展区" onClick={onClose}><Icon name="chevron" size={16} /></button></header>
  {!tabs.length && <div className="extension-empty"><p>扩展区暂无页签</p><button onClick={() => add()}><Icon name="add" size={16} />新增空页签</button></div>}
  {tabs.map(t => <section key={t.id} id={'extension-panel-' + t.id} role="tabpanel" aria-labelledby={'extension-tab-' + t.id} className="extension-content" hidden={t.id !== chosen}>{t.kind === 'empty' ? <div className="extension-empty">{choices.map(kind => <button key={kind} onClick={() => setTabs(old => old.map(x => x.id === t.id ? { ...x, kind } : x))}><Icon name={icons[kind]} size={20} />打开{names[kind]}</button>)}</div> : t.kind === 'browser' ? <BrowserPane workspace={workspace} /> : t.kind === 'terminal' ? <TerminalPane workspace={workspace} tabId={t.id} /> : t.kind === 'team' ? <TeamView workspace={workspace} snapshot={snapshot} refresh={refresh} dirty={dirty} tabId={t.id} onStarted={onStarted} /> : t.kind === 'knowledge' ? <BusinessArchitecture workspace={workspace} tabId={t.id} dirty={dirty} snapshot={snapshot} refresh={refresh} onStarted={onStarted} /> : t.kind === 'automation' ? <AutomationView active={open && t.id === chosen} key={workspace.id + ':' + workspace.instanceId} onOpenRun={onStarted} workspace={workspace} snapshot={snapshot} /> : <WorkspaceDiagnostics workspace={workspace} snapshot={snapshot} refreshKnowledge={refresh} />}</section>)}
  </aside>;
 }
+
 /** 沙箱网页无 preload/Node/顶层导航权限；仅接受 HTTP(S)，被站点拒绝嵌入时提供外部打开。 */
 function BrowserPane({ workspace }: { workspace: WorkspaceView })
 {
@@ -113,8 +117,10 @@ function BrowserPane({ workspace }: { workspace: WorkspaceView })
       setError(e.message)
     }
   }
+
   return <div className="browser-pane"><div className="view-context"><Icon name="browser" size={16} /><strong>{workspace.name}</strong><span>沙箱网页预览</span></div><form onSubmit={e => { e.preventDefault(); navigate() }}><input aria-label="浏览器地址" value={value} onChange={e => setValue(e.target.value)} /><button><Icon name="browser" size={16} />打开</button><button type="button" disabled={!url} onClick={() => void api.call('chat.openLink', { id: workspaceId, target: url }).catch(e => setError(e.message))}><Icon name="openExternal" size={16} />外部打开</button></form><small>部分站点禁止嵌入或需要登录，可在系统浏览器中打开。</small>{error && <p role="alert">{error}</p>}{url ? <iframe title="扩展浏览器" src={url} sandbox="allow-scripts allow-forms" /> : <div className="extension-empty"><Icon name="browser" size={32} /><h2>预览网页</h2><p>输入网页或本地开发服务器地址；打开后在此预览。</p><p>此面板不提供桌面权限，也不会读取账号凭据。</p></div>}</div>;
 }
+
 /** 命令由用户显式执行；收起页签继续运行，关闭页签释放进程，输出最多保留 200k 字符。 */
 function TerminalPane({ workspace, tabId }: { workspace: WorkspaceView; tabId: string })
 {
@@ -166,6 +172,7 @@ function TerminalPane({ workspace, tabId }: { workspace: WorkspaceView; tabId: s
       setRequest(null)
     }
   }
+
   return <div className="terminal-pane"><div className="view-context"><Icon name="terminal" size={16} /><strong>{workspace.name}</strong><code>{workspace.path}</code></div>
   <p>命令在以上项目根目录执行。不支持交互式程序，cd 不跨命令保留；执行可能修改项目文件。</p>
   <div className="terminal-state" role="status"><Icon name={request === 'stop' ? 'stopping' : state.running ? 'running' : state.exitCode === null ? 'notRun' : state.exitCode === 0 ? 'stopped' : 'failed'} size={16} />{request === 'start' ? '正在请求执行…' : request === 'stop' ? '正在请求停止…' : state.running ? '运行中' : state.exitCode === null ? '尚无已退出命令' : '已退出 · 退出码 ' + state.exitCode}</div>

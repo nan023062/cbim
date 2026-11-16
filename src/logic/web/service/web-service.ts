@@ -25,6 +25,7 @@ export class WebService implements WebToolsPort
   {
     this.pages = pageReader ?? new WebPageReader(client, timing, browser, 'CBIMBot/0.1');
   }
+
   /** 每次读取捕获已保存策略；基础类库按策略分隔缓存，搜索开关不影响正文读取。 */
   async Fetch(raw: Parameters<WebToolsPort['Fetch']>[0], signal: AbortSignal)
   {
@@ -34,6 +35,7 @@ export class WebService implements WebToolsPort
 
     return { ...page, untrusted: true as const };
   }
+
   private async Pace(_url: URL, signal: AbortSignal)
   {
     signal.throwIfAborted();
@@ -54,6 +56,7 @@ export class WebService implements WebToolsPort
 
     signal.throwIfAborted();
   }
+
   /** Brave 是固定查询 API，不执行 robots 抓取；凭据不会进入错误或结果，不跟随 API 跳转。 */
   async Search(raw: Parameters<WebToolsPort['Search']>[0], signal: AbortSignal)
   {

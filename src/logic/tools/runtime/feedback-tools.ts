@@ -28,10 +28,12 @@ export class FeedbackTools
 
       fail('GITHUB_FEEDBACK_BINDING', '反馈工具与本轮工作区不一致');
   }
+
   Has(name: string)
   {
     return name === 'cbim_feedback_submit' || name === 'cbim_feedback_receipt'
   }
+
   List()
   {
     return [
@@ -42,6 +44,7 @@ export class FeedbackTools
 
     ]
   }
+
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name))
@@ -56,12 +59,14 @@ export class FeedbackTools
 
     return parsed.data;
   }
+
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     this.Parse(name, input);
 
     return { effects: [name === 'cbim_feedback_submit' ? 'external-write' : 'read'], native: false, contractVersion: 1, scope: this.scope }
   }
+
   /** 仅调用一次端口；协议异常不重放外部写。返回 submitted 才允许静默结束。 */
   async Call(name: string, input: unknown, signal: AbortSignal)
   {

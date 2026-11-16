@@ -11,18 +11,22 @@ export class KnowledgeQueries
   constructor(private readonly workspace: KnowledgeSnapshotReader)
   {
   }
+
   async Modules(query = '')
   {
     return new BusinessWorkspace(await this.workspace.Snapshot()).Modules(query)
   }
+
   async Module(id: string)
   {
     return new BusinessWorkspace(await this.workspace.Snapshot()).Module(id)
   }
+
   async Agents(query = '')
   {
     return new Team(await this.workspace.Snapshot()).Agents(query)
   }
+
   async Agent(id: string)
   {
     return new Team(await this.workspace.Snapshot()).Agent(id)

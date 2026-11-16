@@ -41,6 +41,7 @@ export interface LlmProfile extends LlmDefinition
 
   hasKey: boolean
 }
+
 export interface LlmSettings
 {
   profiles: LlmProfile[];

@@ -43,6 +43,7 @@ export class EngineArtifacts implements EngineArtifactsPort
   constructor(private readonly stateFile: string, private readonly store: RuntimeStore, private readonly seed: SignedRuntimeManifest, private readonly signal: AbortSignal, private readonly fetchIndex = () => downloadRuntimeManifest('runtime-engines', engineIndexAsset(store.cold.publicKey), signal), private readonly progress: (kind: string, version: string, progress?: number, error?: string) => void = () => { }, private readonly historicalKeys: readonly string[] = [])
   {
   }
+
   private VerifyHistory<T>(verify: (publicKey: string) => T): T
   {
     try
@@ -64,6 +65,7 @@ export class EngineArtifacts implements EngineArtifactsPort
       throw error;
     }
   }
+
   private Add(packages: readonly EnginePackage[], target: Map<string, EnginePackage>)
   {
     for (const pkg of packages)
@@ -81,6 +83,7 @@ export class EngineArtifacts implements EngineArtifactsPort
       target.set(pkg.kind + ':' + pkg.package.sha256, pkg);
     }
   }
+
   private async Init()
   {
     if (this.initialized)
@@ -186,18 +189,22 @@ export class EngineArtifacts implements EngineArtifactsPort
 
     this.initialized = true;
   }
+
   private Summary(pkg: EnginePackage): EngineArtifact
   {
     return { kind: pkg.kind, identity: pkg.package.sha256, version: pkg.adapter!.version, nativeVersion: pkg.version, protocol: pkg.adapter!.protocol, dependencies: structuredClone(pkg.dependencies ?? []) }
   }
+
   List()
   {
     return this.queue.Run(async () => { await this.Init(); return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) } })
   }
+
   Check()
   {
     return this.queue.Run(async () => { await this.Init(); const checked = verifyEngineIndex(await this.fetchIndex(), this.store.cold); if (checked.index.sequence < this.head || checked.index.sequence === this.head && checked.digest !== this.digest) throw Error('引擎索引回退或同序号冲突'); if (checked.index.sequence === this.head) return; if (this.envelopes.length >= 128) throw Error('引擎索引保留数量达到上限，需要维护后再更新'); const available = new Map(this.available); this.Add(checked.index.releases, available); const envelopes = [...this.envelopes, checked.envelope]; await atomic(this.stateFile, JSON.stringify({ schema: 1, seeds: this.seeds, indexes: envelopes })); this.available = available; this.envelopes = envelopes; this.head = checked.index.sequence; this.digest = checked.digest; for (const ref of checked.index.current) this.current.set(ref.kind, ref.identity); })
   }
+
   /** 只准备已验签的准确版本；并发下载交给 RuntimeStore，失败不会删除已安装包；回调含本地校验，不能据此宣称发生网络下载。 */
   async Prepare(kind: string, identity: string, onProgress?: (progress: number) => void)
   {

@@ -60,6 +60,7 @@ export interface ValidationFilePort
 
   CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
 }
+
 /** 运行时仅提供可信身份、当前进度、授权核实与可靠事件保存，不定义各验证器规则。 */
 export interface RunValidationContext
 {
@@ -77,6 +78,7 @@ export interface RunValidationContext
 
   Save(value: ValidationResult): Promise<void>;
 }
+
 /** 在获取运行资源前核实冻结要求；无要求时不创建能力，失败不启动引擎。 */
 export function prepareRunValidation(workflows: readonly WorkflowContractBinding[], member: MemberRunBinding | undefined, artifacts: ArtifactCapturePort | undefined, files: ValidationFilePort | undefined): { required: boolean; Create(context: RunValidationContext): RunValidation | undefined }
 {
@@ -102,6 +104,7 @@ export function prepareRunValidation(workflows: readonly WorkflowContractBinding
 
   return { required: validationRequired, Create: context => validationRequired ? new RunValidation(member!, workflows, artifacts!, files!, context) : undefined };
 }
+
 /** 一轮一实例；真实 validation 调用结束释放其锁，交付复核拥有独立 finally 生命周期。 */
 export class RunValidation
 {
@@ -117,6 +120,7 @@ export class RunValidation
 
       consumed: boolean
     };
+
   private deliveryReading = false;
 
   private generations = new Map<string, number>();
@@ -133,6 +137,7 @@ export class RunValidation
       knowledgeRevision: artifacts.knowledgeRevision, bindings: this.bindings, ManifestIdentity: input => { const manifest = this.Selected(input).manifest; return manifest ? outputManifestIdentity(manifest.manifest) : undefined }, Run: (input, id) => this.Run(input, id)
     });
   }
+
   /** 在任何策略 await 之前预占；交付复核期间同样拒绝新工具，避免审批或写入越过读取窗口。 */
   Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
@@ -160,6 +165,7 @@ export class RunValidation
 
     this.reserved = { id, input: parsed.data, consumed: false };
   }
+
   /** 只接收已经落盘的事件；当前代次由运行时持有，不从模型传来的 progressVersion 推断。 */
   Observed(event: StoredEvent)
   {
@@ -179,19 +185,23 @@ export class RunValidation
 
       this.reserved = undefined;
   }
+
   Stop()
   {
     this.controller.abort(Error('运行已停止，JSON/CSV/PNG 产物验证取消'))
   }
+
   /** 返回当前计划/副作用代次的可信记录；步骤版本增加不使同一代次的验证失效。 */
   Records(): ValidationRecord[]
   {
     return verifyValidationRecords(this.events, this.binding, this.artifacts.knowledgeRevision, this.bindings, this.artifacts.NormalizePath).filter(record => this.generations.get(record.result.toolCallId) === this.context.Generation())
   }
+
   private LastEffectSeq()
   {
     return this.events.filter(event => event.type === 'tool.allowed' && Array.isArray(event.data.effects) && event.data.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(String(effect)))).at(-1)?.seq ?? 0
   }
+
   private Selected(input: ValidationInput)
   {
     const selected = validationRequirement(this.bindings, input.moduleId, input.requirementId);
@@ -236,6 +246,7 @@ export class RunValidation
 
     return { selected, file: { relativePath: file.relativePath, byteLength: file.byteLength, sha256: file.sha256 } };
   }
+
   private async Run(input: ValidationInput, id: string): Promise<ValidationResult>
   {
     const reserved = this.reserved;
@@ -312,6 +323,7 @@ export class RunValidation
 
     return result;
   }
+
   /** 保存交付前只读复核；锁与真正 validation 调用分离，finally 不得释放另一调用的占位。 */
   async VerifyCurrent(records: readonly ValidationRecord[]): Promise<void>
   {

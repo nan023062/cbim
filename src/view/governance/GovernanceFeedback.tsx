@@ -20,6 +20,7 @@ export function GovernanceDecisionFeedback({ decision }: { decision: ModuleGover
   {!!decision.assessments?.length && <div data-testid="governance-saved-assessments"><small>以下是该次本机评价，不表示理解认证或专业验收。</small>{decision.assessments.map(item => <p key={item.decisionId}>{outcomeLabels[item.outcome]} · {item.explanation}<code>{item.decisionId}</code></p>)}</div>}
 </>
 }
+
 /** 反馈引用保持原样；current/superseded 来自后端当前投影，旧评价不会自动变成对新意见的回应。 */
 export function GovernanceResponseDetails({ selected }: { selected: GovernanceSelected })
 {
@@ -29,6 +30,7 @@ export function GovernanceResponseDetails({ selected }: { selected: GovernanceSe
 
   return <section data-testid="governance-response-sources"><h4>本方案回应的原意见</h4>{!governanceResponsesCurrent(selected) && <p role="status">来源意见已被替代或尚未核实，不能继续沿用它批准或实施。历史记录保持不变。</p>}{selected.responseStates?.map(state => <article key={state.reference.decisionId}><b>{state.state === 'current' ? '来源仍有效' : '来源已被替代'}</b><code>{state.reference.decisionId}</code><p>{state.comment}</p><p>{focusLabels[state.feedback.focus]} · 期望回应：{state.feedback.expectedResponse}</p>{state.state === 'superseded' && <small>当前决定 {state.latestDecisionId} · 版本 {state.latestDecisionRevision}</small>}</article>)}<p>回应评价独立记录；没有评价就是未评价，批准不表示已回应或已理解。</p></section>;
 }
+
 /** 同一提案刷新保留草稿；勾选键随来源/决定变更失效，提交字段由纯校验器一次生成。 */
 export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit }: { selected: GovernanceSelected; disabled: boolean; OnSubmit(fields: ReturnType<typeof governanceDecisionFields>): void | Promise<void> })
 {
@@ -52,6 +54,7 @@ export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit 
 
     setError('')
   }
+
   function eligible(decision: 'approve' | 'reject' | 'defer')
   {
     try
@@ -65,6 +68,7 @@ export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit 
       return false
     }
   }
+
   function submit(decision: 'approve' | 'reject' | 'defer')
   {
     try
@@ -80,6 +84,7 @@ export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit 
       setError(cause instanceof Error ? cause.message : String(cause))
     }
   }
+
   return <fieldset disabled={disabled} data-testid="governance-decision-form"><legend>独立记录人工决定</legend>
     <label>意见<textarea aria-label="治理决定意见" value={draft.comment} onChange={event => change({ comment: event.target.value })} maxLength={8000} /></label>
     <label>暂缓后的复查条件<input aria-label="治理复查条件" value={draft.revisitCondition} onChange={event => change({ revisitCondition: event.target.value })} maxLength={8000} /></label>

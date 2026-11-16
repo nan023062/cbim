@@ -27,18 +27,21 @@ export interface OfficeHistoryPorts
 
   InspectMember(run: DispatchRun): Promise<RunSummary>
 }
+
 interface Entry
 {
   reference: OfficeHistoryEntry;
 
   read: () => Promise<unknown>
 }
+
 /** 保存的是原 canonical；此服务只生成可重建目录并读取明确选择的一份内容。 */
 export class OfficeHistoryService
 {
   constructor(private readonly workspaceId: string, private readonly store: DispatchStore, private readonly ports?: OfficeHistoryPorts)
   {
   }
+
   private Index(state: DispatchState, identity: GraphIdentity, scopeId: string): Entry[]
   {
     const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === identity.rootSessionId && value.workspaceId === identity.workspaceId);
@@ -79,6 +82,7 @@ export class OfficeHistoryService
     }
     return entries;
   }
+
   private PublicRun(run: RunSummary, identity: GraphIdentity, taskId: string, runId: string)
   {
     if (run.task.workspaceId !== identity.workspaceId || run.task.taskId !== taskId || run.runId !== runId || run.events.some(event => event.workspaceId !== identity.workspaceId || event.taskId !== taskId || event.runId !== runId))
@@ -105,6 +109,7 @@ export class OfficeHistoryService
       })
     };
   }
+
   /** offset>0 必须携带上页版本；变更时拒绝混读，查询与翻页从不恢复任何运行。 */
   async Read(identity: GraphIdentity, raw: unknown, signal: AbortSignal): Promise<OfficeHistoryResult>
   {

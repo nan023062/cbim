@@ -9,6 +9,7 @@ export interface ConversationStopTarget
 
   taskId: string
 }
+
 type StopToken = Readonly<ConversationStopTarget &
 {
   generation: number
@@ -36,6 +37,7 @@ export class ConversationStopGate
       this.generation++
     }
   }
+
   /** 同一会话只有一个在途停止；切换到其他会话仍可发出它自己的停止。 */
   Begin(target: ConversationStopTarget): StopToken | undefined
   {
@@ -51,15 +53,18 @@ export class ConversationStopGate
 
     return token
   }
+
   Pending(target: ConversationStopTarget): boolean
   {
     return this.requests.has(key(target))
   }
+
   /** 迟到回包仅可更新原视图代次的错误和刷新状态；请求本身仍按原身份结束。 */
   IsCurrent(token: StopToken): boolean
   {
     return key(token) === this.target && token.generation === this.generation
   }
+
   /** 仅消费原标记，不能用迟到的旧请求清除同身份下一次请求。 */
   Finish(token: StopToken): boolean
   {

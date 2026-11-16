@@ -15,10 +15,12 @@ function identity(candidate: HumanDecisionCandidateProof)
 
   return { taskId: value.taskId, taskRevision: value.taskRevision, runId: value.runId, resultId: value.resultId, planRevision: value.planRevision, logHash: value.logHash, evidenceToolCallIds: [...value.evidenceToolCallIds].sort() }
 }
+
 function selection(candidate: HumanDecisionCandidateProof)
 {
   return { taskId: candidate.taskId, ...(candidate.selected ? { selected: { ...candidate.selected, files: candidate.selected.files.map(({ relativePath, expected }) => ({ relativePath, expected })).sort((a, b) => a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0) } } : {}), ...(candidate.selectedManifest ? { manifest: candidate.selectedManifest.manifest } : {}) }
 }
+
 /** 原日志是否可信必须由服务实际读取；当前未选文件时只显示无法核实，不自动沿用旧选择或读取。 */
 export function compareHumanReconsideration(records: readonly HumanDecisionRecord[], input: { criterionId: string; reconsidersDecisionId: string; waitId?: string }, current: Pick<HumanDecisionPreview, 'source' | 'candidates' | 'allowedDecisions'>, originalVerified: boolean): HumanReconsideration
 {

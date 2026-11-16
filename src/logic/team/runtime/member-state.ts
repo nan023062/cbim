@@ -46,11 +46,13 @@ export function memberTask(state: DispatchState, rootSessionId: string, taskId: 
 
   return { graph, task, member, session };
 }
+
 /** 一个提交只推进一个主会话的连续游标；观察者在落盘成功后才能收到。 */
 export function memberBatch(graph: GraphSnapshot, commandId: string, cause: GraphEventBatch['cause'], changes: GraphChange[]): GraphEventBatch
 {
   return { version: 1, identity: graph.identity, streamId: graph.cursor.streamId, seq: graph.cursor.seq + 1, eventId: randomUUID(), commandId, cause, committedAt: new Date().toISOString(), changes };
 }
+
 /** 本图活动视图不能泄漏其他主会话的任务身份，真实全局占用保留在 AgentInstance。 */
 export function memberView(graph: GraphSnapshot, member: AgentInstance, task: TaskNode): AgentGraphView
 {
@@ -64,11 +66,13 @@ export function memberView(graph: GraphSnapshot, member: AgentInstance, task: Ta
 
   return { ...old, revision: old.revision + 1, state: running ? 'working' : member.activeTaskId === task.taskId ? 'communicating' : waiting.length ? 'waiting' : 'idle', runningTaskId: running?.taskId, waitingTaskIds: waiting };
 }
+
 /** 所有依赖必须仍匹配指定计划和候选结果，不能把回合结束当作放行条件。 */
 export function dependenciesReady(graph: GraphSnapshot, task: TaskNode)
 {
   return graph.edges.filter(e => e.enabled && e.kind === 'dependency' && e.toNodeId === task.nodeId).every(edge => { if (edge.kind !== 'dependency') return false; const source = graph.tasks.find(t => t.nodeId === edge.fromNodeId); return source?.status === 'result_ready' && source.planRevision === edge.condition.planRevision && source.result?.planRevision === edge.condition.planRevision && (!edge.condition.resultId || edge.condition.resultId === source.result.resultId) && (!edge.condition.reviewRequired || candidateAccepted(source)); });
 }
+
 /** 交付候选仍需人工或治理验收；只认同一 run 的结构化计划及成功工具证据。 */
 export function memberCandidate(task: TaskNode, summary: RunSummary): TaskNode['result']
 {

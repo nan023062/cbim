@@ -44,14 +44,17 @@ export interface AgentSessionHistoryProps
 
   onClose: () => void
 }
+
 function rolePresence(id: string, definitions: Definitions, ready: boolean)
 {
   return definitions[id] ? '当前定义存在' : ready ? '当前定义已删除或不再登记' : '当前定义尚未读取'
 }
+
 function Diagnostics({ items }: { items: string[] })
 {
   return items.length ? <div className="agent-history-diagnostics" role="status"><strong>部分历史需要核实</strong><ul>{items.map((item, index) => <li key={index}>{item}</li>)}</ul></div> : null
 }
+
 /** 未提供 initialAgentId 时先浏览历史角色索引；已删除角色只在此索引出现，不回填静态团队树。 */
 export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefinitions, knowledgeReady, onClose }: AgentSessionHistoryProps)
 {
@@ -95,6 +98,7 @@ export function AgentSessionHistory({ workspaceId, initialAgentId, currentDefini
     </>}
   </section>;
 }
+
 /** Session 与运行选择分层保存；切换角色/会话由 key 重建下层，不能沿用另一角色的日志游标。 */
 function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId: string })
 {
@@ -113,6 +117,7 @@ function AgentSessions({ workspaceId, agentId }: { workspaceId: string; agentId:
     </aside><div className="agent-history-session-content">{selected ? <SessionRuns key={selected.sessionId} session={selected} /> : <p className="agent-history-empty">选择一个 Session 查看独立运行记录。</p>}</div></div>
   </>;
 }
+
 function SessionRuns({ session }: { session: AgentHistorySession })
 {
   const runs = useHistoryRuns({ workspaceId: session.workspaceId, agentId: session.agentId, sessionId: session.sessionId }, true),
@@ -131,6 +136,7 @@ function SessionRuns({ session }: { session: AgentHistorySession })
     {selected ? <SelectedRun key={historyRunKey(selected)} record={selected} /> : <p className="agent-history-empty">选择一个轮次后读取公开消息、工具与计划证据。</p>}
   </section>;
 }
+
 function SelectedRun({ record }: { record: AgentHistoryRun })
 {
   const events = useHistoryEvents(record);
@@ -140,6 +146,7 @@ function SelectedRun({ record }: { record: AgentHistoryRun })
     <HistoryRunContent record={record} run={events.projection.run} />
   </section>;
 }
+
 /** 只展示后端公开投影；输入和成员回注分别标识，计划证据仅展示引用，不以历史按钮执行任何操作。 */
 export function HistoryRunContent({ record, run }: { record: AgentHistoryRun; run?: RunSummary })
 {

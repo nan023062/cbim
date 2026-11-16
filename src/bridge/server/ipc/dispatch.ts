@@ -54,16 +54,19 @@ function handlers(app: ApplicationServices): IpcHandlers<ApplicationIpcAction>
     ...automationIpcHandlers(app),
   }
 }
+
 function isApplicationAction(action: string): action is ApplicationIpcAction
 {
   return isIpcAction(action) && !Object.hasOwn(desktopIpcRequests, action)
 }
+
 async function invoke<A extends ApplicationIpcAction>(app: ApplicationServices, action: A, input: unknown): Promise<IpcResponse<A>>
 {
   const request = parseApplicationRequest(action, input, app.isStopping);
 
   return handlers(app)[action](request);
 }
+
 /** 原始传输入口只接受 unknown；按已登记操作解析，业务校验和权限仍在服务内。 */
 export function dispatchApplication<A extends IpcAction>(app: ApplicationServices, action: A, input?: unknown): Promise<IpcResponse<A>>;
 

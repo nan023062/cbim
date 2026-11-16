@@ -22,6 +22,7 @@ export interface EffectAttempt
 
   error?: string
 }
+
 export interface EffectDraft
 {
   identity: EffectObservationInput;
@@ -32,6 +33,7 @@ export interface EffectDraft
 
   commandId?: string
 }
+
 export interface EffectReadState
 {
   report?: EffectObservationReport;
@@ -48,6 +50,7 @@ export interface EffectReadState
 
   selectedId?: string
 }
+
 export interface EffectState
 {
   drafts: readonly EffectDraft[];
@@ -58,6 +61,7 @@ export interface EffectState
 
   error: string
 }
+
 export interface EffectPorts
 {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
@@ -74,6 +78,7 @@ export interface EffectPorts
 
   relations: (input: EffectRelationsInput) => Promise<unknown>;
 }
+
 const errorText = (e: unknown) => e instanceof Error ? e.message : String(e);
 
 /** 仅后端在调用事务前明确标记的拒绝可编辑；CAS、IO 或已提交未知不能据错误文字自动解锁。 */
@@ -100,6 +105,7 @@ export function checkedEffectReport(raw: unknown, selection: EffectObservationIn
 
   return report;
 }
+
 /** 回执严格匹配已经冻结的命令与观察依据，已保存事实不能被后续查询改写。 */
 export function checkedEffectReceipt(raw: unknown, request: EffectDispositionInput, previous?: EffectDispositionReceipt): EffectDispositionReceipt
 {
@@ -115,6 +121,7 @@ export function checkedEffectReceipt(raw: unknown, request: EffectDispositionInp
 
   return receipt;
 }
+
 /** 读写状态按原 subject 分开；构造/订阅/重开均不查询、不发模型任务。 */
 export class EffectObservationController
 {
@@ -174,22 +181,27 @@ export class EffectObservationController
       this.value = { ...this.value, error: '本机处置记录无法读取，未发送请求：' + errorText(error) }
     }
   }
+
   private Owns(v: { workspaceId: string; rootSessionId: string })
   {
     return v.workspaceId === this.workspaceId && v.rootSessionId === this.rootSessionId
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return this.listeners.size === 0 && this.pending.size === 0 && !Object.values(this.value.reads).some(v => v.loading)
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(next: EffectState)
@@ -198,30 +210,36 @@ export class EffectObservationController
 
     this.listeners.Notify()
   }
+
   Draft(identity: EffectObservationInput)
   {
     return this.value.drafts.find(x => sameIdentity(x.identity, identity))
   }
+
   Attempt(identity: EffectObservationInput)
   {
     const id = this.Draft(identity)?.commandId;
 
     return this.value.attempts.find(x => x.request.commandId === id)
   }
+
   Read(identity: EffectObservationInput)
   {
     return this.value.reads[effectSelectionKey(identity)]
   }
+
   IsPending(commandId?: string)
   {
     return !!commandId && this.pending.has(commandId)
   }
+
   Selected(identity: EffectObservationInput): EffectDispositionRecord | undefined
   {
     const id = this.Read(identity)?.selectedId ?? this.Attempt(identity)?.receipt?.record.dispositionId;
 
     return this.value.attempts.find(x => x.request.commandId === id && sameIdentity(x.request, identity))?.receipt?.record;
   }
+
   private SetRead(identity: EffectObservationInput, patch: Partial<EffectReadState>)
   {
     const key = effectSelectionKey(identity),
@@ -230,6 +248,7 @@ export class EffectObservationController
 
     this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
   }
+
   /** 图/日志只改变时效，不读取报告；迟到回包保留为旧依据，不能赋予新提交资格。 */
   ObserveAnchor(identity: EffectObservationInput, anchor: string)
   {
@@ -237,12 +256,14 @@ export class EffectObservationController
 
       this.anchors.set(effectSelectionKey(identity), anchor)
   }
+
   Fresh(identity: EffectObservationInput)
   {
     const r = this.Read(identity);
 
     return !!r?.report && !r.error && !r.loading && r.report.consistency === 'stable' && r.anchor === this.anchors.get(effectSelectionKey(identity))
   }
+
   private Persist(drafts: readonly EffectDraft[], attempts: readonly EffectAttempt[]): boolean
   {
     try
@@ -272,6 +293,7 @@ export class EffectObservationController
 
     return true;
   }
+
   Edit(identity: EffectObservationInput, reason: string, decision: EffectDecision)
   {
     if (!this.Owns(identity) || this.unavailable || reason.length > 4096 || this.Draft(identity)?.commandId && this.Attempt(identity)?.phase !== 'rejected' || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(decision))
@@ -286,6 +308,7 @@ export class EffectObservationController
 
     this.Persist([...this.value.drafts.filter(x => !sameIdentity(x.identity, identity)), { identity: parsed.data, reason, decision }], this.value.attempts);
   }
+
   /** 显式准备下一条处置，上一条 immutable 回执仍留在历史，不构造新命令或访问后端。 */
   Prepare(identity: EffectObservationInput)
   {
@@ -301,6 +324,7 @@ export class EffectObservationController
 
     this.SetRead(identity, { selectedId: undefined, relations: undefined })
   }
+
   async Observe(identity: EffectObservationInput)
   {
     if (!this.Owns(identity) || this.Read(identity)?.loading)
@@ -332,6 +356,7 @@ export class EffectObservationController
         this.SetRead(identity, { loading: false, error: '影响核实失败：' + errorText(error) })
     }
   }
+
   /** 只有点击保存才生成命令；未知不开放换 ID 重发，模型调用与恢复由其它显式入口负责。 */
   async Submit(identity: EffectObservationInput)
   {
@@ -394,12 +419,14 @@ export class EffectObservationController
       this.Publish({ ...this.value })
     }
   }
+
   private SaveAttempt(attempt: EffectAttempt)
   {
     const found = this.value.attempts.some(x => x.request.commandId === attempt.request.commandId);
 
     return this.Persist(this.value.drafts, found ? this.value.attempts.map(x => x.request.commandId === attempt.request.commandId ? attempt : x) : [...this.value.attempts, attempt])
   }
+
   /** 查询已冻结命令或显式历史选择；回执丢失不能解释成未执行，不能修改原正文重试。 */
   async Query(identity: EffectObservationInput, commandId: string)
   {
@@ -461,6 +488,7 @@ export class EffectObservationController
       this.Publish({ ...this.value })
     }
   }
+
   /** 只返回所选来源的摘要；不自动挑最新决定、不自动打开或执行后续任务。 */
   async List(identity: EffectObservationInput)
   {
@@ -485,6 +513,7 @@ export class EffectObservationController
       this.SetRead(identity, { loading: false, error: '处置列表读取失败：' + errorText(error) })
     }
   }
+
   async Relations(identity: EffectObservationInput)
   {
     const selected = this.Selected(identity);
@@ -519,6 +548,7 @@ export class EffectObservationController
     }
   }
 }
+
 /** 同 renderer 的主工具与任务节点共享稳定请求；仅空闲无订阅控制器可被回收。 */
 export class EffectObservationPool
 {
@@ -527,6 +557,7 @@ export class EffectObservationPool
   constructor(private idleLimit = 16)
   {
   }
+
   Get(workspaceId: string, rootSessionId: string, ports: EffectPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),

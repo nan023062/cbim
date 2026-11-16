@@ -19,11 +19,13 @@ export interface KnowledgeRefreshPort extends KnowledgeSnapshotReader
 
   Commit(request: ChangeRequest): Promise<KnowledgeCommit>;
 }
+
 export class KnowledgeRefresh
 {
   constructor(private readonly workspace: KnowledgeRefreshPort)
   {
   }
+
   /** 原成功回执优先；重复不再提交，返回的校验仍来自当前快照，不冒充原时刻状态。 */
   async Refresh(input: KnowledgeRefreshInput)
   {

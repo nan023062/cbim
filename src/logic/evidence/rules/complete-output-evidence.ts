@@ -35,16 +35,19 @@ export interface CompleteOutputBinding
     }
   }
 }
+
 /** 任一模块要求完整出口时，候选使用本轮全部已声明范围；其它声明不能被静默剔除。 */
 export function completeOutputRequired(bindings: readonly CompleteOutputBinding[])
 {
   return bindings.some(binding => binding.contract.delivery?.requireCompleteManifest === true)
 }
+
 /** 投影原记录的三字段身份；不接受调用方以单个文件指纹替换集合摘要。 */
 export function outputManifestIdentity(value: OutputManifestIdentity): OutputManifestIdentity
 {
   return { manifestId: value.manifestId, scopeHash: value.scopeHash, manifestHash: value.manifestHash }
 }
+
 /** 重算引用，保留原采集顺序；记录对象本身不能自报另一份摘要或数量。 */
 export function completeOutputProof(raw: OutputManifestRecord): OutputManifestProof
 {
@@ -52,6 +55,7 @@ export function completeOutputProof(raw: OutputManifestRecord): OutputManifestPr
 
   return outputManifestProofSchema.parse({ ...outputManifestReference(record.manifest), capturedSeq: record.capturedSeq, finishedSeq: record.finishedSeq })
 }
+
 /** 仅选择已核实的同轮记录；正常根必须存在，唯有覆盖全部冻结要求的原操作证明可解释对应源根缺失。 */
 export function selectCompleteOutput(evidence: ReturnType<typeof verifyOutputManifests>, bindings: readonly CompleteOutputBinding[], manifestId: string, context: { workspaceId: string; taskId: string; runId: string; knowledgeRevision: string; progressVersion?: number }): OutputManifestRecord
 {
@@ -83,6 +87,7 @@ export function selectCompleteOutput(evidence: ReturnType<typeof verifyOutputMan
 
   return structuredClone(record);
 }
+
 /** 当前核实必须返回完整同范围集合且重算哈希匹配；端口自报 matches 不足以放行。 */
 export function assertCompleteOutputCurrent(expected: OutputManifestSnapshot, raw: unknown): void
 {
@@ -90,6 +95,7 @@ export function assertCompleteOutputCurrent(expected: OutputManifestSnapshot, ra
 
     fail('MANIFEST_OUTPUT_CHANGED', '完整产物集合已变化、缺失或无法核实，请重新读取、采集并验证');
 }
+
 /** 负面观察仍可用于拒绝/补证，但错误范围、局部列表或自相矛盾的端口结果不能形成依据。 */
 export function completeOutputObservation(expected: OutputManifestSnapshot, raw: unknown): { state: 'matches' | 'changed' | 'unverifiable'; observedHash?: string }
 {
@@ -117,6 +123,7 @@ export function completeOutputObservation(expected: OutputManifestSnapshot, raw:
 
   return { state: value.state, observedHash: value.observedHash };
 }
+
 /** 多候选共用一份有界读取预算，重复清单只由调用方去重，不能把单份限制放大16倍。 */
 export function assertCompleteOutputBudget(records: readonly OutputManifestRecord[], files: readonly ArtifactFileFact[] = []): void
 {

@@ -19,6 +19,7 @@ export class WorkspaceExecutionLease
 
     return () => { this.listeners.delete(listener) }
   }
+
   /** 键由装配方加 conversation/member 前缀；权限在领取时固定，占用持续至对应释放函数调用。 */
   private leases = new Map<string,
     {
@@ -40,6 +41,7 @@ export class WorkspaceExecutionLease
 
       return 'workspace_conflict';
   }
+
   /** 非阻塞领取；同实例任何权限都串行，ask 按写入独占。旧未登记调用可缺省实例；释放函数幂等。 */
   Acquire(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
   {
@@ -55,6 +57,7 @@ export class WorkspaceExecutionLease
 
     return this.Hold(runKey, permission, agentInstanceId);
   }
+
   /**
        * 仅供装配方确认属于 ownerKey 的运行内只读核证。没有原占用时按普通读申请，不能借其他运行跳过排他。
        * 派生占用独立释放；即使原运行先结束，尚未结束的读取仍阻止后续写入。此方法不授予工具权限。
@@ -71,6 +74,7 @@ export class WorkspaceExecutionLease
 
     return this.Hold(runKey, 'read');
   }
+
   private Hold(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
   {
     this.leases.set(runKey, { permission, agentInstanceId });

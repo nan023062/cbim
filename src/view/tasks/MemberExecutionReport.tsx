@@ -41,6 +41,7 @@ export interface ExecutionReportView extends ExecutionReportState
 
   more: () => Promise<void>
 }
+
 const executionLabels: Record<ExecutionReport['execution'], string> = { not_started: '尚未领取执行', in_flight: '有在途执行记录', settled: '执行轮次已结算', unknown: '执行结果未知' };
 
 const logLabels: Record<ExecutionReport['log']['state'], string> = { not_expected: '没有已登记的运行日志', not_selected: '尚未选择执行轮次', verified: '运行日志已通过核对', missing: '运行日志缺失', incomplete: '运行日志不完整', invalid: '运行日志无效', identity_mismatch: '运行日志身份不匹配', unavailable: '运行日志暂时无法读取' };
@@ -92,6 +93,7 @@ export function ExecutionReportPanel({ state, taskId, runId }: { state: Executio
     </>}
   </section>;
 }
+
 /** 独立挂载在轮次选择器之后，即使流式日志损坏也能通过该只读入口检查登记事实。 */
 export function MemberExecutionReport({ workspaceId, workspaceInstanceId, rootSessionId, task, runId, graphCursor, scope, recovery }: { workspaceId: string; workspaceInstanceId?: string; rootSessionId: string; task: TaskNode; runId?: string; graphCursor?: GraphCursor; scope?: ScopeSummary; recovery?: ExecutionRecoveryContext })
 {

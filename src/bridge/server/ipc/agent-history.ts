@@ -18,11 +18,13 @@ export interface AgentHistoryQueryPort
 
   Events(input: AgentHistoryRequest<'agentHistory.events'>): Promise<AgentHistoryResponses['agentHistory.events']>;
 }
+
 /** 查询已打开的工作区；查找失败沿原错误向调用方传播，不创建实例。 */
 export interface AgentHistoryIpcServices
 {
   AgentHistory(workspaceId: string): AgentHistoryQueryPort
 }
+
 /** 与其余业务组共同装配；请求已由主分派解析，服务继续核实工作区身份与日志。 */
 export function agentHistoryIpcHandlers(app: AgentHistoryIpcServices): IpcHandlers<AgentHistoryAction>
 {

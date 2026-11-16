@@ -21,6 +21,7 @@ export function controlledFileController(workspaceId: string, rootSessionId: str
     apply: input => window.cbim.call('dispatch.fileCompensate', input), receipt: input => window.cbim.call('dispatch.fileCompensationReceipt', input),
   })
 }
+
 /** anchor 只表示界面已观察的实例/图版本，真正内容与补偿资格由提交时后端重新核对。 */
 export function useControlledFiles(identity: ControlledFileReportInput, instanceId: string | undefined, anchor: string)
 {

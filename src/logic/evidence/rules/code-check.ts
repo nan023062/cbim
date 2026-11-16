@@ -41,6 +41,7 @@ export type CodeCheckBinding =
 
     contract: WorkflowContract
   };
+
 export type FrozenCodeCheck =
   {
     moduleId: string;
@@ -51,14 +52,17 @@ export type FrozenCodeCheck =
 
     requirement: CodeCheckRequirement
   };
+
 export function frozenCodeChecks(bindings: readonly CodeCheckBinding[]): FrozenCodeCheck[]
 {
   return bindings.flatMap(binding => (binding.contract.delivery?.requiredCodeChecks ?? []).map(requirement => ({ moduleId: binding.moduleId, workflowId: binding.workflowId, workflowVersion: binding.workflowVersion, requirement })));
 }
+
 export function codeRequirementsHash(bindings: readonly CodeCheckBinding[])
 {
   return hash(JSON.stringify(frozenCodeChecks(bindings)))
 }
+
 export const codeCommandResultSchema = z.object({ moduleId: z.string().min(1), requirementId: z.string().min(1), resolvedProgram: z.string().min(1), exitCode: z.number().int().nullable(), signal: z.string().nullable(), durationMs: z.number().nonnegative(), failure: z.enum(['spawn', 'timeout', 'output_limit', 'exit', 'summary']).optional(), outputHash: digest, stdoutTail: z.string().max(codeCheckLimits.tailBytes), stderrTail: z.string().max(codeCheckLimits.tailBytes), summary: codeTestSummarySchema.optional(), }).strict();
 
 export type CodeCommandResult = z.infer<typeof codeCommandResultSchema>;
@@ -83,6 +87,7 @@ export function codeCheckPassed(checks: readonly FrozenCodeCheck[], execution: C
 {
   return !execution.sourceChanged && execution.commands.length === checks.length && checks.every((check, index) => { const value = execution.commands[index], rule = check.requirement; return value.moduleId === check.moduleId && value.requirementId === rule.id && !value.failure && value.exitCode === 0 && value.signal === null && (rule.success.kind === 'exit-code' ? value.summary === undefined : !!value.summary && value.summary.failed === 0 && value.summary.passed >= rule.success.minPassed); });
 }
+
 /** 给模型返回有界诊断和集合摘要，不把全部源码目录条目再次塞进上下文。 */
 export function codeCheckOutput(record: CodeCheckRecord)
 {
@@ -90,12 +95,14 @@ export function codeCheckOutput(record: CodeCheckRecord)
 
   return { ...result, entryCount: snapshot.entries.length }
 }
+
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
 
     fail('CODE_CHECK_EVIDENCE', message)
 }
+
 /** 只有可信事件与真实成功工具回执、回包完全对应时才形成检查事实；rejected 仍保留。 */
 export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindings: readonly CodeCheckBinding[], owner: CodeCheckIdentity): CodeCheckRecord[]
 {
@@ -153,6 +160,7 @@ export function verifyCodeChecks(events: readonly ArtifactEvidenceEvent[], bindi
 
   return records;
 }
+
 /** 代码检查后的完整清单必须具有相同集合指纹；新增文件、缺失文件及源码变更均不能沿用旧证明。 */
 export function selectCodeCheck(bindings: readonly CodeCheckBinding[], receipts: readonly ToolReceipt[], owner: CodeCheckIdentity, records: readonly CodeCheckRecord[], manifest?: OutputManifestProof): CodeCheckProof | undefined
 {
@@ -172,6 +180,7 @@ export function selectCodeCheck(bindings: readonly CodeCheckBinding[], receipts:
 
   return { toolCallId: record.toolCallId, requirementsHash: record.requirementsHash, snapshotHash: record.snapshotHash };
 }
+
 /** 平台执行拥有进程和快照；Core 只接受冻结命令与已登记工作区的真实结果。 */
 export interface CodeCheckPort
 {

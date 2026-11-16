@@ -32,6 +32,7 @@ export class RepositoryConnectionStore
   constructor(private filename: string)
   {
   }
+
   async Init()
   {
     let text: string;
@@ -107,25 +108,30 @@ export class RepositoryConnectionStore
       fail('REPOSITORY_CONNECTION_DATA', '本机仓库授权记录损坏，原文件已保留；不能猜测授权状态')
     }
   }
+
   Grants(workspaceId: string)
   {
     return structuredClone(this.state.grants.filter(grant => grant.workspaceId === workspaceId))
   }
+
   Grant(workspaceId: string, connectorId: string)
   {
     return this.Grants(workspaceId).find(grant => grant.connectorId === connectorId)
   }
+
   Receipt(workspaceId: string, commandId: string)
   {
     const command = this.state.commands.find(item => item.commandId === commandId);
 
     return command?.workspaceId === workspaceId ? structuredClone(command.receipt) : undefined
   }
+
   /** 未受理证明检查全局命令占用；不同工作区记录同样不能被当成不存在。 */
   HasCommand(commandId: string)
   {
     return this.state.commands.some(item => item.commandId === commandId)
   }
+
   Replay(workspaceId: string, commandId: string, inputHash: string)
   {
     const command = this.state.commands.find(item => item.commandId === commandId);
@@ -140,6 +146,7 @@ export class RepositoryConnectionStore
 
     return structuredClone(command.receipt)
   }
+
   /** 成功回执与授权同一次原子文件替换；失败不发布新内存状态，不删除旧历史腾空间。 */
   async Save(grant: RepositoryConnectionGrant, receipt: RepositoryConnectionReceipt, inputHash: string)
   {

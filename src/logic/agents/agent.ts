@@ -24,6 +24,7 @@ export interface AgentDefinition
       modelId: string
     }>;
 }
+
 /** 对话正文属于运行日志；此处只保留可核验身份，不能用显示名称关联。 */
 export interface AgentConversation
 {
@@ -31,6 +32,7 @@ export interface AgentConversation
 
   taskId: string
 }
+
 /** 一次受理中的冻结 Agent；调度与循环依赖本对象，不反向持有它们。 */
 export class Agent
 {

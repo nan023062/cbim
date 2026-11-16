@@ -16,6 +16,7 @@ export interface ChannelDraft
 
   revision: number
 }
+
 export interface ChannelDraftIdentity
 {
   workspaceId: string;
@@ -24,6 +25,7 @@ export interface ChannelDraftIdentity
 
   scopeId: string
 }
+
 /** 草稿不是执行授权；损坏/无法持久化时保留原数据并禁止发送，不能按空草稿覆盖。 */
 export class ChannelDraftStore
 {
@@ -69,19 +71,23 @@ export class ChannelDraftStore
       this.error = String(error)
     }
   }
+
   /** 仅损坏记录锁定编辑；临时导入/存储失败允许修正后重试，不制造输入死锁。 */
   get writable()
   {
     return !this.blocked
   }
+
   get snapshot()
   {
     return this.value
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   /** 读取/写入共用 512 Ki 字符记录上限，先持久化后发布；主聊天和原补充命令不在此键内。 */
   Edit(patch: Partial<Pick<ChannelDraft, 'text' | 'attachments'>>)
   {
@@ -122,6 +128,7 @@ export class ChannelDraftStore
       this.listeners.Notify()
     }
   }
+
   /** 接收成功只清除提交时那一版；迟到回执不清空用户后来输入的内容。 */
   ClearIfUnchanged(revision: number)
   {
@@ -129,14 +136,17 @@ export class ChannelDraftStore
 
       this.Edit({ text: '', attachments: [] })
   }
+
   BeginImport()
   {
     return ++this.generation
   }
+
   CancelImport()
   {
     this.generation++
   }
+
   /** 关闭/隐藏、换频道或新选择都会使旧 token 失效，绝不将附件附到当前选中频道。 */
   FinishImport(token: number, items: unknown)
   {

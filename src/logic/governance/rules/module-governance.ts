@@ -73,6 +73,7 @@ function checkedFeedback(value: { decision: string; feedback?: z.infer<typeof mo
 
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['feedback'], message: '补证只能随明确暂缓登记，异议只能随明确驳回登记' });
 }
+
 /** revision 表示此保护对象已生效正文基线的版本；初始登记与后续已提交 journal 派生它，普通 CRUD 不可改写。 */
 export const moduleGovernanceProtectionSchema = z.object({ protectionId: uuid, workspaceId: id, moduleId, revision: positive, definition: file, overview: file, registeredAt: timestamp, actor: moduleGovernanceActorSchema }).strict();
 

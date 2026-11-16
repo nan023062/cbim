@@ -41,6 +41,7 @@ export class QueuedDependencyRevisionService
   constructor(private readonly owner: DispatchKnowledgeWorkspace, private readonly store: DispatchStore, private readonly goals: ScopeGoalService, private readonly owners: OwnerExecutionService)
   {
   }
+
   /** 停止和版本竞争在读取前后复核；已保存的同命令只读返回，不再次变更或启动任务。 */
   async Revise(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
   {

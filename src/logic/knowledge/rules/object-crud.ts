@@ -36,6 +36,7 @@ export class ObjectCrud
   constructor(private w: KnowledgeWorkspace)
   {
   }
+
   /** 按输入顺序在同一候选快照创建父子对象，再校验完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
   async Preview(revision: string, operations: ObjectOperation[]): Promise<ObjectPreview>
   {
@@ -315,6 +316,7 @@ export class ObjectCrud
 
     return { ...preview, planId, objects, notice: '仅预览。调用 cbim_object_commit(planId) 才提交；校验失败不能提交。空目录可能保留，不删除业务源码或资源。' };
   }
+
   /** 读取计划并核验指纹、实例和版本；写授权由核心知识服务调用边界检查。 */
   async Commit(planId: string): Promise<ObjectCommit>
   {

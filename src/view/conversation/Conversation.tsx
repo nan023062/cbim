@@ -122,6 +122,7 @@ interface HistoryItem
 {
   status: string
 }
+
 /** 请求使用本组件工作区身份；请求锁阻止双击，轮询只在当前组件存活时写入状态。 */
 export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTeamConversations, conversations, runningTaskIds, onSelectConversation, onRenameConversation, onRemoveConversation, tab, workspace, onDraft, openView, onBind, openSettings, onAttachments, onOpenAutomationRun, active = true, navigation, onNavigationHandled }: { chatNavigation?: number; selectedChild?: string; onAgentChat?: (sessionId?: string) => void; onTeamConversations?: (key: string, items: TeamConversation[]) => void; conversations: ViewTab[]; runningTaskIds: string[]; onSelectConversation: (id: string) => void; onRenameConversation: (id: string, title: string) => void; onRemoveConversation: (id: string) => void; tab: ViewTab; workspace: WorkspaceView; onDraft: (draft: string) => void; openView: (kind: TabKind) => void; onBind: (taskId?: string) => void; openSettings: () => void; onAttachments: (items: ChatAttachment[]) => void; onOpenAutomationRun?: (taskId: string, title: string) => void; active?: boolean; navigation?: RuntimeNavigationRequest; onNavigationHandled?: (requestId: number) => void })
 {
@@ -150,18 +151,21 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       onNavigationHandled?.(navigation.requestId)
     }
   }
+
   function selectSection(value: 'chat' | 'tasks' | 'automation')
   {
     consumeNavigation();
 
     setSection(value)
   }
+
   function selectTask(id?: string)
   {
     consumeNavigation();
 
     setSelectedTaskId(id)
   }
+
   useEffect(() => { setSelectedTaskId(undefined); setSelectedTopicId(undefined) }, [workspace.id, tab.taskId]);
 
   // 历史条目使用稳定导航回调，点击时再读取当前定位请求，避免逐键草稿使所有轮次失效。
@@ -317,6 +321,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
 
       setNextTip(Date.now())
   }
+
   async function importFiles(files: File[])
   {
     if (importing.current || attachmentBusy || busy)
@@ -350,6 +355,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       setAttachmentBusy(false)
     }
   }
+
   /** 粘贴图片无需磁盘路径；只消费本次事件，失败不发送消息或清空既有草稿。 */
   async function importPaste(files: File[], paths?: string[], original = '')
   {
@@ -427,6 +433,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         setAttachmentBusy(false)
     }
   }
+
   const input = useRef<HTMLTextAreaElement>(null);
 
   const lock = useRef(false),
@@ -529,6 +536,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
           timer = setTimeout(() => void poll(), 1000)
       }
     }
+
     void poll();
 
     return () => { cancelled = true; clearTimeout(timer) };
@@ -580,6 +588,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         setBusy(false)
     }
   }
+
   // 停止不能排在插入的共享锁后；完成只释放自身标记，不修改仍在途的发送 busy。
   async function stopCurrent()
   {
@@ -627,6 +636,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       }
     }
   }
+
   /** Skill 点击只发送明确的流程调用；正文和附件留在草稿中，由用户随后自愿描述，不强制补齐格式。 */
   async function send(skill?: FeedbackSkillTitle)
   {
@@ -718,6 +728,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
       }
     });
   }
+
   const selectedPair = (() => { try { const value = JSON.parse(selection || '[]'); return Array.isArray(value) ? value : [] } catch { return [] } })();
 
   const selectedProfile = models?.profiles.find(p => p.id === (selectedPair[0] || models?.selectedId));
@@ -771,6 +782,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         setNextTip(Date.now())
     }
   }
+
   async function chooseModel(value: string)
   {
     const [profileId, modelId] = value ? JSON.parse(value) : [defaultProfile?.id, defaultModel?.id];
@@ -784,6 +796,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         setNextTip(Date.now())
     }
   }
+
   const modelAvailable = !modelEditor && engineSelectionAvailable(selectedRuntime ?? (selectedProfile && selectedModel ? { engine: chosenEngine, profileId: selectedProfile.id, modelId: selectedModel.id } : undefined), models) && !!mainAgent.value && !mainAgent.busy && !mainAgent.error && !pendingEngine && !!selectedProfile && !!selectedModel?.enabled && providerSupportsEngine(chosenEngine, selectedProfile, selectedModel.id);
 
   // 两处目标卡共享同一控制器。明确冻结实际模型与权限，补充不引用、不清空聊天草稿和附件。

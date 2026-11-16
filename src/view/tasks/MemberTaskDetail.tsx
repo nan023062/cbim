@@ -87,6 +87,7 @@ export function MemberTaskDetail({ workspaceId, workspaceInstanceId, rootSession
     </>}
   </section>;
 }
+
 /** 外层以四层身份作为 React key；历史轮次只读，审批和停止只作用于当前活动轮次。 */
 function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { workspaceId: string; rootSessionId: string; task: TaskNode; runId: string; active: boolean })
 {
@@ -161,6 +162,7 @@ function MemberRunDetail({ workspaceId, rootSessionId, task, runId, active }: { 
         setBusy(false)
     }
   }
+
   return <div className="member-run-detail">
     {current && <div className="member-run-actions"><button disabled={busy} onClick={() => void operate('dispatch.executionStop', {}).catch(() => { })}><Icon name="stop" size={16} />停止成员执行</button><small>仅停止此任务，不回滚已完成操作</small></div>}
     {(error || interactionError || operationError) && <div className="member-error" role="alert">{operationError || error || interactionError}<button onClick={() => { setOperationError(''); void refresh(); void refreshInteractions.current() }}><Icon name="refresh" size={16} />重新读取</button></div>}

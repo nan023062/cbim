@@ -19,6 +19,7 @@ function plainText(value: ReactNode): string
 {
   return Children.toArray(value).map(v => typeof v === 'string' || typeof v === 'number' ? String(v) : isValidElement<{ children?: ReactNode }>(v) ? plainText(v.props.children) : '').join('')
 }
+
 /** 复制原代码而非高亮后的 HTML；复制失败在按钮旁显示，不假报成功。 */
 function CodeBlock({ children }: { children?: ReactNode })
 {
@@ -33,6 +34,7 @@ function CodeBlock({ children }: { children?: ReactNode })
 
   return <div className="chat-code-block"><div className="chat-code-header"><span>{language || '代码'}</span><button onClick={() => void navigator.clipboard.writeText(plainText(children)).then(() => setStatus('已复制')).catch(() => setStatus('复制失败'))}>{status || '复制代码'}</button></div><pre>{children}</pre></div>;
 }
+
 /** 流式修复仅影响显示；持久化记录和复制消息始终保留原文。 */
 export const MarkdownMessage = memo(function MarkdownMessage({ text, streaming = false, workspaceId }: { text: string; streaming?: boolean; workspaceId: string })
 {

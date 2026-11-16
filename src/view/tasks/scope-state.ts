@@ -22,14 +22,17 @@ export class SessionScopeProjection
   constructor(readonly identity: GraphIdentity)
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get cursor()
   {
     return this.value?.cursor
   }
+
   Fork()
   {
     const next = new SessionScopeProjection(this.identity);
@@ -38,6 +41,7 @@ export class SessionScopeProjection
 
     return next
   }
+
   Apply(response: ScopeDelta): ScopeSnapshot
   {
     const cursor = response.cursor;
@@ -101,6 +105,7 @@ export class SessionScopeProjection
     return next;
   }
 }
+
 /** UI 状态不等同于模型生成状态；completed 只来自可靠关闭，不来自 review.decision。 */
 export interface GoalView
 {
@@ -110,6 +115,7 @@ export interface GoalView
 
   phase: string
 }
+
 export function scopeGoalView(scope: ScopeSummary | undefined, graph?: GraphSnapshot): GoalView
 {
   if (!scope)
@@ -204,12 +210,14 @@ export function scopeGoalView(scope: ScopeSummary | undefined, graph?: GraphSnap
 
   return scope.hasPlan ? { phase: 'planning', label: '正在推进目标', tone: 'running' } : { phase: 'chat', label: '普通对话处理中', tone: 'running' };
 }
+
 /** 自动跟随开放周期（执行或持久等待），否则按后端首次创建事务顺序取最新历史，不按本机时间或随机标识重排。 */
 export function currentScope(scopes: readonly ScopeSummary[]): ScopeSummary | undefined
 {
   // 存储按首次创建事务保持插入顺序，更新旧周期不会移位；与后端自动详情选择保持一致。
   return scopes.find(scope => scope.status !== 'closed') ?? scopes.at(-1);
 }
+
 const sameStamp = (a: ScopeDetailStamp, b: ScopeDetailStamp) => a.scopeId === b.scopeId && a.streamId === b.streamId && a.seq === b.seq;
 
 /** 同一会话内同时提交图、周期摘要与详情；任意部分无效都保留上一组合，不显示半次响应。 */
@@ -234,36 +242,44 @@ export class SessionReadProjection
 
     this.goals = new SessionScopeProjection(identity)
   }
+
   get graph()
   {
     return this.graphs.snapshot
   }
+
   get scopes()
   {
     return this.goals.snapshot?.scopes
   }
+
   get teamSessions()
   {
     return this.sessions
   }
+
   get graphCursor()
   {
     return this.graphs.cursor
   }
+
   get scopeCursor()
   {
     return this.goals.cursor
   }
+
   Selected(id?: string)
   {
     return id ? this.scopes?.find(scope => scope.scopeId === id) : currentScope(this.scopes ?? [])
   }
+
   DetailStamp(id?: string)
   {
     const selected = this.Selected(id);
 
     return selected ? this.details.get(selected.scopeId)?.stamp : undefined
   }
+
   Detail(id?: string)
   {
     const selected = this.Selected(id),
@@ -272,6 +288,7 @@ export class SessionReadProjection
 
     return selected && cached && sameStamp(selected.stamp, cached.stamp) ? cached.scope : undefined
   }
+
   Apply(response: DispatchSessionRead, requestedScopeId?: string): void
   {
     const graphs = this.graphs.Fork(),
@@ -420,6 +437,7 @@ export class SessionReadProjection
     this.sessions = sessions;
   }
 }
+
 /** 两条增量流都追齐同一次读取屏障后才可发布；分页过程只推进内部游标，不能把新目标状态配上旧任务节点。 */
 export function completeSessionRead(response: DispatchSessionRead, projection: SessionReadProjection, selectedScopeId?: string)
 {
@@ -429,6 +447,7 @@ export function completeSessionRead(response: DispatchSessionRead, projection: S
 
   return { graph: projection.graph, scopes: projection.scopes ?? [], detail: projection.Detail(selectedScopeId), teamSessions: projection.teamSessions };
 }
+
 /** 对话摘要和任务根共用的只读状态；当前周期与历史选择刻意分开。 */
 export interface ScopeGoalState
 {

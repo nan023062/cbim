@@ -24,6 +24,7 @@ export class ControlledFileBlobs
   constructor(private readonly directory: string)
   {
   }
+
   private async CheckedDirectory(create = false)
   {
     const absolute = path.resolve(this.directory),
@@ -62,6 +63,7 @@ export class ControlledFileBlobs
         fail('CONTROLLED_BLOB_PATH', '备份目录不是可靠私有目录')
     }
   }
+
   /** 同一工作区容量预留串行；写失败留下的临时字节不会被排除额度。 */
   SavePair(operationId: string, before: Uint8Array, after: Uint8Array): Promise<{ before: ControlledFileBlobRef; intendedAfter: ControlledFileBlobRef }>
   {
@@ -71,6 +73,7 @@ export class ControlledFileBlobs
 
     return run;
   }
+
   private async Save(operationId: string, role: 'before' | 'intended_after', bytes: Uint8Array): Promise<ControlledFileBlobRef>
   {
     const blobId = randomUUID(),
@@ -99,6 +102,7 @@ export class ControlledFileBlobs
 
     return ref;
   }
+
   /** 引用并不是路径；逐次验证实际私有文件、大小和哈希，绝不重读原业务 source 代替备份。 */
   async Read(input: ControlledFileBlobRef): Promise<Buffer>
   {

@@ -30,6 +30,7 @@ export interface ConversationAgentBinding
   /** 兼容现有聊天日志时等于 TaskSpec.taskId，不表示已经创建业务任务节点。 */
   rootSessionId: string;
 }
+
 /** 校验后端绑定与普通主对话一致并复制；旧日志没有该字段时由调用者保留缺省，不能按角色名补造。 */
 export function checkedConversationAgentBinding(value: unknown, task: TaskSpec): ConversationAgentBinding
 {
@@ -76,6 +77,7 @@ export function checkedConversationAgentBinding(value: unknown, task: TaskSpec):
 
   return structuredClone(value) as ConversationAgentBinding;
 }
+
 /** 主控制面工具的窄生命周期端口；捕获已受理根运行，不创建周期或授予写权。 */
 export interface MainToolContext
 {

@@ -88,10 +88,12 @@ export class Workspace implements KnowledgeWorkspace
 
     this.knowledge = new KnowledgeStore(this, (event, details) => this.Log(event, details), this.governance)
   }
+
   View(): WorkspaceView
   {
     return { ...this.entry, state: this.state, error: this.error, tasks: [...this.tasks.values()], revision: this.lastRevision, changed: this.changed, instanceId: this.instanceId, knowledgeErrors: this.knowledgeErrors }
   }
+
   /** 区分工程选错与运行实例变化；只提示刷新身份，不重绑定旧计划或重放未知写入。 */
   Assert(identity?: { workspaceId: string; instanceId: string })
   {
@@ -107,6 +109,7 @@ export class Workspace implements KnowledgeWorkspace
 
       fail('STALE_INSTANCE', `运行实例已变化，可能已重启。请调用 cbim_workspace_identity，使用新 instanceId（当前为 ${this.instanceId}）重新读取与预览。未知提交先核实原回执，不自动重放。`);
   }
+
   /** Application 可在 open 前注入带监控器的唯一 Store；此时不读取磁盘。 */
   AttachDispatchStore(store: FileDispatchStore)
   {
@@ -124,6 +127,7 @@ export class Workspace implements KnowledgeWorkspace
 
     this.knowledge.AttachSources(this.sources)
   }
+
   get dispatchStore()
   {
     if (!this.sharedDispatch)
@@ -132,6 +136,7 @@ export class Workspace implements KnowledgeWorkspace
 
     return this.sharedDispatch
   }
+
   /**
        * 持有独占锁后恢复事务并初始化知识；失败释放锁，不发布网络端点或写入外部工具配置。
        * beforeDispatchLoad 是 Main 装配方的可信启动阶段：路径归属核实后、Store 首次读取或恢复提交前，先恢复观察器需要的历史索引。
@@ -211,51 +216,62 @@ export class Workspace implements KnowledgeWorkspace
       throw e
     }
   }
+
   /** 存储操作统一委托，工作区仍负责实例身份和生命周期。 */
   Read()
   {
     return this.knowledge.Read()
   }
+
   Snapshot()
   {
     return this.knowledge.Snapshot()
   }
+
   Preview(request: ChangeRequest)
   {
     return this.knowledge.Preview(request)
   }
+
   Commit(request: ChangeRequest)
   {
     return this.knowledge.Commit(request)
   }
+
   CommitPlanned(reference: KnowledgePlanRef)
   {
     return this.knowledge.CommitPlanned(reference)
   }
+
   /** 原成功回执先由服务查询；新的来源采纳才持此知识观察锁进入一个 Store 事务。 */
   WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>)
   {
     return this.knowledge.WithSourceSnapshot(operation)
   }
+
   /** Main 私有治理端口；回调已经持有知识队列，不可重入公开提交方法。 */
   Governed<T>(operation: (tx: KnowledgeGovernanceTransaction) => Promise<T>)
   {
     return this.knowledge.Governed(operation)
   }
+
   /** 查询原知识事务回执；旧实例请求可核实，但不会被重新提交。 */
   CommittedReceipt(request: ChangeRequest)
   {
     return this.knowledge.CommittedReceipt(request)
   }
+
   /** 未受理核实只看原事务记录是否存在，不把回滚或未完成记录当作不存在。 */
   HasRecordedRequest(request: ChangeRequest)
   {
     return this.knowledge.HasRecordedRequest(request)
   }
+
   PlanMove(snapshot: Snapshot, from: string, to: string | null)
   {
     return this.knowledge.PlanMove(snapshot, from, to)
   }
+
   StartTask(name: 'validate' | 'reindex')
   {
     this.Assert();
@@ -274,6 +290,7 @@ export class Workspace implements KnowledgeWorkspace
 
     return task;
   }
+
   /**
        * 仅取消本实例的知识检查或索引维护任务；对话和成员派发任务不在此任务表中。
        * 未运行或不存在时抛出明确错误。返回当前真实状态：abort 只是取消请求，已进入提交的事务可继续完成；终态重复取消保持原结果。
@@ -294,6 +311,7 @@ export class Workspace implements KnowledgeWorkspace
 
     return task;
   }
+
   async LocalData(kind: 'memory' | 'task-records' | 'logs')
   {
     const dir = this.paths.Local(this.entry.id, kind);
@@ -302,6 +320,7 @@ export class Workspace implements KnowledgeWorkspace
 
     return { source: 'local', nature: kind, workspaceId: this.entry.id, files: await fs.readdir(dir) }
   }
+
   private async Log(event: string, details: Record<string, unknown> = {})
   {
     const directory = this.paths.Local(this.entry.id, 'logs');
@@ -310,11 +329,13 @@ export class Workspace implements KnowledgeWorkspace
 
     await fs.appendFile(path.join(directory, 'events.ndjson'), JSON.stringify({ time: new Date().toISOString(), workspaceId: this.entry.id, instanceId: this.instanceId, event, ...details }) + '\n', { mode: 0o600 }).catch(() => { })
   }
+
   /** 停止监听与任务，等待正在提交的事务，再释放本实例持有的锁。 */
   async PrepareClose()
   {
     return this.closePreparation ??= (async () => { if (this.state === 'closed') return; this.state = 'closing'; if (this.watcher) clearInterval(this.watcher); for (const c of this.controllers.values()) c.abort(); await this.knowledge.Drain(); while (this.controllers.size) await new Promise(r => setTimeout(r, 10)) })()
   }
+
   async Close()
   {
     if (this.state === 'closed')

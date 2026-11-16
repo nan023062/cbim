@@ -16,6 +16,7 @@ export interface ScopeUsageState
 
   error: string
 }
+
 /** 身份不包含展示筛选或路径；主会话下不同目标周期不得合并。 */
 export const scopeUsageKey = (identity: ScopeUsageInput) => JSON.stringify([identity.workspaceId, identity.rootSessionId, identity.scopeId]);
 
@@ -48,6 +49,7 @@ export function scopeUsageGroup(runs: ScopeUsageRun[])
   }
   return { runs: runs.length, tokens, cost: priced ? cost : undefined, missing };
 }
+
 /** 只发布本周期且内部自洽的快照；完整标志不能覆盖缺日志、部分汇总、在途或读取中变化。 */
 export function checkedScopeUsage(raw: unknown, identity: ScopeUsageInput): ScopeUsageReport
 {
@@ -97,6 +99,7 @@ export function checkedScopeUsage(raw: unknown, identity: ScopeUsageInput): Scop
 
   return report;
 }
+
 /** 构造/订阅不读取；只有 read 明确查询，重复点击合并，取消只作废观察而不改变执行。 */
 export class ScopeUsageController
 {
@@ -112,10 +115,12 @@ export class ScopeUsageController
   {
     this.identity = scopeUsageInputSchema.parse(identity)
   }
+
   get snapshot()
   {
     return this.value
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: ScopeUsageState)
@@ -124,12 +129,14 @@ export class ScopeUsageController
 
     this.listeners.Notify()
   }
+
   Cancel()
   {
     this.generation.Advance();
 
     this.value = { ...this.value, loading: false }
   }
+
   async Read()
   {
     if (this.value.loading)

@@ -48,11 +48,13 @@ export interface IsolationHead
 
   phase: IsolationChange['kind']
 }
+
 /** ID 来源为原 run/call 的摘要；重复调用不能分配第二个执行身份。 */
 export function isolationOperationId(runId: string, toolCallId: string)
 {
   return hash(JSON.stringify(['isolated-node-v1', runId, toolCallId]))
 }
+
 export class FileIsolationRecords
 {
   private tail: Promise<void> = Promise.resolve();
@@ -62,6 +64,7 @@ export class FileIsolationRecords
   constructor(readonly directory: string)
   {
   }
+
   private File(runId: string, operationId: string)
   {
     safeId(runId);
@@ -72,6 +75,7 @@ export class FileIsolationRecords
 
     return path.join(this.directory, runId, operationId + '.jsonl')
   }
+
   private async Regular(file: string)
   {
     const stat = await fs.lstat(file);
@@ -80,6 +84,7 @@ export class FileIsolationRecords
 
       fail('ISOLATION_RECORD_INVALID', '隔离记录不是有界普通文件')
   }
+
   private Validate(changes: IsolationChange[])
   {
     const first = changes[0];
@@ -108,6 +113,7 @@ export class FileIsolationRecords
     }
     return first.record;
   }
+
   /** 只读原完整帧。ENOENT 只代表没有新协议记录，绝不等于旧调用未执行。 */
   async Read(runId: string, operationId: string): Promise<IsolationHead | undefined>
   {
@@ -162,6 +168,7 @@ export class FileIsolationRecords
 
     return { record, changes, revision: changes.length, checksum: previous, phase: changes.at(-1)!.kind };
   }
+
   async List(runId: string)
   {
     const directory = path.dirname(this.File(runId, '0'.repeat(64)));
@@ -206,6 +213,7 @@ export class FileIsolationRecords
     }
     return results
   }
+
   /** 只追加合法阶段并等待实际 sync；写入未知封闭本实例，不能继续发出资源操作。 */
   Append(runId: string, operationId: string, change: IsolationChange, expectedRevision: number): Promise<IsolationHead>
   {
@@ -217,11 +225,13 @@ export class FileIsolationRecords
 
     return result;
   }
+
   async Drain()
   {
     await this.tail
   }
 }
+
 interface MemoryEntry
 {
   operationId: string;

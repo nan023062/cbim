@@ -19,10 +19,12 @@ export class WebTools
   constructor(private readonly port: WebToolsPort, private readonly workspaceId: string)
   {
   }
+
   Has(name: string)
   {
     return name === fetchName || name === searchName
   }
+
   List()
   {
     return [
@@ -33,6 +35,7 @@ export class WebTools
 
     ]
   }
+
   Describe(name: string, input: unknown): RunToolDescriptor
   {
     if (!this.Has(name))
@@ -43,6 +46,7 @@ export class WebTools
 
     return { effects: ['read'], native: false, scope: { kind: 'workspace', workspaceId: this.workspaceId } };
   }
+
   /** 已授权端口仅调用一次；取消、解析或传输失败均不重试。 */
   async Call(name: string, input: unknown, signal: AbortSignal)
   {

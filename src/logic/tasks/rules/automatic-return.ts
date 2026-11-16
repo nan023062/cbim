@@ -30,8 +30,10 @@ type ReturnScope =
     {
       mainRunIds: string[]
     };
+
     automaticReturns?: AutomaticReturn[]
   };
+
 /** 提交与重放共用：已有批次永不改写；新批次只能绑定最新真实主轮及同周期已存在任务。 */
 export function validateAutomaticReturns(previous: ReturnScope | undefined, next: ReturnScope, graph: GraphSnapshot): void
 {

@@ -33,6 +33,7 @@ export type ScopeUsageLogs = Pick<ScopeGoalPorts, 'InspectMain' | 'InspectMember
 {
   InspectAgent?(taskId: string, runId: string): Promise<RunSummary>
 };
+
 type Source =
   {
     kind: 'main' | 'member';
@@ -49,16 +50,19 @@ type Source =
 
     invalid?: boolean
   };
+
 function matches(value: unknown, expected: unknown)
 {
   return json(value) === json(expected)
 }
+
 /** 共享可信日志端口，递归来源只从已核实父日志展开；查询独立于目标审阅，不批准目标或触发恢复。 */
 export class ScopeUsageService
 {
   constructor(private readonly owner: Owner, private readonly store: Pick<DispatchStore, 'Read'>, private readonly logs?: ScopeUsageLogs)
   {
   }
+
   private Facts(state: DispatchState, input: ScopeUsageInput)
   {
     const scope = state.scopes?.find(value => value.scopeId === input.scopeId && value.rootSessionId === input.rootSessionId && value.workspaceId === input.workspaceId);
@@ -77,6 +81,7 @@ export class ScopeUsageService
 
     return { scope, root: graph?.root, tasks, runs, sessions, agentRuns };
   }
+
   private Sources(facts: ReturnType<ScopeUsageService['Facts']>, input: ScopeUsageInput): Source[]
   {
     const output: Source[] = (facts.scope?.runTracking?.mainRunIds ?? []).map(runId => ({ kind: 'main', taskId: input.rootSessionId, runId }));
@@ -109,6 +114,7 @@ export class ScopeUsageService
 
     return output.filter((source, index) => output.findIndex(value => value.runId === source.runId) === index).map(source => ({ ...source, invalid: source.invalid || (counts.get(source.runId) ?? 0) > 1 }));
   }
+
   private Bound(summary: RunSummary, source: Source, facts: ReturnType<ScopeUsageService['Facts']>, input: ScopeUsageInput)
   {
     if (summary.runId !== source.runId || summary.task.workspaceId !== input.workspaceId || summary.task.root !== this.owner.entry.path || summary.task.taskId !== source.taskId)
@@ -147,6 +153,7 @@ export class ScopeUsageService
 
     return summary.task.mode === 'chat' && summary.task.agentId === 'cbim:main' && !summary.memberBinding && binding?.workspaceId === input.workspaceId && binding.rootSessionId === input.rootSessionId && binding.agentId === 'cbim:main' && binding.agentInstanceId === root?.agentInstanceId && session?.workspaceId === input.workspaceId && session.rootSessionId === input.rootSessionId && session.agentId === 'cbim:main' && session.agentInstanceId === root?.agentInstanceId && session.teamId === binding.teamId;
   }
+
   /** 使用调用方已持有的事务快照核实日志；不重入 store.read，也不把公开报告缓存当作启动许可。 */
   async Collect(state: DispatchState, raw: unknown)
   {
@@ -275,6 +282,7 @@ export class ScopeUsageService
     }
     return { input, facts, runs, logStamps };
   }
+
   /** 查询无自动重试；不同步的来源与日志只降低完整性，不按错误结果估算零消耗。 */
   async Read(raw: unknown): Promise<ScopeUsageReport>
   {

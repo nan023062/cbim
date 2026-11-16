@@ -20,10 +20,12 @@ export class FileAgentHistoryStore implements AgentHistoryStore
   constructor(readonly directory: string, private readonly workspaceId: string, private readonly root: string)
   {
   }
+
   private Location(record: AgentHistoryRecord)
   {
     return { role: hash(record.view.agentId), session: hash(record.view.sessionId), file: hash(JSON.stringify([record.view.taskId, record.view.runId])) + '.json' };
   }
+
   /** 拒绝应用归档目录中的符号链接；外部字符串只参与 hash，不成为可注入路径片段。 */
   private async SafeDirectory(directory: string)
   {
@@ -33,6 +35,7 @@ export class FileAgentHistoryStore implements AgentHistoryStore
 
       throw Error('Agent 历史目录不能是符号链接')
   }
+
   async Put(raw: AgentHistoryRecord)
   {
     const record = checkedAgentHistoryRecord(raw, this.workspaceId, this.root),
@@ -51,6 +54,7 @@ export class FileAgentHistoryStore implements AgentHistoryStore
 
     await atomic(path.join(session, location.file), JSON.stringify(record));
   }
+
   /** 启动读取轻量索引，不扫描正文；每个损坏/未知条目可见，其他可核验记录继续显示。 */
   async Load()
   {

@@ -18,10 +18,12 @@ function deferred<T>()
 
   return { promise, resolve, reject }
 }
+
 function error(code: string, message: string)
 {
   return Object.assign(Error(message), { code })
 }
+
 /** 一次只保留一个原题；发布端使用独立快照。答案先持久记录再消费，重复答案返回原回包，不唤醒第二次。 */
 export class AgentCallExchange
 {
@@ -35,6 +37,7 @@ export class AgentCallExchange
 
       answer: ReturnType<typeof deferred<QuestionResult>>
     };
+
   private readonly replies = new Map<string,
     {
       fingerprint: string;
@@ -51,14 +54,17 @@ export class AgentCallExchange
   constructor(private readonly publish: (phase: 'waiting' | 'running', questionId: string, input?: QuestionInput, answer?: QuestionResult) => Promise<ToolResult>)
   {
   }
+
   Waiting()
   {
     return !!this.pending
   }
+
   Wait()
   {
     return this.frame.promise
   }
+
   async Ask(raw: unknown, signal: AbortSignal): Promise<QuestionResult>
   {
     signal.throwIfAborted();
@@ -101,6 +107,7 @@ export class AgentCallExchange
         this.pending = undefined
     }
   }
+
   /** questionId 在原调用内唯一；不同答案不得重用已消费问题，新轮问题必须使用新 ID。 */
   Reply(questionId: string, raw: unknown): Promise<ToolResult>
   {
@@ -150,6 +157,7 @@ export class AgentCallExchange
 
     return result;
   }
+
   Finish(result: ToolResult)
   {
     this.ended = true;
@@ -160,6 +168,7 @@ export class AgentCallExchange
 
     this.frame.resolve(result)
   }
+
   Fail(reason: unknown)
   {
     this.ended = true;

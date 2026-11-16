@@ -15,6 +15,7 @@ export interface TaskHistoryView
 
   relatedEdgeCount: number
 }
+
 /**
  * 已停止/撤销任务与已可靠完成周期的交付节点进入历史。在途、失败、受阻及待审阅节点仍可见。
  * 缺少周期或完成依据的旧记录保持可见；不借其他事件流的同名周期隐藏任务。

@@ -15,11 +15,13 @@ export interface AgentHistoryIdentity
 
   agentId: string
 }
+
 /** sessionId 是历史分组键；已登记记录取真实 agentSessionId，legacy:<taskId> 仅为旧日志分组，不是运行通道。 */
 export interface AgentHistorySessionIdentity extends AgentHistoryIdentity
 {
   sessionId: string
 }
+
 /** taskId 与 runId 必须同时命中归属，不能只凭最后一次运行或界面所选角色推断。 */
 export interface AgentHistoryRunIdentity extends AgentHistorySessionIdentity
 {
@@ -27,6 +29,7 @@ export interface AgentHistoryRunIdentity extends AgentHistorySessionIdentity
 
   runId: string
 }
+
 export type AgentHistoryStatus = RunStatus | 'starting';
 
 /** 角色名称来自已记录的执行配置；不能说明历史使用了当前同名角色的配置。 */
@@ -40,6 +43,7 @@ export interface AgentHistoryRole extends AgentHistoryIdentity
 
   updatedAt: string
 }
+
 export interface AgentHistorySession extends AgentHistorySessionIdentity
 {
   kind: 'conversation' | 'task' | 'legacy';
@@ -63,6 +67,7 @@ export interface AgentHistorySession extends AgentHistorySessionIdentity
 
   rootSessionId?: string;
 }
+
 /** 执行时归属、范围和配置版本；终态仅表示运行结束，不能当作业务验收。 */
 export interface AgentHistoryRun extends AgentHistoryRunIdentity
 {
@@ -90,6 +95,7 @@ export interface AgentHistoryRun extends AgentHistoryRunIdentity
 
   configurationRevision?: string;
 }
+
 /** diagnostics 表示归档不完整或部分记录无法核实，不能用空列表掩盖读取失败。 */
 export interface AgentHistoryRoles
 {
@@ -97,6 +103,7 @@ export interface AgentHistoryRoles
 
   diagnostics: string[]
 }
+
 export interface AgentHistoryPage<T>
 {
   items: T[];
@@ -105,6 +112,7 @@ export interface AgentHistoryPage<T>
 
   diagnostics: string[]
 }
+
 /** 复用已审核公开事件协议；禁止传原始 sessionFile、workflowContext、工具正文或私有推理。 */
 export type AgentHistoryEventsRead = MemberEventsRead;
 

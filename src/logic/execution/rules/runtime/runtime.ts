@@ -186,6 +186,7 @@ export interface RuntimeOptions
   /** 接收已落盘事件；异常被隔离，不能借此回调阻断运行或替代可靠提交。 */
   OnEvent?(event: StoredEvent): void;
 }
+
 /** 仅可信调度入口可注入；beforeRun 成功不代表模型已经启动，后续失败不得自动重放该意图。 */
 export interface RunStartControl
 {
@@ -195,6 +196,7 @@ export interface RunStartControl
   /** 租约、旧绑定及已声明引擎的历史预检后、任何新日志/引擎之前调用；runId 由运行时生成。 */
   BeforeRun?(input: { task: TaskSpec; runId: string }): Promise<void>;
 }
+
 /** 插入绑定用户选定的原主运行；停止信号只阻止发送前准备，不撤销已确认接收。 */
 export interface RunSteerControl
 {
@@ -211,6 +213,7 @@ export interface RunSteerControl
     attachmentManifest?: ScopeActiveInputPayload['attachmentManifest']
   }
 }
+
 /** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
 export interface FreshMainStartControl
 {
@@ -222,6 +225,7 @@ export interface FreshMainStartControl
   /** 在任何新日志、工具装配或模型之前可靠保存意图；失败不允许启动，成功后失败也不能重放同一意图。 */
   BeforeRun(input: { task: TaskSpec; runId: string; nativeSessionId: string; excludedRunIds: string[] }): Promise<void>;
 }
+
 /** 管理任务级运行和日志；成员跨任务的互斥、通道复用及结果交接由外层调度负责。 */
 export class LoopRuntime
 {
@@ -262,6 +266,7 @@ export class LoopRuntime
   constructor(private options: RuntimeOptions)
   {
   }
+
   /** 新建运行或显式恢复；可信 source 仅允许接续安全完成的主对话，返回句柄后仍需等待 done。 */
   async Start(task: TaskSpec, message = task.goal, resume?: { runId: string; reconciledToolIds?: string[] }, source?: RunInputSource, control?: RunStartControl): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
@@ -282,6 +287,7 @@ export class LoopRuntime
       this.starting.delete(pending)
     }
   }
+
   /**
        * 启动已可靠领取的成员任务。只接收新业务 taskId；调用方负责成员互斥及前一通道运行的安全核实。
        * 递归调用同样使用本入口及 beforeRun 记录父工具关系；本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
@@ -307,6 +313,7 @@ export class LoopRuntime
       this.starting.delete(pending)
     }
   }
+
   /** 已领取的单次成员续执行；不放宽普通 start/resume，不移植旧工具证据或改换原生会话。 */
   async ResumeMember(task: TaskSpec, message: string, launch: MemberRunLaunch, checkpoint: { checkpointId: string; runId: string; logHash: string }, control?: Pick<RunStartControl, 'signal'>): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
@@ -333,6 +340,7 @@ export class LoopRuntime
       this.starting.delete(pending)
     }
   }
+
   /** 为已经登记的主会话建立新上下文；不读旧日志、不承接旧工具或任务进度，目录存在及身份/租约仍须核实。 */
   async StartFreshMain(task: TaskSpec, message: string, control: FreshMainStartControl): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
@@ -357,6 +365,7 @@ export class LoopRuntime
       this.starting.delete(pending)
     }
   }
+
   private async StartInternal(task: TaskSpec, message: string, resume?: { runId: string; reconciledToolIds?: string[] }, member?: MemberRunLaunch, source?: RunInputSource, control?: RunStartControl, fresh?: FreshMainStartControl, memberResume?: { checkpointId: string; runId: string; logHash: string }): Promise<{ runId: string; done: Promise<RunSummary> }>
   {
     task = structuredClone(task);
@@ -603,6 +612,7 @@ export class LoopRuntime
           }
         } : {}), ...(workflows.length ? { workflow: { bindings: workflows, task: { goal: task.goal, acceptance: task.acceptance }, identity } } : {})
       });
+
       const emit = async (event: EngineEvent, trustedArtifact = false) =>
       {
         if (!trustedArtifact && event.type === 'tool.updated' && event.data.agentCall !== undefined)
@@ -723,6 +733,7 @@ export class LoopRuntime
         }
         return saved;
       };
+
       let stopping = false;
 
       let stopFailure: unknown;
@@ -916,6 +927,7 @@ export class LoopRuntime
 
           throw stopFailure;
       };
+
       const abort = () => { void stop().catch(() => { }) };
 
       control?.signal.addEventListener('abort', abort, { once: true });
@@ -1258,6 +1270,7 @@ export class LoopRuntime
       throw error
     }
   }
+
   /** 读取指定轮次日志；本进程仍持有该轮次时将尚无终态的摘要呈现为 running，不触发恢复。 */
   async Inspect(taskId: string, runId: string)
   {
@@ -1269,11 +1282,13 @@ export class LoopRuntime
 
     return summary;
   }
+
   /** 请求当前轮次停止；不存在活动运行时为空操作，最终状态仍须等待启动句柄的 done。 */
   async Stop(taskId: string)
   {
     await this.active.get(taskId)?.stop()
   }
+
   /** 只向明确选定的原活动运行注入；当前新轮不能代收迟到请求，未知结果不自动重放。 */
   async Steer(taskId: string, message: string, images: import('../types').InputImage[], control: RunSteerControl)
   {
@@ -1300,6 +1315,7 @@ export class LoopRuntime
       inject.pending.delete(pending)
     }
   }
+
   /** 禁止新启动，等待在途注册后停止并收束活动运行；逐项失败不会阻止其余资源释放。 */
   async Close()
   {

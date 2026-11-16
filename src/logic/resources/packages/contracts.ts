@@ -14,6 +14,7 @@ export interface PublishWorkspaceResult
 
   removedBindings: string[]
 }
+
 export type ImportWorkspacePreview = import('../../knowledge/rules/types').Preview &
 {
   planId: string;

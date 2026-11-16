@@ -27,23 +27,27 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 function memberRuns(state: DispatchState, scope: DispatchScope)
 {
   const ids = new Set(state.graphs.find(graph => graph.identity.rootSessionId === scope.rootSessionId)?.tasks.filter(task => task.scopeId === scope.scopeId).map(task => task.taskId) ?? []);
 
   return (state.runs ?? []).filter(run => run.binding.workspaceId === scope.workspaceId && run.binding.rootSessionId === scope.rootSessionId && ids.has(run.binding.taskId));
 }
+
 /** 清单包含已登记而日志尚未产生的意图；不能只数成功读取的运行。 */
 function sources(state: DispatchState, scope: DispatchScope | undefined): string[]
 {
   return scope ? [...(scope.runTracking?.mainRunIds ?? []), ...memberRuns(state, scope).map(run => run.binding.runId)] : []
 }
+
 function observation(value: ScopeBudgetObservation, ids: string[])
 {
   valid(value.registeredRuns === ids.length && new Set(ids).size === ids.length, '预算观察必须覆盖全部既有运行归属');
 
   valid([...value.liveRunIds, ...value.unknownRunIds].every(id => ids.includes(id)), '预算观察不能引用其他周期或未登记运行');
 }
+
 /** 保留旧缺省；新周期策略创建后冻结，等待只允许独立记录拒绝，关闭记录永久不变。 */
 export function validateScopeBudgets(previous: DispatchState, next: DispatchState, mutation: DispatchMutation): void
 {

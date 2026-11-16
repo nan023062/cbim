@@ -23,6 +23,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 新增处置完整通过才返回许可；已核实的历史处置也保留取消许可，但其整个任务必须不变。 */
 export function validateCheckpointAbandonment(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, command: DispatchCommand): ReadonlySet<string>
 {

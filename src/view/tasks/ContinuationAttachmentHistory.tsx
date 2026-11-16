@@ -33,6 +33,7 @@ function sourceSummary(item: ContinuationAttachmentItem)
       return `${source.resourceKind} · ${source.resourceId} · 仓库版本 ${source.revision.slice(0, 12)} · 原文 ${source.fullContentBytes} 字节${source.truncated ? ' · 已截取' : ''} · 导入时只读授权第 ${source.grantRevision} 版`;
   }
 }
+
 /** 无内容抓取入口；快照仅代表导入/受理事实，不作为目标完成或当前源状态证明。 */
 export function ContinuationAttachmentHistory({ manifest }: { manifest: ContinuationAttachmentManifest })
 {

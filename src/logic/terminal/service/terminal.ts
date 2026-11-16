@@ -61,12 +61,14 @@ export class TerminalSessions
 
     return this.Read(key);
   }
+
   Read(key: string)
   {
     const entry = this.entries.get(key);
 
     return entry ? { output: entry.output, running: entry.running, exitCode: entry.exitCode } : { output: '', running: false, exitCode: null }
   }
+
   Close(key: string)
   {
     const e = this.entries.get(key);
@@ -83,6 +85,7 @@ export class TerminalSessions
     }
     this.entries.delete(key)
   }
+
   CloseAll()
   {
     for (const key of this.entries.keys())

@@ -16,6 +16,7 @@ export interface ModelConnectionRequirement
 
   fallbackApi?: LlmApi
 }
+
 export interface SelectedConnection
 {
   api: LlmDefinition['api'];
@@ -24,6 +25,7 @@ export interface SelectedConnection
 
   source: 'primary' | 'explicit' | 'preset'
 }
+
 const supportsModel = (connection: AlternateConnection, modelId?: string) => !connection.modelIds || modelId !== undefined && connection.modelIds.includes(modelId);
 
 /** 主接口优先，显式配置覆盖该协议的预设；无兼容接口时返回 undefined，调用者不得静默绕过协议需求。 */

@@ -22,6 +22,7 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
 
       onCancel()
   }
+
   const patch = (part: Partial<AutomationDefinition>) => setValue(old => ({ ...old, ...part }));
 
   const executor = value.executor,
@@ -36,6 +37,7 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
   {
     patch({ schedule: kind === 'manual' ? { kind } : kind === 'interval' ? { kind, minutes: 60 } : kind === 'daily' ? { kind, time: '09:00', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone } : { kind, at: new Date(Date.now() + 3600000).toISOString() } });
   }
+
   function submit()
   {
     if (!value.name.trim() || !value.prompt.trim())
@@ -54,6 +56,7 @@ export function AutomationEditor({ initial, catalog, busy, onSave, onCancel }: {
 
     onSave(value);
   }
+
   const localOnce = schedule.kind === 'once' ? new Date(Date.parse(schedule.at) - new Date(schedule.at).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
 
   return <form className="automation-editor" onSubmit={e => { e.preventDefault(); submit() }}>

@@ -24,14 +24,17 @@ export class QuestionTools
   constructor(private readonly request: (input: QuestionInput, signal: AbortSignal) => Promise<unknown>)
   {
   }
+
   Has(name: string)
   {
     return name === questionToolName
   }
+
   List()
   {
     return [structuredClone(questionTool)]
   }
+
   private Parse(name: string, raw: unknown)
   {
     if (!this.Has(name))
@@ -46,6 +49,7 @@ export class QuestionTools
 
     return parsed.data;
   }
+
   /** 授权前只检查严格原参数并分类，不弹题、不消费回答。 */
   Describe(name: string, raw: unknown): RunToolDescriptor
   {
@@ -53,6 +57,7 @@ export class QuestionTools
 
     return { effects: ['read'], native: false }
   }
+
   /** 不在 await 后用取消覆盖先完成的回答；真正终态由队列的一次消费边界决定。 */
   async Call(name: string, raw: unknown, signal: AbortSignal)
   {

@@ -69,4 +69,5 @@ function command(options: EngineAdapterOptions)
   }
   throw Error('缺少 Pi 运行时，请先安装项目依赖');
 }
+
 export const engineAdapter: EngineAdapter = Object.freeze({ protocol: 1, id: 'pi', version: '1.1.1', descriptor: engineDescriptor('pi'), create: (options: EngineAdapterOptions) => new PiEngine({ ...options, process: command(options) }) });

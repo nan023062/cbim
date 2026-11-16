@@ -58,6 +58,7 @@ export interface WorkflowRunIdentity
 
   runId: string
 }
+
 /** 只能由本轮装配提供；任务要求不可由模型在创建局部计划时扩大或删减。 */
 export interface WorkflowProgressContext
 {
@@ -67,12 +68,14 @@ export interface WorkflowProgressContext
 
   identity: WorkflowRunIdentity
 }
+
 function valid(value: unknown, code: string, message: string): asserts value
 {
   if (!value)
 
     fail(code, message)
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
 
@@ -85,6 +88,7 @@ export function workflowHasEffects(effects: readonly ToolEffect[])
 {
   return effects.some(effect => effect === 'business-write' || effect === 'command')
 }
+
 function checkedBindings(bindings: readonly WorkflowContractBinding[])
 {
   valid(bindings.length <= 100 && new Set(bindings.map(item => item.moduleId)).size === bindings.length, 'WORKFLOW_CONTEXT_INVALID', 'Workflow 模块约定数量或归属重复');
@@ -97,6 +101,7 @@ function checkedBindings(bindings: readonly WorkflowContractBinding[])
 
   return [...bindings].sort((a, b) => a.moduleId < b.moduleId ? -1 : a.moduleId > b.moduleId ? 1 : 0);
 }
+
 /** 执行业务副作用前核对当前计划；没有声明 requirePlan 时不新增该门禁。 */
 export function assertWorkflowPlan(bindings: readonly WorkflowContractBinding[], plan: TaskProgress | undefined, task: Pick<TaskSpec, 'goal' | 'acceptance'>): number | undefined
 {
@@ -108,6 +113,7 @@ export function assertWorkflowPlan(bindings: readonly WorkflowContractBinding[],
 
   return plan.version;
 }
+
 /** 只评价调用方已核实且实际列入步骤的当前代次回执，不自动挑选未引用的其他工具。 */
 export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBinding[], receipts: readonly ToolReceipt[], identity: WorkflowRunIdentity, validations: readonly ValidationRecord[] = [], manifest?: OutputManifestProof, codeChecks: readonly CodeCheckRecord[] = []): WorkflowEvidenceProof
 {
@@ -157,6 +163,7 @@ export function evaluateWorkflowDelivery(bindings: readonly WorkflowContractBind
 
   return { ...(codeCheck ? { codeCheck } : {}), version: 1, bindingsHash: hash(JSON.stringify(ordered(values))), checks, ...(validationChecks.length ? { validationChecks } : {}), ...(manifest ? { manifest: structuredClone(manifest) } : {}) };
 }
+
 /** 从步骤实际引用中选唯一 passed 记录；rejected 的成功回执只证明执行过检查，不能满足此出口。 */
 export function selectWorkflowValidations(bindings: readonly WorkflowContractBinding[], receipts: readonly ToolReceipt[], identity: WorkflowRunIdentity, records: readonly ValidationRecord[]): ValidationRecord[]
 {
@@ -184,6 +191,7 @@ export function selectWorkflowValidations(bindings: readonly WorkflowContractBin
     }
   return selected;
 }
+
 function progressResult(event: ArtifactEvidenceEvent): TaskProgress
 {
   const content = (event.data.result as
@@ -210,6 +218,7 @@ function progressResult(event: ArtifactEvidenceEvent): TaskProgress
     fail('WORKFLOW_LOG_INVALID', '任务工具结果无法解析')
   }
 }
+
 /** 失败的副作用也可能已经改过文件；核实结束边界但不将失败回执作为完成证据。 */
 function effectFinished(events: readonly ArtifactEvidenceEvent[], identity: WorkflowRunIdentity, allowed: ArtifactEvidenceEvent): ArtifactEvidenceEvent
 {
@@ -237,6 +246,7 @@ function effectFinished(events: readonly ArtifactEvidenceEvent[], identity: Work
 
   return end;
 }
+
 /**
  * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
  * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。

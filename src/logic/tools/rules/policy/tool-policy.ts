@@ -38,6 +38,7 @@ export interface RunToolDescriptor
   /** 仅可信装配提供；仓库分支须绑定实际注册操作、链接器和工作区，不由模型填写。 */
   scope?: ToolScope;
 }
+
 export interface RunPolicyContext
 {
   workspaceId: string;
@@ -52,6 +53,7 @@ export interface RunPolicyContext
   /** 来自桌面设置和本轮端口的窄授权；不存在时，任何 external-write 都拒绝。 */
   feedbackGrant?: FeedbackScope;
 }
+
 /** 每次调用独立评估；审批缓存由运行所有者清理，本策略不持久化授权。 */
 export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, context: RunPolicyContext): Promise<ToolDecision>
 {

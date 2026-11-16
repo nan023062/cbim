@@ -54,6 +54,7 @@ export interface SettingsViewProps
 
   onOpenUpdates: () => void;
 }
+
 /** 导航状态由外壳持有，支持账号菜单和资源页面直达；不重新创建更新或外观控制器。 */
 export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionChange, onBack, appearance, updates, onOpenUpdates }: SettingsViewProps)
 {
@@ -83,6 +84,7 @@ export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionC
 
     setQuery('')
   }
+
   function panel(id: SettingsSectionId)
   {
     switch (id)
@@ -120,6 +122,7 @@ export function SettingsView({ onDirtyChange, sidebarResize, section, onSectionC
         return <AboutSettings updates={updates} onOpenUpdates={onOpenUpdates} />;
     }
   }
+
   return <div className="settings-center"><div className="settings-layout">
     <aside className="settings-navigation sidebar-frame" aria-label="设置导航">
       {sidebarResize}

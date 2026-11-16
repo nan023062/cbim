@@ -110,6 +110,7 @@ export interface ScopeGoalPorts
 
   CheckManifest?(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
 }
+
 type Owner = Pick<KnowledgeWorkspace, 'entry' | 'instanceId' | 'Assert' | 'Snapshot' | 'Read'>;
 
 const effects = new Set(['business-write', 'knowledge-write', 'external-write', 'command']);
@@ -126,15 +127,18 @@ function check(condition: unknown, code: string, message: string): asserts condi
 
     fail(code, message)
 }
+
 function lastEffect(summary: RunSummary)
 {
   return summary.events.reduce((latest, event) => event.type === 'tool.allowed' && (Array.isArray(event.data.effects) && event.data.effects.some(effect => effects.has(String(effect))) || ['write', 'edit', 'bash'].includes(String(event.data.name))) ? Math.max(latest, event.seq) : latest, 0)
 }
+
 export class ScopeGoalService
 {
   constructor(private readonly owner: Owner, private readonly store: DispatchStore, private readonly ports?: ScopeGoalPorts, private readonly humanPorts?: HumanDecisionPorts, private readonly owners?: OwnerExecutionService, private readonly memberPauses?: MemberPauseService)
   {
   }
+
   /** 主运行显式接受/拒绝精确候选；决定可靠保存后不可翻转，不代替最终目标审阅或人工签署。 */
   async ReviewCandidate(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: CandidateReviewInput, assertCurrent: () => void): Promise<TaskNode>
   {
@@ -178,6 +182,7 @@ export class ScopeGoalService
       return { batch: { version: 1, identity, streamId: graph.cursor.streamId, seq: graph.cursor.seq + 1, eventId: randomUUID(), commandId, cause: 'task.revised', committedAt: now, changes: [{ type: 'task.upserted', task: updated }] }, receipt: updated };
     });
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, value: unknown): z.output<S>
   {
     const result = schema.safeParse(value);
@@ -188,6 +193,7 @@ export class ScopeGoalService
 
     return result.data
   }
+
   private Scope(state: DispatchState, identity: GraphIdentity, scopeId: string)
   {
     this.Parse(identitySchema, { ...identity, scopeId });
@@ -202,6 +208,7 @@ export class ScopeGoalService
 
     return scope;
   }
+
   private Graph(state: DispatchState, scope: DispatchScope)
   {
     const graph = state.graphs.find(value => value.identity.rootSessionId === scope.rootSessionId && value.identity.workspaceId === scope.workspaceId);
@@ -210,6 +217,7 @@ export class ScopeGoalService
 
     return graph
   }
+
   private Editable(scope: DispatchScope, expectedRevision: number)
   {
     check(!scopeHasUnresolvedActiveInput(scope), 'GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充尚未核实，不能沿旧目标继续决策');
@@ -228,17 +236,20 @@ export class ScopeGoalService
 
     return scope.goal;
   }
+
   private Command(operation: string, identity: GraphIdentity, scopeId: string, runId: string, commandId: string, draft: unknown)
   {
     check(typeof runId === 'string' && runId.trim().length > 0 && typeof commandId === 'string' && commandId.trim().length > 0, 'GOAL_IDENTITY', '目标决策缺少可信运行或命令身份');
 
     return goalCommand(operation, identity, scopeId, runId, commandId, draft);
   }
+
   /** 只读固定身份的周期快照；不创建计划、不读取完整运行日志。 */
   async Inspect(identity: GraphIdentity, scopeId: string): Promise<DispatchScope>
   {
     return this.Scope(await this.store.Read(), identity, scopeId)
   }
+
   /** 主工具的一次权威读取；scope 与 graph 来自同一快照，公开字段由调用方投影，不拼接两次读取的版本。 */
   async InspectWithGraph(identity: GraphIdentity, scopeId: string): Promise<{ scope: DispatchScope; graph: GraphSnapshot }>
   {
@@ -248,6 +259,7 @@ export class ScopeGoalService
 
     return { scope, graph: this.Graph(state, scope) };
   }
+
   /** 一次存储读取生成撤销或等待清单；不写入、不读取文件、不启动成员，正式提交再次核验。 */
   async PreviewClosure(identity: GraphIdentity, scopeId: string, input?: CancelQueuedTasksInput)
   {
@@ -257,6 +269,7 @@ export class ScopeGoalService
 
     return coordinationPreview(state, scope, this.Graph(state, scope), input);
   }
+
   /** 核实角色、模块和知识后追加计划；主角色可直接完成业务或知识工作，成员专属 Workflow 契约仍只绑定自定义岗位。 */
   async Plan(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: GoalPlanInput, assertCurrent?: () => void): Promise<DispatchScope>
   {
@@ -274,6 +287,7 @@ export class ScopeGoalService
 
       return old.receipt as DispatchScope
     }
+
     const alive = () => { this.owner.Assert(); assertCurrent?.() };
 
     alive();
@@ -288,6 +302,7 @@ export class ScopeGoalService
 
     return business.length ? this.owners!.WithContext(state => business.map(assignment => this.owners!.Selection(state, scopeId, assignment.ownerSelection)), save, alive) : save({ snapshot: await this.owner.Snapshot(), profiles: [] });
   }
+
   /** 正式派发必须匹配当前计划的角色、模块集合及选择模式；缺省不是任意 Workflow，完成申请后须先重规划。 */
   ValidateDispatch(state: DispatchState, scope: DispatchScope, input: DispatchTaskInput['task'], knowledgeRevision: string, ownerBinding?: OwnerExecutionBinding, fallbackBinding?: AutomaticExecutionBinding): void
   {
@@ -314,6 +329,7 @@ export class ScopeGoalService
 
     check(plan.assignments.some(item => item.agentId === input.assigneeAgentId && sameSet(item.moduleIds, input.moduleIds) && sameWorkflowSelectionsForModules(item.workflowSelections, input.workflowSelections, input.moduleIds) && sameAutomaticExecutionForModules(item.fallbackBinding, fallbackBinding, input.moduleIds) && sameOwnerExecutionForModules(item.ownerBinding, ownerBinding, input.moduleIds)), 'GOAL_ASSIGNMENT_MISMATCH', '派发岗位、角色、模块集合或 Workflow 选择不在当前目标计划中');
   }
+
   /** 普通聊天与业务完成共用；只读原日志，不重入派发 store，也不补造缺失接收记录。 */
   async ValidateActiveInputs(scope: DispatchScope, main?: RunSummary): Promise<void>
   {
@@ -331,12 +347,14 @@ export class ScopeGoalService
 
         validateScopeActiveInputLog(scope, await this.Logs().InspectMain(scope.rootSessionId, runId));
   }
+
   private Logs()
   {
     check(this.ports, 'GOAL_EVIDENCE_UNAVAILABLE', '尚未接入可信运行日志，不能审阅或完成目标');
 
     return this.ports
   }
+
   private Main(state: DispatchState, summary: RunSummary, scope: DispatchScope, graph: GraphSnapshot, runId: string)
   {
     const binding = summary.conversationBinding,
@@ -347,6 +365,7 @@ export class ScopeGoalService
 
     check(summary.runId === runId && summary.task.workspaceId === scope.workspaceId && summary.task.taskId === scope.rootSessionId && summary.task.agentId === 'cbim:main' && summary.task.mode === 'chat' && binding?.workspaceId === scope.workspaceId && binding.rootSessionId === scope.rootSessionId && binding.agentId === 'cbim:main' && binding.agentInstanceId === root.agentInstanceId && channel?.workspaceId === scope.workspaceId && channel.rootSessionId === scope.rootSessionId && channel.agentInstanceId === root.agentInstanceId && channel.agentId === 'cbim:main' && channel.teamId === binding.teamId, 'GOAL_EVIDENCE_IDENTITY', '主运行日志与当前主会话实例或对话通道不一致');
   }
+
   private Receipt(summary: RunSummary, toolCallId: string): { receipt: ToolReceipt; event: StoredEvent }
   {
     const receipts = (summary.toolReceipts ?? []).filter(item => item.toolCallId === toolCallId),
@@ -371,6 +390,7 @@ export class ScopeGoalService
 
     return { receipt, event };
   }
+
   private async Member(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string, historical = false)
   {
     const result = task.result;
@@ -411,6 +431,7 @@ export class ScopeGoalService
     }
     return summary;
   }
+
   /** 返工只接完整已结算主轮；逐条核原主链和成员日志，未知或未授权操作不变为重试许可。 */
   async RepairContext(identity: GraphIdentity, scopeId: string, expected: RunSummary)
   {
@@ -463,6 +484,7 @@ export class ScopeGoalService
 
     return { scope, graph };
   }
+
   /** 调度修订复用交付证据规则，并要求 canonical 头、连续事件及实际终态完整；不把候选视为验收。 */
   async ValidateMemberCandidate(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string): Promise<RunSummary>
   {
@@ -474,6 +496,7 @@ export class ScopeGoalService
 
     return summary;
   }
+
   /** 仅核历史真实交付；人工负面可据此记录，接受调用方必须另合并核全部当前验证及基线文件。 */
   async ValidateHistoricalMemberCandidate(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, task: TaskNode, knowledgeRevision: string): Promise<RunSummary>
   {
@@ -485,6 +508,7 @@ export class ScopeGoalService
 
     return summary;
   }
+
   /**
        * 人工决定只读取当前安全等待中的一个 human 项及其全部真实历史候选；文件变化不能阻止拒绝或补证。
        * 返回 canonical 摘要及冻结验证文件供同批当前字节校验。接受另须核全部验证文件，不能只选未变化的基线子集。
@@ -585,6 +609,7 @@ export class ScopeGoalService
 
     return { graph, criterion: { ...criterion, kind: 'human' as const }, main, knowledgeRevision: snapshot.revision, candidates: [...selected.values()].sort((a, b) => a.task.taskId < b.task.taskId ? -1 : 1) };
   }
+
   /** 换边前核验完整执行来源；只有无通道且无工具事实的明确启动失败可省略原生绑定。 */
   private MemberTerminal(scope: DispatchScope, task: TaskNode, run: DispatchRun, summary: RunSummary)
   {
@@ -609,6 +634,7 @@ export class ScopeGoalService
 
     check(!facts.invalid && !facts.counts.unknown && !facts.counts.not_authorized, 'GOAL_EVIDENCE_INVALID', '成员工具仍有未知副作用或缺失授权链');
   }
+
   /** 重读可靠求助/失败或已明确放弃检查点的原日志；后者只核历史，不刷新旧文件/native证明或恢复执行。 */
   async ValidateDependencySource(state: DispatchState, scope: DispatchScope, task: TaskNode): Promise<void>
   {
@@ -645,6 +671,7 @@ export class ScopeGoalService
         check(run.status === 'failed', 'GOAL_EVIDENCE_INVALID', '原前置不是明确失败，不能绕过已有结果');
     }
   }
+
   private async Evidence(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, draft: GoalReviewInput, main: RunSummary, knowledgeRevision: string)
   {
     const plan = scope.goal!.plan!,
@@ -809,6 +836,7 @@ export class ScopeGoalService
 
     await this.Supersessions(state, scope, graph, draft, members, knowledgeRevision);
   }
+
   private async Supersessions(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, draft: GoalReviewInput, cache: Map<string, Promise<RunSummary>>, knowledgeRevision: string)
   {
     const entries = draft.superseded,
@@ -910,6 +938,7 @@ export class ScopeGoalService
           check(ids.includes(task.taskId), 'GOAL_WORK_FAILED', '本周期失败任务尚未被真实成功任务替代');
     }
   }
+
   /** 工具阶段仅登记审阅请求；当前 review 工具尚未结束，完整运行终态留到 validateCompletion 核验。 */
   async Review(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: GoalReviewInput): Promise<DispatchScope>
   {
@@ -919,6 +948,7 @@ export class ScopeGoalService
 
     return this.store.Transact(command, async state => { const scope = this.Scope(state, identity, scopeId), goal = this.Editable(scope, draft.expectedRevision), graph = this.Graph(state, scope); check(goal.plan, 'GOAL_PLAN_REQUIRED', '审阅前必须建立本轮目标计划'); check(!goalNeedsReplan(goal), 'GOAL_REPLAN_REQUIRED', '用户已补充目标，必须按最新输入重新规划再审阅'); if (draft.memberPause) { check(draft.decision === 'awaiting_user' && this.memberPauses, 'GOAL_MEMBER_PAUSE_INVALID', '成员等待清单只用于已装配的等待用户分支'); await this.memberPauses.VerifyWaiting(state, scope, draft.memberPause) } const main = await this.Logs().InspectMain(scope.rootSessionId, runId); this.Main(state, main, scope, graph, runId); check(!main.logIntegrity?.partialTail, 'GOAL_EVIDENCE_INVALID', '主运行日志尾行不完整，不能据此前缀审阅'); await this.ValidateActiveInputs(scope, main); const snapshot = await this.owner.Read(); await this.Evidence(state, scope, graph, draft, main, snapshot.revision); check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '审阅期间知识版本发生变化'); const { expectedRevision: _, ...body } = draft, review: ScopeGoalReview = { ...body, revision: goal.revision + 1, inputRevision: goalInputRevision(goal), planRevision: goal.plan.revision, runId, recordedAt: new Date().toISOString(), knowledgeRevision: snapshot.revision, graphCursor: cursor(graph), observedSeq: main.events.at(-1)?.seq ?? 0, lastEffectSeq: lastEffect(main) }; const next = { ...scope, goal: { ...goal, revision: goal.revision + 1, review } }; return { scopes: [next], receipt: next }; });
   }
+
   /** 在父级关闭事务中调用，不重入 store；复核同一主运行真实终态及完成申请之后的图/知识/副作用变化。 */
   async ValidateCompletion(state: DispatchState, scope: DispatchScope, summary: RunSummary): Promise<void>
   {
@@ -952,6 +982,7 @@ export class ScopeGoalService
 
     check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '完成核验期间知识版本已变化');
   }
+
   /**
        * 为显式业务新周期重新核实已封存的只读核实周期，不假装重开 scope，也不要求关闭释放后的图游标等于旧审阅游标。
        * 全部主链与成员运行均读取 canonical 记录；旧业务的未知事实不在此更正。返回哈希只是这批记录的版本证明，不是业务产物指纹。
@@ -1089,6 +1120,7 @@ export class ScopeGoalService
 
     return { knowledgeRevision: knowledge.revision, coveredModuleIds, evidenceDigest: hash(json({ goal, tasks, runs, logs: recorded.map(item => item.summary) })) };
   }
+
   /**
        * 在 parkScope 的事务内核实无活动执行的等待边界，不重入存储、不启动模型。
        * 等待只接受当前 awaiting_user 审阅；显式 memberPause 可保留可靠检查点及未领取后继，未知工具和在途租约始终拒绝。
@@ -1163,6 +1195,7 @@ export class ScopeGoalService
 
     check((await this.owner.Read()).revision === snapshot.revision, 'GOAL_KNOWLEDGE_CHANGED', '等待核验期间知识版本已变化');
   }
+
   /** 只有可信协调器调用；失败原因持久化但不伪造目标输入、运行结果或图事件。 */
   async Block(identity: GraphIdentity, scopeId: string, reason: string): Promise<DispatchScope>
   {

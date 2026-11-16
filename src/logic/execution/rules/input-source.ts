@@ -19,6 +19,7 @@ export interface MemberResultSource
   /** 本次回注涉及的派发任务集合，与 messageIds 不要求逐项对应。 */
   taskIds: string[];
 }
+
 /** 只有显式等待目标入口生成；普通聊天、队列和模型正文不能构造这一恢复权。 */
 export interface UserContinuationSource
 {
@@ -39,6 +40,7 @@ export interface UserContinuationSource
   /** 只有已排空整话题的显式接续生成；允许接续安全取消的主轮，不允许未知或失败日志。 */
   interruptionId?: string;
 }
+
 /** 仅独立显式继续入口生成，正文为系统转交的已保存决定摘要，不是用户新业务目标。 */
 export interface HumanDecisionsSource
 {
@@ -56,6 +58,7 @@ export interface HumanDecisionsSource
 
   decisionIds: string[];
 }
+
 /** 最终验收拒绝的系统反馈；不是用户授权，原主轮与失败指纹用于去重和有界返工。 */
 export interface GoalRepairSource
 {
@@ -73,6 +76,7 @@ export interface GoalRepairSource
 
   fingerprint: string;
 }
+
 export type RunInputSource = MemberResultSource | UserContinuationSource | HumanDecisionsSource | GoalRepairSource;
 
 /** 校验并复制可信输入或历史日志中的来源；拒绝空任务、重复标识和额外身份/权限字段。 */

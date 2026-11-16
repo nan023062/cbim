@@ -26,6 +26,7 @@ export interface ViewTab
 
   attachments?: ChatAttachment[]
 }
+
 /** 有序页签及当前 active ID；关闭最后一个页签时 active 为空。 */
 export interface TabLayout
 {
@@ -36,6 +37,7 @@ export interface TabLayout
   /** 本机移除的任务条目；只抑制列表恢复，不删除后端历史或停止运行。 */
   hiddenTaskIds?: string[]
 }
+
 /** 以工作区 ID 为键的本机布局，各工作区草稿与选中页签相互隔离。 */
 export type Layouts = Record<string, TabLayout>;
 
@@ -43,12 +45,14 @@ export function newTab(kind: TabKind): ViewTab
 {
   return { id: crypto.randomUUID(), kind, title: tabKinds[kind].label }
 }
+
 export function initialLayout(): TabLayout
 {
   const t = newTab('chat');
 
   return { tabs: [t], active: t.id }
 }
+
 export function moveTab(layout: TabLayout, from: string, to: string): TabLayout
 {
   const tabs = [...layout.tabs],
@@ -65,6 +69,7 @@ export function moveTab(layout: TabLayout, from: string, to: string): TabLayout
 
   return { ...layout, tabs };
 }
+
 export function readLayouts(text: string | null): Layouts
 {
   try
@@ -106,6 +111,7 @@ export function readLayouts(text: string | null): Layouts
     return {}
   }
 }
+
 /** 将持久化任务补回侧栏；已有草稿、选中项和自定义标题保持不变。 */
 export function mergeConversations(layout: TabLayout | undefined, records: { task?: { taskId: string; goal: string; mode?: string } }[]): TabLayout | undefined
 {
@@ -142,6 +148,7 @@ export function mergeConversations(layout: TabLayout | undefined, records: { tas
   }
   return changed ? { ...base, tabs, active: base.active || tabs[0].id } : base;
 }
+
 /** 本机改名保持任务身份和草稿；空白名称不生效。 */
 export function renameConversation(layout: TabLayout, id: string, title: string): TabLayout
 {
@@ -149,6 +156,7 @@ export function renameConversation(layout: TabLayout, id: string, title: string)
 
   return name ? { ...layout, tabs: layout.tabs.map(tab => tab.id === id ? { ...tab, title: name, customTitle: true } : tab) } : layout;
 }
+
 /** 移除条目并保存任务墓碑；删除当前最后一项时提供新的空对话，不调用执行服务。 */
 export function removeConversation(layout: TabLayout, id: string): TabLayout
 {

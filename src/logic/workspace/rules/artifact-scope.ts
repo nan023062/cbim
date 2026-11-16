@@ -24,11 +24,13 @@ export function artifactTransitionPaths(operation: ArtifactTransitionDefinition)
 {
   return operation.kind === 'delete' ? [operation.path] : [operation.from, operation.to]
 }
+
 /** 即使当前平台区分大小写，也不接受会在另一平台合并的根；目录范围包含全部后代。 */
 export function artifactRootsDisjoint(roots: readonly ArtifactScopeRoot[]): boolean
 {
   return roots.every((root, index) => roots.every((other, at) => index === at || root.path.toLowerCase() !== other.path.toLowerCase() && !(root.kind === 'directory' && other.path.toLowerCase().startsWith(root.path.toLowerCase() + '/'))));
 }
+
 export const artifactScopeSchema = z.object({ version: z.literal(1), roots: z.array(artifactScopeRootSchema).min(1).max(artifactScopeLimits.roots).refine(artifactRootsDisjoint, '产物根不能重叠或使用大小写别名'), transitions: z.array(artifactTransitionDefinitionSchema).min(1).max(artifactScopeLimits.transitions).optional() }).strict().superRefine((value, context) => { const paths = (value.transitions ?? []).flatMap(artifactTransitionPaths), folded = paths.map(p => p.toLowerCase()); if (paths.some(p => p.split('/').some(part => part.toLowerCase() === '.git') || !value.roots.some(root => root.path === p || root.kind === 'directory' && p.startsWith(root.path + '/'))) || folded.some((p, i) => folded.some((q, j) => i !== j && (p === q || p.startsWith(q + '/'))))) context.addIssue({ code: 'custom', message: '删除/移动端点必须由本模块完整根覆盖，且不能重叠、使用大小写别名或访问受保护路径' }); });
 
 export type ArtifactScope = z.infer<typeof artifactScopeSchema>;
@@ -46,6 +48,7 @@ export function preparedArtifactTransitions(scopes: readonly ArtifactScopeBindin
 {
   return scopes.flatMap(scope => (scope.scope.transitions ?? []).map((operation, operationIndex) => ({ moduleId: scope.moduleId, operationIndex, operation: structuredClone(operation) })))
 }
+
 /** 只投影已冻结 Workflow；没有声明时返回空数组，不给旧任务补造完整覆盖。 */
 export function preparedArtifactScopes(bindings: readonly { moduleId: string; workflowId: string; workflowVersion: string; contract: { artifactScope?: ArtifactScope } }[]): ArtifactScopeBinding[]
 {

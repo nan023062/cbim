@@ -44,6 +44,7 @@ export function coordinationVersions(scope: MainToolScope, graph: GraphSnapshot)
     evidenceNotice: '候选引用不是验收；toolCallIds 沿原交付保存，审阅仍核实真实工具、日志与当前文件。',
   };
 }
+
 /** includeClosure 只生成完整预览，不能隐式扩大一次写入的授权集合。 */
 export function coordinationPreview(state: DispatchState, scope: DispatchScope, graph: GraphSnapshot, input?: CancelQueuedTasksInput): CoordinationPreview
 {

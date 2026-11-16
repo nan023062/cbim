@@ -56,6 +56,7 @@ export function isKnowledge(relative: string)
 
   return /^\.cbim\/(workspace|team|connectors)\/.+\.(json|md)$/.test(relative) || /^\.cbim\/[^/]+\.md$/.test(relative);
 }
+
 export class Rules
 {
   private validators = new Map<string, ReturnType<Ajv2020['compile']>>();
@@ -64,6 +65,7 @@ export class Rules
   constructor(readonly assetsRoot: string)
   {
   }
+
   async Init()
   {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
@@ -72,6 +74,7 @@ export class Rules
 
       this.validators.set(key, ajv.compile(parseJson(await fs.readFile(path.join(this.assetsRoot, file), 'utf8'))))
   }
+
   /** 对传入的完整候选知识校验并派生索引；读取 source 存在性但不修改业务工程。 */
   async Validate(root: string, files: KnowledgeFile[]): Promise<Validation>
   {
@@ -110,6 +113,7 @@ export class Rules
         {
           add(file.path, 'workflow_contract', 'Workflow 执行约定无效：请核对唯一的 cbim-workflow 块及版本、条件、工具和证据 ID')
         }
+
     const schema = (p: string, key: string) =>
     {
       const value = data(p);
@@ -144,6 +148,7 @@ export class Rules
       }
       return true
     };
+
     const ref = (owner: string, reference: string) => { const target = pp.normalize(pp.join(owner, reference.split('#')[0])); if (!target.startsWith('.cbim/') || !texts.has(target)) add(owner, 'reference', `引用不存在或越界：${reference}`); return target };
 
     const summary = (p: string, s: string) => { const length = Array.from(s.replace(/\s/g, '')).length; if (s !== s.trim() || /[\r\n]/.test(s) || length < 100 || length > 250) add(p, 'summary', '摘要须为 100–250 个非空白字符的单行文本') };
@@ -324,6 +329,7 @@ export class Rules
         owner = pp.dirname(owner)
       }
     }
+
     // Also discover empty Teams when validating the live project; empty groups remain indexed.
     const walkTeams = async (folder: string) => { try { for (const d of await fs.readdir(path.join(root, folder), { withFileTypes: true })) { if (!d.isDirectory() || d.name.startsWith('.') || excluded.has(d.name) || ['skills', 'references', 'assets', 'scripts'].includes(d.name)) continue; const id = folder + '/' + d.name; if (!agents.has(id)) { if (await exists(path.join(root, id, 'agent.json'))) continue; groups.add(id); await walkTeams(id) } } } catch { } };
 
@@ -452,6 +458,7 @@ export class Rules
         p = parents.get(p)
       }
     }
+
     const ancestor = (child: string, parent: string) => { const seen = new Set<string>(); let current = parents.get(child); while (current && !seen.has(current)) { if (current === parent) return true; seen.add(current); current = parents.get(current) } return false };
 
     for (let i = 0; i < sourceRows.length; i++)
@@ -532,6 +539,7 @@ export class Rules
     }
     return { issues, indexes, skills, tree: { nodes, roots: [...modules.keys()].filter(id => !parents.has(id)).sort() }, structural: !issues.some(x => x.severity === 'error'), architecture: 'review-required', business: 'not-run' };
   }
+
   private Inventory(owner: string, list: any[], actual: string[], ref: (o: string, r: string) => string, add: (p: string, c: string, m: string) => void, kind: string)
   {
     const paths = new Set<string>(),
@@ -566,6 +574,7 @@ export class Rules
 
         add(p, 'inventory', '清单不是有效方法入口');
   }
+
   private Body(id: string, d: any, text: string, add: (p: string, c: string, m: string) => void)
   {
     const p = id + '/module.md';

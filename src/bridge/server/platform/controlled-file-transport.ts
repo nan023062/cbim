@@ -41,6 +41,7 @@ function physicalWorkingDirectory(): string
     fail('CONTROLLED_PLATFORM_UNSUPPORTED', '受控文件进程工作目录不可用')
   }
 }
+
 /** 参数仅由桌面装配/隔离 Electron 测试宿主提供；不是 renderer 或模型路径。 */
 export function createControlledFileTransport(options: { entryPath?: string; koffiPath?: string } = {}): ControlledFileTransport
 {
@@ -55,6 +56,7 @@ export function createControlledFileTransport(options: { entryPath?: string; kof
 
   return new UtilityControlledFiles(entryPath, koffiPath);
 }
+
 /** 关闭失败保留活动 child；再次 close 可核实原进程，不创建替代工人或重发 apply。 */
 class UtilityControlledFiles implements ControlledFileTransport
 {
@@ -65,14 +67,17 @@ class UtilityControlledFiles implements ControlledFileTransport
   constructor(private readonly entryPath: string, private readonly koffiPath: string)
   {
   }
+
   async WithExclusiveExisting<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledFile) => Promise<T>): Promise<T>
   {
     return this.WithSession(root, relativePath, protectedRoots, signal, use);
   }
+
   async WithExclusiveTransition<T>(root: string, relativePath: string, transition: ControlledNamespaceChange, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledTransition) => Promise<T>): Promise<T>
   {
     return this.WithSession(root, relativePath, protectedRoots, signal, use, structuredClone(transition));
   }
+
   /** 两种端口共享真实进程退出屏障；副作用种类在 open 时固定，不能在同一会话换用另一操作。 */
   private async WithSession<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: UtilityFileSession) => Promise<T>, transition?: ControlledNamespaceChange): Promise<T>
   {
@@ -110,6 +115,7 @@ class UtilityControlledFiles implements ControlledFileTransport
       await session.Close()
     }
   }
+
   async Drain(root: string)
   {
     const sessions = [...this.sessions].filter(([, value]) => value === root).map(([session]) => session);
@@ -120,6 +126,7 @@ class UtilityControlledFiles implements ControlledFileTransport
 
       fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
   }
+
   async Close()
   {
     this.closing = true;
@@ -131,6 +138,7 @@ class UtilityControlledFiles implements ControlledFileTransport
       fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
   }
 }
+
 /** seq、token、唯一 apply 和 exit promise 均绑定真实进程；退出码不作为业务成功依据。 */
 class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlledTransition
 {
@@ -152,6 +160,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
       timer: ReturnType<typeof setTimeout>
     };
+
   private before?: Extract<ControlledChildReply,
     {
       kind: 'opened'
@@ -179,10 +188,12 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
       this.abort();
   }
+
   get writeIssued()
   {
     return this.issued
   }
+
   private Reject(error: unknown)
   {
     if (this.pending)
@@ -194,6 +205,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
       this.pending = undefined
     }
   }
+
   private Request(request: Request): Promise<ControlledChildReply>
   {
     if (this.dead || this.pending)
@@ -204,6 +216,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     return new Promise((resolve, reject) => { const timer = setTimeout(() => { this.Reject(new Fault('CONTROLLED_TIMEOUT', '文件操作未确认，原请求不会自动重发')); this.child.kill() }, 30_000); this.pending = { seq, resolve, reject, timer }; try { this.child.postMessage({ ...request, token: this.token, seq }) } catch (e) { this.Reject(e); this.child.kill() } });
   }
+
   async Open(request: Extract<Request, { kind: 'open' }>)
   {
     const reply = await this.Request(request);
@@ -214,6 +227,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     this.before = reply
   }
+
   async ReadBefore()
   {
     if (!this.before || this.dead)
@@ -222,6 +236,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     return { identity: structuredClone(this.before.identity), fact: structuredClone(this.before.fact), bytes: Buffer.from(this.before.bytes, 'base64') }
   }
+
   async RecheckIdentity()
   {
     this.signal.throwIfAborted();
@@ -234,6 +249,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     return { identity: reply.identity, fact: reply.fact }
   }
+
   async ReplaceAndFlush(value: Uint8Array)
   {
     this.signal.throwIfAborted();
@@ -258,6 +274,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     return { identity: reply.identity, fact: reply.fact };
   }
+
   async TransitionAndVerify()
   {
     this.signal.throwIfAborted();
@@ -276,6 +293,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
 
     return { identity: reply.identity, fact: reply.fact, transition: reply.transition, sourceMissing: reply.sourceMissing };
   }
+
   Close(): Promise<void>
   {
     if (this.closing)

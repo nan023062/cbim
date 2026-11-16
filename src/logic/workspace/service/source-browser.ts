@@ -24,10 +24,12 @@ export interface SourceBrowserWorkspace
 
     path: string
   };
+
   Assert(identity: { workspaceId: string; instanceId: string }): void;
 
   Read(): Promise<Snapshot>
 }
+
 const textLimit = 256 * 1024;
 
 function segments(value: string, empty = false)
@@ -44,10 +46,12 @@ function segments(value: string, empty = false)
 
   return parts;
 }
+
 function protectedPath(value: string)
 {
   return value.split('/').some(part => ['.cbim', '.git'].includes(part.toLowerCase()))
 }
+
 const same = (a: { dev: number; ino: number }, b: { dev: number; ino: number }) => a.dev === b.dev && a.ino === b.ino;
 
 /** 每次操作从当前快照重新验证绑定；结束再次检查版本，迟到结果不返回给另一实例。 */
@@ -56,6 +60,7 @@ export class ModuleSourceBrowser
   constructor(private readonly workspace: SourceBrowserWorkspace)
   {
   }
+
   private async Binding(input: SourceTarget)
   {
     this.workspace.Assert(input);
@@ -116,6 +121,7 @@ export class ModuleSourceBrowser
 
     return { target, relative, ignored, checkPath };
   }
+
   private Check(snapshot: Snapshot, input: SourceTarget)
   {
     this.workspace.Assert(input);
@@ -124,10 +130,12 @@ export class ModuleSourceBrowser
 
       fail('SOURCE_STALE', '模块绑定或工作区已变化，请刷新架构后重试');
   }
+
   private async Finish(input: SourceTarget)
   {
     this.Check(await this.workspace.Read(), input)
   }
+
   private async Guarded<T>(run: () => Promise<T>): Promise<T>
   {
     try
@@ -148,6 +156,7 @@ export class ModuleSourceBrowser
       fail('SOURCE_READ', code === 'ENOENT' ? '源目录或文件不存在，请刷新目录' : code === 'EACCES' || code === 'EPERM' ? '没有权限读取此源目录或文件' : '源目录或文件读取失败，请刷新后重试');
     }
   }
+
   /** 单次最多检查 2000 个目录项、返回 200 项；不递归预读，不枚举链接目标。 */
   async List(raw: unknown): Promise<SourceDirectory>
   {
@@ -155,6 +164,7 @@ export class ModuleSourceBrowser
 
     return this.Guarded(async () => { const scope = await this.Binding(input), before = await fs.stat(scope.target); if (!before.isDirectory()) fail('SOURCE_KIND', '此路径不是目录'); const directory = await fs.opendir(scope.target), entries: SourceDirectory['entries'] = []; let seen = 0, scanned = 0, nextOffset: number | undefined; try { for await (const entry of directory) { if (seen++ < input.offset) continue; if (entries.length === 200 || scanned === 2000) { nextOffset = seen - 1; break } scanned++; const relative = scope.relative + '/' + entry.name; if (entry.isSymbolicLink() || (!entry.isDirectory() && !entry.isFile()) || protectedPath(relative) || scope.ignored.ignores(relative + (entry.isDirectory() ? '/' : ''))) continue; try { segments(entry.name) } catch { continue } entries.push({ name: entry.name, path: input.path ? input.path + '/' + entry.name : entry.name, kind: entry.isDirectory() ? 'directory' : 'file' }); } } finally { await directory.close().catch(error => { if (error.code !== 'ERR_DIR_CLOSED') throw error }) } await scope.checkPath(); const after = await fs.stat(scope.target); if (!same(before, after) || before.mtimeMs !== after.mtimeMs) fail('SOURCE_CHANGED', '枚举期间目录已变化，请刷新目录'); await this.Finish(input); entries.sort((a, b) => Number(b.kind === 'directory') - Number(a.kind === 'directory') || a.name.localeCompare(b.name)); return { entries, ...(nextOffset === undefined ? {} : { nextOffset }) }; })
   }
+
   /** 只预览普通 UTF-8 文本；大文件和二进制返回明确说明，绝不执行 HTML/脚本。 */
   async Read(raw: unknown): Promise<SourceFile>
   {

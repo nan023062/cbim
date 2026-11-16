@@ -13,6 +13,7 @@ type QueuedReceipt =
 
     id: string
   };
+
 type InsertPort = (request: QueueInsertRequest) => Promise<unknown>;
 
 /** 当前主头必须属于正在操作的会话；成员活动或持久等待不能借旧 running 日志取得插入口。 */
@@ -24,11 +25,13 @@ export function captureQueueInsertTarget(id: string, taskId: string | undefined,
 
   return Object.freeze({ id, taskId, expectedRunId: run.runId });
 }
+
 /** 明确选择已有消息只发送一次；传输失败不根据新的主轮重新构造请求。 */
 export function insertQueuedMessage(target: QueueInsertTarget, queueId: string, insert: InsertPort): Promise<unknown>
 {
   return insert({ id: target.id, taskId: target.taskId, expectedRunId: target.expectedRunId, queueId });
 }
+
 /** 真实入队成功即确认草稿已保存；后续插入失败保留该事实，不再入队、不移除原消息。 */
 export async function enqueueConversationMessage<T extends QueuedReceipt>(ports: { Enqueue(): Promise<T>; Accepted(receipt: T): void; insert: InsertPort }, target?: QueueInsertTarget): Promise<T>
 {

@@ -61,6 +61,7 @@ export function commandVerificationReportForInput(input: CommandVerificationInpu
 
   return commandVerificationReportSchema.superRefine((value, context) => { if ((Object.keys(expected) as (keyof CommandVerificationInput)[]).some(key => value.identity[key] !== expected[key])) context.addIssue({ code: 'custom', message: '原命令报告不属于本次明确选择' }); });
 }
+
 /** 只认显式支持矩阵，原型属性或近似名称不属于已支持命令。 */
 export function isVerifiableMainToolName(name: string): name is VerifiableMainToolName
 {

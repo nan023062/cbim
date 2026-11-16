@@ -59,6 +59,7 @@ export interface MemberToolBinding
 
   runId: string
 }
+
 /** 本轮真实调用 ID 在门禁后独立传递；业务参数不能指定它。 */
 export interface WorkspaceMemberToolsPort
 {

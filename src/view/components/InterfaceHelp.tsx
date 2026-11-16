@@ -16,6 +16,7 @@ function description(element: HTMLElement): string
 {
   return element.dataset.help || element.getAttribute('title') || element.getAttribute('aria-label') || '';
 }
+
 export function InterfaceHelp()
 {
   const id = useId();
@@ -80,6 +81,7 @@ export function InterfaceHelp()
 
       setTip(null);
     };
+
     dismiss.current = hide;
 
     const show = (element: HTMLElement) => { if (!element.isConnected || dialog.current?.open || element.closest('[hidden],[inert]')) return; const text = description(element); if (!text || element.getAttribute('aria-describedby')) return; originalTitle = element.getAttribute('title'); originalDescription = element.getAttribute('aria-describedby'); owner.current = element; element.removeAttribute('title'); element.setAttribute('aria-describedby', id); const bounds = element.getBoundingClientRect(); setTip({ text, x: Math.max(8, Math.min(bounds.left, window.innerWidth - 328)), y: bounds.bottom + 8 }); };
@@ -134,6 +136,7 @@ export function InterfaceHelp()
 
     dialog.current?.showModal();
   }
+
   /** 显式关闭和 Escape 共用焦点返回，不依赖后台窗口延迟派发原生 close 事件。 */
   function closeHelp()
   {
@@ -141,6 +144,7 @@ export function InterfaceHelp()
 
     trigger.current?.focus();
   }
+
   return <>
     <button ref={trigger} className="interface-help-trigger" aria-label="查看当前页面操作说明" onClick={openHelp}><Icon name="info" size={16} /><span>操作说明</span></button>
     {tip && createPortal(<div ref={tipElement} id={id} role="tooltip" className="interface-tooltip" style={{ left: tip.x, top: tip.y }}>{tip.text}</div>, document.body)}

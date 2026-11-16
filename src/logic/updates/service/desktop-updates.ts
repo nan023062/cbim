@@ -17,6 +17,7 @@ export interface DesktopUpdateInstaller
 
   Close(): void;
 }
+
 export class DesktopUpdates
 {
   private state: DesktopUpdateStatus;
@@ -36,11 +37,13 @@ export class DesktopUpdates
   {
     this.state = { currentVersion: version, currentNotes: notes, enabled, phase: enabled ? 'idle' : 'disabled', ...(resourceVersion === undefined ? {} : { currentResourceVersion: resourceVersion }) };
   }
+
   /** 复制公开数据，读取不触发联网或下载。 */
   Status(): DesktopUpdateStatus
   {
     return structuredClone({ ...this.state, ...(this.enginePreparations ? { enginePreparations: this.enginePreparations() } : {}) })
   }
+
   /** 只有正式安装版启动检查与预下载；下载完成不排空业务，也不自动安装。 */
   Start()
   {
@@ -56,6 +59,7 @@ export class DesktopUpdates
 
     this.timer.unref()
   }
+
   private Run(action: () => Promise<void>)
   {
     if (this.controller.signal.aborted)
@@ -72,6 +76,7 @@ export class DesktopUpdates
 
     return job;
   }
+
   Check()
   {
     if (!this.state.enabled || ['downloading', 'ready', 'installing'].includes(this.state.phase))
@@ -80,6 +85,7 @@ export class DesktopUpdates
 
     return this.Run(async () => { const previous = this.state; this.state = { ...this.state, phase: 'checking', error: undefined }; try { const latest = await this.latest(this.controller.signal); if (this.controller.signal.aborted) return; const newer = latest?.delivery === 'resources' ? latest.version === this.state.currentVersion && Number.isSafeInteger(latest.resourceVersion) && latest.resourceVersion! > (this.state.currentResourceVersion ?? 0) : latest && compareDesktopVersions(latest.version, this.state.currentVersion) > 0; const release = newer ? latest : undefined; if (release?.version !== previous.release?.version || release?.resourceVersion !== previous.release?.resourceVersion) this.retryDownloadAfter = 0; this.state = { ...this.state, checkedAt: new Date().toISOString(), release, phase: release ? 'available' : 'current', progress: undefined }; if (release) { if (Date.now() >= this.retryDownloadAfter) await this.DownloadCandidate(release); else this.state = { ...this.state, error: previous.error }; } } catch { if (!this.controller.signal.aborted) this.state = { ...this.state, checkedAt: new Date().toISOString(), release: previous.release, phase: previous.release ? 'available' : 'idle', error: '暂时无法检查更新，将在下一分钟自动重试，也可手动检查。' }; } });
   }
+
   /** 手动重试只准备安装包，与后台预下载共用同一在途操作；不授权停止任务或重启。 */
   Download()
   {
@@ -95,6 +101,7 @@ export class DesktopUpdates
 
     return this.Run(() => this.DownloadCandidate(release));
   }
+
   /** 候选在准备和下载期间冻结；完整校验成功才公开 ready，失败有限频后台重试。 */
   private async DownloadCandidate(release: DesktopRelease)
   {
@@ -127,6 +134,7 @@ export class DesktopUpdates
       }
     }
   }
+
   /** 用户明确确认重启时安装已校验候选；在途下载不排队安装，须就绪后再次确认。 */
   Install()
   {
@@ -140,6 +148,7 @@ export class DesktopUpdates
 
     return this.Run(() => this.InstallReady());
   }
+
   /** installing 先让出事件循环供 IPC/窗口呈现；取消固定两秒等待，仍必须等待真实业务排空。 */
   private async InstallReady()
   {
@@ -168,6 +177,7 @@ export class DesktopUpdates
         this.state = { ...this.state, phase: 'ready', error: '重启安装未能完成。请保留当前窗口，处理关闭错误后再试。' }
     }
   }
+
   /** 退出取消读取／下载并移除计时器；从不在退出时隐式安装。 */
   Close()
   {

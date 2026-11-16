@@ -34,6 +34,7 @@ function check(value: unknown, message: string): asserts value
 
     fail('MEMBER_CHECKPOINT_INVALID', message)
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
 
@@ -100,6 +101,7 @@ function closedTools(events: readonly ArtifactEvidenceEvent[], binding: Binding,
     }
   }
 }
+
 /** 可在本次 checkpoint 已授权但未结束时调用；仅忽略明确传入的本次调用，不能忽略其他在途操作。 */
 export function validateCheckpointEligibility(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, normalizePath: (path: string) => string, raw: MemberCheckpointInput, activeCheckpointToolCallId?: string)
 {
@@ -181,6 +183,7 @@ export function validateCheckpointEligibility(events: readonly ArtifactEvidenceE
 
   return { baseline, progressVersion: input.expectedTaskProgressVersion, lastEffectSeq };
 }
+
 /** 只读取完整 canonical 事件；没有请求时不产生检查点，有损坏请求时拒绝而非当普通交付。 */
 export function verifyMemberCheckpoint(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, normalizePath: (path: string) => string): { checkpoint: MemberCheckpointRecord; logHash: string } | undefined
 {

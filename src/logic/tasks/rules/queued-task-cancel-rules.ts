@@ -22,6 +22,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 const pending = (task: TaskNode) => ['planned', 'queued', 'waiting'].includes(task.status);
 
 /** 只计算明确集合，不增删图；遗漏后继以 taskId 明确报错，调用者须重新提出完整请求。 */
@@ -100,6 +101,7 @@ export function queuedCancellationSelection(state: DispatchState, identity: Grap
 
   return { graph, scope, tasks, assignments, members };
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
 

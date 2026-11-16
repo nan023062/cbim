@@ -38,6 +38,7 @@ export interface ScopedExecutionPort
   /** 只有已发出的实际平台资源全部收束才返回；失败保留租约，不重放任何程序。 */
   Drain(): Promise<void>;
 }
+
 export class RunScopedExecution
 {
   private controller = new AbortController();
@@ -64,6 +65,7 @@ export class RunScopedExecution
 
       settled: boolean
     };
+
   constructor(private readonly scope: ExecutionScope, private readonly port: ScopedExecutionPort, private readonly assertReady: (id: string) => void)
   {
     this.scope = structuredClone(scope);
@@ -72,6 +74,7 @@ export class RunScopedExecution
 
       fail('EXECUTION_SCOPE_PORT', '平台与原冻结范围不一致')
   }
+
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.physicalUnknown && name !== scopedReadToolName)
@@ -115,12 +118,14 @@ export class RunScopedExecution
 
     this.reserved = { id, name, input: structuredClone(input), hash: hash(JSON.stringify(input)), consumed: false, finished: false, settled: false };
   }
+
   Authorize(id: string, seq: number)
   {
     if (this.reserved?.id === id && !this.controller.signal.aborted)
 
       this.reserved.allowedSeq = seq
   }
+
   Observed(type: string, id: unknown)
   {
     const r = this.reserved;
@@ -140,16 +145,19 @@ export class RunScopedExecution
       this.Release()
     }
   }
+
   private Release()
   {
     if (this.reserved?.finished && this.reserved.settled)
 
       this.reserved = undefined
   }
+
   Stop()
   {
     this.controller.abort(Error('运行已停止'))
   }
+
   /** 统一保留未退出分类，让上层成员与应用关闭链继续持原租约；再次关闭只收尾原资源。 */
   async Drain()
   {
@@ -164,6 +172,7 @@ export class RunScopedExecution
       fail('EXECUTION_SCOPE_DRAIN_PENDING', '原隔离资源尚未确认退出与清理，请保留运行占用并核实')
     }
   }
+
   async List()
   {
     const base = { version: 1, cancellation: { mode: 'during_execution' as const, description: '停止同一次读取或隔离Job；实际退出前保留运行占用。' }, recovery: { mode: 'inspect_before_retry' as const, description: '先查原调用回执；不自动重放未知执行，私有输出不回写工程。' } };
@@ -176,6 +185,7 @@ export class RunScopedExecution
 
     ]
   }
+
   async Call(name: string, input: unknown, id?: string, signal?: AbortSignal)
   {
     const r = this.reserved;

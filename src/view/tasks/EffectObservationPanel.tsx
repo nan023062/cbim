@@ -35,6 +35,7 @@ export function EffectDispositionSummary({ record }: { record: EffectDisposition
 {
   return <div className="effect-disposition-summary" data-testid="effect-selected-disposition"><strong>{decisions[record.request.decision]}</strong><p>{record.request.reason}</p><small>本机明确保存 · {new Date(record.recordedAt).toLocaleString()} · 非业务验收</small><code>{record.dispositionId}</code></div>
 }
+
 /** 仅按钮读取当前影响；原失败提示位于面板之外，后续结果独立列出。 */
 export function EffectObservationPanel({ identity, anchor, context }: { identity: EffectObservationInput; anchor: string; context?: ExecutionRecoveryContext })
 {
@@ -103,6 +104,7 @@ export function EffectObservationPanel({ identity, anchor, context }: { identity
     {read?.relations && read.relations.identity.dispositionId === selected?.dispositionId && <div data-testid="effect-relations"><h4>由本处置关联的后续周期</h4>{read.relations.links.length ? read.relations.links.map(link => <article key={link.scopeId}><strong>{link.kind === 'inspection' ? '独立只读核实' : '独立业务修复'}</strong><p>{link.status === 'closed' ? ({ completed: '新目标已结束', failed: '新任务失败', cancelled: '新任务已停止', interrupted: '新任务中断' }[link.outcome!]) : link.status === 'waiting' ? '等待补充' : '新任务进行中'} · {link.taskIds.length} 个任务节点</p><code>{link.scopeId}</code>{context && <button onClick={() => context.showScope(link.scopeId)}><Icon name="inspect" size={16} />查看新周期</button>}</article>) : <p>尚无关联周期；保存处置不会自动创建任务。</p>}<p>新任务的结果不改变原工具的成功、失败或未知状态。</p></div>}
   </section>;
 }
+
 /** 从已经明确加载的成员报告选择原调用；不默认选最新，不使用模型自报的文件路径。 */
 export function MemberEffectObservation({ report, anchor, context }: { report: ExecutionReport; anchor: string; context?: ExecutionRecoveryContext })
 {

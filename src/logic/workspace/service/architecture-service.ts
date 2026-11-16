@@ -28,6 +28,7 @@ export class ArchitectureService
   {
     this.objects = new ObjectCrud(workspace)
   }
+
   /** 只缓存对象预览；不要求真人登记，所有正式知识到 commit 才写入，未知输入仍严格拒绝。 */
   async Preview(raw: unknown): Promise<ArchitecturePreview>
   {
@@ -41,6 +42,7 @@ export class ArchitectureService
 
     return { ...preview, notice: '仅预览。请核对差异和校验结果，再手动确认提交；校验失败不能提交，不删除业务源码或资源。' };
   }
+
   /** 按预览时冻结的完整事务提交；旧实例、旧知识版本、失效校验和被篡改计划均由原事务链拒绝。 */
   async Commit(raw: unknown): Promise<ArchitectureCommit>
   {

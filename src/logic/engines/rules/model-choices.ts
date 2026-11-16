@@ -20,11 +20,13 @@ export interface ModelChoice
 
   label: string
 }
+
 /** 显式角色只能选择对应操作；型号白名单约束与服务的 additionalRoleOperations 相同。 */
 export function modelRoleChoices(role: ModelRoleDescriptor, models: LlmSettings): ModelChoice[]
 {
   return models.profiles.flatMap(profile => (role.kind === 'embedding' ? profile.embedding?.models ?? [] : profile.models).filter(model => model.enabled && (!role.modelIds || role.modelIds.includes(model.id)) && (role.kind === 'embedding' || !!selectProviderConnection(profile, role.connection, model.id))).map(model => ({ profileId: profile.id, modelId: model.id, label: profile.name + ' / ' + (model.name || model.id) })));
 }
+
 /** 可用于禁用保存/发送；不是后端授权，陈旧模型配置仍需服务复核。 */
 export function engineSelectionAvailable(value: { engine: LoopEngine; profileId: string; modelId: string; modelRoles?: ModelRolesSelection } | undefined | null, models: LlmSettings | undefined): boolean
 {

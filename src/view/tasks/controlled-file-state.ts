@@ -25,6 +25,7 @@ export interface FileCompensationAttempt
 
   error?: string
 }
+
 export interface ControlledFileDraft
 {
   identity: ControlledFileReportInput;
@@ -33,6 +34,7 @@ export interface ControlledFileDraft
 
   commandId?: string
 }
+
 export interface ControlledFileRead
 {
   report?: ControlledFileReport;
@@ -45,6 +47,7 @@ export interface ControlledFileRead
 
   error: string
 }
+
 export interface ControlledFileState
 {
   drafts: readonly ControlledFileDraft[];
@@ -55,6 +58,7 @@ export interface ControlledFileState
 
   error: string
 }
+
 /** 私有文件/进程能力不出现在该端口；只接受固定原调用及明确的新补偿命令。 */
 export interface ControlledFilePorts
 {
@@ -70,6 +74,7 @@ export interface ControlledFilePorts
 
   receipt: (input: FileCompensationLookup) => Promise<unknown>;
 }
+
 export const CONTROLLED_FILE_LOCAL_BYTES = 2 * 1024 * 1024,
 
   CONTROLLED_FILE_LOCAL_LIMIT = 64;
@@ -87,6 +92,7 @@ function knownPreAcceptRejection(error: unknown)
 {
   return error instanceof Error && /^(FILE_COMPENSATION_PRE_ACCEPT_INPUT|FILE_COMPENSATION_PRE_ACCEPT_REJECTED): /.test(error.message)
 }
+
 const byteLength = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)).length;
 
 const terminal = (phase: ControlledFilePhase) => phase === 'applied' || phase === 'not_applied' || phase === 'unknown';
@@ -100,11 +106,13 @@ function phaseAdvances(previous: { revision: number; phase: ControlledFilePhase 
 {
   return next.revision > previous.revision && !terminal(previous.phase) && (previous.phase === 'prepared' || next.revision === 3 && terminal(next.phase));
 }
+
 /** 已见公开历史也是单调依据，不能因尚无本机完整回执而接受改名或退回的终态。 */
 function summaryAdvances(previous: FileCompensationSummary, next: FileCompensationSummary)
 {
   return previous.compensationId === next.compensationId && previous.commandId === next.commandId && previous.preparedAt === next.preparedAt && (same(previous, next) || phaseAdvances(previous, next)) && Date.parse(next.updatedAt) >= Date.parse(previous.updatedAt);
 }
+
 function bounded(raw: unknown)
 {
   if (byteLength(raw) > controlledFileLimits.outputBytes)
@@ -113,6 +121,7 @@ function bounded(raw: unknown)
 
   return raw
 }
+
 /** 报告必须属于所选真实调用；已读到的操作不能被后来查无或另一操作替代。 */
 export function checkedControlledFileReport(raw: unknown, identity: ControlledFileReportInput, previous?: ControlledFileReport): ControlledFileReport
 {
@@ -149,6 +158,7 @@ export function checkedControlledFileReport(raw: unknown, identity: ControlledFi
   }
   return report;
 }
+
 /** 补偿恢复原 before；回执不能借同一 command 返回另一文件、摘要或请求。 */
 export function checkedFileCompensationReceipt(raw: unknown, request: FileCompensationInput, source: ControlledFileOperationSummary, previous?: FileCompensationReceipt): FileCompensationReceipt
 {
@@ -168,6 +178,7 @@ export function checkedFileCompensationReceipt(raw: unknown, request: FileCompen
   }
   return receipt;
 }
+
 /** 每主会话共享；构造、订阅和身份/图版本变化均不调用任何后端端口。 */
 export class ControlledFileController
 {
@@ -222,22 +233,27 @@ export class ControlledFileController
       this.value = { ...this.value, error: '本机补偿索引无法读取，未发送请求：' + errorText(error) }
     }
   }
+
   private Owns(v: { workspaceId: string; rootSessionId: string })
   {
     return v.workspaceId === this.workspaceId && v.rootSessionId === this.rootSessionId
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return !this.listeners.size && !this.pending.size && !Object.values(this.value.reads).some(v => v.loading)
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(next: ControlledFileState)
@@ -246,22 +262,27 @@ export class ControlledFileController
 
     this.listeners.Notify()
   }
+
   Read(identity: ControlledFileReportInput)
   {
     return this.value.reads[controlledFileSelectionKey(identity)]
   }
+
   Draft(identity: ControlledFileReportInput)
   {
     return this.value.drafts.find(v => sameIdentity(v.identity, identity))
   }
+
   Attempt(identity: ControlledFileReportInput)
   {
     return this.value.attempts.find(v => v.request.commandId === this.Draft(identity)?.commandId)
   }
+
   IsPending(commandId?: string)
   {
     return !!commandId && this.pending.has(commandId)
   }
+
   private SetRead(identity: ControlledFileReportInput, patch: Partial<ControlledFileRead>)
   {
     const key = controlledFileSelectionKey(identity),
@@ -270,18 +291,21 @@ export class ControlledFileController
 
     this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
   }
+
   ObserveAnchor(identity: ControlledFileReportInput, anchor: string)
   {
     if (this.Owns(identity))
 
       this.anchors.set(controlledFileSelectionKey(identity), anchor)
   }
+
   Fresh(identity: ControlledFileReportInput, instanceId?: string)
   {
     const r = this.Read(identity);
 
     return !!instanceId && !!r?.preview?.eligible && !r.error && !r.loading && r.preview.identity.instanceId === instanceId && r.anchor === this.anchors.get(controlledFileSelectionKey(identity))
   }
+
   private Persist(drafts: readonly ControlledFileDraft[], attempts: readonly FileCompensationAttempt[]): boolean
   {
     try
@@ -310,6 +334,7 @@ export class ControlledFileController
 
     return true;
   }
+
   Edit(identity: ControlledFileReportInput, reason: string)
   {
     const length = controlledFileUtf8Bytes(reason),
@@ -328,6 +353,7 @@ export class ControlledFileController
 
     this.Persist([...this.value.drafts.filter(v => !sameIdentity(v.identity, identity)), { identity: parsed.data, reason }], this.value.attempts);
   }
+
   /** 明确未写的已结算补偿才可准备另一个请求；成功、未知和在途不能换 ID 重发。 */
   Prepare(identity: ControlledFileReportInput)
   {
@@ -343,6 +369,7 @@ export class ControlledFileController
 
     this.SetRead(identity, { preview: undefined, anchor: undefined })
   }
+
   async Inspect(identity: ControlledFileReportInput)
   {
     if (!this.Owns(identity) || this.Read(identity)?.loading)
@@ -362,6 +389,7 @@ export class ControlledFileController
       this.SetRead(identity, { loading: false, error: '原操作核实失败：' + errorText(error) })
     }
   }
+
   /** 预览才读取当前文件；不保存补偿意图或持有句柄等待用户决定。 */
   async Preview(identity: ControlledFileReportInput, instanceId: string)
   {
@@ -402,10 +430,12 @@ export class ControlledFileController
       this.SetRead(identity, { loading: false, error: '补偿预览失败：' + errorText(error) })
     }
   }
+
   private SaveAttempt(attempt: FileCompensationAttempt)
   {
     return this.Persist(this.value.drafts, this.value.attempts.some(v => v.request.commandId === attempt.request.commandId) ? this.value.attempts.map(v => v.request.commandId === attempt.request.commandId ? attempt : v) : [...this.value.attempts, attempt])
   }
+
   /** 保存原命令后只发一次。仅首次提交的两个明确事务前拒绝码允许修改草稿；未知后的查询失败不能解除原命令锁。 */
   async Submit(identity: ControlledFileReportInput, instanceId: string)
   {
@@ -462,6 +492,7 @@ export class ControlledFileController
       this.Publish({ ...this.value })
     }
   }
+
   /** 查询原本机命令或后端历史；阶段只前进，查询失败既不把未知升级拒绝，也不抹去此前明确拒绝。 */
   async Query(identity: ControlledFileReportInput, commandId: string)
   {
@@ -525,6 +556,7 @@ export class ControlledFileController
     }
   }
 }
+
 /** 同 renderer 的节点/页签共享未决命令；仅无订阅且无请求的控制器可逐出，重开从本机索引恢复。 */
 export class ControlledFilePool
 {
@@ -533,6 +565,7 @@ export class ControlledFilePool
   constructor(private idleLimit = 16)
   {
   }
+
   Get(workspaceId: string, rootSessionId: string, ports: ControlledFilePorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),

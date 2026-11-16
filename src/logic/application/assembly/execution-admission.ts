@@ -26,11 +26,13 @@ export interface WorkspaceAdmission
 
   signal?: AbortSignal
 }
+
 /** 来源加摘要构成有界安全标识；稳定命令不因原文长度或分隔符变化而生成无效票据键。 */
 export function admissionRequestId(source: 'main' | 'member', commandId: string): string
 {
   return source + '-' + hash(commandId)
 }
+
 /** 同步领取成功才返回幂等释放函数；没有等待回调的直接请求绝不留下后台排队票据。 */
 export function acquireExecutionLease(lease: WorkspaceExecutionLease, runKey: string, request: Omit<AdmissionRequest, 'ownerEpoch'>, admission?: WorkspaceAdmission, wait?: ExecutionAdmissionWait): () => void
 {

@@ -27,6 +27,7 @@ export interface QueueCursor
 
   items: Record<string, number>
 }
+
 export interface QueueDelta
 {
   epoch: string;

@@ -16,6 +16,7 @@ export class FileAutomations implements AutomationStorage
   constructor(private readonly file: string, private readonly workspaceId: string)
   {
   }
+
   async Read(): Promise<AutomationState>
   {
     let text: string;
@@ -44,6 +45,7 @@ export class FileAutomations implements AutomationStorage
 
     return state;
   }
+
   async Write(state: AutomationState)
   {
     const checked = automationStateSchema.parse(state);

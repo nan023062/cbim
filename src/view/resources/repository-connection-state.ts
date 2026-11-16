@@ -49,6 +49,7 @@ export interface RepositoryConnectionPendingStore
   /** 只删除逐字段一致的原请求；不允许迟到回执清除后来保存的命令。 */
   Remove(pending: RepositoryConnectionPending): void;
 }
+
 /** 不缓存 localStorage：不同组件重新进入时仍读取同一原请求；坏数据保留，不空表降级覆盖。 */
 export function createRepositoryConnectionPendingStore(storage: PendingStorage): RepositoryConnectionPendingStore
 {
@@ -61,6 +62,7 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
     {
       return load().records.find(record => record.input.workspaceId === workspaceId)
     },
+
     Save(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
@@ -80,6 +82,7 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
       // 即使已有同一请求也重新保存一次，确保存储不可写时不会以“已有记录”为由发起重试。
       write(old ? state.records : [...state.records, pending]);
     },
+
     Remove(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
@@ -100,6 +103,7 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
     },
   };
 }
+
 /** 核对定义提交的完整原计划身份；定义当前内容相同不能代替原提交回执。 */
 export function checkedRepositoryConnectionCommit(raw: unknown, pending: RepositoryConnectionCommitPending): RepositoryConnectionCommit
 {
@@ -118,6 +122,7 @@ export function checkedRepositoryConnectionCommit(raw: unknown, pending: Reposit
 
   return receipt;
 }
+
 /** 授权/撤销必须是原命令、原目标及精确下一版；不把最新授权状态当成原命令回执。 */
 export function checkedRepositoryConnectionReceipt(raw: unknown, pending: RepositoryConnectionGrantPending): RepositoryConnectionReceipt
 {
@@ -140,6 +145,7 @@ export function checkedRepositoryConnectionReceipt(raw: unknown, pending: Reposi
 
   return receipt;
 }
+
 /** 必须由后端明确核实原实例退役且原请求未受理；普通查询空值、当前实例或错误身份均不构成清除依据。 */
 export function checkedRepositoryConnectionUnaccepted(raw: unknown, pending: RepositoryConnectionPending): boolean
 {
@@ -153,6 +159,7 @@ export function checkedRepositoryConnectionUnaccepted(raw: unknown, pending: Rep
 
   return result.unaccepted;
 }
+
 /**
  * 只供首次发送且从未未知的请求判断明确未受理；持久恢复或曾经丢失响应后不能借后来错误解锁。
  * grant 的网络核验发生在授权写入之前，所以额外三种预检失败可确认未写；commit/revoke 不作该推断。

@@ -55,6 +55,7 @@ export interface ModuleOwnershipPanelProps
     onSelect: (moduleId: string, agentId: string) => void
   }
 }
+
 export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberId, memberId, onClose, registration, onDirtyChange }: ModuleOwnershipPanelProps)
 {
   const controller = useMemo(() => commands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), [identity.workspaceId]);
@@ -140,6 +141,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
         setLoading(false)
     }
   }
+
   async function currentMembers()
   {
     const result: WorkspaceMemberList['items'] = [];
@@ -172,6 +174,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
 
     throw Error('已离开当前视图');
   }
+
   async function select(moduleId: string, preferredMemberId?: string)
   {
     if (lock.current || !leaveDraft())
@@ -260,6 +263,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
         setLoading(false)
     }
   }
+
   function invalidate()
   {
     markDirty(true);
@@ -268,6 +272,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
 
     setPreview(undefined)
   }
+
   async function prepare(adoptSource = false)
   {
     if (!detail || blocked || lock.current)
@@ -330,6 +335,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
         setLoading(false)
     }
   }
+
   async function commit()
   {
     if (!preview || blocked || lock.current)
@@ -368,6 +374,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
 
       setError(record.error);
   }
+
   async function query(commandId: string, retry = false)
   {
     if (retry)
@@ -382,6 +389,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
 
       await list()
   }
+
   const binding = detail?.view.binding,
 
     sameOwner = (binding?.ownerMemberId ?? null) === (nextId || null);

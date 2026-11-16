@@ -30,6 +30,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 const equal = sameGoalValue;
 
 /** 提交/重放使用同一规则；仅有界历史追加可作为 waiting 的精确变化例外。 */
@@ -160,6 +161,7 @@ export function validateHumanDecisions(previous: DispatchState, next: DispatchSt
 
   valid(!otherIds.some(id => ids.has(id)), '人工决定不能重用已存在的周期启动或补充命令');
 }
+
 /** 真实命令由可信服务命名；模型派发或其它事务不能夹带独立的人工决定记录。 */
 export function validateHumanDecisionCommand(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand): void
 {

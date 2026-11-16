@@ -10,6 +10,7 @@ export type KnowledgeJsonValue = null | boolean | number | string | KnowledgeJso
 {
   [key: string]: KnowledgeJsonValue
 };
+
 function isJsonValue(value: unknown): value is KnowledgeJsonValue
 {
   const active = new Set<object>(),
@@ -65,6 +66,7 @@ function isJsonValue(value: unknown): value is KnowledgeJsonValue
   }
   return true;
 }
+
 /**
  * 自定义谓词仅检查且原样返回；Zod record 会删除合法 JSON 自有 __proto__ 键，不能用于这些原始事实槽。
  * JSON Schema 中该字段允许任意 JSON 值，与传输快照语义一致；外层服务对象仍使用严格字段协议。

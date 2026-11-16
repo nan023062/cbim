@@ -38,6 +38,7 @@ export class RunMemberCheckpoint
 
       consumed: boolean
     };
+
   private staged = false;
 
   private controller = new AbortController();
@@ -48,6 +49,7 @@ export class RunMemberCheckpoint
 
     this.tools = new MemberCheckpointTools(this.binding, { knowledgeRevision: port.knowledgeRevision, Stage: (input, id) => this.Stage(input, id) });
   }
+
   /** 策略或审批 await 之前预占；失败参数可修正，开始保存后永久封住本轮，直到安全结算。 */
   Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
@@ -75,6 +77,7 @@ export class RunMemberCheckpoint
 
     this.reserved = { id, input: parsed.data, consumed: false };
   }
+
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type === 'task.updated' || event.type === 'artifact.baseline_captured' || event.type === 'task.checkpoint_requested' || event.type === 'run.stop_requested')
@@ -85,10 +88,12 @@ export class RunMemberCheckpoint
 
       this.reserved = undefined;
   }
+
   Stop()
   {
     this.controller.abort(Error('成员运行已停止'))
   }
+
   private async Stage(input: MemberCheckpointInput, id: string): Promise<MemberCheckpointStaged>
   {
     if (!this.reserved || this.reserved.id !== id || this.reserved.consumed || !isDeepStrictEqual(this.reserved.input, input))

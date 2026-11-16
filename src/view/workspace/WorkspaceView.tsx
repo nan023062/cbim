@@ -120,6 +120,7 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
 
     setSource(target)
   }
+
   function select(path: string, kind: 'folder' | 'file')
   {
     if (dirty.current.has(tabId) && !confirm('丢弃未提交的知识草稿并切换？'))
@@ -134,6 +135,7 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
 
     setChosen(owner ?? projectRootModuleId)
   }
+
   async function saved(objects: string[])
   {
     setEditor(undefined);
@@ -153,6 +155,7 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
       setError(cause instanceof Error ? cause.message : String(cause))
     }
   }
+
   /** 回调固定所点行的模块身份；先保护未提交草稿，编辑/删除仍由原事务弹窗预览。 */
   function nodeActions(target: string): KnowledgeTreeAction[]
   {
@@ -194,6 +197,7 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
 
     ];
   }
+
   const definition = (() => { try { return JSON.parse(current?.files.find(item => item.path === node?.id + '/module.json')?.text ?? '{}') } catch { return {} } })();
 
   if (current && registration)

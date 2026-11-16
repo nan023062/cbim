@@ -28,6 +28,7 @@ export function nativeToolInput(name: string, input: Record<string, unknown>, cw
   }
   return input;
 }
+
 /** 固定第三方操作库，优先使用受管 E 根，旧包兼容 pi-runtime；只创建工具，不创建会话或读取模型账号。 */
 export async function managedNativeTools(cwd: string, runtime?: EngineRuntimePackage): Promise<EngineToolsPort>
 {

@@ -24,6 +24,7 @@ export function buildPiRuntimeSettings(model?: Pick<LlmModel, 'contextWindow' | 
     ...(reserveTokens === undefined ? {} : { compaction: { reserveTokens } })
   };
 }
+
 /** 无推理模型强制 off；未设置的推理模型使用 Pi 的默认 medium，恢复时不继承旧模型档位。 */
 export function requestedThinkingLevel(model: { reasoning: boolean; thinkingLevel?: LlmModel['thinkingLevel'] })
 {

@@ -33,6 +33,7 @@ export function recursiveEvidenceRun(state: DispatchState, workspaceId: string, 
 
   return run;
 }
+
 /** 同时核对原生绑定和完整连续事件；active 登记不证明进程活跃，文件复核另要求真实终态与 closed。 */
 export function recursiveEvidenceLogMatches(run: AgentBusinessRun, summary: RunSummary, root: string): boolean
 {

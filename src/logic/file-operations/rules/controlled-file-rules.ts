@@ -20,6 +20,7 @@ type State =
   {
     controlledFileChanges?: readonly ControlledFileChange[]
   };
+
 /** 运行/调用而非正文决定原操作身份；同调用不能换命令再次写。 */
 export function controlledFileOperationId(binding: ControlledFileBinding, toolCallId: string): string
 {
@@ -27,22 +28,27 @@ export function controlledFileOperationId(binding: ControlledFileBinding, toolCa
 
   return hash(json(['controlled-file-write-v1', b.workspaceId, b.rootSessionId, b.taskId, b.runId, toolCallId]))
 }
+
 export function controlledFileOwnerBindingHash(binding: OwnerExecutionBinding | AutomaticExecutionBinding): string
 {
   return hash(json('kind' in binding ? automaticExecutionBindingSchema.parse(binding) : ownerExecutionBindingSchema.parse(binding)))
 }
+
 export function controlledFileRequestFingerprint(origin: ControlledFileOrigin, request: ControlledWriteRequest): string
 {
   return hash(json({ version: 1, origin: controlledFileOriginSchema.parse(origin), request: controlledWriteRequestSchema.parse(request) }))
 }
+
 export function controlledFileIntentHash(intent: ControlledFileIntent): string
 {
   return hash(json(controlledFileIntentSchema.parse(intent)))
 }
+
 export function controlledFileChangeHash(change: ControlledFileChange): string
 {
   return hash(json(controlledFileChangeSchema.parse(change)))
 }
+
 /** 终态共享同一个命令键，不能在已保存 applied 后另存 unknown。 */
 export function controlledFilePhaseCommand(change: ControlledFileChange): { commandId: string; fingerprint: string }
 {
@@ -52,10 +58,12 @@ export function controlledFilePhaseCommand(change: ControlledFileChange): { comm
 
   return { commandId: `controlled-file:${checked.operationId}:${phase}`, fingerprint: controlledFileChangeHash(checked) }
 }
+
 export function controlledFilePhaseReceipt(change: ControlledFileChange): ControlledFilePhaseReceipt
 {
   return { version: 1, operationId: change.operationId, phase: change.phase, revision: change.revision, intentHash: change.phase === 'prepared' ? controlledFileIntentHash(change.intent) : change.intentHash, recordedAt: change.recordedAt }
 }
+
 /** 只派生已存前缀；调用者须使用通过 Store 校验的记录，不查询或修改当前文件。 */
 export function controlledFileOperation(state: State, operationId: string): ControlledFileOperation | undefined
 {
@@ -75,18 +83,22 @@ export function controlledFileOperation(state: State, operationId: string): Cont
 
   return { intent: structuredClone(first.intent), phase: change.phase, revision: change.revision, updatedAt: change.recordedAt, change: structuredClone(change) }
 }
+
 export function fileCompensationId(input: Pick<FileCompensationInput, 'workspaceId' | 'commandId'>): string
 {
   return hash(json(['file-compensation-v1', input.workspaceId, input.commandId]))
 }
+
 export function fileCompensationRequestFingerprint(input: FileCompensationInput, actor: FileCompensationActor): string
 {
   return hash(json({ version: 1, request: fileCompensationInputSchema.parse(input), actor: fileCompensationActorSchema.parse(actor) }))
 }
+
 export function fileCompensationRevision(state: State, operationId: string): number
 {
   return (state.controlledFileChanges ?? []).filter(c => c.phase === 'prepared' && c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === operationId).length
 }
+
 /** basis 不含观察时钟，包含原 applied 事实、补偿 CAS 和实读同一文件；公开请求不能自造这些事实。 */
 export function fileCompensationBasis(input: { original: ControlledFileOperation; compensationRevision: number; fileIdentity: ControlledFileIdentity; observedBefore: ControlledFileContentFact }): string
 {
@@ -98,6 +110,7 @@ export function fileCompensationBasis(input: { original: ControlledFileOperation
 
   return hash(json({ version: 1, operationId: original.intent.operationId, intentHash: controlledFileIntentHash(original.intent), appliedEventHash: controlledFileChangeHash(original.change), operationRevision: original.revision, compensationRevision: input.compensationRevision, fileIdentity: controlledFileIdentitySchema.parse(input.fileIdentity), observedBefore: controlledFileContentFactSchema.parse(input.observedBefore), restore: { byteLength: original.intent.before.byteLength, sha256: original.intent.before.sha256 } }));
 }
+
 const fact = (v: ControlledFileContentFact): ControlledFileContentFact => ({ byteLength: v.byteLength, sha256: v.sha256 });
 
 const issue = (operation: ControlledFileOperation) => 'reasonCode' in operation.change ? { issue: { code: operation.change.reasonCode, message: operation.phase === 'not_applied' ? '执行方确认尚未发出内容写入' : '操作结果未确认，不能自动重试或补偿' } } : {};
@@ -113,6 +126,7 @@ export function summarizeControlledFileOperation(operation: ControlledFileOperat
 
   return { operationId: i.operationId, scopeId: i.origin.scopeId, binding: structuredClone(i.origin.binding), toolCallId: i.origin.toolCallId, revision: operation.revision, phase: operation.phase, relativePath: i.request.relativePath, before: fact(i.before), intendedAfter: fact(i.intendedAfter), preparedAt: i.preparedAt, updatedAt: operation.updatedAt, ...issue(operation) }
 }
+
 export function controlledFileWriteApplied(operation: ControlledFileOperation): ControlledFileWriteApplied
 {
   const i = operation.intent;
@@ -123,6 +137,7 @@ export function controlledFileWriteApplied(operation: ControlledFileOperation): 
 
   return { version: 1, state: 'applied', operationId: i.operationId, revision: 3, scopeId: i.origin.scopeId, binding: structuredClone(i.origin.binding), toolCallId: i.origin.toolCallId, inputHash: i.origin.inputHash, relativePath: i.request.relativePath, before: fact(i.before), after: fact(i.intendedAfter), appliedAt: operation.updatedAt, coverage: 'single_file_default_stream', acceptance: 'not_evaluated' }
 }
+
 export function summarizeFileCompensation(operation: ControlledFileOperation): FileCompensationSummary
 {
   const i = operation.intent;
@@ -133,6 +148,7 @@ export function summarizeFileCompensation(operation: ControlledFileOperation): F
 
   return { compensationId: i.operationId, commandId: i.request.commandId, revision: operation.revision, phase: operation.phase, preparedAt: i.preparedAt, updatedAt: operation.updatedAt, ...issue(operation) }
 }
+
 export function fileCompensationReceipt(operation: ControlledFileOperation): FileCompensationReceipt
 {
   const i = operation.intent;

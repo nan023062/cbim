@@ -22,10 +22,12 @@ export function useHistorySessions(identity: AgentHistoryIdentity, enabled: bool
 {
   return useHistoryPage(identity, readSessions, enabled)
 }
+
 export function useHistoryRuns(identity: AgentHistorySessionIdentity, enabled: boolean)
 {
   return useHistoryPage(identity, readRuns, enabled)
 }
+
 /** 调用方固定只读动作及身份；disabled 不读取，返回内容始终先核对当前作用域。 */
 function useHistoryPage<I extends AgentHistoryIdentity, T extends Item>(identity: I, readPage: (input: I & { cursor?: string; limit: number }) => Promise<AgentHistoryPage<T>>, enabled: boolean)
 {
@@ -57,6 +59,7 @@ function useHistoryPage<I extends AgentHistoryIdentity, T extends Item>(identity
 
   return { ...(state.key === key ? state : { key, loading: enabled, error: '' }), refresh, more };
 }
+
 /** 只观察选中的一轮，补完已有事件后停止；刷新从已确认游标增量读取，绝不启动或恢复模型。 */
 export function useHistoryEvents(record: AgentHistoryRun)
 {
@@ -169,6 +172,7 @@ export function useHistoryEvents(record: AgentHistoryRun)
 
       return inFlight;
     }
+
     void pull();
 
     return () => { stopped = true; if (controller.current === current) controller.current = undefined };

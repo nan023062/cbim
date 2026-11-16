@@ -26,6 +26,7 @@ function valid(value: unknown, message: string): asserts value
 
     throw Error(message)
 }
+
 /** 调用方核完整磁盘日志；本函数核运行绑定、递增顺序、冻结范围及逐次不可变采集链。 */
 export function verifyOutputManifests(events: readonly ArtifactEvidenceEvent[], binding: Binding, knowledgeRevision: string, scopes: readonly ArtifactScopeBinding[]): { records: OutputManifestRecord[]; refs: Array<OutputManifestRef & { invalidated: boolean }>; issues: Array<{ code: string; message: string }> }
 {

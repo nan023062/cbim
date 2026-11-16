@@ -17,6 +17,7 @@ export interface ExecutionAdmissionWait
   /** 按稳定请求键覆盖清理函数，重试不会不断积累相同票据的清理闭包。 */
   RegisterWithdraw(requestId: string, withdraw: () => void): void;
 }
+
 /** 启动工厂的可信上下文；与可序列化用户 Options 分开，signal 只保护当前启动准备。 */
 export interface ExecutionLaunchContext
 {

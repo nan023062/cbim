@@ -36,6 +36,7 @@ export type PngRasterResult =
 
     issue: Issue
   };
+
 const invalid = (keyword: string, instancePath = '', code: Issue['code'] = 'png_invalid'): PngRasterResult => ({ ok: false, issue: { code, instancePath, keyword } });
 
 const paeth = (a: number, b: number, c: number) => { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); return pa <= pb && pa <= pc ? a : pb <= pc ? b : c };
@@ -234,6 +235,7 @@ export function decodePngRaster(bytes: Uint8Array): PngRasterResult
   }
   return { ok: true, width, height, colorType: channels === 3 ? 'rgb' : 'rgba', pixels };
 }
+
 /** 对同一实际字节完整解码，再匹配冻结宽高/通道；只返回无像素的原条件判定。 */
 export function validatePngArtifact(rawSchema: PngImageSchema, bytes: Uint8Array): PngValidationOutcome
 {

@@ -41,6 +41,7 @@ function read(snapshot: Snapshot, path: string)
     return {}
   }
 }
+
 /** 读取自身定义及正文；继承 Skill 由调用者传原 owner 的 id，不把副本写到当前 Agent。 */
 export function editableObject(snapshot: Snapshot, kind: EditableKind, id?: string)
 {
@@ -66,6 +67,7 @@ export function editableObject(snapshot: Snapshot, kind: EditableKind, id?: stri
 
   return { data: (inventory[kind === 'skill' ? 'skills' : 'workflows'] ?? []).find((item: any) => item.reference === reference) ?? {}, body: snapshot.files.find(file => file.path === owner + '/' + reference)?.text ?? '' };
 }
+
 // 与后端诊断共用结构；占位内容须由用户按实际业务填写。
 const moduleScaffold = moduleBodyTemplate();
 
@@ -87,6 +89,7 @@ export interface ArchitectureEditorProps
 
   onSaved: (objects: string[]) => void
 }
+
 /** 删除始终先预览，级联必须单独勾选；不再登记真人或签署旧维护声明，岗位负责人通过独立入口配置。 */
 export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, mode = 'edit', onClose, onSaved }: ArchitectureEditorProps)
 {
@@ -154,12 +157,14 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
 
     setError('')
   }
+
   function close()
   {
     if (!busy && (!changed || confirm('放弃尚未提交的修改？')))
 
       onClose()
   }
+
   const lines = (value: string) => value.split('\n').map(item => item.trim()).filter(Boolean);
 
   const moduleParents = ['.cbim/workspace', ...Object.keys(base.validation?.tree.nodes ?? {})];
@@ -212,6 +217,7 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
       setBusy(false)
     }
   }
+
   async function commit()
   {
     if (!preview || lock.current)
@@ -243,6 +249,7 @@ export function ArchitectureEditor({ workspaceId, snapshot, kind, id, parentId, 
       setBusy(false)
     }
   }
+
   return createPortal(<div className="modal-backdrop architecture-editor-backdrop"><form className="modal architecture-editor" role="dialog" aria-modal="true" aria-label={removing ? '删除' + labels[kind] : (id ? '编辑' : '新建') + labels[kind]} onSubmit={event => { event.preventDefault(); void prepare() }}>
     <header><div><small>工作区知识 · {base.workspaceId.slice(0, 8)}</small><h2>{removing ? '删除' : id ? '编辑' : '新建'}{labels[kind]}</h2></div><button type="button" disabled={busy} onClick={close}>关闭</button></header>
     {id && <p className="architecture-object-id">{id}</p>}

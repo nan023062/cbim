@@ -20,6 +20,7 @@ export interface RuntimeNavigationRequest extends RuntimeNavigationTarget
 
   instanceId: string
 }
+
 /** loop.list 的白名单事实；成员任务只作为目标节点，不能借其 ID 创建主会话。 */
 export interface VerifiedRuntimeNavigation
 {
@@ -34,6 +35,7 @@ export interface VerifiedRuntimeNavigation
     goal: string
   }
 }
+
 type NavigationReader = (action: 'list' | 'loop.list', args?: { id: string }) => Promise<unknown>;
 
 type NavigationGraph =
@@ -44,6 +46,7 @@ type NavigationGraph =
 
     tasks: readonly Pick<GraphSnapshot['tasks'][number], 'taskId' | 'scopeId'>[]
   };
+
 const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 
 function runningWorkspace(raw: unknown, id: string): WorkspaceView
@@ -58,6 +61,7 @@ function runningWorkspace(raw: unknown, id: string): WorkspaceView
 
   return matches[0] as unknown as WorkspaceView;
 }
+
 /** 只读核实；cancel 或更新请求后，迟到成功和失败都不再影响当前页面。 */
 export class RuntimeNavigationResolver
 {
@@ -66,10 +70,12 @@ export class RuntimeNavigationResolver
   constructor(private readonly read: NavigationReader)
   {
   }
+
   Cancel()
   {
     this.generation.Advance()
   }
+
   async Resolve(raw: RuntimeNavigationTarget): Promise<VerifiedRuntimeNavigation | undefined>
   {
     const generation = this.generation.Advance();
@@ -150,6 +156,7 @@ export class RuntimeNavigationResolver
     }
   }
 }
+
 /** 只切换已绑定原会话的页签；不存在时显式恢复该历史条目并解除其本机隐藏，不修改原草稿、附件或其他工作区。 */
 export function bindRuntimeConversation(layout: TabLayout | undefined, verified: VerifiedRuntimeNavigation): TabLayout
 {
@@ -165,6 +172,7 @@ export function bindRuntimeConversation(layout: TabLayout | undefined, verified:
 
   return { ...base, tabs: [...base.tabs, tab], active: tab.id, ...(base.hiddenTaskIds ? { hiddenTaskIds: base.hiddenTaskIds.filter(id => id !== verified.conversation.taskId) } : {}) };
 }
+
 /** 对已同步的原图进行一次定位；不存在的周期或节点明确拒绝，不猜最新周期、不改变执行中的目标。 */
 export function runtimeTaskSelection(target: RuntimeNavigationTarget, identity: { workspaceId: string; rootSessionId?: string }, graph: NavigationGraph | undefined, scopes: readonly Pick<ScopeSummary, 'scopeId'>[]): { taskId: string; scopeId?: string }
 {

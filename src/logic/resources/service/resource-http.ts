@@ -35,11 +35,13 @@ export function repositoryUrl(input: string)
 
   return url.origin;
 }
+
 export class RemoteRepository implements RepositoryStore
 {
   constructor(readonly url: string, private token: string, readonly expectedId?: string)
   {
   }
+
   private async Request(method = 'GET', body?: unknown, signal?: AbortSignal)
   {
     const timeout = AbortSignal.timeout(8000),
@@ -108,20 +110,24 @@ export class RemoteRepository implements RepositoryStore
 
     return parsed.data;
   }
+
   /** 真实 HTTP 读取；信号作用到响应正文，不保存凭据、不自动重试。 */
   Read(signal?: AbortSignal)
   {
     return this.Request('GET', undefined, signal)
   }
+
   Save(args: unknown)
   {
     return this.Request('POST', args)
   }
+
   Remove(args: unknown)
   {
     return this.Request('DELETE', args)
   }
 }
+
 /** 既有共享令牌保留读写；独立只读令牌只能 GET，不能通过客户端声明或请求体提升权限。 */
 export async function serveRepository(store: RepositoryStore, token: string, options: { host: '127.0.0.1' | '0.0.0.0'; port: number; readOnlyToken?: string })
 {
@@ -144,7 +150,13 @@ export async function serveRepository(store: RepositoryStore, token: string, opt
   const port = (server.address() as AddressInfo).port;
 
   return {
-    url: `http://127.0.0.1:${port}`, host: options.host, port, async Close()
+    url: `http://127.0.0.1:${port}`,
+
+    host: options.host,
+
+    port,
+
+    async Close()
     {
       closing = true;
 

@@ -33,6 +33,7 @@ export function modelRolesMatch(selection: ModelRolesSelection | undefined, snap
 
   return roles.length === Object.keys(snapshot.roles).length && roles.every(([slot, ref]) => { const value = snapshot.roles[slot]; return !!value && value.kind === ref.kind && value.profile.id === ref.profileId && value.profile.model === ref.modelId; });
 }
+
 /** 角色能力由官方代码声明；型号白名单缺省允许满足协议/操作约束的自定义型号。 */
 export type ModelRoleDescriptor =
   {

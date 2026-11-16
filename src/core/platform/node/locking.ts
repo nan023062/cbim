@@ -94,6 +94,7 @@ export class KernelLock
     }
     held.add(this.key);
   }
+
   /** 释放本实例原生句柄并移除进程内占用；业务不得在释放后继续使用原临界区。 */
   Close()
   {

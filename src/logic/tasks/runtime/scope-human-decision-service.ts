@@ -49,6 +49,7 @@ function check(condition: unknown, code: string, message: string): asserts condi
 
     fail(code, message)
 }
+
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 
 export class ScopeHumanDecisionService
@@ -56,6 +57,7 @@ export class ScopeHumanDecisionService
   constructor(private readonly owner: Owner, private readonly store: DispatchStore, private readonly goals: ScopeGoalService, private readonly logs?: ScopeGoalPorts, private readonly ports?: HumanDecisionPorts, private readonly assertCurrent: () => void = () => { })
   {
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   {
     const parsed = schema.safeParse(raw);
@@ -66,6 +68,7 @@ export class ScopeHumanDecisionService
 
     return parsed.data
   }
+
   private Current()
   {
     this.owner.Assert();
@@ -74,6 +77,7 @@ export class ScopeHumanDecisionService
 
     this.ports?.AssertCurrent?.()
   }
+
   private Scope(state: DispatchState, input: HumanDecisionHistoryInput)
   {
     this.Current();
@@ -86,12 +90,14 @@ export class ScopeHumanDecisionService
 
     return scope;
   }
+
   private Receipt(scope: DispatchScope, commandId: string): HumanDecisionReceipt | undefined
   {
     const record = scope.humanDecisions?.records.find(item => item.decisionId === commandId);
 
     return record ? { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, decisionRevision: scope.humanDecisions!.revision, record: structuredClone(record) } : undefined;
   }
+
   /** 原命令的只读回执不重新核实文件，也不隐式继续等待周期。 */
   async Inspect(raw: HumanDecisionLookup): Promise<HumanDecisionReceipt | undefined>
   {
@@ -99,6 +105,7 @@ export class ScopeHumanDecisionService
 
     return this.Receipt(this.Scope(await this.store.Read(), input), input.commandId)
   }
+
   /** 有界历史通过同一持久存储读取，关闭后仍保留；不把过去的接受当作当前执行许可。 */
   async History(raw: HumanDecisionHistoryInput): Promise<HumanDecisionHistory>
   {
@@ -108,12 +115,14 @@ export class ScopeHumanDecisionService
 
     return { ...input, scopeStatus: scope.status, decisionRevision: scope.humanDecisions?.revision ?? 0, records: structuredClone(scope.humanDecisions?.records ?? []) }
   }
+
   private StateStamp(state: DispatchState, input: HumanDecisionHistoryInput)
   {
     this.Scope(state, input);
 
     return humanEvidenceStateStamp(state, input);
   }
+
   /** 原依据只读核验，不要求旧候选仍在当前计划中；固定日志必须完整且与保存时逐字节指纹一致。 */
   private async OriginalVerified(state: DispatchState, scope: DispatchScope, input: HumanDecisionPreviewInput): Promise<boolean>
   {
@@ -158,6 +167,7 @@ export class ScopeHumanDecisionService
       return false
     }
   }
+
   /** 版本竞态后可用最新历史重算；来源可信位仅来自上述实际读取，不能由请求或界面传入。 */
   private Reconsider(scope: DispatchScope, input: HumanDecisionPreviewInput, preview: HumanDecisionPreview, originalVerified: boolean)
   {
@@ -176,6 +186,7 @@ export class ScopeHumanDecisionService
       delete preview.latestDecisionId
     }
   }
+
   /** 单次收集使用原状态快照且不占任务事务；所有候选共享一份文件读取预算。 */
   private async Collect(state: DispatchState, input: HumanDecisionPreviewInput): Promise<HumanDecisionPreview>
   {
@@ -283,6 +294,7 @@ export class ScopeHumanDecisionService
       }
       candidates.push(projected);
     }
+
     const inBudget = (files: Map<string, ArtifactFileFact>) => files.size <= artifactLimits.files && [...files.values()].reduce((total, file) => total + file.byteLength, 0) <= artifactLimits.totalBytes;
 
     check(inBudget(expectedFiles), 'HUMAN_LIMIT', '本次人工决定的文件超过 16 个或总计 32 MiB 上限');
@@ -423,6 +435,7 @@ export class ScopeHumanDecisionService
 
     return humanDecisionPreviewSchema.parse(preview);
   }
+
   private async Reading<T>(selected: boolean, work: () => Promise<T>): Promise<T>
   {
     this.Current();
@@ -457,6 +470,7 @@ export class ScopeHumanDecisionService
       release?.()
     }
   }
+
   private Unavailable(input: HumanDecisionPreviewInput, scope: DispatchScope, error: unknown): HumanDecisionPreview
   {
     const code = (error as
@@ -472,6 +486,7 @@ export class ScopeHumanDecisionService
 
     return preview;
   }
+
   /** 无基线选择时只列可信候选及基线菜单；显式选择才读取文件，预览不会留下决定。 */
   async Preview(raw: HumanDecisionPreviewInput): Promise<HumanDecisionPreview>
   {
@@ -492,6 +507,7 @@ export class ScopeHumanDecisionService
       return this.Unavailable(input, scope, error)
     }
   }
+
   /**
        * 只有可信桌面闭包传入 actor。重复命令返回旧回执；新命令先核证，提交在知识快照下核原状态与决定版本，先可靠落盘再返回。
        * 文件/知识并非同一存储，不能承诺外部原子快照；保存只追加记录，不消费 wait 或触发任何模型调用。

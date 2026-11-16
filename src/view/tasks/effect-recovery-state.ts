@@ -15,6 +15,7 @@ export function effectObservationAnchor(state: Pick<ScopeGoalState, 'graph' | 's
 {
   return JSON.stringify([state?.graph?.cursor, state?.scopes.map(scope => [scope.scopeId, scope.stamp])])
 }
+
 /** 旧无 scope 主日志仅显示诊断；不借当前选中周期或根节点补造归属。 */
 export function effectRecoveryTarget(identity: EffectObservationInput, report: EffectObservationReport | undefined, fresh: boolean, disposition: EffectDispositionRecord | undefined, state: ScopeGoalState): { target?: RecoveryTarget; reason: string }
 {

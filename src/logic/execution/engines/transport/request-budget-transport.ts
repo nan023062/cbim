@@ -33,6 +33,7 @@ export function requestBudgetEndpoint(llm: ResolvedLlm): string
 
   return base.href.replace(/\/+$/, '') + suffix;
 }
+
 /** 返回值只给当前引擎；任何失败一旦阻断，不能通过新调用 ID 或再次握手解除。 */
 export async function openRequestBudgetTransport(llm: ResolvedLlm, port: RequestBudgetPort, options: { anthropicClient?: boolean } = {})
 {
@@ -280,6 +281,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       req.off('aborted', abort)
     }
   }
+
   const server = http.createServer((req, res) => { const controller = new AbortController(); const pending = handle(req, res, controller).catch(() => { block('模型请求收尾失败，原预留保持未决'); res.destroy() }); active.set(pending, controller); void pending.finally(() => active.delete(pending)) });
 
   server.requestTimeout = 30000;
@@ -289,7 +291,11 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) });
 
   return {
-    endpoint, token, url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port,
+    endpoint,
+
+    token,
+
+    url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port,
 
     AssertReady()
     {
@@ -297,10 +303,12 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
 
         throw Error('逐请求预算门禁未完成启动核验')
     },
+
     Error()
     {
       return blocked
     },
+
     /** 原生引擎可能在 SSE 完成前调用工具；先等实际请求全部结算，失败或停止不得进入工具授权。 */
     async AssertSettled()
     {
@@ -312,6 +320,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
 
         throw Error(blocked ?? '模型请求已停止');
     },
+
     /** 原生停止先取消实际 IO，保留已经可靠结算的用量；等待全部未决阶段落盘后才关闭资源。 */
     Close()
     {

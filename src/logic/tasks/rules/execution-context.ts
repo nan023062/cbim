@@ -48,6 +48,7 @@ export interface PreparedDispatchModule
   /** 同一正文的可选程序约定；无声明不补默认规则，保存后必须与正文解析完全一致。 */
   workflowContract?: WorkflowContract;
 }
+
 /** 每份约定保留自己的模块与 Workflow 身份；合并检查不意味着证据具有逐模块覆盖能力。 */
 export interface WorkflowContractBinding
 {
@@ -59,11 +60,13 @@ export interface WorkflowContractBinding
 
   contract: WorkflowContract
 }
+
 /** 从已经冻结的执行知识提取全部有效约定，不读取最新知识或继承父模块。 */
 export function preparedWorkflowContracts(prepared: PreparedDispatchKnowledge): WorkflowContractBinding[]
 {
   return prepared.modules.flatMap(module => module.workflowContract ? [{ moduleId: module.binding.moduleId, workflowId: module.binding.workflow.id, workflowVersion: module.binding.workflow.version, contract: structuredClone(module.workflowContract) }] : [])
 }
+
 /** 后端内部的完整执行知识；不得整体放进公开任务图、全局监控或模型配置返回值。 */
 export interface PreparedDispatchKnowledge
 {
@@ -100,12 +103,14 @@ export interface PreparedDispatchKnowledge
 
     adaptation: WorkspaceMemberAdaptation
   };
+
   /** 除本字段外所有冻结内容的稳定 JSON SHA-256；没有授权含义。 */
   /** 自动兜底不制造岗位适配；完整保留原模型、范围和原因。 */
   fallbackBinding?: AutomaticExecutionBinding;
 
   fingerprint: string;
 }
+
 const id = z.string().min(1).max(512).refine(value => value.trim() === value && !/[\x00-\x1f]/.test(value));
 
 const text = z.string().min(1).max(2 * 1024 * 1024).refine(value => !!value.trim());
@@ -149,6 +154,7 @@ export function dispatchKnowledgeFingerprint(value: Omit<PreparedDispatchKnowled
 
   return hash(JSON.stringify(ordered(body)));
 }
+
 /**
  * 新提交与恢复共用的结构/指纹校验。失败不回显知识正文，不修改输入，也不授予权限。
  * workspace/角色/模块均须属于同一基线，专属 Workflow 和内置规范的正文须与冻结版本匹配。

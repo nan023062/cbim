@@ -15,6 +15,7 @@ export function inputIssueMessage(issues: unknown): string | undefined
 
   return issues.slice(0, 8).map(i => `${i.path.join('.') || '参数'}：${i.code === 'invalid_type' && i.received === 'undefined' ? '缺少必填字段' : '类型或格式不符合工具声明'}`).join('；');
 }
+
 /** 只在执行前校验边界调用；执行后的 Zod 错误不能据此判为未执行。 */
 export function toolInputError(error: unknown): unknown
 {

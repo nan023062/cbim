@@ -199,12 +199,17 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) });
 
   return {
-    url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port, token, error: () => failure ?? gate?.Error(),
+    url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port,
+
+    token,
+
+    error: () => failure ?? gate?.Error(),
 
     Usage()
     {
       return !closing && !failure && completed ? { ...totals } : undefined
     },
+
     async AssertSettled()
     {
       while (active.size)
@@ -217,6 +222,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
 
         throw Error(failure ?? 'Codex 请求已停止')
     },
+
     Close()
     {
       return closePromise ??= (async () => { closing = true; for (const controller of active.values()) controller.abort(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await Promise.allSettled([...active.keys()]); await gate?.Close() })()

@@ -110,12 +110,14 @@ export function EnginePicker({ value, onChange, onConfigure, disabled = false }:
         setPending([...locks.current])
     }
   }
+
   function close()
   {
     setOpen(false);
 
     trigger.current?.focus()
   }
+
   return <div ref={root} className="composer-picker right engine-picker" onKeyDown={event => { if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close() } if (open && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { const buttons = [...root.current!.querySelectorAll<HTMLButtonElement>('.engine-picker-panel button:not(:disabled)')]; if (!buttons.length) return; event.preventDefault(); const i = buttons.indexOf(document.activeElement as HTMLButtonElement); buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (i + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length]?.focus() } if (event.key === 'Tab' && open) { const nodes = [...root.current!.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]; if (event.shiftKey && document.activeElement === nodes[0] || !event.shiftKey && document.activeElement === nodes.at(-1)) setOpen(false) } }}>
     <button ref={trigger} className="composer-chip" aria-label="Loop 引擎" aria-haspopup="dialog" aria-expanded={open} aria-controls={id} title="选择引擎、安装或更新运行包" onClick={() => setOpen(!open)}><Icon name="settings" size={14} /><span>{engineLabel(value)}</span><span className="chip-chevron">⌄</span></button>
     {open && <div id={id} className="composer-picker-panel engine-picker-panel" role="dialog" aria-label="引擎选择与安装">

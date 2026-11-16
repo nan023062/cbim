@@ -70,6 +70,7 @@ export interface HumanDecisionsView
 
   reconsider: (decisionId?: string) => Promise<void>;
 }
+
 /** 详情和摘要都必须属于当前 waiting，目标或独立决定增量变化会使旧预览失效。 */
 export function humanDecisionTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, criterionId: string): HumanDecisionTarget | undefined
 {
@@ -83,6 +84,7 @@ export function humanDecisionTarget(workspaceId: string, rootSessionId: string |
 
   return { workspaceId, rootSessionId, scopeId: scope.scopeId, criterionId, anchor: JSON.stringify([summary.stamp, scope.wait.waitId, scope.goal.revision, scope.humanDecisions?.revision ?? 0]) };
 }
+
 export function useHumanDecisions(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, refresh: () => void): HumanDecisionsView
 {
   const [selection, select] = useState(''),

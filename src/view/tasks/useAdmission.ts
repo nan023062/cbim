@@ -17,6 +17,7 @@ export function useAdmission(active = true)
 
   return useSyncExternalStore(subscribe, snapshot, snapshot);
 }
+
 /** 保存设置后按需刷新，已有在途请求会复用而不是并发再读。 */
 export function refreshAdmission()
 {

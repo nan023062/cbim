@@ -45,6 +45,7 @@ function check(condition: unknown, code: string, message: string): asserts condi
 
     fail(code, message)
 }
+
 /** fresh 仅本次进程事务返回，绝不写入 durable receipt；即使为 true，调用方仍需复核停止与当前 scope 状态。 */
 export interface AcceptedScopeContinuation
 {
@@ -54,11 +55,13 @@ export interface AcceptedScopeContinuation
 
   fresh: boolean
 }
+
 export class ScopeContinuationService
 {
   constructor(private readonly owner: Owner, private readonly store: DispatchStore, private readonly budgets?: ScopeBudgetService, private readonly memberPauses?: MemberPauseService)
   {
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
   {
     const parsed = schema.safeParse(input);
@@ -69,6 +72,7 @@ export class ScopeContinuationService
 
     return parsed.data
   }
+
   private Scope(state: DispatchState, input: ScopeContinuationLookup): DispatchScope
   {
     this.owner.Assert();
@@ -81,6 +85,7 @@ export class ScopeContinuationService
 
     return scope;
   }
+
   /** 只查现有日志事实，不核实模型或原生会话，不产生启动授权；active/closed 也保留原接收记录。 */
   async Inspect(raw: ScopeContinuationLookup): Promise<GoalContinuationReceipt | undefined>
   {
@@ -92,6 +97,7 @@ export class ScopeContinuationService
 
     return continuation && !isHumanContinuation(continuation) ? { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, continuation } : undefined;
   }
+
   /**
        * 仅可信 beforeRun 调用，runId 已由运行时分配。指纹不含随机 runId，相同命令永远返回第一次接收记录；变更请求则冲突。
        * waiting→active、补充输入版本及旧检查点归档在同一事务提交；未提交不消费，提交后错误由调用方关闭并保留历史，不自动重试。
@@ -121,6 +127,7 @@ export class ScopeContinuationService
     {
       manifestCopyFailed = true
     }
+
     const replay = (scope: DispatchScope): AcceptedScopeContinuation | undefined => { const existing = scope.continuations?.find(item => item.continuationId === input.commandId); if (!existing) return; check(!isHumanContinuation(existing) && existing.wait.waitId === input.waitId && existing.wait.goalRevision === input.expectedGoalRevision && existing.inputRevision === input.expectedInputRevision + 1 && sameGoalValue(existing.input, input.input) && sameGoalValue(existing.options, input.options), 'COMMAND_ID_CONFLICT', '原命令已受理，不能更换补充正文、附件、等待版本或运行选项'); return { scope, continuation: existing, fresh: false }; };
 
     const observed = this.Scope(await this.store.Read(), input),
@@ -213,6 +220,7 @@ export class ScopeContinuationService
 
       return { scopes: [next], receipt: saved };
     });
+
     // 先查幂等历史，再取得知识→模型→Store；绝不能从上述事务内部反向取得岗位快照。
     if (observed.wait?.memberPause && !this.memberPauses)
 

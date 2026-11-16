@@ -26,6 +26,7 @@ export interface HumanContinuationAttempt
 
   error?: string
 }
+
 /** 每次真实等待一条启动意图，已受理后不可换 ID；新的等待使用新记录。 */
 export interface HumanContinuationDraft
 {
@@ -35,12 +36,14 @@ export interface HumanContinuationDraft
 
   attempt: HumanContinuationAttempt
 }
+
 export interface HumanContinuationState
 {
   records: readonly HumanContinuationDraft[];
 
   error: string
 }
+
 /** submit 可能已在后端受理后丢失响应，lookup 为空也不能证明未受理；storage 失败必须先阻止发送。 */
 export interface HumanContinuationPorts
 {
@@ -52,6 +55,7 @@ export interface HumanContinuationPorts
 
   uuid: () => string
 }
+
 const textError = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 const sameIds = (a: string[], b: string[]) => equal([...a].sort(), [...b].sort());
@@ -61,6 +65,7 @@ export function humanContinuationRejected(error: unknown)
 {
   return /^(?:CAPACITY_BUSY|SCOPE_BUDGET_EXCEEDED|SCOPE_BUDGET_UNVERIFIABLE|SCOPE_BUDGET_WAITING|HUMAN_CONTINUATION_INPUT|HUMAN_CONTINUATION_IDENTITY|HUMAN_CONTINUATION_NOT_WAITING|HUMAN_CONTINUATION_UNAVAILABLE|HUMAN_CONTINUATION_NOT_READY|HUMAN_CONTINUATION_LIMIT|HUMAN_CONTINUATION_STALE|HUMAN_NOT_WAITING|HUMAN_IDENTITY|HUMAN_SOURCE_INVALID|HUMAN_KNOWLEDGE_CHANGED|HUMAN_EVIDENCE_INVALID|HUMAN_STALE|HUMAN_REVISION_CONFLICT|GOAL_IDENTITY|GOAL_NOT_WAITING|GOAL_WAIT_CONFLICT|GOAL_REVISION_CONFLICT|GOAL_CYCLE_LIMIT|GOAL_DECISION_LIMIT|GOAL_RUN_CONFLICT|GOAL_INPUT_LIMIT|GOAL_WORK_PENDING|IDENTITY|CONTINUATION_NOT_READY):/.test(textError(error))
 }
+
 /** 接受回执不是目标完成；查询允许外层状态变化，但不可替换原意图的固定内容。 */
 export function checkedHumanContinuationReceipt(raw: unknown, request: HumanContinuationRequest, previous?: HumanContinuationReceipt): HumanContinuationReceipt
 {
@@ -74,6 +79,7 @@ export function checkedHumanContinuationReceipt(raw: unknown, request: HumanCont
 
   return receipt;
 }
+
 export class HumanContinuationController
 {
   private value: HumanContinuationState = { records: [], error: '' };
@@ -121,34 +127,42 @@ export class HumanContinuationController
       this.value = { records: [], error: '本地接续意图无法读取，未启动执行：' + textError(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return !this.listeners.size && !this.pending.size
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   Record(scopeId: string, waitId: string)
   {
     return this.value.records.find(value => value.scopeId === scopeId && value.waitId === waitId)
   }
+
   IsPending(record?: HumanContinuationDraft)
   {
     return !!record && this.pending.has(record.attempt.request.commandId)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Update(record: HumanContinuationDraft): boolean
   {
     const records = [...this.value.records],
@@ -192,6 +206,7 @@ export class HumanContinuationController
       return false
     }
   }
+
   /** 只有明确点击调用；无需自由正文，最新决定、等待版本与执行配置一并冻结。 */
   async Submit(target: HumanContinuationTarget, options: HumanContinuationRequest['options'])
   {
@@ -225,6 +240,7 @@ export class HumanContinuationController
 
       await this.Send(record);
   }
+
   private async Send(record: HumanContinuationDraft)
   {
     const { attempt } = record,
@@ -258,6 +274,7 @@ export class HumanContinuationController
       this.Emit()
     }
   }
+
   /** 原命令重试不采纳后来选择的意见、模型或权限。 */
   async Retry(scopeId: string, waitId: string)
   {
@@ -267,6 +284,7 @@ export class HumanContinuationController
 
       await this.Send(record)
   }
+
   /** 未找到回执不能推出未执行；存储暂时不可写仍允许核实已有请求，只读查询不发起新运行。 */
   async Query(scopeId: string, waitId: string)
   {
@@ -307,11 +325,13 @@ export class HumanContinuationController
       this.Emit()
     }
   }
+
   async Restore()
   {
     await Promise.all(this.value.records.filter(value => value.attempt.phase === 'unknown').map(value => this.Query(value.scopeId, value.waitId)))
   }
 }
+
 /** 同一 renderer 的两个卡片及重访共用在途命令，空闲历史允许从有界缓存回收。 */
 export class HumanContinuationPool
 {

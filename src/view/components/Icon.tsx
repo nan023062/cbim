@@ -162,6 +162,7 @@ const paths: Record<string, React.ReactNode> = {
 
   'text-plus': <path d="m3 19 5-14 5 14M5 14h6M16 12h6M19 9v6" />,
 };
+
 const aliases: Record<string, string> = { chat: 'conversation', flow: 'workflow', plus: 'add', plug: 'connector', arrow: 'send', check: 'success', trash: 'remove', clock: 'queued' };
 
 /** 所有图形都是装饰；图标按钮必须在按钮上提供 aria-label。 */

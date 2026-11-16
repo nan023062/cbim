@@ -29,6 +29,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 /** 替换审计须对应唯一四项图变更；新增/退役许可只由统一提交入口完整校验追加或多边修订后提供，不能来自请求或回执。 */
 export function validateQueuedDependencyReplacement(previous: DispatchState, next: DispatchState, mutation: DispatchMutation, command: DispatchCommand, addedEdges: ReadonlySet<string> = new Set(), retiredEdges: ReadonlySet<string> = new Set()): void
 {

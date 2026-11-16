@@ -42,6 +42,7 @@ export function checkModuleOwnershipActor(state: DispatchState, actor: ModuleOwn
 
   check(session?.workspaceId === state.workspaceId && session.agentId === 'cbim:main' && session.agentInstanceId === actor.agentInstanceId && session.rootSessionId === actor.rootSessionId && session.purpose === 'conversation' && member?.agentSessionIds.includes(actor.agentSessionId), '主责任操作缺少真实对话通道');
 }
+
 /** 完整相关事实进入 digest，只输出计数；领取/结算/检查点变化会失效预览，不披露任务正文或原生路径。 */
 export function moduleOwnershipImpact(state: DispatchState, moduleId: string): ModuleOwnershipImpact
 {
@@ -51,6 +52,7 @@ export function moduleOwnershipImpact(state: DispatchState, moduleId: string): M
 
   return { coverage: 'dispatch_graph_tasks_with_module', total: rows.length, counts, digest: hash(moduleOwnershipCanonical({ workspaceId: state.workspaceId, moduleId, rows })) };
 }
+
 /** 责任 mutation 只许一条审计及其回执；最终投影由原事件重算，不能直接 upsert 头或混入任务。 */
 export function projectModuleOwnershipMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand, sourcePermit?: KnowledgeSourceCapturePermit): { moduleOwnerships: ModuleOwnership[]; ownershipChanges: ModuleOwnershipChange[]; ownershipCursor: ModuleOwnershipCursor | null }
 {

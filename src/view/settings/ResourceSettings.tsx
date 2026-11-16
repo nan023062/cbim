@@ -73,6 +73,7 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setBusy(false)
     }
   }
+
   async function configure()
   {
     setBusy(true);
@@ -100,6 +101,7 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setBusy(false)
     }
   }
+
   async function sharing(start: boolean)
   {
     setBusy(true);
@@ -121,6 +123,7 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setBusy(false)
     }
   }
+
   async function showConnection()
   {
     setError('');
@@ -134,6 +137,7 @@ export function ResourceSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setError(e.message)
     }
   }
+
   return <>
     {status && <section className="settings-card"><h2>当前资源来源</h2><p className="settings-path">{status.config?.location || '尚未选择目录'}</p><p>链接器、人才市场、业务模板共用此仓库。更换目录不会搬迁、合并或删除原有数据。</p></section>}
     {error && <div className="settings-message" role="alert"><p>{error}</p><button disabled={busy} onClick={() => void reload()}>重新读取仓库</button></div>}

@@ -36,4 +36,5 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
 
   return { store, value: store.snapshot, error: error || store.error, busy, edit: (text: string) => change(() => store.Edit({ text })), remove: (id: string) => change(() => store.Edit({ attachments: store.snapshot.attachments.filter(item => item.id !== id) })), importFiles, clear: (revision: number) => change(() => store.ClearIfUnchanged(revision)) };
 }
+
 export type ChannelDraftView = ReturnType<typeof useChannelDraft>;

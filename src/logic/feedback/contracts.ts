@@ -36,6 +36,7 @@ export interface FeedbackToolsPort
 
   Receipt(signal: AbortSignal): Promise<FeedbackResult>;
 }
+
 /** 本机连接检查只读公开状态与代际，不请求 GitHub、不解密令牌、不查询提交历史。 */
 export const feedbackConnectionCheckSchema = z.object({ code: z.enum(['GITHUB_CONNECTED', 'GITHUB_NOT_CONNECTED', 'GITHUB_AUTH_PENDING', 'GITHUB_CONNECTION_CHANGED', 'GITHUB_EXPIRED', 'GITHUB_SECRET_STORAGE', 'GITHUB_SETTINGS']), repository: z.object({ owner: z.string().min(1).max(100), repo: z.string().min(1).max(100) }).strict().optional(), }).strict();
 
@@ -65,6 +66,7 @@ export interface GitHubFeedbackStatus
 
     repo: string
   };
+
   flow?:
   {
     id: string;
@@ -78,6 +80,7 @@ export interface GitHubFeedbackStatus
     nextPollAt: number
   };
 }
+
 /** 缺省/空白的主栏目统一标记未提供，保证等价输入防重；完整旧输入输出不变。不读取额外资料。 */
 export function feedbackIssue(input: FeedbackInput)
 {

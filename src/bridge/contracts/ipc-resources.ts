@@ -40,6 +40,7 @@ export interface ResourcesIpcResponses
 
     token: string
   };
+
   'resources.connection.list': RepositoryConnectionList;
 
   'resources.connection.preview': RepositoryConnectionPreview;

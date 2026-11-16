@@ -9,12 +9,14 @@ export interface TextStorage
 
   setItem(key: string, value: string): void;
 }
+
 /** 不缓存、不自动删除或覆盖坏数据；每次读写调用注入端口，异常原样传播。 */
 export class JsonRecordStorage
 {
   constructor(private readonly storage: TextStorage, private readonly key: string, private readonly maxBytes: number)
   {
   }
+
   /** null/空串视为缺失；其余先按 UTF-8 检查上限再解析。返回未校验数据，业务方必须核验。 */
   Read(limitMessage: string): any
   {
@@ -30,6 +32,7 @@ export class JsonRecordStorage
 
     return JSON.parse(raw);
   }
+
   /** 保留 JSON.stringify 次序及错误；超限不调用 setItem，成功返回只表示同步写入完成。 */
   Write(value: unknown, limitMessage: string): void
   {

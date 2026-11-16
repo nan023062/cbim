@@ -50,6 +50,7 @@ const shutdownMessages: Partial<Record<ApplicationIpcAction, string>> = {
 
   'add': 'CBIM 正在退出',
 };
+
 const inputCodes: Partial<Record<ApplicationIpcAction, string>> = {
   'dispatch.fileCompensate': 'FILE_COMPENSATION_PRE_ACCEPT_INPUT',
 
@@ -79,6 +80,7 @@ const inputCodes: Partial<Record<ApplicationIpcAction, string>> = {
 
   'task': 'TOOL', 'local': 'TYPE',
 };
+
 /** 服务仍核实身份、权限、CAS 和幂等；这里的错误仅证明还没有进入服务。 */
 export function parseApplicationRequest<A extends ApplicationIpcAction>(action: A, input: unknown, stopping: boolean)
 {

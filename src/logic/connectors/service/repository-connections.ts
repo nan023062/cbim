@@ -55,6 +55,7 @@ function checkedInput<T>(schema: z.ZodType<T>, raw: unknown): T
 
   return result.data
 }
+
 /** 查询原提交的端口归本机知识事务，不扩大 Core 普通知识调用权限。 */
 export interface RepositoryConnectionWorkspace extends KnowledgeWorkspace
 {
@@ -62,6 +63,7 @@ export interface RepositoryConnectionWorkspace extends KnowledgeWorkspace
 
   HasRecordedRequest(request: ChangeRequest): Promise<boolean>
 }
+
 /** 私有捕获事实只交给桌面快照导入；令牌与地址始终留在原共享闭包。 */
 interface CapturedRepositoryTarget
 {
@@ -75,6 +77,7 @@ interface CapturedRepositoryTarget
 
   Read(signal: AbortSignal): ReturnType<SharedRepositoryReadConnection['Read']>
 }
+
 /** 全应用一个服务；授权写入串行，慢速 check 不占写队列，撤销可中止它且仍有前后版本屏障。 */
 export class RepositoryConnections
 {
@@ -97,16 +100,19 @@ export class RepositoryConnections
   {
     this.store = new RepositoryConnectionStore(filename)
   }
+
   Init()
   {
     return this.store.Init()
   }
+
   private Current()
   {
     if (this.closed)
 
       fail('REPOSITORY_CONNECTION_UNAVAILABLE', '资源仓库连接服务正在关闭')
   }
+
   private Owner(input: RepositoryConnectionIdentity)
   {
     this.Current();
@@ -117,12 +123,14 @@ export class RepositoryConnections
 
     return owner
   }
+
   private AssertOwner(owner: KnowledgeWorkspace, input: RepositoryConnectionIdentity)
   {
     if (this.Owner(input) !== owner)
 
       fail('REPOSITORY_CONNECTION_STALE', '工作区连接实例已更换')
   }
+
   private Serial<T>(fn: () => Promise<T>)
   {
     const result = this.queue.catch(() => { }).then(() => { this.Current(); return fn() });
@@ -131,6 +139,7 @@ export class RepositoryConnections
 
     return result
   }
+
   private async Definitions(owner: KnowledgeWorkspace)
   {
     owner.Assert();
@@ -157,6 +166,7 @@ export class RepositoryConnections
 
     return { snapshot, entries };
   }
+
   private async Definition(owner: KnowledgeWorkspace, connectorId: string)
   {
     const { snapshot, entries } = await this.Definitions(owner),
@@ -169,14 +179,17 @@ export class RepositoryConnections
 
     return { snapshot, definition, definitionHash: definitionHash(definition) }
   }
+
   private PlanPath(owner: KnowledgeWorkspace, planId: string)
   {
     return path.join(owner.paths.Local(owner.entry.id, 'cache'), 'repository-connections', z.string().uuid().parse(planId) + '.json')
   }
+
   private async SavePlan(owner: KnowledgeWorkspace, plan: Plan)
   {
     await atomic(this.PlanPath(owner, plan.preview.planId), json(plan))
   }
+
   private async ReadPlan(owner: KnowledgeWorkspace, planId: string, requireInstance = true): Promise<Plan>
   {
     try
@@ -207,6 +220,7 @@ export class RepositoryConnections
     }
     ;
   }
+
   async List(raw: unknown)
   {
     const input = checkedInput(repositoryConnectionListInputSchema, raw),
@@ -230,6 +244,7 @@ export class RepositoryConnections
 
     return repositoryConnectionListSchema.parse({ identity: identity(input), knowledgeRevision: snapshot.revision, ...(sharing ? { sharing } : {}), connections });
   }
+
   /** 仅保存知识事务预览；没有 grant，也不会自动开启 HTTP 服务。 */
   Preview(raw: unknown): Promise<RepositoryConnectionPreview>
   {
@@ -237,6 +252,7 @@ export class RepositoryConnections
 
     return this.Serial(async () => { const owner = this.Owner(input), connection = this.resources.ReadConnection(input.repositoryId), { snapshot, entries } = await this.Definitions(owner); if (snapshot.revision !== input.revision) fail('REPOSITORY_CONNECTION_STALE', '知识版本已变化，请重新读取并预览'); const definition = resourceRepositoryConnectorDefinitionSchema.parse({ id: input.connectorId, name: input.name, summary: input.summary, provider: 'resource_repository_v1', repository: { repositoryId: input.repositoryId } }), existing = entries.find(item => item.id === input.connectorId); if (existing && (!isResourceRepositoryConnector(existing) || existing.repository.repositoryId !== input.repositoryId)) fail('REPOSITORY_CONNECTION_DEFINITION', '同名链接器已有其他来源，不能用连接登记覆盖'); const next = existing ? entries.map(item => item.id === input.connectorId ? definition : item) : [...entries, definition], planId = randomUUID(); const request = { ...identity(input), revision: input.revision, requestId: planId, changes: existing && definitionHash(existing) === definitionHash(definition) ? [] : [{ path: registryPath, text: json({ connectors: next }) }] }; const checked = await owner.Preview(request); owner.Assert(input); connection.AssertCurrent(); const result = repositoryConnectionPreviewSchema.parse({ identity: identity(input), planId, revision: input.revision, repositoryId: input.repositoryId, connectionId: connection.connectionId, definition, definitionHash: definitionHash(definition), changes: checked.changes, validation: { structural: checked.validation.structural, issues: checked.validation.issues, architecture: checked.validation.architecture, business: checked.validation.business }, diff: checked.diff }); const plan = { version: 1 as const, preview: result, request, fingerprint: hash(json({ preview: result, request })) }; await this.SavePlan(owner, plan); owner.Assert(input); connection.AssertCurrent(); return result; })
   }
+
   /** 显式提交只写正式链接器定义；失败后沿原 planId 核实，不顺带授予本机权限。 */
   Commit(raw: unknown): Promise<RepositoryConnectionCommit>
   {
@@ -293,10 +309,12 @@ export class RepositoryConnections
       return result;
     })
   }
+
   private CommitResult(plan: Plan, committed: KnowledgeCommit)
   {
     return repositoryConnectionCommitSchema.parse({ identity: identity(plan.request), planId: plan.preview.planId, connectorId: plan.preview.definition.id, repositoryId: plan.preview.repositoryId, definitionHash: plan.preview.definitionHash, knowledgeRevision: committed.revision, state: 'committed', changed: committed.changed })
   }
+
   /** 无副作用查询旧 planId，缓存回执丢失时查原知识事务，不因当前定义相同就推断提交成功。 */
   async CommitReceipt(raw: unknown): Promise<RepositoryConnectionCommit | undefined>
   {
@@ -314,6 +332,7 @@ export class RepositoryConnections
 
     return committed ? this.CommitResult(plan, committed) : undefined
   }
+
   /** 只有旧实例已退役且写队列排空后的“完全无记录”才能证明未受理；不清历史、不新建请求。 */
   Unaccepted(raw: unknown)
   {
@@ -321,6 +340,7 @@ export class RepositoryConnections
 
     return this.Serial(async () => { const owner = this.workspace(input.workspaceId); owner.Assert(); let unaccepted = false; if (owner.instanceId !== input.instanceId) { if (input.action === 'commit') { const plan = await this.ReadPlan(owner, input.id, false); if (plan.request.instanceId !== input.instanceId) fail('REPOSITORY_CONNECTION_PLAN', '原计划不属于待核实的实例'); unaccepted = !plan.committed && !await owner.HasRecordedRequest(plan.request) } else unaccepted = !this.store.HasCommand(input.id); } owner.Assert(); return repositoryConnectionUnacceptedSchema.parse({ identity: identity(input), action: input.action, id: input.id, unaccepted }); })
   }
+
   private AbortChecks(workspaceId: string, connectorId?: string)
   {
     for (const [controller, target] of this.checks)
@@ -329,6 +349,7 @@ export class RepositoryConnections
 
         controller.abort()
   }
+
   /** 仅桌面显式 IPC 调用本方法；定义和实际共享身份重核后持久授权，不由模型或知识正文签发。 */
   Grant(raw: unknown): Promise<RepositoryConnectionReceipt>
   {
@@ -338,6 +359,7 @@ export class RepositoryConnections
 
     return this.Serial(async () => { const replay = this.store.Replay(input.workspaceId, input.commandId, inputHash); if (replay) return replay; const owner = this.Owner(input), old = this.store.Grant(input.workspaceId, input.connectorId); if ((old?.revision ?? 0) !== input.expectedGrantRevision) fail('REPOSITORY_CONNECTION_STALE', '授权版本已变化，请重新读取'); const source = await this.Definition(owner, input.connectorId); if (source.definitionHash !== input.definitionHash || source.definition.repository.repositoryId !== input.repositoryId) fail('REPOSITORY_CONNECTION_STALE', '链接器定义或仓库身份已变化，请重新读取'); const connection = this.resources.ReadConnection(input.repositoryId); await connection.Read(); const after = await this.Definition(owner, input.connectorId); this.AssertOwner(owner, input); connection.AssertCurrent(); if (after.definitionHash !== input.definitionHash) fail('REPOSITORY_CONNECTION_STALE', '授权期间链接器定义发生变化，未保存授权'); const grant: RepositoryConnectionGrant = { workspaceId: input.workspaceId, connectorId: input.connectorId, repositoryId: input.repositoryId, definitionHash: input.definitionHash, revision: input.expectedGrantRevision + 1, enabled: true, updatedAt: new Date().toISOString() }, receipt: RepositoryConnectionReceipt = { workspaceId: input.workspaceId, connectorId: input.connectorId, commandId: input.commandId, action: 'grant', grant }; await this.store.Save(grant, receipt, inputHash); this.AbortChecks(input.workspaceId, input.connectorId); return structuredClone(receipt); })
   }
+
   /** 撤销保留静态定义和历史回执；不停止共享服务器，也不影响其他工作区授权。 */
   Revoke(raw: unknown): Promise<RepositoryConnectionReceipt>
   {
@@ -347,6 +369,7 @@ export class RepositoryConnections
 
     return this.Serial(async () => { const replay = this.store.Replay(input.workspaceId, input.commandId, inputHash); if (replay) return replay; this.Owner(input); const old = this.store.Grant(input.workspaceId, input.connectorId); if (!old) fail('REPOSITORY_CONNECTION_NOT_GRANTED', '此工作区链接器尚未获得本机授权'); if (old.revision !== input.expectedGrantRevision) fail('REPOSITORY_CONNECTION_STALE', '授权版本已变化，请重新读取'); const grant = { ...old, revision: old.revision + 1, enabled: false, updatedAt: new Date().toISOString() }, receipt: RepositoryConnectionReceipt = { workspaceId: input.workspaceId, connectorId: input.connectorId, commandId: input.commandId, action: 'revoke', grant }; await this.store.Save(grant, receipt, inputHash); this.AbortChecks(input.workspaceId, input.connectorId); return structuredClone(receipt); })
   }
+
   /** 查询原授权命令，不校验共享、不发送网络请求，也不复活已被后续撤销的授权。 */
   Receipt(raw: unknown)
   {
@@ -356,6 +379,7 @@ export class RepositoryConnections
 
     return this.store.Receipt(input.workspaceId, input.commandId)
   }
+
   /**
        * 主运行创建时只读捕获已就绪授权，不联网；坏静态注册表不妨碍主会话诊断知识。
        * 每个闭包固定原实例/定义/授权/共享代际。后续显式授权或重新共享只影响新运行，旧运行不能静默换源。
@@ -430,6 +454,7 @@ export class RepositoryConnections
 
     return captured;
   }
+
   /** 主运行仍只取得原 list/get 能力；捕获本身不联网。 */
   async PrepareTools(input: RepositoryConnectionIdentity): Promise<RepositoryToolsPort | undefined>
   {
@@ -437,6 +462,7 @@ export class RepositoryConnections
 
     return captured ? this.Tools(captured) : undefined;
   }
+
   /** 桌面显式资料导入使用同一授权闭包，一次 HTTP 读取完整选定版本，不能拼接多次分页冒充同一快照。 */
   async PrepareMaterials(input: RepositoryConnectionIdentity)
   {
@@ -452,6 +478,7 @@ export class RepositoryConnections
       targets: tools.targets, list: tools.List, capture: async (raw: { connectorId: string; connectionId: string; expectedRevision: string; resourceId: string }, signal: AbortSignal) => { const entry = captured.get(raw.connectorId); if (!entry) fail('REPOSITORY_CONNECTION_NOT_GRANTED', '该资料来源不属于当前工作区已授权连接'); if (entry.target.connectionId !== raw.connectionId) fail('REPOSITORY_CONNECTION_STALE', '资料连接已变化，请重新选择来源'); const result = await entry.Read(signal); if (result.revision !== raw.expectedRevision) fail('REPOSITORY_REVISION_CHANGED', '仓库资料已变化，请重新读取目录版本'); const resource = result.items.find(item => item.id === raw.resourceId); if (!resource) fail('REPOSITORY_RESOURCE_MISSING', '当前仓库版本没有该资源'); return { target: { ...entry.target }, definitionHash: entry.definitionHash, grantRevision: entry.grantRevision, revision: result.revision, resource: { ...resource }, assertCurrent: entry.Verify }; }
     };
   }
+
   private Tools(captured: Map<string, CapturedRepositoryTarget>): RepositoryToolsPort
   {
     const selected = (connectorId: string) => { const target = captured.get(connectorId); if (!target) fail('REPOSITORY_CONNECTION_NOT_GRANTED', '该链接器不属于本轮已捕获的只读授权'); return target };
@@ -464,6 +491,7 @@ export class RepositoryConnections
       Get: async (raw, signal) => { const request = checkedInput(repositoryGetInputSchema, raw), entry = selected(request.connectorId), result = await entry.Read(signal); if (request.expectedRevision !== result.revision) fail('REPOSITORY_REVISION_CHANGED', '仓库资料已变化，请明确重新读取目录版本'); const item = result.items.find(item => item.id === request.resourceId); if (!item) fail('REPOSITORY_RESOURCE_MISSING', '当前仓库版本没有该资源'); const characters = Array.from(item.content), offset = request.offset ?? 0, limit = request.limit ?? repositoryToolLimits.contentCharacters; if (offset > characters.length) fail('REPOSITORY_PAGE_INVALID', '正文偏移超出当前版本范围'); const text = characters.slice(offset, offset + limit).join(''), end = offset + Array.from(text).length, { content: _, ...resource } = item, { workspaceId, connectorId, repositoryId, connectionId } = entry.target; return { scope: { kind: 'repository', workspaceId, connectorId, repositoryId, connectionId, operation: 'get' }, revision: result.revision, resource, content: { text, offset, totalCharacters: characters.length, contentHash: hash(item.content), ...(end < characters.length ? { nextOffset: end } : {}), complete: offset === 0 && end === characters.length }, readOnly: true }; },
     };
   }
+
   /** 仅显式核验发起真实 HTTP；读到内容后再次核对实例、定义、授权和共享代际，绝不返回迟到旧结果。 */
   Check(raw: unknown)
   {
@@ -475,6 +503,7 @@ export class RepositoryConnections
 
     return operation
   }
+
   private async CheckOnce(raw: unknown)
   {
     const input = checkedInput(repositoryConnectionCheckInputSchema, raw),
@@ -536,11 +565,13 @@ export class RepositoryConnections
       this.checks.delete(controller)
     }
   }
+
   /** 工作区关闭只取消在途核验，持久授权保留；重开不会自动打开服务器。 */
   RetireWorkspace(workspaceId: string)
   {
     this.AbortChecks(workspaceId)
   }
+
   async Close()
   {
     this.closed = true;

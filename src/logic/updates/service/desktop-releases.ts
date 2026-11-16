@@ -29,12 +29,14 @@ export function compareDesktopVersions(a: string, b: string)
 
   return 0;
 }
+
 export function desktopInstallerName(version: string)
 {
   compareDesktopVersions(version, version);
 
   return `CBIM-Setup-${version}-x64.exe`
 }
+
 /** 地址完全由校验后的版本构造，渲染进程和远端正文不能提供任意更新源。 */
 export function desktopReleaseBase(version: string)
 {
@@ -42,6 +44,7 @@ export function desktopReleaseBase(version: string)
 
   return `${repository}/releases/download/desktop-v${version}/`
 }
+
 export function parseDesktopRelease(value: unknown): DesktopRelease | undefined
 {
   if (!value || typeof value !== 'object')
@@ -74,6 +77,7 @@ export function parseDesktopRelease(value: unknown): DesktopRelease | undefined
   }
   return { version, tag: item.tag_name, notes: typeof item.body === 'string' ? item.body.slice(0, 20000) : '', publishedAt: item.published_at };
 }
+
 /** 至多读取最近 150 条发布；只读请求不附带反馈 OAuth Token。完整扫描后按版本选择。 */
 export async function latestDesktopRelease(signal: AbortSignal, request: ReleaseRequest = releaseRequest)
 {

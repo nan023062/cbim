@@ -23,6 +23,7 @@ function record(value: unknown): Record<string, unknown> | undefined
 {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined
 }
+
 function reference(value: unknown): AgentCallReference | undefined
 {
   const item = record(value);
@@ -33,6 +34,7 @@ function reference(value: unknown): AgentCallReference | undefined
 
   return item as unknown as AgentCallReference;
 }
+
 function resultReference(value: unknown): unknown
 {
   const result = record(value);
@@ -65,10 +67,12 @@ function resultReference(value: unknown): unknown
         }
     }
 }
+
 function sameReference(left: AgentCallReference, right: AgentCallReference)
 {
   return fields.every(key => left[key] === right[key])
 }
+
 /** 只接受原工具的宿主事件引用；互相冲突的记录不任选一个子运行。 */
 export function agentCallReference(run: RunSummary, toolCallId: string): AgentCallReference | undefined
 {
@@ -100,6 +104,7 @@ export function agentCallReference(run: RunSummary, toolCallId: string): AgentCa
   }
   return selected;
 }
+
 /** 展示前复核子日志实际起始绑定；查询成功不代表读取的是此调用的记录。 */
 export function assertAgentCallRun(call: AgentCallReference, run: RunSummary): void
 {
@@ -111,6 +116,7 @@ export function assertAgentCallRun(call: AgentCallReference, run: RunSummary): v
 
     throw Error('执行对话身份与原工具调用不一致，未展示该记录。');
 }
+
 /** 对话输入仅来自调用方；所有状态与正文取自核验后的日志，读取失败不提供执行重试。 */
 export function AgentCallDetails({ parentRun, toolCallId, active = true }: { parentRun: RunSummary; toolCallId: string; active?: boolean })
 {
@@ -153,6 +159,7 @@ export function AgentCallDetails({ parentRun, toolCallId, active = true }: { par
 
     trigger.current?.focus()
   }
+
   if (!call)
 
     return null;

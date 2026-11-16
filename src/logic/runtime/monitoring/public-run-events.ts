@@ -31,6 +31,7 @@ export interface PublicRunIdentity
 
   runId: string
 }
+
 const record = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
 const text = (value: unknown, max = 256000) => typeof value === 'string' ? value.slice(0, max) : undefined;
@@ -62,6 +63,7 @@ function publicScope(value: unknown, binding: PublicRunIdentity): ToolReceipt['s
   }
   return { kind: ['workspace', 'knowledge', 'unknown'].includes(String(scope.kind)) ? scope.kind as 'workspace' | 'knowledge' | 'unknown' : 'unknown', workspaceId: binding.workspaceId };
 }
+
 const labels = new Set(['正在思考…', '正在生成…', 'Pi 运行配置已应用', '上下文用量已更新', '模型请求额度', '模型连接重试中', '模型连接已恢复', '模型重试已结束', '正在整理对话上下文', '上下文整理已取消', '上下文整理失败', '上下文整理结束', '上下文摘要等待重试', '正在重试上下文摘要', '上下文摘要重试结束', '本轮用量已汇总', '正在插入用户补充', '已插入，当前动作完成后处理', '插入未确认，请核实后继续']);
 
 function usage(value: unknown)
@@ -92,6 +94,7 @@ function usage(value: unknown)
 
   return out
 }
+
 function progress(value: unknown): TaskProgress | undefined
 {
   const data = record(value);
@@ -106,6 +109,7 @@ function progress(value: unknown): TaskProgress | undefined
     version: data.version as number, goal: text(data.goal, 16000) ?? '', acceptance: texts(data.acceptance).slice(0, 50), reason: text(data.reason, 4000) ?? '', state: data.state as TaskProgress['state'], steps: data.steps.slice(0, 50).map(value => { const step = record(value); return { id: text(step.id, 80) ?? '', title: text(step.title, 4000) ?? '', owner: text(step.owner, 4000) ?? '', state: ['pending', 'working', 'reported_done'].includes(String(step.state)) ? step.state as 'pending' | 'working' | 'reported_done' : 'pending', evidence: texts(step.evidence, 128).slice(0, 30) } }), ...(typeof delivery.summary === 'string' ? { delivery: { summary: delivery.summary.slice(0, 4000), limitations: texts(delivery.limitations, 4000).slice(0, 30) } } : {})
   };
 }
+
 function receipt(value: unknown, binding: PublicRunIdentity): ToolReceipt | undefined
 {
   const data = record(value);
@@ -116,6 +120,7 @@ function receipt(value: unknown, binding: PublicRunIdentity): ToolReceipt | unde
 
   return { version: 1, toolCallId: text(data.toolCallId, 128) ?? '', toolName: text(data.toolName, 128) ?? '', workspaceId: binding.workspaceId, taskId: binding.taskId, runId: binding.runId, outcome: data.outcome as ToolReceipt['outcome'], inputHash: text(data.inputHash, 64) ?? '', ...(typeof data.resultHash === 'string' ? { resultHash: data.resultHash.slice(0, 64) } : {}), effects: texts(data.effects, 40).filter((effect): effect is ToolReceipt['effects'][number] => ['read', 'preview', 'maintenance', 'business-write', 'knowledge-write', 'external-write', 'command'].includes(effect)), scope: publicScope(data.scope, binding), recordedAt: text(data.recordedAt, 40) ?? '' };
 }
+
 /** 只保留工作区内业务文件的定位；不返回 .cbim、外部路径、命令参数或写入正文。 */
 function businessPath(value: unknown, root: string)
 {
@@ -131,6 +136,7 @@ function businessPath(value: unknown, root: string)
 
   return relative.replace(/\\/g, '/');
 }
+
 /** 显式选择每种事件的公开字段；不把未审核的新字段经 spread 透传给前端。 */
 export function projectRunEvent(event: StoredEvent, identity: PublicRunIdentity, task: TaskSpec): StoredEvent
 {

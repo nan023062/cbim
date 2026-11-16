@@ -18,6 +18,7 @@ export type CommandVerificationSelection = CommandVerificationInput &
 {
   expectedToolName: string
 };
+
 export interface CommandVerificationState
 {
   report?: CommandVerificationReport;
@@ -26,6 +27,7 @@ export interface CommandVerificationState
 
   error: string
 }
+
 export const commandVerificationKey = (selection: CommandVerificationSelection) => JSON.stringify([selection.workspaceId, selection.rootSessionId, selection.runId, selection.toolCallId, selection.expectedToolName]);
 
 /** 仅真实主实例的工具轨道可装配入口；成员日志和无绑定旧日志不能按角色名推测主运行。 */
@@ -43,6 +45,7 @@ export function mainCommandSelection(run: RunSummary, toolCallId: string, toolNa
 
   return parsed.success ? { ...parsed.data, expectedToolName: toolName } : undefined;
 }
+
 /** 严格校验后才替换报告；其它会话、运行、调用或工具的回包不能显示为当前原命令证据。 */
 export function applyCommandVerification(raw: unknown, selection: CommandVerificationSelection): CommandVerificationReport
 {
@@ -60,11 +63,13 @@ export function applyCommandVerification(raw: unknown, selection: CommandVerific
 
   return report;
 }
+
 /** 日志追加仅提示报告时效，不否定已经核实的原提交，也不自行再次访问后端。 */
 export function commandVerificationStale(report: CommandVerificationReport | undefined, latestSeq: number): boolean
 {
   return !!report && (report.consistency === 'changed_during_read' || report.basis.throughSeq !== undefined && latestSeq > report.basis.throughSeq);
 }
+
 /** 控制器只拥有一组原身份；构造和订阅不读取，inspect 是唯一请求入口。 */
 export class CommandVerificationController
 {
@@ -80,10 +85,12 @@ export class CommandVerificationController
   {
     this.selection = { ...selection }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: CommandVerificationState)
@@ -92,6 +99,7 @@ export class CommandVerificationController
 
     this.listeners.Notify()
   }
+
   /** 卸载只取消观察，忽略迟到回包；不停止原任务、不修改服务端日志。 */
   Cancel()
   {
@@ -99,6 +107,7 @@ export class CommandVerificationController
 
     this.value = { ...this.value, loading: false }
   }
+
   /** 同一实例在途时合并重复点击；失败保留旧报告，绝不转调原工具或自动重读。 */
   async Inspect()
   {

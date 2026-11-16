@@ -18,6 +18,7 @@ export interface BrowserProxyTransport
 
   Connect(address: string, port: number): Socket;
 }
+
 /** 一个读取任务一个出口；累计传输上限包括 TLS 密文，不能当作单个解压资源大小。 */
 export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: Error) => void, transport?: BrowserProxyTransport)
 {

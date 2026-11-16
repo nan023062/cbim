@@ -109,6 +109,7 @@ interface ApplicationPlatform
   /** 静态网页不足时使用的浏览器适配；Node 宿主可不提供。 */
   webBrowser?: BrowserReader;
 }
+
 /** 业务服务的唯一生命周期所有者；Bridge 子类只补充通信分发，不复制本类状态。 */
 export class Application
 {
@@ -179,6 +180,7 @@ export class Application
 
     this.admissionOwners.delete(id);
   }
+
   /** 绑定一次工作区打开；退役只撤销票据与通知，不删除尚未释放的实际占用。 */
   private BindAdmission(workspace: Workspace, lease: WorkspaceExecutionLease): WorkspaceAdmission
   {
@@ -204,6 +206,7 @@ export class Application
       IsCurrent: () => current && !this.stopping && workspace.state === 'running' && this.running.get(id) === workspace,
     };
   }
+
   /** 进入工作区关闭或重启屏障，返回仅退出本次计数的闭包。 */
   private Retire(id: string)
   {
@@ -211,6 +214,7 @@ export class Application
 
     return () => { const count = this.retiring.get(id)! - 1; if (count) this.retiring.set(id, count); else this.retiring.delete(id); };
   }
+
   /** 拒绝应用退出及工作区退役期间的新服务请求，不隐式打开或恢复工程。 */
   private AssertServiceAvailable(id: string)
   {
@@ -222,6 +226,7 @@ export class Application
 
       fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
   }
+
   /** 应用数据与工作区目录的可信定位器，保持调用方传入的同一实例。 */
   public readonly paths: Paths;
 
@@ -278,6 +283,7 @@ export class Application
   {
     return this.stopping;
   }
+
   /** 装配应用级服务；仅可信宿主提供资源根、密钥适配和平台端口，持久配置由 init 读取。 */
   // 可信文件传输同时供旧运行恢复与新 Agent 业务装配；公开对话参数不能替换该端口。
   public constructor(paths: Paths, assetsRoot: string, secretCipher?: SecretCipher, platform: ApplicationPlatform = {})
@@ -344,6 +350,7 @@ export class Application
 
     this.chatMaterials = new ChatMaterialImports((id) => { this.AssertServiceAvailable(id); const ws = this.Workspace(id); ws.Assert(); return ws; }, this.repositoryConnections);
   }
+
   /** 自动化仅在当前打开实例调度，关闭先停止新触发，再排空主/成员运行。 */
   public Automations(id: string)
   {
@@ -359,6 +366,7 @@ export class Application
 
     return service;
   }
+
   /** 成员图与邮箱每工作区只有一个写入服务，沿用已持有的工作区锁。 */
   public MemberDispatch(id: string)
   {
@@ -376,6 +384,7 @@ export class Application
 
     return service;
   }
+
   /** 岗位登记和旧命令查询只访问已打开工作区；旧实例回执由服务先查，不据当前来源重建。 */
   public WorkspaceMembers(id: string)
   {
@@ -393,6 +402,7 @@ export class Application
 
     return service;
   }
+
   /** 模块责任共用岗位与派发日志；未接到业务执行策略，查询不启动任何运行。 */
   public WorkspaceOwnerships(id: string)
   {
@@ -410,6 +420,7 @@ export class Application
 
     return service;
   }
+
   /** 明确绑定工作区的成员执行入口；不依赖界面选中状态或普通对话的活动任务。 */
   public MemberExecution(id: string)
   {
@@ -427,6 +438,7 @@ export class Application
 
     return service;
   }
+
   /** 每个工作区实例唯一的执行管理器；调用必须显式指定工作区。 */
   public Execution(id: string)
   {
@@ -444,6 +456,7 @@ export class Application
 
     return manager;
   }
+
   /** 明确工作区的只读角色历史；没有执行、审批或恢复模型的副作用。 */
   public AgentHistory(id: string)
   {
@@ -461,6 +474,7 @@ export class Application
 
     return history;
   }
+
   /** 取得当前工作区已装配的请求预算服务，不恢复或重发历史请求。 */
   public RequestBudgets(id: string)
   {
@@ -476,6 +490,7 @@ export class Application
 
     return service;
   }
+
   /** 只取得已打开工作区的原隔离记录，查询不启动程序或隐式清理。 */
   public IsolatedExecutions(id: string)
   {
@@ -491,6 +506,7 @@ export class Application
 
     return service;
   }
+
   /** 原报告不隐式打开工作区；平台缺省只禁新写入，不影响已保存历史查询。 */
   public ControlledFiles(id: string)
   {
@@ -506,6 +522,7 @@ export class Application
 
     return service;
   }
+
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
   public async Init(options: { /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */ restore?: boolean; } = {})
   {
@@ -529,6 +546,7 @@ export class Application
 
       await this.Restore();
   }
+
   /** 合并登记簿与当前实例视图；未打开的工作区只检查目录是否存在。 */
   public async List()
   {
@@ -550,6 +568,7 @@ export class Application
       ),
     };
   }
+
   /** 仅取得已登记在运行集合中的实例；调用方继续按业务需要核实其就绪状态。 */
   public Workspace(id: string)
   {
@@ -561,6 +580,7 @@ export class Application
 
     return ws;
   }
+
   /** 只取得已就绪工作区的私有治理服务；不把计划或决定接到模型执行入口。 */
   public Governance(id: string)
   {
@@ -572,6 +592,7 @@ export class Application
 
     return ws.governance;
   }
+
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
   public async Open(id: string, restart = false)
   {
@@ -841,6 +862,7 @@ export class Application
       this.opening.delete(id);
     }
   }
+
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
   public async Stop(id: string)
   {
@@ -913,6 +935,7 @@ export class Application
       release();
     }
   }
+
   /** 先关闭目标工作区，再移除登记和监管投影；不删除用户工程文件。 */
   public async Remove(id: string)
   {
@@ -922,6 +945,7 @@ export class Application
 
     this.runtime.Forget(id);
   }
+
   /** 仍按原策略恢复全部已登记工作区；与界面手动打开合并，退出后不再开始新的恢复。 */
   public async Restore()
   {
@@ -943,6 +967,7 @@ export class Application
       }
     }
   }
+
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
   public async Shutdown()
   {
@@ -962,6 +987,7 @@ export class Application
 
     return this.shutdownPromise;
   }
+
   /** 默认选择转为独立引擎及明确模型身份，校验协议后仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
   public async ModelOptions(input: any = {})
   {
@@ -991,6 +1017,7 @@ export class Application
       profileId: profile.id,
     };
   }
+
   /** 发送前验证图片能力；队列只保存工作区快照 ID，启动时再检查当前模型。 */
   public async ChatOptions(id: string, input: any, attachments: unknown)
   {

@@ -29,11 +29,13 @@ export interface MemberPausePorts extends MemberCheckpointVerificationPorts
 
   AssertCurrent(): void
 }
+
 export class MemberPauseService
 {
   constructor(private readonly owner: DispatchKnowledgeWorkspace, private readonly store: DispatchStore, private readonly owners: OwnerExecutionService, private readonly ports?: MemberPausePorts)
   {
   }
+
   private Available()
   {
     if (!this.ports)
@@ -42,6 +44,7 @@ export class MemberPauseService
 
     return this.ports
   }
+
   private Scope(state: DispatchState, request: GoalContinuationRequest)
   {
     const scope = state.scopes?.find(s => s.workspaceId === request.workspaceId && s.rootSessionId === request.rootSessionId && s.scopeId === request.scopeId);
@@ -52,6 +55,7 @@ export class MemberPauseService
 
     return scope;
   }
+
   /** 审阅/停泊事务内只核历史日志；不反向取得锁、不重新生成原 proof。 */
   async VerifyWaiting(state: DispatchState, scope: DispatchScope, pause: MemberPause): Promise<void>
   {
@@ -63,6 +67,7 @@ export class MemberPauseService
 
       await verifyMemberCheckpointHistory(this.owner, task, run, ports, () => ports.AssertCurrent(), state.runs);
   }
+
   /** 预检取得短读占用；可信 beforeRun 已持主运行占用，不能再次领取与自身写租约冲突的读锁。该标记不是工具输入。 */
   async WithContext<T>(request: GoalContinuationRequest, alive: () => void, use: (context: OwnerExecutionContext) => Promise<T>, mainLeaseHeld = false): Promise<T>
   {
@@ -83,6 +88,7 @@ export class MemberPauseService
       release()
     }
   }
+
   /** 在已持有外层快照的最终状态中核验；不升级成员权限、不刷新旧 native 或文件指纹。 */
   async ValidateCurrent(state: DispatchState, request: GoalContinuationRequest, context: OwnerExecutionContext, alive: () => void): Promise<void>
   {
@@ -116,6 +122,7 @@ export class MemberPauseService
     }
     await this.owners.Recheck(context.snapshot, assert);
   }
+
   /** 用户明确继续才调用；失败保留原等待，成功也不消费或启动。最终受理事务再次核实同一清单。 */
   async Preflight(request: GoalContinuationRequest, alive: () => void = () => { }): Promise<void>
   {

@@ -66,6 +66,7 @@ export function workspaceMemberEngine(ref: WorkspaceMemberModelRef & { snapshot?
 {
   return ref.engine ?? ref.snapshot?.engine
 }
+
 /** 保存真实原则与有效继承 Skill；整库知识 revision 是采集出处，不是能力内容的独立代次。 */
 export const workspaceMemberCapabilitySchema = z.object({ workspaceId: id, teamId: id, agentId: id, name: text(512), knowledgeRevision: id, source: z.enum(['builtin', 'workspace']), principles: z.string(), effectiveSkills: z.array(z.object({ skillId: id, ownerId: id, inherited: z.boolean(), content: z.string() }).strict()).max(workspaceMemberLimits.skills) }).strict().superRefine((value, context) => { if (value.agentId === 'cbim:main' || value.source === 'builtin' && value.agentId !== 'cbim:executor' || value.source === 'workspace' && !value.agentId.startsWith('.cbim/team/') || new Set(value.effectiveSkills.map(item => item.skillId)).size !== value.effectiveSkills.length || byteLength(value) > workspaceMemberLimits.capabilityBytes) context.addIssue({ code: 'custom', message: '岗位能力身份、有效 Skill 或容量无效' }); });
 

@@ -24,6 +24,7 @@ export interface RuntimeCursor
 
   revision: number
 }
+
 /** 队列数量只统计待执行用户消息，不把它们冒充已经创建的任务或运行。 */
 export interface RuntimeQueueCounts
 {
@@ -34,12 +35,14 @@ export interface RuntimeQueueCounts
   /** 已 claim 的 starting 消息，包括启动新轮次和插入当前轮次；不能再次计算为待领取。 */
   inserting: number;
 }
+
 export interface RuntimeIssue
 {
   source: string;
 
   message: string
 }
+
 export interface RuntimeWorkspace
 {
   workspaceId: string;
@@ -54,6 +57,7 @@ export interface RuntimeWorkspace
 
   queue: RuntimeQueueCounts;
 }
+
 /** 持久化实例加当前进程观察状态；恢复的历史 activity 不代表已经持有活动执行租约。 */
 export interface RuntimeMember
 {
@@ -101,10 +105,12 @@ export interface RuntimeMember
 
     runId: string
   };
+
   waitingTaskIds: string[];
 
   communicatingMessageIds: string[];
 }
+
 /** 已派发业务任务；runIds 为空表示尚未创建执行轮次。 */
 export interface RuntimeDispatchTask
 {
@@ -137,6 +143,7 @@ export interface RuntimeDispatchTask
 
   updatedAt: string;
 }
+
 /** 对话按真实绑定归属实例；旧记录仍只有角色，禁止按角色名称猜测实例。 */
 export type RuntimeLoopTask =
   {
@@ -172,6 +179,7 @@ export type RuntimeLoopTask =
 
       rootSessionId: string
     });
+
 export type RuntimeTask = RuntimeDispatchTask | RuntimeLoopTask;
 
 /** 目标周期与模型轮次分开展示；审阅 complete 是申请，只有 closed/outcome 才是已提交的周期结算。 */
@@ -203,18 +211,21 @@ export interface RuntimeScope
   {
     reason: string
   };
+
   wait?:
   {
     createdAt: string;
 
     reason: string
   };
+
   /** 只说明此前真实预算拒绝，不是额度配置、用量证明或新的准入许可。 */
   budgetBlocked?:
   {
     reason: 'token_limit' | 'cost_limit' | 'usage_unverifiable'
   };
 }
+
 export interface RuntimeRun
 {
   workspaceId: string;
@@ -244,6 +255,7 @@ export interface RuntimeRun
 
   usage: RunUsage;
 }
+
 /** 已报告消费的累计数，不是上下文占用；cost 可为已计价部分，不完整由 costPartial 指明。 */
 export interface RuntimeUsage extends RunUsage
 {
@@ -255,6 +267,7 @@ export interface RuntimeUsage extends RunUsage
 
   unpricedRuns: number;
 }
+
 /** 当前活跃运行与各类排队分别计数，避免把任务、轮次、消息叠加成虚假的总负载。 */
 export interface RuntimePressure
 {
@@ -291,6 +304,7 @@ export interface RuntimePressure
 
   insertingConversationMessages: number;
 }
+
 export interface RuntimeSnapshot
 {
   cursor: RuntimeCursor;
@@ -312,6 +326,7 @@ export interface RuntimeSnapshot
   /** 任一工作区尚未载入、不可用或有诊断时为 false；缺失数据不能当作零负载。 */
   complete: boolean;
 }
+
 /** 版本未变化时不复制全局状态；streamId 区分应用重启，不复用旧进程游标。 */
 export type RuntimeRead =
   {

@@ -19,11 +19,13 @@ export interface MemberCheckpointChain
 
   runIds: readonly string[];
 }
+
 /** 按真实预约顺序读取；本函数不修复损坏或重复的历史。 */
 export function memberResumeRequests(task: MemberCheckpointChain): readonly MemberResumeRequest[]
 {
   return [...(task.resumeHistory ?? []), ...(task.resumeRequest ? [task.resumeRequest] : [])]
 }
+
 /** 当前段没有预约时返回 undefined，即使前一段已消费的预约仍保留在任务上。 */
 export function currentMemberResumeRequest(task: MemberCheckpointChain): MemberResumeRequest | undefined
 {
@@ -31,6 +33,7 @@ export function currentMemberResumeRequest(task: MemberCheckpointChain): MemberR
 
   return checkpoint && task.resumeRequest?.checkpointId === checkpoint.checkpointId ? task.resumeRequest : undefined
 }
+
 /** 仅检查有序形状和来源对应；任务身份、权限、canonical 及跨表原子性仍由各边界重核。 */
 export function validMemberCheckpointChain(task: MemberCheckpointChain): boolean
 {

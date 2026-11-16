@@ -67,6 +67,7 @@ export const knowledgeSourceMutationPlanSchema = z.object({ source: knowledgeSou
 
     ctx.addIssue({ code: 'custom', message: '来源操作与前后对象不一致' });
 });
+
 export type KnowledgeSourceMutationPlan = z.infer<typeof knowledgeSourceMutationPlanSchema>;
 
 const transitionBody = { version: z.literal(1), transitionId: id, workspaceId: workspace, instanceId: uuid, requestId: id, requestFingerprint: digest, journalBindingHash: digest, expectedSourceCursor: knowledgeSourceCursorSchema.nullable(), changes: z.array(knowledgeSourceMutationPlanSchema).max(knowledgeSourceLimits.affected), preparedAt: time };
@@ -102,18 +103,22 @@ export function knowledgeSourceKey(value: KnowledgeSourceKey)
 {
   return value.kind + ':' + value.sourceId
 }
+
 export function sameKnowledgeSourceKey(a: KnowledgeSourceKey, b: KnowledgeSourceKey)
 {
   return a.kind === b.kind && a.sourceId === b.sourceId
 }
+
 export function sourceRefMatches(ref: CapabilitySourceRef, workspaceId: string, source: KnowledgeSourceKey | 'cbim:executor')
 {
   return source === 'cbim:executor' ? 'kind' in ref && ref.kind === 'builtin' : !('kind' in ref) && ref.workspaceId === workspaceId && sameKnowledgeSourceKey(ref.source, source);
 }
+
 export function sourceSelectionMatches(selection: SourceSelection, workspaceId: string, source: KnowledgeSourceKey | 'cbim:executor')
 {
   return source === 'cbim:executor' ? selection.kind === 'builtin' : selection.kind === 'workspace' && selection.workspaceId === workspaceId && sameKnowledgeSourceKey(selection.source, source);
 }
+
 /** 公开状态必须属于所显示对象；current 只说明已采纳引用与当前头相同，不表示可执行。 */
 export function sourceReadStateMatches(value: KnowledgeSourceReadState, workspaceId: string, source: KnowledgeSourceKey | 'cbim:executor', adopted?: CapabilitySourceRef): boolean
 {

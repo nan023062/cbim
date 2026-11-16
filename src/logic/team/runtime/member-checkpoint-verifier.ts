@@ -41,6 +41,7 @@ export interface MemberCheckpointVerificationPorts
 
   NativeFingerprint(session: DispatchRun['session'], signal: AbortSignal): Promise<MemberCheckpointProof['native']>;
 }
+
 /** 历史放弃只读取 canonical；当前 native/知识/模型/业务文件不再决定旧待办能否终止。 */
 export type MemberCheckpointHistoryPorts = Pick<MemberCheckpointVerificationPorts, 'Inspect' | 'NormalizePath'>;
 
@@ -53,16 +54,19 @@ export async function verifyMemberCheckpointHistory(owner: Pick<KnowledgeWorkspa
 
   await verifyChain(owner, task, run, ports, assertCurrent, memberCheckpointProofSchema.parse(run.checkpointProof), false, priorRuns);
 }
+
 /** 最新 native 和全链累计文件均需相同；priorRuns 来自同一可信快照，不从事务内部反向读取 Store。 */
 export async function verifyMemberCheckpointProof(owner: DispatchKnowledgeWorkspace, task: TaskNode, run: DispatchRun, ports: MemberCheckpointVerificationPorts, assertCurrent: () => void, expected?: MemberCheckpointProof, priorRuns: readonly DispatchRun[] = []): Promise<MemberCheckpointProof>
 {
   return verifyChain(owner, task, run, ports, assertCurrent, expected, true, priorRuns, { owner, ports });
 }
+
 /** 原生加载后只核全链日志/知识/累计文件；不把合法 native 配置追加说成仍等于旧指纹。 */
 export async function verifyMemberCheckpointInputs(owner: DispatchKnowledgeWorkspace, task: TaskNode, run: DispatchRun, ports: MemberCheckpointVerificationPorts, assertCurrent: () => void, expected: MemberCheckpointProof, priorRuns: readonly DispatchRun[] = []): Promise<void>
 {
   await verifyChain(owner, task, run, ports, assertCurrent, expected, false, priorRuns, { owner, ports });
 }
+
 async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, assertCurrent: () => void, expected: MemberCheckpointProof | undefined, includeNative: boolean, priorRuns: readonly DispatchRun[], current?: { owner: DispatchKnowledgeWorkspace; ports: MemberCheckpointVerificationPorts }): Promise<MemberCheckpointProof>
 {
   const check = () => { owner.Assert(); assertCurrent() };
@@ -190,6 +194,7 @@ async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, 
 
   return memberCheckpointProofSchema.parse({ checkpoint: latest.checkpoint, logHash: latest.logHash, native });
 }
+
 async function verifySegment(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, check: () => void, expected?: MemberCheckpointProof)
 {
   const summary = await ports.Inspect(run);

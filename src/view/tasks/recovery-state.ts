@@ -26,12 +26,14 @@ export interface RecoveryAttempt
 
   error?: string;
 }
+
 export type RecoveryArchive = RecoveryAttempt &
 {
   phase: 'accepted';
 
   receipt: RecoveryReceipt
 };
+
 export interface RecoveryDraft
 {
   source: RecoverySource;
@@ -44,12 +46,14 @@ export interface RecoveryDraft
 
   history?: readonly RecoveryArchive[]
 }
+
 export interface RecoveryState
 {
   records: readonly RecoveryDraft[];
 
   error: string
 }
+
 export interface RecoveryPorts
 {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
@@ -60,6 +64,7 @@ export interface RecoveryPorts
 
   uuid: () => string;
 }
+
 /** 报告更新不改变草稿归属；workspace/root 由外层控制器固定，不与目标补充的 waitId 混用。 */
 export { recoverySourceKey };
 
@@ -74,6 +79,7 @@ const sourceIdentity = (source: RecoverySource): RecoverySource =>
   }
   return recoverySourceSelectionSchema.parse(source);
 };
+
 const textError = (error: unknown) => error instanceof Error ? error.message : String(error);
 
 const sameOptions = (a: RecoveryRequest['options'], b: RecoveryRequest['options']) => a.provider === b.provider && a.model === b.model && a.profileId === b.profileId && a.permission === b.permission && a.turnTimeoutMs === b.turnTimeoutMs;
@@ -93,6 +99,7 @@ export function recoveryRejected(error: unknown)
 {
   return /^(?:CAPACITY_BUSY|RECOVERY_INPUT_INVALID|RECOVERY_IDENTITY|RECOVERY_SOURCE_NOT_CLOSED|RECOVERY_BUSY|RECOVERY_SOURCE_INVALID|RECOVERY_RUN_REQUIRED|RECOVERY_UNAVAILABLE|RECOVERY_REPORT_STALE|RECOVERY_CONTEXT_CONFLICT):/.test(textError(error))
 }
+
 /** 回执需匹配原始命令及内容，新周期和新运行不能借用来源身份；受理不等于正在运行。 */
 export function checkedRecoveryReceipt(raw: unknown, request: RecoveryRequest, previous?: RecoveryReceipt): RecoveryReceipt
 {
@@ -111,6 +118,7 @@ export function checkedRecoveryReceipt(raw: unknown, request: RecoveryRequest, p
 
   return receipt;
 }
+
 /** 每个主会话一份持久索引；来源删除、选中节点变化或报告更新均不丢弃未确认命令。 */
 export class ExecutionRecoveryController
 {
@@ -166,22 +174,27 @@ export class ExecutionRecoveryController
       this.value = { records: [], error: '本地核实记录无法读取，未发送请求：' + textError(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get available()
   {
     return !this.unavailable
   }
+
   get canRelease()
   {
     return this.listeners.size === 0 && this.pending.size === 0
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   /** 归档成功先使该来源各视图的旧报告失效，再通知重绘；挂载期间错过的变更也会补查。 */
   SubscribeSource(source: RecoverySource, listener: () => void, onPrepared: () => void, observedHistoryCount = this.Record(source)?.history?.length ?? 0)
   {
@@ -195,20 +208,24 @@ export class ExecutionRecoveryController
 
     return unsubscribe;
   }
+
   Record(source: RecoverySource)
   {
     const key = recoverySourceKey(source);
 
     return this.value.records.find(item => recoverySourceKey(item.source) === key)
   }
+
   IsPending(record?: RecoveryDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Update(record: RecoveryDraft): boolean
   {
     const key = recoverySourceKey(record.source),
@@ -258,6 +275,7 @@ export class ExecutionRecoveryController
 
     return true;
   }
+
   /** 编辑只影响当前来源的未提交草稿；报告 basis 不写入草稿 key。 */
   Edit(source: RecoverySource, fields: { observation: string; message: string })
   {
@@ -273,6 +291,7 @@ export class ExecutionRecoveryController
 
     this.Update({ source: sourceIdentity(source), ...fields, history: old?.history ?? [], attempt: old?.attempt });
   }
+
   /** 仅首次明确点击构造命令；保存失败不调用后端，双击不能绕过冻结状态。 */
   async Submit(target: RecoveryTarget, options: RecoveryRequest['options'])
   {
@@ -312,6 +331,7 @@ export class ExecutionRecoveryController
 
     await this.Send(next);
   }
+
   /**
        * 明确准备下一次核实：重新查询旧受理命令，确认 closed 后完整归档，再保存无命令的新草稿。
        * 查询缺失、冲突、在途或本地保存失败均不解锁；不生成 UUID、不发启动请求，也不改旧周期。
@@ -367,6 +387,7 @@ export class ExecutionRecoveryController
       this.Emit()
     }
   }
+
   private async Send(record: RecoveryDraft)
   {
     const attempt = record.attempt!,
@@ -400,6 +421,7 @@ export class ExecutionRecoveryController
       this.Emit()
     }
   }
+
   /** 同命令重试不重新读取模型或报告。当前图已改变也须由后端先查询该命令，不能换 ID 重建。 */
   async Retry(source: RecoverySource)
   {
@@ -415,6 +437,7 @@ export class ExecutionRecoveryController
 
       await this.Send(next)
   }
+
   /** 没有查询到回执仍是未知；已有受理事实不能被一次查询失败降为未受理。 */
   async Query(source: RecoverySource)
   {
@@ -455,12 +478,14 @@ export class ExecutionRecoveryController
       this.Emit()
     }
   }
+
   /** 重开只查询未确认命令，不发送模型任务或重新运行旧工具。 */
   async Restore()
   {
     await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.Query(item.source)))
   }
 }
+
 /** 切换节点/工作区仍保留在途请求，闲置且无观察者的控制器可回收后从本机记录恢复。 */
 export class ExecutionRecoveryPool
 {
@@ -469,6 +494,7 @@ export class ExecutionRecoveryPool
   constructor(private idleLimit = 16)
   {
   }
+
   Get(workspaceId: string, rootSessionId: string, ports: RecoveryPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),

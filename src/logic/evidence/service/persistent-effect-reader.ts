@@ -30,6 +30,7 @@ interface PersistentEffectOwner
   {
     id: string
   };
+
   Assert(): void;
 
   dispatchStore: Pick<DispatchStore, 'Read' | 'CommandReceipt'>;
@@ -38,15 +39,18 @@ interface PersistentEffectOwner
   {
     store: Pick<ModuleGovernanceStore, 'Find'>
   };
+
   /** 仅借同一队列，闭包不取得任何事务写端口。 */
   Governed<T>(operation: () => Promise<T>): Promise<T>;
 }
+
 function check(value: unknown): asserts value
 {
   if (!value)
 
     fail('EFFECT_RECORD_INVALID', '原保存记录与调用来源或请求不一致')
 }
+
 /** 已保存原实例随请求保留，重开读取不换实例重放；停止或存储不可用不能降级为 absent。 */
 export async function observePersistentWrite(owner: PersistentEffectOwner, reference: PersistentWriteReference, signal?: AbortSignal): Promise<PersistentWriteObservation>
 {

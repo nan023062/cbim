@@ -20,6 +20,7 @@ export class ByteLimitError extends RangeError
     this.name = 'ByteLimitError';
   }
 }
+
 /** 有界字节流消费；每次调用独立拥有 reader、缓冲和取消监听。 方法不依赖 this，可作为回调传递。 */
 export class ByteUtils
 {
@@ -27,6 +28,7 @@ export class ByteUtils
   private constructor()
   {
   }
+
   /**
      * 消费完整流才返回；超限、取消或流错误均不交付半截正文。null 正文视为空字节。
      * maxBytes 是非负安全整数，signal 的原 reason 保留；非法上限或预先取消不取得 reader。
@@ -74,6 +76,7 @@ export class ByteUtils
       {
       }
     };
+
     const abort = () => { cancel(signal!.reason); rejectRead?.(signal!.reason); };
 
     signal?.addEventListener('abort', abort, { once: true });

@@ -40,6 +40,7 @@ function outputText(result: unknown): string
   }
   return JSON.stringify(result, null, 2);
 }
+
 /** 单调用模式只筛选原日志，不混入其他调用或全局状态；展开不执行工具。 */
 export function ToolTimeline({ run, renderControls, renderDetails, toolCallId }: { run: RunSummary; renderControls?: (call: { id: string; name: string; attention: boolean }) => ReactNode; renderDetails?: (toolCallId: string) => ReactNode; toolCallId?: string })
 {

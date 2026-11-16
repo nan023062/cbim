@@ -16,6 +16,7 @@ export function executionScopeCovers(roots: readonly ArtifactScopeRoot[], path: 
 {
   return executionPathSchema.safeParse(path).success && roots.some(root => root.kind === 'directory' && (root.path === path || path.startsWith(root.path + '/')) || kind === 'file' && root.kind === 'file' && root.path === path);
 }
+
 export const executionScopeSchema = z.object({ version: z.literal(1), profile: z.literal('windows-lpac-node-v1'), read: z.array(root).min(1).max(32).refine(artifactRootsDisjoint), write: z.array(root).max(32).refine(artifactRootsDisjoint), /** 这些是固定上限，工具参数不能覆盖；timeoutMs 是单次执行墙钟毫秒。 */ node: z.object({ timeoutMs: z.number().int().min(100).max(30000), memoryMiB: z.number().int().min(128).max(1024), processLimit: z.number().int().min(1).max(8) }).strict().optional(), }).strict().superRefine((value, context) => { if (value.write.some(root => !executionScopeCovers(value.read, root.path, root.kind))) context.addIssue({ code: 'custom', message: '写范围必须完整包含在读范围内' }) });
 
 export type ExecutionScope = z.infer<typeof executionScopeSchema>;
@@ -39,6 +40,7 @@ type Contract =
       }[]
     }
   };
+
 /** 准备与恢复对全部实际模块调用；未声明任务返回 undefined，不能给旧记录自动加范围。 */
 export function preparedExecutionScope(modules: readonly { contract?: Contract }[]): ExecutionScope | undefined
 {
@@ -74,6 +76,7 @@ export function preparedExecutionScope(modules: readonly { contract?: Contract }
 
       throw Error('EXECUTION_SCOPE_NODE: Node证据要求必须同时声明固定预算');
   }
+
   // 合并显式授予的模块根，去掉已被目录覆盖的冗余根；不根据当前磁盘目录扩大授权。
   const merge = (key: 'read' | 'write') => scopes.flatMap(scope => scope[key]).filter((root, index, all) => !all.some((other, at) => at !== index && (other.path === root.path && other.kind === root.kind && at < index || other.kind === 'directory' && (root.path.startsWith(other.path + '/') || root.path === other.path && root.kind === 'file'))));
 

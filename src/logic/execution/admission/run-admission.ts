@@ -20,6 +20,7 @@ export interface LocalAdmissionPort
 
   OnReady?(): void;
 }
+
 export type AdmissionAttempt =
   {
     kind: 'granted';
@@ -38,6 +39,7 @@ export type AdmissionAttempt =
 
     reason: AdmissionDenialReason
   };
+
 type Waiting =
   {
     request: AdmissionRequest;
@@ -46,12 +48,14 @@ type Waiting =
 
     port: LocalAdmissionPort
   };
+
 type Occupied =
   {
     request: AdmissionRequest;
 
     view: AdmissionOccupant
   };
+
 const clone = <T>(value: T): T => structuredClone(value);
 
 const key = (identity: AdmissionIdentity) => JSON.stringify([identity.workspaceId, identity.ownerEpoch, identity.requestId]);
@@ -104,12 +108,14 @@ export class GlobalRunAdmission
 
     queueMicrotask(() => { this.changeScheduled = false; for (const listener of this.listeners) try { listener() } catch { /* 观察失败不改变准入 */ } });
   }
+
   ObserveChange(listener: () => void)
   {
     this.listeners.add(listener);
 
     return () => { this.listeners.delete(listener) }
   }
+
   private Current(request: AdmissionRequest, port: LocalAdmissionPort)
   {
     if (this.retired.has(ownerKey(request.workspaceId, request.ownerEpoch)))
@@ -125,6 +131,7 @@ export class GlobalRunAdmission
       return false
     }
   }
+
   private Local(port: LocalAdmissionPort): AdmissionWaitReason | undefined
   {
     try
@@ -138,6 +145,7 @@ export class GlobalRunAdmission
       return 'workspace_conflict'
     }
   }
+
   private Prune()
   {
     let removed = false;
@@ -154,6 +162,7 @@ export class GlobalRunAdmission
       }
     return removed
   }
+
   /** FIFO 只比较可领取票；较早 writer 即使本地阻塞也形成同工作区屏障，不能被后来 reader 饿死。 */
   private Evaluate(candidate?: Waiting)
   {
@@ -221,6 +230,7 @@ export class GlobalRunAdmission
     }
     return choices;
   }
+
   private UpdateReasons(choices: ReturnType<GlobalRunAdmission['Evaluate']>)
   {
     for (const [id, item] of this.waiting)
@@ -235,6 +245,7 @@ export class GlobalRunAdmission
       }
     }
   }
+
   /**
        * 同请求排队重试保留原票；变参拒绝，已占用不返回第二把释放句柄。direct 拒绝不排票。
        * 本地领取失败不会创建全局占用；只有成功返回 granted 才允许调用方继续创建 run/模型。
@@ -392,6 +403,7 @@ export class GlobalRunAdmission
       this.inAttempt = false
     }
   }
+
   private WaitOrDeny(item: Waiting, reason: AdmissionWaitReason): AdmissionAttempt
   {
     if (item.request.source === 'direct')
@@ -419,6 +431,7 @@ export class GlobalRunAdmission
     // 排队本身不触发 onReady；只有外部状态变化唤醒，防止无资源重试形成微任务忙循环。
     return { kind: 'waiting', ticket: clone(this.waiting.get(id)!.ticket) };
   }
+
   /** 只撤销等待票；提供的可选身份必须匹配，不会中止或假释放已运行占用。 */
   Withdraw(raw: AdmissionIdentity): boolean
   {
@@ -450,6 +463,7 @@ export class GlobalRunAdmission
 
     return true;
   }
+
   /** 工作区关闭代际只撤等待；既有运行持续占用名额直到其真实释放函数返回。 */
   RetireOwner(workspaceId: string, ownerEpoch: number): void
   {
@@ -477,6 +491,7 @@ export class GlobalRunAdmission
 
     this.Wake();
   }
+
   /** 合并外部释放/配置/本地状态变化，仅通知可轮到的原协调器；不直接创建模型或运行。 */
   Wake(): void
   {
@@ -488,6 +503,7 @@ export class GlobalRunAdmission
 
     queueMicrotask(() => { this.wakeScheduled = false; this.Prune(); const choices = this.Evaluate(); this.UpdateReasons(choices); const ready = [...this.waiting].filter(([id]) => choices.get(id)?.ready).map(([id]) => id); for (const id of ready) { const item = this.waiting.get(id); if (!item || !this.Current(item.request, item.port) || !this.Evaluate().get(id)?.ready) continue; try { item.port.OnReady?.() } catch { /* 原协调器负责失败处置，通知本身不签发执行 */ } } });
   }
+
   /** 持久设置只允许在启动恢复阶段安装一次；不能在执行过请求或改配后回滚版本。 */
   RestorePolicy(raw: AdmissionPolicy): void
   {
@@ -510,6 +526,7 @@ export class GlobalRunAdmission
       this.Changed()
     }
   }
+
   /** revision 是当前策略的 CAS 版本；额度下降不取消已有占用。调用方须先可靠保存新策略再调用。 */
   Configure(raw: AdmissionPolicy): AdmissionPolicy
   {
@@ -537,10 +554,12 @@ export class GlobalRunAdmission
 
     return clone(this.policy);
   }
+
   Snapshot(): AdmissionSnapshot
   {
     return { cursor: { streamId: this.streamId, revision: this.revision }, policy: clone(this.policy), occupied: [...this.occupied.values()].map(item => clone(item.view)), waiting: [...this.waiting.values()].sort((a, b) => a.ticket.order - b.ticket.order).map(item => clone(item.ticket)) }
   }
+
   /** 读取不执行本地回调、不清理票据、不扫描日志；不同/未来游标返回新快照，同游标为 noop。 */
   Read(cursor?: AdmissionCursor): AdmissionRead
   {

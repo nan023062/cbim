@@ -14,6 +14,7 @@ export interface AdmissionFeedState
 
   error: string
 }
+
 /** 本投影不启动任务、不持有票据，也不把取数失败解释为零占用。 */
 export class AdmissionFeed
 {
@@ -30,14 +31,17 @@ export class AdmissionFeed
   constructor(private read: (cursor?: AdmissionCursor) => Promise<unknown>, private intervalMs = 1000)
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   /** 首订阅触发读取；末订阅离开后停止，已确认数据保留但不可启动历史等待。 */
   Subscribe(listener: () => void)
   {
@@ -51,6 +55,7 @@ export class AdmissionFeed
     }
     return () => { unsubscribe(); if (!this.listeners.size) { this.generation.Advance(); clearTimeout(this.timer) } };
   }
+
   /** 串行读取，不按固定间隔堆积请求；保存配额后也可调用，未订阅时不创建常驻轮询。 */
   Refresh(): Promise<void>
   {
@@ -80,6 +85,7 @@ export class AdmissionFeed
     return pending;
   }
 }
+
 /** 使用当前主会话身份过滤进程票据；同工作区的其它会话不会出现在此会话提示中。 */
 export function sessionAdmission(data: AdmissionSnapshot | undefined, workspaceId: string, rootSessionId?: string)
 {

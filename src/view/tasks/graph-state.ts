@@ -10,6 +10,7 @@ function sameCursor(a: GraphCursor, b: GraphCursor)
 {
   return a.workspaceId === b.workspaceId && a.rootSessionId === b.rootSessionId && a.streamId === b.streamId && a.seq === b.seq
 }
+
 /** 仅接受本会话的完整响应；失败不会推进游标，下次由 Hook 请求权威快照恢复。 */
 export class SessionGraphProjection
 {
@@ -19,14 +20,17 @@ export class SessionGraphProjection
   constructor(readonly identity: GraphIdentity)
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get cursor()
   {
     return this.value?.cursor
   }
+
   /** 在组合响应中先验证候选；fork 共用不可变快照，不复制整张图，成功后调用方才替换投影。 */
   Fork()
   {
@@ -36,6 +40,7 @@ export class SessionGraphProjection
 
     return next
   }
+
   /** 整个响应校验成功后才替换投影；中途批次失败保持旧值，noop 保留原对象引用。 */
   Apply(response: GraphDelta): GraphSnapshot
   {

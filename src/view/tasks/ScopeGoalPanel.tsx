@@ -61,6 +61,7 @@ export interface ScopeGoalPanelProps
   /** 明确把已保存决定交回主调度，不构造新用户正文。 */
   humanContinuation?: HumanContinuationView
 }
+
 const shortId = (value: string) => value.length > 20 ? value.slice(0, 8) + '…' + value.slice(-6) : value;
 
 const reviewLabels = { complete: '完成申请', replan: '继续重规划', blocked: '报告阻塞', awaiting_user: '需要用户补充' };
@@ -84,12 +85,14 @@ export function goalTaskReference(state: ScopeGoalState, taskId: string)
 
     return task;
 }
+
 function GoalTaskReference({ state, taskId, onSelectTask }: { state: ScopeGoalState; taskId: string; onSelectTask?: ScopeGoalPanelProps['onSelectTask'] })
 {
   const task = goalTaskReference(state, taskId);
 
   return task && onSelectTask ? <button type="button" className="scope-task-reference" data-testid="scope-task-reference" data-task-id={taskId} title={task.goal} onClick={() => onSelectTask(taskId)}>{task.assignee.name} · {shortId(taskId)}</button> : <code>{shortId(taskId)}</code>;
 }
+
 /** 所有“已满足”都明确是审阅声明；人工决定显示实际记录，不自动形成完成结论。 */
 export function ScopeGoalPanel({ state, compact = false, testId = 'scope-goal-panel', continuation, replan, humanDecisions, humanContinuation, onSelectTask }: ScopeGoalPanelProps)
 {

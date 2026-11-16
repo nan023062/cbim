@@ -34,17 +34,20 @@ export type BudgetCandidate =
 
     model?: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>
   };
+
 /** 私有事务回执只标记拒绝，绝不是已受理运行；事务完成后再抛错，避免丢失 blocked 记录。 */
 export type ScopeBudgetRejected =
   {
     budgetRejected: NonNullable<NonNullable<DispatchScope['budget']>['blocked']>
   };
+
 export function rejectBudget(result: ScopeBudgetRejected): never
 {
   const reason = result.budgetRejected.reason;
 
   fail(reason === 'usage_unverifiable' ? 'SCOPE_BUDGET_UNVERIFIABLE' : 'SCOPE_BUDGET_EXCEEDED', reason === 'usage_unverifiable' ? '当前周期所需用量无法可靠核实，未启动新的运行；请核实记录或结束后另建目标' : '当前周期已达到冻结的软限额，未启动新的运行；现有结果和等待检查点保留');
 }
+
 export class ScopeBudgetService
 {
   private readonly liveMain = new Set<string>();
@@ -52,6 +55,7 @@ export class ScopeBudgetService
   constructor(private readonly usage: ScopeUsageService, private readonly policy: () => ScopeBudgetPolicy = () => ({ revision: 1, enabled: false, limits: {} }))
   {
   }
+
   /** 必须覆盖 beforeRun 到引擎关闭全过程；仅内存可信占位，重开不复原它，也不修改持久计量。 */
   HoldMain(runId: string): () => void
   {
@@ -63,11 +67,13 @@ export class ScopeBudgetService
 
     return () => { this.liveMain.delete(runId) }
   }
+
   /** 仅可信请求账本核实当前主进程占位；历史登记不能替代这份运行生命周期。 */
   IsMainLive(runId: string): boolean
   {
     return this.liveMain.has(runId)
   }
+
   /** 新周期空历史允许首轮；策略与第一条运行证明一起进入创建事务，之后设置变化不会修改它。 */
   Initialize(scope: DispatchScope, candidate: BudgetCandidate): DispatchScope
   {
@@ -79,6 +85,7 @@ export class ScopeBudgetService
 
     return { ...scope, budget: { version: 1, policy, ...(policy.enabled ? { lastAdmission: { ...identity, policyRevision: policy.revision, observation } } : {}) } };
   }
+
   /** 只能在既有串行事务中调用；等待不写入回执，拒绝返回 mutation 所需的 scope，不在事务中抛掉拒绝事实。 */
   async Admit(state: DispatchState, scope: DispatchScope, candidate: BudgetCandidate): Promise<{ scope: DispatchScope; rejected?: ScopeBudgetRejected }>
   {
@@ -124,6 +131,7 @@ export class ScopeBudgetService
 
     return { scope: { ...scope, budget: { ...budget, lastAdmission: { ...identity, policyRevision: budget.policy.revision, observation } } } };
   }
+
   /** 等待补充或成员领取前先核保守容量，拒绝时不消费检查点；这是预检，不代替发送前的原子预留。 */
   PreflightRequest(state: RequestBudgetState, scope: RequestBudgetScope, model: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>): void
   {
@@ -145,6 +153,7 @@ export class ScopeBudgetService
 
       fail('MODEL_REQUEST_PREFLIGHT', reason === 'token_reserve' ? `下一请求需预留 ${reservation.tokens} Token，剩余 ${Math.max(0, (policy.limits.tokens ?? 0) - report.tokens - report.reservedTokens)} Token；原等待或待领取任务保留` : reason === 'cost_reserve' ? `下一请求需预留约 $${reservation.estimatedCostUsd}，剩余约 $${Math.max(0, (policy.limits.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}；原等待或待领取任务保留` : '下一请求预算无法可靠核实；原等待或待领取任务保留');
   }
+
   /** 已无真实在途运行时，所有未决请求均阻止下一轮；没有请求事实的旧运行也不凭空当零。 */
   private RequestObservation(state: DispatchState, scope: DispatchScope): ScopeBudgetObservation
   {
@@ -162,6 +171,7 @@ export class ScopeBudgetService
 
     return { basis: hash(json({ ids, records })), observedAt: new Date().toISOString(), registeredRuns: ids.length, coverage: scope.runTracking ? 'tracked' : 'legacy', consistency: 'stable', liveRunIds: [], tokens: report.tokens, tokensComplete: !unknownRunIds.length, estimatedCostUsd: report.estimatedCostUsd, costComplete: report.costComplete && !unknownRunIds.length, unknownRunIds };
   }
+
   private async LegacyObservation(state: DispatchState, scope: DispatchScope): Promise<ScopeBudgetObservation>
   {
     const budget = scope.budget!,

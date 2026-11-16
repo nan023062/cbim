@@ -34,6 +34,7 @@ export interface AgentHistoryRecord
 
   dispatchStatus?: AgentHistoryStatus;
 }
+
 /** 持久化失败由上层记录诊断；已发生的运行事实不可因为索引写失败而回滚或重新执行。 */
 export interface AgentHistoryStore
 {
@@ -41,6 +42,7 @@ export interface AgentHistoryStore
 
   Put(record: AgentHistoryRecord): Promise<void>;
 }
+
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 const text = z.string().min(1).max(512);

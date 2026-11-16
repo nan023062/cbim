@@ -49,6 +49,7 @@ export interface OpenGraphReceipt
 
   cursor: GraphCursor
 }
+
 /** member 的活动和任务引用限定于本图；agentSessionIds 仅包含当前通道，不是全局实例详情。 */
 export interface CreateMemberReceipt extends OpenGraphReceipt
 {
@@ -56,6 +57,7 @@ export interface CreateMemberReceipt extends OpenGraphReceipt
 
   session: AgentSessionBinding
 }
+
 /** 成功仅代表派发已可靠排队，尚未交给大脑执行。 */
 export interface DispatchReceipt
 {

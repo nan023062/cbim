@@ -23,6 +23,7 @@ function AttachmentImage({ item, workspaceId }: { item: ChatAttachment; workspac
 
   return image ? <img className="attachment-thumbnail" alt={item.name} src={`data:${image.mimeType};base64,${image.data}`} /> : <span title={error || undefined}><Icon name={item.kind === 'folder' ? 'folder' : item.kind === 'connector' ? 'plug' : 'knowledge'} size={22} />{error && <small>预览失败</small>}</span>;
 }
+
 export function ComposerAttachments({ items, workspaceId, disabled, onRemove }: { items: ChatAttachment[]; workspaceId: string; disabled: boolean; onRemove: (id: string) => void })
 {
   const [preview, setPreview] = useState<ChatAttachmentPreview>(),
@@ -68,5 +69,6 @@ export function ComposerAttachments({ items, workspaceId, disabled, onRemove }: 
         setLoading('')
     }
   }
+
   return <>{items.length > 0 && <div className="composer-attachments" aria-label="待发送附件">{items.map(item => <div className="composer-attachment" key={item.id}><button className="attachment-preview" title={item.source} aria-label={'预览附件 ' + item.name} disabled={disabled} onClick={() => void show(item)}><span className="attachment-type"><AttachmentImage item={item} workspaceId={workspaceId} /></span><span className="attachment-info"><b>{item.name}</b><small>{loading === item.id ? '正在读取…' : kinds[item.kind]}</small></span></button><button className="attachment-remove" aria-label={'移除附件 ' + item.name} disabled={disabled} onClick={() => onRemove(item.id)}><Icon name="close" size={12} /></button></div>)}</div>}{error && <p role="alert" className="composer-attachment-error">{error}</p>}{preview && <dialog ref={dialog} className="attachment-dialog" onCancel={() => setPreview(undefined)} onClose={() => setPreview(undefined)}><header><b>{preview.name}</b><button aria-label="关闭附件预览" onClick={() => dialog.current?.close()}><Icon name="close" size={16} /></button></header><p>{preview.source}</p>{preview.note && <p className="attachment-note">{preview.note}</p>}<>{preview.image && <img className="attachment-full-image" alt={preview.name} src={`data:${preview.image.mimeType};base64,${preview.image.data}`} />}</><pre>{preview.text || '该附件没有文本内容。'}</pre></dialog>}</>;
 }

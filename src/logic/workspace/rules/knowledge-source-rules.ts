@@ -25,6 +25,7 @@ export interface KnowledgeSourceRegistry
 
   sourceCursor?: KnowledgeSourceCursor | null;
 }
+
 /** 固定 JSON 对象键序、保持数组次序；不对客户端内容作默认补值或转换。 */
 export function knowledgeSourceCanonical(value: unknown): string
 {
@@ -32,6 +33,7 @@ export function knowledgeSourceCanonical(value: unknown): string
 
   return JSON.stringify(order(value));
 }
+
 const equal = (a: unknown, b: unknown) => knowledgeSourceCanonical(a) === knowledgeSourceCanonical(b);
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
@@ -42,26 +44,31 @@ function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts 
 
     fail(code, message)
 }
+
 /** 只返回身份，不把当前退休状态或捕获时钟复制进消费者固定引用。 */
 export function knowledgeSourceRef(value: KnowledgeSourceGeneration): KnowledgeSourceRef
 {
   return { version: 1, workspaceId: value.workspaceId, source: structuredClone(value.source), generationId: value.generationId }
 }
+
 /** 当前头由全部历史中过滤非退役代次得出；完整投影保证每个逻辑来源最多一个。 */
 export function currentKnowledgeSource(state: KnowledgeSourceRegistry, key: KnowledgeSourceKey)
 {
   return state.knowledgeSourceGenerations?.find(value => sameKnowledgeSourceKey(value.source, key) && !value.retired)
 }
+
 /** 任一未结算知识事务形成工作区级短屏障，不将 unknown 推断为失败。 */
 export function knowledgeSourcePending(state: KnowledgeSourceRegistry)
 {
   return state.knowledgeSourceTransitions?.find(value => value.state === 'pending')
 }
+
 /** streamId 仅在首次事件使用；已有流不可被调用方替换。 */
 export function nextKnowledgeSourceCursor(state: KnowledgeSourceRegistry, streamId: string): KnowledgeSourceCursor
 {
   return { kind: 'knowledge_sources', workspaceId: state.workspaceId, streamId: state.sourceCursor?.streamId ?? streamId, seq: (state.sourceCursor?.seq ?? 0) + 1 }
 }
+
 /** 只固定已观察来源与当前头，不分配 UUID、不写日志，供明确预览依据使用。 */
 export function knowledgeSourceSelection(state: KnowledgeSourceRegistry, key: KnowledgeSourceKey, observation: KnowledgeSourceObservation): SourceSelection
 {
@@ -71,6 +78,7 @@ export function knowledgeSourceSelection(state: KnowledgeSourceRegistry, key: Kn
 
   return { kind: 'workspace', workspaceId: state.workspaceId, source: structuredClone(key), expectedRef: current ? knowledgeSourceRef(current) : null, observation: structuredClone(observation) };
 }
+
 /** 只派生读取状态；来源不可见/损坏应由真实读取方先返回 missing/invalid，不能靠此函数猜不存在。 */
 export function knowledgeSourceStatus(state: KnowledgeSourceRegistry, key: KnowledgeSourceKey, adopted: KnowledgeSourceRef | undefined, observation: KnowledgeSourceObservation): KnowledgeSourceReadState
 {
@@ -102,6 +110,7 @@ export function knowledgeSourceStatus(state: KnowledgeSourceRegistry, key: Knowl
   }
   return current ? { status: 'needs_adoption', currentRef: knowledgeSourceRef(current) } : { status: 'untracked', source: key, observation };
 }
+
 /** 新捕获与消费者同一提交；预览只使用 selection，UUID/时间不得进入预览依据。 */
 export function createKnowledgeSourceCapture(state: KnowledgeSourceRegistry, selection: Extract<SourceSelection, { kind: 'workspace' }>, facts: { changeId: string; generationId: string; streamId: string; recordedAt: string; consumer: KnowledgeSourceCapture['consumer'] }): KnowledgeSourceCapture
 {
@@ -113,6 +122,7 @@ export function createKnowledgeSourceCapture(state: KnowledgeSourceRegistry, sel
 
   return event;
 }
+
 /** capture 使用消费者命令；独立 prepare/resolve 使用原 transition 命名空间。 */
 export function knowledgeSourceCommand(event: Exclude<KnowledgeSourceChange, KnowledgeSourceCapture>)
 {
@@ -122,6 +132,7 @@ export function knowledgeSourceCommand(event: Exclude<KnowledgeSourceChange, Kno
 
   return { commandId: `knowledge-source-${event.kind}-${transitionId}`, fingerprint: hash(knowledgeSourceCanonical({ domain: 'knowledge-source-v1', workspaceId: event.workspaceId, proof })) };
 }
+
 /** 紧凑回执仅映射本次原事件，不读取今天的来源头或知识。 */
 export function knowledgeSourceReceipt(event: Exclude<KnowledgeSourceChange, KnowledgeSourceCapture>): KnowledgeSourceReceipt
 {
@@ -129,6 +140,7 @@ export function knowledgeSourceReceipt(event: Exclude<KnowledgeSourceChange, Kno
 
   return { workspaceId: event.workspaceId, transitionId: proof.transitionId, state: event.kind === 'prepared' ? 'pending' : event.outcome, sourceCursor: structuredClone(event.sourceCursor), requestFingerprint: proof.requestFingerprint, journalBindingHash: proof.journalBindingHash };
 }
+
 /** 严格追加一个来源事件；所有历史保留，pending 容量预留使 terminal 不会因本域正常写满而永久卡住。 */
 export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: KnowledgeSourceChange)
 {
@@ -230,6 +242,7 @@ export function applyKnowledgeSourceChange(state: KnowledgeSourceRegistry, raw: 
 
   return { knowledgeSourceGenerations: nextGenerations, knowledgeSourceTransitions: nextTransitions, knowledgeSourceChanges: [...history, event], sourceCursor: event.sourceCursor };
 }
+
 /** 消费者采用的 workspace 引用必须是同事务当前头；builtin 由能力内容指纹另核。 */
 export function validateKnowledgeSourceSelection(state: KnowledgeSourceRegistry, selection: SourceSelection, ref: CapabilitySourceRef)
 {

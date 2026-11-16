@@ -45,16 +45,19 @@ export class Win32IsolationRecovery
 
     this.api.deleteProfile = this.k.load('userenv.dll').func('int32 __stdcall DeleteAppContainerProfile(str16)');
   }
+
   private Check(value: unknown, stage: string)
   {
     if (!value)
 
       fault(stage, this.api.last())
   }
+
   private Close(handle: any)
   {
     this.Check(this.api.close(handle), 'CLOSE')
   }
+
   private ProcessHandle(pid: number)
   {
     const handle = this.api.process(0x100000 | 0x1000, 0, pid);
@@ -71,6 +74,7 @@ export class Win32IsolationRecovery
     }
     return handle
   }
+
   private ProcessFacts(handle: any, pid: number): IsolationProcess
   {
     const created = Buffer.alloc(8),
@@ -89,6 +93,7 @@ export class Win32IsolationRecovery
 
     return { pid, created: created.readBigUInt64LE().toString(), session: session.readUInt32LE() }
   }
+
   /** 创建时间保留 FILETIME 原始整数，避免毫秒截断产生身份碰撞。 */
   ProcessIdentity(pid: number = process.pid): IsolationProcess
   {
@@ -107,6 +112,7 @@ export class Win32IsolationRecovery
       this.Close(handle)
     }
   }
+
   Host(original: IsolationProcess): 'live' | 'exited' | 'reused' | 'unknown'
   {
     try
@@ -143,6 +149,7 @@ export class Win32IsolationRecovery
       return 'unknown'
     }
   }
+
   /** 只在 host 已可靠退出后调用，避免观察者提前持句柄延长 KILL_ON_JOB_CLOSE 生命周期。 */
   Job(resource: IsolationResource): 'active' | 'empty' | 'absent' | 'unknown'
   {
@@ -171,6 +178,7 @@ export class Win32IsolationRecovery
       this.Close(handle)
     }
   }
+
   private Final(handle: any)
   {
     const value = Buffer.alloc(65536),
@@ -183,6 +191,7 @@ export class Win32IsolationRecovery
 
     return value.subarray(0, length * 2).toString('utf16le')
   }
+
   private Information(handle: any)
   {
     const value = Buffer.alloc(52);
@@ -191,6 +200,7 @@ export class Win32IsolationRecovery
 
     return { identity: { volumeId: value.readUInt32LE(28).toString(16), fileId: value.subarray(44, 52).toString('hex') }, attributes: value.readUInt32LE(0), links: value.readUInt32LE(40) }
   }
+
   private Open(file: string, remove: boolean)
   {
     const handle = this.api.file(file, 0x81 | (remove ? 0x10000 : 0), 3, null, 3, 0x2000000 | 0x200000, null),
@@ -222,6 +232,7 @@ export class Win32IsolationRecovery
       throw error
     }
   }
+
   private Parents(root: string)
   {
     const held: any[] = [],
@@ -257,6 +268,7 @@ export class Win32IsolationRecovery
       throw error
     }
   }
+
   private RootPath(root: string)
   {
     const temp = fs.realpathSync(os.tmpdir());
@@ -265,6 +277,7 @@ export class Win32IsolationRecovery
 
       fault('ROOT_PATH')
   }
+
   DirectoryIdentity(root: string): IsolationDirectory
   {
     this.RootPath(root);
@@ -294,6 +307,7 @@ export class Win32IsolationRecovery
         this.Close(handle)
     }
   }
+
   /** 持根和全部待删对象，扫描完成前不删除。返回的闭包只删除这些原句柄，最多4096对象／64层。 */
   LockTree(resource: IsolationResource, ownerRequired: boolean)
   {
@@ -342,6 +356,7 @@ export class Win32IsolationRecovery
       throw error
     }
   }
+
   /** 删除只依据私有生成的唯一 profile 名称；不存在也是幂等清理，未知错误不得忽略。 */
   DeleteProfile(resource: IsolationResource)
   {

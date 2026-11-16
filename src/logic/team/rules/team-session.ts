@@ -27,8 +27,10 @@ export interface TeamSessionRun
 
     runId: string
   };
+
   status: string;
 }
+
 /** 仅新登记的长期对话采用角色级串行；旧日志保持原执行语义。excludeRunId 用于核验已加入候选状态的本轮。 */
 export function teamSessionBusy(sessions: readonly TeamSession[], runs: readonly TeamSessionRun[], identity: Pick<TeamSession, 'workspaceId' | 'rootSessionId' | 'agentId'>, excludeRunId?: string): boolean
 {
@@ -36,6 +38,7 @@ export function teamSessionBusy(sessions: readonly TeamSession[], runs: readonly
 
   return sessions.some(matches) && runs.some(run => run.binding.runId !== excludeRunId && matches(run.binding) && ['starting', 'running'].includes(run.status));
 }
+
 /** 验证并追加身份；已登记身份不可重绑，重复的相同登记幂等，跨办公室的同名角色相互独立。 */
 export function appendTeamSessions(previous: readonly TeamSession[], updates: readonly TeamSession[], workspaceId: string): TeamSession[]
 {

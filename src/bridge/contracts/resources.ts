@@ -29,6 +29,7 @@ export interface PublishWorkspaceInput
 
   summary: string
 }
+
 export interface ImportWorkspacePreviewInput
 {
   workspaceId: string;
@@ -49,6 +50,7 @@ export interface ImportWorkspacePreviewInput
 
   slug?: string
 }
+
 export interface ImportWorkspaceCommitInput
 {
   workspaceId: string;
@@ -57,4 +59,5 @@ export interface ImportWorkspaceCommitInput
 
   planId: string
 }
+
 export type { PublishWorkspaceResult, ImportWorkspacePreview } from '../../logic/resources/packages/contracts';

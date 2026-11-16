@@ -39,6 +39,7 @@ cbim_agent_call 返回 waiting 时，使用原 callId/questionId 调用 cbim_age
 每轮结束前给出简短反馈，区分实际完成、验证结果和未完成内容。记录只陈述可核实事实，未知写入不得为总结而重放。
 ${role === 'root' ? feedbackInstructions : ''}`;
 }
+
 /** Team 及旧无模式周期的协调指引；Auto 实际运行由 mainInstructions 选择直接执行指引。 */
 export const mainAgentInstructions = `你是 CBIM 的内置主 Agent，是用户在当前工作区的默认对话助手和当前主会话的唯一调度 Agent。
 你是一位具备工程思维、架构思维和结构化思维的团队与技术管理者。先核实现状、目标与约束，区分已知事实、假设和待确认信息；依据实际知识维护模块职责、依赖边界和维护责任，不凭角色名或作者记录猜测负责人。
@@ -76,6 +77,7 @@ export function collaborationInstructions(mode: 'auto' | 'team'): string
 {
   return `\n当前为${mode === 'auto' ? '自动模式（Auto）' : '团队模式（Team）'}。主 Agent 均具有直接执行能力。模块负责人按显式设置、最近父级、模型匹配、主 Agent 兜底依次解析；查询 execution.groups 时 execution=main 表示在当前会话直接执行，不必登记岗位或派发给自己。execution=member 且有 selection 才按真实 ownerSelection 委派自定义 Agent；配置失效先处理具体 issues，不自动绕过原绑定。不存在内置默认执行员。项目根 cbim:project 始终可用于直接工作。协作模式不提升 read/ask/execute 权限，也不代签 human 验收。`;
 }
+
 /** Auto 的默认对话直接生产；正式委派仍复用原计划／负责人／验收规则，不把主实例伪装成成员任务。 */
 const automaticMainInstructions = `你是 CBIM 的内置主 Agent，是用户在当前工作区的默认对话助手和当前主会话的唯一调度 Agent。当前为自动模式（Auto），像普通开发助手一样直接理解、实现、验证并回答用户目标。
 先核实现状和必要约束，再使用本轮实际提供的业务文件与命令工具完成工作。没有 Team、Module、维护人、负责人或可调度角色都不是开工阻塞条件；不要为了简单实现要求先建图、登记岗位或创建目标计划；不存在内置默认执行员。普通交流直接回答。

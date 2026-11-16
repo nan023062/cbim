@@ -20,23 +20,27 @@ export interface RequestBudgetScope
   {
     policy: ScopeBudgetPolicy
   };
+
   runTracking?:
   {
     mainRunIds: string[]
   }
 }
+
 export interface RequestBudgetState
 {
   scopes?: RequestBudgetScope[];
 
   modelRequestBudgetChanges?: ModelRequestBudgetChange[]
 }
+
 export interface RequestBudgetMutation<T>
 {
   modelRequestBudgetChanges: ModelRequestBudgetChange[];
 
   receipt: T
 }
+
 /** 命令身份与幂等摘要由调用方按原请求产生；同一键重放须返回原回执而不再次执行 prepare。 */
 export interface RequestBudgetStore
 {
@@ -44,6 +48,7 @@ export interface RequestBudgetStore
 
   TransactBudget<T>(command: { commandId: string; fingerprint: string }, prepare: (state: RequestBudgetState) => Promise<RequestBudgetMutation<T>>): Promise<T>;
 }
+
 /** 只核实可信主运行占位与请求额度，不授予启动、改写周期或补造历史的能力。 */
 export interface RequestBudgetAdmission
 {

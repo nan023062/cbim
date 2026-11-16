@@ -44,6 +44,7 @@ function checkItems(value: { items: ContinuationAttachmentItem[] }, context: z.R
 
     context.addIssue({ code: 'custom', message: '图片快照合计超过 20 MiB' });
 }
+
 /** file/image 的旧 v1 字段及缺省语义不变；只有真实混入新来源时才使用 v2。 */
 export const continuationAttachmentManifestV1Schema = z.object({ version: z.literal(1), items: z.array(continuationFileItemSchema).min(1).max(continuationAttachmentLimits.items), ...manifest }).strict().superRefine(checkItems);
 
@@ -64,6 +65,7 @@ export function continuationSourceItemFromSnapshot(snapshot: ContinuationSourceS
 
   return { attachmentId: snapshot.id, kind: snapshot.kind, name: snapshot.name, ...(snapshot.note === undefined ? {} : { note: snapshot.note }), snapshotHash, contentHash, byteLength: snapshot.proof.savedTextBytes, contentKind: contentKinds[snapshot.kind], proof: structuredClone(snapshot.proof) };
 }
+
 /** 只由实际启动闭包传入，不属于 IPC 或模型请求；旧内核纯文本调用可没有停止信号。 */
 export interface TrustedContinuationInput
 {
@@ -71,6 +73,7 @@ export interface TrustedContinuationInput
 
   signal?: AbortSignal
 }
+
 /** 在受理前核实一次快照清单；无附件保持旧记录缺省，有附件必须完全同序且不得遗漏或替换。 */
 export function assertContinuationAttachmentManifest(input: { message: string; attachmentIds?: readonly string[] }, manifest: unknown): asserts manifest is ContinuationAttachmentManifest | undefined
 {

@@ -100,16 +100,19 @@ export class KnowledgeTools
 
     register('cbim_task_cancel', { effects: ['maintenance'], description: '请求取消本工作区知识检查/索引维护任务；只接受维护接口返回的 taskId，不接受主对话、执行计划或成员派发任务 ID。不存在报 TASK_NOT_FOUND；已结束返回原状态，取消请求不代表事务已经回滚。', inputSchema: { ...identity, taskId: z.string() } }, wrap(args => workspace.CancelTask(args.taskId)));
   }
+
   /** 返回实际工具 Schema，供内部引擎注册可调用能力。 */
   List()
   {
     return this.registry.List()
   }
+
   /** 只识别当前注册条目，不生成 Schema 或读取默认值。 */
   Has(name: string)
   {
     return this.registry.tools.some(tool => tool.name === name)
   }
+
   /** 可信运行在 proposed 之前冻结实际参数，使审计、授权与知识事务使用相同身份/default。 */
   NormalizeInput(name: string, input: unknown)
   {
@@ -123,6 +126,7 @@ export class KnowledgeTools
       });
     return args;
   }
+
   /** 授权前解析参数和实例身份；只检查，不执行或创建预览。 */
   Describe(name: string, input: unknown)
   {
@@ -136,6 +140,7 @@ export class KnowledgeTools
       });
     return { effects: tool.effects, native: false, contractVersion: tool.version };
   }
+
   /** 由执行桥在一次性 gate 授权后调用；write 来自运行策略，不能由模型输入自行授予。 */
   async CallFromRun(name: string, input: unknown, write: boolean, signal?: AbortSignal)
   {
@@ -145,6 +150,7 @@ export class KnowledgeTools
 
     return this.Invoke(name, input, write, signal);
   }
+
   private async Invoke(name: string, input: unknown, write: boolean, signal?: AbortSignal)
   {
     signal?.throwIfAborted();
@@ -166,6 +172,7 @@ export class KnowledgeTools
     return this.registry.InvokeResolved(tool, args, write);
   }
 }
+
 const services = new WeakMap<KnowledgeWorkspace, KnowledgeTools>();
 
 /** 同一工作区实例共享预览计划；重启实例后不继承旧计划。 */

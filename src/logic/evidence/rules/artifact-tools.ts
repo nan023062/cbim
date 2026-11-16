@@ -18,6 +18,7 @@ export function artifactTool(name: string, input: unknown)
 {
   return name === artifactCaptureToolName ? { args: artifactCaptureInputSchema.parse(input), effects: ['maintenance'] as const, native: false } : undefined
 }
+
 export class ArtifactTools
 {
   private readonly knowledgeRevision?: string;
@@ -29,10 +30,12 @@ export class ArtifactTools
 
     this.knowledgeRevision = ports.knowledgeRevision
   }
+
   async List()
   {
     return [{ name: artifactCaptureToolName, description: '显式采集已完成 read/write/edit 单文件调用所涉及文件的当前指纹。只传当前任务进度版本与本轮真实成功调用 ID，不能填写路径或哈希；采集时不可有其它在途工具。指纹仅证明采集时所列文件的字节，不证明较早测试针对这些字节，不代表整个工作区未变、业务验收或恢复许可。', inputSchema: zodToJsonSchema(artifactCaptureInputSchema) as Record<string, unknown>, ...memberToolContract(artifactCaptureToolName) }];
   }
+
   /** 保存后坏正文保留原事件并失败，不自动补采；短门闩仍由运行时真实结束事件释放。 */
   async Call(name: string, input: unknown, toolCallId?: string)
   {

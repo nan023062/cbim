@@ -42,6 +42,7 @@ export function controlledFileUtf8Bytes(value: string): number | undefined
   }
   return new TextEncoder().encode(value).length
 }
+
 const boundedText = (max: number) => z.string().refine(v => { const length = controlledFileUtf8Bytes(v); return length !== undefined && length <= max }, '文本必须是有效且有界的 UTF-8');
 
 export const controlledFilePathSchema = z.string().min(1).max(controlledFileLimits.pathCharacters).refine(v => v.trim() === v && !/[\\:\x00-\x1f\x7f]/.test(v) && !v.startsWith('/') && v.split('/').every(p => p !== '' && p !== '.' && p !== '..'), '必须是规范的工作区相对文件路径');

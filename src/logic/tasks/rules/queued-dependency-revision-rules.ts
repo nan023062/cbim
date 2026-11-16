@@ -25,6 +25,7 @@ function check(v: unknown, code: string, message: string): asserts v
 
     fail(code, message)
 }
+
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(x => b.includes(x));
 
 /** 返回持久任务顺序的闭包；不以创建时间推断先后，未变化的反向前置不被扩入闭包。 */

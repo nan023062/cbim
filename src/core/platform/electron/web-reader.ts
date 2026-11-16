@@ -52,6 +52,7 @@ const frameSnapshot = z.object({
 
   challenge: z.boolean(),
 });
+
 const policy =
 
   "default-src http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src http: https:; object-src 'none'; worker-src 'none'; form-action 'none'";
@@ -66,6 +67,7 @@ export class ElectronBrowserReader implements BrowserReader
   constructor(private readonly transport?: BrowserProxyTransport)
   {
   }
+
   /** 独占匿名会话。所有 HTTP 资源逐次 authorize，文档额外节流；只允许 GET，不承诺 canvas 像素识别。 */
   async Read(raw: string, signal: AbortSignal, authorize: (url: string, signal: AbortSignal, document?: boolean) => Promise<void>): Promise<BrowserPage>
   {
@@ -302,6 +304,7 @@ export class ElectronBrowserReader implements BrowserReader
           await delay(250, undefined, { signal: active });
         }
       };
+
       try
       {
         return await Promise.race([collect(), aborted]);

@@ -136,7 +136,13 @@ function boot()
   const engineArtifacts = new EngineArtifacts(path.join(userRoot, 'desktop-runtime', identity, 'engine-index.json'), engineStore, selection.envelope, controller.signal, undefined, (engine, version, progress, error) => { if (progress === undefined && !error) preparation.delete(engine); else preparation.set(engine, { engine, version, progress, error }) }, historicalEngineKeys);
 
   const host: DesktopRuntimeHost = {
-    assetsRoot: selection.root, cacheRoot: cacheIdentityRoot, codeVersion: cold.codeVersion, resourceVersion: selection.manifest.resourceVersion,
+    assetsRoot: selection.root,
+
+    cacheRoot: cacheIdentityRoot,
+
+    codeVersion: cold.codeVersion,
+
+    resourceVersion: selection.manifest.resourceVersion,
 
     engineArtifacts,
 
@@ -144,12 +150,14 @@ function boot()
     {
       controller.abort()
     },
+
     Updates(beforeInstall, enabled)
     {
       const installer = new RuntimeUpdates(store, selection.journal, selection.manifest, new NsisUpdateInstaller(), () => { app.relaunch(); app.exit(0) }, undefined, () => []);
 
       return new DesktopUpdates(cold.codeVersion, selection.manifest.notes, enabled, signal => installer.Latest(signal), installer, beforeInstall, selection.manifest.resourceVersion, () => [...preparation.values()]);
     },
+
     Confirm()
     {
       selection.journal.Confirm(selection.digest)
@@ -165,6 +173,7 @@ function boot()
     };
   implementation.StartDesktop(host);
 }
+
 try
 {
   boot()

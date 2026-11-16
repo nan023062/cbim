@@ -76,6 +76,7 @@ export interface AgentCallAssemblyInput
   /** 可信宿主为每个业务子调用创建端口；普通调用不继承删除/移动能力。 */
   artifactTransitions?: () => ExecutionServices['artifactTransitions'];
 }
+
 /** 新运行专属装配，不读取最新 scope 推断归属；旧模型入口不会调用此函数。 */
 export function createAgentCallAssembly(input: AgentCallAssemblyInput)
 {
@@ -208,6 +209,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       }
     }
   });
+
   const finish = async (summary?: RunSummary) =>
   {
     if (closed)
@@ -258,6 +260,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       releaseBudget = undefined
     }
   };
+
   return {
     rootAgent,
 
@@ -274,9 +277,12 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         binding: Object.freeze({ ...identity, scopeId, runId }), AssertCurrent: current, Track: <T>(operation: () => Promise<T>) => { current(); const pending = Promise.resolve().then(() => { current(); return operation() }); inputs.add(pending); return pending.finally(() => inputs.delete(pending)); }
       };
     },
+
     officeHistory: dispatch ? new OfficeHistoryTools(identity, (query, signal) => { workspace.Assert(); if (closed || !rootRunId) fail('AGENT_ROOT_CLOSED', '原主运行已经结束'); return dispatch.history.Read(identity, query, signal) }) : undefined,
 
-    AgentTools: (context: AgentToolContext) => scheduler.Bind(context), requestBudget: budget,
+    AgentTools: (context: AgentToolContext) => scheduler.Bind(context),
+
+    requestBudget: budget,
 
     agentLifecycle: {
       InsertInput: insertInput,

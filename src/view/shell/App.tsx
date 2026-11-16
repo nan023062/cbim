@@ -80,6 +80,7 @@ export function App()
   {
     setUpdateView(true)
   }
+
   const [catalog, setCatalog] = useState<any>({ entries: [] }),
 
     [selected, setSelected] = useState(''),
@@ -109,6 +110,7 @@ export function App()
   {
     setSelectedChildren(old => ({ ...old, [tabId]: sessionId }))
   }
+
   const observeTeamChats = useCallback((key: string, items: TeamConversation[]) => setTeamChats(old => JSON.stringify(old[key]) === JSON.stringify(items) ? old : { ...old, [key]: items }), []);
 
   const [extensionOpen, setExtensionOpen] = useState<Record<string, boolean>>({});
@@ -128,6 +130,7 @@ export function App()
 
     setExtensionRequest({ workspaceId: selected, kind, nonce: Date.now() })
   }
+
   const openingRequests = useRef(new Set<string>());
 
   const [openingIds, setOpeningIds] = useState<Set<string>>(new Set());
@@ -207,6 +210,7 @@ export function App()
       loading.current.delete(w.id)
     }
   }
+
   async function refresh()
   {
     const request = ++listRequest.current;
@@ -230,6 +234,7 @@ export function App()
         void api.call('loop.list', { id: w.id }).then(records => { if (!alive.current || request !== listRequest.current) return; setLayouts(old => { const merged = mergeConversations(old[w.id], records); return merged && merged !== old[w.id] ? { ...old, [w.id]: merged } : old }) }).catch(() => { })
       }
   }
+
   useEffect(() => { alive.current = true; void refresh().catch(e => setError(e.message)); const timer = setInterval(() => void refresh().catch(e => setError(e.message)), 1200); return () => { alive.current = false; runtimeResolver.current.Cancel(); clearInterval(timer) } }, []);
 
   async function perform(label: string, fn: () => Promise<unknown>)
@@ -253,14 +258,17 @@ export function App()
       await refresh().catch(e => setError(e.message))
     }
   }
+
   function canLeave()
   {
     return !dirty.current.size || confirm('有尚未保存的编辑，离开将丢弃这些输入。继续吗？')
   }
+
   function ensureLayout(id: string, kind?: TabKind)
   {
     setLayouts(old => { let l = old[id] || initialLayout(); if (!l.tabs.some(t => t.kind === 'chat')) { const chat = newTab('chat'); l = { ...l, tabs: [...l.tabs, chat], active: chat.id } } if (kind) { const existing = l.tabs.find(t => t.kind === kind); if (existing) l = { ...l, active: existing.id }; else { const tab = newTab(kind); l = { ...l, tabs: [...l.tabs, tab], active: tab.id } } } return { ...old, [id]: l } })
   }
+
   async function openWorkspace(id: string)
   {
     if (openingRequests.current.has(id))
@@ -292,6 +300,7 @@ export function App()
       setOpeningIds(new Set(openingRequests.current))
     }
   }
+
   function cancelRuntimeNavigation()
   {
     runtimeResolver.current.Cancel();
@@ -300,6 +309,7 @@ export function App()
 
     setRuntimeNavigationError('')
   }
+
   function select(id: string, kind?: TabKind, openOnSelect = true)
   {
     if ((selected !== id || screen !== 'workspace') && !canLeave())
@@ -328,6 +338,7 @@ export function App()
 
     return true
   }
+
   function global(kind: ResourceCategory | 'settings' | 'runtime')
   {
     if (!canLeave())
@@ -344,6 +355,7 @@ export function App()
 
     return true
   }
+
   /** 设置分类可被菜单直达；与原离开校验共用，不改工作区或运行状态。 */
   function openSettings(section: SettingsSectionId = 'models')
   {
@@ -351,6 +363,7 @@ export function App()
 
       setSettingsSection(section)
   }
+
   /** 运行总览的显式导航只有读取与本机布局副作用；核实期间切屏后忽略迟到结果。 */
   async function openRuntimeTarget(target: RuntimeNavigationTarget)
   {
@@ -393,10 +406,12 @@ export function App()
         setRuntimeNavigationError(error instanceof Error ? error.message : '原会话定位失败。')
     }
   }
+
   function updateLayout(fn: (layout: TabLayout) => TabLayout)
   {
     setLayouts(old => ({ ...old, [selected]: fn(old[selected] || initialLayout()) }))
   }
+
   function newConversation(id: string)
   {
     if (!canLeave())
@@ -425,6 +440,7 @@ export function App()
 
     setLayouts(old => { const l = old[id] || { tabs: [], active: '' }; return { ...old, [id]: { ...l, tabs: [...l.tabs, t], active: t.id } } })
   }
+
   async function addWorkspace()
   {
     if (!canLeave())
@@ -433,25 +449,30 @@ export function App()
 
     await perform('添加工作区', async () => { const folder = await api.call('chooseFolder'); if (!folder) return; const w = await api.call('add', { path: folder }); select(w.id, undefined, false); await openWorkspace(w.id) })
   }
+
   /** 绑定真实启动回执到原工作区；不覆盖已有草稿或假造执行完成。 */
   function showStartedTask(workspaceId: string, taskId: string, title: string)
   {
     setLayouts(old => { const layout = old[workspaceId] ?? initialLayout(), existing = layout.tabs.find(tab => tab.taskId === taskId), tab = existing ?? { ...newTab('chat'), taskId, title }; return { ...old, [workspaceId]: { ...layout, tabs: existing ? layout.tabs : [...layout.tabs, tab], active: tab.id } } })
   }
+
   function renameChat(workspaceId: string, tabId: string, title: string)
   {
     setLayouts(old => old[workspaceId] ? { ...old, [workspaceId]: renameConversation(old[workspaceId], tabId, title) } : old)
   }
+
   function removeChat(workspaceId: string, tabId: string)
   {
     cancelRuntimeNavigation();
 
     setLayouts(old => old[workspaceId] ? { ...old, [workspaceId]: removeConversation(old[workspaceId], tabId) } : old)
   }
+
   function changeDraft(id: string, draft: string)
   {
     updateLayout(l => ({ ...l, tabs: l.tabs.map(t => t.id === id ? { ...t, draft } : t) }))
   }
+
   return <div className={'desktop-shell ' + (!sidebar ? 'sidebar-collapsed' : '') + (screen === 'settings' ? ' settings-focused' : '')} style={{ '--sidebar-width': sidebarSize.width + 'px' } as CSSProperties}>
     <aside className="workspace-sidebar sidebar-frame">
     <div className="sidebar-resize" {...sidebarSize.handle} /><div className="sidebar-top"><button className="icon-button" aria-label="收起侧栏" onClick={() => setSidebar(false)}><Icon name="menu" /></button><span className="sidebar-title">团队空间</span></div><div className="primary-nav"><button data-testid="runtime-navigation-entry" className={screen === 'runtime' ? 'selected' : ''} onClick={() => global('runtime')}><Icon name="flow" />运行管理</button><button onClick={() => void addWorkspace()} disabled={!!busy}><Icon name="plus" />新建工作区</button><button className={screen === 'connectors' ? 'selected' : ''} onClick={() => global('connectors')}><Icon name="plug" />链接器<span className="nav-caption">工具桥梁</span></button><button className={screen === 'talent' ? 'selected' : ''} onClick={() => global('talent')}><Icon name="team" />人才市场</button><button className={screen === 'templates' ? 'selected' : ''} onClick={() => global('templates')}><Icon name="knowledge" />业务模版</button></div><div className="sidebar-search"><Icon name="search" size={16} /><input aria-label="搜索工作区" placeholder="搜索工作区…" value={search} onChange={e => setSearch(e.target.value)} /></div><div className="sidebar-label"><span>工作区</span><span>{workspaces.length}</span></div><nav className="workspace-list" aria-label="所有工作区"><WorkspaceList teamChats={teamChats} selectedChildren={selectedChildren} onChild={(id, t, childId) => { if (!select(id)) return; showAgentChat(t.id, childId); setLayouts(old => ({ ...old, [id]: { ...old[id], active: t.id } })) }} onSettings={id => { if (select(id)) setSettings(true) }} running={running} onRenameChat={renameChat} onRemoveChat={removeChat} workspaces={workspaces.filter(w => (w.name + ' ' + w.path).toLowerCase().includes(search.toLowerCase()))} layouts={layouts} selected={screen === 'workspace' ? selected : ''} busy={!!busy} onSelect={id => select(id)} onChat={(id, t) => { if (!select(id)) return; showAgentChat(t.id); setLayouts(old => ({ ...old, [id]: { ...old[id], active: t.id } })) }} onNew={id => newConversation(id)} onRename={(id, name) => perform('重命名项目', () => api.call('rename', { id, name }))} onRemove={id => perform('移除项目', async () => { if (!canLeave()) return; await api.call('remove', { id }); if (selected === id) { setSelected(''); dirty.current.clear() } })} />{!workspaces.length && <p className="sidebar-hint">添加项目，开始团队协作。</p>}{workspaces.length > 0 && !workspaces.some(w => (w.name + ' ' + w.path).toLowerCase().includes(search.toLowerCase())) && <p className="sidebar-hint">没有匹配的工作区。</p>}</nav><UserMenu theme={appearance.resolvedTheme} toggleTheme={() => appearance.update({ theme: appearance.resolvedTheme === 'dark' ? 'light' : 'dark' })} openSettings={openSettings} updates={updates} /></aside>

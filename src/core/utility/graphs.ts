@@ -10,6 +10,7 @@ export class GraphUtils
   private constructor()
   {
   }
+
   /**
      * 对唯一节点及完整端点执行拓扑遍历；平行边逐条计数，自环返回 false，空图返回 true。
      * 不修改输入；重复节点或缺端点抛错。领域入口应先核验身份，不能以无环代替授权。

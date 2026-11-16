@@ -21,6 +21,7 @@ export function effectController(workspaceId: string, rootSessionId: string)
     record: input => window.cbim.call('dispatch.effectDisposition', input), receipt: input => window.cbim.call('dispatch.effectDispositionReceipt', input), relations: input => window.cbim.call('dispatch.effectRelations', input),
   })
 }
+
 /** 返回共享控制器及当前来源快照；anchor 是本地时效提示，不是后端授权。 */
 export function useEffectObservation(identity: EffectObservationInput, anchor: string)
 {

@@ -50,6 +50,7 @@ function canonical(value: unknown): string
 
   return JSON.stringify(order(value));
 }
+
 function sameBindings(task: TaskNode, prepared: PreparedDispatchKnowledge)
 {
   validateTaskWorkflowSelections(task.workflowSelections, task.modules);
@@ -58,6 +59,7 @@ function sameBindings(task: TaskNode, prepared: PreparedDispatchKnowledge)
 
     fail('DISPATCH_CONTEXT_CHANGED', '任务角色或模块绑定与冻结执行知识不一致，请重新核实派发基线');
 }
+
 function body(value: { available: boolean; text?: unknown }, subject: string): string
 {
   if (!value.available || typeof value.text !== 'string' || !value.text.trim())
@@ -66,6 +68,7 @@ function body(value: { available: boolean; text?: unknown }, subject: string): s
 
   return value.text;
 }
+
 /**
  * 只为已派发任务准备知识；按持久化原选择解析，所有模块须匹配派发时的知识版本及 Workflow 绑定。
  * 读取结束前再次核对知识和内置规范，返回独立的可序列化快照；缺失正文不降级为其他流程。
@@ -128,6 +131,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
 
   return prepared;
 }
+
 /** 恢复只复核既有快照，绝不静默替换正文；软件内置规范更新也会阻止旧基线继续运行。 */
 export async function recheckDispatchExecutionContext(workspace: DispatchKnowledgeWorkspace, prepared: PreparedDispatchKnowledge): Promise<void>
 {
@@ -164,6 +168,7 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
   }
   await check();
 }
+
 /** 正式任务只接受执行者；历史主角色任务也不得借恢复提示词重新获得业务执行能力。 */
 export function memberExecutionPrompt(prepared: PreparedDispatchKnowledge, task: TaskNode, prerequisites: Array<{ taskId: string; planRevision: number; result: NonNullable<TaskNode['result']> }> = [], topicContext?: string): string
 {

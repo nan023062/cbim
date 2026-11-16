@@ -26,6 +26,7 @@ export interface RequestBudgetTicket
 
   notSent(reason: 'cancelled_before_send' | 'closed_before_send'): Promise<void>;
 }
+
 /** reserve 是已发布包的固定入口；工厂固定实际运行和模型，调用方只提供正文摘要及协议输出上限，不可选额度、身份或价格；向量请求 maxOutputTokens=0，生成仍须正上限。 */
 export interface RequestBudgetPort
 {

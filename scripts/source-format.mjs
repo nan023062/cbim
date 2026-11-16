@@ -83,7 +83,7 @@ function isSignature(node)
 
 function layout(source)
 {
-  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [], tightCallEdges = new Set();
+  const text = source.text, entries = lexemes(source), breaks = new Map(), groups = [], protectedRanges = [], tightCallEdges = new Set(), memberBoundaries = new Set();
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const entryAt = new Map(entries.map((entry, index) => [entry.start, index]));
   const mark = (position, priority = 3) => breaks.set(position, Math.max(priority, breaks.get(position) ?? 0));
@@ -104,6 +104,16 @@ function layout(source)
       return;
     }
     groups.push({ start, end, priority });
+  };
+  const declaration = node => ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node) || ts.isEnumDeclaration(node) || ts.isModuleDeclaration(node) || ts.isVariableStatement(node) && node.declarationList.declarations.some(item => item.initializer && (ts.isArrowFunction(item.initializer) || ts.isFunctionExpression(item.initializer)));
+  const members = nodes => {
+    for (let index = 0; index < nodes.length; index++)
+    {
+      const position = before(nodes[index]);
+      // 成员间距属于声明边界；前一个成员的右大括号不能抵消它。
+      // 首成员不加空行，说明注释与声明之间也不加空行。
+      if (index > 0) memberBoundaries.add(position);
+    }
   };
   let sawBody = false;
   for (const statement of source.statements)
@@ -143,9 +153,14 @@ function layout(source)
         const following = entries[entryAt.get(open.getStart(source)) + 1];
         if (following) mark(following.start);
       }
-      if (node.members) for (const member of node.members) before(member);
+      if (node.members) members(node.members);
     }
-    if (node.statements) for (const statement of node.statements) before(statement);
+    if (ts.isObjectLiteralExpression(node) && node.properties.some(property => ts.isMethodDeclaration(property) || ts.isGetAccessorDeclaration(property) || ts.isSetAccessorDeclaration(property))) members(node.properties);
+    if (node.statements) for (let index = 0; index < node.statements.length; index++)
+    {
+      const position = before(node.statements[index]);
+      if (index > 0 && (ts.isSourceFile(node) || ts.isModuleBlock(node) || declaration(node.statements[index]) || declaration(node.statements[index - 1]))) memberBoundaries.add(position);
+    }
     if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || ts.isExportDeclaration(node)) single(node, node.end, 5, 'import-export');
     if (ts.isExportAssignment(node) || ((ts.isVariableStatement(node) || ts.isTypeAliasDeclaration(node)) && node.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword))) single(node, node.end, 1, 'export-expression');
     if (isSignature(node)) single(node, node.body?.getStart(source) ?? node.end, 4, 'signature');
@@ -206,7 +221,7 @@ function layout(source)
     const previousLine = output.slice(output.lastIndexOf('\n') + 1);
     const trailingComment = previous.comment && !/[\r\n]/.test(previous.text) && previousLine.slice(0, -previous.text.length).trim().length > 0;
     const comment = previous.comment && !trailingComment && (lineComment || /[\r\n]/.test(original) || forced);
-    const count = tightCallEdges.has(current.start) || brace || braceEnding || comment ? 1 : 2;
+    const count = memberBoundaries.has(current.start) ? 2 : tightCallEdges.has(current.start) || brace || braceEnding || comment ? 1 : 2;
     const indent = /(?:\r?\n)([ \t]*)$/.exec(original)?.[1] ?? '';
     output += eol.repeat(count) + indent + current.text;
   }

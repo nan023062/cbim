@@ -25,12 +25,15 @@ export interface AgentHistoryWorkspace
 
     path: string
   };
+
   paths:
   {
     Project(id: string): string
   };
+
   Assert(): void;
 }
+
 /** 构造不读盘；工作区持锁并核实路径后、Store 观察器接收投影前初始化索引。详情定位只能由固定 source/task/run 决定，服务关闭前不释放工作区。 */
 export function createAgentHistory(workspace: AgentHistoryWorkspace, diagnostic?: (message: string) => void)
 {

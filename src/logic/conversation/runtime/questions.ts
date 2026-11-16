@@ -23,6 +23,7 @@ export class QuestionQueue
   {
     return [...this.pending.values()].filter(p => p.view.taskId === taskId).map(p => structuredClone(p.view))
   }
+
   /** 先校验模型输入；取消信号监听在结束时移除，防止任务残留等待。 */
   Ask(taskId: string, args: unknown, signal: AbortSignal): Promise<QuestionResult>
   {
@@ -34,6 +35,7 @@ export class QuestionQueue
 
     return new Promise(resolve => { const id = randomUUID(); let settled = false; const cancel = () => finish({ cancelled: true }); const finish = (value: QuestionResult) => { if (settled) return; settled = true; this.pending.delete(id); signal.removeEventListener('abort', cancel); resolve(value) }; this.pending.set(id, { view: { id, taskId, ...parsed }, finish }); signal.addEventListener('abort', cancel, { once: true }); if (signal.aborted) cancel(); });
   }
+
   /** 校验全部答案后一次性消费问题；重复提交或跨任务回答均拒绝。 */
   Answer(taskId: string, id: string, value: unknown)
   {
@@ -53,6 +55,7 @@ export class QuestionQueue
 
     item.finish({ answers: result });
   }
+
   Cancel(taskId?: string)
   {
     for (const item of [...this.pending.values()])

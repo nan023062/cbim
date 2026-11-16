@@ -15,6 +15,7 @@ function budgetState(state: DispatchState): RequestBudgetState
     ...(state.modelRequestBudgetChanges ? { modelRequestBudgetChanges: state.modelRequestBudgetChanges } : {}),
   });
 }
+
 /** 不获取新锁或另建日志；原 Store 负责幂等、预算不变量、可靠落盘和恢复。 */
 export function requestBudgetStore(store: Pick<DispatchStore, 'Read' | 'Transact'>): RequestBudgetStore
 {

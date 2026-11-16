@@ -45,6 +45,7 @@ type ImportPreview = Preview &
 
   removedBindings: string[]
 };
+
 export interface WorkspaceResourceTransferProps
 {
   workspaceId: string;
@@ -67,6 +68,7 @@ export interface WorkspaceResourceTransferProps
 
   onApplied?: () => void
 }
+
 /** 仓库是本地或已连接的服务器来源；“发布”只保存静态资源包，不启动 Agent 或安装链接器。 */
 export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, objectId, targetParentId, category = 'talent', resourceId, onClose, onApplied }: WorkspaceResourceTransferProps)
 {
@@ -149,6 +151,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
         setBusy(false)
     }
   }
+
   const eligible = (library?.items ?? []).filter(item => applicableResourceKind(item)).filter(item => category === 'templates' || kind === 'architecture' ? item.kind === 'architecture' : ['team', 'agent', 'skill'].includes(item.kind)).filter(item => !kind || item.kind === kind);
 
   const item = eligible.find(item => item.id === selected),
@@ -171,6 +174,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
 
     setError('')
   }
+
   async function perform(action: () => Promise<void>)
   {
     if (lock.current)
@@ -206,6 +210,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
         setBusy(false)
     }
   }
+
   const identity = { workspaceId, instanceId: base.instanceId, revision: base.revision };
 
   async function publish()
@@ -216,6 +221,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
 
     await perform(async () => { const receipt = await window.cbim.call('resources.publishWorkspace', { ...identity, repositoryId: library.repositoryId, repositoryRevision: library.revision, kind, ...(objectId ? { objectId } : {}), name, summary }); if (alive.current) { setLibrary(receipt.repository); setResult({ message: '静态定义已发布到当前仓库。', warnings: receipt.warnings ?? [], removedBindings: receipt.removedBindings ?? [] }) } })
   }
+
   async function prepare()
   {
     if (!library || !item)
@@ -224,6 +230,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
 
     await perform(async () => { const receipt: ImportPreview = await window.cbim.call('resources.importPreview', { ...identity, repositoryId: library.repositoryId, repositoryRevision: library.revision, resourceId: item.id, mode: whole && replace ? 'replace' : 'add', ...(selectedKind !== 'architecture' && !(selectedKind === 'team' && replace) ? { targetParentId: parent, slug } : {}) }); if (alive.current) setPreview(receipt) })
   }
+
   async function commit()
   {
     if (!preview)
@@ -232,6 +239,7 @@ export function WorkspaceResourceTransfer({ workspaceId, snapshot, mode, kind, o
 
     await perform(async () => { await window.cbim.call('resources.importCommit', { workspaceId, instanceId: base.instanceId, planId: preview.planId }); if (alive.current) { setResult({ message: '资源包已应用到此工作区。', warnings: preview.warnings, removedBindings: preview.removedBindings }); setPreview(undefined); onApplied?.() } })
   }
+
   return <ModalFrame label={mode === 'publish' ? '发布静态资源' : '使用仓库资源'} onRequestClose={() => { if (!busy) onClose() }}><section className="modal architecture-editor workspace-transfer"><header><div><small>{mode === 'publish' ? '分享静态定义' : '下载并应用静态定义'}</small><h2>{mode === 'publish' ? kind === 'architecture' ? '发布完整业务架构' : '发布到人才市场' : category === 'templates' || kind === 'architecture' ? '使用业务模板' : '从人才市场添加'}</h2></div><button disabled={busy} onClick={onClose}><Icon name="close" size={16} />关闭</button></header>
     {mode === 'import' && <ol className="transfer-steps" aria-label="资源应用阶段">{['选择资源与归属', '审阅变更', '取得回执'].map((label, index) => <li key={label} aria-current={(result ? 2 : preview ? 1 : 0) === index ? 'step' : undefined}><Icon name={index === 0 ? 'folder' : index === 1 ? 'inspect' : 'history'} size={16} />{label}</li>)}</ol>}
     <p className="transfer-source">{status?.source === 'server' ? '账号服务器仓库' : '本地仓库'} · {status?.config?.location ?? '尚未配置'}</p>

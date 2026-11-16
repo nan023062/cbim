@@ -31,8 +31,10 @@ export interface EnginePackageStatus
 
     progress?: number
   };
+
   error?: string;
 }
+
 export interface EnginePackageSettings
 {
   managed: boolean;

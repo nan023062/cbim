@@ -14,6 +14,7 @@ export interface ViewTab
 
   count?: number
 }
+
 /** 调用方用 `${id}-panel-${value}` 和 `${id}-tab-${value}` 关联对应 panel。 */
 export function ViewTabs({ id, label, value, tabs, onChange }: { id: string; label: string; value: string; tabs: readonly ViewTab[]; onChange: (value: string) => void })
 {

@@ -44,11 +44,13 @@ export interface OutputManifestReportPorts
 
   AcquireRead(): () => void;
 }
+
 export class OutputManifestReportService
 {
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, private readonly store: Pick<DispatchStore, 'Read'>, private readonly ports: OutputManifestReportPorts)
   {
   }
+
   /** 缺 manifestId 只读历史引用；明确选择后才读取当前目录，失败不会自动选其它清单或重试。 */
   async Read(raw: unknown): Promise<OutputManifestReport>
   {
@@ -278,6 +280,7 @@ export class OutputManifestReportService
 
     return outputManifestReportSchema.parse(report);
   }
+
   private Inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
   {
     if ('protocol' in run)
@@ -290,6 +293,7 @@ export class OutputManifestReportService
     }
     return this.ports.Inspect(run);
   }
+
   private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
@@ -308,6 +312,7 @@ export class OutputManifestReportService
 
     return { graph, task, run, scope, recursive };
   }
+
   private Stamp(facts: ReturnType<OutputManifestReportService['Facts']>)
   {
     return hash(json({ graph: facts.graph.cursor, task: facts.task, run: facts.run, scope: facts.scope }))

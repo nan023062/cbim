@@ -42,6 +42,7 @@ export interface WorkspaceMemberAgentOption
 
   runtime?: import('../../bridge/contracts/agent-settings').AgentModelSelection
 }
+
 /** 当前定义只用于明确选择；已登记岗位的正文和版本一律从后端详情读取，不用静态列表补造。 */
 export interface WorkspaceMembersProps
 {
@@ -56,6 +57,7 @@ export interface WorkspaceMembersProps
   {
     agentId: string
   };
+
   /** 只通知本次已受理的登记，不把预览、未知或旧命令查询当作新岗位。 */
   onRegistered?: (memberId: string) => void;
 
@@ -63,6 +65,7 @@ export interface WorkspaceMembersProps
 
   onDirtyChange?: (dirty: boolean) => void
 }
+
 export function WorkspaceMembers({ workspace, agents, onClose, initialRegistration, onRegistered, returnLabel = '返回团队定义', onDirtyChange }: WorkspaceMembersProps)
 {
   const controller = useMemo(() => commands.Get(workspace.id, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }), [workspace.id]);
@@ -163,6 +166,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
         setLoading(false)
     }
   }
+
   async function select(memberId: string)
   {
     if (!available || lock.current || !leaveDraft())
@@ -212,6 +216,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
         setLoading(false)
     }
   }
+
   function start(kind: WorkspaceMemberChangeInput['kind'], extra: typeof special = {})
   {
     if (!leaveDraft())
@@ -230,6 +235,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
 
     setError('')
   }
+
   function invalidate()
   {
     markDirty(true);
@@ -238,6 +244,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
 
     setPreview(undefined)
   }
+
   async function prepare(change: WorkspaceMemberChangeInput)
   {
     if (!available || blocked || lock.current)
@@ -279,6 +286,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
         setLoading(false)
     }
   }
+
   async function commit()
   {
     if (!preview || blocked || lock.current)
@@ -327,6 +335,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
 
       setError(record.error);
   }
+
   async function query(commandId: string, retry = false)
   {
     if (retry)
@@ -341,6 +350,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
 
       await list()
   }
+
   if (ownershipMember)
 
     return <ModuleOwnershipPanel key={workspace.id + workspace.instanceId + ownershipMember} identity={identity} memberId={ownershipMember} onDirtyChange={onDirtyChange} onClose={() => { setOwnershipMember(undefined); void select(ownershipMember) }} />;
@@ -372,6 +382,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
     {!!state.records.length && <details className="workspace-member-commands" open={blocked}><summary>本机提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record => <div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{ submitting: '正在提交', unknown: '结果未确认', accepted: '已受理', rejected: '未受理' }[record.phase]}</strong><code>{record.request.commandId}</code>{record.error && <p role="alert">{record.error}</p>}{record.receipt && <p>岗位 {record.receipt.memberId} · 第 {record.receipt.memberRevision} 版</p>}{record.phase !== 'rejected' && <button data-testid="workspace-member-receipt-query" disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId)}><Icon name="search" size={16} />查询原命令</button>}{record.phase === 'unknown' && <button disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId, true)}><Icon name="retry" size={16} />重送同一请求</button>}{record.receipt && <button disabled={loading} onClick={() => void select(record.receipt!.memberId)}><Icon name="inspect" size={16} />查看岗位</button>}</div>)}</details>}
   </section>;
 }
+
 function stateLabel(state: 'active' | 'suspended' | 'retired')
 {
   return { active: '已启用', suspended: '已暂停', retired: '已退休' }[state]

@@ -26,5 +26,6 @@ export interface GovernanceIpcResponses
 
   'governance.apply': z.infer<typeof governanceCommandReceipts.apply>;
 }
+
 /** 命令返回对应种类的回执；通用查询仍可能返回其它种类或未找到。 */
 export const governanceCommandReceipts = { register: moduleGovernanceReceiptSchema.options[0], observe: moduleGovernanceReceiptSchema.options[1], propose: moduleGovernanceReceiptSchema.options[2], decide: moduleGovernanceReceiptSchema.options[3], apply: moduleGovernanceReceiptSchema.options[4] };

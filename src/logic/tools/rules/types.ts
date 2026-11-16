@@ -14,6 +14,7 @@ export interface ToolCall
 
   input: Record<string, unknown>
 }
+
 /** 声明操作事实，不表示已经获得权限；external-write 是已绑定外部目标的写入，不能作为业务文件或知识提交证据。 */
 export type ToolEffect = 'read' | 'preview' | 'maintenance' | 'business-write' | 'knowledge-write' | 'external-write' | 'command';
 
@@ -28,6 +29,7 @@ export interface ToolDecision
 
   scope?: ToolScope
 }
+
 /** 由运行时生成的单次调用回执；成功只表示工具返回成功，不等于业务验收或回滚。 */
 export interface ToolReceipt
 {

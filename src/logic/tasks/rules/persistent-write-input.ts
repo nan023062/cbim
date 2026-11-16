@@ -35,6 +35,7 @@ export interface PersistentMainSource
 
   toolCallId: string
 }
+
 export type PersistentWriteReference = |
 {
   kind: 'governance';
@@ -67,6 +68,7 @@ export type PersistentWriteReference = |
 
   input: ModuleOwnerCommitInput
 };
+
 /** 调用前已核 canonical、授权与唯一 scope；旧参数不严格匹配则无适配，不纠正或剥离未知字段。 */
 export function originalPersistentWrite(name: string, raw: unknown, binding: PersistentMainSource): PersistentWriteReference | undefined
 {
@@ -98,6 +100,7 @@ export function originalPersistentWrite(name: string, raw: unknown, binding: Per
     return undefined
   }
 }
+
 /** 稳定原命令不含当前实例；完整来源与输入另入 sourceHash，避免同 ID 异参冒领。 */
 export function persistentWriteIdentity(reference: PersistentWriteReference)
 {
@@ -105,6 +108,7 @@ export function persistentWriteIdentity(reference: PersistentWriteReference)
 
   return persistentWriteIdentitySchema.parse({ workspaceId, rootSessionId: source.rootSessionId, runId: source.runId, toolCallId: source.toolCallId, toolName: source.toolName, commandId: reference.kind === 'governance' ? moduleGovernanceMainCommandId(workspaceId, reference.source) : moduleOwnershipMainCommandId(workspaceId, reference.source) });
 }
+
 /** 同一命令算法之外另核原参数及完整主来源，不返回其中正文或权限。 */
 export function persistentWriteSourceHash(reference: PersistentWriteReference)
 {

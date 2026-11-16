@@ -21,6 +21,7 @@ export interface SoftwareUpdateController
 
   act: (action: UpdateAction) => Promise<void>;
 }
+
 const api = window.cbim;
 
 /** 一个 App 挂载一次；操作前后的代际使旧查询不能覆盖新回执，下载期间仍可读取进度。 */

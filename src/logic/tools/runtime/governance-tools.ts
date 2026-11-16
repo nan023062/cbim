@@ -34,6 +34,7 @@ export interface GovernanceRunBinding
 
   runId: string
 }
+
 const inputs = { cbim_governance_get: governanceGetInputSchema, cbim_governance_observe: governanceObserveInputSchema, cbim_governance_propose: governanceProposeInputSchema, cbim_governance_receipt: governanceReceiptInputSchema };
 
 const descriptions = {
@@ -45,6 +46,7 @@ const descriptions = {
 
   cbim_governance_receipt: '只读核实原主工具命令：commandId 或 action+toolCallId+可选原runId。仅本根会话模型来源可查；unknown不表示未受理，不能因此新建或重放。',
 };
+
 /** 与运行共存的独立包装；未注入本端口的成员、CLI 和其他主轮没有这些工具。 */
 export class GovernanceTools
 {
@@ -56,14 +58,17 @@ export class GovernanceTools
 
     this.binding = Object.freeze({ workspaceId, rootSessionId, agentInstanceId, agentSessionId, runId })
   }
+
   Has(name: string): name is GovernanceToolName
   {
     return isGovernanceToolName(name)
   }
+
   List()
   {
     return (Object.keys(inputs) as GovernanceToolName[]).map(name => ({ name, version: 1, effects: [governanceToolEffects[name]], description: descriptions[name], inputSchema: zodToJsonSchema(inputs[name]) as Record<string, unknown> }))
   }
+
   private Parse<T>(schema: z.ZodType<T>, raw: unknown): T
   {
     const parsed = schema.safeParse(raw);
@@ -74,6 +79,7 @@ export class GovernanceTools
 
     return parsed.data
   }
+
   /** 同步分类不读写磁盘；仅真实注册的四项工具获得本运行固定的 knowledge 范围。 */
   Describe(name: string, input: unknown): RunToolDescriptor
   {
@@ -85,12 +91,14 @@ export class GovernanceTools
 
     return { effects: [governanceToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
+
   private Command(name: 'cbim_governance_observe' | 'cbim_governance_propose', toolCallId: string)
   {
     const { workspaceId, ...source } = this.binding;
 
     return moduleGovernanceMainCommandId(workspaceId, { kind: 'main_agent', ...source, toolName: name, toolCallId })
   }
+
   /** 领域操作仅调用一次；编码和校验只处理同一快照，失败不得通过再次执行补一个成功响应。 */
   async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {

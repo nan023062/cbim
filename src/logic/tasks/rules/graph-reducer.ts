@@ -21,6 +21,7 @@ type SeenBatch =
 
     commandId: string
   };
+
 // 跟随不可变投影保留已核验的重放证明，不序列化进公开 Snapshot；从日志重建时自然恢复。
 const seenBatches = new WeakMap<GraphSnapshot, Map<number, SeenBatch>>();
 
@@ -36,6 +37,7 @@ function stable(value: unknown): string
 
   return JSON.stringify(value);
 }
+
 function changeKey(change: GraphChange)
 {
   switch (change.type)
@@ -51,12 +53,14 @@ function changeKey(change: GraphChange)
       return 'agent:' + change.agent.agentInstanceId
   }
 }
+
 function nextRevision(previous: { revision: number } | undefined, next: { revision: number })
 {
   if (next.revision !== (previous ? previous.revision + 1 : 1))
 
     fail('GRAPH_REVISION_CONFLICT', '图对象版本必须从 1 开始并连续递增');
 }
+
 function taskRevision(previous: TaskNode, next: TaskNode)
 {
   if (previous.checkpointAbandonment)
@@ -159,6 +163,7 @@ function taskRevision(previous: TaskNode, next: TaskNode)
 
     fail('GRAPH_INPUT_INVALID', '修订前置不能同时修改任务目标、范围、责任或验收');
 }
+
 /**
  * 原子应用一个完整批次。连续内存投影中的已验证重复返回原引用；断档或同序号异内容拒绝。
  * 单独反序列化的 Snapshot 不含重放证明，旧批次会拒绝；应从日志重建或由游标读取补齐。
@@ -308,6 +313,7 @@ export function applyGraphBatch(previous: GraphSnapshot | undefined, event: Grap
 
   return next;
 }
+
 /**
  * 读取同一图的已提交增量；limit 按完整批次计数，no-op 不复制全图。
  * batches 是按 seq 连续、可选已压缩前缀的保留日志；缺口/乱序属于损坏，不能伪装成最新状态。

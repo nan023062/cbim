@@ -55,6 +55,7 @@ export async function openBridge(knowledge: KnowledgeBridge, beforeTool: (call: 
     url: `http://127.0.0.1:${port}`, token, tools, close: async () => { grants.clear(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())) }
   };
 }
+
 /** 受控扩展正文；可信回传元数据由生成器写入，普通运行为空，不从用户文字识别“内部消息”。 */
 const bridgeExtensionBody = `
 export default async function(pi) {
@@ -119,5 +120,6 @@ export function bridgeExtensionForSource(source?: RunInputSource)
 {
   return 'const returnedOutcome=' + JSON.stringify(toolOutcome('returned')) + ';const rejectedOutcome=' + JSON.stringify(toolOutcome('rejected')) + ';const unknownOutcome=' + JSON.stringify(toolOutcome('unknown')) + ';\n' + 'const trustedInputSource=' + JSON.stringify(source ? checkedRunInputSource(source) : null) + ';\n' + bridgeExtensionBody;
 }
+
 /** 普通用户对话保持原有扩展入口，不拦截输入。 */
 export const bridgeExtension = bridgeExtensionForSource();

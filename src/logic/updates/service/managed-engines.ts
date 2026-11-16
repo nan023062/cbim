@@ -36,6 +36,7 @@ export class ManagedEngines
   constructor(private readonly store: RuntimeStore, private readonly descriptors: EnginePackage[], private readonly signal: AbortSignal)
   {
   }
+
   /** 本地只读校验一次；清单固定于本次启动，不联网发现或自动安装候选。 */
   async Status(): Promise<ManagedEngineStatus[]>
   {
@@ -43,18 +44,22 @@ export class ManagedEngines
 
     return structuredClone([...this.states.values()])
   }
+
   Preparations()
   {
     return [...this.states.values()].filter(s => s.state === 'preparing' || s.state === 'failed').map(s => ({ engine: s.engine, version: s.version!, progress: s.progress, error: s.error }))
   }
+
   Used()
   {
     return [...this.jobs.keys()]
   }
+
   private Initialize()
   {
     return this.initialization ??= (async () => { for (const engine of ['pi', 'claude-code', 'codex'] as const) { const descriptor = this.descriptors.find(d => d.kind === engine); if (!descriptor) { this.states.set(engine, { engine, state: 'unavailable', error: '当前资源版本未提供兼容引擎包' }); continue } let installedVersion: string | undefined, identity: string | undefined; try { const record = JSON.parse(await fs.readFile(path.join(this.store.root, 'engine-' + engine + '.json'), 'utf8')); if (typeof record.version === 'string' && typeof record.identity === 'string') { installedVersion = record.version; identity = record.identity } } catch { } const state: ManagedEngineStatus = { engine, version: descriptor.version, installedVersion, state: identity && identity !== descriptor.package.sha256 ? 'update' : 'install' }; try { const target = this.store.PackageRoot(descriptor.package); const exists = await fs.lstat(target).catch(error => { if (error.code === 'ENOENT') return undefined; throw error }); if (exists) { await verifyRuntimeDirectory(target, descriptor.package.files, this.signal); state.state = 'ready'; state.installedVersion = descriptor.version } } catch { state.state = 'failed'; state.error = '本地引擎校验失败，未覆盖原文件；请修复缓存或重新安装兼容版本。' } this.states.set(engine, state); } })();
   }
+
   /** 显式准备或首次运行共用同一 Promise；失败允许重试，既有成功包和运行引用不被替换。 */
   ResolveEngine(engine: ManagedEngineStatus['engine'])
   {
@@ -70,6 +75,7 @@ export class ManagedEngines
 
     return job;
   }
+
   private async Prepare(engine: ManagedEngineStatus['engine'])
   {
     await this.Initialize();

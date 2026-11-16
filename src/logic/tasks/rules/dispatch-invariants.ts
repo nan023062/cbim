@@ -117,14 +117,17 @@ function valid(condition: unknown, message: string): asserts condition
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 function lookupTask(state: DispatchState, ref: GraphIdentity, taskId: string)
 {
   return state.graphs.find(graph => sameGraph(graph.identity, ref))?.tasks.find(task => task.taskId === taskId)
 }
+
 function changedTask(mutation: DispatchMutation, ref: GraphIdentity, taskId: string)
 {
   return mutation.batch && sameGraph(mutation.batch.identity, ref) && mutation.batch.changes.some(change => change.type === 'task.upserted' && change.task.taskId === taskId)
 }
+
 /** 使用模型现有规则校验可持久化参数，显式拒绝 apiKey 及其他非公开字段。 */
 function validateModel(model: DispatchRun['model'])
 {
@@ -145,6 +148,7 @@ function validateModel(model: DispatchRun['model'])
 
   valid(connectionSchema.strict().safeParse({ name, api, baseUrl, auth }).success && modelSchema.safeParse({ id: modelId, name: modelId, enabled: true, ...options }).success, '执行模型参数无效或包含非公开字段');
 }
+
 /** 校验单次运行固定输入和状态迁移；历史终态不得被迟到回调改写。 */
 function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state: DispatchState, mutation: DispatchMutation)
 {
@@ -302,6 +306,7 @@ function validateRun(previous: DispatchRun | undefined, run: DispatchRun, state:
     }
   }
 }
+
 /** 校验消息更新的固定信封、单向投递进度及与运行/结果的对应关系。 */
 function validateMessage(previous: DispatchMessage | undefined, message: DispatchMessage, state: DispatchState, mutation: DispatchMutation, command: DispatchCommand)
 {
@@ -388,6 +393,7 @@ function validateMessage(previous: DispatchMessage | undefined, message: Dispatc
     }
   }
 }
+
 /**
  * 对完整候选状态检查活动槽，对变更对象检查不可变字段与生命周期。
  * 旧日志没有 runs 时等同空集合；恢复只验证事实，不自动重发任务或启动执行。

@@ -23,6 +23,7 @@ export function completedCheckpointLedger(state: DispatchState, task: TaskNode, 
 
       fail(code, message)
   }
+
   check(validMemberCheckpointChain(task) && !!task.checkpoints?.length && task.runIds.length === task.checkpoints.length, '最新检查点必须尚未被运行消费，完整历史不能缺段');
 
   const checkpoints = task.checkpoints!,

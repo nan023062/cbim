@@ -20,6 +20,7 @@ function fail(code: string, message: string): never
 {
   throw Object.assign(new Error(`${code}: ${message}`), { code });
 }
+
 const limit = 1024 * 1024;
 
 export function publicAddress(address: string): boolean
@@ -33,6 +34,7 @@ export function publicAddress(address: string): boolean
     return false;
   }
 }
+
 /** URL 的规范化先于 DNS；仅常规 Web 端口，禁止凭据、非公网 IP 与本地名称。 */
 export function publicUrl(value: string): URL
 {
@@ -80,6 +82,7 @@ export function publicUrl(value: string): URL
 
   return url;
 }
+
 export interface PublicHttpResponse
 {
   status: number;
@@ -88,6 +91,7 @@ export interface PublicHttpResponse
 
   body: string;
 }
+
 /** 原始资源保留二进制；同样受 DNS 固定与体积限制，不预先当作 UTF-8 正文解码。 */
 export interface PublicHttpBytes
 {
@@ -97,6 +101,7 @@ export interface PublicHttpBytes
 
   body: Buffer;
 }
+
 /** 测试端口只由可信装配提供，不属于 IPC 或模型参数。lookup 返回全部地址，request 必须遵守传入 lookup。 */
 export interface PublicHttpTransport
 {
@@ -104,12 +109,14 @@ export interface PublicHttpTransport
 
   request: typeof http.request;
 }
+
 /** 请求独立销毁连接，默认 1 MiB（压缩前后）和 15 秒；二进制可信入口至多 8 MiB，不自动重试。 */
 export class PublicHttp
 {
   constructor(private readonly transport?: PublicHttpTransport, private readonly userAgent = 'PublicWebReader/1.0')
   {
   }
+
   /** 静态网页入口保留原 1 MiB 与严格 UTF-8 语义。 */
   async Read(raw: string, signal: AbortSignal, options: { headers?: Record<string, string> } = {}): Promise<PublicHttpResponse>
   {
@@ -124,6 +131,7 @@ export class PublicHttp
       throw Error('WEB_CONTENT: 响应编码无效或不受支持');
     }
   }
+
   /** 可信调用者可设置请求头与至多 8 MiB 的资源上限；仅 GET，不自动读取宿主 Cookie 或登录态。 */
   async ReadBytes(raw: string, signal: AbortSignal, options: { headers?: Record<string, string>; maxBytes?: number } = {}): Promise<PublicHttpBytes>
   {

@@ -17,6 +17,7 @@ export interface ResolvedEngineModel
 
     modelRoles?: ModelRolesSnapshot
   };
+
   apiKey: string;
 
   /** 各额外角色的凭据仅在可信执行装配中使用，不持久化。 */

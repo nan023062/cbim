@@ -27,6 +27,7 @@ export interface EngineRuntimePackage
     protocol: 1
   }
 }
+
 /** 主进程私有端口；调用可等待首次准备，失败不启动引擎；绝不由模型或公开运行参数提供路径。 */
 export interface EngineRuntimeResolver
 {

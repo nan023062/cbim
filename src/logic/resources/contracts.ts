@@ -25,6 +25,7 @@ export interface ResourceDefinition
 
   updatedAt: string
 }
+
 /** 完整仓库快照；提交需同时携带仓库身份和 revision，防止写入错误仓库或覆盖更新。 */
 export interface ResourceLibrarySnapshot
 {
@@ -34,6 +35,7 @@ export interface ResourceLibrarySnapshot
 
   items: ResourceDefinition[]
 }
+
 /** 公开仓库配置，不含令牌；远端配置由未来账号会话提供。 */
 export type RepositoryConfig =
   {
@@ -50,6 +52,7 @@ export type RepositoryConfig =
 
     repositoryId: string
   };
+
 /** 账号状态占位；只有经账号服务确认后才能进入 signedIn，当前无登录入口。 */
 export type RepositorySession =
   {
@@ -60,6 +63,7 @@ export type RepositorySession =
 
     accountId: string
   };
+
 /** 面向界面的仓库状态；config 为空表示尚无可用来源，sharing 仅在本机共享期间存在。 */
 export interface RepositoryStatus
 {

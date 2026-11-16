@@ -38,6 +38,7 @@ export function MainAgentEditor({ workspace, onClose }: { workspace: WorkspaceVi
 
       onClose()
   }
+
   useEffect(() => { let cancelled = false; void window.cbim.call('models.list').then(value => { if (!cancelled) setModels(value) }).catch(cause => { if (!cancelled) setError(cause.message) }); return () => { cancelled = true } }, []);
 
   useEffect(() => { if (initial !== undefined || !settings.value || !models) return; setInitial(settings.value.revision); const profile = models.profiles.find(p => p.id === models.selectedId), model = profile?.models.find(m => m.enabled && m.id === profile.defaultModel); setSelection(settings.value.selection ?? (profile && model ? { engine: 'pi', profileId: profile.id, modelId: model.id } : null)); }, [settings.value, models, initial]);
@@ -54,6 +55,7 @@ export function MainAgentEditor({ workspace, onClose }: { workspace: WorkspaceVi
 
       onClose();
   }
+
   return <ModalFrame label="主 Agent 配置" onRequestClose={close}><form className="modal architecture-editor" onSubmit={event => { event.preventDefault(); void save() }}>
     <header><h2>主 Agent 配置</h2><button type="button" disabled={settings.busy} onClick={close}><Icon name="close" size={16} />关闭</button></header>
     <p>与对话栏修改的是同一份主 Agent 配置，适用于本工作区的新执行。已启动和已排队的任务保留原选型。</p>

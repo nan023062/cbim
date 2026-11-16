@@ -29,6 +29,7 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
     {
       return load().records.find(v => v.workspaceId === workspaceId)
     },
+
     Save(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
@@ -47,6 +48,7 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
 
       write(old ? data.records : [...data.records, pending])
     },
+
     Remove(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
@@ -67,6 +69,7 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
     },
   };
 }
+
 /** 原回执须关联原命令和目标，不允许“当前已经改成这样”替代历史证明。 */
 export function checkedGovernanceReceipt(raw: unknown, pending: GovernancePending)
 {
@@ -100,6 +103,7 @@ export function checkedGovernanceReceipt(raw: unknown, pending: GovernancePendin
 
   return receipt;
 }
+
 /** 只有服务对原退役实例作出的肯定证明可解除；没有回执或同名新命令均不能替代。 */
 export function checkedGovernanceUnaccepted(raw: unknown, pending: GovernancePending)
 {
@@ -111,6 +115,7 @@ export function checkedGovernanceUnaccepted(raw: unknown, pending: GovernancePen
 
   return result;
 }
+
 /** 仅用于第一次 RPC 的明确预受理拒绝，含来源已过期及评价错误；已未知、恢复查询或后续刷新失败禁止据此解除记录。 */
 export function isFirstGovernanceRejection(error: unknown)
 {

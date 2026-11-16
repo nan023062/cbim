@@ -56,6 +56,7 @@ export class Builtins
   constructor(private assetsRoot: string)
   {
   }
+
   private async Document(entry: typeof entries[number])
   {
     // Only application-owned manifest entries can select a file, never caller paths.
@@ -79,6 +80,7 @@ export class Builtins
 
     return { ...entry, version: hash(text), text, readOnly: true };
   }
+
   /** 返回允许读取的全部内置资源及内容身份，不安装 Skill 或启动其流程。 */
   async Catalog()
   {
@@ -86,6 +88,7 @@ export class Builtins
 
     return { entryId: 'knowledge-governance', contract, revision: hash(JSON.stringify(items)), items };
   }
+
   /** 只读白名单正文；可核对原版本，不把读取成功解释成反馈提交或业务执行成功。 */
   async Read(id: string, expectedVersion?: string)
   {

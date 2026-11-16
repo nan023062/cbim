@@ -12,6 +12,7 @@ export function codexPath(file: string)
 {
   return path.resolve(process.platform === 'win32' ? file.replace(/^\\\\\?\\UNC\\/, '\\\\').replace(/^\\\\\?\\(?=[A-Za-z]:\\)/, '') : file)
 }
+
 /** 只读取私有目录内完整、有界、非链接原生文件；返回元数据供恢复前核对工具。 */
 export async function readCodexSession(home: string, file: string, id: string, cwd: string)
 {

@@ -41,6 +41,7 @@ export interface ToolDefinition<Context>
   /** 返回领域值，不先包装 ToolResult；执行后的协议失败不能触发第二次 execute。 */
   execute: (args: any, context: Context) => Promise<unknown> | unknown;
 }
+
 /** 只负责协议和参数；实例、版本与副作用规则由领域入口检查。 */
 export class ToolRegistry<Context>
 {
@@ -50,6 +51,7 @@ export class ToolRegistry<Context>
   {
     return this.entries
   }
+
   Register(tool: ToolDefinition<Context>)
   {
     if (!/^cbim_[A-Za-z0-9_]+$/.test(tool.name))
@@ -72,20 +74,24 @@ export class ToolRegistry<Context>
 
     this.entries.push({ ...tool, ...metadata.data });
   }
+
   /** 引擎注册保持紧凑输入清单，不把全部输出 Schema 注入每次模型上下文。 */
   List()
   {
     return this.entries.map(t => ({ ...this.Summary(t), inputSchema: zodToJsonSchema(z.object(t.inputSchema)) as Record<string, unknown> }))
   }
+
   private Summary(tool: ToolDefinition<Context>)
   {
     return { name: tool.name, ...(tool.description === undefined ? {} : { description: tool.description }), version: tool.version, effects: [...tool.effects] }
   }
+
   /** 只列实际注册条目的摘要，不承诺原生、调度或外部工具可用。 */
   Catalog()
   {
     return { family: 'knowledge' as const, tools: this.entries.map(tool => this.Summary(tool)) }
   }
+
   /** 按需导出有限 JSON Schema 和说明；不执行领域调用，不把函数、凭据或其它工具清单嵌入结果。 */
   Describe(name: string)
   {
@@ -93,6 +99,7 @@ export class ToolRegistry<Context>
 
     return { family: 'knowledge' as const, tool: { ...this.Summary(tool), inputSchema: zodToJsonSchema(z.object(tool.inputSchema)), outputSchema: zodToJsonSchema(tool.outputSchema), cancellation: structuredClone(tool.cancellation), recovery: structuredClone(tool.recovery) } }
   }
+
   private Entry(name: string)
   {
     const tool = this.entries.find(t => t.name === name);
@@ -103,6 +110,7 @@ export class ToolRegistry<Context>
 
     return tool
   }
+
   /** 只解析，不执行；错误只列字段和修正方式，不回显输入正文。调用方随后校验身份与授权。 */
   Resolve(name: string, input: unknown)
   {
@@ -120,6 +128,7 @@ export class ToolRegistry<Context>
     }
     return { tool, args: parsed.data };
   }
+
   /** 已由调用边界核对身份与授权后使用；只执行一次，不因业务输出损坏重放或补造字段。 */
   async InvokeResolved(tool: ToolDefinition<Context>, args: unknown, context: Context)
   {

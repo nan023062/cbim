@@ -64,6 +64,7 @@ export interface WorkflowCapabilities
 
   artifacts: boolean;
 }
+
 /** 原派工和递归调用共用的启动前检查；缺能力即拒绝，不建运行、不申请工具审批或自动提高权限。 */
 export function assertWorkflowCapabilities(bindings: readonly { contract: WorkflowContract }[], capabilities: WorkflowCapabilities): void
 {
@@ -101,10 +102,12 @@ export function assertWorkflowCapabilities(bindings: readonly { contract: Workfl
 
     fail('WORKFLOW_VALIDATION_UNAVAILABLE', '当前引擎或文件端口未提供 Workflow 必需结构验证能力');
 }
+
 function invalid(reason: string): never
 {
   fail('WORKFLOW_CONTRACT_INVALID', 'Workflow 执行约定无效：' + reason)
 }
+
 /**
  * 读取最多一个顶层 cbim-workflow 围栏块；标准反引号/波浪线围栏支持 0–3 空格缩进。
  * 普通代码块内的示例、引用块和缩进代码不是声明。命名后附加语言/属性、未闭合、重复及非严格 JSON 均拒绝。

@@ -37,6 +37,7 @@ interface ObservedRun
   /** 忽略 UI 不关心的流式片段时也推进接收序号，保证后续事实仍能检查顺序。 */
   receivedSeq: number;
 }
+
 interface WorkspaceIndex
 {
   view: RuntimeWorkspace;
@@ -59,6 +60,7 @@ interface WorkspaceIndex
       seq: number
     }>;
 }
+
 const clone = <T>(value: T): T => structuredClone(value);
 
 const key = (...parts: string[]) => JSON.stringify(parts);
@@ -150,6 +152,7 @@ function measurement(event: StoredEvent): StoredEvent | undefined
 
   return { version: 1, workspaceId: event.workspaceId, taskId: event.taskId, runId: event.runId, seq: event.seq, time: event.time, type: event.type, data: next };
 }
+
 /** 单个应用实例持有一个管理器；所有写入均为同步投影，不等待 I/O，也不代替权威日志。 */
 export class GlobalRuntimeManager
 {
@@ -165,16 +168,19 @@ export class GlobalRuntimeManager
   {
     this.revision++
   }
+
   private Current(id: string, epoch: number)
   {
     const state = this.workspaces.get(id);
 
     return state?.view.epoch === epoch && state.view.availability !== 'closed' ? state : undefined
   }
+
   private Cursor(): RuntimeCursor
   {
     return { streamId: this.streamId, revision: this.revision }
   }
+
   /** 开始接管工作区投影；旧代际即刻失效，恢复期间的数据完整性明确标为 loading。 */
   Begin(workspaceId: string, name: string): number
   {
@@ -186,6 +192,7 @@ export class GlobalRuntimeManager
 
     return epoch;
   }
+
   /** 仅装配方在派发、历史运行和排队恢复完成后调用；有 issues 时快照仍标记不完整。 */
   Ready(id: string, epoch: number)
   {
@@ -198,6 +205,7 @@ export class GlobalRuntimeManager
       this.Changed()
     }
   }
+
   /** 项目重命名仅更新显示名，不改变工作区身份、接入代际或执行归属。 */
   Rename(id: string, name: string)
   {
@@ -210,6 +218,7 @@ export class GlobalRuntimeManager
       this.Changed()
     }
   }
+
   Unavailable(id: string, epoch: number, error: string)
   {
     const state = this.Current(id, epoch);
@@ -229,6 +238,7 @@ export class GlobalRuntimeManager
       this.Changed()
     }
   }
+
   /** 关闭后保留已知消费及任务记录，但不能再把历史运行或成员计为活跃。 */
   Detach(id: string, epoch: number)
   {
@@ -244,12 +254,14 @@ export class GlobalRuntimeManager
 
     this.Changed()
   }
+
   Forget(id: string)
   {
     if (this.workspaces.delete(id))
 
       this.Changed()
   }
+
   private Interrupt(state: WorkspaceIndex)
   {
     for (const run of state.runs.values())
@@ -261,6 +273,7 @@ export class GlobalRuntimeManager
         run.view.phase = 'settled'
       }
   }
+
   /** 诊断为可信装配层的简短说明；调用方不得传原始异常堆栈、绝对路径或工具正文。 */
   Issue(id: string, epoch: number, source: string, message: string)
   {
@@ -278,6 +291,7 @@ export class GlobalRuntimeManager
 
     this.Changed();
   }
+
   /** 首次恢复基线，不用于定时回读；旧记录没有周期时保持空集，恢复等待也不代表重新启动模型。 */
   RestoreDispatch(id: string, epoch: number, baseline: DispatchState)
   {
@@ -336,6 +350,7 @@ export class GlobalRuntimeManager
 
     this.Changed();
   }
+
   /** 同工作区提交由 store 同步串行通知；scope-only 也更新全局版本，不借用图序号或目标版本，不读取日志。 */
   DispatchCommitted(id: string, epoch: number, mutation: DispatchMutation)
   {
@@ -445,6 +460,7 @@ export class GlobalRuntimeManager
 
       this.Changed();
   }
+
   /** 只接受明确属于现有/同事务新建根的周期；不能用同 scope ID 改写主会话归属。 */
   private ProjectScopes(id: string, roots: ReadonlyMap<string, unknown>, previous: ReadonlyMap<string, RuntimeScope>, updates: NonNullable<DispatchState['scopes']>): Map<string, RuntimeScope>
   {
@@ -480,14 +496,17 @@ export class GlobalRuntimeManager
       }
     return next;
   }
+
   private Member(value: AgentInstance, current: boolean): RuntimeMember
   {
     return { workspaceId: value.workspaceId, teamId: value.teamId, agentId: value.agentId, agentInstanceId: value.agentInstanceId, leaseEpoch: value.leaseEpoch, ...(value.mainRootSessionId ? { mainRootSessionId: value.mainRootSessionId } : {}), ...(value.executionScopeId ? { executionScopeId: value.executionScopeId, executionTaskId: value.executionTaskId } : {}), ...(value.lifecycle ? { lifecycle: value.lifecycle, releasedAt: value.releasedAt } : {}), activity: value.activity, activityCurrent: current && value.lifecycle !== 'released', availability: 'loading', sessionCount: value.agentSessionIds.length, activeTaskId: value.activeTaskId, activeRunId: value.activeRunId, waitingTaskIds: [...value.waitingTaskIds], communicatingMessageIds: [...value.communicatingMessageIds] };
   }
+
   private Task(value: TaskNode): RuntimeDispatchTask
   {
     return { source: 'dispatch', binding: 'instance', workspaceId: value.identity.workspaceId, rootSessionId: value.identity.rootSessionId, taskId: value.taskId, ...(value.scopeId ? { scopeId: value.scopeId } : {}), agentId: value.assignee.agentId, agentInstanceId: value.assignee.agentInstanceId, moduleIds: value.modules.map(m => m.moduleId), status: value.status, revision: value.revision, planRevision: value.planRevision, runIds: [...value.runIds], updatedAt: value.updatedAt };
   }
+
   /** 恢复可信 RunSummary；重复恢复相同轮次不累计消费，历史 running 强制降为 interrupted。 */
   RestoreRun(id: string, epoch: number, summary: RunSummary)
   {
@@ -581,6 +600,7 @@ export class GlobalRuntimeManager
 
     this.Changed();
   }
+
   /** 已落盘事件按 workspace/task/run/seq 去重；只接收有明确 run.started 身份的运行。 */
   RunEvent(id: string, epoch: number, event: StoredEvent)
   {
@@ -657,6 +677,7 @@ export class GlobalRuntimeManager
       this.Changed()
     }
   }
+
   private Phase(run: ObservedRun, event: StoredEvent)
   {
     if (event.type === 'run.settled')
@@ -690,6 +711,7 @@ export class GlobalRuntimeManager
         run.view.phase = 'working';
     }
   }
+
   /** 两种运行绑定互斥；主会话与正式成员任务共享实例但保留各自通道，旧对话不猜映射。 */
   private NewRun(task: TaskSpec, runId: string, time: string, memberBinding?: unknown, conversationBinding?: unknown): ObservedRun
   {
@@ -707,6 +729,7 @@ export class GlobalRuntimeManager
 
     return { view: { workspaceId: task.workspaceId, taskId: task.taskId, runId, agentId: task.agentId, ...(binding ? { memberBinding: binding } : {}), ...(conversation ? { conversationBinding: conversation } : {}), status: 'running', phase: 'working', lastSeq: 0, startedAt: time, updatedAt: time, usage: runUsage([]) }, moduleIds: [...task.moduleIds], measurements: [], receivedSeq: 0, liveEstablished: false };
   }
+
   /** 队列变化后由唯一队列实例报告，重复计数不推进全局版本。 */
   Queue(id: string, epoch: number, counts: RuntimeQueueCounts)
   {
@@ -727,6 +750,7 @@ export class GlobalRuntimeManager
       this.Changed()
     }
   }
+
   /** 无变化时只返回游标；不扫描磁盘，也不重建完整快照。 */
   Read(cursor?: RuntimeCursor): RuntimeRead
   {
@@ -738,6 +762,7 @@ export class GlobalRuntimeManager
 
     return { mode: 'snapshot', cursor: current, snapshot: this.Snapshot() };
   }
+
   /** 汇总只读副本；多个工作区使用相同任务/运行字符串也不会相互覆盖。 */
   Snapshot(): RuntimeSnapshot
   {

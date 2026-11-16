@@ -43,6 +43,7 @@ function input<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
 
   return result.data
 }
+
 type Knowledge =
   {
     snapshot?: Snapshot;
@@ -56,16 +57,19 @@ type Knowledge =
 
     issue?: 'invalid' | 'unavailable'
   };
+
 /** 无执行器和模型端口；写入只追加单条责任审计，不改变知识、任务或默认执行者。 */
 export class ModuleOwnerships
 {
   constructor(private readonly owner: KnowledgeSourceWorkspace, private readonly store: DispatchStore, private readonly isCurrent: () => boolean = () => true)
   {
   }
+
   private Identity()
   {
     return { workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId }
   }
+
   private Assert(identity: ModuleOwnershipIdentity)
   {
     if (identity.workspaceId !== this.owner.entry.id || identity.instanceId !== this.owner.instanceId)
@@ -78,20 +82,24 @@ export class ModuleOwnerships
 
       fail('OWNERSHIP_UNAVAILABLE', '工作区正在关闭，未接受新的责任变更');
   }
+
   private Workspace(id: string)
   {
     if (id !== this.owner.entry.id)
 
       fail('OWNERSHIP_IDENTITY', '责任记录不属于当前工作区')
   }
+
   private Cursor(state: DispatchState)
   {
     return state.ownershipCursor ?? null
   }
+
   private Basis(state: DispatchState, knowledge: Knowledge): ModuleOwnershipReadBasis
   {
     return { ownershipCursor: this.Cursor(state), memberRegistryCursor: state.registryCursor ?? null, knowledgeRevision: knowledge.snapshot?.revision ?? null, sourceCursor: state.sourceCursor ?? null }
   }
+
   private async Knowledge(fixed?: Snapshot): Promise<Knowledge>
   {
     let snapshot: Snapshot;
@@ -129,6 +137,7 @@ export class ModuleOwnerships
       return { snapshot, visible: new Map(), issue: 'invalid' }
     }
   }
+
   private Observed(knowledge: Knowledge, moduleId: string): ObservedModule | undefined
   {
     if (knowledge.issue || !knowledge.visible.has(moduleId))
@@ -143,6 +152,7 @@ export class ModuleOwnerships
 
     return { knowledgeRevision: knowledge.snapshot!.revision, definitionHash: file.hash, observedAt: new Date().toISOString() };
   }
+
   private View(state: DispatchState, knowledge: Knowledge, moduleId: string): ModuleOwnershipView
   {
     const binding = state.moduleOwnerships?.find(item => item.moduleId === moduleId) ?? null,
@@ -163,16 +173,19 @@ export class ModuleOwnerships
 
     return { moduleId, ...(module ? { module } : {}), binding, ...(member ? { owner: summarizeWorkspaceMember(member) } : {}), status: !binding?.ownerMemberId ? 'unassigned' : !member ? 'owner_missing' : member.state === 'active' ? 'assigned' : member.state === 'suspended' ? 'owner_suspended' : 'owner_retired', source, sourceStatus };
   }
+
   /** 每次都读真实知识；游标只绑定页，不缓存模块存在性或当前岗位状态。 */
   async List(raw: unknown)
   {
     return this.Page(input(moduleOwnershipListInputSchema, raw))
   }
+
   /** 只查当前明确引用，不把历史曾负责关系混入反查。来源失效仍能看到并解除原关系。 */
   async ByMember(raw: unknown)
   {
     return this.Page(input(moduleOwnershipByMemberInputSchema, raw))
   }
+
   /** 主工具按明确模块集合一次读取同一依据；不拼接多个不同版本的详情，也不批量复制历史。 */
   async InspectModules(identity: ModuleOwnershipIdentity, moduleIds: readonly string[])
   {
@@ -192,6 +205,7 @@ export class ModuleOwnerships
 
     return moduleOwnershipPageSchema.parse({ identity: this.Identity(), readOnly: true, checkedAt: new Date().toISOString(), basis: this.Basis(state, knowledge), offset: 0, total: items.length, items });
   }
+
   private async Page(request: z.output<typeof moduleOwnershipListInputSchema> & { memberId?: string })
   {
     this.Assert(request);
@@ -234,6 +248,7 @@ export class ModuleOwnerships
 
     return moduleOwnershipPageSchema.parse({ identity: this.Identity(), readOnly: true, checkedAt: new Date().toISOString(), basis, offset, total: ids.length, items, ...(end < ids.length ? { nextOffset: end } : {}) });
   }
+
   /** 历史只投影近二十项摘要；旧关系来源缺失不妨碍查询，不推断来源连续性。 */
   async Get(raw: unknown)
   {
@@ -261,6 +276,7 @@ export class ModuleOwnerships
 
     return moduleOwnershipDetailSchema.parse({ identity: this.Identity(), readOnly: true, checkedAt: new Date().toISOString(), basis: this.Basis(state, knowledge), view, history: { total: changes.length, truncated: changes.length > items.length, items } });
   }
+
   private async VerifyKnowledge(knowledge: Knowledge, identity: ModuleOwnershipIdentity, assertCurrent?: () => void)
   {
     if (knowledge.snapshot)
@@ -279,6 +295,7 @@ export class ModuleOwnerships
 
     assertCurrent?.();
   }
+
   private async VerifyRead(state: DispatchState, knowledge: Knowledge, identity: ModuleOwnershipIdentity)
   {
     await this.VerifyKnowledge(knowledge, identity);
@@ -291,6 +308,7 @@ export class ModuleOwnerships
 
       fail('OWNERSHIP_REGISTRY_STALE', '读取期间责任、岗位或来源变化，请重新读取');
   }
+
   /** 只读重建依据；不保存预览、不生成关系身份。 */
   async Preview(raw: unknown)
   {
@@ -314,6 +332,7 @@ export class ModuleOwnerships
 
     return prepared.preview;
   }
+
   private async Prepare(state: DispatchState, request: ModuleOwnershipPreviewInput, assertCurrent?: () => void, fixed?: Snapshot)
   {
     this.Assert(request);
@@ -378,6 +397,7 @@ export class ModuleOwnerships
 
     return { preview, knowledge };
   }
+
   /** 只读原命令，无当前实例/来源要求；未找到保持未知，不借事务重放查回执。 */
   async Receipt(raw: unknown): Promise<ModuleOwnershipReceipt | undefined>
   {
@@ -389,6 +409,7 @@ export class ModuleOwnerships
 
     return record ? this.CheckedReceipt(record.receipt, request.workspaceId, request.commandId) : undefined;
   }
+
   private CheckedReceipt(raw: unknown, workspaceId: string, commandId: string)
   {
     const result = moduleOwnershipReceiptSchema.safeParse(raw);
@@ -399,6 +420,7 @@ export class ModuleOwnerships
 
     return result.data;
   }
+
   /** actor 只由桌面路由或真实主闭包注入；主写必须携带停止复验端口，保存后不再抛预受理失败。 */
   async Commit(raw: unknown, rawActor: ModuleOwnershipActor, assertCurrent?: () => void): Promise<ModuleOwnershipReceipt>
   {

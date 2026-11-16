@@ -39,12 +39,14 @@ export interface ValidationWorkflowBinding
 
   contract: WorkflowContract
 }
+
 function valid(value: unknown, message: string): asserts value
 {
   if (!value)
 
     fail('VALIDATION_EVIDENCE_INVALID', message)
 }
+
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
 const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
 
@@ -69,6 +71,7 @@ export function validationRequirement(bindings: readonly ValidationWorkflowBindi
 
   return { binding, requirement, schemaHash: hash(JSON.stringify(ordered(requirement.validator === 'json-schema-v1' ? requirement.schema : { validator: requirement.validator, schema: requirement.schema }))) };
 }
+
 /** 运行中可省略无关消息，但顺序/身份仍严格；未结束或明确失败的暂存不成为记录，成功却缺事件则拒绝。 */
 export function verifyValidationRecords(events: readonly ArtifactEvidenceEvent[], binding: ValidationBinding, knowledgeRevision: string, bindings: readonly ValidationWorkflowBinding[], normalizePath: (raw: string) => string): ValidationRecord[]
 {

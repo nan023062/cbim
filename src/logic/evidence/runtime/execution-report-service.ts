@@ -38,6 +38,7 @@ export class ExecutionReportService
   constructor(private owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private store: Pick<DispatchStore, 'Read'>, private inspect: (run: DispatchRun) => Promise<RunSummary>, private inspectAgent?: (run: AgentBusinessRun) => Promise<RunSummary>)
   {
   }
+
   /** 只读核实；缺失、损坏、截断及身份不符返回保守报告，非法请求或跨主会话访问仍拒绝。 */
   async Read(raw: unknown): Promise<ExecutionReport>
   {
@@ -249,6 +250,7 @@ export class ExecutionReportService
 
     return executionReportSchema.parse(result);
   }
+
   /** 新调用没有图任务版本；仅解释原登记、原日志和工具回执，不创造旧交付候选或恢复资格。 */
   private async ReadRecursive(input: ReturnType<typeof executionReportInputSchema.parse>, before: DispatchState): Promise<ExecutionReport>
   {
@@ -406,6 +408,7 @@ export class ExecutionReportService
 
     return executionReportSchema.parse(result);
   }
+
   /** 分页只针对已核对的报告基线；基线变化从首项重新展示，不拼接不同版本。 */
   private Page(result: ExecutionReport, input: ReturnType<typeof executionReportInputSchema.parse>)
   {
@@ -423,6 +426,7 @@ export class ExecutionReportService
 
       result.tools.nextCursor = { basis: result.basis.key, offset: start + input.limit };
   }
+
   private Facts(state: DispatchState, rootSessionId: string, taskId: string, runId?: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === rootSessionId),
@@ -444,6 +448,7 @@ export class ExecutionReportService
 
     return { graph, task, run, scope, assignments, registeredRuns };
   }
+
   /** 只承认明确、结构完整且绑定当前任务的未启动撤销；旧 cancelled 或坏记录保持 unknown。 */
   private CancelledWithoutRun({ task, scope, graph, assignments, registeredRuns }: ReturnType<ExecutionReportService['Facts']>): boolean
   {
@@ -459,16 +464,19 @@ export class ExecutionReportService
 
     return task.status === 'cancelled' && !!scope && record.scopeId === task.scopeId && record.scopeId === scope.scopeId && record.previousRevision + 1 === task.revision && record.cancelledAt === task.updatedAt && record.reason === task.waitReason && Date.parse(record.cancelledAt) >= Date.parse(task.createdAt) && record.graphCursor.streamId === graph.cursor.streamId && record.graphCursor.seq < graph.cursor.seq && !task.runIds.length && !task.activeRunId && !task.result && !task.help && !task.awaitedChildren.length && !registeredRuns.length && sameAgent(task.requester, graph.root.agent) && assignments.length === 1 && assignments[0].identity.workspaceId === task.identity.workspaceId && assignments[0].identity.rootSessionId === task.identity.rootSessionId && assignments[0].planRevision === task.planRevision && sameAgent(assignments[0].from, task.requester) && sameAgent(assignments[0].to, task.assignee) && assignments[0].delivery === 'processed' && !assignments[0].claim;
   }
+
   private Stamp(value: ReturnType<ExecutionReportService['Facts']>)
   {
     return hash(json({ cursor: value.graph.cursor, task: value.task, assignments: value.assignments, registeredRuns: value.registeredRuns.map(run => ({ binding: run.binding, status: run.status })), run: value.run ? { binding: value.run.binding, status: value.run.status, startedAt: value.run.startedAt, settledAt: value.run.settledAt, session: value.run.session } : undefined, scope: value.scope ? { id: value.scope.scopeId, status: value.scope.status, goalRevision: value.scope.goal?.revision } : undefined }))
   }
+
   private Bound(run: DispatchRun, task: ReturnType<ExecutionReportService['Facts']>['task'], workspaceId: string, rootSessionId: string)
   {
     const b = run.binding;
 
     return b.workspaceId === workspaceId && b.rootSessionId === rootSessionId && b.taskId === task.taskId && b.agentId === task.assignee.agentId && b.agentInstanceId === task.assignee.agentInstanceId && b.agentSessionId === task.assignee.agentSessionId
   }
+
   private Matches(summary: RunSummary, run: DispatchRun)
   {
     const b = run.binding;

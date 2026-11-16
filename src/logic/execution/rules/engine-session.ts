@@ -16,6 +16,7 @@ export interface EngineSessionSelection
 
   handoff?: string
 }
+
 /** 仅允许完整封存且没有模型输出/工具调用的主聊天启动失败；不是未知执行结果的恢复许可。 */
 function failedBeforeInteraction(run: RunSummary): boolean
 {
@@ -29,6 +30,7 @@ function failedBeforeInteraction(run: RunSummary): boolean
 
     && !run.events.some(event => ['tool.proposed', 'tool.allowed', 'tool.finished', 'tool.denied', 'message', 'message.delta'].includes(event.type));
 }
+
 /** 超出边界或日志损坏明确拒绝，不能截断上下文后假称完整恢复。 */
 export async function selectEngineSession(engine: string, previous: RunSummary, read: (runId: string) => Promise<RunSummary>): Promise<EngineSessionSelection>
 {
@@ -75,6 +77,7 @@ export async function selectEngineSession(engine: string, previous: RunSummary, 
   }
   return { handoff: history(records) };
 }
+
 function history(records: RunSummary[]): string
 {
   const value = records.reverse().map(run => ({ runId: run.runId, engine: run.events[0]?.data.engine ?? 'pi', status: run.status, input: run.events[0]?.data.message, source: run.source?.kind ?? 'user', events: run.events.filter(event => event.type === 'message' || event.type === 'tool.finished' || event.type === 'tool.denied').map(event => ({ type: event.type, data: event.data })) }));

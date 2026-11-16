@@ -24,6 +24,7 @@ export type OwnerTaskView =
 
     needsReplan: boolean
   };
+
 /** 旧在途只展示原事实；未领取或未消费检查点不能借阅读历史获得新的执行身份。 */
 export function ownerTaskView(task: TaskNode): OwnerTaskView
 {
@@ -37,6 +38,7 @@ export function ownerTaskView(task: TaskNode): OwnerTaskView
 
   return { kind: 'bound', binding: task.ownerBinding };
 }
+
 const canonical = (value: unknown): string => JSON.stringify(value && typeof value === 'object' ? Array.isArray(value) ? value.map(item => JSON.parse(canonical(item))) : Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => [k, JSON.parse(canonical(v))])) : value) ?? 'null';
 
 /** 图版本变化使旧观察失效；序列化仅用于本地视图隔离，不是服务端许可或哈希。 */
@@ -44,6 +46,7 @@ export function ownerInspectionKey(task: TaskNode): string
 {
   return canonical({ identity: task.identity, taskId: task.taskId, revision: task.revision, ownerBinding: task.ownerBinding, agentId: task.assignee.agentId, moduleIds: task.modules.map(module => module.moduleId) })
 }
+
 export interface OwnerInspectionView
 {
   report: TaskOwnerInspectOutput;
@@ -52,6 +55,7 @@ export interface OwnerInspectionView
 
   issues: string[]
 }
+
 /** 核对原冻结记录及此次读取的完整模块集合，再比较当前选择；不从只读响应启动或修复任务。 */
 export function checkedOwnerInspection(raw: unknown, task: TaskNode): OwnerInspectionView
 {
@@ -93,6 +97,7 @@ export function checkedOwnerInspection(raw: unknown, task: TaskNode): OwnerInspe
 
   return { report, comparison: matching ? 'matching' : 'changed', issues };
 }
+
 export interface OwnerInspectionState
 {
   key: string;
@@ -103,6 +108,7 @@ export interface OwnerInspectionState
 
   error?: string
 }
+
 /** 一次显式核实的内存控制器；切换或新版本作废迟到结果，不取消后端已完成的只读观察。 */
 export class OwnerInspectionController
 {
@@ -122,20 +128,24 @@ export class OwnerInspectionController
 
     this.value = { key: ownerInspectionKey(task), loading: false }
   }
+
   get snapshot(): OwnerInspectionState
   {
     return this.value
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   private Publish(value: OwnerInspectionState)
   {
     this.value = value;
 
     this.listeners.Notify()
   }
+
   /** 仅同步观察对象，不自动读取；新节点/版本不会沿用旧报告或进行中的操作状态。 */
   Observe(task: TaskNode)
   {
@@ -153,6 +163,7 @@ export class OwnerInspectionController
 
     this.Publish({ key, loading: false })
   }
+
   /** 同一版本双击合并；无轮询，网络失败保留同版本旧报告并明确显示过期读取错误。 */
   Inspect(): Promise<void>
   {
@@ -174,6 +185,7 @@ export class OwnerInspectionController
 
     return work;
   }
+
   /** 卸载只阻止本地迟到发布，不声称取消了服务端读取。 */
   Dispose()
   {

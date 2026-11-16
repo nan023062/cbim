@@ -47,6 +47,7 @@ export type VerifiedMainCallSource =
 
     throughSeq?: number
   };
+
 type ReadLog = VerifiedMainCallSource;
 
 /** 端口只读已有 canonical；不能为了查询创建运行管理器或打开工作区。 */
@@ -54,11 +55,13 @@ export interface CommandVerificationPorts
 {
   InspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
 }
+
 export class CommandVerificationService
 {
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: Pick<DispatchStore, 'Read' | 'CommandEvidence'>, private readonly ports?: CommandVerificationPorts)
   {
   }
+
   /** 后端影响观察复用同一主身份/授权核验；返回含私有日志，禁止直接作为 IPC 或模型输出。 */
   InspectSource(input: CommandVerificationInput, state: DispatchState): Promise<VerifiedMainCallSource>
   {
@@ -66,6 +69,7 @@ export class CommandVerificationService
 
     return this.Log(input, state)
   }
+
   /** 原 run/call 必须明确；取消只结束本次读取，不修改任何原事实。 */
   async Read(raw: unknown, signal?: AbortSignal): Promise<CommandVerificationReport>
   {
@@ -258,6 +262,7 @@ export class CommandVerificationService
 
     return commandVerificationReportSchema.parse({ version: 1, identity: input, checkedAt: new Date().toISOString(), basis: { key: hash(json({ input, log: first.stamp, state: this.Stamp(before, input), command, changed })), adapterVersion: 1, ...(first.logPrefixHash ? { logPrefixHash: first.logPrefixHash, throughSeq: first.throughSeq } : {}) }, consistency: changed ? 'changed_during_read' : 'stable', source: first.source, command, ...(scopeView ? { scope: scopeView } : {}), issues, readOnly: true, acceptance: 'not_evaluated' });
   }
+
   private async State(): Promise<DispatchState | undefined>
   {
     try
@@ -269,12 +274,14 @@ export class CommandVerificationService
       return undefined
     }
   }
+
   private Scope(state: DispatchState | undefined, input: CommandVerificationInput): DispatchScope | undefined
   {
     const scopes = state?.scopes?.filter(scope => scope.workspaceId === input.workspaceId && scope.rootSessionId === input.rootSessionId && scope.runTracking?.mainRunIds.includes(input.runId));
 
     return scopes?.length === 1 ? scopes[0] : undefined;
   }
+
   /** 只冻结本根会话的相关事实；其他工作区/主会话的无关提交不使本报告过期。 */
   private Stamp(state: DispatchState | undefined, input: CommandVerificationInput)
   {
@@ -284,6 +291,7 @@ export class CommandVerificationService
 
     return hash(json({ available: !!state, scope: this.Scope(state, input), root, graphCursor: graph?.cursor, member: state?.members.find(member => member.agentInstanceId === root?.agentInstanceId), sessions: state?.sessions.filter(session => session.agentInstanceId === root?.agentInstanceId && session.rootSessionId === input.rootSessionId), assignments: state?.outbox.filter(message => message.kind === 'assignment' && message.identity.workspaceId === input.workspaceId && message.identity.rootSessionId === input.rootSessionId) }));
   }
+
   private async Log(input: CommandVerificationInput, state: DispatchState | undefined): Promise<ReadLog>
   {
     if (!this.ports)

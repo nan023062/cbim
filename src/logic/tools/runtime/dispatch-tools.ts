@@ -106,6 +106,7 @@ const definitions = {
     schema: replaceQueuedDependencyInputSchema, effects: ['maintenance'] as const,
   },
 };
+
 type DispatchToolName = keyof typeof definitions;
 
 /** 仅由一次性工具桥提供，不能从模型参数中取调用 ID。 */
@@ -115,6 +116,7 @@ export interface DispatchToolInvocation
 
   signal: AbortSignal
 }
+
 /**
  * 运行装配方绑定工作区、主会话、runId 及权限；不得给成员 Loop 注入本首版端口。
  * dispatch 保持调用幂等并可靠入队，inspect 必须限制在同一主会话；启动与结果续跑由调度器负责。
@@ -155,6 +157,7 @@ export interface DispatchToolsPort
   /** 只终止未消费的旧待办；原运行与证明不变，历史读取和最终 CAS 由服务负责。 */
   AbandonCheckpoint?(input: AbandonCheckpointInput, invocation: DispatchToolInvocation): Promise<AbandonCheckpointReceipt>;
 }
+
 /** 工具解析在权限检查前和执行前各做一次，不默默剥离模型提供的额外字段。 */
 export class DispatchTools
 {
@@ -164,30 +167,36 @@ export class DispatchTools
   {
     this.binding = Object.freeze(structuredClone(port.binding))
   }
+
   /** 只有装配了真实端口才构造本对象；返回值不包含未来工具占位。 */
   get collaborationMode()
   {
     return this.port.collaborationMode ?? 'team'
   }
+
   private Definition(name: DispatchToolName)
   {
     const definition = definitions[name];
 
     return name === 'cbim_dispatch_cancel' && !this.port.PreviewCancel ? { ...definition, schema: cancelQueuedTasksInputSchema } : definition
   }
+
   private Available(name: string)
   {
     return (name !== 'cbim_dispatch_command_report' || !!this.port.CommandReport) && (name !== 'cbim_dispatch_cancel' || !!this.port.Cancel) && (name !== 'cbim_dispatch_replace_dependency' || !!this.port.ReplaceDependency) && (name !== 'cbim_dispatch_add_dependency' || !!this.port.AddDependency) && (name !== 'cbim_dispatch_revise_dependencies' || !!this.port.ReviseDependencies) && (name !== 'cbim_dispatch_resume' || !!this.port.Resume) && (name !== 'cbim_dispatch_abandon_checkpoint' || !!this.port.AbandonCheckpoint)
   }
+
   List()
   {
     return [...Object.entries(definitions).filter(([name]) => this.Available(name)).map(([name]) => { const d = this.Definition(name as DispatchToolName); return ({ name, description: d.description, effects: d.effects, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...(name === 'cbim_dispatch_command_report' ? commandReportContract() : mainToolContract(name as Exclude<DispatchToolName, 'cbim_dispatch_command_report'>)), ...(name === 'cbim_dispatch_cancel' && this.port.PreviewCancel ? { version: 2, outputSchema: { anyOf: [mainToolContract('cbim_dispatch_cancel').outputSchema, zodToJsonSchema(coordinationPreviewSchema)] } } : {}) }) }), ...(this.goals?.List() ?? []), ...(this.reviews?.List() ?? []), ...(this.history?.List() ?? [])]
   }
+
   /** 名称检测不执行操作，供 Loop 在知识工具之前选择本适配器。 */
   Has(name: string): boolean
   {
     return (Object.hasOwn(definitions, name) && this.Available(name)) || !!this.goals?.Has(name) || !!this.reviews?.Has(name) || !!this.history?.Has(name)
   }
+
   private Parse(name: string, input: unknown)
   {
     if (!Object.hasOwn(definitions, name) || !this.Available(name))
@@ -210,6 +219,7 @@ export class DispatchTools
 
     return { name: name as DispatchToolName, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
   }
+
   /** 描述入队/读取副作用；成员业务工具仍独立经过其运行权限，不继承本次免询问批准。 */
   Describe(name: string, input: unknown)
   {
@@ -229,6 +239,7 @@ export class DispatchTools
 
     return { effects: parsed.effects, native: false }
   }
+
   /** gate 后由桥调用；可信 toolCallId 用于持久化幂等，缺失时拒绝，不随机造新操作。 */
   async Call(name: string, input: unknown, signal: AbortSignal, toolCallId?: string)
   {

@@ -23,6 +23,7 @@ export class RunInactivityTimer
 
     this.timer = setTimeout(() => { this.closed = true; this.toolProgress.clear(); const period = duration % 60000 === 0 ? `${duration / 60000} 分钟` : `${duration / 1000} 秒`; onTimeout(Error(`${engine} 连续 ${period}无执行进展，已中断；请核实未确认的操作与产物。`)); }, duration);
   }
+
   /** 仅由适配器确认的新输出调用；不发送模型请求，不改变工具权限。 */
   Progress()
   {
@@ -30,6 +31,7 @@ export class RunInactivityTimer
 
       this.timer.refresh()
   }
+
   /** 工具生命周期与有内容的新进度快照续期；空快照、重复快照和普通状态事件忽略。 */
   Observe(event: EngineEvent)
   {
@@ -79,6 +81,7 @@ export class RunInactivityTimer
 
     this.Progress();
   }
+
   /** run 的 finally、显式停止及关闭都可调用；无副作用地重复释放。 */
   Dispose()
   {

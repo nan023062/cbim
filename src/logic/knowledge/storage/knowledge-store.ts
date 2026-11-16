@@ -43,6 +43,7 @@ export interface KnowledgeStoreOwner
 
     path: string
   };
+
   readonly instanceId: string;
 
   readonly paths: StoragePaths;
@@ -63,6 +64,7 @@ export interface KnowledgeStoreOwner
 
   Assert(identity?: { workspaceId: string; instanceId: string }): void;
 }
+
 interface CommitResult
 {
   state: string;
@@ -77,6 +79,7 @@ interface CommitResult
 
   changed: string[]
 }
+
 interface Journal
 {
   version: 1;
@@ -99,6 +102,7 @@ interface Journal
 
   source?: KnowledgeSourceJournal
 }
+
 /** 工作区持有一个存储实例，关闭前等待 drain，观察器避开正在提交的事务。 */
 export class KnowledgeStore
 {
@@ -109,6 +113,7 @@ export class KnowledgeStore
   constructor(private owner: KnowledgeStoreOwner, private log: (event: string, details?: Record<string, unknown>) => Promise<void>, private governance?: KnowledgeGovernanceAuthority, private sources?: KnowledgeSourceAuthority)
   {
   }
+
   /** 工作区持锁后只装配一次；必须在恢复和对外开放之前设置同一个 DispatchStore 协调器。 */
   AttachSources(sources: KnowledgeSourceAuthority)
   {
@@ -118,6 +123,7 @@ export class KnowledgeStore
 
     this.sources = sources
   }
+
   /** 固定知识观察后允许一个短 Store 事务；回调不能重入本队列。 */
   WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
   {
@@ -125,11 +131,13 @@ export class KnowledgeStore
 
     return this.Serial(async () => { this.owner.Assert(); this.activeOperations++; try { return await operation(await this.Snapshot()) } finally { this.activeOperations-- } })
   }
+
   /** 等待已经进入队列的事务结束；不会取消半完成提交。 */
   async Drain()
   {
     await this.queue
   }
+
   /** 只读核实原请求的已提交回执，允许查询旧实例请求；不执行提交、回滚或恢复。 */
   async CommittedReceipt(request: ChangeRequest): Promise<CommitResult | undefined>
   {
@@ -137,6 +145,7 @@ export class KnowledgeStore
 
     return this.Serial(async () => { this.owner.Assert(); return (await this.JournalStatus(request))?.result });
   }
+
   /** 同串行事务内部的只读查询；允许旧实例身份，但不执行恢复或写入。 */
   private async JournalStatus(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>
   {
@@ -214,11 +223,13 @@ export class KnowledgeStore
 
     return status;
   }
+
   /** 私有治理操作与所有知识提交共用一个队列；回调中的 apply 只解析已保存的真实意图。 */
   Governed<T>(operation: (transaction: KnowledgeGovernanceTransaction) => Promise<T>): Promise<T>
   {
     return this.Serial(async () => { this.owner.Assert(); this.activeOperations++; try { return await operation({ Snapshot: () => this.Snapshot(), Preview: request => this.Draft(request), Journal: request => this.JournalStatus(request), Apply: async intentId => { if (!this.governance) fail('GOVERNANCE_UNAVAILABLE', '治理存储尚未装配'); const request = await this.governance.Request(intentId); return this.CommitInternal(request, intentId); } }) } finally { this.activeOperations-- } });
   }
+
   /** 仅证明原请求是否有任何事务记录；已回滚/未完成也算存在，不冒称从未受理。 */
   async HasRecordedRequest(request: ChangeRequest): Promise<boolean>
   {
@@ -230,6 +241,7 @@ export class KnowledgeStore
 
     return this.Serial(async () => { this.owner.Assert(); try { await fs.lstat(path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json')); return true } catch (error: any) { if (error.code === 'ENOENT') return false; throw error } })
   }
+
   async Initialize()
   {
     const dir = path.join(this.owner.entry.path, '.cbim');
@@ -313,12 +325,14 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       await fs.rm(staging, { recursive: true, force: true })
     }
   }
+
   async Read(): Promise<Snapshot>
   {
     const files = await readKnowledge(this.owner.paths, this.owner.entry.path);
 
     return { workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, revision: revision(files), files }
   }
+
   /** 读取当前正文并校验；返回结构错误不等于工作区不可用。 */
   async Snapshot()
   {
@@ -344,6 +358,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return snapshot
   }
+
   private Serial<T>(operation: () => Promise<T>): Promise<T>
   {
     const current = this.queue.then(operation);
@@ -352,6 +367,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return current
   }
+
   private async Draft(request: ChangeRequest): Promise<Preview>
   {
     if (!plannedRequestSchema.safeParse(request).success)
@@ -414,11 +430,13 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return { request, changes, validation, affected, diff, fingerprint: hash(json(request)) };
   }
+
   /** 只生成差异和校验结果，不写正式知识；提交必须再次核对读取版本。 */
   async Preview(request: ChangeRequest)
   {
     return this.Serial(() => this.Draft(request))
   }
+
   /** 按串行队列执行版本检查和带日志的写入；同请求内容幂等，失败时只回滚仍匹配本次写入的文件。 */
   async Commit(request: ChangeRequest)
   {
@@ -426,6 +444,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return this.Serial(async () => { this.owner.Assert(request); this.activeOperations++; try { return await this.CommitInternal(request) } finally { this.activeOperations-- } })
   }
+
   /** 原缓存只提供固定计划；旧计划仅能命中成功 journal，不自动升级旧意图。 */
   async CommitPlanned(reference: KnowledgePlanRef)
   {
@@ -433,6 +452,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return this.Serial(async () => { this.owner.Assert(); const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), loaded.request.requestId + '.json'); if (await exists(file)) { const status = await this.JournalStatus(loaded.request); if (status?.state === 'committed' && status.result) return status.result; fail('RECOVERY', '原知识计划尚未核实，不允许重放') } if (!loaded.plan) fail('SOURCE_PLAN_INVALID', '旧计划缺少来源语义，请重新预览'); this.owner.Assert(loaded.request); this.activeOperations++; try { return await this.CommitInternal(loaded.request, undefined, loaded.plan) } finally { this.activeOperations-- } })
   }
+
   /** 调用方已经持有 serial；开始后 close 必须 drain，不能把 closing 当成中途取消提交。 */
   private async CommitInternal(request: ChangeRequest, intentId?: string, plan?: PlannedKnowledgeCommit)
   {
@@ -626,6 +646,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
     return journal.result!;
   }
+
   private async Write(relative: string, text: string | null)
   {
     const target = await this.owner.paths.Knowledge(this.owner.entry.path, relative);
@@ -638,6 +659,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
       await atomic(target, text)
   }
+
   private async Rollback(journal: Journal, p: string)
   {
     let blocked = false;
@@ -678,6 +700,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       this.owner.error = '恢复遇到外部修改，保留现场与事务证据，请人工合并后重新打开'
     }
   }
+
   /** 核实原 journal 后回滚获准但未完成的事务，或补来源结算；未获准 prepared 仅比对 before，冲突保留现场。 */
   async Recover()
   {
@@ -768,6 +791,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
 
       fail('SOURCE_JOURNAL_INVALID', '来源历史引用的原知识日志缺失，不能解除屏障');
   }
+
   async PlanMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>
   {
     this.owner.Assert(snapshot);

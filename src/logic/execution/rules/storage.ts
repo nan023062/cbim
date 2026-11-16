@@ -16,6 +16,7 @@ export interface ExecutionJournal
 
   Flush(): Promise<void>;
 }
+
 /** 目录参数由可信装配方生成；实现需保留重复任务拒绝和日志完整性检查。 */
 export interface RunStorage
 {

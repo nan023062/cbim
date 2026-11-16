@@ -43,6 +43,7 @@ export class QueuedDependencyAdditionService
   constructor(private readonly owner: DispatchKnowledgeWorkspace, private readonly store: DispatchStore, private readonly goals: ScopeGoalService, private readonly owners?: OwnerExecutionService)
   {
   }
+
   /** 主轮闭包提供身份和停止屏障；同命令先返回原提交回执，变参拒绝，读取/停止不自动重新加边。 */
   async Add(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
   {

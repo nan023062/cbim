@@ -41,6 +41,7 @@ export function mergeHistoryPage<T extends HistoryItem>(previous: AgentHistoryPa
   }
   return { items, nextCursor: page.nextCursor, diagnostics: [...new Set([...(append ? previous?.diagnostics ?? [] : []), ...page.diagnostics])] };
 }
+
 /** 事件协议沿用成员公开投影；旧记录缺少 root 时保持空值，不根据静态角色补造主会话身份。 */
 export function historyEventScope(run: AgentHistoryRun): MemberEventScope
 {

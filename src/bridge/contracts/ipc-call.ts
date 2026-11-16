@@ -32,6 +32,7 @@ export const ipcRequests = { ...agentHistoryRequests, ...peopleIpcRequests, ...g
 export interface IpcResponses extends AgentHistoryResponses, PeopleIpcResponses, GovernanceIpcResponses, DispatchIpcResponses, SettingsIpcResponses, LoopIpcResponses, ChatIpcResponses, ResourcesIpcResponses, WorkspaceIpcResponses, DesktopIpcResponses, AutomationActionResults
 {
 }
+
 export type IpcAction = keyof IpcResponses;
 
 export type IpcRequest<A extends IpcAction> = z.input<(typeof ipcRequests)[A]>;
@@ -50,10 +51,12 @@ export interface IpcCaller
 {
   <C extends IpcCall>(...request: C & ExactIpcCall<C>): Promise<IpcResponse<C[0]>>
 }
+
 export type IpcHandlers<A extends IpcAction = IpcAction> =
   {
     [K in A]: (input: IpcRequest<K>) => IpcResponse<K> | Promise<IpcResponse<K>>
   };
+
 export type DesktopIpcAction = keyof DesktopIpcResponses;
 
 export type ApplicationIpcAction = Exclude<IpcAction, DesktopIpcAction>;
@@ -63,6 +66,7 @@ export function isIpcAction(action: string): action is IpcAction
 {
   return Object.hasOwn(ipcRequests, action)
 }
+
 /** 映射类型让解析、处理和返回始终使用同一操作键，运行时输入在此之前保持 unknown。 */
 const requestParsers:
   {
@@ -73,6 +77,7 @@ export function parseIpcRequest<A extends IpcAction>(action: A, input: unknown):
 {
   return requestParsers[action].parse(input)
 }
+
 /** 保留既有错误信封；失败不等于未执行，不由桥自动重试。 */
 export type IpcResult<A extends IpcAction> =
   {
@@ -90,14 +95,17 @@ export type IpcResult<A extends IpcAction> =
       message: string
     }
   };
+
 /** 原生桌面成功值同样按操作核对，不能由调用方任意指定响应。 */
 export function ipcSuccess<A extends IpcAction>(_action: A, value: NoInfer<IpcResponse<A>>): { ok: true; value: IpcResponse<A> }
 {
   return { ok: true, value }
 }
+
 /** 动态表单先按已知操作解析，再形成相关元组；仅在这个已验证的配对处恢复 TS 无法表达的相关性。 */
 export function checkedIpcCall<A extends IpcAction>(action: A, input: unknown): IpcCall<A>
 {
   return [action, parseIpcRequest(action, input)] as IpcCall<A>
 }
+
 export type IpcCallerFor<A extends IpcAction> = <C extends IpcCall<A>>(...request: C & ExactIpcCall<C>) => Promise<IpcResponse<C[0]>>;

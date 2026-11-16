@@ -83,6 +83,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
       setBusy(false)
     }
   }
+
   const descriptor = selected !== 'all' ? engineDescriptor(selected) : undefined,
 
     item = state?.items.find(item => item.kind === selected);

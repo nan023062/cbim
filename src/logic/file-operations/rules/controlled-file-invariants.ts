@@ -22,6 +22,7 @@ function check(value: unknown, message: string): asserts value
 
     fail('CONTROLLED_FILE_AUDIT', message)
 }
+
 const sameFact = (a: { byteLength: number; sha256: string }, b: { byteLength: number; sha256: string }) => a.byteLength === b.byteLength && a.sha256 === b.sha256;
 
 const workspace = (i: ControlledFileIntent) => i.kind === 'member_write' ? i.origin.binding.workspaceId : i.request.workspaceId;
@@ -71,6 +72,7 @@ function liveMember(state: DispatchState, intent: ControlledWritePrepared): void
 
   check(session?.workspaceId === b.workspaceId && session.rootSessionId === b.rootSessionId && session.agentInstanceId === b.agentInstanceId && session.agentId === b.agentId && session.teamId === b.teamId && (session.purpose ?? 'task') === 'task' && b.agentId !== 'cbim:main', '业务写通道或主成员边界不符');
 }
+
 function validateWrite(state: DispatchState, i: ControlledWritePrepared): void
 {
   check(i.operationId === controlledFileOperationId(i.origin.binding, i.origin.toolCallId) && i.requestFingerprint === controlledFileRequestFingerprint(i.origin, i.request), '原操作身份或请求指纹不一致');
@@ -85,6 +87,7 @@ function validateWrite(state: DispatchState, i: ControlledWritePrepared): void
 
   liveMember(state, i);
 }
+
 function validateCompensation(state: DispatchState, i: FileCompensationPrepared): void
 {
   const original = controlledFileOperation(state, i.original.operationId);
@@ -117,6 +120,7 @@ function validateCompensation(state: DispatchState, i: FileCompensationPrepared)
 
   check(i.previewBasis === i.request.expectedBasis && i.previewBasis === fileCompensationBasis({ original, compensationRevision: i.request.expectedCompensationRevision, fileIdentity: i.fileIdentity, observedBefore: i.observedBefore }), '补偿预览依据与原事实不一致');
 }
+
 function capacity(changes: ControlledFileChange[], intent: ControlledFileIntent): void
 {
   const prepared = changes.filter(c => c.phase === 'prepared');
@@ -132,6 +136,7 @@ function capacity(changes: ControlledFileChange[], intent: ControlledFileIntent)
 
     fail('CONTROLLED_FILE_LIMIT', '受控操作附录无法同时容纳新意图及终态预留空间');
 }
+
 /** 无记录保留旧缺省；新阶段仅接受精确的一条附录和其原回执，禁止夹带任何领域变更。 */
 export function projectControlledFileMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand): Pick<DispatchState, 'controlledFileChanges'>
 {

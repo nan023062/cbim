@@ -67,6 +67,7 @@ export interface ScopeSnapshot
 
   scopes: ScopeSummary[]
 }
+
 /** 同一持久化事务中此主会话的全部周期变化构成一个批次；其他会话不会推进此序号。 */
 export interface ScopeEventBatch
 {
@@ -78,6 +79,7 @@ export interface ScopeEventBatch
 
   scopes: ScopeSummary[]
 }
+
 export type ScopeResetReason = 'initial' | 'stream_changed' | 'cursor_ahead' | 'history_compacted';
 
 export type ScopeDelta = |
@@ -106,6 +108,7 @@ export type ScopeDelta = |
 
   cursor: ScopeCursor
 };
+
 export type ScopeDetailRead = |
 {
   mode: 'updated';
@@ -122,6 +125,7 @@ export type ScopeDetailRead = |
 {
   mode: 'empty'
 };
+
 /** 两条增量和详情来自同一已提交屏障；分页增量可尚未追到头部，详情始终反映该屏障的最新状态。 */
 export interface DispatchSessionRead
 {
@@ -134,6 +138,7 @@ export interface DispatchSessionRead
   /** 本办公室已可靠登记的逻辑对话，无正文、原生路径或其它办公室身份；旧响应可缺省。 */
   teamSessions?: TeamSession[];
 }
+
 /** 摘要增量与重复批次证明最多保留 256 批；更旧游标读取当前快照，原事务日志仍完整保留。 */
 export const scopeViewHistoryLimit = 256;
 
@@ -143,6 +148,7 @@ function valid(condition: unknown, message: string): asserts condition
 
     fail('SCOPE_VIEW_INVALID', message)
 }
+
 const preview = (value: string) => value.replace(/\s+/g, ' ').trim().slice(0, 240);
 
 /** 独立序列由原图流身份派生；重启重放得到相同 streamId，不写入第二份状态。 */
@@ -150,6 +156,7 @@ export function emptyScopeSnapshot(identity: GraphIdentity, graphStreamId: strin
 {
   return { identity: { ...identity }, cursor: { ...identity, kind: 'scopes', streamId: 'scopes:' + graphStreamId, seq: 0 }, scopes: [] };
 }
+
 /** 白名单摘要不含完整输入、附件、证据正文、运行私有路径或邮箱；文本预览最多 240 字符。 */
 export function summarizeScope(scope: DispatchScope, streamId: string, seq: number): ScopeSummary
 {
@@ -173,6 +180,7 @@ export function summarizeScope(scope: DispatchScope, streamId: string, seq: numb
     ...(goal?.blocked ? { blockedReason: preview(goal.blocked.reason) } : {}), ...(scope.budget ? { budget: { policy: structuredClone(scope.budget.policy), ...(scope.budget.blocked ? { blocked: structuredClone(scope.budget.blocked) } : {}) } } : {}), ...(scope.humanDecisions ? { humanDecisions: { revision: scope.humanDecisions.revision, count: scope.humanDecisions.records.length, lastDecisionAt: scope.humanDecisions.records.at(-1)!.recordedAt } } : {}), ...(scope.wait ? { wait: { ...(scope.wait.interruptionId ? { interruptionId: scope.wait.interruptionId } : {}), waitId: scope.wait.waitId, reason: preview(scope.wait.reason), goalRevision: scope.wait.goalRevision, createdAt: scope.wait.createdAt } } : {}), stamp: { scopeId: scope.scopeId, streamId, seq }
   };
 }
+
 function validateSummaries(scopes: ScopeSummary[], cursor: Pick<ScopeCursor, 'streamId' | 'seq'>, batch = false)
 {
   valid(Array.isArray(scopes) && new Set(scopes.map(item => item?.scopeId)).size === scopes.length, '周期摘要标识重复或集合无效');
@@ -192,6 +200,7 @@ function validateSummaries(scopes: ScopeSummary[], cursor: Pick<ScopeCursor, 'st
     valid(!item.budget?.blocked || item.budget.policy.enabled && item.budget.blocked.policyRevision === item.budget.policy.revision, '预算拒绝与冻结策略不一致');
   }
 }
+
 /** 界面恢复时校验身份和摘要，而非根据消息正文重建目标。 */
 export function validateScopeSnapshot(snapshot: ScopeSnapshot): void
 {
@@ -201,6 +210,7 @@ export function validateScopeSnapshot(snapshot: ScopeSnapshot): void
 
   validateSummaries(snapshot.scopes, snapshot.cursor);
 }
+
 const seenBatches = new WeakMap<ScopeSnapshot, Map<number, ScopeEventBatch>>();
 
 /** 原子归并完整批次；未变摘要保持引用，只有已验证的同序号重放才能直接复用原快照。 */
@@ -250,6 +260,7 @@ export function applyScopeBatch(previous: ScopeSnapshot, event: ScopeEventBatch)
 
   return next;
 }
+
 /** 完整批次分页；没有变化时只返回游标，缺/未来/换流游标返回当前摘要快照。 */
 export function readScopeDelta(snapshot: ScopeSnapshot, batches: readonly ScopeEventBatch[], cursor?: ScopeCursor, limit = 100): ScopeDelta
 {
@@ -305,6 +316,7 @@ export function readScopeDelta(snapshot: ScopeSnapshot, batches: readonly ScopeE
 
   return { mode: 'delta', from: cursor, cursor: { ...snapshot.cursor, seq: last }, batches: selected, hasMore: last < snapshot.cursor.seq };
 }
+
 /**
  * 只读当前会话选中周期；缺省选 active/waiting 或最后创建的周期。stamp 相同则省略大正文。
  * 显式选择不存在/其他会话的周期拒绝，不静默跳转；旧 goal 继续缺省。

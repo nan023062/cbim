@@ -66,6 +66,7 @@ export interface EffectObservationPorts extends EffectSourcePorts
 
   AssertCurrent?(): void;
 }
+
 // 只识别原授权中无歧义的单文件形状，不执行 Pi 的字符串/单对象参数纠正，也不合并新旧字段。
 // edits 的成功匹配、顺序和重叠属于原工具执行结果；这里仅据原 path 观察今天的字节。
 const editPair = z.object({ oldText: z.string(), newText: z.string() }).strict();
@@ -83,6 +84,7 @@ const nativeInputs = {
 
   ]),
 };
+
 type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 
 function check(value: unknown, code: string, message: string): asserts value
@@ -91,11 +93,13 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 export class EffectObservationService
 {
   constructor(private readonly owner: Owner, private readonly store: DispatchStore, private readonly commands: CommandVerificationService, private readonly ports?: EffectObservationPorts)
   {
   }
+
   private Parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   {
     const value = schema.safeParse(raw);
@@ -106,6 +110,7 @@ export class EffectObservationService
 
     return value.data
   }
+
   /** 公共读取也有总字节界限；无法交付不改原存储，不把输出错误解释为未提交。 */
   private Output<T>(value: T): T
   {
@@ -113,6 +118,7 @@ export class EffectObservationService
 
     return value
   }
+
   private Alive(workspaceId: string, signal?: AbortSignal)
   {
     signal?.throwIfAborted();
@@ -123,16 +129,19 @@ export class EffectObservationService
 
     check(workspaceId === this.owner.entry.id, 'EFFECT_IDENTITY', '请求不属于当前工作区')
   }
+
   /** 仅读当前原事实；所有路径只由已经核对的 proposed/allowed 推导，不能接受客户端路径。 */
   async Observe(raw: unknown, signal?: AbortSignal): Promise<EffectObservationReport>
   {
     return (await this.Prepare(this.Parse(effectObservationInputSchema, raw), signal)).report
   }
+
   /** 仅已核实身份的主运行内部核证使用；不暴露为 IPC，防止公开观察借用正在写入的运行。 */
   async ObserveFromMain(raw: EffectObservationInput, signal?: AbortSignal): Promise<EffectObservationReport>
   {
     return (await this.Prepare(this.Parse(effectObservationInputSchema, raw), signal, true)).report
   }
+
   private async Prepare(input: EffectObservationInput, signal?: AbortSignal, withinMainRun = false)
   {
     this.Alive(input.workspaceId, signal);
@@ -419,6 +428,7 @@ export class EffectObservationService
 
     return { report: checked, stateStamp: effectStateStamp(before, input) };
   }
+
   /** 可信端口同样核身份与输出；异常只给出不可核实诊断，不产生未写入证明。 */
   private async Knowledge(reference: KnowledgeWriteReference, signal?: AbortSignal): Promise<KnowledgeTransactionObservation>
   {
@@ -447,6 +457,7 @@ export class EffectObservationService
       return knowledgeTransactionObservationSchema.parse({ identity, state: 'unverifiable', reason: 'query_unavailable' })
     }
   }
+
   /** 原身份和解析参数摘要均须匹配；端口错误保持不可核实，不能洗成未保存。 */
   private async Persistent(reference: PersistentWriteReference, signal?: AbortSignal): Promise<PersistentWriteObservation>
   {
@@ -473,6 +484,7 @@ export class EffectObservationService
       return persistentWriteObservationSchema.parse({ identity, sourceHash, state: 'unverifiable', reason: 'query_unavailable' })
     }
   }
+
   private Baselines(source: EffectSourceRead, report: EffectObservationReport)
   {
     if (!source.run || !source.summary || !this.ports)
@@ -513,6 +525,7 @@ export class EffectObservationService
         call.baselineChecks = checks;
     }
   }
+
   /** 同 root 版本与所选来源摘要分开；查询不初始化另一个存储，也不重读文件。 */
   async List(raw: unknown)
   {
@@ -528,6 +541,7 @@ export class EffectObservationService
 
     return result
   }
+
   /** 已保存回执优先，后来的文件/知识变化不能让它重新保存或变成未受理。 */
   async Receipt(raw: EffectDispositionLookup): Promise<EffectDispositionReceipt | undefined>
   {
@@ -547,6 +561,7 @@ export class EffectObservationService
 
     return this.Output(receipt)
   }
+
   /** actor 只能来自本机入口；任何取证和停止失败都不回滚已保存附录。 */
   private async RecordReady(raw: EffectDispositionInput, actor: { kind: 'local_desktop'; interaction: 'explicit_submit' }, signal?: AbortSignal)
   {
@@ -586,6 +601,7 @@ export class EffectObservationService
 
     return { input, command, selection, prepared, record };
   }
+
   /** 只有进入事务前的确定拒绝使用 PREACCEPT；Store/CAS/落盘及回包异常保持未知，由原命令查询收口。 */
   async Record(raw: EffectDispositionInput, actor: { kind: 'local_desktop'; interaction: 'explicit_submit' }, signal?: AbortSignal): Promise<EffectDispositionReceipt>
   {
@@ -618,6 +634,7 @@ export class EffectObservationService
 
     return this.Output(effectDispositionReceiptSchema.parse(receipt));
   }
+
   /** 只从已保存意图派生后续关系；新修复完成不改写原调用状态或原处置。 */
   async Relations(raw: EffectRelationsInput)
   {

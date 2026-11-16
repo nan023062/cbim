@@ -119,6 +119,7 @@ export interface DispatchIpcResponses
   {
     requested: boolean
   };
+
   'dispatch.messages': DispatchMessage[];
 
   'dispatch.acknowledge':
@@ -127,6 +128,7 @@ export interface DispatchIpcResponses
 
     delivery: 'processed'
   };
+
   'dispatch.approvals': ChatApproval[];
 
   'dispatch.approve': void;

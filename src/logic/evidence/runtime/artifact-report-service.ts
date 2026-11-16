@@ -42,11 +42,13 @@ export interface ArtifactReportPorts
 
   AcquireRead(): () => void;
 }
+
 export class ArtifactReportService
 {
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, private readonly store: Pick<DispatchStore, 'Read'>, private readonly ports: ArtifactReportPorts)
   {
   }
+
   /** baselineId 缺省只列举日志引用；存在时才读所选文件，失败保留未知而不改变任务或日志。 */
   async Read(raw: unknown): Promise<ArtifactReport>
   {
@@ -307,6 +309,7 @@ export class ArtifactReportService
 
     return artifactReportSchema.parse(report);
   }
+
   private Inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
   {
     if ('protocol' in run)
@@ -319,6 +322,7 @@ export class ArtifactReportService
     }
     return this.ports.Inspect(run);
   }
+
   private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
@@ -337,6 +341,7 @@ export class ArtifactReportService
 
     return { graph, task, run, scope, recursive };
   }
+
   private Stamp(facts: ReturnType<ArtifactReportService['Facts']>)
   {
     return hash(json({ graph: facts.graph.cursor, task: facts.task, run: facts.run, scope: facts.scope }))

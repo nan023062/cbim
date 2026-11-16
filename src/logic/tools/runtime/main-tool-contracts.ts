@@ -27,6 +27,7 @@ export function mainToolCommandId(name: MainToolName, binding: MainToolOutputBin
 
   return prefix + hash(json({ identity: { workspaceId: binding.workspaceId, rootSessionId: binding.rootSessionId }, runId: binding.runId, toolCallId }));
 }
+
 /** 元数据仅描述当前主工具，不扩充知识目录或赋予成员调度权限。 */
 export function mainToolContract(name: MainToolName)
 {
@@ -42,6 +43,7 @@ export function mainToolContract(name: MainToolName)
 
   return { version: name === 'cbim_goal_plan' || name === 'cbim_dispatch_task' ? 2 : 1, outputSchema: zodToJsonSchema(mainToolOutputSchemas[name]) as Record<string, unknown>, cancellation, recovery };
 }
+
 /** 领域方法已执行后只校验这一次原 wire；不得对 Schema 解析结果重新编码或重新提交。 */
 export function checkedMainToolResult(name: MainToolName, value: unknown, binding: MainToolOutputBinding, input: unknown, toolCallId: string)
 {

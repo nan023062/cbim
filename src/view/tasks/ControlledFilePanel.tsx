@@ -26,6 +26,7 @@ function CompensationReceipt({ receipt }: { receipt: FileCompensationReceipt })
   {receipt.issue && <p role="alert">{receipt.issue.message}（{receipt.issue.code}）</p>}<code>{receipt.commandId}</code><p>原工具与原写入记录保留；恢复文件内容不表示任务已验收。</p>
 </div>
 }
+
 /** 仅展示已核实工具名的入口；挂载不会查询原账本或读取当前文件。 */
 export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }: { identity: ControlledFileReportInput; instanceId?: string; anchor: string; toolStatus: keyof typeof toolLabels })
 {
@@ -77,6 +78,7 @@ export function ControlledFilePanel({ identity, instanceId, anchor, toolStatus }
     {ledger?.state === 'recorded' && ledger.compensations.some(v => !known.has(v.commandId)) && <div className="controlled-actions" data-testid="file-compensation-server-history"><h4>已保存补偿历史</h4>{ledger.compensations.filter(v => !known.has(v.commandId)).map(item => <button key={item.commandId} data-command-id={item.commandId} disabled={controller.IsPending(item.commandId)} onClick={() => void controller.Query(identity, item.commandId)}>{phaseLabels[item.phase]} · {new Date(item.preparedAt).toLocaleString()}</button>)}</div>}
   </section>;
 }
+
 /** 原工具选择来自已加载的真实执行报告，旧 native 操作不会因此获得补偿入口。 */
 export function MemberControlledFiles({ report, instanceId, anchor }: { report: ExecutionReport; instanceId?: string; anchor: string })
 {

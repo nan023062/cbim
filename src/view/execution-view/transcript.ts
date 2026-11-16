@@ -29,6 +29,7 @@ export interface ChatItem
     source: string
   }[]
 }
+
 /** 用户轮次显示用户输入，可信回传轮次仅显示系统来源提示；结果正文不伪造用户消息。 */
 export function transcript(run: RunSummary): ChatItem[]
 {
@@ -171,6 +172,7 @@ export function transcript(run: RunSummary): ChatItem[]
 
   return items.filter(x => x.text);
 }
+
 /** 主对话结束兜底：只读当前轮交付声明或缺失事实，旧轮继承的 taskProgress 不充当本轮总结。 */
 export function completionFeedback(run: RunSummary, items: readonly ChatItem[]): string | undefined
 {

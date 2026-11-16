@@ -19,6 +19,7 @@ function canonical(value: unknown): unknown
 
   return value;
 }
+
 export class RepeatedToolFailures
 {
   private pending: Array<
@@ -46,10 +47,12 @@ export class RepeatedToolFailures
 
       inputHash: string
     };
+
   Proposed(call: ToolCall)
   {
     this.pending.push({ id: call.id, name: call.name, key: hash(JSON.stringify({ name: call.name, input: canonical(call.input) })) })
   }
+
   Settled(id: string, failed: boolean)
   {
     const item = this.pending.find(call => call.id === id);

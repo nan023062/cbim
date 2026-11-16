@@ -22,6 +22,7 @@ export class BusinessWorkspace
   constructor(private snapshot: Snapshot)
   {
   }
+
   async Modules(query = '')
   {
     const s = this.snapshot,
@@ -30,6 +31,7 @@ export class BusinessWorkspace
 
     return { ...context(s), workspaceRootId: '.cbim/workspace', projectRoot: { ...projectRootModule, children: [...s.validation!.tree.roots] }, modules: index.modules.filter((m: any) => !query || `${m.id} ${m.summary}`.toLowerCase().includes(query.toLowerCase())), roots: s.validation!.tree.roots, indexSource: 'current-definitions', persistedIndexMatches: s.files.find(f => f.path === '.cbim/workspace/registry.json')?.text === s.validation!.indexes['.cbim/workspace/registry.json'] };
   }
+
   async Module(id: string)
   {
     const s = this.snapshot;

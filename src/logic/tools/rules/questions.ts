@@ -18,6 +18,7 @@ export interface PendingQuestion extends QuestionInput
 
   taskId: string
 }
+
 /** option 为 null 才是其它答案；索引只引用冻结选项，不接受客户端自报的题目或答案标签。 */
 export const questionAnswersInputSchema = z.array(z.object({ option: z.number().int().min(0).max(5).nullable(), other: z.string().trim().max(4000) }).strict()).min(1).max(3);
 

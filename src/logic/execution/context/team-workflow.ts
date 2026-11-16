@@ -40,6 +40,7 @@ export function assertLegacyWorkflowCompatible(task: TaskSpec): void
 
     fail('WORKFLOW_MEMBER_REQUIRED', '声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务及其续聊入口不提供该门禁');
 }
+
 /** 只读准备；所有正文必须来自同一知识版本，缺失和继承冲突拒绝启动。 */
 export async function prepareTeamTask(workspace: KnowledgeWorkspace, input: TeamTaskInput): Promise<TaskSpec>
 {
@@ -89,6 +90,7 @@ export async function prepareTeamTask(workspace: KnowledgeWorkspace, input: Team
     workflowContext: { revision: module.revision, workflowId: workflow.id, module, agent, workflow, standards }
   };
 }
+
 /** 正文是业务上下文，不授予工具权限；实际工具由本次运行注册并受统一策略约束。 */
 export const loopInstructions = `你是 CBIM Team 中有自身会话、状态和模型思考能力的执行 Agent。
 主 Agent 可直接实现与验证未配置自定义 Agent 的模块，背后由任务调度引擎管理自定义岗位派工，也可经受控知识服务治理团队与业务架构。你本轮是独立自定义执行角色，只完成派给自己的任务，不再次派工。

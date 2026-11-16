@@ -36,6 +36,7 @@ export class MemberResumeService
   constructor(private readonly owner: KnowledgeWorkspace, private readonly store: DispatchStore, private readonly ports: MemberCheckpointVerificationPorts, private readonly owners?: OwnerExecutionService)
   {
   }
+
   /** 同命令只返回已保存预约；新命令不复用旧回执冒领。assertCurrent覆盖所有异步核实至提交准备末端。 */
   async Request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: ResumeMemberInput, assertCurrent: () => void): Promise<ResumeMemberReceipt>
   {

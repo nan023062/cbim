@@ -44,6 +44,7 @@ export function sameAutomaticExecutionForModules(a: AutomaticExecutionBinding | 
 
     a.model.profileId === b.model.profileId && a.model.modelId === b.model.modelId && a.model.configurationHash === b.model.configurationHash && b.moduleIds.length === ids.length && ids.every(id => a.moduleIds.includes(id) && b.moduleIds.includes(id));
 }
+
 /** 历史的结构归属检查不读当前状态；不意味着现在仍允许领取。 */
 export function automaticExecutionBindingMatches(binding: AutomaticExecutionBinding, workspaceId: string, scopeId: string | undefined, agentId: string, ids: readonly string[]): boolean
 {

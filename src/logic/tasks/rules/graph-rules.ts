@@ -152,11 +152,13 @@ function shape(schema: z.ZodTypeAny, value: unknown)
 
     fail('GRAPH_INPUT_INVALID', `任务图字段无效：${result.error.issues[0]?.path.join('.') ?? ''}`)
 }
+
 /** 严格校验公开身份，不允许空串、未知字段或隐式工作区切换。 */
 export function validateGraphIdentity(value: GraphIdentity)
 {
   shape(identity, value)
 }
+
 /** 在批次进入持久化或 reducer 前检查协议版本和数据形状。 */
 export function validateGraphBatch(value: GraphEventBatch)
 {
@@ -166,6 +168,7 @@ export function validateGraphBatch(value: GraphEventBatch)
 
   shape(batch, value);
 }
+
 /** delta 的身份必须先匹配，不能借 reset 切换会话。 */
 export function assertGraphIdentity(expected: GraphIdentity, actual: GraphIdentity)
 {
@@ -177,32 +180,38 @@ export function assertGraphIdentity(expected: GraphIdentity, actual: GraphIdenti
 
     fail('GRAPH_IDENTITY_MISMATCH', '任务图工作区或主会话身份不匹配');
 }
+
 /** 校验外部游标形状；seq=0 仅表示当前流的空前缀。 */
 export function validateGraphCursor(value: unknown)
 {
   shape(cursor, value)
 }
+
 function unique(values: string[], label: string)
 {
   if (new Set(values).size !== values.length)
 
     fail('GRAPH_INPUT_INVALID', `${label}出现重复身份`)
 }
+
 function sameMember(left: AgentRef, right: AgentRef)
 {
   return left.agentId === right.agentId && left.agentInstanceId === right.agentInstanceId && left.agentSessionId === right.agentSessionId
 }
+
 function acyclic(nodes: string[], edges: [string, string][], code: string)
 {
   if (!GraphUtils.IsDirectedAcyclic(nodes, edges))
 
     fail(code, code === 'GRAPH_WAIT_CYCLE' ? '任务等待关系形成互等' : '任务派发与依赖形成循环');
 }
+
 /** 仅当前计划的真实候选可满足前置；有固定 resultId 时不能换用其它结果。 */
 export function usableResult(task: TaskNode, planRevision: number, resultId?: string)
 {
   return task.status === 'result_ready' && task.result?.planRevision === planRevision && task.planRevision === planRevision && (!resultId || task.result.resultId === resultId)
 }
+
 /** 单项查询与完整图共用节点自身可核实的不变量；跨节点、图流及边关系仍由 validateGraph 核验。 */
 export function validateTaskNode(t: TaskNode): void
 {
@@ -361,6 +370,7 @@ export function validateTaskNode(t: TaskNode): void
       fail('GRAPH_INPUT_INVALID', '修订审计与原增删请求不一致');
   }
 }
+
 /**
  * 验证完整的已提交投影；允许端点在同批创建后一起验证，不读取文件或修改传入对象。
  * 这里只检验结构事实，不实现未来结果提交、取消或执行状态机。

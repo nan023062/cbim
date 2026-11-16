@@ -11,6 +11,7 @@ export class GraphTopologyError extends Error
     this.name = 'GraphTopologyError';
   }
 }
+
 /** 按输入次序遍历，返回从 0 开始的最长前驱层级；平行边逐条计入，自环视为环，不修改输入。 */
 export function rankDirectedGraph(ids: readonly string[], edges: readonly (readonly [string, string])[]): Map<string, number>
 {

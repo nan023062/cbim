@@ -19,6 +19,7 @@ export interface MemberEventCursor
 
   seq: number
 }
+
 const runId = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
 
 /** 按事件条数分页，默认 200、最大 500；调用入口须同时核对 cursor.runId 与请求运行一致。 */
@@ -43,6 +44,7 @@ export interface MemberRunView
 
   taskProgress?: TaskProgress;
 }
+
 /**
  * reset 从空前缀重建，delta 续读，事件的受限字段经投影替换而不跳号；hasMore 时继续分页。
  * noop 仍包含运行快照：最后一个日志事件之后，调度终态事务可能才完成。

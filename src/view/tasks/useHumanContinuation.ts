@@ -32,6 +32,7 @@ export function currentHumanDecisions(state: ScopeGoalState): HumanDecisionRecor
 
   return [...latest.values()].filter(record => record.proof.source.waitId === scope.wait!.waitId && scope.goal?.plan?.criteria.some(criterion => criterion.kind === 'human' && criterion.id === record.criterionId)).sort((a, b) => a.criterionId.localeCompare(b.criterionId));
 }
+
 /** 只构造已同步的写入身份；没有真实决定、版本未追齐或历史选择时不能启动。 */
 export function humanContinuationTarget(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState): HumanContinuationTarget | undefined
 {
@@ -49,6 +50,7 @@ export function humanContinuationTarget(workspaceId: string, rootSessionId: stri
 
   return { ...base, expectedDecisionRevision: revision, decisionIds: records.map(record => record.decisionId) };
 }
+
 /** 当前等待只展示同 wait 的意图；没有当前意见不等于可以拿上一等待的已受理卡填充。 */
 export function humanContinuationDraftForView(state: ScopeGoalState, records: readonly HumanContinuationDraft[], target?: HumanContinuationTarget): HumanContinuationDraft | undefined
 {
@@ -68,6 +70,7 @@ export function humanContinuationDraftForView(state: ScopeGoalState, records: re
 
   return [...records].reverse().find(item => item.scopeId === state.selectedScopeId);
 }
+
 export interface HumanContinuationView
 {
   scopeId?: string;
@@ -96,6 +99,7 @@ export interface HumanContinuationView
 
   retry: () => Promise<void>;
 }
+
 /** 使用输入区当前真实模型；只读核实周期仍强制 read，未知/已受理请求保持旧配置。 */
 export function useHumanContinuation(workspaceId: string, rootSessionId: string | undefined, state: ScopeGoalState, model: ContinuationModel | undefined, refresh: () => void): HumanContinuationView
 {

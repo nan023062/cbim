@@ -194,6 +194,7 @@ export interface WorkspaceLoopOptions
   /** 由主进程解析的 LLM 运行配置，不接受模型工具参数直接提供密钥。 */
   llm?: ResolvedEngineModel;
 }
+
 /** 装配方注入的运行保障；无默认放行策略，缺少实现不能启动执行。 */
 export interface ExecutionServices
 {
@@ -255,6 +256,7 @@ export interface ExecutionServices
 
     workflowContracts?: WorkflowContractBinding[]
   };
+
   /** 仅成员装配提供文件读取与当前知识复核；不存在时模型无法发现或调用采集工具。 */
   artifacts?: ArtifactCapturePort;
 
@@ -297,6 +299,7 @@ export interface ExecutionServices
   /** 原生工具仍须通过平台边界；两类写入共用运行授权，知识另核验 Schema、实例与版本。 */
   AuthorizeNative(call: ToolCall): Promise<ToolDecision>;
 }
+
 /** 新旧执行装配共享返回协议；独立宿主缺少 Agent 调度器时保持旧生命周期。 */
 export interface WorkspaceLoop
 {
@@ -308,6 +311,7 @@ export interface WorkspaceLoop
 
     path: string
   };
+
   agentHome: string;
 
   agent?: Agent;
@@ -318,6 +322,7 @@ export interface WorkspaceLoop
 
   NewTask(goal: string, acceptance?: string[]): TaskSpec;
 }
+
 /** 必须由工作区所有者装配；直接接入内部知识服务，保留权限与版本检查。 */
 export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspace, options: WorkspaceLoopOptions, services: ExecutionServices): Promise<WorkspaceLoop>
 {
@@ -571,6 +576,7 @@ export async function createWorkspaceLoop(paths: Paths, owner: KnowledgeWorkspac
 
     return native;
   };
+
   const runtime = new LoopRuntime({
     AgentTools: services.AgentTools,
 

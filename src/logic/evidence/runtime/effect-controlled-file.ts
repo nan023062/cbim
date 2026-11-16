@@ -25,6 +25,7 @@ export interface ControlledEffectReference
 
   input: ControlledFileWriteInput
 }
+
 /** 只读取原报告，返回无时钟的 ledger；停止由调用方 alive 在每次 await 前后复核并向外传播。 */
 export async function observeControlledEffect(reference: ControlledEffectReference, read: (input: ControlledFileReportInput, signal?: AbortSignal) => Promise<ControlledFileReport>, alive: () => void, signal?: AbortSignal): Promise<ControlledFileReport['ledger']>
 {

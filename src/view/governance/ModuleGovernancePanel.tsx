@@ -46,6 +46,7 @@ interface Props
 
   OnApplied?(): Promise<void>
 }
+
 /** 打开时固定工作区实例和模块；查看历史不启动实施，卸载使所有迟到结果失效。 */
 export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, OnApplied: onApplied }: Props)
 {
@@ -130,6 +131,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
     }
     return result;
   }
+
   async function exclusive(action: () => Promise<void>)
   {
     // 新操作不能沿用上次成功提示；回复丢失时，只表达当前原命令仍待核实。
@@ -164,6 +166,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
         setBusy(false)
     }
   }
+
   useEffect(() => { alive.current = true; try { setPending(store.Read(target.workspaceId)) } catch (cause) { setStorageError(message(cause)) } void exclusive(async () => { await load() }); return () => { alive.current = false; sequence.current++ }; }, []);
 
   /** 只对完整原回执解除本地待确认；pending 实施仍需继续查原 journal，不新建命令。 */
@@ -236,6 +239,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
       await load(next);
   }
+
   async function submit(action: GovernancePending['action'], fields: Record<string, unknown>)
   {
     if (blocked)
@@ -286,6 +290,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
       await accept(result, original);
     });
   }
+
   async function inspectPending()
   {
     if (!pending)
@@ -296,6 +301,7 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
     await exclusive(async () => { const result = await window.cbim.call('governance.receipt', { workspaceId: original.workspaceId, commandId: original.commandId }); if (result) await accept(result, original); else setNotice('尚未查到原命令回执，不能推断未受理。原记录继续保留。') })
   }
+
   async function releaseUnaccepted()
   {
     if (!pending)
@@ -306,14 +312,17 @@ export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, On
 
     await exclusive(async () => { checkedGovernanceUnaccepted(await window.cbim.call('governance.unaccepted', { workspaceId: original.workspaceId, instanceId: original.instanceId, commandId: original.commandId, action: original.action }), original); if (!alive.current) return; store.Remove(original); setPending(undefined); setNotice('已核实原实例退役且命令未受理，待确认记录已解除。'); await load() })
   }
+
   async function selectProposal(proposalId: string)
   {
     await exclusive(async () => { await load({ proposalId }) })
   }
+
   async function inspectApplication(commandId: string)
   {
     await exclusive(async () => { const result = moduleGovernanceReceiptSchema.parse(await window.cbim.call('governance.receipt', { workspaceId: target.workspaceId, commandId })); if (result.commandId !== commandId || result.identity.workspaceId !== target.workspaceId || result.action !== 'apply' || result.record.proposalId !== proposal?.proposalId) throw Error('历史实施回执与选定提案不一致'); if (alive.current) setReceipt(result) })
   }
+
   return <ModalFrame label="模块知识治理" onRequestClose={() => { if (!busy) onClose() }}><section className="modal module-governance" data-testid="module-governance-panel">
     <header><div><small>静态业务架构 · 模块知识</small><h2>知识治理</h2><code>{moduleId}</code></div><button disabled={busy} onClick={onClose}><Icon name="close" size={16} />关闭</button></header>
     <p>登记保护范围后，正文修改需经过提案、人工决定和单独实施。这里只验证知识变更；不执行项目业务，也不代替架构语义验收。</p>

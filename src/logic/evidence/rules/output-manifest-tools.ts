@@ -29,6 +29,7 @@ export function outputManifestTool(name: string, input: unknown)
 
   return { args: (name === outputManifestToolName ? outputManifestInputSchema : inspectInput).parse(input), effects: ['maintenance'] as const, native: false, contractVersion: 1 };
 }
+
 type Binding = OutputManifestStaged['binding'];
 
 export class OutputManifestTools
@@ -39,6 +40,7 @@ export class OutputManifestTools
 
     this.scopes = structuredClone(scopes);
   }
+
   async List()
   {
     return [
@@ -49,6 +51,7 @@ export class OutputManifestTools
 
     ].map(value => ({ name: value.name, description: value.description, version: 1, effects: ['maintenance'] as const, inputSchema: zodToJsonSchema(value.input) as Record<string, unknown>, outputSchema: zodToJsonSchema(value.output) as Record<string, unknown>, cancellation: { mode: 'preflight_only' as const, description: '停止取消尚在进行的读取；已保存的原事件不回滚。' }, recovery: value.recovery }))
   }
+
   /** 只编码一次实际返回值；身份、范围、进度与原本轮端口分别核对，不能接受端口换绑。 */
   async Call(name: string, raw: unknown, toolCallId?: string)
   {

@@ -31,13 +31,44 @@ test('普通代码行间空一行，Allman 大括号前后不重复留白', () =
   expect(format('class Counter { private _count=0; Read(): number { this._count++; return this._count; } }')).toBe('class Counter\n{\n  private _count = 0;\n\n  Read(): number\n  {\n    this._count++;\n\n    return this._count;\n  }\n}\n');
 });
 
-test('空块、相邻方法、嵌套块与 else/catch/finally 的大括号承担间距', () => {
+test('相邻方法保留空行，空块、嵌套块与 else/catch/finally 内部不加空行', () => {
   const result = format('class A { First() {} Second() { try { if (true) { Run(); } else { Stop(); } } catch (error) { Fail(error); } finally { Done(); } } }');
-  expect(result).toContain('First()\n  {\n  }\n  Second()');
+  expect(result).toContain('First()\n  {\n  }\n\n  Second()');
   expect(result).toContain('}\n      else\n      {');
   expect(result).toContain('}\n    catch (error)\n    {');
   expect(result).toContain('}\n    finally\n    {');
   expect(result).not.toMatch(/\{\n\n|\n\n\s*\}/);
+});
+
+test('截图中的构造函数、Init 与私有方法之间始终空一行', () => {
+  const result = format('class EnginePackages { constructor(private readonly file: string) {} Init() { return this.file; } private Save() { Persist(); } private Trusted() { return true; } }');
+  expect(result).toContain('constructor(private readonly file: string)\n  {\n  }\n\n  Init()');
+  expect(result).toContain('return this.file;\n  }\n\n  private Save()');
+  expect(result).toContain('Persist();\n  }\n\n  private Trusted()');
+});
+
+test('方法、属性和字段的分隔空行位于下一成员注释之前', () => {
+  const result = format('class Counter { Read() { return 1; }\n/** 当前值。 */\nget value() { return 1; }\n/** 设置值。 */\nset value(next: number) { Save(next); }\n/** 初始值。 */\nprivate _initial = 0; }');
+  expect(result).toContain('}\n\n  /** 当前值。 */\n  get value()');
+  expect(result).toContain('}\n\n  /** 设置值。 */\n  set value(next: number)');
+  expect(result).toContain('}\n\n  /** 初始值。 */\n  private _initial = 0;\n}');
+});
+
+test('顶层和嵌套函数分隔，控制块与同一函数的后续语句不额外插空', () => {
+  const result = format('function First() {}\n/** 第二个函数。 */\nfunction Second() { function Nested() {} function Other() {} if (ready) { Run(); } return 1; }\nclass A {}\ninterface Port { Read(): void; Save(): void; }');
+  expect(result).toContain('}\n\n/** 第二个函数。 */\nfunction Second()');
+  expect(result).toContain('Nested()\n  {\n  }\n\n  function Other()');
+  expect(result).toContain('Run();\n  }\n  return 1;');
+  expect(result).toContain('}\n\nclass A');
+  expect(result).toContain('}\n\ninterface Port');
+  expect(result).toContain('Read(): void;\n\n  Save(): void;');
+});
+
+test('对象方法也按成员分隔，单行箭头与签名内联类型仍遵守原有例外', () => {
+  const result = format('const service = { First() {}, Second() {} };\nconst run = () => { function Nested() {} function Other() {} return { a: 1, b: 2 }; };\nfunction Read(value: { a: string; b: string; }): void {}');
+  expect(result).toMatch(/First\(\)\n\s*\{\n\s*\},\n\n\s*Second\(\)/);
+  expect(result).toContain('const run = () => { function Nested() { } function Other() { } return { a: 1, b: 2 }; };');
+  expect(result).toContain('function Read(value: { a: string; b: string; }): void');
 });
 
 test('导入、重导出和导出表达式保持单行且相互留白', () => {

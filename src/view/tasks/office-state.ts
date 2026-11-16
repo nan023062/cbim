@@ -34,12 +34,14 @@ export interface OfficeActor
 
   queued: number
 }
+
 export interface OfficeDesk
 {
   id: string;
 
   name: string
 }
+
 export interface OfficeSceneState
 {
   actors: OfficeActor[];
@@ -50,6 +52,7 @@ export interface OfficeSceneState
 
   history: TaskNode[]
 }
+
 /** 当前和历史仅决定可见任务；角色保留，已完成话题不会删除其子对话。 */
 export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession[] | undefined, scopes: readonly ScopeSummary[], mainRunning: boolean): OfficeSceneState
 {
@@ -106,6 +109,7 @@ export function officeScene(graph: GraphSnapshot, sessions: readonly TeamSession
 
   return { actors, desks, current, history: archived.tasks };
 }
+
 export interface OfficeEvent
 {
   id: string;
@@ -120,10 +124,12 @@ export interface OfficeEvent
 
   label: string
 }
+
 function facts(graph: GraphSnapshot): OfficeEvent[]
 {
   return graph.tasks.flatMap(task => { const common = { agentId: task.assignee.agentId, taskId: task.taskId, scopeId: task.scopeId }; const events: OfficeEvent[] = [{ ...common, id: 'assignment:' + task.taskId, kind: 'assignment', label: '派发任务' }]; if (task.result) events.push({ ...common, id: 'result:' + task.result.resultId, kind: 'feedback', label: '汇报候选' }); if (task.help) events.push({ ...common, id: 'help:' + task.help.helpId, kind: 'feedback', label: '请求协助' }); for (const checkpoint of task.checkpoints ?? []) events.push({ ...common, id: 'checkpoint:' + checkpoint.checkpointId, kind: 'feedback', label: '汇报检查点' }); return events; });
 }
+
 /** 首次快照是静态基线；只播放本次可见期间的新增事实，返回全部新事件供界面摘要，动画可有界合并。 */
 export class OfficeEventTracker
 {

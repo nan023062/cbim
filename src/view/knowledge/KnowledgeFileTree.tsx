@@ -40,5 +40,6 @@ export function KnowledgeFileTree({ snapshot, root, label, selected, onSelect, q
    {!!items.length && <TreeActions name={name} actions={items} />}
   </div>{node.kind === 'folder' && open && <ul>{node.children.map(branch)}</ul>}</li>;
   };
+
   return <nav className="knowledge-file-tree" aria-label={label + '知识文件树'}><div className="knowledge-file-actions" role="group" aria-label={label + '视图操作'}><button type="button" title="展开全部" aria-label="展开全部" onClick={() => setClosed(new Set())}><Icon name="expand" size={17} /></button><button type="button" title="折叠全部" aria-label="折叠全部" onClick={() => setClosed(new Set(folders(tree)))}><Icon name="collapse" size={17} /></button></div><ul>{branch(tree)}</ul>{!tree.children.length && <p>没有匹配的知识文件。</p>}</nav>;
 }

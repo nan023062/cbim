@@ -44,16 +44,19 @@ export interface WorkflowFileVerification
 
   signal?: AbortSignal;
 }
+
 /** 只核历史原始证明并返回应复核的文件；供明确返工保留过去事实，不作为新交付放行。 */
 export function memberWorkflowFiles(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, normalizePath?: (raw: string) => string): ArtifactFileFact[]
 {
   return memberWorkflowEvidence(task, run, summary, root, normalizePath).files;
 }
+
 /** 同时重建历史文件验证与原完整清单；调用方不可把候选自报的摘要当作可信来源。 */
 export function memberWorkflowEvidence(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, normalizePath?: (raw: string) => string): { files: ArtifactFileFact[]; manifest?: OutputManifestRecord }
 {
   return businessWorkflowEvidence(memberPublicTask(task, root), run, summary, normalizePath);
 }
+
 /** 递归业务与旧派工共用冻结契约核证；只接受原 TaskSpec，不创建或登记兼容任务。 */
 function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepared' | 'binding' | 'session'>, summary: RunSummary, normalizePath?: (raw: string) => string): { files: ArtifactFileFact[]; manifest?: OutputManifestRecord }
 {
@@ -123,11 +126,13 @@ function businessWorkflowEvidence(task: TaskSpec, run: Pick<DispatchRun, 'prepar
   }
   return { files: [...files.values()], ...(manifest ? { manifest } : {}) };
 }
+
 /** 有约定的新运行须有完整 canonical；只读旧无约定不新增 I/O，文件变化/无法核实均拒绝当前候选。 */
 export async function validateMemberWorkflow(task: TaskNode, run: DispatchRun, summary: RunSummary, root: string, port?: WorkflowFileVerification): Promise<void>
 {
   return validateBusinessWorkflow(memberPublicTask(task, root), run, summary, port);
 }
+
 /** 共用原日志、结构验证和完整出口检查；调用者另核来源身份与结算状态。 */
 export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<DispatchRun, 'prepared' | 'binding' | 'session'>, summary: RunSummary, port?: WorkflowFileVerification): Promise<void>
 {

@@ -29,6 +29,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 /** 不修改状态、不访问文件；返回的闭包只供调度跟踪，不能作为运行许可。 */
 export function memberResumeSelection(state: DispatchState, identity: GraphIdentity, scopeId: string, mainRunId: string, input: ResumeMemberInput)
 {

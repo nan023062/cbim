@@ -23,6 +23,7 @@ export interface SourceEntry
 
   kind: 'directory' | 'file'
 }
+
 /** offset 为本次目录枚举的原始位置；目录变化需刷新，不能当作持久文件身份。 */
 export interface SourceDirectory
 {
@@ -30,6 +31,7 @@ export interface SourceDirectory
 
   nextOffset?: number
 }
+
 export type SourceFile =
   {
     kind: 'text';

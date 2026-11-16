@@ -64,6 +64,7 @@ export function claudeInputSchema(schema: Record<string, unknown>)
 
   return { ...object, type: 'object' as const, properties: { ...properties, ...schema.properties as Record<string, unknown> }, ...(required ? { required } : {}) };
 }
+
 /** 原生参数只投影到公共权限/证据字段，执行仍使用原生参数，不改写业务路径。 */
 export function claudeToolCall(name: string, input: Record<string, unknown>)
 {
@@ -93,6 +94,7 @@ export function claudeToolCall(name: string, input: Record<string, unknown>)
   }
   return { name: canonical, input: value };
 }
+
 /** 一个实例只服务一个 run；stop 取消未完成端口，已执行但未落盘的结果保持未知。 */
 export async function claudeTools(context: EngineContext, port: EngineToolsPort, allowExecution: boolean, blocked: () => string | undefined, settle: () => Promise<void> = async () => { })
 {
@@ -157,6 +159,7 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
 
     return { content: result.content, isError: result.isError };
   });
+
   const before: HookCallback = async input =>
   {
     if (input.hook_event_name !== 'PreToolUse')
@@ -210,6 +213,7 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
 
     return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', ...(internal ? { updatedInput: { ...original, [identityField]: id } } : {}) } };
   };
+
   const after: HookCallback = async input =>
   {
     if (input.hook_event_name !== 'PostToolUse' && input.hook_event_name !== 'PostToolUseFailure')
@@ -235,15 +239,22 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
 
     return failed ? { hookSpecificOutput: { hookEventName: 'PostToolUseFailure', additionalContext: JSON.stringify(result) } } : {};
   };
+
   return {
-    native, expected: [...native, ...catalog.map(tool => prefix + tool.name)], config: { type: 'sdk', name: 'cbim', instance: server } as McpSdkServerConfigWithInstance,
+    native,
+
+    expected: [...native, ...catalog.map(tool => prefix + tool.name)],
+
+    config: { type: 'sdk', name: 'cbim', instance: server } as McpSdkServerConfigWithInstance,
 
     hooks: { PreToolUse: [{ hooks: [before], onFailure: 'block' as const }], PostToolUse: [{ hooks: [after], onFailure: 'block' as const }], PostToolUseFailure: [{ hooks: [after], onFailure: 'block' as const }] },
 
     Stop()
     {
       controller.abort()
-    }, async Close()
+    },
+
+    async Close()
     {
       controller.abort();
 

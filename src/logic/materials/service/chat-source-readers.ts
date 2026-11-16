@@ -35,6 +35,7 @@ export function sourceExcerpt(text: string)
   }
   return { text: text.slice(0, end), savedTextBytes: size, truncated: end < text.length };
 }
+
 /** 枚举最多 200 条可见首层项及一条溢出哨兵，不读取子目录内容或链接目标。 */
 export async function readDirectorySource(file: string, signal: AbortSignal)
 {
@@ -81,6 +82,7 @@ export async function readDirectorySource(file: string, signal: AbortSignal)
 
   return { text: lines.join('\n'), proof: { kind: 'folder', mode: 'first_level', capturedAt: new Date().toISOString(), savedTextBytes, entryLimit: 200, entryCount: lines.length, truncated } satisfies ContinuationSourceProof };
 }
+
 /** URL 指针不联网；网页单次读取完整有界响应后才提取文本，原响应超限直接拒绝，不伪造完整原文 hash。 */
 export async function readUrlSource(kind: 'link' | 'web', value: string, signal: AbortSignal)
 {

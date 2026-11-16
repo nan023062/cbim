@@ -46,6 +46,7 @@ export interface MemberRunBinding
   /** 本次执行所依据的业务节点计划版本，与任务内步骤版本不同。 */
   planRevision: number;
 }
+
 /**
  * 后端启动参数；跨任务复用同成员通道不属于旧 TaskSpec 的 resume。
  * 调度必须先确认上轮 completed、没有未决工具，并持有成员和会话执行槽；这里不自动推断恢复安全性。
@@ -62,6 +63,7 @@ export interface MemberRunLaunch
     sessionFile?: string
   };
 }
+
 /** 校验运行日志或启动绑定与实际任务/轮次一致；返回独立快照，避免调用方随后修改身份。 */
 export function checkedMemberRunBinding(value: unknown, task: TaskSpec, runId?: string): MemberRunBinding
 {
@@ -122,6 +124,7 @@ export function checkedMemberRunBinding(value: unknown, task: TaskSpec, runId?: 
 
   return structuredClone(value) as MemberRunBinding;
 }
+
 /** 校验后端启动数据，不读取会话文件；Pi 适配器还须核对文件归属与实际原生 sessionId。 */
 export function checkedMemberRunLaunch(value: MemberRunLaunch, task: TaskSpec): MemberRunLaunch
 {

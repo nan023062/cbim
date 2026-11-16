@@ -29,6 +29,7 @@ export interface QueueCounts
   /** starting 状态的消息数：已持久化占用，等待插入或下一轮启动确认。 */
   inserting: number;
 }
+
 export class MessageQueue
 {
   private items: QueuedMessage[] = [];
@@ -85,14 +86,17 @@ export class MessageQueue
 
       this.Notify(observer)
   }
+
   constructor(private file: string)
   {
   }
+
   /** 并发初始化共享一次恢复；损坏记录不发布假空队列。 */
   Load(): Promise<void>
   {
     return this.loading ??= this.LoadOnce().catch(error => { this.ReportFailure(error); throw error })
   }
+
   private async LoadOnce()
   {
     try
@@ -109,6 +113,7 @@ export class MessageQueue
 
     this.Publish()
   }
+
   /** 初始成功恢复及后续保存完成后通知；取消订阅不影响队列所有权。 */
   Subscribe(listener: (counts: QueueCounts) => void, failed?: (error: Error) => void)
   {
@@ -122,6 +127,7 @@ export class MessageQueue
 
     return () => { this.observers.delete(observer) }
   }
+
   /** 计数依据最后成功发布状态，不读取尚未保存的工作副本。 */
   Counts(): QueueCounts
   {
@@ -133,6 +139,7 @@ export class MessageQueue
 
     return counts
   }
+
   private Notify(observer: { listener: (counts: QueueCounts) => void; failed?: (error: Error) => void })
   {
     try
@@ -151,6 +158,7 @@ export class MessageQueue
       }
     }
   }
+
   private ReportFailure(error: unknown)
   {
     for (const observer of this.observers)
@@ -164,10 +172,12 @@ export class MessageQueue
         /* 监控异常不影响原始错误 */
       }
   }
+
   List(taskId: string)
   {
     return this.items.filter(x => x.taskId === taskId)
   }
+
   /** 返回已提交的增量；纯排序只传 ID 顺序，删除由 order 缺失表示。 */
   Delta(taskId: string, input?: unknown): QueueDelta
   {
@@ -183,6 +193,7 @@ export class MessageQueue
 
     return { epoch: this.epoch, revision: this.revision, reset, order: entries.map(x => x.item.id), upserts: entries.filter(x => reset || cursor?.items[x.item.id] !== x.version).map(({ version, item }) => ({ version, item })) };
   }
+
   /** 临时文件与原文件位于同目录，提交完成后才允许启动下一轮。 */
   private async Save()
   {
@@ -206,6 +217,7 @@ export class MessageQueue
     }
     this.Publish()
   }
+
   async Add(taskId: string, message: string, config: QueuedMessage['options'], followupOf?: string, attachmentManifest?: QueuedMessage['attachmentManifest'])
   {
     if (this.List(taskId).length >= 30)
@@ -220,6 +232,7 @@ export class MessageQueue
 
     return entry
   }
+
   async Change(taskId: string, id: string, action: 'first' | 'up' | 'down' | 'remove')
   {
     const i = this.items.findIndex(x => x.id === id && x.taskId === taskId);
@@ -249,6 +262,7 @@ export class MessageQueue
     }
     await this.Save();
   }
+
   /** 编辑仅替换用户文字，保留附件快照与发送设置；旧页面不能覆盖已更新消息。 */
   async Edit(taskId: string, id: string, message: string, expected: string)
   {
@@ -276,6 +290,7 @@ export class MessageQueue
 
     await this.Save();
   }
+
   /** 将源项移动到目标项之前；仅操作同一会话内尚未启动的条目。 */
   async Move(taskId: string, id: string, beforeId?: string)
   {
@@ -301,6 +316,7 @@ export class MessageQueue
 
     await this.Save();
   }
+
   /** 先持久化占用，再向引擎发送；重启时转为暂停，避免未知结果被自动重复插入。 */
   async Claim(taskId: string, id: string)
   {
@@ -316,6 +332,7 @@ export class MessageQueue
 
     return entry
   }
+
   async Pause(taskId: string, reason: string)
   {
     for (const x of this.List(taskId))
@@ -326,6 +343,7 @@ export class MessageQueue
     }
     await this.Save()
   }
+
   async Resume(taskId: string)
   {
     for (const x of this.List(taskId))
@@ -336,6 +354,7 @@ export class MessageQueue
     }
     await this.Save()
   }
+
   async Take(taskId: string)
   {
     const next = this.List(taskId)[0];
@@ -350,6 +369,7 @@ export class MessageQueue
 
     return next
   }
+
   async Complete(id: string)
   {
     this.items = this.items.filter(x => x.id !== id);

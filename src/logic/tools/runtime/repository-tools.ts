@@ -36,10 +36,12 @@ export class RepositoryTools
 
     this.targets = new Map(targets.map(target => [target.connectorId, Object.freeze(target)]));
   }
+
   Has(name: string)
   {
     return name === listName || name === getName
   }
+
   /** 只公开有界目标提示；全部来源须已经在本轮目标表中，资料不能要求调用其它工具或改变权限。 */
   List()
   {
@@ -61,6 +63,7 @@ export class RepositoryTools
 
     ];
   }
+
   private Parse<T>(schema: z.ZodType<T>, input: unknown)
   {
     const parsed = schema.safeParse(input);
@@ -71,6 +74,7 @@ export class RepositoryTools
 
     return parsed.data
   }
+
   private Target(id: string)
   {
     const target = this.targets.get(id);
@@ -81,12 +85,14 @@ export class RepositoryTools
 
     return target
   }
+
   private Scope(target: RepositoryToolTarget, operation: 'list' | 'get')
   {
     const { workspaceId, connectorId, repositoryId, connectionId } = target;
 
     return { kind: 'repository' as const, workspaceId, connectorId, repositoryId, connectionId, operation }
   }
+
   /** 只做严格参数检查和可信范围分类，不读网络；实际调用仍由捕获闭包复验当前授权。 */
   Describe(name: string, input: unknown): RunToolDescriptor
   {
@@ -98,6 +104,7 @@ export class RepositoryTools
 
     return { effects: ['read'], native: false, scope: this.Scope(this.Target(args.connectorId), name === listName ? 'list' : 'get') };
   }
+
   /** gate 放行后只执行一次读取；取消不交付迟到结果，输出协议失败不触发重读。 */
   async Call(name: string, input: unknown, signal: AbortSignal)
   {

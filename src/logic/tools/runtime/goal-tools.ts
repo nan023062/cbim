@@ -49,6 +49,7 @@ const definitions = {
     schema: z.union([reviewInput, pausePreviewInput]), effects: ['maintenance'] as const,
   },
 };
+
 type GoalToolName = keyof typeof definitions;
 
 /** 由工具桥提供实际调用 ID 和取消信号，不从模型输入提取或随机补造。 */
@@ -58,6 +59,7 @@ export interface GoalToolInvocation
 
   signal: AbortSignal
 }
+
 /**
  * 工作区、主会话、scope 和 run 由可信装配绑定；这里只接收 Core 计划/审阅协议。
  * inspect 返回当前真实状态；写入口负责幂等、版本和证据核验，失败不能被工具层改写为成功。
@@ -79,6 +81,7 @@ export interface GoalToolsPort
 
   Review(input: z.infer<typeof goalReviewInputSchema>, invocation: GoalToolInvocation): Promise<unknown>;
 }
+
 /** 仅在主调度装配真实目标服务时注册；成员执行 Loop 不获得规划整轮用户目标的入口。 */
 export class GoalTools
 {
@@ -88,22 +91,26 @@ export class GoalTools
   {
     this.binding = Object.freeze(structuredClone(port.binding))
   }
+
   /** 工具表只公布已绑定端口，不包含未来人工确认或完成按钮的占位。 */
   List()
   {
     return Object.entries(definitions).map(([name, definition]) => { const d = this.Definition(name as GoalToolName); return ({ name, description: d.description, effects: d.effects, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...mainToolContract(name as GoalToolName), ...(name === 'cbim_goal_review' && this.port.PreviewPause ? { version: 2, outputSchema: { anyOf: [mainToolContract('cbim_goal_review').outputSchema, zodToJsonSchema(coordinationPreviewSchema)] } } : {}) }) })
   }
+
   /** 精确匹配已实现名称，不按 cbim_goal_ 前缀放行未知操作。 */
   Has(name: string): name is GoalToolName
   {
     return Object.hasOwn(definitions, name)
   }
+
   private Definition(name: GoalToolName)
   {
     const definition = definitions[name];
 
     return name === 'cbim_goal_review' && !this.port.PreviewPause ? { ...definition, schema: reviewInput } : definition
   }
+
   private Parse(name: string, input: unknown)
   {
     if (!this.Has(name))
@@ -126,6 +133,7 @@ export class GoalTools
 
     return { name, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
   }
+
   /** 规划和审阅仅维护调度记录；不能因此放行主 Agent 的业务写入或签发人工批准。 */
   Describe(name: string, input: unknown)
   {
@@ -133,6 +141,7 @@ export class GoalTools
 
     return { effects: parsed.effects, native: false }
   }
+
   /** gate 放行后调用；服务保持真实结果，complete 的完成门禁仍在可信主运行结算阶段。 */
   async Call(name: string, input: unknown, signal: AbortSignal, toolCallId?: string)
   {

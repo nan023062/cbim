@@ -62,12 +62,14 @@ export function verifyBootResources(root: string, files: RuntimeFile[])
       count++;
     }
   }
+
   walk(root);
 
   if (count !== files.length)
 
     throw Error('启动资源不完整');
 }
+
 function readJson(file: string)
 {
   const stat = fs.lstatSync(file);
@@ -78,6 +80,7 @@ function readJson(file: string)
 
   return JSON.parse(fs.readFileSync(file, 'utf8'))
 }
+
 export interface BootSelection
 {
   root: string;
@@ -92,6 +95,7 @@ export interface BootSelection
 
   pending: boolean
 }
+
 /** 与 cacheRoot 对应的单实例锁由桌面入口取得；返回后仍须先记 data-access 才可导入业务。 */
 export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundledRoot: string, bundledManifest: string, stateDirectory = path.join(cacheRoot, 'state')): BootSelection
 {
@@ -119,6 +123,7 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
 
     return { ...checked, root };
   }
+
   let selected: ReturnType<typeof resolve>,
 
     pending = !!state.pending;

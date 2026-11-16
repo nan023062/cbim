@@ -32,11 +32,13 @@ export class ModelJsonRequests
   {
     this.llm = structuredClone(llm)
   }
+
   /** 固定 OpenAI Chat JSON 协议；输出上限来自冻结模型，调用者只提供消息和工具声明。 */
   Chat(messages: readonly unknown[], tools: readonly unknown[] = [])
   {
     return this.Request('primary', { messages, stream: false, max_tokens: this.llm.profile.maxTokens, ...(tools.length ? { tools, parallel_tool_calls: false } : {}) });
   }
+
   /** 不猜兼容供应商是否支持 dimensions 参数；按冻结维度验证完整返回后才构建索引。 */
   Embed(input: readonly string[])
   {
@@ -52,6 +54,7 @@ export class ModelJsonRequests
 
     return this.Request('embedding', { input, encoding_format: 'float' });
   }
+
   private async Request(role: 'primary' | 'embedding', payload: Record<string, unknown>): Promise<Record<string, any>>
   {
     if (this.blocked || this.pending)

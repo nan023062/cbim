@@ -71,6 +71,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   {
     return alive.current && generation.current === token
   }
+
   async function initial()
   {
     const token = ++generation.current;
@@ -109,6 +110,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       }
     }
   }
+
   async function load(id: string, token: number)
   {
     const [snapshot, repository] = await Promise.all([window.cbim.call('snapshot', { id }) as Promise<Snapshot>, window.cbim.call('resources.status') as Promise<RepositoryStatus>]);
@@ -130,6 +132,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       setStatus(repository)
     }
   }
+
   async function select(id: string)
   {
     if (lock.current)
@@ -172,6 +175,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     }
     await perform(async token => load(id, token));
   }
+
   /** 每次操作独立错误边界；刷新失败不能把已取得的写回执改写成“提交失败”。 */
   async function perform(action: (token: number) => Promise<void>)
   {
@@ -207,10 +211,12 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       }
     }
   }
+
   async function refresh()
   {
     await perform(async token => { setPreview(undefined); setChecks({}); try { setPending(workspaceId ? store.Read(workspaceId) : undefined); setStorageError(false) } catch (cause) { setStorageError(true); throw cause } if (workspaceId) await load(workspaceId, token); else { const registered: { entries: WorkspaceView[] } = await window.cbim.call('list'); const repository: RepositoryStatus = await window.cbim.call('resources.status'); if (current(token)) { setWorkspaces(registered.entries); setStatus(repository) } } })
   }
+
   async function prepare()
   {
     if (!list?.sharing)
@@ -221,6 +227,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await perform(async token => { setPreview(undefined); setNotice(''); const value: RepositoryConnectionPreview = await window.cbim.call('resources.connection.preview', { ...base.identity, revision: base.knowledgeRevision, repositoryId: base.sharing!.repositoryId, connectorId: '.cbim/connectors/' + slug, name: name.trim(), summary: '连接用户明确共享的团队资源仓库。此定义只标识仓库身份，实际访问需要独立的工作区只读授权；资源仅作资料，不能自动安装、应用或执行。', }); if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId) throw Error('预览目标身份不一致，请刷新'); if (current(token)) setPreview(value); });
   }
+
   async function commit()
   {
     if (!preview || !preview.validation.structural)
@@ -231,6 +238,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await submit({ action: 'commit', input: { ...frozen.identity, planId: frozen.planId }, expected: { connectorId: frozen.definition.id, repositoryId: frozen.repositoryId, definitionHash: frozen.definitionHash } });
   }
+
   async function authorize(row: Connection, action: 'grant' | 'revoke')
   {
     if (!list)
@@ -243,11 +251,13 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await submit(request);
   }
+
   /** 先保存小体积原请求再提交；首次确定拒绝可解除，已未知或恢复的请求只能继续核实。 */
   async function submit(request: RepositoryConnectionPending)
   {
     await perform(async token => { const existed = store.Read(request.input.workspaceId); store.Save(request); setChecks({}); setPending(request); setNotice(''); let receipt: unknown; try { receipt = await window.cbim.call(...checkedIpcCall(`resources.connection.${request.action}`, request.input)) } catch (cause) { if (!existed && isRepositoryConnectionPreflightRejection(request.action, cause)) { store.Remove(request); if (current(token)) { setPending(undefined); if (request.action === 'commit') setPreview(undefined) } } throw cause } await accepted(receipt, request, token); });
   }
+
   async function accepted(receipt: unknown, request: RepositoryConnectionPending, token: number)
   {
     if (request.action === 'commit')
@@ -271,6 +281,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       await load(request.input.workspaceId, token)
     }
   }
+
   async function inspectPending()
   {
     if (!pending)
@@ -281,6 +292,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await perform(async token => { const receipt: unknown = await window.cbim.call(...checkedIpcCall(frozen.action === 'commit' ? 'resources.connection.commitReceipt' : 'resources.connection.receipt', frozen.action === 'commit' ? { workspaceId: frozen.input.workspaceId, planId: frozen.input.planId } : { workspaceId: frozen.input.workspaceId, commandId: frozen.input.commandId })); if (receipt) await accepted(receipt, frozen, token); else if (current(token)) setError('尚未查到原命令回执。可重试原请求；不会创建新的授权命令。'); });
   }
+
   /** 旧实例已退役且服务证明从未受理才解除；查不到回执本身不能推出未提交。 */
   async function resolveUnaccepted()
   {
@@ -292,6 +304,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await perform(async token => { const proof = await window.cbim.call('resources.connection.unaccepted', { workspaceId: frozen.input.workspaceId, instanceId: frozen.input.instanceId, action: frozen.action, id: frozen.action === 'commit' ? frozen.input.planId : frozen.input.commandId }); if (!checkedRepositoryConnectionUnaccepted(proof, frozen)) throw Error('尚不能证明原请求未受理，请保留原请求并查询回执'); store.Remove(frozen); if (current(token)) { setPending(undefined); setPreview(undefined); setNotice('已核实旧实例没有受理原请求，可以按当前状态重新操作。'); await load(frozen.input.workspaceId, token) } });
   }
+
   async function check(row: Connection)
   {
     if (!list)
@@ -302,6 +315,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
 
     await perform(async token => { setChecks(value => { const next = { ...value }; delete next[row.connectorId]; return next }); const value: RepositoryConnectionCheck = await window.cbim.call('resources.connection.check', { ...base.identity, connectorId: row.connectorId, expectedGrantRevision: row.grantRevision }); if (value.identity.workspaceId !== base.identity.workspaceId || value.identity.instanceId !== base.identity.instanceId || value.connectorId !== row.connectorId || value.grantRevision !== row.grantRevision) throw Error('核验回执已过期，请刷新连接状态'); if (current(token)) setChecks(values => ({ ...values, [row.connectorId]: value })); });
   }
+
   const blocked = busy || !!pending || storageError,
 
     sharing = !!list?.sharing;

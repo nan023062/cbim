@@ -28,6 +28,7 @@ export function checkedWorkspaceMemberList(raw: unknown, input: WorkspaceMemberL
 
   return value;
 }
+
 /** 详情包含历史采纳快照；当前差异只是本次读取事实，不自动修改岗位。 */
 export function checkedWorkspaceMemberDetail(raw: unknown, input: WorkspaceMemberGetInput): WorkspaceMemberDetail
 {
@@ -39,6 +40,7 @@ export function checkedWorkspaceMemberDetail(raw: unknown, input: WorkspaceMembe
 
   return value;
 }
+
 /** 预览必须对应当前表单选择；只读预览没有创建岗位或启动模型的权限。 */
 export function checkedWorkspaceMemberPreview(raw: unknown, input: WorkspaceMemberPreviewInput): WorkspaceMemberPreview
 {
@@ -122,6 +124,7 @@ export function checkedWorkspaceMemberPreview(raw: unknown, input: WorkspaceMemb
 
   return value;
 }
+
 /** 所有回执字段都固定为原提交事实，后来的查询不能更换岗位、版本或时间。 */
 export function checkedWorkspaceMemberReceipt(raw: unknown, request: WorkspaceMemberCommitInput, previous?: WorkspaceMemberReceipt): WorkspaceMemberReceipt
 {
@@ -137,6 +140,7 @@ export function checkedWorkspaceMemberReceipt(raw: unknown, request: WorkspaceMe
 
   return value;
 }
+
 export interface WorkspaceMemberAttempt
 {
   request: WorkspaceMemberCommitInput;
@@ -149,6 +153,7 @@ export interface WorkspaceMemberAttempt
 
   error?: string
 }
+
 /** 只含公开请求和紧凑回执，历史正文仍由 Main 的权威审计持有。 */
 export interface WorkspaceMemberCommandState
 {
@@ -156,6 +161,7 @@ export interface WorkspaceMemberCommandState
 
   error: string
 }
+
 export interface WorkspaceMemberCommandPorts
 {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
@@ -166,11 +172,13 @@ export interface WorkspaceMemberCommandPorts
 
   uuid: () => string
 }
+
 /** 精确列举首次受理前拒绝，包含仍有模块责任时的退休拒绝；未知、IO 与命令冲突不能解释为可换 ID 重做。 */
 export function workspaceMemberPreRejected(error: unknown)
 {
   return /^MEMBER_(?:INPUT_INVALID|NOT_FOUND|IDENTITY|REGISTRY_STALE|REVISION_CONFLICT|BASIS_STALE|SOURCE_INVALID|SOURCE_PENDING|MODEL_INVALID|NO_CHANGE|RETIRED|LIMIT|SOURCE_CHANGED|OWNERSHIP_ACTIVE):/.test(message(error))
 }
+
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class WorkspaceMemberCommands
 {
@@ -221,30 +229,37 @@ export class WorkspaceMemberCommands
       this.value = { records: [], error: '岗位本机提交记录无法读取，未发送请求：' + message(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get blocked()
   {
     return this.unavailable || this.pending.size > 0 || this.value.records.some(item => item.phase === 'unknown' || item.phase === 'submitting')
   }
+
   get canRelease()
   {
     return !this.listeners.size && !this.pending.size
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   IsPending(id: string)
   {
     return this.pending.has(id)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Save(record: WorkspaceMemberAttempt)
   {
     const records = [...this.value.records],
@@ -286,6 +301,7 @@ export class WorkspaceMemberCommands
       return false
     }
   }
+
   /** 显式选择/提交后发送当前预览；返回本次原命令记录，避免组合调用错取其它页面的最后一条记录。 */
   async Submit(input: WorkspaceMemberPreviewInput, preview: WorkspaceMemberPreview)
   {
@@ -317,6 +333,7 @@ export class WorkspaceMemberCommands
 
     return this.value.records.find(item => item.request.commandId === request.commandId);
   }
+
   private async Send(record: WorkspaceMemberAttempt)
   {
     const request = record.request;
@@ -348,6 +365,7 @@ export class WorkspaceMemberCommands
       this.Emit()
     }
   }
+
   /** 手动重送永远使用已冻结原请求；重开应用不会调用本接口。 */
   async Retry(id: string)
   {
@@ -359,6 +377,7 @@ export class WorkspaceMemberCommands
 
     await this.Send(record)
   }
+
   /** 查询失败或空回执仍是未知；允许修复“已受理但本机保存失败”，不执行新的登记。 */
   async Query(id: string)
   {
@@ -395,6 +414,7 @@ export class WorkspaceMemberCommands
       this.Emit()
     }
   }
+
   /** 重开只核实已持久未知命令；尚未查到回执不会自动预览、提交或换新 ID。 */
   async Restore()
   {
@@ -405,6 +425,7 @@ export class WorkspaceMemberCommands
         await this.Query(record.request.commandId)
   }
 }
+
 /** 多个团队页签共享原工作区未决命令；仅回收无人使用的控制器，不丢持久记录。 */
 export class WorkspaceMemberCommandPool
 {
@@ -431,5 +452,6 @@ export class WorkspaceMemberCommandPool
     return value
   }
 }
+
 /** 同工作区全部桌面入口共享未决登记；不在模块初始化时访问浏览器存储。 */
 export const workspaceMemberCommands = new WorkspaceMemberCommandPool();

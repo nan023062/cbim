@@ -23,6 +23,7 @@ export class ApprovalQueue
 
     return new Promise(resolve => { const id = randomUUID(); this.approvals.set(id, { view: { id, taskId, name: call.name, input: call.input, createdAt: new Date().toISOString() }, resolve }) })
   }
+
   private approvals = new Map<string,
     {
       view: ChatApproval;
@@ -34,6 +35,7 @@ export class ApprovalQueue
   {
     return [...this.approvals.values()].filter(a => a.view.taskId === taskId).map(a => a.view)
   }
+
   /** 审批身份绑定任务；单次答复只授权当前调用，本次全部通过仅放行同一任务当前运行中的待确认调用。 */
   Answer(taskId: string, id: string, allow: boolean, allowAll = false)
   {
@@ -69,6 +71,7 @@ export class ApprovalQueue
 
     pending.resolve({ allow: allow === true, reason: allow ? '用户允许本次调用' : '用户拒绝本次调用' });
   }
+
   Cancel(taskId?: string)
   {
     if (taskId)

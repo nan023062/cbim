@@ -41,6 +41,7 @@ export interface ArtifactTransitionFile
 
   Apply(): Promise<{ identity: ArtifactTransitionPrepared['fileIdentity']; fact: ArtifactTransitionPrepared['before']; operation: ArtifactTransitionDefinition; sourceMissing: true }>;
 }
+
 /** withExclusive 返回或抛错前应确认工人退出；无法退出时 drain 必须继续失败并保留运行占用。 */
 export interface ArtifactTransitionRunPort
 {
@@ -48,6 +49,7 @@ export interface ArtifactTransitionRunPort
 
   Drain(): Promise<void>;
 }
+
 export class RunArtifactTransition implements ArtifactTransitionToolPort
 {
   private readonly events: StoredEvent[] = [];
@@ -85,12 +87,14 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
 
       badFinish: boolean
     };
+
   constructor(private readonly binding: MemberRunBinding, private readonly scopes: readonly ArtifactScopeBinding[], private readonly manifests: OutputManifestCapturePort, private readonly port: ArtifactTransitionRunPort, private readonly context: { Version(): number | undefined; AssertReady(id: string): void; Save(event: EngineEvent): Promise<StoredEvent> })
   {
     this.binding = structuredClone(binding);
 
     this.scopes = structuredClone(scopes)
   }
+
   /** 同步预占先于任何审批与进度失效；此时保留原有效写前清单，不从已发生副作用之后倒推 before。 */
   Guard(name: string, id: string, raw: unknown, active: readonly string[]): string | undefined
   {
@@ -150,6 +154,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
     }
     this.reserved = { id, input: structuredClone(input), inputHash: hash(JSON.stringify(raw)), before: structuredClone(before), operation: requirement.operation, consumed: false, settled: false, validated: false, finished: false, badFinish: false };
   }
+
   /** 仅 Runtime 的可靠 allowed append 返回值可签发，观察到同名引擎事件不产生许可。 */
   Authorize(id: string, seq: number)
   {
@@ -157,6 +162,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
 
       this.reserved.allowedSeq = seq
   }
+
   Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type.startsWith('artifact.') || ['task.updated', 'run.stop_requested', 'run.interrupted'].includes(event.type))
@@ -205,6 +211,7 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
       this.Release();
     }
   }
+
   private Release()
   {
     const current = this.reserved;
@@ -223,10 +230,12 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
 
     this.reserved = undefined
   }
+
   get unverifiedCallIds()
   {
     return [...this.unverified]
   }
+
   /** 供实际交付与终态复核，不能以成功模型回合解除未知副作用。 */
   AssertVerified()
   {
@@ -234,20 +243,24 @@ export class RunArtifactTransition implements ArtifactTransitionToolPort
 
       fail('ARTIFACT_TRANSITION_REVIEW_REQUIRED', '原删除/移动结果待核实，不能交付或安全交接')
   }
+
   Stop()
   {
     this.controller.abort(Error('运行已停止删除/移动'))
   }
+
   async Drain()
   {
     await this.pending.Drain();
 
     await this.port.Drain()
   }
+
   async List()
   {
     return [{ name: artifactTransitionToolName, version: 1, effects: ['business-write'] as const, description: '按冻结 artifactScope.transitions 的模块和序号执行一个真实文件删除或不覆盖移动。必须显式引用本轮有效写前完整清单；只支持本机 NTFS 普通 UTF-8 文件，先可靠保存阶段再操作，完成后须重新采集完整清单。失败/未知不能换调用重试，不提供自动恢复。', inputSchema: zodToJsonSchema(artifactTransitionInputSchema), outputSchema: zodToJsonSchema(artifactTransitionOutputSchema), cancellation: { mode: 'preflight_only' as const, description: '停止可阻止发出操作；已经发出的结果须按原阶段核实。' }, recovery: { mode: 'inspect_before_retry' as const, description: '只查询原操作事实；工具不自动重发或恢复，原成功链才可用于完整验收。' } }]
   }
+
   async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     const input = artifactTransitionInputSchema.parse(raw),

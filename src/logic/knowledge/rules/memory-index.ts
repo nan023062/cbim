@@ -19,6 +19,7 @@ export interface MemoryChunk
 
   text: string
 }
+
 /** key 同时绑定工作区、完整来源版本和公开 embedding 配置摘要；不得保存密钥。 */
 export interface MemoryIndexPlan
 {
@@ -38,10 +39,12 @@ export interface MemoryIndexPlan
 
   chunks: MemoryChunk[]
 }
+
 export interface MemoryIndex extends MemoryIndexPlan
 {
   vectors: number[][]
 }
+
 /** 超过规模明确拒绝，不静默截断后宣称完整索引；offset 为 JS 字符偏移，来源文本原样保留。 */
 export function planMemoryIndex(input: unknown, modelHash: string, dimensions: number): MemoryIndexPlan
 {
@@ -76,6 +79,7 @@ export function planMemoryIndex(input: unknown, modelHash: string, dimensions: n
 
   return { ...value, key: digest(JSON.stringify(value)) };
 }
+
 /** 以副本形成完整新代；失败不会修改旧代。零向量不可用于余弦检索。 */
 export function finishMemoryIndex(plan: MemoryIndexPlan, vectors: readonly number[][]): MemoryIndex
 {
@@ -89,12 +93,14 @@ export function finishMemoryIndex(plan: MemoryIndexPlan, vectors: readonly numbe
 
   return { ...structuredClone(plan), vectors: vectors.map(v => [...v]) };
 }
+
 function checkVector(vector: readonly number[], dimensions: number)
 {
   if (vector.length !== dimensions || vector.some(v => !Number.isFinite(v)) || !Number.isFinite(Math.hypot(...vector)) || Math.hypot(...vector) === 0)
 
     throw Error('向量维度或数值无效');
 }
+
 /** 查询向量必须由相同模型产生；返回带来源版本的资料，不把命中正文解释为指令。 */
 export function searchMemoryIndex(index: MemoryIndex, query: readonly number[], limit = 6)
 {

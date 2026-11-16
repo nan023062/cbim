@@ -29,6 +29,7 @@ export interface InlineOwnerAgent
 
   runtime?: AgentModelSelection
 }
+
 export interface InlineOwnerChoice
 {
   value: string;
@@ -37,12 +38,14 @@ export interface InlineOwnerChoice
 
   disabled?: boolean
 }
+
 export interface InlineOwnerData
 {
   members: WorkspaceMemberList['items'];
 
   views: ModuleOwnershipView[]
 }
+
 /** 固定分页游标，只读取真实岗位；来源错误不能假报为可新建的空列表。 */
 export async function readInlineMembers(identity: ModuleOwnershipIdentity, call: InlineOwnerCall)
 {
@@ -73,6 +76,7 @@ export async function readInlineMembers(identity: ModuleOwnershipIdentity, call:
     offset = page.nextOffset
   }
 }
+
 /** 责任与岗位各自校验读取版本；保存时重新读取原模块与岗位，不以页面列表作为写入依据。 */
 export async function readInlineOwners(identity: ModuleOwnershipIdentity, call: InlineOwnerCall): Promise<InlineOwnerData>
 {
@@ -105,11 +109,13 @@ export async function readInlineOwners(identity: ModuleOwnershipIdentity, call: 
     offset = page.nextOffset
   }
 }
+
 /** 只提供自定义 Agent；同一 Agent 多个岗位时在同级列表区分，不能静默替换其中某个岗位的配置。 */
 export function inlineOwnerChoices(agents: InlineOwnerAgent[], members: WorkspaceMemberList['items']): InlineOwnerChoice[]
 {
   return agents.filter(agent => agent.id !== 'cbim:main' && agent.id !== 'cbim:executor').flatMap(agent => { const matches = members.filter(member => member.agentId === agent.id); if (!matches.length) return [{ value: 'agent:' + agent.id, label: agent.name }]; return matches.map(member => ({ value: 'member:' + member.memberId, label: agent.name + (matches.length > 1 ? ' · ' + member.name : '') + (member.state === 'active' ? '' : member.state === 'suspended' ? '（已停用）' : '（已退休）'), disabled: member.state !== 'active' })); });
 }
+
 export interface InlineOwnerPorts
 {
   call: InlineOwnerCall;
@@ -120,6 +126,7 @@ export interface InlineOwnerPorts
 
   isCurrent: () => boolean
 }
+
 /** 选择即授权本次登记/绑定，不启动业务。任何未知、来源变化或页面离开都停止后续步骤；已受理的前一步仍保留。 */
 export async function assignInlineOwner(identity: ModuleOwnershipIdentity, moduleId: string, value: string, agents: InlineOwnerAgent[], ports: InlineOwnerPorts)
 {

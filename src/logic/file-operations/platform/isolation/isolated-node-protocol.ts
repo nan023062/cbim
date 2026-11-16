@@ -39,6 +39,7 @@ export interface IsolatedNodeResult
       sha256: string
     }[]
   };
+
   inputs:
   {
     path: string;
@@ -68,6 +69,7 @@ export interface IsolatedNodeResult
 
     peakMemoryBytes: number
   };
+
   allProcessesExited: true;
 
   cleanup: 'complete';

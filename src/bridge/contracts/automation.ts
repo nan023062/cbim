@@ -28,4 +28,5 @@ export interface AutomationActionResults
 
   'automation.remove': AutomationState;
 }
+
 export const isAutomationAction = (action: string): action is AutomationAction => Object.hasOwn(automationActionSchemas, action);

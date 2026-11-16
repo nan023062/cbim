@@ -63,6 +63,7 @@ export interface DispatchMessageBase
     leaseEpoch: number
   };
 }
+
 /** 接收成员的任务信封；只保存任务引用，正文从同事务任务节点读取。 */
 export interface AssignmentMessage extends DispatchMessageBase
 {
@@ -70,6 +71,7 @@ export interface AssignmentMessage extends DispatchMessageBase
 
   resumeFrom?: MemberResumeFrom
 }
+
 /** 返回原发送方的候选引用；不复制消息正文，也不形成任务图的反向边。 */
 export interface ResultMessage extends DispatchMessageBase
 {
@@ -81,6 +83,7 @@ export interface ResultMessage extends DispatchMessageBase
 
   runId: string
 }
+
 /** 成员正常结算后的问题引用，不是成功候选、用户消息或自动恢复许可。 */
 export interface HelpMessage extends DispatchMessageBase
 {
@@ -92,6 +95,7 @@ export interface HelpMessage extends DispatchMessageBase
 
   runId: string
 }
+
 /** 检查点可供主调度审阅，不是成功结果或自动恢复许可；只在可靠正常结算时发出。 */
 export interface CheckpointMessage extends DispatchMessageBase
 {
@@ -103,6 +107,7 @@ export interface CheckpointMessage extends DispatchMessageBase
 
   runId: string
 }
+
 export type DispatchMessage = AssignmentMessage | ResultMessage | HelpMessage | CheckpointMessage;
 
 /** 工作区级状态；主实例随会话保留，周期执行实例与历史图分开计量。 */
@@ -165,6 +170,7 @@ export interface DispatchState
   /** 逐请求预算独立阶段附录；旧周期缺省，无记录不补造为已报告零消耗。 */
   modelRequestBudgetChanges?: ModelRequestBudgetChange[];
 }
+
 /** 幂等键由可信入口产生；fingerprint 是包括调用者在内的规范化输入摘要。 */
 export interface DispatchCommand
 {
@@ -172,6 +178,7 @@ export interface DispatchCommand
 
   fingerprint: string
 }
+
 /**
  * 原命令内部依据，仅从已可靠提交或已验证重放的原前态派生。
  * receipt 仍是后端私有值，公开前须领域校验与白名单投影；不导出完整事务或 Prepared。
@@ -190,6 +197,7 @@ export interface DispatchCommandEvidence
 
     executionProtocol: 'legacy' | 'module_owner_v1'
   };
+
   graph?:
   {
     identity: GraphIdentity;
@@ -201,11 +209,13 @@ export interface DispatchCommandEvidence
 
       rootRevision: number
     };
+
     afterCursor: GraphCursor;
 
     cause: GraphEventBatch['cause'];
   };
 }
+
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown>
 {
@@ -247,6 +257,7 @@ export interface DispatchMutation<T = unknown>
 
   receipt: T;
 }
+
 /**
  * 应用级监控的只读事实接收端；loaded 在完整恢复后调用一次，committed 只对应新落盘事务。
  * 观察失败不能撤回已提交事务，存储通过 failed 单独报告；参数与权威状态隔离，允许接收方持有副本。
@@ -259,6 +270,7 @@ export interface DispatchObserver
 
   Failed(error: Error): void;
 }
+
 /** 实现必须串行提交且先可靠落盘再返回，不允许失败后发布半次 mutation。 */
 export interface DispatchStore
 {

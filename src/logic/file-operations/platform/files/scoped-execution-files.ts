@@ -54,6 +54,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     };
     this.koffiPath = host.resourcesPath && !host.defaultApp ? path.join(host.resourcesPath, 'koffi') : requireRuntime.resolve('koffi');
   }
+
   /** 返回完整锁定读取，供产物指纹/验证复用；调用者不得把 bytes 缓存为以后读取权限。 */
   Snapshot(relative: string, signal: AbortSignal)
   {
@@ -88,6 +89,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
       this.unsettled.delete(token)
     }
   }
+
   /** 枚举期间持目标和全部祖先目录，不允许删除/重命名替换；返回释放函数只关闭本次句柄。 */
   LockDirectory(relative: string)
   {
@@ -105,6 +107,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
 
     return () => { directory.Close(); this.unsettled.delete(token) }
   }
+
   async Read(relative: string, signal: AbortSignal)
   {
     const value = this.Snapshot(relative, signal),
@@ -113,6 +116,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
 
     return { file: { path: relative, ...value.fact }, encoding: 'utf8' as const, content, acceptance: 'not_evaluated' as const }
   }
+
   async Node(raw: ScopedNodeInput, signal: AbortSignal, authorization?: ScopedExecutionAuthorization)
   {
     if (this.unsettled.size)
@@ -157,6 +161,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
 
     return { executionId: value.executionId, isolation: value.isolation, status: value.status, exitCode: value.exitCode, stdio: value.stdio, runtime: value.runtime, inputs: value.inputs, outputs: value.outputs, allProcessesExited: value.allProcessesExited, cleanup: value.cleanup, acceptance: 'not_evaluated' as const };
   }
+
   async Drain()
   {
     for (const retry of this.cleanupRetries.values())

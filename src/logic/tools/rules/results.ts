@@ -23,6 +23,7 @@ export type ToolResultContent =
 
     mimeType: string
   };
+
 export interface ToolResult
 {
   content: ToolResultContent[];
@@ -32,10 +33,12 @@ export interface ToolResult
 
   details?: unknown;
 }
+
 function invalid(name: string, reason: string): never
 {
   fail('TOOL_RESULT_INVALID', `${name} 返回无效工具结果：${reason}。请核实已有操作，不自动重试。`);
 }
+
 /** 不回显结果正文或序列化异常，避免将私密数据带进错误消息。 */
 function encode(name: string, value: unknown): string
 {
@@ -55,11 +58,13 @@ function encode(name: string, value: unknown): string
 
   return encoded;
 }
+
 /** 包装确定的领域返回值；null 是显式结果，undefined 必须由领域接口改为明确状态或错误。 */
 export function jsonToolResult(name: string, value: unknown): { content: { type: 'text'; text: string }[] }
 {
   return { content: [{ type: 'text', text: encode(name, value) }] };
 }
+
 /**
  * 领域调用完成后只生成一次 JSON 字节快照；严格核验同一快照，实际发送原编码，不采用 Schema 改写的数据。
  * 错误只报告结构位置/类别。操作可能已经发生，返回无效不代表回滚，调用方不得自动重试领域调用。
@@ -73,6 +78,7 @@ export function checkedJsonToolResult(name: string, value: unknown, schema: z.Zo
 
     return fail('TOOL_OUTPUT_INVALID', `${name} 业务输出无效（位置 ${location}；类别 ${category}）。操作可能已经发生，请核实已有记录，不自动重试。`);
   };
+
   const encoded = (() => { try { const encoded = JSON.stringify(value); return typeof encoded === 'string' ? encoded : reject('serialization') } catch { return reject('serialization') } })();
 
   const wire: unknown = JSON.parse(encoded);
@@ -92,6 +98,7 @@ export function checkedJsonToolResult(name: string, value: unknown, schema: z.Zo
 
   return { content: [{ type: 'text', text: encoded }] };
 }
+
 /**
  * 校验实际 JSON 传输形态并返回该快照，阻止 toJSON 或 undefined 字段在发送时改变协议。
  * 可用于已有具体结果类型；不执行工具、不授予权限，不自动把缺失内容补成成功结果。

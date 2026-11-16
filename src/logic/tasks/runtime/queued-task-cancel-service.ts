@@ -33,6 +33,7 @@ export class QueuedTaskCancelService
   constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: DispatchStore)
   {
   }
+
   /**
        * scope/run/command 来自主运行闭包；模型仅提供 targets、图游标及原因。同命令返回原回执，变参拒绝；校验失败不取消任何节点。
        * 实例仅转 idle，生命周期仍 active；旧审阅因图游标变化失效，业务完成仍需真实后续候选替代。

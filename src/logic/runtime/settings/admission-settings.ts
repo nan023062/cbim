@@ -26,6 +26,7 @@ export interface AdmissionSettingsStorage
 
   Write(filename: string, value: string): Promise<void>;
 }
+
 const disk: AdmissionSettingsStorage = { Read: filename => fs.readFile(filename, 'utf8'), Write: atomic };
 
 /** 应用唯一实例；只在 init 成功后向桌面提供配置入口。 */
@@ -39,15 +40,18 @@ export class AdmissionSettings
   constructor(private filename: string, private admission: GlobalRunAdmission, private storage: AdmissionSettingsStorage = disk)
   {
   }
+
   private Serial<T>(work: () => Promise<T>): Promise<T>
   {
     return this.queue.Run(work)
   }
+
   /** 在任何工作区开启前读取；缺文件沿用默认 4，损坏配置明确失败，不擅自覆盖用户设置。 */
   Init(): Promise<void>
   {
     return this.Serial(async () => { if (this.initialized) return; let policy: AdmissionPolicy; try { policy = storedPolicy.parse(JSON.parse(await this.storage.Read(this.filename))).policy } catch (error) { if ((error as { code?: string })?.code !== 'ENOENT') fail('ADMISSION_SETTINGS_INVALID', '运行配额设置无法读取，请核实设置文件后重新启动'); policy = this.admission.Snapshot().policy } this.admission.RestorePolicy(policy); this.initialized = true; })
   }
+
   /** 仅读取当前已生效策略，不扫描运行日志，不触发任务或恢复。 */
   Read(): AdmissionPolicy
   {
@@ -57,6 +61,7 @@ export class AdmissionSettings
 
     return { ...this.admission.Snapshot().policy }
   }
+
   /** revision 是用户查看时的策略版本；写盘失败保留旧值，成功后唤醒等待者重新检查资格。 */
   Configure(raw: unknown): Promise<AdmissionPolicy>
   {

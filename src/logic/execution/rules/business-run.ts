@@ -20,6 +20,7 @@ export interface BusinessRunSource
 
   protocol?: 'agent-tools-v1'
 }
+
 export interface AgentBusinessRun
 {
   protocol: 'agent-tools-v1';
@@ -44,6 +45,7 @@ export interface AgentBusinessRun
 
     acceptance: string[]
   };
+
   /** active 只表示启动意图已保存；真实授权和执行事实必须再核 canonical。 */
   status: 'active' | 'closed';
 

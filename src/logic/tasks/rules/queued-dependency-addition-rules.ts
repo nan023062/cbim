@@ -23,6 +23,7 @@ function check(value: unknown, code: string, message: string): asserts value
 
     fail(code, message)
 }
+
 const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every(value => b.includes(value));
 
 /** 返回闭包按图持久顺序排列；不扩张模型指定的边，不按时间或创建先后推断执行先后。 */

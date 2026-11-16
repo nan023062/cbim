@@ -20,6 +20,7 @@ interface WorkspaceDiagnosticsProps
 
   refreshKnowledge: () => Promise<unknown>;
 }
+
 const stateLabels: Record<string, string> = { registered: '已登记', running: '运行中', opening: '正在打开', closing: '正在关闭', closed: '已关闭', missing: '路径失效', failed: '打开失败', recovery_required: '需要恢复' };
 
 /** 校验结果来自知识快照；没有快照时明确显示待加载，不将缺失结果当作检查通过。 */
@@ -58,6 +59,7 @@ export function WorkspaceDiagnostics({ workspace, snapshot, refreshKnowledge }: 
       setRefreshing(false)
     }
   }
+
   return <section className="workspace-diagnostics" aria-label={`${workspace.name} 的工作区状态`}>
     <header><p className="overline">项目 / 诊断</p><h2>工作区状态</h2><p><Icon name={workspace.state === 'running' ? 'running' : workspace.state === 'failed' || workspace.state === 'missing' ? 'failed' : 'info'} size={16} />{stateLabels[workspace.state] || workspace.state}</p></header>
     <div className="view-context"><Icon name="folder" size={16} /><strong>{workspace.name}</strong><code>{workspace.path}</code></div>

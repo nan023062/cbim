@@ -32,6 +32,7 @@ export class MainAgentSettings
   constructor(private filename: (workspaceId: string) => string, private assertCurrent: (identity: Identity) => void, private models: EngineModelProfiles)
   {
   }
+
   private async ReadStored(workspaceId: string)
   {
     try
@@ -50,6 +51,7 @@ export class MainAgentSettings
       fail('AGENT_SETTINGS_READ', '主 Agent 配置读取失败，请检查配置文件后重试')
     }
   }
+
   /** 只读取配置，不读取密钥或创建运行；两处界面及所有主会话看到相同 revision。 */
   async Read(raw: unknown): Promise<MainAgentSettingsView>
   {
@@ -63,6 +65,7 @@ export class MainAgentSettings
 
     return { ...identity, agentId: 'cbim:main', ...value };
   }
+
   /** 保存完整选型；模型校验与写盘共享配置短锁，写盘成功才发布新 revision。 */
   Configure(raw: unknown): Promise<MainAgentSettingsView>
   {

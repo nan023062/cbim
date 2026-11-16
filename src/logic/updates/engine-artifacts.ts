@@ -21,6 +21,7 @@ export interface EngineArtifact
     identity: string
   }[];
 }
+
 /** 地址仅在完整校验后由可信宿主返回；调用者不能提交文件路径或 URL。 */
 export interface PreparedEngineArtifact
 {
@@ -41,6 +42,7 @@ export interface PreparedEngineArtifact
     protocol: 1
   };
 }
+
 export interface EngineArtifactsPort
 {
   /** 离线列出已验签候选；未知身份不接受 prepare。 */

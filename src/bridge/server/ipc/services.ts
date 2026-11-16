@@ -100,6 +100,7 @@ export interface ApplicationServices
   {
     Read(cursor?: AdmissionCursor): AdmissionRead
   };
+
   readonly admissionSettings: AdmissionSettings;
 
   /** 应用设置只为未来周期提供默认策略，不修改当前周期的冻结额度或发放启动许可。 */
@@ -114,6 +115,7 @@ export interface ApplicationServices
 
     Rename(workspaceId: string, name: string): void
   };
+
   /** 仅观察已运行实例；路由重命名时同步实例显示名，不负责增删实例。 */
   readonly running: ReadonlyMap<string, Workspace>;
 

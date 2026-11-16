@@ -35,6 +35,7 @@ type Draft =
 
     revision: string
   };
+
 const api = window.cbim;
 
 export function ResourceRepositoryView({ category, onSettings }: { category: ResourceCategory; onSettings: () => void })
@@ -122,6 +123,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
         setBusy(false)
     }
   }
+
   useEffect(() => { alive.current = true; void refresh(); return () => { alive.current = false; targetRequest.current++ } }, []);
 
   useEffect(() => { targetRequest.current++; setFilter('all'); setQuery(''); setDraft(undefined); setDirty(false); setApply(undefined); setTransfer(undefined); setError('') }, [category]);
@@ -136,6 +138,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
 
     setDraft({ id: copy ? undefined : item?.id, kind: item?.kind || createKinds[0], name: item ? (copy ? item.name + ' 副本' : item.name) : '', summary: item?.summary || '', content: item?.content || '', repositoryId: data.repositoryId, revision: data.revision })
   }
+
   /** 选择目标只读取登记清单与该工作区快照；不切换全局选中项、不自动创建成员实例。 */
   async function chooseWorkspace(item: ResourceDefinition)
   {
@@ -175,6 +178,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
         setBusy(false)
     }
   }
+
   async function continueApply()
   {
     if (!apply?.targetId || busy)
@@ -218,6 +222,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
         setBusy(false)
     }
   }
+
   async function save()
   {
     if (!draft)
@@ -247,6 +252,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
       setBusy(false)
     }
   }
+
   async function remove(item: ResourceDefinition)
   {
     if (!data || !confirm(`从当前仓库删除「${item.name}」？已存在的工作区知识不会被修改。`))
@@ -270,6 +276,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
       setBusy(false)
     }
   }
+
   const items = (data?.items || []).filter(i => kinds.includes(i.kind) && (filter === 'all' || i.kind === filter) && `${i.name} ${i.summary}`.toLowerCase().includes(query.toLowerCase()));
 
   // 静态包有指纹与引用关系，正文在工作区语义编辑器中定制后重新发布；这里仅维护仓库展示信息。
@@ -281,6 +288,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
 
       setDraft(undefined)
   }
+
   function closeApply()
   {
     if (!busy)
@@ -292,6 +300,7 @@ export function ResourceRepositoryView({ category, onSettings }: { category: Res
       setError('')
     }
   }
+
   return <div className="view-page resource-library"><div className="view-heading"><div><p className="overline">CBIM / 团队资源仓库</p><h1>{meta.label}</h1><p>{meta.description}</p></div><button className="solid-button" disabled={!data || busy} onClick={() => edit()}><Icon name="add" size={16} />新建自定义资源</button></div>
     <div className="repository-bar"><div><b>{!status ? (error ? '来源读取失败' : '正在读取资源来源…') : status.source === 'server' ? '服务器仓库' : status.config ? '本地仓库（未登录）' : '本地仓库未配置'}</b><small>{status?.config?.location || (status ? '未登录时请在设置中选择本地目录' : '来源确认前不能保存或应用资源')}</small></div><button disabled={busy} onClick={onSettings}><Icon name="openExternal" size={16} />前往设置</button>{status?.config && <button disabled={busy} onClick={() => void refresh()}><Icon name="refresh" size={16} />刷新资源</button>}</div>
     {error && <div className="shell-alert" role="alert">{error}</div>}

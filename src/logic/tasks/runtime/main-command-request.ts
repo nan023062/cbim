@@ -41,21 +41,25 @@ export function goalCommand(operation: string, identity: GraphIdentity, scopeId:
 {
   return { commandId, fingerprint: hash(json({ operation, identity, scopeId, runId, draft })) }
 }
+
 /** 原桌面/Auto 共用命令格式；actor 是既有命名空间，不据此推断真人操作。 */
 export function dispatchCommand<T extends { commandId: string }>(operation: string, input: T): DispatchCommand
 {
   return { commandId: input.commandId, fingerprint: hash(json({ operation, actor: 'desktop-local-user', input })) }
 }
+
 /** 撤销、加边、换边与放弃保留各自 context（runId 或 mainRunId），不能混用字段。 */
 export function contextualMainCommand<T extends { commandId: string }>(operation: string, context: T, input: unknown): DispatchCommand
 {
   return { commandId: context.commandId, fingerprint: hash(json({ operation, context, input })) }
 }
+
 /** 预约原格式不在指纹正文重复 commandId；只读核实必须与提交方一致。 */
 export function memberResumeCommand(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, input: unknown): DispatchCommand
 {
   return { commandId, fingerprint: hash(json({ operation: 'member.resume.request', identity, scopeId, mainRunId, input })) }
 }
+
 const { assigneeAgentId, ...taskFields } = dispatchTaskFields.shape;
 
 // 旧工具允许缺省内置角色；这里只复原历史，执行工具仍独立要求明确岗位和角色。
@@ -70,6 +74,7 @@ export interface RestoredMainCommand
 
   input: unknown
 }
+
 export function restoreMainCommand(name: VerifiableMainToolName, binding: MainToolOutputBinding, toolCallId: string, raw: unknown, parentRevision?: number): RestoredMainCommand
 {
   const identity = { workspaceId: binding.workspaceId, rootSessionId: binding.rootSessionId },

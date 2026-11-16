@@ -12,6 +12,7 @@ export interface MemberDependencyHistory
 
   invalid: boolean
 }
+
 /** 缺字段是旧节点；空数组或不匹配的审计是坏记录，不应显示为没有历史。 */
 export interface MemberDependencyAdditionHistory
 {
@@ -19,12 +20,14 @@ export interface MemberDependencyAdditionHistory
 
   invalid: boolean
 }
+
 export interface MemberDependencyRevisionHistory
 {
   records: DependencyRevision[];
 
   invalid: boolean
 }
+
 /** 原子增删仅显示原请求与审计；跨图和原边事实仍由后端完整图核实，不在视图重建。 */
 export function memberDependencyRevisionHistory(task: TaskNode): MemberDependencyRevisionHistory
 {
@@ -58,6 +61,7 @@ export function memberDependencyRevisionHistory(task: TaskNode): MemberDependenc
   }
   return { records, invalid: false };
 }
+
 /** 调用方先核对工作区/会话身份。这里不读取日志、核验证据或签发执行许可；完整语义由后端事务保证。 */
 export function memberDependencyHistory(task: TaskNode): MemberDependencyHistory
 {
@@ -89,6 +93,7 @@ export function memberDependencyHistory(task: TaskNode): MemberDependencyHistory
   }
   return { records, invalid: false };
 }
+
 /** 追加只锁定当时的前置任务与计划，不能在此查询或补造其后产生的 run/result。 */
 export function memberDependencyAdditionHistory(task: TaskNode): MemberDependencyAdditionHistory
 {

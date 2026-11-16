@@ -29,6 +29,7 @@ export class RunJournal
   constructor(readonly directory: string, readonly task: TaskSpec, readonly runId: string)
   {
   }
+
   /** 创建新轮次日志；已有 events.jsonl 时失败，不覆盖历史或把旧日志当作新轮次续写。 */
   async Init()
   {
@@ -38,6 +39,7 @@ export class RunJournal
 
     await file.close();
   }
+
   /** 顺序追加并 fsync 后返回；一旦写失败，此日志队列后续写入继续失败以阻止无证据执行。 */
   Append(event: EngineEvent): Promise<StoredEvent>
   {
@@ -50,11 +52,13 @@ export class RunJournal
 
     return write;
   }
+
   /** 等待截至调用时已排队的写入；日志曾写失败时继续拒绝，不能作为已可靠结算的证明。 */
   async Flush()
   {
     await this.tail
   }
+
   /** 只解析完整行并验证身份及顺序；未完整尾行通过 logIntegrity 报告，已放行无结果为 interrupted。IO 错误保留系统码，坏记录使用 RUN_LOG_INVALID。 */
   static async Read(directory: string): Promise<RunSummary>
   {

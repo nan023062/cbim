@@ -25,10 +25,12 @@ type Owner =
     {
       id: string
     };
+
     instanceId: string;
 
     Assert(): void
   };
+
 /** 每个活动工作区仅一份；实例代际来自工作区所有权，不从磁盘请求或页面输入恢复。 */
 export class ModelRequestBudgetService
 {
@@ -38,6 +40,7 @@ export class ModelRequestBudgetService
   constructor(private readonly owner: Owner, private readonly store: RequestBudgetStore, private readonly budgets: RequestBudgetAdmission)
   {
   }
+
   /** 主工厂已解析配置但尚未消费等待时调用；没有当前周期表示新目标，由其首次请求独立核验。 */
   async Preflight(rootSessionId: string, scopeId: string | undefined, llm: RequestBudgetExecutionModel | undefined): Promise<void>
   {
@@ -61,6 +64,7 @@ export class ModelRequestBudgetService
 
     this.budgets.PreflightRequest(state, scope, llm.profile);
   }
+
   /** 在真实 run 登记后冻结模型计价；assertCaller 在每次发送前核实原子调用，终态用量不因停止被丢弃。旧成员须先领取 running。 */
   async ForRun(input: { rootSessionId: string; taskId: string; runId: string; kind: 'main' | 'member'; scopeId?: string; agentRun?: { taskId: string; runId: string } }, llm?: RequestBudgetExecutionModel, role = 'primary', assertCaller?: () => void): Promise<RequestBudgetPort | undefined>
   {
@@ -88,6 +92,7 @@ export class ModelRequestBudgetService
       model: structuredClone(model), reserve: async request => { this.AssertLive(binding, assertCaller); if (this.stoppedScopes.has(binding.scopeId)) fail('MODEL_REQUEST_UNVERIFIED', '本周期请求结果待核实，未发送新的请求'); const intent: RequestBudgetIntent = { version: 1, requestId: randomUUID(), binding, policyRevision, model, requestHash: request.requestHash, maxOutputTokens: request.maxOutputTokens, ...requestBudgetReservation(model, request.maxOutputTokens), createdAt: new Date().toISOString() }; const initial: ModelRequestBudgetChange = { requestId: intent.requestId, revision: 1, recordedAt: intent.createdAt, phase: 'reserved', intent }; let denial = ''; const receipt = await this.store.TransactBudget(requestBudgetCommand(initial), async current => { this.AssertLive(binding, assertCaller); const currentScope = current.scopes?.find(s => s.scopeId === binding.scopeId); if (!currentScope?.budget) fail('MODEL_REQUEST_BUDGET_STALE', '请求所属周期或冻结预算已不存在'); const records = requestBudgetRecords(current.modelRequestBudgetChanges ?? []), report = this.Summary(current, binding), reason = requestBudgetDecision(currentScope.budget.policy, report, intent, records); const change: ModelRequestBudgetChange = reason ? { ...initial, phase: 'denied', reason } : initial; if (reason) { const limit = currentScope.budget.policy.limits; denial = reason === 'token_reserve' ? `本次请求需要预留 ${intent.tokens} Token，剩余 ${Math.max(0, (limit.tokens ?? 0) - report.tokens - report.reservedTokens)} Token` : reason === 'cost_reserve' ? `本次请求需预留约 $${intent.estimatedCostUsd}，剩余约 $${Math.max(0, (limit.estimatedCostUsd ?? 0) - report.estimatedCostUsd - report.reservedCostUsd)}` : reason === 'unpriced' ? '原模型价格缺失，无法核实美元预算' : reason === 'capacity' ? '请求审计容量已满' : '本周期存在未核实请求或超出原预留的报告'; } return { modelRequestBudgetChanges: [change], receipt: requestBudgetReceipt(change) }; }); if (receipt.phase === 'denied') fail('MODEL_REQUEST_BUDGET_DENIED', denial + '；已在发送前停止，原结果保留'); return this.Ticket(intent, assertCaller); }
     };
   }
+
   /** 纯读取，不补终态、不启动模型；调用者必须提供完整的周期归属。 */
   async Report(input: unknown)
   {
@@ -101,6 +106,7 @@ export class ModelRequestBudgetService
 
     return this.Summary(await this.store.ReadBudget(), query)
   }
+
   private Summary(state: RequestBudgetState, b: { workspaceId: string; rootSessionId: string; scopeId: string })
   {
     const scope = state.scopes?.find(s => s.scopeId === b.scopeId && s.rootSessionId === b.rootSessionId && s.workspaceId === b.workspaceId);
@@ -111,6 +117,7 @@ export class ModelRequestBudgetService
 
     return requestBudgetReport(requestBudgetRecords(state.modelRequestBudgetChanges ?? []), { workspaceId: b.workspaceId, rootSessionId: b.rootSessionId, scopeId: b.scopeId, policyRevision: scope.budget.policy.revision }, this.owner.instanceId);
   }
+
   private AssertLive(binding: RequestBudgetBinding, assertCaller?: () => void)
   {
     this.owner.Assert();
@@ -121,6 +128,7 @@ export class ModelRequestBudgetService
 
       fail('MODEL_REQUEST_RUN_STALE', '原主运行已结束，未发送新的模型请求')
   }
+
   private Ticket(intent: RequestBudgetIntent, assertCaller?: () => void): RequestBudgetTicket
   {
     let revision = 1,

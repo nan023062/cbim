@@ -25,6 +25,7 @@ export function knowledgeRefreshRequest(input: KnowledgeRefreshInput): ChangeReq
 {
   return { ...knowledgeRefreshInputSchema.parse(input), changes: [] }
 }
+
 export type KnowledgeWriteReference =
   {
     kind: 'request';
@@ -40,6 +41,7 @@ export type KnowledgeWriteReference =
 
     planId: string
   };
+
 /** 重现实际工具解析，不访问当前实例、文件或知识服务；无安全原引用时不猜测请求。 */
 export function originalKnowledgeWrite(name: string, raw: unknown, contractVersion?: number): KnowledgeWriteReference | undefined
 {
@@ -78,6 +80,7 @@ export function originalKnowledgeWrite(name: string, raw: unknown, contractVersi
     return { kind: 'object_plan', ...parsed.data };
   }
 }
+
 /** 查询身份来自原工具参数或原 planId，不取当前实例身份替换历史。 */
 export function originalKnowledgeIdentity(reference: KnowledgeWriteReference)
 {

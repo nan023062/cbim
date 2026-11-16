@@ -187,6 +187,7 @@ export const humanDecisionRecordSchema = z.object({ decisionId: z.string().uuid(
 
     issue('人工决定的完整集合合并预算超过上限');
 });
+
 export type HumanDecisionRecord = z.infer<typeof humanDecisionRecordSchema>;
 
 export const scopeHumanDecisionsSchema = z.object({ revision: positive.max(humanDecisionLimit), records: z.array(humanDecisionRecordSchema).min(1).max(humanDecisionLimit) }).strict().superRefine((value, context) => { if (value.revision !== value.records.length || value.records.some((record, index) => record.revision !== index + 1) || !unique(value.records.map(record => record.decisionId))) context.addIssue({ code: 'custom', message: '人工决定历史必须有界连续且命令唯一' }); for (let index = 0; index < value.records.length; index++) { const record = value.records[index], prior = value.records.slice(0, index).filter(item => item.criterionId === record.criterionId && item.basis === record.basis).at(-1); if (record.supersedesDecisionId !== prior?.decisionId) context.addIssue({ code: 'custom', message: '只能替代同人工项、同依据的最近决定' }) } for (let index = 0; index < value.records.length; index++) { const record = value.records[index]; if (!record.reconsidersDecisionId) continue; const prior = value.records.slice(0, index).filter(item => item.criterionId === record.criterionId).at(-1); if (prior?.decisionId !== record.reconsidersDecisionId || prior.proof.source.waitId === record.proof.source.waitId) context.addIssue({ code: 'custom', message: '跨等待重新决定只能关联本项最新的先前等待意见' }) } });

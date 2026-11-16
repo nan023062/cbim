@@ -77,6 +77,7 @@ export function ModelSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boole
       setBusy(false)
     }
   }
+
   function open(p?: LlmProfile)
   {
     setId(p?.id);
@@ -99,21 +100,25 @@ export function ModelSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boole
 
     setNotice('')
   }
+
   function add(value: string)
   {
     setDraft(d => ({ ...d, models: [...d.models, newModel(value, found.find(m => m.id === value))], defaultModel: d.defaultModel || value }));
 
     setModelId('')
   }
+
   function updateModel(index: number, patch: Partial<LlmModel>)
   {
     setDraft(d => ({ ...d, models: d.models.map((m, i) => i === index ? { ...m, ...patch } : m) }))
   }
+
   // 删除型号同时清理显式接口引用；清空限定列表后需用户重新选择或取消限制，不能静默扩大到全部型号。
   function drop(index: number)
   {
     setDraft(d => { const models = d.models.filter((_, i) => i !== index); const alternateConnections = d.alternateConnections?.map(connection => ({ ...connection, modelIds: connection.modelIds?.filter(id => models.some(model => model.id === id)) })); return { ...d, models, alternateConnections, defaultModel: models.some(m => m.id === d.defaultModel) ? d.defaultModel : models.find(m => m.enabled)?.id || '' }; })
   }
+
   return <section className="repository-settings model-settings" aria-label="模型供应商">
     <div className="model-heading"><div><h2>模型供应商</h2><p>连接自定义接口，选择大脑使用的默认模型。</p></div><button disabled={busy || editing} onClick={() => open()}>添加供应商</button></div>
     {error && <p className="shell-alert" role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}

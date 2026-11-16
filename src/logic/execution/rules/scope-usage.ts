@@ -25,6 +25,7 @@ export function emptyScopeRunUsage(): ScopeRunUsage
 {
   return { source: 'none', tokensState: 'missing', costState: 'unknown', tokens: emptyTokens(), issues: [] }
 }
+
 function readTokens(raw: unknown)
 {
   const value = record(raw),
@@ -59,12 +60,14 @@ function readTokens(raw: unknown)
 
   return { tokens, present, complete };
 }
+
 function addTokens(target: ScopeUsageTokens, value: ScopeUsageTokens)
 {
   for (const key of [...tokenKeys, 'reasoning', 'total'] as const)
 
     target[key] += value[key]
 }
+
 function price(data: Record<string, unknown>, aggregate = false)
 {
   const value = aggregate ? data.cost : record(record(data.usage)?.cost)?.total;
@@ -73,6 +76,7 @@ function price(data: Record<string, unknown>, aggregate = false)
 
   return number(value) && (data.pricingKnown === true || provider === true || value > 0) ? value : undefined;
 }
+
 const hasTerminal = (event: StoredEvent, status: RunSummary['status']) => event.type === 'run.settled' && event.data?.status === status && status !== 'running' || event.type === 'run.interrupted' && status === 'interrupted';
 
 /** 只有完整且不早于任何消息的原生汇总能声明 reported；仅消息计量始终是部分值。 */
@@ -253,6 +257,7 @@ export function measureScopeRunUsage(summary: RunSummary): ScopeRunUsage
 
   return result;
 }
+
 /** 汇总仅接受本次读取的精确运行集合；legacy、读取竞争、在途或缺日志均使完整性为 false。 */
 export function summarizeScopeUsage(runs: readonly ScopeUsageRun[], coverage: 'tracked' | 'legacy', consistency: 'stable' | 'changed_during_read'): ScopeUsageTotals
 {

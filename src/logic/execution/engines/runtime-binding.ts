@@ -70,6 +70,7 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
 
       throw Error('此会话绑定的引擎包已变化，请保留历史并新建对话；未用新引擎恢复旧原生会话');
   }
+
   async function remember(id: string)
   {
     await fs.mkdir(directory, { recursive: true });
@@ -98,6 +99,7 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
       await check(id)
     }
   }
+
   return {
     kind: engine.kind,
 
@@ -115,7 +117,12 @@ export function pinRuntimeEngine(engine: AgentEngine, home: string, runtime?: En
         ...context, emit: async event => { if (event.type === 'session.bound' && typeof event.data.sessionId === 'string') await remember(event.data.sessionId); await context.emit(event) }
       });
     },
-    run: message => engine.run(message), stop: () => engine.stop(), close: async () => { await engine.close(); release?.() },
+
+    run: message => engine.run(message),
+
+    stop: () => engine.stop(),
+
+    close: async () => { await engine.close(); release?.() },
 
     ...(engine.steer ? { steer: (...args: Parameters<NonNullable<AgentEngine['steer']>>) => engine.steer!(...args) } : {}),
   };

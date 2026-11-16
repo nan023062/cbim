@@ -27,6 +27,7 @@ function checkView(view: ModuleOwnershipView, workspaceId: string)
 
     throw Error('模块来源不属于当前工作区或责任记录');
 }
+
 /** 三项读取依据一起冻结后续页；岗位改名、知识变化或关系变更均不能拼入旧列表。 */
 export function checkedModuleOwnershipPage(raw: unknown, input: ModuleOwnershipListInput | ModuleOwnershipByMemberInput): ModuleOwnershipPage
 {
@@ -48,6 +49,7 @@ export function checkedModuleOwnershipPage(raw: unknown, input: ModuleOwnershipL
   }
   return value;
 }
+
 /** 详情只显示当前关系和真实历史，不依据旧任务或 Agent 名称补造负责人。 */
 export function checkedModuleOwnershipDetail(raw: unknown, input: ModuleOwnershipGetInput): ModuleOwnershipDetail
 {
@@ -61,6 +63,7 @@ export function checkedModuleOwnershipDetail(raw: unknown, input: ModuleOwnershi
 
   return value;
 }
+
 /** 未选中的身份、原关系或目标岗位不能由预览回包改写。 */
 export function checkedModuleOwnershipPreview(raw: unknown, input: ModuleOwnershipPreviewInput): ModuleOwnershipPreview
 {
@@ -92,6 +95,7 @@ export function checkedModuleOwnershipPreview(raw: unknown, input: ModuleOwnersh
 
   return value;
 }
+
 /** 桌面原请求只能对应本机明确提交来源；回执一经受理，全部事实保持不变。 */
 export function checkedModuleOwnershipReceipt(raw: unknown, request: ModuleOwnershipCommitInput, previous?: ModuleOwnershipReceipt): ModuleOwnershipReceipt
 {
@@ -115,6 +119,7 @@ export function checkedModuleOwnershipReceipt(raw: unknown, request: ModuleOwner
 
   return value;
 }
+
 export interface ModuleOwnershipAttempt
 {
   request: ModuleOwnershipCommitInput;
@@ -127,6 +132,7 @@ export interface ModuleOwnershipAttempt
 
   error?: string
 }
+
 /** 只含公开请求和紧凑回执，历史正文仍由 Main 的权威审计持有。 */
 export interface ModuleOwnershipCommandState
 {
@@ -134,6 +140,7 @@ export interface ModuleOwnershipCommandState
 
   error: string
 }
+
 export interface ModuleOwnershipCommandPorts
 {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
@@ -144,11 +151,13 @@ export interface ModuleOwnershipCommandPorts
 
   uuid: () => string
 }
+
 /** 精确列举首次受理前拒绝；未知、IO 与命令冲突不能被解释为可换 ID 的拒绝。 */
 export function moduleOwnershipPreRejected(error: unknown)
 {
   return /^OWNERSHIP_(?:INPUT|IDENTITY|NOT_FOUND|REGISTRY_STALE|BINDING_STALE|ALREADY_EXISTS|MEMBER_CHANGED|MEMBER_UNAVAILABLE|SOURCE_INVALID|SOURCE_CHANGED|SOURCE_PENDING|BASIS_STALE|NO_CHANGE|LIMIT):/.test(message(error))
 }
+
 /** 每工作区共享的本机命令日志；卸载视图不取消已经送达的登记，也不删除未决记录。 */
 export class ModuleOwnershipCommands
 {
@@ -199,30 +208,37 @@ export class ModuleOwnershipCommands
       this.value = { records: [], error: '责任本机提交记录无法读取，未发送请求：' + message(error) }
     }
   }
+
   get snapshot()
   {
     return this.value
   }
+
   get blocked()
   {
     return this.unavailable || this.pending.size > 0 || this.value.records.some(item => item.phase === 'unknown' || item.phase === 'submitting')
   }
+
   get canRelease()
   {
     return !this.listeners.size && !this.pending.size
   }
+
   Subscribe(listener: () => void)
   {
     return this.listeners.Subscribe(listener)
   }
+
   IsPending(id: string)
   {
     return this.pending.has(id)
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   private Save(record: ModuleOwnershipAttempt)
   {
     const records = [...this.value.records],
@@ -264,6 +280,7 @@ export class ModuleOwnershipCommands
       return false
     }
   }
+
   /** 当前明确选择对应预览才提交；返回本次命令记录，不能从共享池最后一条推测调用结果。 */
   async Submit(input: ModuleOwnershipPreviewInput, preview: ModuleOwnershipPreview)
   {
@@ -295,6 +312,7 @@ export class ModuleOwnershipCommands
 
     return this.value.records.find(item => item.request.commandId === request.commandId);
   }
+
   private async Send(record: ModuleOwnershipAttempt)
   {
     const request = record.request;
@@ -326,6 +344,7 @@ export class ModuleOwnershipCommands
       this.Emit()
     }
   }
+
   /** 手动重送永远使用已冻结原请求；重开应用不会调用本接口。 */
   async Retry(id: string)
   {
@@ -337,6 +356,7 @@ export class ModuleOwnershipCommands
 
     await this.Send(record)
   }
+
   /** 查询失败或空回执仍是未知；允许修复“已受理但本机保存失败”，不执行新的登记。 */
   async Query(id: string)
   {
@@ -373,6 +393,7 @@ export class ModuleOwnershipCommands
       this.Emit()
     }
   }
+
   /** 重开只核实已持久未知命令；尚未查到回执不会自动预览、提交或换新 ID。 */
   async Restore()
   {
@@ -383,6 +404,7 @@ export class ModuleOwnershipCommands
         await this.Query(record.request.commandId)
   }
 }
+
 /** 多个业务架构或岗位页签共享原工作区未决命令；仅回收无人使用的控制器，不丢持久记录。 */
 export class ModuleOwnershipCommandPool
 {
@@ -409,5 +431,6 @@ export class ModuleOwnershipCommandPool
     return value
   }
 }
+
 /** 业务卡片、完整责任页与岗位反查入口共享未决写入。 */
 export const moduleOwnershipCommands = new ModuleOwnershipCommandPool();

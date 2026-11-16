@@ -63,6 +63,7 @@ export interface CodexOptions
 
   requestBudget?(): Promise<RequestBudgetPort | undefined>
 }
+
 /** 删除宿主 Codex/OpenAI 身份及启动注入；只把本轮代理令牌交给原生进程。 */
 export function codexEnvironment(home: string, token: string): NodeJS.ProcessEnv
 {
@@ -76,6 +77,7 @@ export function codexEnvironment(home: string, token: string): NodeJS.ProcessEnv
 
   return { ...env, CODEX_HOME: home, CBIM_CODEX_API_KEY: token };
 }
+
 /** TOML 内联值仅用于独立 argv；从不拼接 shell 命令，也不在 argv 放真实供应商凭据。 */
 function toml(value: any): string
 {
@@ -89,6 +91,7 @@ function toml(value: any): string
 
   return JSON.stringify(value)
 }
+
 export class CodexEngine implements AgentEngine
 {
   readonly kind = 'codex';
@@ -127,15 +130,18 @@ export class CodexEngine implements AgentEngine
 
       reject: (error: Error) => void
     };
+
   constructor(private options: CodexOptions)
   {
   }
+
   private Redact(text: string)
   {
     const key = this.options.llm?.apiKey;
 
     return StringUtils.RedactLiteral(text, key)
   }
+
   private Fail(error: Error)
   {
     this.fatal ??= Error(this.Redact(error.message));
@@ -146,6 +152,7 @@ export class CodexEngine implements AgentEngine
 
       this.done?.reject(this.fatal)
   }
+
   private async Emit(event: EngineEvent)
   {
     this.inactivity?.Observe(event);
@@ -161,6 +168,7 @@ export class CodexEngine implements AgentEngine
       throw error
     }
   }
+
   async start(context: EngineContext)
   {
     this.context = context;
@@ -278,6 +286,7 @@ export class CodexEngine implements AgentEngine
 
     await this.Emit({ type: 'engine.status', data: { label: 'Codex 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.catalog.map(t => t.name) } });
   }
+
   private async Bind()
   {
     if (this.sessionBound)
@@ -294,6 +303,7 @@ export class CodexEngine implements AgentEngine
 
     this.sessionBound = true;
   }
+
   async run(message: string)
   {
     if (!this.rpc || !this.context)
@@ -350,6 +360,7 @@ export class CodexEngine implements AgentEngine
       this.inactivity?.Dispose()
     }
   }
+
   private async Notification(method: string, params: any)
   {
     if (params?.threadId !== this.threadId)
@@ -396,6 +407,7 @@ export class CodexEngine implements AgentEngine
       this.done?.resolve(this.stopped || turn.status === 'interrupted' ? { status: 'cancelled' } : turn.status === 'completed' && !error ? { status: 'completed' } : { status: 'failed', error: this.Redact(error ?? 'Codex 返回未知终态') });
     }
   }
+
   async stop()
   {
     this.stopped = true;
@@ -417,6 +429,7 @@ export class CodexEngine implements AgentEngine
       }
     this.done?.resolve({ status: 'cancelled' })
   }
+
   /**
        * 所有终态都先关闭原生进程、排空回调，再补登记延迟落盘的文件；运行时随后才封存日志。
        * 只使用 thread 回执中的路径，不扫描/猜测其他文件。尚未落盘保持缺省；无效文件拒绝绑定。

@@ -17,6 +17,7 @@ export interface ConversationTopic
 
   archived: boolean
 }
+
 /** 返回所属办公室的只读分组；冲突归属保留在未分类集合，不任选一个话题。 */
 export function conversationTopics(identity: GraphIdentity, scopes: readonly ScopeSummary[], runs: readonly RunSummary[], graph?: GraphSnapshot)
 {

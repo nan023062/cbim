@@ -27,6 +27,7 @@ export class CodexRpc
 
     checkRemainder: text => { if (Buffer.byteLength(text) > 32 * 1024 * 1024) throw Error('Codex 消息超出限制') },
   });
+
   private pending = new PendingRequests<number, any>();
 
   private handling = new InFlightOperations();
@@ -36,6 +37,7 @@ export class CodexRpc
   constructor(private notify: (method: string, params: any) => Promise<void>, private requestHandler: (method: string, params: any) => Promise<unknown>, private failed: (error: Error) => void)
   {
   }
+
   Start(binary: string, cwd: string, env: NodeJS.ProcessEnv, args: string[])
   {
     const child = this.child = spawn(binary, ['app-server', '--listen', 'stdio://', ...args], { cwd, env, windowsHide: true, shell: false, stdio: 'pipe' });
@@ -50,6 +52,7 @@ export class CodexRpc
 
     child.stdout.on('data', (chunk: string) => { try { this.frames.Push(chunk, line => { if (line.trim()) this.Receive(JSON.parse(line)) }) } catch (error) { this.Fail(error instanceof Error ? error : Error(String(error))) } });
   }
+
   private Receive(value: any)
   {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -80,6 +83,7 @@ export class CodexRpc
 
       throw Error('Codex 返回不可关联的消息');
   }
+
   /** 请求只发一次；原生确认之前的断连保持失败，不猜测操作是否被受理。 */
   Request(method: string, params: unknown = {}, timeoutMs = 30000): Promise<any>
   {
@@ -91,6 +95,7 @@ export class CodexRpc
 
     return new Promise((resolve, reject) => { this.pending.Register(id, { resolve, reject }, timeoutMs, () => this.Fail(Error('Codex ' + method + ' 超时，请核实原运行'))); try { this.Send({ id, method, params }) } catch (error) { this.Fail(error instanceof Error ? error : Error(String(error))) } });
   }
+
   Send(value: unknown)
   {
     if (this.failure || this.closing || !this.child)
@@ -99,6 +104,7 @@ export class CodexRpc
 
     this.child.stdin.write(JSON.stringify(value) + '\n')
   }
+
   private Fail(error: Error)
   {
     if (this.failure)
@@ -113,6 +119,7 @@ export class CodexRpc
 
     this.failed(error)
   }
+
   /** 停止接收后续请求并等待操作处理排空；不将进程退出解释为已撤销工具副作用。 */
   async Close()
   {

@@ -26,6 +26,7 @@ export function pastedLocalPaths(text: string): string[] | undefined
 
     return paths;
 }
+
 /** 此资料导入协议不包含正文、凭据或来源证明；本地路径/剪贴板图片分别使用受限专用入口。 */
 export type ChatMaterialImport =
   {

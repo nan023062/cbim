@@ -37,6 +37,7 @@ function valid(value: unknown, message: string): asserts value
 
     fail('GRAPH_INPUT_INVALID', message)
 }
+
 const fixed = (task: TaskNode) => ({ goal: task.goal, acceptance: task.acceptance, modules: task.modules, workflowSelections: task.workflowSelections, ownerBinding: task.ownerBinding, fallbackBinding: task.fallbackBinding, assignee: task.assignee, requester: task.requester, scopeId: task.scopeId, planRevision: task.planRevision });
 
 /** 验证真实联合状态，不访问磁盘；abandoned 只接完整放弃校验按 [rootSessionId,taskId] 编码的许可。恢复仍需当前文件/原生证明，终止不授予恢复资格。 */

@@ -16,6 +16,7 @@ export function quoteWindowsArgument(value: string): string
 {
   return '"' + value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1') + '"'
 }
+
 const fault = (stage: string, code?: number): never => { throw Object.assign(new Error('隔离平台操作失败：' + stage), { code: 'ISOLATION_' + stage, ...(code === undefined ? {} : { win32Code: code }) }) };
 
 /** 一个实例只启动一次；close 只收束原 Job，不启动替代进程，失败可对同实例重试清理。 */
@@ -168,12 +169,14 @@ export class Win32IsolatedNode
       throw error
     }
   }
+
   private Check(value: unknown, stage: string)
   {
     if (!value)
 
       fault(stage, this.api.last())
   }
+
   private Keep(handle: any)
   {
     if (!handle || this.k.address(handle) === 0xffffffffffffffffn)
@@ -184,6 +187,7 @@ export class Win32IsolatedNode
 
     return handle
   }
+
   private Release(handle: any)
   {
     if (!handle)
@@ -194,6 +198,7 @@ export class Win32IsolatedNode
 
     this.handles.splice(this.handles.indexOf(handle), 1)
   }
+
   private StringSid(sid: any)
   {
     const out = [null];
@@ -209,6 +214,7 @@ export class Win32IsolatedNode
       this.api.localFree(out[0])
     }
   }
+
   private Token(handle: any, kind: number)
   {
     const bytes = Buffer.alloc(4096),
@@ -223,6 +229,7 @@ export class Win32IsolatedNode
 
     return bytes
   }
+
   /** 只在新建且未填充的自有目录上设置保护 DACL；创建文件随后继承各自读写范围。 */
   Grant(directory: string, access: 'traverse' | 'read' | 'write')
   {
@@ -245,12 +252,14 @@ export class Win32IsolatedNode
       this.api.localFree(sd[0])
     }
   }
+
   private Attribute(id: number, bytes: Buffer)
   {
     this.pins.push(bytes);
 
     this.Check(this.api.attribute(this.attributes, 0, id, bytes, bytes.length, null, null), 'ATTRIBUTE')
   }
+
   /** 创建挂起的进程；Job 由创建属性一次绑定，任何核实失败均不执行用户脚本。 */
   Start(executable: string, args: string[], cwd: string, options: { timeoutMs: number; memoryMiB: number; processLimit: number }, suspendOnly = false): number
   {
@@ -443,6 +452,7 @@ export class Win32IsolatedNode
 
     return info.readUInt32LE(16);
   }
+
   /** 原进程仍挂起时先保存调用身份；只有该次可靠保存完成后才允许执行脚本。 */
   Resume()
   {
@@ -456,6 +466,7 @@ export class Win32IsolatedNode
 
     this.resumed = true
   }
+
   /** 只读取已在宿主管道中的字节；单次最多 4096，不等待用户进程生产数据。 */
   Read(): Buffer
   {
@@ -485,6 +496,7 @@ export class Win32IsolatedNode
 
     return bytes.subarray(0, count.readUInt32LE())
   }
+
   /** 主进程句柄已发信号与Job活动数分别核实；单凭exitCode（含259）不能判断存活，也不意味着后代全部结束。 */
   State()
   {
@@ -514,6 +526,7 @@ export class Win32IsolatedNode
 
     return { active: accounting.readUInt32LE(40), exited: result === 0, exitCode: code.readUInt32LE(), totalProcesses: accounting.readUInt32LE(36), limitTerminations: accounting.readUInt32LE(44), peakMemoryBytes: Number(limits.readBigUInt64LE(136)) }
   }
+
   /** 终止整个原 Job，包括主进程已退出而仍存活的后代；调用后仍须轮询 active=0。 */
   Terminate()
   {
@@ -521,6 +534,7 @@ export class Win32IsolatedNode
 
       this.Check(this.api.jobTerminate(this.job, 1), 'TERMINATE')
   }
+
   /** 无活动程序后释放所有句柄和临时 profile；中途失败保留剩余所有权供同实例再次 close。 */
   Close()
   {

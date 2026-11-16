@@ -123,6 +123,7 @@ export function useMemberRun(workspaceId: string, rootSessionId: string, taskId:
 
       return inFlight;
     }
+
     const visible = () => { if (document.visibilityState === 'visible') void pull() };
 
     if (enabled && runId)

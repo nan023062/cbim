@@ -38,6 +38,7 @@ const definitions = {
 
   cbim_delivery_prepare: { description: '准备交付候选。全部步骤须有有效回执；Workflow 若要求 requireCompleteManifest，须明确原 manifestId，产物验证须引用同一清单，程序重核全部声明根及后代。仅观察声明和旧模式不传 manifestId。这里只标记待审阅，不能表示人工业务验收通过。', schema: progressToolInputSchemas.cbim_delivery_prepare },
 };
+
 /** 工具只维护执行记录，不修改项目或知识；参数校验可在授权前独立调用。 */
 export function progressTool(name: string, input: unknown)
 {
@@ -53,6 +54,7 @@ export function progressTool(name: string, input: unknown)
 
   return { args: definition.schema.parse(input), effects: ['maintenance'] as const, native: false };
 }
+
 /** 仅暴露本实现的参数协议；名称、输入 Schema 和描述不构成工具执行授权。 */
 export const progressToolSchemas = Object.entries(definitions).map(([name, d]) => ({ name, description: d.description, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...memberToolContract(name as MemberToolName) }));
 
@@ -64,6 +66,7 @@ export class TaskProgressTools
   {
     return progressToolSchemas
   }
+
   private state?: TaskProgress;
 
   private evidence = new Map<string, ToolReceipt>();
@@ -93,11 +96,13 @@ export class TaskProgressTools
 
       fail('TASK_PROGRESS_IDENTITY', '执行进度必须绑定真实工作区、任务与运行')
   }
+
   /** 只返回当前计划副本；可信采集端口用它核实版本，不允许工具或调用方直接修改计划。 */
   Current(): TaskProgress | undefined
   {
     return this.state ? structuredClone(this.state) : undefined
   }
+
   /** 审批前同步检查；返回的版本必须在审批后由 invalidate 同队列重新比较。 */
   BeforeEffects(): number | undefined
   {
@@ -109,6 +114,7 @@ export class TaskProgressTools
 
     return version;
   }
+
   private Serial<T>(work: () => Promise<T>): Promise<T>
   {
     const next = this.tail.then(work);
@@ -117,6 +123,7 @@ export class TaskProgressTools
 
     return next
   }
+
   /** 保存前隔离内存状态；返回原值交唯一 wire 校验，save 的坏回包不能冒充回滚或污染已知计划。 */
   private async Persist(next: TaskProgress)
   {
@@ -128,11 +135,13 @@ export class TaskProgressTools
 
     return next
   }
+
   /** 新轮次或任何写入/命令放行前使证据失效；失败/取消也不能假设产物未改变。 */
   Invalidate(reason: string, expectedPlanVersion?: number)
   {
     return this.Serial(async () => { if (expectedPlanVersion !== undefined && this.state?.version !== expectedPlanVersion) fail('WORKFLOW_PLAN_STALE', '审批期间执行计划已变化，请基于当前计划重新发起此操作'); this.generation++; this.evidence.clear(); if (!this.state) return; await this.Persist({ ...this.state, version: this.state.version + 1, state: 'executing', reason, delivery: undefined, steps: this.state.steps.map(s => ({ ...s, state: s.state === 'reported_done' ? 'pending' : s.state, evidence: [] })) }); })
   }
+
   /** 只接收运行时生成的业务回执；外部仓库资料、任务记录、派发、目标审阅与候选工具不能替代实际业务交付证据。 */
   /** 历史报告可读取缺哈希的旧回执；当前证据必须有明确成功结果和真实三身份。忽略不可引用项，不删除原日志。 */
   Record(receipt: ToolReceipt, generation: number)
@@ -141,6 +150,7 @@ export class TaskProgressTools
 
       this.evidence.set(receipt.toolCallId, structuredClone(receipt))
   }
+
   /** 桥的一次性 gate 之后调用；状态版本和证据再次核验，返回可序列化工具结果。 */
   Call(name: string, input: unknown)
   {

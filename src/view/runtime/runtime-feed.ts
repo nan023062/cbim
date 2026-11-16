@@ -17,6 +17,7 @@ export interface RuntimeFeedState
 
   error: string
 }
+
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 function rows<T>(previous: T[], next: T[], key: (item: T) => string)
@@ -27,6 +28,7 @@ function rows<T>(previous: T[], next: T[], key: (item: T) => string)
 
   return previous.length === result.length && result.every((item, index) => item === previous[index]) ? previous : result
 }
+
 /** 同一进程中只替换变化行；新 stream 完整换入，避免沿用前一进程的身份与状态。 */
 export function reconcileRuntime(previous: RuntimeSnapshot | undefined, next: RuntimeSnapshot): RuntimeSnapshot
 {
@@ -36,6 +38,7 @@ export function reconcileRuntime(previous: RuntimeSnapshot | undefined, next: Ru
 
   return { ...next, workspaces: rows(previous.workspaces, next.workspaces, x => x.workspaceId), members: rows(previous.members, next.members, x => x.workspaceId + ':' + x.agentInstanceId), tasks: rows(previous.tasks, next.tasks, runtimeTaskKey), scopes: rows(previous.scopes, next.scopes, x => x.workspaceId + ':' + x.scopeId), runs: rows(previous.runs, next.runs, runtimeRunKey), pressure: same(previous.pressure, next.pressure) ? previous.pressure : next.pressure, usage: same(previous.usage, next.usage) ? previous.usage : next.usage };
 }
+
 /** 一份页面事实流；transport 校验失败保留旧数据并明确过期，不解释成零负载。 */
 export class RuntimeFeed
 {
@@ -52,14 +55,17 @@ export class RuntimeFeed
   constructor(private readonly read: (cursor?: RuntimeCursor) => Promise<unknown>, private readonly intervalMs = 1000)
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   private Emit()
   {
     this.listeners.Notify()
   }
+
   Subscribe(listener: () => void)
   {
     const unsubscribe = this.listeners.Subscribe(listener);
@@ -72,6 +78,7 @@ export class RuntimeFeed
     }
     return () => { unsubscribe(); if (!this.listeners.size) { this.generation.Advance(); clearTimeout(this.timer) } }
   }
+
   /** 在途读取复用，完成后再计时；手动刷新也不会发起并行请求。 */
   Refresh(): Promise<void>
   {

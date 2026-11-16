@@ -42,18 +42,21 @@ interface Ports
 
   checkManifest?: WorkflowFileVerification['CheckManifest'];
 }
+
 function check(condition: unknown, message: string): asserts condition
 {
   if (!condition)
 
     fail('REPLAN_PROOF_INVALID', message)
 }
+
 /** 无状态核证器；证据稳定性由二次读取核实，不把文件检查描述成跨文件事务。 */
 export class RecursiveInspectionEvidence
 {
   private constructor()
   {
   }
+
   static async Verify(state: DispatchState, scope: DispatchScope, owner: Pick<KnowledgeWorkspace, 'entry' | 'Read'>, ports: Ports)
   {
     const recovery = scope.recovery;

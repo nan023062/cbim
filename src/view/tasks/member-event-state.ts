@@ -20,6 +20,7 @@ export interface MemberEventScope
   /** 本次执行尝试；切换历史轮次时重新建立投影。 */
   runId: string;
 }
+
 /** 单个观察作用域的内存投影，页面卸载后不作为后端运行状态保存。 */
 export interface MemberEventState
 {
@@ -34,6 +35,7 @@ export interface MemberEventState
   /** 即使运行已结算，仍须补齐后续分页，才能停止轮询。 */
   hasMore: boolean;
 }
+
 /** 同时编码四层身份，供 Hook 隔离状态；该键不构成后端访问授权。 */
 export const memberEventKey = (scope: MemberEventScope) => JSON.stringify([scope.workspaceId, scope.rootSessionId, scope.taskId, scope.runId]);
 
@@ -42,6 +44,7 @@ export function emptyMemberEvents(scope: MemberEventScope): MemberEventState
 {
   return { scope: { ...scope }, hasMore: false }
 }
+
 /** 下次读取间隔（毫秒）；终态仍须补完 hasMore，读完才停止，starting 的空前缀继续等待。 */
 export function memberPollDelay(state: MemberEventState, background: boolean, failed = false): number | undefined
 {
@@ -59,6 +62,7 @@ export function memberPollDelay(state: MemberEventState, background: boolean, fa
 
   return undefined;
 }
+
 /**
  * 纯增量归并，不修改历史对象。连续重复片段幂等，同序号不同正文或跳号拒绝后由调用方重载。
  * noop 可携带最新结算状态，因此相同游标仍核对公开运行概要，不强制重建无变化视图。

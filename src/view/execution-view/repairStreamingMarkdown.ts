@@ -80,6 +80,7 @@ function scanFences(md: string): { open: boolean; outside: string; fenceMarker: 
   }
   return { open, outside: outside.join('\n'), fenceMarker };
 }
+
 function isEscaped(text: string, index: number): boolean
 {
   let backslashes = 0;
@@ -90,6 +91,7 @@ function isEscaped(text: string, index: number): boolean
 
   return backslashes % 2 === 1;
 }
+
 /** `*` 是否是行首列表标记(前面只有空白、后面紧跟空白)。 */
 function isBulletMarker(text: string, index: number): boolean
 {
@@ -113,6 +115,7 @@ function isBulletMarker(text: string, index: number): boolean
   }
   return true;
 }
+
 /** 统计未转义的 delim 出现次数与最后出现位置;mixed = 出现 ≥3 连星复合 run。 */
 function scanDelim(text: string, delim: '**' | '*',): { count: number; last: number; mixed: boolean }
 {
@@ -161,6 +164,7 @@ function scanDelim(text: string, delim: '**' | '*',): { count: number; last: num
   }
   return { count, last, mixed };
 }
+
 /** 未配对强调符:最后开符之后是同一行非空白正文时补闭合。 */
 function balanceEmphasis(md: string, delim: '**' | '*'): string
 {
@@ -198,6 +202,7 @@ function balanceEmphasis(md: string, delim: '**' | '*'): string
 
   return md + delim;
 }
+
 /** 半截图片:`![alt](partial` / `![partial` → 先渲染 alt 文本。 */
 function repairTrailingImage(md: string): string
 {
@@ -207,11 +212,13 @@ function repairTrailingImage(md: string): string
 
     .replace(/!\[([^\]\n]*)$/, '$1');
 }
+
 /** 半截链接:`[text](partial` → 先渲染链接文本(`![` 图片已在前一步处理)。 */
 function repairTrailingLink(md: string): string
 {
   return md.replace(/(^|[^!\\])\[([^\]\n]*)\]\([^)\n]*$/, '$1$2');
 }
+
 export function repairStreamingMarkdown(md: string): string
 {
   if (md.length === 0)

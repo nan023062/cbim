@@ -27,6 +27,7 @@ export interface EngineProcess
 
   env?: Record<string, string | undefined>
 }
+
 /** 每次工厂调用获得独立实例；配置已冻结，端口不能绕过 EngineContext 的权限与持久化顺序。requestBudget 是已发布 protocol=1 的固定入口。 */
 export interface EngineAdapterOptions
 {
@@ -58,6 +59,7 @@ export interface EngineAdapterOptions
   /** 原 run 登记后才可取得端口；不传角色表示 primary，每次请求独立预留与结算。 */
   requestBudget?(role?: string): Promise<RequestBudgetPort | undefined>;
 }
+
 /** 发布包导出唯一 engineAdapter；create 名称属于 protocol=1。版本由适配器维护，不从 SDK 版本推断。 */
 export interface EngineAdapter
 {
@@ -72,6 +74,7 @@ export interface EngineAdapter
 
   create(options: EngineAdapterOptions): AgentEngine;
 }
+
 /** 先核身份与协议再取工厂；正式加载传入 R 声明以拒绝不匹配的 E，不执行安装脚本、回退或重试。 */
 export function checkedEngineAdapter(value: unknown, expected: { id: string; version?: string; descriptor?: EngineDescriptor }): EngineAdapter
 {
@@ -99,6 +102,7 @@ export function checkedEngineAdapter(value: unknown, expected: { id: string; ver
   }
   return adapter as EngineAdapter;
 }
+
 /** 仅比较执行语义；业务介绍、显示名与角色标签更新不强迫更换仍兼容的 E。 */
 function descriptorContract(value: EngineDescriptor)
 {

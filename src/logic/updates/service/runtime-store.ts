@@ -24,10 +24,12 @@ export class RuntimeStore
   constructor(readonly root: string, readonly cold: ColdRuntime, private readonly download: RuntimePackageDownloader = downloadRuntimePackage, private readonly reuseRoots: readonly string[] = [])
   {
   }
+
   PackageRoot(pkg: RuntimePackage)
   {
     return path.join(this.root, 'packages', pkg.sha256)
   }
+
   ManifestPath(digest: string)
   {
     if (!/^[a-f0-9]{64}$/.test(digest))
@@ -36,6 +38,7 @@ export class RuntimeStore
 
     return path.join(this.root, 'manifests', digest + '.json')
   }
+
   async SaveManifest(envelope: SignedRuntimeManifest)
   {
     const checked = verifyRuntimeManifest(envelope, this.cold);
@@ -76,6 +79,7 @@ export class RuntimeStore
 
     return checked;
   }
+
   async ReadManifest(digest: string)
   {
     const file = this.ManifestPath(digest),
@@ -94,6 +98,7 @@ export class RuntimeStore
 
     return checked;
   }
+
   /** download / extract / verify 均在后台完成；完整成功后目录才进入内容寻址缓存。 */
   Prepare(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void = () => { }): Promise<string>
   {
@@ -109,6 +114,7 @@ export class RuntimeStore
 
     return job;
   }
+
   private async PreparePackage(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void)
   {
     signal.throwIfAborted();

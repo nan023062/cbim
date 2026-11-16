@@ -32,6 +32,7 @@ export class CodeCheckRunner implements CodeCheckPort
 
     this.manifests = new OutputManifestFiles(this.root, assertCurrent)
   }
+
   private async Directory(relative: string, signal: AbortSignal)
   {
     this.assertCurrent();
@@ -58,6 +59,7 @@ export class CodeCheckRunner implements CodeCheckPort
     }
     return current;
   }
+
   async Run(checks: readonly FrozenCodeCheck[], scopes: Parameters<CodeCheckPort['Run']>[1], signal: AbortSignal)
   {
     const snapshot = await this.manifests.Capture(scopes, signal);
@@ -88,6 +90,7 @@ export class CodeCheckRunner implements CodeCheckPort
 
     return codeCheckExecutionSchema.parse({ snapshot, commands, sourceChanged: current.state !== 'matches' || current.observedHash !== outputManifestHash(snapshot) });
   }
+
   private Command(check: FrozenCodeCheck, cwd: string, signal: AbortSignal): Promise<CodeCommandResult>
   {
     const rule = check.requirement,

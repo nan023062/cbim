@@ -15,6 +15,7 @@ export type ExecutionReportSelection = Pick<ExecutionReportInput, 'workspaceId' 
 {
   scopeId?: string
 };
+
 export interface ExecutionReportState
 {
   report?: ExecutionReport;
@@ -23,6 +24,7 @@ export interface ExecutionReportState
 
   error: string
 }
+
 export const executionReportKey = (identity: ExecutionReportSelection) => JSON.stringify([identity.workspaceId, identity.rootSessionId, identity.scopeId, identity.taskId, identity.runId]);
 
 const sameIdentity = (a: ExecutionReportSelection, b: ExecutionReport['identity']) => a.workspaceId === b.workspaceId && a.rootSessionId === b.rootSessionId && a.taskId === b.taskId && a.runId === b.runId;
@@ -84,6 +86,7 @@ export function applyExecutionReport(previous: ExecutionReport | undefined, raw:
 
   return { ...next, tools: { ...next.tools, items } };
 }
+
 /** 当前图或周期与核实时不同只标为过期，不自动再次读取，更不能由此启动运行。 */
 export function executionReportStale(report: ExecutionReport | undefined, task: TaskNode, graphCursor?: GraphCursor, scope?: ScopeSummary): boolean
 {
@@ -95,6 +98,7 @@ export function executionReportStale(report: ExecutionReport | undefined, task: 
 
   return report.consistency === 'changed_during_read' || basis.taskRevision !== task.revision || basis.planRevision !== task.planRevision || basis.taskStatus !== task.status || basis.scopeId !== task.scopeId || Boolean(graphCursor && (graphCursor.streamId !== basis.graphCursor.streamId || graphCursor.seq !== basis.graphCursor.seq)) || Boolean(scope && (basis.scopeId !== scope.scopeId || basis.scopeStatus !== scope.status || basis.goalRevision !== scope.goalRevision));
 }
+
 /** 实例只属于一个选中身份；创建、订阅和取消观察均不会请求后端，只有 inspect/more 显式读取。 */
 export class ExecutionReportController
 {
@@ -107,10 +111,12 @@ export class ExecutionReportController
   constructor(readonly selection: ExecutionReportSelection, private read: (request: ExecutionReportInput) => Promise<unknown>, private limit = 50)
   {
   }
+
   get snapshot()
   {
     return this.value
   }
+
   subscribe = (listener: () => void) => { return this.listeners.Subscribe(listener) };
 
   private Publish(value: ExecutionReportState)
@@ -119,6 +125,7 @@ export class ExecutionReportController
 
     this.listeners.Notify()
   }
+
   /** 切换/卸载只忽略迟到读取；不停止后端任务或改变日志。 */
   Cancel()
   {
@@ -126,6 +133,7 @@ export class ExecutionReportController
 
     this.value = { ...this.value, loading: false }
   }
+
   /** 新草稿必须重新显式核实；清除旧缓存并作废已发出的读取，绝不自动回读或恢复运行。 */
   Invalidate()
   {
@@ -133,10 +141,12 @@ export class ExecutionReportController
 
     this.Publish({ loading: false, error: '' })
   }
+
   async Inspect()
   {
     await this.Pull()
   }
+
   async More()
   {
     const report = this.value.report;
@@ -147,6 +157,7 @@ export class ExecutionReportController
 
     await this.Pull(report.tools.nextCursor)
   }
+
   private async Pull(cursor?: NonNullable<ExecutionReportInput['cursor']>)
   {
     if (this.value.loading)

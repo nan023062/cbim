@@ -24,6 +24,7 @@ function scheduleLabel(job: AutomationJob)
 
   return s.kind === 'manual' ? '手动运行' : s.kind === 'interval' ? `每 ${s.minutes} 分钟` : s.kind === 'daily' ? `每天 ${s.time}（${s.timezone}）` : '指定时间一次'
 }
+
 const newDefinition = (): AutomationDefinition => ({ name: '', enabled: true, executor: { kind: 'main' }, moduleIds: [], workflowSelections: [], skillIds: [], prompt: '', permission: 'read', schedule: { kind: 'manual' } });
 
 export function AutomationView({ workspace, active = true, onOpenRun }: { workspace: WorkspaceView; snapshot?: Snapshot; active?: boolean; onOpenRun?: (taskId: string, title: string) => void })
@@ -90,6 +91,7 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
         setBusy(false)
     }
   }
+
   const identity = { workspaceId: workspace.id, instanceId: workspace.instanceId! };
 
   const job = state?.jobs.find(j => j.id === selected),
@@ -106,12 +108,14 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
 
     setSelected(id)
   }
+
   function edit()
   {
     if (job)
 
       setEditing({ id: job.id, revision: job.revision, definition: structuredClone(job.definition) })
   }
+
   function create()
   {
     if (editing && !confirm('放弃尚未保存的自动化设置？'))
@@ -122,6 +126,7 @@ export function AutomationView({ workspace, active = true, onOpenRun }: { worksp
 
     setEditing({ id: crypto.randomUUID(), revision: 0, definition: newDefinition() })
   }
+
   return <div className="view-page workspace-automation" data-workspace-id={workspace.id}>
   <div className="view-heading"><div><p className="overline">{workspace.name} / 团队</p><h1>自动化</h1><p>配置任务、查看计划和运行结果。</p></div><button disabled={busy || !catalog} onClick={create}>新建自动化</button></div>
   <p className="inline-note">仅在 CBIM 运行且当前工作区打开时触发，关闭期间错过的时间不补跑，同一任务不重叠运行。暂停或删除会停止该自动化当前的执行。</p>

@@ -25,14 +25,17 @@ export class FileRunStorage implements RunStorage
 
     await fs.mkdir(path.join(directory, safeId(taskId)))
   }
+
   CreateJournal(directory: string, task: TaskSpec, runId: string)
   {
     return new RunJournal(directory, task, runId)
   }
+
   Read(directory: string)
   {
     return RunJournal.Read(directory)
   }
+
   List(directory: string)
   {
     return fs.readdir(directory)

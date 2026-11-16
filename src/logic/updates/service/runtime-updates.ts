@@ -24,12 +24,14 @@ type Candidate =
 
     digest: string
   };
+
 interface RuntimeUpdateSources
 {
   Cold(signal: AbortSignal): Promise<DesktopRelease | undefined>;
 
   Resources(tag: string, name: string, signal: AbortSignal): Promise<unknown>;
 }
+
 /** 包管理只依赖窄的重启回调；不认识窗口、任务或任何业务数据存储。 */
 export class RuntimeUpdates implements DesktopUpdateInstaller
 {
@@ -46,6 +48,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
   constructor(private readonly store: RuntimeStore, private readonly journal: RuntimeJournal, private readonly current: RuntimeManifest, private readonly installer: DesktopUpdateInstaller, private readonly restart: () => void, private readonly sources: RuntimeUpdateSources = { Cold: latestDesktopRelease, Resources: downloadRuntimeManifest }, private readonly usedEngines: () => readonly string[] = () => [])
   {
   }
+
   /** 优先当前 C 可用的 R；更高 C 仅在没有兼容资源更新时提示，不强迫所有用户先换基础包。 */
   async Latest(signal: AbortSignal): Promise<DesktopRelease | undefined>
   {
@@ -93,6 +96,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
     return undefined;
   }
+
   async Prepare(release: DesktopRelease)
   {
     this.controller.signal.throwIfAborted();
@@ -119,6 +123,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
     this.prepared = candidate;
   }
+
   async Download(progress: (percent: number) => void)
   {
     if (!this.selected)
@@ -153,6 +158,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     }
     this.ready = true;
   }
+
   async Install()
   {
     this.controller.signal.throwIfAborted();
@@ -180,6 +186,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
     this.restart();
   }
+
   Close()
   {
     this.controller.abort();

@@ -26,6 +26,7 @@ export interface KnowledgeSourceCapturePermit
 
   captureChangeId: string
 }
+
 const equal = (a: unknown, b: unknown) => knowledgeSourceCanonical(a) === knowledgeSourceCanonical(b);
 
 function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts value
@@ -34,6 +35,7 @@ function check(value: unknown, message: string, code = 'SOURCE_AUDIT'): asserts 
 
     fail(code, message)
 }
+
 /** 验证单条来源事件及所有来源消费者；不读取知识或反向等待 Store。 */
 export function projectKnowledgeSourceMutation(previous: DispatchState, mutation: DispatchMutation, command: DispatchCommand)
 {
@@ -114,6 +116,7 @@ export function projectKnowledgeSourceMutation(previous: DispatchState, mutation
 
     validateKnowledgeSourceSelection(projected, selection, ref);
   };
+
   if (mutation.workspaceMemberChanges?.length === 1)
   {
     const event = mutation.workspaceMemberChanges[0];

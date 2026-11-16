@@ -28,6 +28,7 @@ export function teamGroupIds(snapshot: Snapshot): string[]
       owner = owner.slice(0, owner.lastIndexOf('/'))
     }
   }
+
   // Rules 读取真实目录后生成的 groups 还覆盖空组和只有 references 正文的组；快照正文不能重建这些事实。
   const registry = snapshot.validation?.indexes?.[root + '/registry.json'];
 

@@ -26,6 +26,7 @@ export interface ConversationEntry
     running?: boolean
   }[]
 }
+
 /** 点击条目仅提交原主条目/成员身份；缺少成员选择回调或页面忙碌时禁用，不在本组件切换模式或启动运行。 */
 export function ConversationEntries({ items, selected, selectedChild, disabled = false, onSelect, onSelectChild, onRename, onRemove }: { items: ConversationEntry[]; selected?: string; selectedChild?: string; disabled?: boolean; onSelect: (id: string) => void; onSelectChild?: (id: string, childId: string) => void; onRename: (id: string, title: string) => void; onRemove: (id: string) => void })
 {

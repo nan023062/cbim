@@ -17,6 +17,7 @@ export interface DesktopRelease
 
   resourceVersion?: number;
 }
+
 /** ready 表示包已校验、等待用户确认重启（也包括安装失败后重试）；installing 包含排空，须在新进程核实 currentVersion/currentResourceVersion 才能确认实际装载版本。 */
 export interface DesktopUpdateStatus
 {
@@ -52,6 +53,7 @@ export interface DesktopUpdateStatus
 
   error?: string;
 }
+
 /** 引擎菜单的公开投影，不包含缓存路径、下载地址或凭据；版本由签名清单固定。 */
 export interface ManagedEngineStatus
 {

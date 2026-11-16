@@ -19,12 +19,14 @@ export function useRuntimeVisibility()
 
   return visible
 }
+
 export function useRuntime(active: boolean)
 {
   const subscribe = useCallback((listener: () => void) => active ? feed.Subscribe(listener) : () => { }, [active]);
 
   return useSyncExternalStore(subscribe, snapshot, snapshot)
 }
+
 export function refreshRuntime()
 {
   return feed.Refresh()

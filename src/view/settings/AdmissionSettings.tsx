@@ -63,6 +63,7 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
       setBusy(false)
     }
   }
+
   async function save()
   {
     if (!policy || busy)
@@ -96,6 +97,7 @@ export function AdmissionSettings({ active = true, onDirtyChange }: { active?: b
       setBusy(false)
     }
   }
+
   const count = Number(value),
 
     valid = /^\d+$/.test(value) && Number.isInteger(count) && count >= 1 && count <= 32;

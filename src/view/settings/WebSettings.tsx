@@ -37,6 +37,7 @@ export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean
 
     setRobots(value.browserRobotsPolicy)
   }
+
   useEffect(() => { let live = true; void api.call('web.settings').then(value => { if (live) accept(value) }).catch((error: Error) => { if (live) setMessage(error.message) }); return () => { live = false } }, []);
 
   async function save(clearKey = false)
@@ -66,6 +67,7 @@ export function WebSettings({ onDirtyChange }: { onDirtyChange?: (dirty: boolean
       setBusy(false)
     }
   }
+
   return <section className="repository-settings"><h2>网页与搜索</h2><p>主 Agent 可读取公开网页。搜索使用 Brave Search API，查询词会发送至该服务；不共享登录 Cookie。</p>
     {!settings ? <p role="status">{message || '正在读取网页设置…'}</p> : <>
       <label>浏览器 robots 策略<select value={robots} disabled={busy} onChange={event => setRobots(event.target.value as 'allow' | 'respect')}>

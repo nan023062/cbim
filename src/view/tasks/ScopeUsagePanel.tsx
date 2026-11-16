@@ -46,6 +46,7 @@ export function ScopeUsageSummary({ report }: { report: ScopeUsageReport })
     <p className="scope-usage-muted">推理已包含在输出中，不重复计入总数；累计消耗不同于上下文占用。费用是已报告估算，不是供应商账单或预算限制，也不代表业务验收。</p>
   </div>;
 }
+
 /** 读取入口只操作本控制器；保持之前报告时明确提示过期，不把错误渲染成零。 */
 export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsageState; OnRead(): void })
 {
@@ -55,6 +56,7 @@ export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsag
   {state.report ? <ScopeUsageSummary report={state.report} /> : <p className="scope-usage-muted">按需核对本周期主 Agent 与执行成员的记录。未读取不表示没有消耗。</p>}
 </>
 }
+
 /** 实例与周期键绑定；挂载或切换不会读取，卸载后迟到响应不会显示在另一个周期。 */
 export function ScopeUsagePanel({ identity }: { identity: ScopeUsageInput })
 {

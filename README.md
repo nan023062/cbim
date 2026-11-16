@@ -14,7 +14,7 @@
 
 执行引擎由独立适配器接入；工具、MCP、连接器和插件属于能力或业务扩展。已有模型服务、反馈和更新可能使用网络，因此“本地优先”不等于已经支持完全离线运行。
 
-当前已具备目标计划、岗位派发、成员结果自动回流、权限与证据核验等基础；完整无人值守开发闭环仍有缺口。见 [核心模型](design/team-workspace-network.md) 和 [源码审计与清理记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/local-ai-workflow-audit-20261112.md)。产品目标与现有实现分别维护，不能用模型回合结束代替业务验收。
+当前已具备目标计划、岗位派发、成员结果自动回流、权限与证据核验等基础；完整无人值守开发闭环仍有缺口。见 [核心模型](design/product-model.md) 和 [源码审计与清理记录](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/local-ai-workflow-audit-20261112.md)。产品目标与现有实现分别维护，不能用模型回合结束代替业务验收。
 
 桌面技术栈为 Electron + React + TypeScript + Vite + Electron Forge + pnpm。桌面与内部 Loop 共用 TypeScript 领域服务，运行时不需要 Python。
 
@@ -22,11 +22,11 @@
 
 Windows x64 当前公开桌面版为 [desktop-v0.1.19](https://github.com/nan023062/cbim/releases/tag/desktop-v0.1.19)，内置资源为 **[C 0.1.19 / R1](https://github.com/nan023062/cbim/releases/tag/runtime-c0.1.19)**。统一图标、状态、表单、帮助提示和明暗主题，改善窄窗口与减少动效体验；页面按需加载，保留未保存输入提示、独立频道草稿及 Agent 工作记录。
 
-本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [C/R/E 运行说明](design/task/desktop-runtime-release.md)。
+本次包含新的基础安装包与 R1，固定新的 Ed25519 资源身份；历史公钥仅兼容本地引擎来源，新引擎索引按公钥隔离，旧通道不变。四个官方 E 包保持原摘要，安装、停用状态及缓存继续保留。实际安装与公开升级范围见 [0.1.19 发布验收](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/desktop-release-0.1.19-public-20261115.md)。更新后台准备，就绪后由用户明确点击安装，普通退出不应用；Windows 安装包未签名、发布者未验证。首次使用未安装的引擎需要联网。实现边界见 [C/R/E 运行说明](engineering/guides/desktop-runtime-release.md)。
 
 供应商只管理统一模型列表，模型菜单按接口兼容性筛选；对话栏与团队页面设置同一份主 Agent 配置，项目岗位保留独立配置。Windows 安装包仍未签名，可能显示未知发布者或安全提示；`SHA256SUMS.txt` 与资源清单 Ed25519 签名均不能替代 Windows 可信代码签名。后续取得证书后通过更高版本迁移，不改写已公开附件。旧 `v1.x` 是 Python 内核通道，不是当前桌面 APP。
 
-BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](design/task/github-feedback-setup.md)。更新程序独立位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](design/task/desktop-release.md)。
+BUG 与需求从对话「+ → BUG 反馈／需求许愿」调用内置 Skill。一句问题或愿望即可提交，其余信息自愿，缺项标“用户未提供”。首次在设置连接自己的 GitHub；成功后由 Agent 简短反馈真实提交结果，不代表开发完成。详见 [OAuth 与反馈指南](engineering/guides/github-feedback-setup.md)。更新程序独立位于 `src/logic/updates/service/`，安装构建用 `pnpm make:desktop`，维护者步骤见 [正式桌面发布](engineering/guides/desktop-release.md)。
 
 构建目录按北京时间命名：`build/YYYYMMDD-HHmmss/`。Windows 便携程序在其中的 `CBIM Assistant-win32-x64/CBIM.exe`，请保留完整目录。分发包为 `make/zip/win32/x64/CBIM-Assistant-YYYYMMDD-HHmmss-win32-x64-版本.zip`，可按名称排序查找最新构建。
 
@@ -60,11 +60,11 @@ pnpm start
 
 新人先阅读 [项目协作规范（AGENTS.md）](AGENTS.md)；Claude Code 的项目入口见 [CLAUDE.md](CLAUDE.md)。
 
-开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](design/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[关联方案、规范与记录](design/README.md)，`docs/` 保存下方概念设计与工程文件组织设计。
+开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](engineering/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 只保存[产品目标、核心取舍、未落地设计和原型](design/README.md)，[工程指南与记录](engineering/README.md) 归 `engineering/`；`docs/` 保存下方概念设计与工程文件组织设计。
 
 开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](docs/06-通用项目架构设计规范与原则.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](docs/07-架构治理规范与治理流程.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
 
-桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](design/README.md#开发入口)。
+桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](engineering/README.md#开发入口)。
 
 架构维护流程提供三个同步入口：
 
@@ -94,7 +94,8 @@ pnpm start
 | `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
 | `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
 | `docs/` | 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则 |
-| `design/` | 当前项目设计、UX 原型、工程指南、发布资料与近期开发记录；旧方案和报告按固定 Git 版本追溯 |
+| `design/` | 产品目标、核心取舍、未落地设计和原型 |
+| `engineering/` | 工程指南、开发记录、发布正文与公钥、必要验证和旧格式参考；过期材料按固定 Git 版本追溯 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
 | `tests/` | 隔离工程、规则、内部工具、调度与故障恢复测试 |
 | `scripts/` | 构建与桌面验证脚本 |
@@ -108,7 +109,7 @@ pnpm start
 - [调度与成员执行](src/logic/ARCHITECTURE.md)
 - [运行统计与准入](src/logic/runtime/rules/ARCHITECTURE.md#contract)
 - [桌面视图与交互](src/view/ARCHITECTURE.md)
-- [开发事实、验证证据与限制](design/development-log.md)
+- [开发事实、验证证据与限制](engineering/development-log.md)
 
 正式知识仅存于 `<项目根>/.cbim/`；登记和本机项目历史存于 `<用户主目录>/.cbim/`。新应用不创建项目内 `.cbim.local/`。测试全部使用隔离用户目录。
 
@@ -128,7 +129,7 @@ pnpm start
 
 自动协作不继承主轮“本次任务全部通过”，不把成员结果冒充用户消息；用户队列在周期可靠关闭后按原内容继续。真实 Application/Pi 配合本机可控模型响应已验证主知识授权、自动派发、成员读写、回注、独立 ask 审批、队列与停止边界。`pnpm test:main-instance` 和 `pnpm test:collaboration` 已验证构建 `20261107-012333` 的默认执行者与自定义成员桌面链路，详见[本步验证](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/main-coordinator-20261107.md)；这些测试不等同于真实供应商的自主协作质量。
 
-全局运行管理已提供只读总览，同时统计对话和成员轮次、任务压力与 token 消耗，按真实运行去重汇总；释放实例退出当前活动统计，历史用量保留。已有公平准入、周期软限额、可靠成员求助及同活动周期的一次检查点续执行；通用恢复、逐请求硬预算、全局运行操作、成员启动表单和主动成员聊天仍未接通。执行成员不具备递归派发权。失败、取消或中断的成员通道不直接续接；重启结算未关闭周期，不自动重放历史任务或未知副作用。结构化候选、主会话回注与结果收件确认均不代表正式业务验收通过，上述说明须结合[实际代码](src/ARCHITECTURE.md)和[开发记录](design/development-log.md)核对；当前开发清单与进度以 [Issues](https://github.com/nan023062/cbim/issues) 为准。
+全局运行管理已提供只读总览，同时统计对话和成员轮次、任务压力与 token 消耗，按真实运行去重汇总；释放实例退出当前活动统计，历史用量保留。已有公平准入、周期软限额、可靠成员求助及同活动周期的一次检查点续执行；通用恢复、逐请求硬预算、全局运行操作、成员启动表单和主动成员聊天仍未接通。执行成员不具备递归派发权。失败、取消或中断的成员通道不直接续接；重启结算未关闭周期，不自动重放历史任务或未知副作用。结构化候选、主会话回注与结果收件确认均不代表正式业务验收通过，上述说明须结合[实际代码](src/ARCHITECTURE.md)和[开发记录](engineering/development-log.md)核对；当前开发清单与进度以 [Issues](https://github.com/nan023062/cbim/issues) 为准。
 
 ## 设计文档
 
@@ -142,6 +143,6 @@ pnpm start
 6. [通用项目架构设计规范与原则](docs/06-通用项目架构设计规范与原则.md)
 7. [架构治理规范与治理流程](docs/07-架构治理规范与治理流程.md)
 
-`docs/` 不依赖 `design/`；具体项目方案与验证记录依据这些准则维护。
+`docs/` 不依赖 `design/` 或 `engineering/`；项目设计与工程记录分别依据这些准则维护。
 
 其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](assets/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

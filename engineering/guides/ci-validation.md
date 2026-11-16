@@ -9,8 +9,8 @@
 - PR、手动 full、手动 runtime-diagnostic 使用不同并发组；同 PR 的过时提交仍自动取消，诊断不会误取消正式全量。手动 full 无论分支是否有关联草稿 PR，都强制完整检查。
 
 - PR 使用 base/head 的 merge-base 差异；`git diff --name-status -z` 保留完整路径，重命名/复制同时检查新旧路径。
-- 轻量白名单：根 README.md、design/development-log.md、design/verification 下直接的 Markdown 报告、website 下直接的 html/css/json 文件。仅这些路径改变时，运行差异空白与新增本地 Markdown 链接检查；包含官网时还运行品牌校验、网站构建与原有 14 个浏览器场景。
-- 空差异、未知路径、代码、依赖、构建/CI 配置、品牌源及内置业务资料均为完整路径。不把 design/** 或所有 Markdown 统一排除；改动检测失败会失败，不假定成轻量。
+- 轻量白名单：根 README.md、engineering/development-log.md、engineering/verification 下直接的 Markdown 报告、website 下直接的 html/css/json 文件。仅这些路径改变时，运行差异空白与新增本地 Markdown 链接检查；包含官网时还运行品牌校验、网站构建与原有 14 个浏览器场景。
+- 空差异、未知路径、代码、依赖、构建/CI 配置、品牌源及内置业务资料均为完整路径。不把 engineering/**、design/** 或所有 Markdown 统一排除；改动检测失败会失败，不假定成轻量。
 - 手动 full 强制完整路径；runtime-diagnostic 仍用独立名称，不能冒充正式完整检查。
 
 ## 完整路径

@@ -57,7 +57,7 @@ Windows 观察由同目录 `desktop-acceptance-process.ps1` 完成：枚举进�
 
 2026-11-09 用户确认个人开发阶段先发行未签名版，取得证书后通过更高版本切换签名。默认命令仍要求签名；未签名发行必须在构建、校验和发布三步均显式指定 `--unsigned`，不因缺少证书或签名失败自动降级。两种方式使用相同应用标识、安装目录规则、数据目录及桌面更新通道，签名情况必须写入版本说明。证书配置和签名校验详见[Windows 签名指南](windows-signing.md)。
 
-1. 将 `package.json` 的版本号增加为新的稳定三段版本，并创建 `design/releases/desktop-v<版本>.md`，只写本版实际完成的修复、改进和新增功能。
+1. 将 `package.json` 的版本号增加为新的稳定三段版本，并创建 `engineering/releases/desktop-v<版本>.md`，只写本版实际完成的修复、改进和新增功能。
 2. 完成类型、依赖／架构和相关测试后，提交并冻结干净源码，再执行 `pnpm make:desktop`；未签名发行使用 `pnpm make:desktop --unsigned`。产物单独位于 `build/desktop-release/<版本>/<signed或unsigned>-<时间>-<随机标识>/`：安装 EXE、blockmap、`latest.yml`、`SHA256SUMS.txt` 和本机构建回执。同版本产物不会被构建脚本静默覆盖。
 3. 核对冻结源码、构建内容和真实安装运行，通过后推送对应源码；给该提交创建独立 `desktop-v<版本>` 标签，不移动既有标签。后续发布／验收记录可单独提交，不替换已验收的源码标签。
 4. 执行 `pnpm verify:desktop <候选目录>` 重新核对签名、时间戳、发布者与更新摘要（未签名追加 `--unsigned`）。按 Skill 分阶段创建唯一草稿、上传四附件并在隔离 Windows runner 验证全新安装和真实上一版升级；完整 CI 和 PR 合并通过后，重新核对候选、附件与标签，再公开同一 Release，保持旧 Python latest。验收工作流必须传 previous_version，当前支持 0.1.1／0.1.2 的两步界面与 0.1.3／0.1.4 的自动安装界面、未签名断言和更高的 0.x 目标；其他旧版交互或签名模式须先核实并适配。

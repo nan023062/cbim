@@ -1,3 +1,15 @@
+## 2026-11-16：design 只保留目标、取舍、未落地设计和原型
+
+- 来源：用户要求继续精简 design，只保留四类设计内容；无关联 Issue。基线 `3a3b23af`。design 从 64 文件／53 份 Markdown 收敛为 19 文件／10 份 Markdown；39 个工程文件迁入 engineering，6 份重复说明合并删除，其余 19 个文件保留或收敛。新增 engineering 导航后该目录共 40 文件，不另建历史归档副本。
+- 将 Agent／Module 概念分工合并到 product-model，四层、Agent 调用、领域引擎和更新方案只保留设计理由与重要边界；不再将已有记忆引擎及递归调度列为待实施。独立 UX 系统提案合并到全界面设计，保留真实评审原型、母版、预览与配套脚本。重复说明与改写前的完整设计正文已核对存在于已推送的 `8c06ff1edacbb296efb994e80eb941a811a1aa8c`；磁盘 CRLF 与 Git LF 仅作换行归一后比较，内容一致。
+- engineering 承接 7 份操作指南、近期开发记录、28 份发布正文、一份公钥、一份被发布正文直接引用的验证说明及旧 Module Schema。发布正文、公钥与旧 Schema 原字节迁移，releases 与 verification 的相对关系保持；旧 Schema 仍仅供手工历史格式识别，不进入当前运行校验或资源包。
+- 同步 README、AGENTS、CLAUDE、docs 01/04/05、三宿主开发／架构／发布入口、真实 assets 导航。assets 只调整资料位置说明与旧 Schema 引用；正文版本会随原机制变化，不改运行工具或 Schema 字段。历史开发命令与结果保留当时原文，仅迁移 Markdown 导航。
+- Forge 默认发布正文改读 engineering/releases，CBIM_DESKTOP_NOTES 覆盖语义不变。CI 轻量白名单仅迁移开发记录和直接验证报告路径，工程指南、发布输入、兼容 Schema、嵌套报告及未知路径仍完整验证。修改 forge.config.ts 会改变既有冷基础指纹；不改签名身份或冻结基线，不绕过 COLD_BASE_CHANGED，后续制品按正常冷基础规则验收。
+- 验证选择：只涉及 CI 分流、构建资料路径与资源收集，因此运行 `pnpm exec vitest run tests/ci-validation.test.mjs tests/runtime-packaging.test.ts --reporter=json --outputFile=build/refined-design-tests.json`，2 套件共 44 用例通过；新增工程目录不进资源包、Forge 输入改变指纹及白名单不能扩大的回归。夹具内容改变后运行 `pnpm check:test-modules`，543 文件通过（unit 176、contract 166、integration 201）。
+- `node build/verify-forge-notes.mjs` 提取实际 generateAssets 函数体，替代品牌／引擎准备和签名配置依赖，在临时目录验证当前 0.1.21 默认正文、自定义覆盖、缺失版本失败和非发布跳过四种情况，全部通过；这不是打包或签名验收。`node build/verify-refined-design.mjs` 核对本地链接／锚点、三宿主一致性、docs 无反向资料依赖及 1,025 个受保护文件摘要，均无新增问题；源码、原型及发布输入保持原字节。核对脚本与 JSON 证据在忽略的 build 中，不新增持续维护工具。
+- 未运行产品全量测试、类型检查、构建、浏览器原型重验、安装升级或发布；没有源码变更，无需改写 src 架构文档。原有 legal/cindy-LICENSE、legal/cindy-NOTICE 删除造成的 README 链接问题与 .idea/ 保持原状，不纳入提交。本轮仅本地提交，未推送。
+
+
 ## 2026-11-16：推送资料整理提交并补齐删除规范
 
 - 来源：用户要求先推送架构文档调整与设计目录清理两个提交，再更新 docs 中的删除说明；无关联 Issue。先 fetch 核对远端可快进，按现有提交链推送 `1592814b`、`8c06ff1e` 及必要前置 `427543cf`，未改写历史。`git push origin HEAD:refs/heads/refactor/2026-11-16` 成功，随后 `git ls-remote` 核实远端为 `8c06ff1edacbb296efb994e80eb941a811a1aa8c`。

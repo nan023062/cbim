@@ -57,4 +57,4 @@ Team 是可调用 Agent 的职责、能力和权限配置集合，不拥有第�
 
 本需求不新增多人邀请、在线状态、组织架构或协作服务器；不授权公开发布、改写用户数据或删除旧日志。办公室视图不作为本次必需入口，也不新增另一套任务状态源。
 
-设计顺序：[UX 设计](agent-tool-ux-design.md) → [工程交接](agent-tool-engineering.md)。实时开发状态只放 GitHub Issues，本文是需求基线。
+设计顺序：[UX 设计](agent-tool-ux-design.md) → [调用设计取舍](agent-call-design.md)。实时开发状态只放 GitHub Issues，本文是需求基线。

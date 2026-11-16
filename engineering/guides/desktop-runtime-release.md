@@ -13,7 +13,7 @@
 | 制品 | 内容与触发条件 | 入口 |
 | --- | --- | --- |
 | C | 固定 bootstrap、Electron/Node/Chromium、koffi、安装配置和资源验签公钥；这些输入变化时提高三段 code 版本 | `pnpm make:desktop [--unsigned]` |
-| R | 编译后的 main/preload/worker/renderer、纯 JS 闭包及 design/docs/legal；同 C 的整数 resource 版本递增 | `pnpm make:resources <基线候选目录> <R> <日志文件> [新E候选目录]` |
+| R | 编译后的 main/preload/worker/renderer、纯 JS 闭包及 assets 中登记的业务资料与 legal；不包含 design/docs/engineering。同 C 的整数 resource 版本递增 | `pnpm make:resources <基线候选目录> <R> <日志文件> [新E候选目录]` |
 | E | 已安装、预编译的 Pi/Claude/Codex 生产依赖闭包和平台程序；用户端只解压使用 | `pnpm make:engines` |
 
 普通 R 构建复用锁定 Forge 的 Vite 配置生成器，只编译脚本，不打 Electron 或 NSIS，也不复制/重新编译引擎。冷构建同时生成离线 R1 和独立 E 候选，但安装器不携带 E。已有 E 默认复用基线签名描述；E 更新显式提供新候选，再用递增 R 固定新组合。纯 E 变更可复用内容相同的 R 缓存，不必提高 C。
@@ -57,4 +57,4 @@ R 构建重新计算固定 bootstrap 产物、实际 Electron 版本、koffi 文
 
 当前选择完整小型 R ZIP、完整按需 E ZIP。未实现文件/块差分、页面独立 reload、主进程 HMR、旧版本缓存自动回收、跨 C 共用 E 缓存或跨 E 会话迁移。首次引擎下载仍需网络；R/E 缓存与失败恢复不能替代用户数据备份。旧 NSIS 已有差分，因此新方案的主要收益是免安装与窗口优先，不能保证每次下载字节更少。
 
-维护入口：[bootstrap 契约](../../src/bridge/server/bootstrap/ARCHITECTURE.md#contract)、[更新契约](../../src/logic/updates/service/ARCHITECTURE.md#contract)、[引擎契约](../../src/logic/execution/engines/ARCHITECTURE.md#contract)、[方案与取舍](desktop-hot-update-design.md)。
+维护入口：[bootstrap 契约](../../src/bridge/server/bootstrap/ARCHITECTURE.md#contract)、[更新契约](../../src/logic/updates/service/ARCHITECTURE.md#contract)、[引擎契约](../../src/logic/execution/engines/ARCHITECTURE.md#contract)、[方案与取舍](../../design/update-design.md)。

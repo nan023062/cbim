@@ -2,7 +2,7 @@
 
 日期：2026-11-15。性质：设计规范与统一 Agent 工具原型母版。后续产品界面实施见 [实施验证](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/ux-interface-20261115.md) 和 [继续验证](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/ux-completion-20261115.md)；完整桌面验收仍有 [未完成项](https://github.com/nan023062/cbim/blob/c3178be11e24259d99ed59db60cc4781afb15782/design/verification/ux-desktop-20261115.md)，原型覆盖不等于产品验收通过。
 
-关联：[UX 主方案](cbim-ux-system-proposal.md) · [图标与反馈预览](cbim-ux-prototype.html#icons-view) · [递归工具调用](cbim-ux-prototype.html) · [SVG sprite](cbim-icon-sprite.svg)。
+关联：[全界面设计](cbim-complete-ux-design.md) · [图标与反馈预览](cbim-ux-prototype.html#icons-view) · [递归工具调用](cbim-ux-prototype.html) · [SVG sprite](cbim-icon-sprite.svg)。
 
 ## 1. 目标与交付范围
 

@@ -4,11 +4,11 @@
 
 ## 1. 范围、环境与签名
 
-先读取 [发布指南](../../../../design/task/desktop-release.md)、[package.json](../../../../package.json)、[签名指南](../../../../design/task/windows-signing.md) 的当前决定及实现。签名指南中旧版同版本重发部分是历史方案，不继承其授权。
+先读取 [发布指南](../../../../engineering/guides/desktop-release.md)、[package.json](../../../../package.json)、[签名指南](../../../../engineering/guides/windows-signing.md) 的当前决定及实现。签名指南中旧版同版本重发部分是历史方案，不继承其授权。
 
 核实 `git status --short --branch`、diff、`git remote -v`、本地／远程分支、已有 PR、远端标签、Release 和 Actions。使用 `gh api user`、`gh repo view nan023062/cbim --json nameWithOwner,defaultBranchRef` 确认账号／仓库；保存旧 `releases/latest` 的 ID／标签作为独立 Python 通道基线。仅检查凭据身份、权限元数据，不输出凭据本身。
 
-明确本次纳入的 Issue／提交；保留各 Issue 单独验证与提交。版本采用大于当前稳定桌面版的三段版本，更新 `package.json`、相关锁文件版本字段（如有）、`design/releases/desktop-v<版本>.md`。说明写实际功能、限制与签名状态，不提前改官网为未公开版本。
+明确本次纳入的 Issue／提交；保留各 Issue 单独验证与提交。版本采用大于当前稳定桌面版的三段版本，更新 `package.json`、相关锁文件版本字段（如有）、`engineering/releases/desktop-v<版本>.md`。说明写实际功能、限制与签名状态，不提前改官网为未公开版本。
 
 签名决策：
 
@@ -108,7 +108,7 @@ pnpm make:desktop --unsigned
 - `pnpm check:brand`、`pnpm build:website`，再用 [website-smoke.mjs](../../../../scripts/website-smoke.mjs) 验证 320／390／1280 px、深浅色和独立离线两页（当前共 14 场景）、无溢出／页面错误、正确链接和摘要。脚本固定输出 `test-results/branding-website`；先保留已有报告，或在隔离检出运行，避免覆盖。只使用独立无头浏览器，不连接用户浏览器资料。
 - 官网及收尾变更经 develop → master PR 检查、正常合并。仅官网、README 和发布记录白名单走轻量检查并核对统一汇总；不重复产品全量。未知路径、内置业务资料及构建配置仍完整检查；[website.yml](../../../../.github/workflows/website.yml) 在 master 部署到既有 Pages。默认 develop 不改变部署分支，不放宽环境保护。核实 Actions 实际 head、目标 URL 与成功回执，再匿名逐文件对照 `index.html`、`download.html`、`404.html`、`robots.txt`、`sitemap.xml`、`cbim.png` 和本地构建字节／摘要。CDN 尚未更新时先只读复核。
 - 将 master 的合并结果以 fast-forward 同步回 develop，核实本地／远端 SHA、默认 develop、远端仅 master／develop 和干净工作树。存在分叉或额外分支时先查差异与授权，不硬重置、不强推或自动删除未知工作；双分支收尾不是新的批量删除许可。
-- 按已有授权回填本次关联 Issues／PR，并更新 [开发记录](../../../../design/development-log.md) 与版本报告；报告 [证据清单](evidence.md) 中的最终事实及尚未同步的外部记录，不再维护 roadmap。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。
+- 按已有授权回填本次关联 Issues／PR，并更新 [开发记录](../../../../engineering/development-log.md) 与版本报告；报告 [证据清单](evidence.md) 中的最终事实及尚未同步的外部记录，不再维护 roadmap。必须按实际安装版本报告更新节奏：0.1.2 是启动约 10 秒后及每 30 分钟检查、下载后再点击重启；从 0.1.3 开始采用每分钟检查、点击下载后自动安装重启。新源码行为必须已有对应公开版本，不能套在尚未升级的旧客户端上。关闭／离线用户不会即时收到，仍需用户主动开始下载。
 
 
 ## 安装器缓存衔接与回退诊断

@@ -30,7 +30,7 @@ describe('change routing', () => {
     expect(()=>pullRequestChecks(['README.md'],undefined)).toThrow(/draft state/);
   });
   it.each([
-    [['README.md','design/development-log.md','design/verification/check.md'],'docs',false],
+    [['README.md','engineering/development-log.md','engineering/verification/check.md'],'docs',false],
     [['website/index.html','website/release.json','README.md'],'website',true],
     [['src/a.ts','website/index.html'],'full',true],
     [['assets/runtime/common-rules.md'],'full',false],
@@ -40,6 +40,12 @@ describe('change routing', () => {
     [['scripts/ci-website-smoke.mjs'],'full',true],
     [['.github/workflows/validate.yml'],'full',false],
     [['package.json','pnpm-lock.yaml'],'full',false],
+    [['engineering/guides/ci-validation.md'],'full',false],
+    [['engineering/releases/desktop-v0.1.21.md'],'full',false],
+    [['engineering/compatibility/module.legacy.schema.json'],'full',false],
+    [['engineering/verification/nested/check.md'],'full',false],
+    [['design/agent-tool-product-requirements.md'],'full',false],
+    [['design/development-log.md','design/verification/check.md'],'full',false],
     [['unknown.md'],'full',false],
     [[], 'full',false],
     [['website/../src/a.ts'],'full',false],
@@ -47,8 +53,8 @@ describe('change routing', () => {
     expect(classifyChanges(files)).toEqual({mode,website});
   });
   it('includes both rename/copy paths and keeps spaces without shell parsing', () => {
-    const paths = parseChangedPaths('R100\0src/a.ts\0design/verification/a.md\0C090\0website/index.html\0website/copy page.html\0D\0README.md\0');
-    expect(paths).toEqual(['README.md','design/verification/a.md','src/a.ts','website/copy page.html','website/index.html']);
+    const paths = parseChangedPaths('R100\0src/a.ts\0engineering/verification/a.md\0C090\0website/index.html\0website/copy page.html\0D\0README.md\0');
+    expect(paths).toEqual(['README.md','engineering/verification/a.md','src/a.ts','website/copy page.html','website/index.html']);
     expect(classifyChanges(paths).mode).toBe('full');
     expect(parseChangedPaths('')).toEqual([]);
   });

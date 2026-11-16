@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 
 // 只放行明确的展示/发布记录；业务资料、配置及未知路径默认完整验证。
-const document = name => name === 'README.md' || name === 'design/development-log.md' || /^design\/verification\/[^/]+\.md$/.test(name);
+const document = name => name === 'README.md' || name === 'engineering/development-log.md' || /^engineering\/verification\/[^/]+\.md$/.test(name);
 const website = name => /^website\/[^/]+\.(?:html|css|json)$/.test(name);
 const websiteInputs = new Set(['scripts/build-website.mjs', 'scripts/build-brand-assets.mjs', 'scripts/website-smoke.mjs', 'scripts/preview-website.mjs', 'scripts/ci-website-smoke.mjs']);
 const safePath = name => typeof name === 'string' && name.length > 0 && !name.includes('\\') && !name.startsWith('/') && !name.split('/').some(part => part === '..' || part === '.' || !part);

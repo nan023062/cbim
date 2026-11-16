@@ -1,6 +1,6 @@
 # 证据与完成条件
 
-从冻结前建立本次记录。原始本机文件保存在唯一候选／`test-results/` 子目录，云端产物按 run ID／attempt 下载到不同目录；这些目录通常被 Git 忽略，关键事实、链接与限制还须进入受版本控制的 `design/verification/`、开发记录和 PR，不能只留本机路径。
+从冻结前建立本次记录。原始本机文件保存在唯一候选／`test-results/` 子目录，云端产物按 run ID／attempt 下载到不同目录；这些目录通常被 Git 忽略，关键事实、链接与限制还须进入受版本控制的 `engineering/verification/`、开发记录和 PR，不能只留本机路径。
 
 ## 记录字段
 

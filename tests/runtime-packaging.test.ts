@@ -12,6 +12,8 @@ it('fixed loader/native/installer inputs force C, while business output and engi
     await fs.writeFile(path.join(f.root,'main.js'),'fixed business');expect(await fingerprint()).toBe(original);
     await fs.writeFile(path.join(f.root,'desktop-builds.ts'),'additional JS worker entry');expect(await fingerprint()).toBe(original);
     await fs.writeFile(path.join(f.root,'engine/entry.js'),'new engine');expect(await fingerprint()).toBe(original);
+    await fs.writeFile(path.join(f.root,'forge.config.ts'),'relocated release notes');expect(await fingerprint()).not.toBe(original);
+    await fs.writeFile(path.join(f.root,'forge.config.ts'),'forge');expect(await fingerprint()).toBe(original);
     await fs.writeFile(path.join(f.root,'node_modules/koffi/addon.node'),'changed native');expect(await fingerprint()).not.toBe(original);
     await fs.writeFile(path.join(f.root,'node_modules/koffi/addon.node'),'native');await fs.writeFile(path.join(f.root,'desktop.js'),'changed loader');expect(await fingerprint()).not.toBe(original);
   }finally{await f.cleanup()}
@@ -24,6 +26,9 @@ it('resource collection omits empty retired directories without changing source 
     const repo=path.join(f.root,'collection-repo'),compiled=path.join(f.root,'compiled'),target=path.join(f.root,'collected');
     const source={
       'design/guide.md':'current guide',
+      'engineering/guides/release.md':'release instructions',
+      'engineering/releases/desktop-v0.1.21.md':'release notes',
+      'engineering/compatibility/module.legacy.schema.json':'legacy schema',
       'assets/business/module.schema.json':'module schema',
       'assets/business/module-spec.md':'module standard',
       'assets/capability/agent.schema.json':'agent schema',
@@ -43,7 +48,7 @@ it('resource collection omits empty retired directories without changing source 
     await collectResources(compiled,target,repo);
     const published=Object.keys(source).filter(name=>name.startsWith('legal/')||name.startsWith('assets/')&&!name.startsWith('assets/branding/'));
     expect((await inventory(target)).map(file=>file.path)).toEqual(['.vite/build/main.js',...published,'package.json'].sort());
-    for(const name of ['design','docs','assets/branding'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
+    for(const name of ['design','docs','engineering','assets/branding'])await expect(fs.stat(path.join(target,name))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'design/retired'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.stat(path.join(target,'.vite/renderer'))).rejects.toMatchObject({code:'ENOENT'});
     expect((await fs.stat(path.join(repo,'design/retired/scripts'))).isDirectory()).toBe(true);

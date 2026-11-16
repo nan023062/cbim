@@ -35,7 +35,7 @@ const config: ForgeConfig = {
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     prePackage:async()=>{await runtimeSigningKey()},
-    generateAssets:async()=>{await verifyBrandAssets();await packageOfficialEngineRuntimes(buildOut);if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`design/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
+    generateAssets:async()=>{await verifyBrandAssets();await packageOfficialEngineRuntimes(buildOut);if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`engineering/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     packageAfterPrune:async(_config,appDirectory)=>{
       await runtimeSigningKey();

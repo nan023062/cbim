@@ -7,7 +7,9 @@ import http from 'node:http';
 import {fixture} from './helpers';
 import {request} from './data/knowledge';
 import {seedTeam} from './team-fixture';
-import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import type {GoalFixtureRequest} from './goal-provider-fixture';
+import {mainToolValue} from './main-tool-contract-provider';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 import {json} from '../src/core/platform/node/serialization';
 import type {DispatchScope} from '../src/logic/tasks/rules/dispatch-scope';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
@@ -15,10 +17,9 @@ import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 type ProviderRequest=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 
 /** Test actual Pi/tool calls and reliable cycle close, with only the model transport replaced by localhost SSE. */
-it.each(['missing-review','failed-member','forged-evidence','replan'] as const)('enforces the goal completion gate across main/member rounds (%s)',async(mode)=>{
+it.each(['missing-review','failed-member','forged-evidence','replan'] as const)('verifies original recursive delivery without old goal review or repair rounds (%s)',async(mode)=>{
   const f=await fixture(),mainGoal='GOAL_REVIEW_MAIN: 核实真实模块文件，必要时追加独立复核';
   const memberGoal='GOAL_REVIEW_MEMBER: 读取 review-input.txt 并提交实际证据';
-  const queuedGoal='GOAL_REVIEW_QUEUED: 前项完成后再处理本项';
   const acceptance=['实际读取 review-input.txt 并提交证据'],fact='REAL_GOAL_REVIEW_FACT_67295';
   const mainRequests:ProviderRequest[]=[],memberRequests:ProviderRequest[]=[],errors:unknown[]=[];
   let moduleId='',agentId='',release=()=>{};let ownerSelection:OwnerExecutionSelection|undefined;
@@ -26,47 +27,28 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
   const server=http.createServer(async(req,res)=>{
     try{
       let raw='';for await(const chunk of req)raw+=chunk;
-      const body=JSON.parse(raw) as ProviderRequest,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
+      const body=JSON.parse(raw) as ProviderRequest,isMain=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review')===true;
       const requests=isMain?mainRequests:memberRequests,turn=requests.length;requests.push(body);
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'goal-review-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        const plan=(revision:number)=>goalPlanArguments({objective:mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance},revision);
-        const dispatch=()=>({agentId,moduleIds:[moduleId],ownerSelection,goal:memberGoal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-        if(turn===0)tool('goal-plan-first','cbim_goal_plan',plan(1));
-        else if(turn===1)tool('goal-dispatch-first','cbim_dispatch_task',dispatch());
-        else if(turn===2)reply('首批已派发，等待执行证据。');
-        else if(mode==='forged-evidence'){
-          if(turn===3)tool('goal-inspect-forgery','cbim_goal_inspect',{});
-          else if(turn===4){
-            const review=goalCompleteArguments(body,'goal-inspect-forgery');
-            review.checks[0].evidence[0].resultId='invented-result-must-not-be-trusted';
-            tool('goal-review-forged','cbim_goal_review',review);
-          }else{
-            expect(turn).toBeGreaterThanOrEqual(5);expect(turn).toBeLessThanOrEqual(7);
-            expect(JSON.stringify(body.messages.filter(message=>message.role==='tool'&&message.tool_call_id==='goal-review-forged'))).toContain('GOAL_EVIDENCE_INVALID');
-            if(turn>5)expect(JSON.stringify(body.messages.at(-1)?.content)).toContain('CBIM 最终验收未通过');
-            reply('忽略证据失败，仍声明全部完成。');
+        expect(body.tools?.some(t=>t.function.name.startsWith('cbim_goal_'))).toBe(false);
+        const call=(id:string)=>tool(id,'cbim_agent_call',{agentId:ownerSelection!.memberId,message:memberGoal,business:{moduleIds:[moduleId],acceptance}});
+        if(turn===0)call('goal-call-first');
+        else if(turn===1){
+          const result=mainToolValue(body,'goal-call-first');
+          if(mode==='failed-member'){expect(result.status).not.toBe('completed');expect(result.verification).toBeUndefined();reply('执行没有完成，保留失败记录，未自动返工。')}
+          else{
+            expect(result.verification).toMatchObject({state:'verified',acceptance:'not_evaluated'});
+            if(mode==='forged-evidence')tool('goal-check-forged','cbim_agent_result_check',{callId:'invented-call-must-not-be-trusted'});
+            else if(mode==='replan')call('goal-call-second');
+            else reply('实际读取已完成；未请求人工评价，不宣称已获人工验收。');
           }
-        }else if(mode!=='replan'){
-          expect(turn).toBeGreaterThanOrEqual(3);expect(turn).toBeLessThanOrEqual(5);
-          if(turn>3)expect(JSON.stringify(body.messages.at(-1)?.content)).toContain('CBIM 最终验收未通过');
-          // 两次有界反馈仍不补证，必须失败；不能让测试供应商异常代替真实验收拒绝。
-          reply('已经全部完成，可以处理排队要求。');
-        }else if(turn===3)tool('goal-inspect-first','cbim_goal_inspect',{});
-        else if(turn===4){
-          const {scope}=goalInspection(body,'goal-inspect-first');
-          tool('goal-review-replan','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'replan',checks:scope.goal.plan.criteria.map(item=>({criterionId:item.id,outcome:'unmet',reason:'尚需第二个独立执行实例复核',evidence:[]})),superseded:[],gaps:['需要独立复核实际内容'],reason:'首批已返回，继续同一用户目标并追加验证'});
-        }else if(turn===5)tool('goal-plan-second','cbim_goal_plan',plan(3));
-        else if(turn===6)tool('goal-dispatch-second','cbim_dispatch_task',dispatch());
-        else if(turn===7)reply('已按新计划追加复核，不提前宣称完成。');
-        else if(turn===8)tool('goal-inspect-final','cbim_goal_inspect',{});
-        else if(turn===9)tool('goal-review-complete','cbim_goal_review',goalCompleteArguments(body,'goal-inspect-final'));
-        else if(turn===10)reply('原目标已核实，两次独立执行证据齐备。');
-        else if(turn===11){expect(JSON.stringify(body.messages.filter(message=>message.role==='user').at(-1)?.content)).toContain(queuedGoal);reply('排队目标现在单独处理。')}
-        else throw Error('Unexpected goal main turn '+turn);
+        }else if(turn===2&&mode==='forged-evidence'){expect(JSON.stringify(mainToolValue(body,'goal-check-forged'))).toContain('AGENT_RESULT_UNAVAILABLE');reply('无法核实不存在的调用，未生成验收事实。')}
+        else if(turn===2&&mode==='replan'){expect(mainToolValue(body,'goal-call-second').verification).toMatchObject({state:'verified',acceptance:'not_evaluated'});reply('同一用户目标的两个独立核实调用都已返回真实证据。')}
+        else throw Error('Unexpected recursive main replay '+turn);
       }else{
         expect(body.tools?.some(tool=>tool.function.name.startsWith('cbim_goal_'))).toBe(false);
         const batch=Math.floor(turn/5),step=turn%5,id='goal-member-'+batch;
@@ -101,45 +83,35 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
     };
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:20000}}) as {taskId:string;runId:string};
     const identity={workspaceId:entry.id,rootSessionId:started.taskId},graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
-    await vi.waitFor(()=>{expect(mainRequests).toHaveLength(3);expect(memberRequests).toHaveLength(2)},{timeout:20000,interval:30});
-    const queued=await f.app.dispatch('loop.resume',{id:entry.id,taskId:started.taskId,runId:started.runId,message:queuedGoal,options:{permission:'read',turnTimeoutMs:20000}});
-    expect(queued.queued).toBe(true);expect((await scopes()).current).toHaveLength(1);
+    await vi.waitFor(()=>{expect(errors).toEqual([]);expect(mainRequests).toHaveLength(1);expect(memberRequests).toHaveLength(2)},{timeout:20000,interval:30});
     release();
     await vi.waitFor(async()=>{
-      const current=(await scopes()).current;expect(current).toHaveLength(mode==='replan'?2:1);expect(current.every(scope=>scope.status==='closed')).toBe(true);
-      expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
+      expect(errors).toEqual([]);const current=(await scopes()).current;
+      expect(current).toHaveLength(1);expect(current[0].status).toBe('closed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
     },{timeout:45000,interval:50});
-    const {current,records}=await scopes(),snapshotGraph=await graph(),first=current[0];
-    expect(first.goal?.input).toEqual({message:mainGoal,attachmentIds:[]});
-    expect(snapshotGraph.tasks.every(task=>task.scopeId===first.scopeId)).toBe(true);
-    const thread=await f.app.execution(entry.id).thread(started.taskId);
-    if(mode==='replan'){
-      expect(first).toMatchObject({outcome:'completed',goal:{revision:5,plan:{revision:4},review:{revision:5,planRevision:4,decision:'complete'}}});
-      const decisions=records.filter(scope=>scope.scopeId===first.scopeId&&scope.status==='active');
-      expect(decisions).toContainEqual(expect.objectContaining({goal:expect.objectContaining({revision:3,review:expect.objectContaining({decision:'replan'})})}));
-      const newPlan=decisions.find(scope=>scope.goal?.revision===4);expect(newPlan?.goal?.review).toBeUndefined();
-      expect(snapshotGraph.tasks).toHaveLength(2);expect(snapshotGraph.tasks.every(task=>task.status==='result_ready')).toBe(true);
-      expect(new Set(snapshotGraph.tasks.map(task=>task.assignee.agentInstanceId)).size).toBe(2);
-      expect(current[1]).toMatchObject({scopeId:expect.any(String),outcome:'completed',goal:{revision:1,input:{message:queuedGoal,attachmentIds:[]}}});
-      expect(current[1].scopeId).not.toBe(first.scopeId);
-      expect(thread.map(run=>run.source?.kind)).toEqual([undefined,'member-results','member-results',undefined]);
-      expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([]);
-      expect(mainRequests).toHaveLength(12);expect(memberRequests).toHaveLength(10);
-    }else{
-      expect(first).toMatchObject({outcome:'failed',goal:{revision:2,blocked:{reason:expect.any(String)}}});
-      expect(first.goal?.review).toBeUndefined();expect(snapshotGraph.tasks).toHaveLength(1);
-      expect(snapshotGraph.tasks[0].status).toBe(mode==='failed-member'?'failed':'result_ready');
-      expect(thread).toHaveLength(4);expect(thread[1].source?.kind).toBe('member-results');
-      expect(thread.slice(2).map(run=>run.source)).toEqual([1,2].map(attempt=>expect.objectContaining({kind:'goal-repair',scopeId:first.scopeId,attempt,failureCode:'GOAL_REVIEW_REQUIRED'})));
-      expect(thread.every(run=>run.status==='completed')).toBe(true);
-      expect(await f.app.dispatch('loop.queue',{id:entry.id,taskId:started.taskId})).toEqual([expect.objectContaining({message:queuedGoal,status:'paused'})]);
-      expect(mainRequests).toHaveLength(mode==='forged-evidence'?8:6);expect(memberRequests).toHaveLength(mode==='failed-member'?2:5);
+    const {current}=await scopes(),snapshotGraph=await graph(),first=current[0],thread=await f.app.execution(entry.id).thread(started.taskId);
+    expect(first.outcome).toBe('completed');expect(first.goal?.input).toEqual({message:mainGoal,attachmentIds:[]});
+    expect(first.goal?.plan).toBeUndefined();expect(first.goal?.review).toBeUndefined();expect(snapshotGraph.tasks).toEqual([]);
+    expect(thread).toHaveLength(1);expect(thread[0].runId).toBe(started.runId);
+    const state=await workspace.dispatchStore.read(),runs=state.agentBusinessRuns!;
+    expect(runs).toHaveLength(mode==='replan'?2:1);expect(state.runs??[]).toEqual([]);
+    const summaries=[];
+    for(const [index,run] of runs.entries()){
+      expect(run.status).toBe('closed');expect(run.parent).toMatchObject({callerRunId:started.runId,toolCallId:index?'goal-call-second':'goal-call-first'});
+      const summary=await new FileRunStorage().read(path.join(f.user,entry.id,'loop-engine/tasks',run.binding.taskId,run.binding.runId));summaries.push(summary);
+      expect(summary.events.filter(e=>e.type==='run.started')).toHaveLength(1);
+      if(mode==='failed-member'){expect(summary.status).not.toBe('completed');expect(summary.taskProgress?.delivery).toBeUndefined()}
+      else{expect(summary.status).toBe('completed');expect(summary.toolReceipts?.find(r=>r.toolCallId==='goal-member-'+index+'-read')?.outcome).toBe('succeeded');expect(summary.taskProgress?.delivery?.summary).toContain(fact)}
     }
-    const monitored=f.app.runtime.snapshot().members;
-    expect(snapshotGraph.tasks.every(task=>monitored.find(agent=>agent.agentInstanceId===task.assignee.agentInstanceId)?.lifecycle==='released')).toBe(true);
-    expect(monitored.find(agent=>agent.agentInstanceId===snapshotGraph.root.agent.agentInstanceId)?.lifecycle).not.toBe('released');
-    const requestCount=mainRequests.length+memberRequests.length;await f.app.open(entry.id,true);
-    expect((await scopes()).current).toEqual(current);expect((await graph()).tasks).toEqual(snapshotGraph.tasks);
-    expect(mainRequests.length+memberRequests.length).toBe(requestCount);expect(errors).toEqual([]);
+    expect(new Set(runs.map(r=>r.binding.runId)).size).toBe(runs.length);
+    expect(thread[0].toolReceipts?.find(r=>r.toolCallId==='goal-call-first')?.outcome).toBe(mode==='failed-member'?'failed':'succeeded');
+    if(mode==='forged-evidence')expect(thread[0].toolReceipts?.find(r=>r.toolCallId==='goal-check-forged')?.outcome).toBe('failed');
+    expect(mainRequests).toHaveLength(mode==='forged-evidence'||mode==='replan'?3:2);
+    expect(memberRequests).toHaveLength(mode==='failed-member'?2:mode==='replan'?10:5);
+    const files=[...thread,...summaries].flatMap(r=>[path.join(f.user,entry.id,'loop-engine/tasks',r.task.taskId,r.runId,'events.jsonl'),r.sessionFile!]);
+    const bytes=await Promise.all(files.map(file=>fs.readFile(file))),requestCount=mainRequests.length+memberRequests.length;
+    await f.app.open(entry.id,true);
+    expect((await scopes()).current).toEqual(current);expect(await f.app.workspace(entry.id).dispatchStore.read()).toEqual(state);expect(await graph()).toEqual(snapshotGraph);
+    expect(await Promise.all(files.map(file=>fs.readFile(file)))).toEqual(bytes);expect(mainRequests.length+memberRequests.length).toBe(requestCount);expect(errors).toEqual([]);
   }finally{release();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },120000);

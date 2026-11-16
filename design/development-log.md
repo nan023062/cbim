@@ -3272,3 +3272,10 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - 旧 run 间软限额不是递归调用的支持模式，未恢复旧成员领取或持久 wait 协议。共享供应商只增加显式 recursive 分支，历史默认未改。
 - 初次 build/recursive-scope-budget.json 为 4/7 通过：未知价格费用完整性断言应为 false；正常完成不应附带一个供应商未实现的额外任务；提问选项须使用真实 label Schema。修正后 pnpm exec vitest run tests/scope-budget-pi.test.ts -t "unknown-price|tokens-unpriced|complete|waiting" --reporter=json --outputFile=build/recursive-scope-budget-followup.json 为 4/4 通过；首轮其余三项无需重复。pnpm typecheck、pnpm check:test-modules 通过。
 - 仅为本批受影响集成验证，完整 CI 和桌面安装验收尚未通过。
+
+
+## 2026-11-16：移除目标审阅/自动返工轮次假设（Issue #94 / PR #96）
+
+- goal-review 四项验证改为原调用交付核验：成功读取仍是 not_evaluated，失败子调用不生成交付；伪造 callId 无法取得证明；第二次独立复核使用新的工具调用身份，旧结果日志保持不变。根对话解释失败后结束不代表业务验收通过，不再要求旧 goal review 或凭空追加修复轮次。
+- goal-repair 验证主 Agent 在同一真实循环内执行失败命令、修复文件、再次运行命令，原失败与新成功回执并存；重新打开不自动返工、不修改 canonical/native。历史队列、目标修复与审阅服务的单元/契约测试保留，未重新启用旧运行工具。
+- pnpm exec vitest run tests/goal-repair-pi.test.ts --reporter=json --outputFile=build/recursive-direct-repair.json：1/1 通过。goal-review 首轮测试迁移有残留语法块，随后 4 项在重开后误用已关闭的旧 Workspace 句柄失败；改为当前生命周期实例后 build/recursive-goal-review-verified.json：4/4 通过。pnpm typecheck、pnpm check:test-modules 通过。完整 CI/桌面验收仍未完成。

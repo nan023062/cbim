@@ -3302,3 +3302,12 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 - abandoned-checkpoint-dependency 四项在新岗位第一项已验证后暂停父模型，后续调用指令只携带当前新调用的 task/run 证明，排除旧 A 身份。正常与坏回包继续；停止或关闭重开不再启动后继。既成的两份 canonical/native 与冻结身份逐字节保留。
 - 未恢复旧检查点预约、换边事务或任务图；这些兼容服务及其原子性单元/契约覆盖保留。新流程按用户设计使用问答与普通 Agent 工具。
 - build/recursive-handoff.json 4/4、build/recursive-handoff-successors.json 4/4 通过；pnpm typecheck、pnpm check:test-modules 通过。新的供应商是独立集成辅助文件，没有将 Vitest 注入桌面共享种子。
+
+
+### 2026-11-16 · #94 递归调用的依赖追加、替换与多项调整
+
+迁移 queued-dependency-addition/replacement/revision 的 11 项真实 Pi 集成场景。主 Agent 在实际问答后明确选择调用顺序；后继只引用已完成原调用 taskId/runId 并重新读取实际文件，替换失败前置时保留旧调用但不引用它作为成功依据。覆盖确认前停止、前置完成后停止、关闭重开、真实结果回包丢失后按原 callId 核实；不构造旧 TaskNode、assignment 或伪造交付。
+
+首次执行暴露测试模型对含 JSON 引号的目标文本匹配错误，导致计划未发出，后续版本检查正确拒绝；修正序列化匹配，并将前置输入限制为原证明身份字段。产品源码未改动，旧队列服务契约测试保留。
+
+实际验证：`pnpm exec vitest run tests/queued-dependency-addition-pi.test.ts tests/queued-dependency-replacement-pi.test.ts tests/queued-dependency-revision-pi.test.ts --reporter=json --outputFile=build/recursive-dependencies-verified.json`：11/11 通过。`pnpm typecheck`、`pnpm check:test-modules` 通过（541 套件，174 unit / 166 contract / 201 integration）。仅覆盖本步依赖行为，未代表全量 CI、桌面安装或发布验收通过。

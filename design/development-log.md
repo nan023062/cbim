@@ -3162,3 +3162,10 @@ coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际�
 - pnpm exec vitest run tests/execution-report.test.ts -t '递归报告' --reporter=default --reporter=json --outputFile=build/recursive-execution-report-identity.json：新增用例通过，16 未选；已通过用例不重复运行。
 - pnpm typecheck、pnpm check:test-modules、pnpm check:architecture、git diff --check 通过。边界 540 测试文件，依赖 1661 文件/7908 边，零环。
 - 未运行桌面报告逐页验收、安装升级或最终制品构建；CI 43790338820 是 ee9c3047，不能作为此本地提交的通过证明。
+
+
+## 2026-11-16 · #94 主 Agent 直接执行的权限回归
+- direct-main-execution-pi 原 8 项已实际完成工具调用，失败点均为要求已退役 Team 提示词。迁移为统一主 Agent 默认执行、调用按工具展开、反馈只返直接调用方及实际新工具目录断言。
+- 保留 8 种旧参数兼容组合的真实文件/命令、read 禁写、ask 两次审批、忙碌准入、知识目录保护、无团队开工和重开无重放验证；没有用提示词代替权限行为测试。
+- pnpm exec vitest run tests/direct-main-execution-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-direct-main-before.json：8 项旧文案断言失败。
+- 同命令输出 build/recursive-direct-main.json：8/8 通过。仅测试断言与说明变化，无产品源码/类型/导入修改，不重复产品静态检查；未运行桌面或发布验收。

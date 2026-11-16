@@ -46,25 +46,25 @@ N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_age
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryPorts["AgentHistoryPorts"] {
   <<interface>>
   +store
-  +read()
-  +diagnostic()
+  +Read()
+  +Diagnostic()
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryPorts : 声明
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
   +workspaceId
   +constructor()
-  +initialize()
-  +issue()
-  +restoreRun()
-  +observeRun()
-  +restoreDispatch()
-  +dispatchCommitted()
-  +roles()
-  +sessions()
-  +runs()
-  +events()
-  +close()
-  +flush()
+  +Initialize()
+  +Issue()
+  +RestoreRun()
+  +ObserveRun()
+  +RestoreDispatch()
+  +DispatchCommitted()
+  +Roles()
+  +Sessions()
+  +Runs()
+  +Events()
+  +Close()
+  +Flush()
   -root
   -ports
 }
@@ -88,13 +88,13 @@ class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHis
   -initialized
   -closed
   -live
-  -check()
-  -notices()
-  -persist()
-  -put()
-  -fromStart()
-  -recordIntent()
-  -page()
+  -Check()
+  -Notices()
+  -Persist()
+  -Put()
+  -FromStart()
+  -RecordIntent()
+  -Page()
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明
 ```
@@ -107,8 +107,8 @@ class N_src_logic_history_runtime_agent_history_ts["agent-history.ts"] {
   <<module>>
 }
 class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHistoryService"] {
-  -accept()
-  -loadStream()
+  -Accept()
+  -LoadStream()
 }
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明
 ```

@@ -23,22 +23,22 @@ export interface AgentHistoryWorkspace
 
   paths:
   {
-    project(id: string): string
+    Project(id: string): string
   };
 
-  assert(): void;
+  Assert(): void;
 }
 
 /** 构造不读盘；工作区持锁并核实路径后、Store 观察器接收投影前初始化索引。详情定位只能由固定 source/task/run 决定，服务关闭前不释放工作区。 */
 export function createAgentHistory(workspace: AgentHistoryWorkspace, diagnostic?: (message: string) => void)
 {
-  const project = workspace.paths.project(workspace.entry.id),
+  const project = workspace.paths.Project(workspace.entry.id),
     storage = new FileRunStorage();
   return new AgentHistoryService(workspace.entry.id, workspace.entry.path, {
-    store: new FileAgentHistoryStore(path.join(project, 'agent-history'), workspace.entry.id, workspace.entry.path), diagnostic,
-    read: async record =>
+    store: new FileAgentHistoryStore(path.join(project, 'agent-history'), workspace.entry.id, workspace.entry.path), Diagnostic: diagnostic,
+    Read: async record =>
     {
-      workspace.assert();
+      workspace.Assert();
       const root = record.journal === 'member' ? path.join(project, 'dispatch', 'runs', 'tasks') : path.join(project, 'loop-engine', 'tasks');
       const task = path.join(root, safeId(record.view.taskId)),
         directory = path.join(task, safeId(record.view.runId));
@@ -48,7 +48,7 @@ export function createAgentHistory(workspace: AgentHistoryWorkspace, diagnostic?
       const relative = path.relative(await fs.realpath(project), await fs.realpath(directory));
       if (!relative || relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative))
         throw Error('运行日志不在本工作区应用目录');
-      const summary = await storage.read(directory);
+      const summary = await storage.Read(directory);
       if (summary.task.workspaceId !== workspace.entry.id || summary.task.root !== workspace.entry.path || summary.task.taskId !== record.view.taskId || summary.runId !== record.view.runId)
         throw Error('运行日志身份不一致');
       return summary;

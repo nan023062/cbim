@@ -65,11 +65,11 @@ export async function knowledgeSourceOwnershipChange(call:KnowledgeSourceCall,id
 
 /** Publish and import the real complete architecture through the existing package service and isolated local resource repository. */
 export async function knowledgeSourceArchitecturePackage(app:Application,id:string,repositoryDirectory:string){
-  await fs.mkdir(repositoryDirectory,{recursive:true});await app.resources.configure({mode:'local',location:repositoryDirectory});
-  const workspace=app.workspace(id),service=new WorkspacePackages(workspace,app.resources),snapshot=await workspace.snapshot(),repository=await app.resources.read();
-  const published=await service.publish({workspaceId:id,instanceId:workspace.instanceId,revision:snapshot.revision,repositoryId:repository.repositoryId,repositoryRevision:repository.revision,kind:'architecture',name:'来源生命周期真实架构包',summary:'目标模块正文与包中完全一致，兄弟正文形成实际差异。'});
-  const preview=async()=>{const current=await workspace.snapshot(),repo=await app.resources.read();return service.preview({workspaceId:id,instanceId:workspace.instanceId,revision:current.revision,repositoryId:repo.repositoryId,repositoryRevision:repo.revision,resourceId:published.resourceId,mode:'replace'})};
-  return {published,service,preview,commit:(planId:string)=>service.commit({workspaceId:id,instanceId:workspace.instanceId,planId})};
+  await fs.mkdir(repositoryDirectory,{recursive:true});await app.resources.Configure({mode:'local',location:repositoryDirectory});
+  const workspace=app.Workspace(id),service=new WorkspacePackages(workspace,app.resources),snapshot=await workspace.Snapshot(),repository=await app.resources.Read();
+  const published=await service.Publish({workspaceId:id,instanceId:workspace.instanceId,revision:snapshot.revision,repositoryId:repository.repositoryId,repositoryRevision:repository.revision,kind:'architecture',name:'来源生命周期真实架构包',summary:'目标模块正文与包中完全一致，兄弟正文形成实际差异。'});
+  const preview=async()=>{const current=await workspace.Snapshot(),repo=await app.resources.Read();return service.Preview({workspaceId:id,instanceId:workspace.instanceId,revision:current.revision,repositoryId:repo.repositoryId,repositoryRevision:repo.revision,resourceId:published.resourceId,mode:'replace'})};
+  return {published,service,preview,commit:(planId:string)=>service.Commit({workspaceId:id,instanceId:workspace.instanceId,planId})};
 }
 
 /** Read full durable bytes without opening a competing writer; corruption injections must target the returned exact owned paths. */

@@ -24,7 +24,7 @@ export class RuntimeJournal
   {
   }
 
-  read(): RuntimeState
+  Read(): RuntimeState
   {
     const initialized = fs.existsSync(this.directory + '.initialized');
     if (!fs.existsSync(this.directory))
@@ -56,7 +56,7 @@ export class RuntimeJournal
     return state;
   }
 
-  private write(state: RuntimeState)
+  private Write(state: RuntimeState)
   {
     stateSchema.parse(state);
     fs.mkdirSync(this.directory, { recursive: true });
@@ -107,29 +107,29 @@ export class RuntimeJournal
   }
 
   /** 只允许显式点击后的激活；缓存发现或普通退出不调用此入口。 */
-  authorize(candidate: { digest: string; resourceVersion: number })
+  Authorize(candidate: { digest: string; resourceVersion: number })
   {
-    const state = this.read();
+    const state = this.Read();
     if (state.pending)
       throw Error('仍有未完成的更新事务');
     if (candidate.resourceVersion <= state.highestResource || state.quarantined.includes(candidate.digest))
       throw Error('不能自动重放或降级资源版本');
-    return this.write({ ...state, sequence: state.sequence + 1, highestResource: candidate.resourceVersion, pending: { ...candidate, stage: 'authorized', dataAccessed: false, transaction: randomUUID() } });
+    return this.Write({ ...state, sequence: state.sequence + 1, highestResource: candidate.resourceVersion, pending: { ...candidate, stage: 'authorized', dataAccessed: false, transaction: randomUUID() } });
   }
 
   /** 在导入候选代码和打开原用户数据前同步持久化；失败不得继续装载。 */
-  accessData(expected: string)
+  AccessData(expected: string)
   {
-    const state = this.read();
+    const state = this.Read();
     if (!state.pending || state.pending.digest !== expected || state.pending.stage !== 'authorized')
       throw Error('更新激活票据无效');
-    return this.write({ ...state, sequence: state.sequence + 1, pending: { ...state.pending, stage: 'data-access', dataAccessed: true } });
+    return this.Write({ ...state, sequence: state.sequence + 1, pending: { ...state.pending, stage: 'data-access', dataAccessed: true } });
   }
 
   /** 业务入口与窗口真实就绪后确认同一候选；单纯进程存活不构成确认。 */
-  confirm(expected: string)
+  Confirm(expected: string)
   {
-    const state = this.read();
+    const state = this.Read();
     if (!state.pending)
     {
       if (state.confirmed !== expected)
@@ -138,24 +138,24 @@ export class RuntimeJournal
     }
     if (state.pending.digest !== expected || state.pending.stage !== 'data-access')
       throw Error('启动回执与激活事务不符');
-    return this.write({ ...state, sequence: state.sequence + 1, previous: state.confirmed, confirmed: expected, pending: undefined });
+    return this.Write({ ...state, sequence: state.sequence + 1, previous: state.confirmed, confirmed: expected, pending: undefined });
   }
 
   /** 仅加载前验证失败可自动退回；一旦放行数据，保留事务供冷壳恢复界面处理。 */
-  rejectBeforeData(expected: string)
+  RejectBeforeData(expected: string)
   {
-    const state = this.read();
+    const state = this.Read();
     if (state.pending?.digest !== expected || state.pending.stage !== 'authorized' || state.pending.dataAccessed)
       throw Error('已访问数据，禁止自动回退');
-    return this.write({ ...state, sequence: state.sequence + 1, pending: undefined, quarantined: [...state.quarantined, expected].slice(-100) });
+    return this.Write({ ...state, sequence: state.sequence + 1, pending: undefined, quarantined: [...state.quarantined, expected].slice(-100) });
   }
 
   /** 恢复界面的明确重试只重试同一候选，不倒退数据格式或自动再次执行任务。 */
-  retryPending()
+  RetryPending()
   {
-    const state = this.read();
+    const state = this.Read();
     if (!state.pending)
       throw Error('没有待恢复更新');
-    return this.write({ ...state, sequence: state.sequence + 1, pending: { ...state.pending, stage: 'authorized' } })
+    return this.Write({ ...state, sequence: state.sequence + 1, pending: { ...state.pending, stage: 'authorized' } })
   }
 }

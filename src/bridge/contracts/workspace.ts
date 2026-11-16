@@ -16,7 +16,7 @@ export interface Bridge
   call: IpcCaller;
 
   /** 原生拖入或粘贴的 File 经 preload 解析路径；不接受字符串路径。 */
-  importFiles(id: string, files: File[]): Promise<import('./chat').ChatAttachment[]>
+  ImportFiles(id: string, files: File[]): Promise<import('./chat').ChatAttachment[]>
 }
 
 declare global

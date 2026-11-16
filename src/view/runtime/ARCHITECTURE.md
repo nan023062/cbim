@@ -47,8 +47,8 @@ N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_Runtim
 class N_src_view_runtime_runtime_feed_ts_RuntimeFeed["RuntimeFeed"] {
   +constructor()
   +snapshot
-  +subscribe()
-  +refresh()
+  +Subscribe()
+  +Refresh()
   -read
   -intervalMs
   -value
@@ -56,7 +56,7 @@ class N_src_view_runtime_runtime_feed_ts_RuntimeFeed["RuntimeFeed"] {
   -timer
   -generation
   -pending
-  -emit()
+  -Emit()
 }
 N_src_view_runtime_runtime_feed_ts ..> N_src_view_runtime_runtime_feed_ts_RuntimeFeed : 声明
 ```

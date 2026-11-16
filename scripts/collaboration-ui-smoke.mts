@@ -95,9 +95,9 @@ const address=server.address();assert.ok(address&&typeof address!=='string');
 let desktop:ElectronApplication|undefined,setup:Application|undefined;
 const pageErrors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  const modelSettings=await setup.models.save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  const modelSettings=await setup.models.Save({profile:{name:'Local collaboration UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'collaboration-ui',models:[{id:'collaboration-ui',name:'Collaboration UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
   const scopes=async()=>{
     // A second FileDispatchStore could truncate a live writer's partial tail during recovery. This reader never writes.
     const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
@@ -114,18 +114,18 @@ try{
   };
   agentId=team.input.agentId;moduleId=team.input.moduleId;
   if(defaultExecutor){
-    const snap=await workspace.snapshot();
+    const snap=await workspace.Snapshot();
     const preview=await team.call('cbim_object_preview',{revision:snap.revision,operations:[{kind:'agent',action:'delete',id:agentId,cascade:true}]});
     await team.call('cbim_object_commit',{planId:preview.planId},true);
     const registry=await team.call('cbim_agent_registry');assert.equal(registry.groups.flatMap((group:any)=>group.agents).length,0);
   }
-  const snapshot=await workspace.snapshot(),modulePath=moduleId+'/module.json';
+  const snapshot=await workspace.Snapshot(),modulePath=moduleId+'/module.json';
   const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'collaboration-ui-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'collaboration-ui-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  await workspace.Commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
   const profile=modelSettings.profiles.find(p=>p.name==='Local collaboration UI');assert.ok(profile);
   ownerSelection=(await registerExplicitFixtureOwner(setup,entry.id,{agentId:defaultExecutor?'cbim:executor':agentId,moduleIds:[moduleId],profileId:profile.id,modelId:'collaboration-ui'})).selection;
-  await setup.shutdown();setup=undefined;
+  await setup.Shutdown();setup=undefined;
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
   assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('userData'))),path.join(user,'desktop'));
   let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
@@ -384,7 +384,7 @@ try{
   await fs.writeFile(`test-results/${artifact}-ui-smoke-failure.json`,JSON.stringify({packagedExe:exe,error:String(error),pageErrors,transportErrors,mainRequests:mainRequests.length,memberRequests:memberRequests.length},null,2));
   throw error;
 }finally{
-  releaseMember();releaseResumed();await setup?.shutdown();await desktop?.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
+  releaseMember();releaseResumed();await setup?.Shutdown();await desktop?.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
   const root=path.resolve(temp),parent=path.resolve(os.tmpdir());
   assert.equal(path.dirname(root),parent);assert.ok(path.basename(root).startsWith('cbim-collaboration-ui-'));
   await fs.rm(root,{recursive:true,force:true,maxRetries:3,retryDelay:150});

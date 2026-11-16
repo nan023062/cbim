@@ -27,31 +27,31 @@ export class FeedbackStatusTool
   {
   }
 
-  has(name: string)
+  Has(name: string)
   {
     return name === 'cbim_feedback_status'
   }
 
-  list()
+  List()
   {
     return [{ name: 'cbim_feedback_status', version: 1, effects: ['read'] as const, description: '只读核实当前反馈连接与本轮提交／核实工具可用性。反馈工具缺失或连接后仍不可用时先调用；不查询 Issue 或处理进度、不连接账号、不提交或重发。knowledge 工具目录不包含本入口或反馈提交工具。', inputSchema: zodToJsonSchema(feedbackReceiptInputSchema) as Record<string, unknown>, outputSchema: zodToJsonSchema(feedbackAvailabilitySchema) as Record<string, unknown> }]
   }
 
-  private parse(name: string, input: unknown)
+  private Parse(name: string, input: unknown)
   {
-    if (!this.has(name) || !feedbackReceiptInputSchema.safeParse(input).success)
+    if (!this.Has(name) || !feedbackReceiptInputSchema.safeParse(input).success)
       fail('GITHUB_FEEDBACK_INPUT', '反馈状态查询不接受身份、仓库、凭据或授权参数')
   }
 
   /** 精确只读分类，使用工作区范围，不借用或创建 GitHub 写授权。 */
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    this.parse(name, input);
+    this.Parse(name, input);
     return { effects: ['read'], native: false, contractVersion: 1, scope: { kind: 'workspace', workspaceId: this.workspaceId } }
   }
 
   /** 本轮装配不随登录中途变化；已登录但未装配时要求新一轮。连接状态不证明原 Issue 是否提交。 */
-  async snapshot(): Promise<FeedbackAvailability>
+  async Snapshot(): Promise<FeedbackAvailability>
   {
     if (!this.check)
       return { code: 'FEEDBACK_TOOL_NOT_LOADED', submitAvailable: this.registered, receiptAvailable: this.registered, message: messages.FEEDBACK_TOOL_NOT_LOADED };
@@ -68,11 +68,11 @@ export class FeedbackStatusTool
     return { code, submitAvailable: this.registered, receiptAvailable: this.registered, ...(connection.repository ? { repository: connection.repository } : {}), message: messages[code] };
   }
 
-  async call(name: string, input: unknown, signal: AbortSignal)
+  async Call(name: string, input: unknown, signal: AbortSignal)
   {
-    this.parse(name, input);
+    this.Parse(name, input);
     signal.throwIfAborted();
-    const result = await this.snapshot();
+    const result = await this.Snapshot();
     signal.throwIfAborted();
     return checkedJsonToolResult(name, result, feedbackAvailabilitySchema)
   }

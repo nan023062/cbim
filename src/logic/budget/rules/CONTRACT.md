@@ -18,4 +18,4 @@ model-request-configuration.ts 从原执行快照投影预算模型；primary �
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

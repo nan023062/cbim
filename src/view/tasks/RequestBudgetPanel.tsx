@@ -18,9 +18,9 @@ export function RequestBudgetPanel({ query, budget }: { query: RequestBudgetQuer
 {
   const controller = useMemo(() => new RequestBudgetController(query, budget.policy.revision, q => window.cbim.call('dispatch.requestBudget', q)), [query.workspaceId, query.rootSessionId, query.scopeId, budget.policy.revision]);
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
-  useEffect(() => () => controller.dispose(), [controller]);
+  useEffect(() => () => controller.Dispose(), [controller]);
   const report = state.report;
-  return <div data-testid="request-budget-panel"><button disabled={state.busy} onClick={() => void controller.load()}><Icon name="refresh" size={16} />刷新请求账本</button>
+  return <div data-testid="request-budget-panel"><button disabled={state.busy} onClick={() => void controller.Load()}><Icon name="refresh" size={16} />刷新请求账本</button>
     {state.error && <p role="alert">{state.error}</p>}
     {!report ? <p className="scope-goal-muted">尚未读取逐请求账本。</p> : <>
       <p className="scope-goal-muted">以下为最近一次读取的记录。</p>

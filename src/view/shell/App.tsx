@@ -211,7 +211,7 @@ export function App()
     return () =>
     {
       alive.current = false;
-      runtimeResolver.current.cancel();
+      runtimeResolver.current.Cancel();
       clearInterval(timer)
     }
   }, []);
@@ -286,7 +286,7 @@ export function App()
   }
   function cancelRuntimeNavigation()
   {
-    runtimeResolver.current.cancel();
+    runtimeResolver.current.Cancel();
     setRuntimeNavigation(undefined);
     setRuntimeNavigationError('')
   }
@@ -332,7 +332,7 @@ export function App()
     setRuntimeNavigation(undefined);
     try
     {
-      const verified = await runtimeResolver.current.resolve(target);
+      const verified = await runtimeResolver.current.Resolve(target);
       if (!alive.current || !verified)
         return;
       dirty.current.clear();

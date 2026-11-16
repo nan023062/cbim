@@ -36,25 +36,25 @@ class N_src_logic_execution_rules_capabilities_artifact_capture_ts["artifact-cap
 class N_src_logic_execution_rules_capabilities_artifact_capture_ts_ArtifactCapturePort["ArtifactCapturePort"] {
   <<interface>>
   +knowledgeRevision
-  +normalizePath()
-  +assertCurrentKnowledge()
-  +captureFiles()
+  +NormalizePath()
+  +AssertCurrentKnowledge()
+  +CaptureFiles()
 }
 N_src_logic_execution_rules_capabilities_artifact_capture_ts ..> N_src_logic_execution_rules_capabilities_artifact_capture_ts_ArtifactCapturePort : 声明
 class N_src_logic_execution_rules_capabilities_artifact_capture_ts_RunArtifactCapture["RunArtifactCapture"] {
   +tools
   +constructor()
-  +guard()
-  +observed()
-  +stop()
-  +refs()
+  +Guard()
+  +Observed()
+  +Stop()
+  +Refs()
   -binding
   -port
   -context
   -events
   -reserved
   -controller
-  -capture()
+  -Capture()
 }
 N_src_logic_execution_rules_capabilities_artifact_capture_ts ..> N_src_logic_execution_rules_capabilities_artifact_capture_ts_RunArtifactCapture : 声明
 ```
@@ -71,9 +71,9 @@ class N_src_logic_execution_rules_capabilities_member_checkpoint_ts["member-chec
 class N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberCheckpoint["RunMemberCheckpoint"] {
   +tools
   +constructor()
-  +guard()
-  +observed()
-  +stop()
+  +Guard()
+  +Observed()
+  +Stop()
   -binding
   -port
   -context
@@ -81,7 +81,7 @@ class N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberChe
   -reserved
   -staged
   -controller
-  -stage()
+  -Stage()
 }
 N_src_logic_execution_rules_capabilities_member_checkpoint_ts ..> N_src_logic_execution_rules_capabilities_member_checkpoint_ts_RunMemberCheckpoint : 声明
 ```
@@ -133,18 +133,18 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts["outpu
 class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_OutputManifestCapturePort["OutputManifestCapturePort"] {
   <<interface>>
   +knowledgeRevision
-  +assertCurrentKnowledge()
-  +capture()
+  +AssertCurrentKnowledge()
+  +Capture()
 }
 N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_OutputManifestCapturePort : 声明
 class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture["RunOutputManifestCapture"] {
   +tools
   +constructor()
-  +guard()
-  +observed()
-  +stop()
-  +select()
-  +verifyCurrent()
+  +Guard()
+  +Observed()
+  +Stop()
+  +Select()
+  +VerifyCurrent()
   -binding
   -scopes
   -port
@@ -167,8 +167,8 @@ class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts["outpu
 }
 class N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture["RunOutputManifestCapture"] {
   -bindings
-  -inspect()
-  -capture()
+  -Inspect()
+  -Capture()
 }
 N_src_logic_execution_rules_capabilities_output_manifest_capture_ts ..> N_src_logic_execution_rules_capabilities_output_manifest_capture_ts_RunOutputManifestCapture : 声明
 ```
@@ -186,27 +186,27 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts["run-a
 }
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_ArtifactTransitionFile["ArtifactTransitionFile"] {
   <<interface>>
-  +readBefore()
-  +apply()
+  +ReadBefore()
+  +Apply()
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_ArtifactTransitionFile : 声明
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_ArtifactTransitionRunPort["ArtifactTransitionRunPort"] {
   <<interface>>
-  +withExclusive()
-  +drain()
+  +WithExclusive()
+  +Drain()
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_ArtifactTransitionRunPort : 声明
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition["RunArtifactTransition"] {
   +constructor()
-  +guard()
-  +authorize()
-  +observed()
+  +Guard()
+  +Authorize()
+  +Observed()
   +unverifiedCallIds
-  +assertVerified()
-  +stop()
-  +drain()
-  +list()
-  +call()
+  +AssertVerified()
+  +Stop()
+  +Drain()
+  +List()
+  +Call()
   -binding
   -scopes
   -manifests
@@ -233,7 +233,7 @@ class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArt
   -pending
   -unverified
   -reserved
-  -release()
+  -Release()
 }
 N_src_logic_execution_rules_capabilities_run_artifact_transition_ts ..> N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_RunArtifactTransition : 声明
 class N_src_logic_execution_rules_capabilities_run_artifact_transition_ts_external_ArtifactTransitionToolPort["ArtifactTransitionToolPort (外部契约)"] {
@@ -261,21 +261,21 @@ class N_src_logic_execution_rules_capabilities_run_code_check_ts["run-code-check
 }
 class N_src_logic_execution_rules_capabilities_run_code_check_ts_CodeCheckContext["CodeCheckContext"] {
   <<interface>>
-  +currentVersion()
-  +generation()
-  +assertReady()
-  +assertKnowledge()
-  +save()
+  +CurrentVersion()
+  +Generation()
+  +AssertReady()
+  +AssertKnowledge()
+  +Save()
 }
 N_src_logic_execution_rules_capabilities_run_code_check_ts ..> N_src_logic_execution_rules_capabilities_run_code_check_ts_CodeCheckContext : 声明
 class N_src_logic_execution_rules_capabilities_run_code_check_ts_RunCodeCheck["RunCodeCheck"] {
   +constructor()
-  +list()
-  +guard()
-  +observed()
-  +stop()
-  +records()
-  +call()
+  +List()
+  +Guard()
+  +Observed()
+  +Stop()
+  +Records()
+  +Call()
   -bindings
   -identity
   -knowledgeRevision
@@ -303,22 +303,22 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts["run-contr
 class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_ControlledFileRunPort["ControlledFileRunPort"] {
   <<interface>>
   +scopeId
-  +write()
-  +confirmNotApplied()
-  +drain()
+  +Write()
+  +ConfirmNotApplied()
+  +Drain()
 }
 N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_execution_rules_capabilities_run_controlled_file_ts_ControlledFileRunPort : 声明
 class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile["RunControlledFile"] {
   +constructor()
-  +guard()
-  +authorize()
-  +observed()
+  +Guard()
+  +Authorize()
+  +Observed()
   +unverifiedCallIds
-  +assertVerified()
-  +stop()
-  +drain()
-  +list()
-  +call()
+  +AssertVerified()
+  +Stop()
+  +Drain()
+  +List()
+  +Call()
   -binding
   -port
   -assertReady
@@ -339,7 +339,7 @@ class N_src_logic_execution_rules_capabilities_run_controlled_file_ts["run-contr
 class N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile["RunControlledFile"] {
   -pending
   -scopeId
-  -release()
+  -Release()
 }
 N_src_logic_execution_rules_capabilities_run_controlled_file_ts ..> N_src_logic_execution_rules_capabilities_run_controlled_file_ts_RunControlledFile : 声明
 ```
@@ -356,20 +356,20 @@ class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts["run-scop
 class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_ScopedExecutionPort["ScopedExecutionPort"] {
   <<interface>>
   +scope
-  +read()
-  +node()
-  +drain()
+  +Read()
+  +Node()
+  +Drain()
 }
 N_src_logic_execution_rules_capabilities_run_scoped_execution_ts ..> N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_ScopedExecutionPort : 声明
 class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScopedExecution["RunScopedExecution"] {
   +constructor()
-  +guard()
-  +authorize()
-  +observed()
-  +stop()
-  +drain()
-  +list()
-  +call()
+  +Guard()
+  +Authorize()
+  +Observed()
+  +Stop()
+  +Drain()
+  +List()
+  +Call()
   -scope
   -port
   -assertReady
@@ -377,7 +377,7 @@ class N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScoped
   -pending
   -physicalUnknown
   -reserved
-  -release()
+  -Release()
 }
 N_src_logic_execution_rules_capabilities_run_scoped_execution_ts ..> N_src_logic_execution_rules_capabilities_run_scoped_execution_ts_RunScopedExecution : 声明
 ```
@@ -403,30 +403,30 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts["run-validation
 }
 class N_src_logic_execution_rules_capabilities_run_validation_ts_ValidationFilePort["ValidationFilePort"] {
   <<interface>>
-  +validateFile()
-  +validateTable()
-  +validateImage()
-  +checkFiles()
+  +ValidateFile()
+  +ValidateTable()
+  +ValidateImage()
+  +CheckFiles()
 }
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_ValidationFilePort : 声明
 class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidationContext["RunValidationContext"] {
   <<interface>>
-  +current()
-  +generation()
-  +assertReady()
-  +assertDeliveryReady()
-  +verifyManifest()
-  +save()
+  +Current()
+  +Generation()
+  +AssertReady()
+  +AssertDeliveryReady()
+  +VerifyManifest()
+  +Save()
 }
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidationContext : 声明
 class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["RunValidation"] {
   +tools
   +constructor()
-  +guard()
-  +observed()
-  +stop()
-  +records()
-  +verifyCurrent()
+  +Guard()
+  +Observed()
+  +Stop()
+  +Records()
+  +VerifyCurrent()
   -binding
   -bindings
   -artifacts
@@ -449,9 +449,9 @@ class N_src_logic_execution_rules_capabilities_run_validation_ts["run-validation
 }
 class N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation["RunValidation"] {
   -controller
-  -lastEffectSeq()
-  -selected()
-  -run()
+  -LastEffectSeq()
+  -Selected()
+  -Run()
 }
 N_src_logic_execution_rules_capabilities_run_validation_ts ..> N_src_logic_execution_rules_capabilities_run_validation_ts_RunValidation : 声明
 ```
@@ -525,4 +525,4 @@ Promise settled 仅代表调用返回。三种能力继续执行各自平台 dra
 
 ## 未核实受控写之后的同调用求助
 
-RunControlledFile.guard 在原写结果未知后允许 cbim_ask_user_question，沿既有 Agent 问答端口交给直接调用方；回答不清除 unverified 集合，也不授予新写入、命令或交付。原生只读与旧 cbim_task_help 保留原语义，最终仍记录 run.interrupted 及原 unverifiedControlledCalls。
+RunControlledFile.Guard 在原写结果未知后允许 cbim_ask_user_question，沿既有 Agent 问答端口交给直接调用方；回答不清除 unverified 集合，也不授予新写入、命令或交付。原生只读与旧 cbim_task_help 保留原语义，最终仍记录 run.interrupted 及原 unverifiedControlledCalls。

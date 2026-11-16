@@ -65,18 +65,18 @@ export class TopicInterruptionController
     return this.value
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  private publish(value: Partial<TopicInterruptionState>)
+  private Publish(value: Partial<TopicInterruptionState>)
   {
     this.value = { ...this.value, ...value };
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  private validate(raw: unknown)
+  private Validate(raw: unknown)
   {
     const request = topicInterruptionRequestSchema.parse(raw);
     if (request.workspaceId !== this.target.workspaceId || request.rootSessionId !== this.target.rootSessionId || request.scopeId !== this.target.scopeId || request.expectedInputRevision !== this.target.expectedInputRevision)
@@ -84,36 +84,36 @@ export class TopicInterruptionController
     return request;
   }
 
-  private run(work: () => Promise<void>): Promise<void>
+  private Run(work: () => Promise<void>): Promise<void>
   {
     if (this.inFlight)
       return this.inFlight;
-    this.publish({ pending: true, error: '' });
-    const pending = Promise.resolve().then(work).catch(error => this.publish({ error: error instanceof Error ? error.message : String(error) })).finally(() =>
+    this.Publish({ pending: true, error: '' });
+    const pending = Promise.resolve().then(work).catch(error => this.Publish({ error: error instanceof Error ? error.message : String(error) })).finally(() =>
     {
       this.inFlight = undefined;
-      this.publish({ pending: false })
+      this.Publish({ pending: false })
     });
     this.inFlight = pending;
     return pending;
   }
 
   /** 重开只读本机请求及原回执；可采纳服务器上尚未消费的原请求，但绝不自动重发。 */
-  restore(saved?: TopicInterruptionRequest): Promise<void>
+  Restore(saved?: TopicInterruptionRequest): Promise<void>
   {
-    return this.run(async () =>
+    return this.Run(async () =>
     {
       try
       {
-        const raw = this.records.read('本机话题补充记录过大，请核实后继续'),
-          local = raw ? this.validate(raw) : undefined,
-          canonical = saved ? this.validate(saved) : undefined;
+        const raw = this.records.Read('本机话题补充记录过大，请核实后继续'),
+          local = raw ? this.Validate(raw) : undefined,
+          canonical = saved ? this.Validate(saved) : undefined;
         if (local && canonical && !equalJson(local, canonical))
           throw Error('本机补充与已保存的话题请求不同，请核实两份原请求');
         const request = local ?? canonical;
         if (request && !local)
-          this.records.write(request, '补充超出本机记录上限，未发送');
-        this.publish({ ready: true, request });
+          this.records.Write(request, '补充超出本机记录上限，未发送');
+        this.Publish({ ready: true, request });
       }
       catch (error)
       {
@@ -121,64 +121,64 @@ export class TopicInterruptionController
         throw error
       }
       if (this.value.request)
-        await this.lookup();
+        await this.Lookup();
     })
   }
 
   /** 普通草稿不传入此控制器；创建请求后，任何失败都保留冻结原文、有序附件身份及选型。 */
-  submit(message: string, options: TopicInterruptionRequest['options'], attachmentIds: readonly string[] = []): Promise<void>
+  Submit(message: string, options: TopicInterruptionRequest['options'], attachmentIds: readonly string[] = []): Promise<void>
   {
-    return this.run(async () =>
+    return this.Run(async () =>
     {
       if (!this.value.ready || this.blocked)
         throw Error('原补充记录尚未核实，未发送');
       if (this.value.request)
         throw Error('已有提交记录，请查询或重试原请求');
-      const other = this.records.read('本机话题补充记录过大，请核实后继续');
+      const other = this.records.Read('本机话题补充记录过大，请核实后继续');
       if (other)
       {
-        this.publish({ request: this.validate(other) });
+        this.Publish({ request: this.Validate(other) });
         throw Error('此话题已有提交记录，未创建重复请求')
       }
-      const request = this.validate({ ...this.target, commandId: this.ports.uuid(), input: { message, ...(attachmentIds.length ? { attachmentIds: [...attachmentIds] } : {}) }, options });
-      this.records.write(request, '补充超出本机记录上限，未发送');
-      this.publish({ request });
-      this.accept(await this.ports.submit(structuredClone(request)), request);
+      const request = this.Validate({ ...this.target, commandId: this.ports.uuid(), input: { message, ...(attachmentIds.length ? { attachmentIds: [...attachmentIds] } : {}) }, options });
+      this.records.Write(request, '补充超出本机记录上限，未发送');
+      this.Publish({ request });
+      this.Accept(await this.ports.submit(structuredClone(request)), request);
     })
   }
 
-  private accept(raw: unknown, request: TopicInterruptionRequest)
+  private Accept(raw: unknown, request: TopicInterruptionRequest)
   {
-    this.publish({ receipt: checkedTopicInterruptionReceipt(raw, request, this.value.receipt), error: '' })
+    this.Publish({ receipt: checkedTopicInterruptionReceipt(raw, request, this.value.receipt), error: '' })
   }
 
-  private async lookup()
+  private async Lookup()
   {
     const request = this.value.request;
     if (!request)
       return;
     const receipt = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId });
     if (receipt !== undefined)
-      this.accept(receipt, request);
+      this.Accept(receipt, request);
   }
 
-  query()
+  Query()
   {
-    return this.run(() => this.lookup())
+    return this.Run(() => this.Lookup())
   }
 
   /** 只有用户明确点击才重试原请求；先查已受理结果，禁止换 ID、正文或权限。 */
-  retry()
+  Retry()
   {
-    return this.run(async () =>
+    return this.Run(async () =>
     {
       if (this.blocked || !this.value.request)
         throw Error('没有可重试的原补充记录');
-      await this.lookup();
+      await this.Lookup();
       if (this.value.receipt)
         return;
       const request = this.value.request;
-      this.accept(await this.ports.submit(structuredClone(request)), request);
+      this.Accept(await this.ports.submit(structuredClone(request)), request);
     })
   }
 }

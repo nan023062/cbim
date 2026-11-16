@@ -125,7 +125,7 @@ export class OfficeEventTracker
 
   private known = new Set<string>();
 
-  observe(graph: GraphSnapshot, visible = true): OfficeEvent[]
+  Observe(graph: GraphSnapshot, visible = true): OfficeEvent[]
   {
     const key = JSON.stringify([graph.identity.workspaceId, graph.identity.rootSessionId, graph.cursor.streamId]);
     if (key === this.key && graph.cursor.seq <= this.seq)

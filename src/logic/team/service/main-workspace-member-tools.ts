@@ -26,20 +26,20 @@ export function mainWorkspaceMemberTools(owner: KnowledgeWorkspace, members: Wor
   const current = (signal: AbortSignal) =>
   {
     signal.throwIfAborted();
-    owner.assert(identity);
-    context.assertCurrent(signal)
+    owner.Assert(identity);
+    context.AssertCurrent(signal)
   };
   const change = async (value: MemberToolChange): Promise<WorkspaceMemberChangeInput> =>
   {
     if (value.kind !== 'register')
       return value;
-    const selection = agentModelSelectionSchema.safeParse(data(await owner.snapshot(), value.agentId + '/agent.json').runtime);
+    const selection = agentModelSelectionSchema.safeParse(data(await owner.Snapshot(), value.agentId + '/agent.json').runtime);
     if (!selection.success)
       fail('MEMBER_MODEL_MANUAL', '请先由用户为静态 Agent 配置模型，岗位登记不会自动选型');
     return { ...value, runtimePolicy: selection.data };
   };
   return {
-    call: async (name, raw, signal, toolCallId) =>
+    Call: async (name, raw, signal, toolCallId) =>
     {
       current(signal);
       if (name === 'cbim_member_inspect')
@@ -47,11 +47,11 @@ export function mainWorkspaceMemberTools(owner: KnowledgeWorkspace, members: Wor
         const input = memberToolInspectSchema.parse(raw);
         if (!('memberId' in input))
         {
-          const page = await members.list({ ...identity, ...input });
+          const page = await members.List({ ...identity, ...input });
           current(signal);
           return { identity, page }
         }
-        const detail = await members.get({ ...identity, ...input });
+        const detail = await members.Get({ ...identity, ...input });
         current(signal);
         return { identity, detail: { memberId: detail.member.memberId, revision: detail.member.revision, agentId: detail.member.adoption.configuration.agentId, state: detail.member.state, currentDiff: detail.currentDiff, repair: [...(detail.currentDiff.capability.status === 'changed' ? ['cbim_member_change_preview: adopt target=capability'] : []), ...(detail.currentDiff.model.status !== 'same' ? ['请由用户核实并采纳模型配置'] : []), ...(detail.currentDiff.capability.status === 'missing' || detail.currentDiff.capability.status === 'invalid' ? ['恢复静态 Agent 定义，或解除责任后停用/退役岗位'] : [])] } };
       }
@@ -60,7 +60,7 @@ export function mainWorkspaceMemberTools(owner: KnowledgeWorkspace, members: Wor
         const input = memberToolPreviewSchema.parse(raw),
           resolved = await change(input.change);
         current(signal);
-        const preview = await members.preview({ ...identity, change: resolved });
+        const preview = await members.Preview({ ...identity, change: resolved });
         current(signal);
         return { identity, change: input.change, basis: preview.basis, registryCursor: preview.registryCursor, previousRevision: preview.previousRevision, capabilityHash: preview.proposed.capability.capabilityHash, configurationHash: preview.proposed.runtimePolicy.configurationHash, changedFields: preview.changedFields };
       }
@@ -69,16 +69,16 @@ export function mainWorkspaceMemberTools(owner: KnowledgeWorkspace, members: Wor
         const input = memberToolCommitSchema.parse(raw),
           actor = workspaceMemberMainActorSchema.parse({ kind: 'main_agent', rootSessionId: fixed.rootSessionId, scopeId: fixed.scopeId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId, toolCallId, toolName: name });
         const commandId = workspaceMemberMainCommandId(identity.workspaceId, actor);
-        return context.track(async () =>
+        return context.Track(async () =>
         {
           const resolved = await change(input.change);
           current(signal);
-          const receipt = await members.commit({ ...identity, ...input, change: resolved, commandId }, actor, () => current(signal));
+          const receipt = await members.Commit({ ...identity, ...input, change: resolved, commandId }, actor, () => current(signal));
           return { identity, status: 'recorded', commandId, receipt };
         });
       }
       const input = memberToolReceiptSchema.parse(raw),
-        receipt = await members.mainReceipt(identity.workspaceId, input.commandId, main.rootSessionId);
+        receipt = await members.MainReceipt(identity.workspaceId, input.commandId, main.rootSessionId);
       current(signal);
       return receipt ? { identity, status: 'recorded', commandId: input.commandId, receipt } : { identity, status: 'unknown', commandId: input.commandId };
     }

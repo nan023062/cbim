@@ -24,24 +24,24 @@ const emptyTools = (): ExecutionReport['tools'] => ({ available: false, total: 0
 /** inspect 必须读取指定 run 的权威日志，不能从 UI 缓存或最近一次运行替代。 */
 export class ExecutionReportService
 {
-  constructor(private owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, private store: Pick<DispatchStore, 'read'>, private inspect: (run: DispatchRun) => Promise<RunSummary>, private inspectAgent?: (run: AgentBusinessRun) => Promise<RunSummary>)
+  constructor(private owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private store: Pick<DispatchStore, 'Read'>, private inspect: (run: DispatchRun) => Promise<RunSummary>, private inspectAgent?: (run: AgentBusinessRun) => Promise<RunSummary>)
   {
   }
 
   /** 只读核实；缺失、损坏、截断及身份不符返回保守报告，非法请求或跨主会话访问仍拒绝。 */
-  async read(raw: unknown): Promise<ExecutionReport>
+  async Read(raw: unknown): Promise<ExecutionReport>
   {
     const parsed = executionReportInputSchema.safeParse(raw);
     if (!parsed.success)
       fail('MEMBER_INPUT_INVALID', '执行核实参数无效');
     const input = parsed.data;
-    this.owner.assert();
+    this.owner.Assert();
     if (input.workspaceId !== this.owner.entry.id)
       fail('GRAPH_IDENTITY_MISMATCH', '执行核实不属于当前工作区');
-    const before = await this.store.read();
+    const before = await this.store.Read();
     if (before.agentBusinessRuns?.some(r => r.binding.workspaceId === input.workspaceId && r.binding.rootSessionId === input.rootSessionId && r.binding.taskId === input.taskId))
-      return this.readRecursive(input, before);
-    const facts = this.facts(before, input.rootSessionId, input.taskId, input.runId);
+      return this.ReadRecursive(input, before);
+    const facts = this.Facts(before, input.rootSessionId, input.taskId, input.runId);
     const { task, run, scope, graph } = facts;
     const result: ExecutionReport = { identity: { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, taskId: input.taskId, ...(input.runId ? { runId: input.runId } : {}) }, checkedAt: new Date().toISOString(), basis: { key: '0'.repeat(64), graphCursor: graph.cursor, taskRevision: task.revision, planRevision: task.planRevision, taskStatus: task.status, ...(task.scopeId ? { scopeId: task.scopeId } : {}), ...(scope ? { scopeStatus: scope.status, goalRevision: scope.goal?.revision } : {}), ...(run ? { runStatus: run.status } : {}) }, consistency: 'stable', execution: 'unknown', log: { state: 'not_selected' }, tools: emptyTools(), issues: [], next: { kind: 'inspect_effects', reason: '先核实已有产物与操作结果；本报告不会自动重放工具。' } };
     const issue = (code: string, severity: ExecutionReport['issues'][number]['severity'], message: string) => result.issues.push({ code, severity, message });
@@ -52,7 +52,7 @@ export class ExecutionReportService
       // 没有 run 意图也必须没有领取/执行事实，才可说当前任务尚未启动。
       const claimed = facts.assignments.some(message => !!message.claim),
         registered = facts.registeredRuns.length > 0;
-      const cancelled = this.cancelledWithoutRun(facts);
+      const cancelled = this.CancelledWithoutRun(facts);
       if (!task.runIds.length && !task.activeRunId && !registered && !claimed && !task.result && !task.help && (['planned', 'queued', 'waiting'].includes(task.status) || cancelled))
       {
         result.execution = 'not_started';
@@ -62,7 +62,7 @@ export class ExecutionReportService
       else
         issue('RUN_NOT_SELECTED', 'info', '请选择需要核实的运行轮次；未选择时不自动读取最新日志。');
     }
-    else if (!task.runIds.includes(input.runId) || !run || !this.bound(run, task, input.workspaceId, input.rootSessionId))
+    else if (!task.runIds.includes(input.runId) || !run || !this.Bound(run, task, input.workspaceId, input.rootSessionId))
     {
       result.log.state = run ? 'identity_mismatch' : 'missing';
       issue('DISPATCH_RUN_UNVERIFIED', 'danger', '所选运行没有与当前任务匹配的持久领取记录，启动结果未知。');
@@ -87,7 +87,7 @@ export class ExecutionReportService
         try
         {
           result.basis.logSeq = summary.events.at(-1)?.seq ?? 0;
-          if (!this.matches(summary, run))
+          if (!this.Matches(summary, run))
           {
             result.log.state = 'identity_mismatch';
             issue('RUN_LOG_IDENTITY', 'danger', '日志身份、事件顺序或成员绑定与所选运行不一致，不能用作执行证据。');
@@ -143,10 +143,10 @@ export class ExecutionReportService
         }
       }
     }
-    const after = await this.store.read();
-    this.owner.assert();
-    const afterFacts = this.facts(after, input.rootSessionId, input.taskId, input.runId);
-    if (this.stamp(facts) !== this.stamp(afterFacts))
+    const after = await this.store.Read();
+    this.owner.Assert();
+    const afterFacts = this.Facts(after, input.rootSessionId, input.taskId, input.runId);
+    if (this.Stamp(facts) !== this.Stamp(afterFacts))
     {
       result.consistency = 'changed_during_read';
       result.execution = 'unknown';
@@ -154,8 +154,8 @@ export class ExecutionReportService
       delete result.candidate;
       issue('REPORT_CHANGED_DURING_READ', 'warning', '读取期间任务或运行状态发生变化；请重新核实，不能合并本次与旧报告。');
     }
-    result.basis.key = hash(json({ state: this.stamp(facts), log: logToken ?? result.log, consistency: result.consistency }));
-    this.page(result, input);
+    result.basis.key = hash(json({ state: this.Stamp(facts), log: logToken ?? result.log, consistency: result.consistency }));
+    this.Page(result, input);
     if (scope?.status === 'closed')
       result.next = { kind: 'new_cycle_only', reason: '本调度周期已关闭，只能先核实遗留影响，再在新周期创建新的执行任务；本报告不执行重试。' };
     else if (result.execution === 'in_flight' || result.execution === 'not_started')
@@ -166,7 +166,7 @@ export class ExecutionReportService
   }
 
   /** 新调用没有图任务版本；仅解释原登记、原日志和工具回执，不创造旧交付候选或恢复资格。 */
-  private async readRecursive(input: ReturnType<typeof executionReportInputSchema.parse>, before: DispatchState): Promise<ExecutionReport>
+  private async ReadRecursive(input: ReturnType<typeof executionReportInputSchema.parse>, before: DispatchState): Promise<ExecutionReport>
   {
     const select = (state: DispatchState) =>
     {
@@ -263,8 +263,8 @@ export class ExecutionReportService
         }
       }
     }
-    const after = await this.store.read();
-    this.owner.assert();
+    const after = await this.store.Read();
+    this.owner.Assert();
     if (stamp(facts) !== stamp(select(after)))
     {
       result.consistency = 'changed_during_read';
@@ -273,7 +273,7 @@ export class ExecutionReportService
       issue('REPORT_CHANGED_DURING_READ', 'warning', '读取期间登记或周期变化，请重新核实。')
     }
     result.basis.key = hash(json({ state: stamp(facts), log: logToken ?? result.log, consistency: result.consistency }));
-    this.page(result, input);
+    this.Page(result, input);
     if (scope.status === 'closed')
       result.next = { kind: 'new_cycle_only', reason: '原周期已关闭；先核实遗留影响，新指令须走新调用，不自动重放原工具。' };
     else if (result.execution === 'in_flight')
@@ -282,7 +282,7 @@ export class ExecutionReportService
   }
 
   /** 分页只针对已核对的报告基线；基线变化从首项重新展示，不拼接不同版本。 */
-  private page(result: ExecutionReport, input: ReturnType<typeof executionReportInputSchema.parse>)
+  private Page(result: ExecutionReport, input: ReturnType<typeof executionReportInputSchema.parse>)
   {
     const reset = !!input.cursor && input.cursor.basis !== result.basis.key,
       offset = reset ? 0 : input.cursor?.offset ?? 0;
@@ -293,7 +293,7 @@ export class ExecutionReportService
       result.tools.nextCursor = { basis: result.basis.key, offset: start + input.limit };
   }
 
-  private facts(state: DispatchState, rootSessionId: string, taskId: string, runId?: string)
+  private Facts(state: DispatchState, rootSessionId: string, taskId: string, runId?: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === rootSessionId),
       task = graph?.tasks.find(t => t.taskId === taskId);
@@ -308,7 +308,7 @@ export class ExecutionReportService
   }
 
   /** 只承认明确、结构完整且绑定当前任务的未启动撤销；旧 cancelled 或坏记录保持 unknown。 */
-  private cancelledWithoutRun({ task, scope, graph, assignments, registeredRuns }: ReturnType<ExecutionReportService['facts']>): boolean
+  private CancelledWithoutRun({ task, scope, graph, assignments, registeredRuns }: ReturnType<ExecutionReportService['Facts']>): boolean
   {
     const parsed = queuedTaskCancellationSchema.safeParse(task.cancelledBeforeStart);
     if (!parsed.success)
@@ -318,18 +318,18 @@ export class ExecutionReportService
     return task.status === 'cancelled' && !!scope && record.scopeId === task.scopeId && record.scopeId === scope.scopeId && record.previousRevision + 1 === task.revision && record.cancelledAt === task.updatedAt && record.reason === task.waitReason && Date.parse(record.cancelledAt) >= Date.parse(task.createdAt) && record.graphCursor.streamId === graph.cursor.streamId && record.graphCursor.seq < graph.cursor.seq && !task.runIds.length && !task.activeRunId && !task.result && !task.help && !task.awaitedChildren.length && !registeredRuns.length && sameAgent(task.requester, graph.root.agent) && assignments.length === 1 && assignments[0].identity.workspaceId === task.identity.workspaceId && assignments[0].identity.rootSessionId === task.identity.rootSessionId && assignments[0].planRevision === task.planRevision && sameAgent(assignments[0].from, task.requester) && sameAgent(assignments[0].to, task.assignee) && assignments[0].delivery === 'processed' && !assignments[0].claim;
   }
 
-  private stamp(value: ReturnType<ExecutionReportService['facts']>)
+  private Stamp(value: ReturnType<ExecutionReportService['Facts']>)
   {
     return hash(json({ cursor: value.graph.cursor, task: value.task, assignments: value.assignments, registeredRuns: value.registeredRuns.map(run => ({ binding: run.binding, status: run.status })), run: value.run ? { binding: value.run.binding, status: value.run.status, startedAt: value.run.startedAt, settledAt: value.run.settledAt, session: value.run.session } : undefined, scope: value.scope ? { id: value.scope.scopeId, status: value.scope.status, goalRevision: value.scope.goal?.revision } : undefined }))
   }
 
-  private bound(run: DispatchRun, task: ReturnType<ExecutionReportService['facts']>['task'], workspaceId: string, rootSessionId: string)
+  private Bound(run: DispatchRun, task: ReturnType<ExecutionReportService['Facts']>['task'], workspaceId: string, rootSessionId: string)
   {
     const b = run.binding;
     return b.workspaceId === workspaceId && b.rootSessionId === rootSessionId && b.taskId === task.taskId && b.agentId === task.assignee.agentId && b.agentInstanceId === task.assignee.agentInstanceId && b.agentSessionId === task.assignee.agentSessionId
   }
 
-  private matches(summary: RunSummary, run: DispatchRun)
+  private Matches(summary: RunSummary, run: DispatchRun)
   {
     const b = run.binding;
     return ['running', 'completed', 'cancelled', 'failed', 'interrupted'].includes(summary.status) && summary.runId === b.runId && summary.task.workspaceId === b.workspaceId && summary.task.taskId === b.taskId && summary.task.agentId === b.agentId && summary.task.root === this.owner.entry.path && isDeepStrictEqual(summary.task.fallbackBinding, run.prepared.fallbackBinding) && isDeepStrictEqual(summary.task.ownerBinding, run.prepared.memberContext?.binding) && json(summary.memberBinding) === json(b) && summary.events.length > 0 && summary.events[0].type === 'run.started' && summary.events.every((event, index) => event.seq === index + 1 && event.runId === b.runId && event.taskId === b.taskId && event.workspaceId === b.workspaceId) && (!run.session.sessionFile || summary.sessionFile === run.session.sessionFile);

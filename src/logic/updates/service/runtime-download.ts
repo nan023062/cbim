@@ -94,7 +94,7 @@ export async function downloadRuntimeManifest(tag: string, name: string, signal:
   let bytes: Uint8Array;
   try
   {
-    bytes = await ByteUtils.readBoundedBytes(response.body, { maxBytes: 16 * 1024 * 1024, signal: combined })
+    bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 16 * 1024 * 1024, signal: combined })
   }
   catch (error)
   {

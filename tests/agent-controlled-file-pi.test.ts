@@ -33,7 +33,7 @@ it.each(['complete','bad-wire','partial','stop-before'] as const)('recursive con
   const report=controlledFileReportSchema.parse(await host.dispatch('dispatch.controlledFileReport',query));expect(report.ledger.state).toBe('recorded');
   if(report.ledger.state!=='recorded')throw Error('Missing controlled ledger');
   expect(report.ledger.originalExecution).toBe('settled');
-  const childDir=path.join(host.user,id,'loop-engine/tasks',b.taskId,b.runId),summary=await new FileRunStorage().read(childDir);
+  const childDir=path.join(host.user,id,'loop-engine/tasks',b.taskId,b.runId),summary=await new FileRunStorage().Read(childDir);
   const finished=summary.events.find(e=>e.type==='tool.finished'&&e.data.id==='controlled-write');
   if(mode==='bad-wire'){expect(finished?.data.isError).toBe(true);expect(JSON.stringify(finished)).toContain('TOOL_OUTPUT_INVALID')}
   if(mode==='complete'){expect(provider.state.call.verification.state).toBe('verified');expect(await fs.readFile(file,'utf8')).toBe(d.after)}

@@ -20,7 +20,7 @@ export const moduleOwnershipFixture={
 
 /** Actual static capability, two independently registered positions and a disposable leaf module. No ownership is pre-forged. */
 export async function seedModuleOwnership(app:Application,temp:string,baseUrl:string){
-  const seeded=await seedWorkspaceMembers(app,temp,baseUrl),workspace=app.workspace(seeded.entry.id),snapshot=await workspace.snapshot();
+  const seeded=await seedWorkspaceMembers(app,temp,baseUrl),workspace=app.Workspace(seeded.entry.id),snapshot=await workspace.Snapshot();
   const preview=await seeded.team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'ownership_leaf',data:{summary},body:moduleFiles('ownership_leaf')[1].text}]});
   if(!preview.validation.structural)throw Error('Actual ownership fixture module failed validation');await seeded.team.call('cbim_object_commit',{planId:preview.planId},true);
   const first=await commitWorkspaceMember(app,seeded.entry.id,seeded.register(workspaceMemberFixture.firstName)),second=await commitWorkspaceMember(app,seeded.entry.id,seeded.register(workspaceMemberFixture.secondName));
@@ -29,7 +29,7 @@ export async function seedModuleOwnership(app:Application,temp:string,baseUrl:st
 
 /** Real object deletion is an explicit source mutation for the missing-source test, not an effect of releasing responsibility. */
 export async function deleteOwnershipFixtureModule(app:Application,seeded:Awaited<ReturnType<typeof seedModuleOwnership>>){
-  const snapshot=await app.workspace(seeded.entry.id).snapshot(),preview=await seeded.team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'module',action:'delete',id:seeded.missingModuleId}]});
+  const snapshot=await app.Workspace(seeded.entry.id).Snapshot(),preview=await seeded.team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'module',action:'delete',id:seeded.missingModuleId}]});
   if(!preview.validation.structural)throw Error('Actual leaf deletion failed validation');await seeded.team.call('cbim_object_commit',{planId:preview.planId},true);
 }
 
@@ -41,7 +41,7 @@ export async function moduleOwnershipJournal(user:string,workspaceId:string){
   return {file,bytes,sha256:createHash('sha256').update(bytes).digest('hex'),records};
 }
 
-export async function moduleOwnershipDetail(app:Application,workspaceId:string,moduleId:string){return moduleOwnershipDetailSchema.parse(await app.dispatch('workspace.ownerships.get',{workspaceId,instanceId:app.workspace(workspaceId).instanceId,moduleId}))}
+export async function moduleOwnershipDetail(app:Application,workspaceId:string,moduleId:string){return moduleOwnershipDetailSchema.parse(await app.Dispatch('workspace.ownerships.get',{workspaceId,instanceId:app.Workspace(workspaceId).instanceId,moduleId}))}
 
 /** The request's expected relation is obtained from the actual current public detail, never synthesized from a task or Agent name. */
 export async function moduleOwnershipChange(app:Application,workspaceId:string,moduleId:string,nextOwner:ModuleOwnershipChangeInput['nextOwner'],reason:string=moduleOwnershipFixture.reason):Promise<ModuleOwnershipChangeInput>{
@@ -49,9 +49,9 @@ export async function moduleOwnershipChange(app:Application,workspaceId:string,m
   return {moduleId,expectedBinding:binding?{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId}:null,nextOwner,reason};
 }
 export async function commitModuleOwnership(app:Application,workspaceId:string,change:ModuleOwnershipChangeInput){
-  const identity={workspaceId,instanceId:app.workspace(workspaceId).instanceId},preview=moduleOwnershipPreviewSchema.parse(await app.dispatch('workspace.ownerships.preview',{...identity,change}));
+  const identity={workspaceId,instanceId:app.Workspace(workspaceId).instanceId},preview=moduleOwnershipPreviewSchema.parse(await app.Dispatch('workspace.ownerships.preview',{...identity,change}));
   const input={...identity,commandId:randomUUID(),change,expectedOwnershipCursor:preview.ownershipCursor,expectedBasis:preview.basis};
-  const receipt=moduleOwnershipReceiptSchema.parse(await app.dispatch('workspace.ownerships.commit',input));return {input,preview,receipt};
+  const receipt=moduleOwnershipReceiptSchema.parse(await app.Dispatch('workspace.ownerships.commit',input));return {input,preview,receipt};
 }
 
 /** Actual Pi runs must expose a real canonical/native binding; absence is a failure, never a reason to skip no-replay checks. */

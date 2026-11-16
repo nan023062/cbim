@@ -82,17 +82,17 @@ export async function codexTools(context: EngineContext, port: EngineToolsPort, 
     return { success: result.isError !== true, contentItems: result.content.map(block => block.type === 'text' ? { type: 'inputText', text: block.text } : { type: 'inputImage', imageUrl: 'data:' + block.mimeType + ';base64,' + block.data }) };
   }
   return {
-    registered, catalog, call(input: Parameters<typeof invoke>[0])
+    registered, catalog, Call(input: Parameters<typeof invoke>[0])
     {
       const pending = invoke(input);
-      return active.track(pending)
-    }, stop()
+      return active.Track(pending)
+    }, Stop()
     {
       controller.abort()
-    }, async close()
+    }, async Close()
     {
       controller.abort();
-      await active.drain()
+      await active.Drain()
     }
   };
 }

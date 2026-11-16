@@ -25,7 +25,7 @@ const close=(value:DispatchScope):DispatchScope=>({...value,status:'closed',clos
 function baseline(workspaceId='workspace',roots=['root'],scopes:DispatchScope[]=[]):DispatchState{
   return {workspaceId,members:[],sessions:[],outbox:[],runs:[],scopes,graphs:roots.map(rootSessionId=>({version:1,identity:{workspaceId,rootSessionId},cursor:{workspaceId,rootSessionId,streamId:'graph-'+rootSessionId,seq:1},root:{kind:'session-root',nodeId:'session-'+rootSessionId,identity:{workspaceId,rootSessionId},agent:{agentId:'cbim:main',agentInstanceId:'main-'+rootSessionId,agentSessionId:'session-'+rootSessionId,name:'主'},revision:1,createdAt:time},tasks:[],edges:[],agents:[]}))};
 }
-function ready(scopes:DispatchScope[]=[]){const manager=new GlobalRuntimeManager(),epoch=manager.begin('workspace','项目');manager.restoreDispatch('workspace',epoch,baseline('workspace',['root','other-root'],scopes));manager.ready('workspace',epoch);return {manager,epoch}}
+function ready(scopes:DispatchScope[]=[]){const manager=new GlobalRuntimeManager(),epoch=manager.Begin('workspace','项目');manager.RestoreDispatch('workspace',epoch,baseline('workspace',['root','other-root'],scopes));manager.Ready('workspace',epoch);return {manager,epoch}}
 function dispatch(value:DispatchScope,seq=2):DispatchMutation{
   const identity={workspaceId:value.workspaceId,rootSessionId:value.rootSessionId},agent={agentId:'cbim:executor',agentInstanceId:'executor',agentSessionId:'executor-session',name:'执行者'};
   const task:TaskNode={kind:'task',identity,nodeId:'task-member',taskId:'member-task',scopeId:value.scopeId,requester:agent,assignee:agent,modules:[],goal:'PRIVATE BUSINESS GOAL',acceptance:[],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:time,updatedAt:time};
@@ -54,59 +54,59 @@ it('complete审阅只显示申请，只有已提交closed/outcome表示周期结
 });
 
 it('scope-only提交推进一次全局游标，图序号和私有清单变化不冒充公开变化',()=>{
-  const {manager,epoch}=ready(),before=manager.snapshot();manager.dispatchCommitted('workspace',epoch,{scopes:[scope()],receipt:{}});
-  const first=manager.snapshot();expect(first.cursor.revision).toBe(before.cursor.revision+1);expect(first.scopes).toEqual([projectRuntimeScope(scope())]);
-  manager.dispatchCommitted('workspace',epoch,{scopes:[{...scope(),runTracking:{version:1,mainRunIds:['main-run','next-run']}}],receipt:{}});
-  expect(manager.read(first.cursor)).toEqual({mode:'noop',cursor:first.cursor});
-  manager.dispatchCommitted('workspace',epoch,{scopes:[waiting()],receipt:{}});expect(manager.snapshot().cursor.revision).toBe(first.cursor.revision+1);
-  manager.dispatchCommitted('workspace',epoch,dispatch(waiting()));expect(manager.snapshot().tasks).toHaveLength(1);
+  const {manager,epoch}=ready(),before=manager.Snapshot();manager.DispatchCommitted('workspace',epoch,{scopes:[scope()],receipt:{}});
+  const first=manager.Snapshot();expect(first.cursor.revision).toBe(before.cursor.revision+1);expect(first.scopes).toEqual([projectRuntimeScope(scope())]);
+  manager.DispatchCommitted('workspace',epoch,{scopes:[{...scope(),runTracking:{version:1,mainRunIds:['main-run','next-run']}}],receipt:{}});
+  expect(manager.Read(first.cursor)).toEqual({mode:'noop',cursor:first.cursor});
+  manager.DispatchCommitted('workspace',epoch,{scopes:[waiting()],receipt:{}});expect(manager.Snapshot().cursor.revision).toBe(first.cursor.revision+1);
+  manager.DispatchCommitted('workspace',epoch,dispatch(waiting()));expect(manager.Snapshot().tasks).toHaveLength(1);
 });
 
 it('同事务成员/任务/周期只发布一次版本，真实任务归属和重放保持一致',()=>{
-  const {manager,epoch}=ready(),first=manager.snapshot(),mutation=dispatch(scope());manager.dispatchCommitted('workspace',epoch,mutation);
-  const next=manager.snapshot();expect(next.cursor.revision).toBe(first.cursor.revision+1);expect(next.members).toHaveLength(1);expect(next.tasks[0]).toMatchObject({scopeId:'scope',source:'dispatch'});expect(next.scopes).toHaveLength(1);
-  manager.dispatchCommitted('workspace',epoch,mutation);expect(manager.read(next.cursor)).toEqual({mode:'noop',cursor:next.cursor});expect(runtimeSnapshotSchema.parse(wire(next))).toEqual(wire(next));
+  const {manager,epoch}=ready(),first=manager.Snapshot(),mutation=dispatch(scope());manager.DispatchCommitted('workspace',epoch,mutation);
+  const next=manager.Snapshot();expect(next.cursor.revision).toBe(first.cursor.revision+1);expect(next.members).toHaveLength(1);expect(next.tasks[0]).toMatchObject({scopeId:'scope',source:'dispatch'});expect(next.scopes).toHaveLength(1);
+  manager.DispatchCommitted('workspace',epoch,mutation);expect(manager.Read(next.cursor)).toEqual({mode:'noop',cursor:next.cursor});expect(runtimeSnapshotSchema.parse(wire(next))).toEqual(wire(next));
 });
 
 it('周期和任务的工作区/主会话隔离，覆盖已有周期不改变持久插入顺序',()=>{
   const first=scope(),second=scope('other-scope','other-root'),{manager,epoch}=ready([first,second]);
-  const b=manager.begin('second','另一个项目');manager.restoreDispatch('second',b,baseline('second',['root'],[scope('scope','root','second')]));manager.ready('second',b);
-  manager.dispatchCommitted('workspace',epoch,{scopes:[close(first)],receipt:{}});
-  const next=scope('new-scope');next.createdAt='2026-11-06T00:00:00.000Z';manager.dispatchCommitted('workspace',epoch,{scopes:[next],receipt:{}});
-  const snapshot=manager.snapshot();expect(snapshot.scopes.map(value=>[value.workspaceId,value.scopeId])).toEqual([['workspace','scope'],['workspace','other-scope'],['workspace','new-scope'],['second','scope']]);
-  expect(runtimeSnapshotSchema.safeParse(snapshot).success).toBe(true);snapshot.scopes[0].outcome='completed';expect(manager.snapshot().scopes[0].outcome).toBe('cancelled');
+  const b=manager.Begin('second','另一个项目');manager.RestoreDispatch('second',b,baseline('second',['root'],[scope('scope','root','second')]));manager.Ready('second',b);
+  manager.DispatchCommitted('workspace',epoch,{scopes:[close(first)],receipt:{}});
+  const next=scope('new-scope');next.createdAt='2026-11-06T00:00:00.000Z';manager.DispatchCommitted('workspace',epoch,{scopes:[next],receipt:{}});
+  const snapshot=manager.Snapshot();expect(snapshot.scopes.map(value=>[value.workspaceId,value.scopeId])).toEqual([['workspace','scope'],['workspace','other-scope'],['workspace','new-scope'],['second','scope']]);
+  expect(runtimeSnapshotSchema.safeParse(snapshot).success).toBe(true);snapshot.scopes[0].outcome='completed';expect(manager.Snapshot().scopes[0].outcome).toBe('cancelled');
 });
 
 it('周期身份、重复和未知根失败时整批不留下半个成员或任务投影',()=>{
-  const {manager,epoch}=ready([scope()]),before=manager.snapshot();
+  const {manager,epoch}=ready([scope()]),before=manager.Snapshot();
   const changes=[{...scope(),workspaceId:'foreign'},{...scope(),rootSessionId:'missing'},{...scope(),rootSessionId:'other-root'},scope('second-scope'),{...scope(),status:'closed' as const}];
-  for(const bad of changes){const mutation=dispatch(bad);if(mutation.batch)mutation.batch.identity={workspaceId:'workspace',rootSessionId:'root'};expect(()=>manager.dispatchCommitted('workspace',epoch,mutation)).toThrow();expect(manager.snapshot()).toEqual(before)}
-  expect(()=>manager.dispatchCommitted('workspace',epoch,{scopes:[scope(),scope()],receipt:{}})).toThrow();expect(manager.snapshot()).toEqual(before);
+  for(const bad of changes){const mutation=dispatch(bad);if(mutation.batch)mutation.batch.identity={workspaceId:'workspace',rootSessionId:'root'};expect(()=>manager.DispatchCommitted('workspace',epoch,mutation)).toThrow();expect(manager.Snapshot()).toEqual(before)}
+  expect(()=>manager.DispatchCommitted('workspace',epoch,{scopes:[scope(),scope()],receipt:{}})).toThrow();expect(manager.Snapshot()).toEqual(before);
 });
 
 it('旧epoch和关闭后迟到的scope提交不改变新投影，关闭保留真实等待历史',()=>{
-  const {manager,epoch}=ready([waiting()]);manager.detach('workspace',epoch);const closed=manager.snapshot();manager.dispatchCommitted('workspace',epoch,{scopes:[close(waiting())],receipt:{}});expect(manager.snapshot()).toEqual(closed);expect(closed.scopes[0].status).toBe('waiting');
-  const fresh=manager.begin('workspace','重开');manager.restoreDispatch('workspace',fresh,baseline('workspace',['root'],[waiting()]));manager.ready('workspace',fresh);const current=manager.snapshot();manager.dispatchCommitted('workspace',epoch,{scopes:[close(waiting())],receipt:{}});manager.restoreDispatch('workspace',epoch,baseline());expect(manager.snapshot()).toEqual(current);
-  manager.forget('workspace');expect(manager.snapshot().scopes).toEqual([]);
+  const {manager,epoch}=ready([waiting()]);manager.Detach('workspace',epoch);const closed=manager.Snapshot();manager.DispatchCommitted('workspace',epoch,{scopes:[close(waiting())],receipt:{}});expect(manager.Snapshot()).toEqual(closed);expect(closed.scopes[0].status).toBe('waiting');
+  const fresh=manager.Begin('workspace','重开');manager.RestoreDispatch('workspace',fresh,baseline('workspace',['root'],[waiting()]));manager.Ready('workspace',fresh);const current=manager.Snapshot();manager.DispatchCommitted('workspace',epoch,{scopes:[close(waiting())],receipt:{}});manager.RestoreDispatch('workspace',epoch,baseline());expect(manager.Snapshot()).toEqual(current);
+  manager.Forget('workspace');expect(manager.Snapshot().scopes).toEqual([]);
 });
 
 it('waiting恢复与最近主运行completed同时存在，不启动、不伪造活跃或目标完成',()=>{
-  const {manager,epoch}=ready([waiting()]);manager.restoreRun('workspace',epoch,completed());const snapshot=manager.snapshot();
+  const {manager,epoch}=ready([waiting()]);manager.RestoreRun('workspace',epoch,completed());const snapshot=manager.Snapshot();
   expect(snapshot.scopes[0]).toMatchObject({status:'waiting',reviewDecision:'awaiting_user'});expect(snapshot.scopes[0]).not.toHaveProperty('outcome');expect(snapshot.tasks[0]).toMatchObject({source:'loop',status:'completed'});expect(snapshot.pressure).toMatchObject({activeRuns:0,activeMembers:0});expect(runtimeSnapshotSchema.safeParse(wire(snapshot)).success).toBe(true);
 });
 
 it('旧基线没有scopes保持空集；已知运行也不能反向创建周期或清单',()=>{
-  const manager=new GlobalRuntimeManager(),epoch=manager.begin('workspace','旧记录'),old=baseline();delete old.scopes;manager.restoreDispatch('workspace',epoch,old);manager.restoreRun('workspace',epoch,completed());manager.ready('workspace',epoch);
-  expect(manager.snapshot().scopes).toEqual([]);expect(manager.snapshot().runs).toHaveLength(1);expect(runtimeSnapshotSchema.safeParse(wire(manager.snapshot())).success).toBe(true);
+  const manager=new GlobalRuntimeManager(),epoch=manager.Begin('workspace','旧记录'),old=baseline();delete old.scopes;manager.RestoreDispatch('workspace',epoch,old);manager.RestoreRun('workspace',epoch,completed());manager.Ready('workspace',epoch);
+  expect(manager.Snapshot().scopes).toEqual([]);expect(manager.Snapshot().runs).toHaveLength(1);expect(runtimeSnapshotSchema.safeParse(wire(manager.Snapshot())).success).toBe(true);
 });
 
 it('预算阻塞scope-only可见但不改目标版本/等待身份，不附带准入许可',()=>{
-  const source=waiting(),{manager,epoch}=ready([source]),before=manager.snapshot();source.budget={version:1,policy:{revision:2,enabled:true,limits:{estimatedCostUsd:1}},blocked:{decisionId:'deny',policyRevision:2,reason:'usage_unverifiable',observation:{basis:'proof',observedAt:time,registeredRuns:1,coverage:'tracked',consistency:'stable',liveRunIds:[],tokens:0,tokensComplete:false,costComplete:false,unknownRunIds:['main-run']}}};
-  manager.dispatchCommitted('workspace',epoch,{scopes:[source],receipt:{}});const after=manager.snapshot();expect(after.cursor.revision).toBe(before.cursor.revision+1);expect(after.scopes[0]).toEqual({...before.scopes[0],budgetBlocked:{reason:'usage_unverifiable'}});expect(after.pressure).toEqual(before.pressure);expect(after.usage).toEqual(before.usage);
+  const source=waiting(),{manager,epoch}=ready([source]),before=manager.Snapshot();source.budget={version:1,policy:{revision:2,enabled:true,limits:{estimatedCostUsd:1}},blocked:{decisionId:'deny',policyRevision:2,reason:'usage_unverifiable',observation:{basis:'proof',observedAt:time,registeredRuns:1,coverage:'tracked',consistency:'stable',liveRunIds:[],tokens:0,tokensComplete:false,costComplete:false,unknownRunIds:['main-run']}}};
+  manager.DispatchCommitted('workspace',epoch,{scopes:[source],receipt:{}});const after=manager.Snapshot();expect(after.cursor.revision).toBe(before.cursor.revision+1);expect(after.scopes[0]).toEqual({...before.scopes[0],budgetBlocked:{reason:'usage_unverifiable'}});expect(after.pressure).toEqual(before.pressure);expect(after.usage).toEqual(before.usage);
 });
 
 it('严格传输拒绝私有字段、矛盾状态、跨身份与重复集合，不给旧客户端补造scopes',()=>{
-  const {manager,epoch}=ready([scope()]);manager.dispatchCommitted('workspace',epoch,dispatch(scope()));const snapshot=wire(manager.snapshot()) as RuntimeSnapshot;
+  const {manager,epoch}=ready([scope()]);manager.DispatchCommitted('workspace',epoch,dispatch(scope()));const snapshot=wire(manager.Snapshot()) as RuntimeSnapshot;
   const mutations:Array<(value:any)=>void>=[value=>delete value.scopes,value=>{value.secret='bad'},value=>{value.scopes[0].goal={input:'private'}},value=>{value.scopes[0].hasGoal=false},value=>{value.scopes[0].status='closed'},value=>{value.scopes[0].wait={createdAt:time,reason:'旧等待'}},value=>{value.scopes[0].budgetBlocked={reason:'other'}},value=>{value.scopes.push(value.scopes[0])},value=>{value.scopes[0].workspaceId='foreign'},value=>{value.tasks[0].rootSessionId='other-root'},value=>{value.usage.cost=Infinity},value=>{value.pressure.activeRuns=-1}];
   for(const change of mutations){const bad=structuredClone(snapshot);change(bad);expect(runtimeSnapshotSchema.safeParse(bad).success).toBe(false)}
   expect(runtimeReadSchema.safeParse({mode:'snapshot',cursor:{...snapshot.cursor,revision:snapshot.cursor.revision+1},snapshot}).success).toBe(false);
@@ -115,23 +115,23 @@ it('严格传输拒绝私有字段、矛盾状态、跨身份与重复集合，�
 });
 
 it('未报告消耗保持未知，严格传输不把费用缺省补成零或宣称完整计量',()=>{
-  const {manager,epoch}=ready();manager.restoreRun('workspace',epoch,completed());const snapshot=manager.snapshot(),parsed=runtimeSnapshotSchema.parse(wire(snapshot));
+  const {manager,epoch}=ready();manager.RestoreRun('workspace',epoch,completed());const snapshot=manager.Snapshot(),parsed=runtimeSnapshotSchema.parse(wire(snapshot));
   expect(parsed.usage).toMatchObject({runCount:1,reportedRuns:0,unreportedRuns:1,usageReported:false,costPartial:true});expect(parsed.usage).not.toHaveProperty('cost');expect(parsed.complete).toBe(true);
-  const spy=vi.spyOn(manager,'snapshot');expect(manager.read(snapshot.cursor)).toEqual({mode:'noop',cursor:snapshot.cursor});expect(spy).not.toHaveBeenCalled();spy.mockRestore();
-  expect(manager.read({...snapshot.cursor,revision:snapshot.cursor.revision+10}).mode).toBe('snapshot');expect(manager.read({...snapshot.cursor,streamId:'old-process'}).mode).toBe('snapshot');
+  const spy=vi.spyOn(manager,'Snapshot');expect(manager.Read(snapshot.cursor)).toEqual({mode:'noop',cursor:snapshot.cursor});expect(spy).not.toHaveBeenCalled();spy.mockRestore();
+  expect(manager.Read({...snapshot.cursor,revision:snapshot.cursor.revision+10}).mode).toBe('snapshot');expect(manager.Read({...snapshot.cursor,streamId:'old-process'}).mode).toBe('snapshot');
 });
 
 it('真实存储scope-only提交与重开沿原Observer更新，回执重放及监管读取均无额外文件读取',async()=>{
   const f=await fixture();let store:FileDispatchStore|undefined,reader:FileDispatchStore|undefined;
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),directory=path.join(f.user,'runtime-scopes'),manager=new GlobalRuntimeManager(),epoch=manager.begin(entry.id,'真实项目');
-    const observer={loaded:(state:DispatchState)=>manager.restoreDispatch(entry.id,epoch,state),committed:(mutation:DispatchMutation)=>manager.dispatchCommitted(entry.id,epoch,mutation),failed:vi.fn()};
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),directory=path.join(f.user,'runtime-scopes'),manager=new GlobalRuntimeManager(),epoch=manager.Begin(entry.id,'真实项目');
+    const observer={Loaded:(state:DispatchState)=>manager.RestoreDispatch(entry.id,epoch,state),Committed:(mutation:DispatchMutation)=>manager.DispatchCommitted(entry.id,epoch,mutation),Failed:vi.fn()};
     store=new FileDispatchStore(directory,entry.id,observer);const service=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'root'};
-    await service.openGraph({...identity,commandId:'root'});manager.ready(entry.id,epoch);const before=manager.snapshot(),graphBefore=(await store.snapshot(identity)).cursor;
-    const opened=await service.openScope(identity,'scope',{message:'PRIVATE ORIGINAL INPUT'},'main-run'),first=manager.snapshot();expect(first.cursor.revision).toBe(before.cursor.revision+1);expect((await store.snapshot(identity)).cursor).toEqual(graphBefore);expect(first.scopes).toEqual([projectRuntimeScope(opened)]);
-    await service.openScope(identity,'scope',{message:'PRIVATE ORIGINAL INPUT'},'main-run');expect(manager.snapshot()).toEqual(first);
-    await service.closeScope(identity,'scope','cancelled');const finished=manager.snapshot(),graphAfter=(await store.snapshot(identity)).cursor;expect(finished.scopes[0]).toMatchObject({status:'closed',outcome:'cancelled'});expect(graphAfter).toEqual(graphBefore);
-    const read=vi.spyOn(fs,'readFile');try{expect(manager.read(finished.cursor)).toEqual({mode:'noop',cursor:finished.cursor});expect(read).not.toHaveBeenCalled()}finally{read.mockRestore()}
-    await store.close();store=undefined;manager.detach(entry.id,epoch);const reopened=manager.begin(entry.id,'真实项目');reader=new FileDispatchStore(directory,entry.id,{loaded:state=>manager.restoreDispatch(entry.id,reopened,state),committed:()=>{throw Error('恢复不允许新提交')},failed:observer.failed});await reader.read();manager.ready(entry.id,reopened);expect(manager.snapshot().scopes).toEqual(finished.scopes);expect(manager.snapshot().runs).toEqual([]);expect(observer.failed).not.toHaveBeenCalled();
-  }finally{await reader?.close();await store?.close();await f.cleanup()}
+    await service.OpenGraph({...identity,commandId:'root'});manager.Ready(entry.id,epoch);const before=manager.Snapshot(),graphBefore=(await store.Snapshot(identity)).cursor;
+    const opened=await service.OpenScope(identity,'scope',{message:'PRIVATE ORIGINAL INPUT'},'main-run'),first=manager.Snapshot();expect(first.cursor.revision).toBe(before.cursor.revision+1);expect((await store.Snapshot(identity)).cursor).toEqual(graphBefore);expect(first.scopes).toEqual([projectRuntimeScope(opened)]);
+    await service.OpenScope(identity,'scope',{message:'PRIVATE ORIGINAL INPUT'},'main-run');expect(manager.Snapshot()).toEqual(first);
+    await service.CloseScope(identity,'scope','cancelled');const finished=manager.Snapshot(),graphAfter=(await store.Snapshot(identity)).cursor;expect(finished.scopes[0]).toMatchObject({status:'closed',outcome:'cancelled'});expect(graphAfter).toEqual(graphBefore);
+    const read=vi.spyOn(fs,'readFile');try{expect(manager.Read(finished.cursor)).toEqual({mode:'noop',cursor:finished.cursor});expect(read).not.toHaveBeenCalled()}finally{read.mockRestore()}
+    await store.Close();store=undefined;manager.Detach(entry.id,epoch);const reopened=manager.Begin(entry.id,'真实项目');reader=new FileDispatchStore(directory,entry.id,{Loaded:state=>manager.RestoreDispatch(entry.id,reopened,state),Committed:()=>{throw Error('恢复不允许新提交')},Failed:observer.Failed});await reader.Read();manager.Ready(entry.id,reopened);expect(manager.Snapshot().scopes).toEqual(finished.scopes);expect(manager.Snapshot().runs).toEqual([]);expect(observer.Failed).not.toHaveBeenCalled();
+  }finally{await reader?.Close();await store?.Close();await f.cleanup()}
 });

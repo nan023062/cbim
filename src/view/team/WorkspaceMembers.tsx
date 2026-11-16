@@ -56,7 +56,7 @@ export interface WorkspaceMembersProps
 
 export function WorkspaceMembers({ workspace, agents, onClose, initialRegistration, onRegistered, returnLabel = '返回团队定义', onDirtyChange }: WorkspaceMembersProps)
 {
-  const controller = useMemo(() => commands.get(workspace.id, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }), [workspace.id]);
+  const controller = useMemo(() => commands.Get(workspace.id, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }), [workspace.id]);
   const [tick, setTick] = useState(0),
     [page, setPage] = useState<WorkspaceMemberList>(),
     [detail, setDetail] = useState<WorkspaceMemberDetail>(),
@@ -93,8 +93,8 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   useEffect(() =>
   {
     alive.current = true;
-    const unsubscribe = controller.subscribe(() => setTick(value => value + 1));
-    void controller.restore().then(() =>
+    const unsubscribe = controller.Subscribe(() => setTick(value => value + 1));
+    void controller.Restore().then(() =>
     {
       if (alive.current)
         void list()
@@ -235,7 +235,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
     lock.current = true;
     setLoading(true);
     const input: WorkspaceMemberPreviewInput = { ...identity, change: preview.change };
-    await controller.submit(input, preview);
+    await controller.Submit(input, preview);
     lock.current = false;
     if (!alive.current)
       return;
@@ -261,9 +261,9 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
   async function query(commandId: string, retry = false)
   {
     if (retry)
-      await controller.retry(commandId);
+      await controller.Retry(commandId);
     else
-      await controller.query(commandId);
+      await controller.Query(commandId);
     if (alive.current)
       await list()
   }
@@ -313,7 +313,7 @@ export function WorkspaceMembers({ workspace, agents, onClose, initialRegistrati
       {!detail && !editing && !loading && <p>选择岗位查看已采纳配置和当前差异，或登记新的岗位。</p>}
       {preview && <section className="workspace-member-preview" data-testid="workspace-member-preview-result"><h3>提交预览</h3><p>变更：{preview.changedFields.join('、')}；原第 {preview.previousRevision} 版 → 第 {preview.previousRevision + 1} 版。</p><p>{preview.proposed.name} · {preview.proposed.position} · {stateLabel(preview.proposed.state)}</p><p>能力：{preview.proposed.capability.configuration.name}；{preview.proposed.capability.configuration.effectiveSkills.length} 项 Skill</p><p>模型：{engineLabel(preview.proposed.runtimePolicy.snapshot.engine ?? 'pi')} · {preview.proposed.runtimePolicy.snapshot.name} / {preview.proposed.runtimePolicy.modelId}</p><KnowledgeSourceSelection selection={preview.sourceSelection} /><details><summary>查看实际采纳内容与差异</summary><pre>{JSON.stringify({ before: preview.previousMember, after: preview.proposed }, null, 2)}</pre></details><p>只保存岗位登记与审计，不启动模型或任务。</p><button className="solid-button" data-testid="workspace-member-commit" disabled={blocked || loading} onClick={() => void commit()}><Icon name="confirm" size={16} />确认保存岗位</button></section>}
     </div></div>
-    {!!state.records.length && <details className="workspace-member-commands" open={blocked}><summary>本机提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record => <div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{ submitting: '正在提交', unknown: '结果未确认', accepted: '已受理', rejected: '未受理' }[record.phase]}</strong><code>{record.request.commandId}</code>{record.error && <p role="alert">{record.error}</p>}{record.receipt && <p>岗位 {record.receipt.memberId} · 第 {record.receipt.memberRevision} 版</p>}{record.phase !== 'rejected' && <button data-testid="workspace-member-receipt-query" disabled={controller.isPending(record.request.commandId)} onClick={() => void query(record.request.commandId)}><Icon name="search" size={16} />查询原命令</button>}{record.phase === 'unknown' && <button disabled={controller.isPending(record.request.commandId)} onClick={() => void query(record.request.commandId, true)}><Icon name="retry" size={16} />重送同一请求</button>}{record.receipt && <button disabled={loading} onClick={() => void select(record.receipt!.memberId)}><Icon name="inspect" size={16} />查看岗位</button>}</div>)}</details>}
+    {!!state.records.length && <details className="workspace-member-commands" open={blocked}><summary>本机提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record => <div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{ submitting: '正在提交', unknown: '结果未确认', accepted: '已受理', rejected: '未受理' }[record.phase]}</strong><code>{record.request.commandId}</code>{record.error && <p role="alert">{record.error}</p>}{record.receipt && <p>岗位 {record.receipt.memberId} · 第 {record.receipt.memberRevision} 版</p>}{record.phase !== 'rejected' && <button data-testid="workspace-member-receipt-query" disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId)}><Icon name="search" size={16} />查询原命令</button>}{record.phase === 'unknown' && <button disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId, true)}><Icon name="retry" size={16} />重送同一请求</button>}{record.receipt && <button disabled={loading} onClick={() => void select(record.receipt!.memberId)}><Icon name="inspect" size={16} />查看岗位</button>}</div>)}</details>}
   </section>;
 }
 

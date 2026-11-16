@@ -25,7 +25,7 @@ const snapshot:Snapshot={workspaceId:'workspace',instanceId:'instance',revision:
  {path:agentId+'/skills/review/SKILL.md',text:'# 审阅流程',hash:'s'},
  {path:'.cbim/.cbimignore',text:'src/hidden/\n',hash:'i'}
 ],validation:{issues:[],indexes:{},structural:true,architecture:'review-required',business:'not-run',tree:{roots:[moduleId],nodes:{[moduleId]:{id:moduleId,name:'app',summary:'业务源码模块',sources:[{location:'src',scope:'业务源码'}],children:[]}}}}};
-const browser=new ModuleSourceBrowser({entry:{id:snapshot.workspaceId,path:project},assert:input=>{assert.equal(input.workspaceId,snapshot.workspaceId);assert.equal(input.instanceId,snapshot.instanceId)},read:async()=>snapshot});
+const browser=new ModuleSourceBrowser({entry:{id:snapshot.workspaceId,path:project},Assert:input=>{assert.equal(input.workspaceId,snapshot.workspaceId);assert.equal(input.instanceId,snapshot.instanceId)},Read:async()=>snapshot});
 const html=path.join(out,'index.html'),main=path.join(out,'main.cjs');
 await fs.writeFile(html,'<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script type="module" src="/scripts/architecture-tree-fixture.tsx"></script>');
 await fs.writeFile(main,`const {app,BrowserWindow}=require('electron');app.setPath('userData',${JSON.stringify(path.join(out,'profile'))});app.whenReady().then(()=>{const w=new BrowserWindow({show:false,width:1100,height:900,useContentSize:true,webPreferences:{contextIsolation:true,sandbox:true,nodeIntegration:false,backgroundThrottling:false,offscreen:true}});w.loadURL(process.env.CBIM_TREE_URL)});app.on('window-all-closed',()=>app.quit());`);
@@ -33,7 +33,7 @@ const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'}
  if(!req.url?.startsWith('/fixture/'))return next();
  res.setHeader('content-type','application/json');
  try{if(req.url==='/fixture/snapshot'){res.end(JSON.stringify(snapshot));return}let body='';for await(const chunk of req){body+=chunk;if(body.length>16000)throw Error('fixture body limit')}
- const input=JSON.parse(body),value=req.url==='/fixture/source.list'?await browser.list(input):req.url==='/fixture/source.read'?await browser.read(input):undefined;
+ const input=JSON.parse(body),value=req.url==='/fixture/source.list'?await browser.List(input):req.url==='/fixture/source.read'?await browser.Read(input):undefined;
  res.end(JSON.stringify({ok:true,value}));}catch(error){res.end(JSON.stringify({ok:false,error:error instanceof Error?error.message:String(error)}))}
 })}}]});
 const checks:string[]=[],errors:string[]=[];let desktop:Awaited<ReturnType<typeof _electron.launch>>|undefined;

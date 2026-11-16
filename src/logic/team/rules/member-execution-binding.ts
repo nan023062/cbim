@@ -65,7 +65,7 @@ export function ownerExecutionSelectionFor(binding: OwnerExecutionBinding): Owne
 
 const equal = (a: unknown, b: unknown): boolean =>
 {
-  const order = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
+  const order = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
   return JSON.stringify(order(a)) === JSON.stringify(order(b));
 };
 

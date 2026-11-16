@@ -34,11 +34,11 @@ export type ControlledChildReply = z.infer<typeof controlledChildReplySchema>;
 /** 会话由平台持有；replace 只供已可靠保存 executing 的可信服务调用一次。 */
 export interface ExclusiveControlledFile
 {
-  readBefore(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; bytes: Uint8Array }>;
+  ReadBefore(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; bytes: Uint8Array }>;
 
-  recheckIdentity(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
+  RecheckIdentity(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
 
-  replaceAndFlush(bytes: Uint8Array): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
+  ReplaceAndFlush(bytes: Uint8Array): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
 
   /** 已向子进程发出 apply 后即为 true；丢回包也不能宣称零写。 */
   readonly writeIssued: boolean;
@@ -47,11 +47,11 @@ export interface ExclusiveControlledFile
 /** 返回原文件身份/字节及实际源缺失；调用方还须等工人退出并复核完整范围，不能仅据此签发交付。 */
 export interface ExclusiveControlledTransition
 {
-  readBefore(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; bytes: Uint8Array }>;
+  ReadBefore(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; bytes: Uint8Array }>;
 
-  recheckIdentity(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
+  RecheckIdentity(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact }>;
 
-  transitionAndVerify(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; transition: ControlledNamespaceChange; sourceMissing: true }>;
+  TransitionAndVerify(): Promise<{ identity: ControlledFileIdentity; fact: ControlledContentFact; transition: ControlledNamespaceChange; sourceMissing: true }>;
 
   /** 发出原命名空间请求后保持 true，回包丢失不能改成未操作。 */
   readonly writeIssued: boolean;
@@ -60,13 +60,13 @@ export interface ExclusiveControlledTransition
 /** 平台能力只由桌面 app.ready 后注入；无端口不得退回主进程同步写。 */
 export interface ControlledFileTransport
 {
-  withExclusiveExisting<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledFile) => Promise<T>): Promise<T>;
+  WithExclusiveExisting<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledFile) => Promise<T>): Promise<T>;
 
   /** 老端口可缺省；新工具必须明确检测能力，不能退回内容替换或任意 shell。 */
-  withExclusiveTransition?<T>(root: string, relativePath: string, transition: ControlledNamespaceChange, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledTransition) => Promise<T>): Promise<T>;
+  WithExclusiveTransition?<T>(root: string, relativePath: string, transition: ControlledNamespaceChange, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledTransition) => Promise<T>): Promise<T>;
 
   /** 工作区关闭只排空该根的子进程；不退役其它工作区的传输。 */
-  drain(root: string): Promise<void>;
+  Drain(root: string): Promise<void>;
 
-  close(): Promise<void>;
+  Close(): Promise<void>;
 }

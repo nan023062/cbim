@@ -17,7 +17,7 @@ export class AgentBusinessRuns
   }
 
   /** 从本调用向根读取实际父工具及原日志；不接受模型提供来源链。 */
-  async start(value: Omit<AgentBusinessRun, 'lineage'>): Promise<void>
+  async Start(value: Omit<AgentBusinessRun, 'lineage'>): Promise<void>
   {
     this.assertCurrent();
     const frozen = structuredClone(value),
@@ -46,7 +46,7 @@ export class AgentBusinessRuns
       link = started.data.agentCall as AgentCallReference;
     }
     const record: AgentBusinessRun = { ...frozen, lineage };
-    await this.store.transact(agentBusinessRunCommand(record), async () =>
+    await this.store.Transact(agentBusinessRunCommand(record), async () =>
     {
       this.assertCurrent();
       return { agentBusinessRuns: [record], receipt: record }
@@ -54,9 +54,9 @@ export class AgentBusinessRuns
   }
 
   /** 仅实际 Runtime.close 成功后调用；保存未知保留准入，不重做执行。 */
-  async close(value: Pick<AgentBusinessRun, 'binding' | 'parent' | 'scopeId'>): Promise<void>
+  async Close(value: Pick<AgentBusinessRun, 'binding' | 'parent' | 'scopeId'>): Promise<void>
   {
-    const old = (await this.store.read()).agentBusinessRuns?.find(run => run.binding.runId === value.binding.runId);
+    const old = (await this.store.Read()).agentBusinessRuns?.find(run => run.binding.runId === value.binding.runId);
     if (!old)
       return;
     if (!equal(old.binding, value.binding) || !equal(old.parent, value.parent) || old.scopeId !== value.scopeId)
@@ -64,6 +64,6 @@ export class AgentBusinessRuns
     if (old.status === 'closed')
       return;
     const closed: AgentBusinessRun = { ...old, status: 'closed', closedAt: new Date().toISOString() };
-    await this.store.transact(agentBusinessRunCommand(closed), async () => ({ agentBusinessRuns: [closed], receipt: closed }));
+    await this.store.Transact(agentBusinessRunCommand(closed), async () => ({ agentBusinessRuns: [closed], receipt: closed }));
   }
 }

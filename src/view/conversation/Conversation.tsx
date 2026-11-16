@@ -264,7 +264,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     setError('');
     try
     {
-      addAttachments(await api.importFiles(workspace.id, files))
+      addAttachments(await api.ImportFiles(workspace.id, files))
     }
     catch (e: any)
     {
@@ -307,7 +307,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
         for (const image of prepared)
           items.push(await api.call('chat.image', { id: workspace.id, ...image }));
         if (others.length)
-          items.push(...await api.importFiles(workspace.id, others));
+          items.push(...await api.ImportFiles(workspace.id, others));
       }
       if (alive.current)
         addAttachments(items);
@@ -336,8 +336,8 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     historyContent = useRef<HTMLDivElement>(null);
   const stopGate = useRef(new ConversationStopGate()),
     [, renderStop] = useState(0);
-  stopGate.current.observe(tab.taskId ? { id: workspace.id, taskId: tab.taskId } : undefined);
-  const stopping = !!tab.taskId && stopGate.current.pending({ id: workspace.id, taskId: tab.taskId });
+  stopGate.current.Observe(tab.taskId ? { id: workspace.id, taskId: tab.taskId } : undefined);
+  const stopping = !!tab.taskId && stopGate.current.Pending({ id: workspace.id, taskId: tab.taskId });
   // 当前开放目标和正在执行分开；持久等待不能通过旧 running 日志或历史选择恢复插入/队列。
   const currentRun = threadResumeRun(runs, resumeRunId),
     latest = currentRun ?? runs.at(-1),
@@ -496,10 +496,10 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   {
     if (!tab.taskId)
       return;
-    const token = stopGate.current.begin({ id: workspace.id, taskId: tab.taskId });
+    const token = stopGate.current.Begin({ id: workspace.id, taskId: tab.taskId });
     if (!token)
       return;
-    const current = () => alive.current && stopGate.current.isCurrent(token);
+    const current = () => alive.current && stopGate.current.IsCurrent(token);
     renderStop(value => value + 1);
     setError('');
     try
@@ -513,7 +513,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     }
     finally
     {
-      stopGate.current.finish(token);
+      stopGate.current.Finish(token);
       if (alive.current)
         renderStop(value => value + 1);
       if (current())
@@ -531,7 +531,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
     if (!message)
       return;
     const sentAttachments = skill ? [] : attachments;
-    if (tab.taskId && stopGate.current.pending({ id: workspace.id, taskId: tab.taskId }))
+    if (tab.taskId && stopGate.current.Pending({ id: workspace.id, taskId: tab.taskId }))
       return;
     await operate(async () =>
     {
@@ -690,7 +690,7 @@ export function Conversation({ chatNavigation, selectedChild, onAgentChat, onTea
   const queueContinue = () =>
   {
     const taskId = tab.taskId;
-    if (canContinueQueue && !graph.loading && taskId && !stopGate.current.pending({ id: workspace.id, taskId }))
+    if (canContinueQueue && !graph.loading && taskId && !stopGate.current.Pending({ id: workspace.id, taskId }))
       void operate(async () =>
       {
         await api.call('loop.queueContinue', { id: workspace.id, taskId })

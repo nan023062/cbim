@@ -32,23 +32,23 @@ export class ManagedEngines
   }
 
   /** 本地只读校验一次；清单固定于本次启动，不联网发现或自动安装候选。 */
-  async status(): Promise<ManagedEngineStatus[]>
+  async Status(): Promise<ManagedEngineStatus[]>
   {
-    await this.initialize();
+    await this.Initialize();
     return structuredClone([...this.states.values()])
   }
 
-  preparations()
+  Preparations()
   {
     return [...this.states.values()].filter(s => s.state === 'preparing' || s.state === 'failed').map(s => ({ engine: s.engine, version: s.version!, progress: s.progress, error: s.error }))
   }
 
-  used()
+  Used()
   {
     return [...this.jobs.keys()]
   }
 
-  private initialize()
+  private Initialize()
   {
     return this.initialization ??= (async () =>
     {
@@ -77,7 +77,7 @@ export class ManagedEngines
         const state: ManagedEngineStatus = { engine, version: descriptor.version, installedVersion, state: identity && identity !== descriptor.package.sha256 ? 'update' : 'install' };
         try
         {
-          const target = this.store.packageRoot(descriptor.package);
+          const target = this.store.PackageRoot(descriptor.package);
           const exists = await fs.lstat(target).catch(error =>
           {
             if (error.code === 'ENOENT')
@@ -102,12 +102,12 @@ export class ManagedEngines
   }
 
   /** 显式准备或首次运行共用同一 Promise；失败允许重试，既有成功包和运行引用不被替换。 */
-  resolveEngine(engine: ManagedEngineStatus['engine'])
+  ResolveEngine(engine: ManagedEngineStatus['engine'])
   {
     const old = this.jobs.get(engine);
     if (old)
       return old;
-    const job = this.prepare(engine).catch(error =>
+    const job = this.Prepare(engine).catch(error =>
     {
       this.jobs.delete(engine);
       throw error
@@ -116,9 +116,9 @@ export class ManagedEngines
     return job;
   }
 
-  private async prepare(engine: ManagedEngineStatus['engine'])
+  private async Prepare(engine: ManagedEngineStatus['engine'])
   {
-    await this.initialize();
+    await this.Initialize();
     this.signal.throwIfAborted();
     const descriptor = this.descriptors.find(d => d.kind === engine);
     if (!descriptor)
@@ -129,7 +129,7 @@ export class ManagedEngines
     state.error = undefined;
     try
     {
-      const root = await this.store.prepare(descriptor.package, this.signal, progress =>
+      const root = await this.store.Prepare(descriptor.package, this.signal, progress =>
       {
         state.progress = progress
       });

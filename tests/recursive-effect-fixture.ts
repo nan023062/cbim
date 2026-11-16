@@ -12,13 +12,13 @@ export async function prepareRecursiveUnknownEffect(app:Application,user:string,
  const seed=await seedEffectObservation(app,project,provider),id=seed.entry.id,fault=unsupported||edit?undefined:loseOriginalEffectResult(project);
  if(edit)await fs.writeFile(path.join(project,data.file),data.editSeedText);
  try{
-  const started=await app.dispatch('loop.chat',{id,message:data.oldGoal,options:seed.options}),identity={workspaceId:id,rootSessionId:started.taskId};
-  await effectWait(async()=>{const saved=await effectRecords(user,id);return saved.scopes.length===1&&saved.scopes[0].status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0},provider,'recursive source closed');
-  const records=await effectRecords(user,id),state=await app.workspace(id).dispatchStore.read(),run=state.agentBusinessRuns?.[0];
+  const started=await app.Dispatch('loop.chat',{id,message:data.oldGoal,options:seed.options}),identity={workspaceId:id,rootSessionId:started.taskId};
+  await effectWait(async()=>{const saved=await effectRecords(user,id);return saved.scopes.length===1&&saved.scopes[0].status==='closed'&&app.runtime.Snapshot().pressure.activeRuns===0},provider,'recursive source closed');
+  const records=await effectRecords(user,id),state=await app.Workspace(id).dispatchStore.Read(),run=state.agentBusinessRuns?.[0];
   assert.ok(run);assert.equal(state.agentBusinessRuns?.length,1);assert.deepEqual(state.graphs[0].tasks,[]);assert.deepEqual(records.runs,[]);
   assert.equal(provider.main.length,2);assert.equal(provider.member.length,3);
   const toolCallId=unsupported?'effect-old-command':edit?'effect-old-edit':'effect-old-write',subject={kind:'member_run' as const,taskId:run.binding.taskId,runId:run.binding.runId,toolCallIds:[toolCallId]};
-  const directory=path.join(user,id,'loop-engine/tasks',subject.taskId,subject.runId),summary=await new FileRunStorage().read(directory);
+  const directory=path.join(user,id,'loop-engine/tasks',subject.taskId,subject.runId),summary=await new FileRunStorage().Read(directory);
   assert.ok(summary.sessionFile);assert.equal(summary.logIntegrity?.partialTail,false);assert.equal(summary.taskProgress?.delivery,undefined);
   assert.equal(summary.events.filter(e=>e.type==='tool.allowed'&&e.data.id===toolCallId).length,1);
   if(!unsupported&&!edit){assert.equal(fault!.events.length,1);assert.ok(summary.unresolvedTools.includes(toolCallId));assert.equal(summary.events.filter(e=>e.type==='tool.finished'&&e.data.id===toolCallId).length,0)}

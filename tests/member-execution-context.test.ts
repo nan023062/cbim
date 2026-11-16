@@ -15,14 +15,14 @@ import {assertLegacyWorkflowCompatible,prepareTeamTask} from '../src/logic/execu
 async function setup(){
   const f=await fixture();
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(entry.id),team=await seedTeam(w),snapshot=await w.snapshot();
+    const entry=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(entry.id),team=await seedTeam(w),snapshot=await w.Snapshot();
     const changes=[team.input.moduleId,team.child].map((id,index)=>{
       const definition=JSON.parse(snapshot.files.find(file=>file.path===id+'/module.json')!.text);
       definition.maintenance={bindingId:'maintenance-'+index,maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review-'+index,source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
       return {path:id+'/module.json',text:json(definition)};
     });
-    await w.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},...changes]));
-    const current=await w.snapshot(),modules=await resolveDispatchModules(current,[team.input.moduleId,team.child]);
+    await w.Commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},...changes]));
+    const current=await w.Snapshot(),modules=await resolveDispatchModules(current,[team.input.moduleId,team.child]);
     const agent={agentId:team.input.agentId,agentInstanceId:'member',agentSessionId:'member-session',name:'开发者'};
     const task:TaskNode={kind:'task',nodeId:'task-node',taskId:'task',identity:{workspaceId:entry.id,rootSessionId:'root-session'},requester:{...agent,agentId:'cbim:main'},assignee:agent,modules,goal:'实现并验证模块交付',acceptance:[{id:'tested',text:'真实证据支持验收'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:'2026-11-06T00:00:00.000Z',updatedAt:'2026-11-06T00:00:00.000Z'};
     return {...f,entry,w,team,task};
@@ -70,8 +70,8 @@ it('派发后知识变化、Workflow 绑定被替换或跨工作区时拒绝执�
     const wrong=structuredClone(f.task);wrong.modules[0].workflow.version='different-workflow-version';
     await expect(prepareDispatchExecutionContext(f.w,wrong)).rejects.toMatchObject({code:'DISPATCH_CONTEXT_CHANGED'});
     await expect(prepareDispatchExecutionContext(f.w,{...f.task,identity:{...f.task.identity,workspaceId:'other'}})).rejects.toMatchObject({code:'GRAPH_IDENTITY_MISMATCH'});
-    const prepared=await prepareDispatchExecutionContext(f.w,f.task),snapshot=await f.w.snapshot(),file=f.team.input.moduleId+'/module.md';
-    await f.w.commit(request(snapshot,[{path:file,text:snapshot.files.find(item=>item.path===file)!.text+'\n新的维护说明。\n'}]));
+    const prepared=await prepareDispatchExecutionContext(f.w,f.task),snapshot=await f.w.Snapshot(),file=f.team.input.moduleId+'/module.md';
+    await f.w.Commit(request(snapshot,[{path:file,text:snapshot.files.find(item=>item.path===file)!.text+'\n新的维护说明。\n'}]));
     await expect(recheckDispatchExecutionContext(f.w,prepared)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
     await expect(prepareDispatchExecutionContext(f.w,f.task)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
     expect(prepared.knowledgeRevision).toBe(f.task.modules[0].knowledgeRevision);
@@ -81,12 +81,12 @@ it('派发后知识变化、Workflow 绑定被替换或跨工作区时拒绝执�
 it('读取期间版本变化或正文缺失不会生成半新半旧的执行快照',async()=>{
   const f=await setup();
   try{
-    const snapshot=await f.w.snapshot();
-    const changed=vi.spyOn(f.w,'read').mockResolvedValue({...snapshot,revision:'changed-during-prepare'});
+    const snapshot=await f.w.Snapshot();
+    const changed=vi.spyOn(f.w,'Read').mockResolvedValue({...snapshot,revision:'changed-during-prepare'});
     await expect(prepareDispatchExecutionContext(f.w,f.task)).rejects.toMatchObject({code:'KNOWLEDGE_CHANGED'});
     changed.mockRestore();
     const missingOverview={...snapshot,files:snapshot.files.filter(file=>file.path!==f.team.input.moduleId+'/module.md')};
-    const unavailable=vi.spyOn(f.w,'snapshot').mockResolvedValue(missingOverview);
+    const unavailable=vi.spyOn(f.w,'Snapshot').mockResolvedValue(missingOverview);
     await expect(prepareDispatchExecutionContext(f.w,f.task)).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
     unavailable.mockRestore();
   }finally{vi.restoreAllMocks();await f.cleanup()}
@@ -115,8 +115,8 @@ it('应用内置规范更新、正文或指纹篡改均拒绝恢复，冻结快�
 
 it('模块自己的可选执行约定同正文冻结，移除或篡改解析结果不能靠重算指纹绕过',async()=>{
   const f=await setup();try{
-    const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'read-proof',toolName:'read'}]}},text='# 专业流程\n```cbim-workflow\n'+JSON.stringify(contract)+'\n```',snapshot=await f.w.snapshot();await f.w.commit(request(snapshot,[{path:f.team.input.workflowId+'/workflow.md',text}]));
-    const task={...f.task,modules:await resolveDispatchModules(await f.w.snapshot(),f.task.modules.map(module=>module.moduleId))},prepared=await prepareDispatchExecutionContext(f.w,task);expect(prepared.modules[0].workflowContract).toEqual(contract);expect(prepared.modules[1].workflowContract).toBeUndefined();expect(preparedWorkflowContracts(prepared)).toEqual([{moduleId:f.team.input.moduleId,workflowId:f.team.input.workflowId,workflowVersion:task.modules[0].workflow.version,contract}]);
+    const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'read-proof',toolName:'read'}]}},text='# 专业流程\n```cbim-workflow\n'+JSON.stringify(contract)+'\n```',snapshot=await f.w.Snapshot();await f.w.Commit(request(snapshot,[{path:f.team.input.workflowId+'/workflow.md',text}]));
+    const task={...f.task,modules:await resolveDispatchModules(await f.w.Snapshot(),f.task.modules.map(module=>module.moduleId))},prepared=await prepareDispatchExecutionContext(f.w,task);expect(prepared.modules[0].workflowContract).toEqual(contract);expect(prepared.modules[1].workflowContract).toBeUndefined();expect(preparedWorkflowContracts(prepared)).toEqual([{moduleId:f.team.input.moduleId,workflowId:f.team.input.workflowId,workflowVersion:task.modules[0].workflow.version,contract}]);
     const absent=structuredClone(prepared);delete absent.modules[0].workflowContract;absent.fingerprint=dispatchKnowledgeFingerprint(absent);expect(()=>validatePreparedDispatchKnowledge(absent)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
     const changed=structuredClone(prepared);changed.modules[0].workflowContract!.delivery!.requiredToolEvidence![0].toolName='bash';changed.fingerprint=dispatchKnowledgeFingerprint(changed);expect(()=>validatePreparedDispatchKnowledge(changed)).toThrow(expect.objectContaining({code:'EXECUTION_CONTEXT_INVALID'}));
     await expect(prepareTeamTask(f.w,{goal:task.goal,moduleId:f.team.input.moduleId,agentId:f.team.input.agentId,workflowId:f.team.input.workflowId,acceptance:task.acceptance.map(item=>item.text)})).rejects.toMatchObject({code:'WORKFLOW_MEMBER_REQUIRED'});

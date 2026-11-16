@@ -148,7 +148,7 @@ export class EffectObservationController
       const attempts: EffectAttempt[] = saved.attempts.map((raw: any) =>
       {
         const request = effectDispositionInputSchema.parse(raw.request);
-        if (!this.owns(request) || commandIds.has(request.commandId) || !['submitting', 'unknown', 'accepted', 'rejected'].includes(raw.phase))
+        if (!this.Owns(request) || commandIds.has(request.commandId) || !['submitting', 'unknown', 'accepted', 'rejected'].includes(raw.phase))
           throw Error('本机处置命令身份无效');
         commandIds.add(request.commandId);
         const receipt = raw.receipt ? checkedEffectReceipt(raw.receipt, request) : undefined;
@@ -160,7 +160,7 @@ export class EffectObservationController
       {
         const identity = effectObservationInputSchema.parse(raw.identity),
           key = effectSelectionKey(identity);
-        if (!this.owns(identity) || keys.has(key) || typeof raw.reason !== 'string' || raw.reason.length > 4096 || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(raw.decision))
+        if (!this.Owns(identity) || keys.has(key) || typeof raw.reason !== 'string' || raw.reason.length > 4096 || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(raw.decision))
           throw Error('本机处置草稿无效');
         keys.add(key);
         const attempt = raw.commandId ? attempts.find(a => a.request.commandId === raw.commandId) : undefined;
@@ -177,7 +177,7 @@ export class EffectObservationController
     }
   }
 
-  private owns(v: { workspaceId: string; rootSessionId: string })
+  private Owns(v: { workspaceId: string; rootSessionId: string })
   {
     return v.workspaceId === this.workspaceId && v.rootSessionId === this.rootSessionId
   }
@@ -199,63 +199,63 @@ export class EffectObservationController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(next: EffectState)
+  private Publish(next: EffectState)
   {
     this.value = next;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  draft(identity: EffectObservationInput)
+  Draft(identity: EffectObservationInput)
   {
     return this.value.drafts.find(x => sameIdentity(x.identity, identity))
   }
 
-  attempt(identity: EffectObservationInput)
+  Attempt(identity: EffectObservationInput)
   {
-    const id = this.draft(identity)?.commandId;
+    const id = this.Draft(identity)?.commandId;
     return this.value.attempts.find(x => x.request.commandId === id)
   }
 
-  read(identity: EffectObservationInput)
+  Read(identity: EffectObservationInput)
   {
     return this.value.reads[effectSelectionKey(identity)]
   }
 
-  isPending(commandId?: string)
+  IsPending(commandId?: string)
   {
     return !!commandId && this.pending.has(commandId)
   }
 
-  selected(identity: EffectObservationInput): EffectDispositionRecord | undefined
+  Selected(identity: EffectObservationInput): EffectDispositionRecord | undefined
   {
-    const id = this.read(identity)?.selectedId ?? this.attempt(identity)?.receipt?.record.dispositionId;
+    const id = this.Read(identity)?.selectedId ?? this.Attempt(identity)?.receipt?.record.dispositionId;
     return this.value.attempts.find(x => x.request.commandId === id && sameIdentity(x.request, identity))?.receipt?.record;
   }
 
-  private setRead(identity: EffectObservationInput, patch: Partial<EffectReadState>)
+  private SetRead(identity: EffectObservationInput, patch: Partial<EffectReadState>)
   {
     const key = effectSelectionKey(identity),
       previous = this.value.reads[key] ?? { loading: false, error: '' };
-    this.publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
+    this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
   }
 
   /** 图/日志只改变时效，不读取报告；迟到回包保留为旧依据，不能赋予新提交资格。 */
-  observeAnchor(identity: EffectObservationInput, anchor: string)
+  ObserveAnchor(identity: EffectObservationInput, anchor: string)
   {
-    if (this.owns(identity))
+    if (this.Owns(identity))
       this.anchors.set(effectSelectionKey(identity), anchor)
   }
 
-  fresh(identity: EffectObservationInput)
+  Fresh(identity: EffectObservationInput)
   {
-    const r = this.read(identity);
+    const r = this.Read(identity);
     return !!r?.report && !r.error && !r.loading && r.report.consistency === 'stable' && r.anchor === this.anchors.get(effectSelectionKey(identity))
   }
 
-  private persist(drafts: readonly EffectDraft[], attempts: readonly EffectAttempt[]): boolean
+  private Persist(drafts: readonly EffectDraft[], attempts: readonly EffectAttempt[]): boolean
   {
     try
     {
@@ -270,62 +270,62 @@ export class EffectObservationController
     }
     catch (error)
     {
-      this.publish({ ...this.value, error: '处置请求未能保存：' + errorText(error) });
+      this.Publish({ ...this.value, error: '处置请求未能保存：' + errorText(error) });
       return false
     }
-    this.publish({ ...this.value, drafts, attempts, error: '' });
+    this.Publish({ ...this.value, drafts, attempts, error: '' });
     return true;
   }
 
-  edit(identity: EffectObservationInput, reason: string, decision: EffectDecision)
+  Edit(identity: EffectObservationInput, reason: string, decision: EffectDecision)
   {
-    if (!this.owns(identity) || this.unavailable || reason.length > 4096 || this.draft(identity)?.commandId && this.attempt(identity)?.phase !== 'rejected' || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(decision))
+    if (!this.Owns(identity) || this.unavailable || reason.length > 4096 || this.Draft(identity)?.commandId && this.Attempt(identity)?.phase !== 'rejected' || !['inspect_more', 'repair_in_new_cycle', 'leave_unresolved'].includes(decision))
       return;
     const parsed = effectObservationInputSchema.safeParse(identity);
     if (!parsed.success)
       return;
-    this.persist([...this.value.drafts.filter(x => !sameIdentity(x.identity, identity)), { identity: parsed.data, reason, decision }], this.value.attempts);
+    this.Persist([...this.value.drafts.filter(x => !sameIdentity(x.identity, identity)), { identity: parsed.data, reason, decision }], this.value.attempts);
   }
 
   /** 显式准备下一条处置，上一条 immutable 回执仍留在历史，不构造新命令或访问后端。 */
-  prepare(identity: EffectObservationInput)
+  Prepare(identity: EffectObservationInput)
   {
-    const draft = this.draft(identity),
-      attempt = this.attempt(identity);
-    if (!draft || attempt?.phase !== 'accepted' || this.isPending(attempt.request.commandId))
+    const draft = this.Draft(identity),
+      attempt = this.Attempt(identity);
+    if (!draft || attempt?.phase !== 'accepted' || this.IsPending(attempt.request.commandId))
       return;
-    this.persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: undefined } : x), this.value.attempts);
-    this.setRead(identity, { selectedId: undefined, relations: undefined })
+    this.Persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: undefined } : x), this.value.attempts);
+    this.SetRead(identity, { selectedId: undefined, relations: undefined })
   }
 
-  async observe(identity: EffectObservationInput)
+  async Observe(identity: EffectObservationInput)
   {
-    if (!this.owns(identity) || this.read(identity)?.loading)
+    if (!this.Owns(identity) || this.Read(identity)?.loading)
       return;
     const key = effectSelectionKey(identity),
       generation = (this.generations.get(key) ?? 0) + 1,
       anchor = this.anchors.get(key);
     this.generations.set(key, generation);
-    this.setRead(identity, { loading: true, error: '' });
+    this.SetRead(identity, { loading: true, error: '' });
     try
     {
       const report = checkedEffectReport(await this.ports.observe(structuredClone(identity)), identity);
       if (this.generations.get(key) === generation)
-        this.setRead(identity, { report, anchor, loading: false, error: '' })
+        this.SetRead(identity, { report, anchor, loading: false, error: '' })
     }
     catch (error)
     {
       if (this.generations.get(key) === generation)
-        this.setRead(identity, { loading: false, error: '影响核实失败：' + errorText(error) })
+        this.SetRead(identity, { loading: false, error: '影响核实失败：' + errorText(error) })
     }
   }
 
   /** 只有点击保存才生成命令；未知不开放换 ID 重发，模型调用与恢复由其它显式入口负责。 */
-  async submit(identity: EffectObservationInput)
+  async Submit(identity: EffectObservationInput)
   {
-    const draft = this.draft(identity),
-      report = this.read(identity)?.report;
-    if (!draft || draft.commandId && this.attempt(identity)?.phase !== 'rejected' || !report || !this.fresh(identity) || !draft.reason.trim() || this.unavailable)
+    const draft = this.Draft(identity),
+      report = this.Read(identity)?.report;
+    if (!draft || draft.commandId && this.Attempt(identity)?.phase !== 'rejected' || !report || !this.Fresh(identity) || !draft.reason.trim() || this.unavailable)
       return;
     let request: EffectDispositionInput;
     try
@@ -336,52 +336,52 @@ export class EffectObservationController
     }
     catch (error)
     {
-      this.publish({ ...this.value, error: errorText(error) });
+      this.Publish({ ...this.value, error: errorText(error) });
       return
     }
     const attempt: EffectAttempt = { request, phase: 'submitting' };
-    if (!this.persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: request.commandId } : x), [...this.value.attempts, attempt]))
+    if (!this.Persist(this.value.drafts.map(x => x === draft ? { ...x, commandId: request.commandId } : x), [...this.value.attempts, attempt]))
       return;
     this.pending.add(request.commandId);
-    this.publish({ ...this.value });
+    this.Publish({ ...this.value });
     try
     {
       const receipt = checkedEffectReceipt(await this.ports.record(structuredClone(request)), request);
-      this.saveAttempt({ ...attempt, phase: 'accepted', receipt });
-      this.setRead(identity, { selectedId: request.commandId, relations: undefined, anchor: undefined })
+      this.SaveAttempt({ ...attempt, phase: 'accepted', receipt });
+      this.SetRead(identity, { selectedId: request.commandId, relations: undefined, anchor: undefined })
     }
     catch (error)
     {
       const rejected = effectPreacceptRejected(error);
-      this.saveAttempt({ ...attempt, phase: rejected ? 'rejected' : 'unknown', error: (rejected ? '请求尚未进入保存事务，请重新核实后编辑处置：' : '保存结果尚未确认：') + errorText(error) + (rejected ? '' : '。请查询原命令。') });
+      this.SaveAttempt({ ...attempt, phase: rejected ? 'rejected' : 'unknown', error: (rejected ? '请求尚未进入保存事务，请重新核实后编辑处置：' : '保存结果尚未确认：') + errorText(error) + (rejected ? '' : '。请查询原命令。') });
       if (rejected)
-        this.setRead(identity, { anchor: undefined })
+        this.SetRead(identity, { anchor: undefined })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.publish({ ...this.value })
+      this.Publish({ ...this.value })
     }
   }
 
-  private saveAttempt(attempt: EffectAttempt)
+  private SaveAttempt(attempt: EffectAttempt)
   {
     const found = this.value.attempts.some(x => x.request.commandId === attempt.request.commandId);
-    return this.persist(this.value.drafts, found ? this.value.attempts.map(x => x.request.commandId === attempt.request.commandId ? attempt : x) : [...this.value.attempts, attempt])
+    return this.Persist(this.value.drafts, found ? this.value.attempts.map(x => x.request.commandId === attempt.request.commandId ? attempt : x) : [...this.value.attempts, attempt])
   }
 
   /** 查询已冻结命令或显式历史选择；回执丢失不能解释成未执行，不能修改原正文重试。 */
-  async query(identity: EffectObservationInput, commandId: string)
+  async Query(identity: EffectObservationInput, commandId: string)
   {
     const previous = this.value.attempts.find(x => x.request.commandId === commandId),
-      listed = this.read(identity)?.list?.records.some(x => x.dispositionId === commandId);
-    if (!this.owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.request, identity) || !previous && !listed)
+      listed = this.Read(identity)?.list?.records.some(x => x.dispositionId === commandId);
+    if (!this.Owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.request, identity) || !previous && !listed)
       return;
     const selectionKey = effectSelectionKey(identity),
       selectionGeneration = (this.selectionGenerations.get(selectionKey) ?? 0) + 1;
     this.selectionGenerations.set(selectionKey, selectionGeneration);
     this.pending.add(commandId);
-    this.publish({ ...this.value });
+    this.Publish({ ...this.value });
     try
     {
       const raw = await this.ports.receipt({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId });
@@ -391,64 +391,64 @@ export class EffectObservationController
       if (!sameIdentity(parsed.record.request, identity) || parsed.record.dispositionId !== commandId)
         throw Error('处置历史不属于所选原调用');
       const receipt = checkedEffectReceipt(parsed, previous?.request ?? parsed.record.request, previous?.receipt);
-      if (this.saveAttempt({ request: receipt.record.request, phase: 'accepted', receipt }) && this.selectionGenerations.get(selectionKey) === selectionGeneration)
-        this.setRead(identity, { selectedId: commandId, relations: this.read(identity)?.relations?.identity.dispositionId === commandId ? this.read(identity)?.relations : undefined, error: '' });
+      if (this.SaveAttempt({ request: receipt.record.request, phase: 'accepted', receipt }) && this.selectionGenerations.get(selectionKey) === selectionGeneration)
+        this.SetRead(identity, { selectedId: commandId, relations: this.Read(identity)?.relations?.identity.dispositionId === commandId ? this.Read(identity)?.relations : undefined, error: '' });
     }
     catch (error)
     {
       const message = '查询结果未确认：' + errorText(error);
       if (previous)
-        this.saveAttempt({ ...previous, phase: previous.receipt ? 'accepted' : 'unknown', error: message });
+        this.SaveAttempt({ ...previous, phase: previous.receipt ? 'accepted' : 'unknown', error: message });
       // 历史选择不一定是当前草稿；错误放在该来源读取区，保留原选择及其真实关系。
       if (this.selectionGenerations.get(selectionKey) === selectionGeneration)
-        this.setRead(identity, { error: message });
+        this.SetRead(identity, { error: message });
     }
     finally
     {
       this.pending.delete(commandId);
-      this.publish({ ...this.value })
+      this.Publish({ ...this.value })
     }
   }
 
   /** 只返回所选来源的摘要；不自动挑最新决定、不自动打开或执行后续任务。 */
-  async list(identity: EffectObservationInput)
+  async List(identity: EffectObservationInput)
   {
-    if (!this.owns(identity) || this.read(identity)?.loading)
+    if (!this.Owns(identity) || this.Read(identity)?.loading)
       return;
-    this.setRead(identity, { loading: true, error: '' });
+    this.SetRead(identity, { loading: true, error: '' });
     try
     {
       const list = effectDispositionListSchema.parse(await this.ports.list(structuredClone(identity)));
       if (!sameIdentity(list.identity, identity))
         throw Error('处置列表属于其他来源');
-      this.setRead(identity, { list, loading: false })
+      this.SetRead(identity, { list, loading: false })
     }
     catch (error)
     {
-      this.setRead(identity, { loading: false, error: '处置列表读取失败：' + errorText(error) })
+      this.SetRead(identity, { loading: false, error: '处置列表读取失败：' + errorText(error) })
     }
   }
 
-  async relations(identity: EffectObservationInput)
+  async Relations(identity: EffectObservationInput)
   {
-    const selected = this.selected(identity);
-    if (!selected || !this.owns(identity) || this.read(identity)?.loading)
+    const selected = this.Selected(identity);
+    if (!selected || !this.Owns(identity) || this.Read(identity)?.loading)
       return;
     const dispositionId = selected.dispositionId;
-    this.setRead(identity, { loading: true, error: '' });
+    this.SetRead(identity, { loading: true, error: '' });
     try
     {
       const relations = effectRelationsSchema.parse(await this.ports.relations({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, dispositionId }));
       if (!sameIdentity(relations.record.request, identity) || relations.identity.dispositionId !== dispositionId || JSON.stringify(relations.record) !== JSON.stringify(selected))
         throw Error('后续关系与原处置不一致');
-      if (this.selected(identity)?.dispositionId === dispositionId)
-        this.setRead(identity, { relations, loading: false });
+      if (this.Selected(identity)?.dispositionId === dispositionId)
+        this.SetRead(identity, { relations, loading: false });
       else
-        this.setRead(identity, { loading: false });
+        this.SetRead(identity, { loading: false });
     }
     catch (error)
     {
-      this.setRead(identity, { loading: false, error: '后续关系读取失败：' + errorText(error) })
+      this.SetRead(identity, { loading: false, error: '后续关系读取失败：' + errorText(error) })
     }
   }
 }
@@ -462,7 +462,7 @@ export class EffectObservationPool
   {
   }
 
-  get(workspaceId: string, rootSessionId: string, ports: EffectPorts)
+  Get(workspaceId: string, rootSessionId: string, ports: EffectPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
       controller = this.values.get(key) ?? new EffectObservationController(workspaceId, rootSessionId, ports);

@@ -11,7 +11,7 @@ export function parseJson(text: string)
 {
   try
   {
-    return JsonUtils.parseStrictJson(text);
+    return JsonUtils.ParseStrictJson(text);
   }
   catch (error)
   {

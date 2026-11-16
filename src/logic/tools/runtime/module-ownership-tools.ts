@@ -37,17 +37,17 @@ export class ModuleOwnershipTools
     this.binding = Object.freeze({ ...binding })
   }
 
-  has(name: string): name is ModuleOwnershipToolName
+  Has(name: string): name is ModuleOwnershipToolName
   {
     return isModuleOwnershipToolName(name)
   }
 
-  list()
+  List()
   {
     return (Object.keys(inputs) as ModuleOwnershipToolName[]).map(name => ({ name, description: descriptions[name], version: 1, effects: [moduleOwnershipToolEffects[name]], inputSchema: zodToJsonSchema(inputs[name]) as Record<string, unknown>, outputSchema: zodToJsonSchema(outputs[name]) as Record<string, unknown>, cancellation: { mode: 'preflight_only' as const, description: '执行前与异步来源读取后复核停止；保存开始后不承诺中断或回滚。' }, recovery: name === 'cbim_module_owner_change_commit' ? { mode: 'inspect_before_retry' as const, queryTool: 'cbim_module_owner_receipt', keyFields: ['commandId'], description: '未确认结果只查询错误保留的原 commandId；不要换调用 ID 或重新提交。' } : name === 'cbim_module_owner_change_preview' ? { mode: 'new_preview' as const, description: '可显式重新预览当前事实；新依据不证明原未知提交未发生。' } : { mode: 'read_again' as const, description: '显式只读查询真实记录，不启动运行或重放写入。' } }))
   }
 
-  private parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
+  private Parse<S extends z.ZodTypeAny>(schema: S, raw: unknown): z.output<S>
   {
     const result = schema.safeParse(raw);
     if (!result.success)
@@ -55,18 +55,18 @@ export class ModuleOwnershipTools
     return result.data
   }
 
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('OWNERSHIP_TOOL_UNKNOWN', '本轮未注册该负责人工具');
-    this.parse(inputs[name], input);
+    this.Parse(inputs[name], input);
     return { effects: [moduleOwnershipToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
 
   /** 领域端口拿独立参数副本，避免返回值或端口变异同时修改预期依据。 */
-  async call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
+  async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('OWNERSHIP_TOOL_UNKNOWN', '本轮未注册该负责人工具');
     signal.throwIfAborted();
     let commandId: string | undefined;
@@ -77,8 +77,8 @@ export class ModuleOwnershipTools
         schema: z.ZodTypeAny;
       if (name === 'cbim_module_owner_inspect')
       {
-        const expected = this.parse(moduleOwnerInspectInputSchema, raw);
-        output = await this.port.inspect(structuredClone(expected), signal);
+        const expected = this.Parse(moduleOwnerInspectInputSchema, raw);
+        output = await this.port.Inspect(structuredClone(expected), signal);
         schema = moduleOwnerInspectOutputSchema.refine(value =>
         {
           if (!bound(value) || !isDeepStrictEqual(value.selection, expected))
@@ -92,25 +92,25 @@ export class ModuleOwnershipTools
       }
       else if (name === 'cbim_module_owner_change_preview')
       {
-        const expected = this.parse(moduleOwnerPreviewInputSchema, raw);
-        output = await this.port.preview(structuredClone(expected), signal);
+        const expected = this.Parse(moduleOwnerPreviewInputSchema, raw);
+        output = await this.port.Preview(structuredClone(expected), signal);
         schema = moduleOwnerPreviewOutputSchema.refine(value => bound(value) && value.preview.identity.workspaceId === this.binding.workspaceId && value.preview.identity.instanceId === this.binding.instanceId && isDeepStrictEqual(value.preview.change, expected.change));
       }
       else if (name === 'cbim_module_owner_change_commit')
       {
-        const expected = this.parse(moduleOwnerCommitInputSchema, raw);
+        const expected = this.Parse(moduleOwnerCommitInputSchema, raw);
         if (!toolCallId)
           fail('OWNERSHIP_ACTOR', '责任提交缺少真实工具调用身份');
         const { workspaceId, instanceId: _, ...identity } = this.binding,
           actor = { kind: 'main_agent' as const, ...identity, toolCallId, toolName: name };
         commandId = moduleOwnershipMainCommandId(workspaceId, actor);
-        output = await this.port.commit(structuredClone(expected), toolCallId, signal);
+        output = await this.port.Commit(structuredClone(expected), toolCallId, signal);
         schema = moduleOwnerRecordedOutputSchema.refine(value => bound(value) && value.commandId === commandId && value.receipt.commandId === commandId && value.receipt.identity.workspaceId === workspaceId && value.receipt.identity.instanceId === this.binding.instanceId && isDeepStrictEqual(value.receipt.actor, actor) && value.receipt.moduleId === expected.change.moduleId && value.receipt.action === (isModuleOwnershipSourceAdoption(expected.change) ? 'adopt_source' : !expected.change.nextOwner ? 'unassign' : !expected.change.expectedBinding?.ownerMemberId ? 'assign' : 'replace') && value.receipt.ownerMemberId === (isModuleOwnershipSourceAdoption(expected.change) ? expected.change.expectedBinding!.ownerMemberId : expected.change.nextOwner?.memberId ?? null) && value.receipt.previousOwnerMemberId === (expected.change.expectedBinding?.ownerMemberId ?? null) && value.receipt.previousRevision === (expected.change.expectedBinding?.revision ?? 0) && (!expected.change.expectedBinding || value.receipt.bindingId === expected.change.expectedBinding.bindingId) && value.receipt.basis === expected.expectedBasis && value.receipt.ownershipCursor.seq === (expected.expectedOwnershipCursor?.seq ?? 0) + 1 && (!expected.expectedOwnershipCursor || value.receipt.ownershipCursor.streamId === expected.expectedOwnershipCursor.streamId));
       }
       else
       {
-        const expected = this.parse(moduleOwnerReceiptInputSchema, raw);
-        output = await this.port.receipt(structuredClone(expected), signal);
+        const expected = this.Parse(moduleOwnerReceiptInputSchema, raw);
+        output = await this.port.Receipt(structuredClone(expected), signal);
         schema = moduleOwnerReceiptOutputSchema.refine(value => bound(value) && value.commandId === expected.commandId && (value.status === 'unknown' || value.receipt.commandId === expected.commandId && value.receipt.identity.workspaceId === this.binding.workspaceId && value.receipt.actor.kind === 'main_agent' && value.receipt.actor.rootSessionId === this.binding.rootSessionId));
       }
       signal.throwIfAborted();

@@ -20,19 +20,19 @@ export class QuestionTools
   {
   }
 
-  has(name: string)
+  Has(name: string)
   {
     return name === questionToolName
   }
 
-  list()
+  List()
   {
     return [structuredClone(questionTool)]
   }
 
-  private parse(name: string, raw: unknown)
+  private Parse(name: string, raw: unknown)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('QUESTION_TOOL_UNKNOWN', '当前运行没有该提问工具');
     const parsed = questionInput.safeParse(raw);
     if (!parsed.success)
@@ -41,16 +41,16 @@ export class QuestionTools
   }
 
   /** 授权前只检查严格原参数并分类，不弹题、不消费回答。 */
-  describe(name: string, raw: unknown): RunToolDescriptor
+  Describe(name: string, raw: unknown): RunToolDescriptor
   {
-    this.parse(name, raw);
+    this.Parse(name, raw);
     return { effects: ['read'], native: false }
   }
 
   /** 不在 await 后用取消覆盖先完成的回答；真正终态由队列的一次消费边界决定。 */
-  async call(name: string, raw: unknown, signal: AbortSignal)
+  async Call(name: string, raw: unknown, signal: AbortSignal)
   {
-    const input = this.parse(name, raw),
+    const input = this.Parse(name, raw),
       schema = questionResultForInput(input);
     const result = await this.request(input, signal);
     return checkedJsonToolResult(name, result, schema);

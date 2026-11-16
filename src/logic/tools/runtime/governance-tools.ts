@@ -48,17 +48,17 @@ export class GovernanceTools
     this.binding = Object.freeze({ workspaceId, rootSessionId, agentInstanceId, agentSessionId, runId })
   }
 
-  has(name: string): name is GovernanceToolName
+  Has(name: string): name is GovernanceToolName
   {
     return isGovernanceToolName(name)
   }
 
-  list()
+  List()
   {
     return (Object.keys(inputs) as GovernanceToolName[]).map(name => ({ name, version: 1, effects: [governanceToolEffects[name]], description: descriptions[name], inputSchema: zodToJsonSchema(inputs[name]) as Record<string, unknown> }))
   }
 
-  private parse<T>(schema: z.ZodType<T>, raw: unknown): T
+  private Parse<T>(schema: z.ZodType<T>, raw: unknown): T
   {
     const parsed = schema.safeParse(raw);
     if (!parsed.success)
@@ -67,24 +67,24 @@ export class GovernanceTools
   }
 
   /** 同步分类不读写磁盘；仅真实注册的四项工具获得本运行固定的 knowledge 范围。 */
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('GOVERNANCE_TOOL_UNKNOWN', '本轮未注册此治理工具');
-    this.parse(inputs[name] as z.ZodTypeAny, input);
+    this.Parse(inputs[name] as z.ZodTypeAny, input);
     return { effects: [governanceToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
 
-  private command(name: 'cbim_governance_observe' | 'cbim_governance_propose', toolCallId: string)
+  private Command(name: 'cbim_governance_observe' | 'cbim_governance_propose', toolCallId: string)
   {
     const { workspaceId, ...source } = this.binding;
     return moduleGovernanceMainCommandId(workspaceId, { kind: 'main_agent', ...source, toolName: name, toolCallId })
   }
 
   /** 领域操作仅调用一次；编码和校验只处理同一快照，失败不得通过再次执行补一个成功响应。 */
-  async call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
+  async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('GOVERNANCE_TOOL_UNKNOWN', '本轮未注册此治理工具');
     signal.throwIfAborted();
     let commandId: string | undefined;
@@ -95,14 +95,14 @@ export class GovernanceTools
       const bound = (value: { identity: { workspaceId: string; rootSessionId: string } }) => value.identity.workspaceId === this.binding.workspaceId && value.identity.rootSessionId === this.binding.rootSessionId;
       if (name === 'cbim_governance_get')
       {
-        const input = this.parse(governanceGetInputSchema, raw);
-        output = await this.port.get(input, signal);
+        const input = this.Parse(governanceGetInputSchema, raw);
+        output = await this.port.Get(input, signal);
         schema = governanceGetOutputSchema.refine(value => bound(value) && value.moduleId === input.moduleId && value.selectedObservation?.observationId === input.observationId && value.selectedProposal?.proposalId === input.proposalId);
       }
       else if (name === 'cbim_governance_receipt')
       {
-        const input = this.parse(governanceReceiptInputSchema, raw);
-        output = await this.port.receipt(input, signal);
+        const input = this.Parse(governanceReceiptInputSchema, raw);
+        output = await this.port.Receipt(input, signal);
         const expected = 'commandId' in input ? input.commandId : moduleGovernanceMainCommandId(this.binding.workspaceId, { kind: 'main_agent', rootSessionId: this.binding.rootSessionId, agentInstanceId: this.binding.agentInstanceId, agentSessionId: this.binding.agentSessionId, runId: input.runId ?? this.binding.runId, toolCallId: input.toolCallId, toolName: `cbim_governance_${input.action}` });
         schema = governanceReceiptOutputSchema.refine(value => bound(value) && value.commandId === expected);
       }
@@ -110,11 +110,11 @@ export class GovernanceTools
       {
         if (!toolCallId)
           fail('GOVERNANCE_IDENTITY', '治理写入缺少真实工具调用身份');
-        commandId = this.command(name, toolCallId);
+        commandId = this.Command(name, toolCallId);
         if (name === 'cbim_governance_observe')
-          output = await this.port.observe(this.parse(governanceObserveInputSchema, raw), toolCallId, signal);
+          output = await this.port.Observe(this.Parse(governanceObserveInputSchema, raw), toolCallId, signal);
         else
-          output = await this.port.propose(this.parse(governanceProposeInputSchema, raw), toolCallId, signal);
+          output = await this.port.Propose(this.Parse(governanceProposeInputSchema, raw), toolCallId, signal);
         schema = governanceWriteOutputSchema.refine(value => bound(value) && value.commandId === commandId && value.action === name.slice('cbim_governance_'.length) && (value.status !== 'recorded' || value.record.origin.runId === this.binding.runId && value.record.origin.agentInstanceId === this.binding.agentInstanceId && value.record.origin.agentSessionId === this.binding.agentSessionId && value.record.origin.toolCallId === toolCallId));
       }
       signal.throwIfAborted();

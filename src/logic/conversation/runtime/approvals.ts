@@ -12,7 +12,7 @@ export class ApprovalQueue
   private approvedRuns = new Set<string>();
 
   /** 仅在当前运行中挂起调用；已获得本次放行时立即返回。 */
-  async request(taskId: string, call: ToolCall): Promise<ToolDecision>
+  async Request(taskId: string, call: ToolCall): Promise<ToolDecision>
   {
     if (this.approvedRuns.has(taskId))
       return { allow: true, reason: '用户已允许本次运行的后续操作' };
@@ -30,13 +30,13 @@ export class ApprovalQueue
       resolve: (decision: ToolDecision) => void
     }>();
 
-  list(taskId: string)
+  List(taskId: string)
   {
     return [...this.approvals.values()].filter(a => a.view.taskId === taskId).map(a => a.view)
   }
 
   /** 审批身份绑定任务；单次答复只授权当前调用，本次全部通过仅放行同一任务当前运行中的待确认调用。 */
-  answer(taskId: string, id: string, allow: boolean, allowAll = false)
+  Answer(taskId: string, id: string, allow: boolean, allowAll = false)
   {
     const pending = this.approvals.get(id);
     if (!pending || pending.view.taskId !== taskId)
@@ -60,7 +60,7 @@ export class ApprovalQueue
     pending.resolve({ allow: allow === true, reason: allow ? '用户允许本次调用' : '用户拒绝本次调用' });
   }
 
-  cancel(taskId?: string)
+  Cancel(taskId?: string)
   {
     if (taskId)
       this.approvedRuns.delete(taskId);

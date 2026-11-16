@@ -33,13 +33,13 @@ export async function workspaceMemberHttpProbe(){
 export async function seedWorkspaceMembers(app:Application,temp:string,baseUrl:string){
   const project=path.join(temp,'workspace-members-alpha'),otherProject=path.join(temp,'workspace-members-beta');
   await Promise.all([fs.mkdir(project,{recursive:true}),fs.mkdir(otherProject,{recursive:true})]);
-  const entry=await app.dispatch('add',{path:project}),other=await app.dispatch('add',{path:otherProject});
-  const team=await seedTeam(app.workspace(entry.id));
+  const entry=await app.Dispatch('add',{path:project}),other=await app.Dispatch('add',{path:otherProject});
+  const team=await seedTeam(app.Workspace(entry.id));
   const definition:LlmDefinition={name:'岗位登记隔离模型配置',api:'openai-completions',baseUrl,auth:'none',defaultModel:'member-explicit-a',models:[
     {id:'member-explicit-a',name:'岗位模型 A',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,vision:false},
     {id:'member-explicit-b',name:'岗位模型 B',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,vision:false},
   ]};
-  const settings=await app.models.save({profile:definition}),profile=settings.profiles.find(item=>item.name===definition.name);if(!profile)throw Error('Explicit fixture profile was not saved');
+  const settings=await app.models.Save({profile:definition}),profile=settings.profiles.find(item=>item.name===definition.name);if(!profile)throw Error('Explicit fixture profile was not saved');
   const profileId=profile.id,modelId=definition.models[0].id;
   const register=(name:string=workspaceMemberFixture.firstName):WorkspaceMemberChangeInput=>({kind:'register',agentId:team.input.agentId,name,position:workspaceMemberFixture.position,adaptation:{instructions:workspaceMemberFixture.instructions,references:[team.input.moduleId,team.shared]},runtimePolicy:{profileId,modelId},reason:workspaceMemberFixture.reason});
   return {project,otherProject,entry,other,team,profileId,modelId,definition,register};
@@ -47,18 +47,18 @@ export async function seedWorkspaceMembers(app:Application,temp:string,baseUrl:s
 
 /** Explicit fixture-side source change through the actual knowledge transaction, not a registration side effect. */
 export async function changeWorkspaceMemberCapability(app:Application,workspaceId:string,agentId:string,sharedSkillId:string){
-  const workspace=app.workspace(workspaceId),snapshot=await workspace.snapshot();
+  const workspace=app.Workspace(workspaceId),snapshot=await workspace.Snapshot();
   const definitionFile=snapshot.files.find(file=>file.path===agentId+'/agent.json');if(!definitionFile)throw Error('Seeded Agent definition is missing');
   const definition=JSON.parse(definitionFile.text) as {work_principles:string};
   const principlesPath=agentId+'/'+definition.work_principles,principles=snapshot.files.find(file=>file.path===principlesPath);
   const skill=snapshot.files.find(file=>file.path===sharedSkillId+'/SKILL.md');if(!principles||!skill)throw Error('Seeded capability source is missing');
   const changes=[{path:principlesPath,text:principles.text+workspaceMemberFixture.changedPrinciples},{path:skill.path,text:skill.text+workspaceMemberFixture.changedSkill}];
-  await workspace.commit(request(snapshot,changes));return {changes,revision:(await workspace.snapshot()).revision};
+  await workspace.Commit(request(snapshot,changes));return {changes,revision:(await workspace.Snapshot()).revision};
 }
 
 /** Knowledge journals and bytes must not change merely because a position is registered or read. */
 export async function workspaceMemberKnowledgeEvidence(app:Application,user:string,workspaceId:string){
-  const snapshot=await app.workspace(workspaceId).snapshot(),directory=path.join(user,workspaceId,'transactions');
+  const snapshot=await app.Workspace(workspaceId).Snapshot(),directory=path.join(user,workspaceId,'transactions');
   let names:string[]=[];try{names=(await fs.readdir(directory)).filter(name=>name.endsWith('.json')).sort()}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}
   const journals=await Promise.all(names.map(async name=>({name,sha256:createHash('sha256').update(await fs.readFile(path.join(directory,name))).digest('hex')})));
   return {revision:snapshot.revision,files:snapshot.files,journals};
@@ -67,16 +67,16 @@ export async function workspaceMemberKnowledgeEvidence(app:Application,user:stri
 /** Registry writes share the dispatch journal, but cannot mutate runtime graphs, messages, instances, sessions or runs. */
 export async function workspaceMemberRuntimeEvidence(app:Application,workspaceIds:string[]){
   const workspaces=[];
-  for(const id of workspaceIds){const state=await (app.memberDispatch(id) as unknown as {store:DispatchStore}).store.read();workspaces.push({workspaceId:id,members:state.members,sessions:state.sessions,graphs:state.graphs,outbox:state.outbox,runs:state.runs??[],scopes:state.scopes??[],mainSessions:await app.dispatch('loop.list',{id})})}
+  for(const id of workspaceIds){const state=await (app.MemberDispatch(id) as unknown as {store:DispatchStore}).store.Read();workspaces.push({workspaceId:id,members:state.members,sessions:state.sessions,graphs:state.graphs,outbox:state.outbox,runs:state.runs??[],scopes:state.scopes??[],mainSessions:await app.Dispatch('loop.list',{id})})}
   return workspaces;
 }
 
 /** Invoke the real public preview and commit actions. A fresh command is generated only for a new explicit change. */
 export async function commitWorkspaceMember(app:Application,workspaceId:string,change:WorkspaceMemberChangeInput){
-  const identity={workspaceId,instanceId:app.workspace(workspaceId).instanceId};
+  const identity={workspaceId,instanceId:app.Workspace(workspaceId).instanceId};
   const {workspaceMemberPreviewSchema,workspaceMemberReceiptSchema}=await import('../src/logic/team/rules/workspace-member');
-  const preview=workspaceMemberPreviewSchema.parse(await app.dispatch('workspace.members.preview',{...identity,change}));
+  const preview=workspaceMemberPreviewSchema.parse(await app.Dispatch('workspace.members.preview',{...identity,change}));
   const input={...identity,change,commandId:randomUUID(),expectedRegistryCursor:preview.registryCursor,expectedBasis:preview.basis};
-  const receipt=workspaceMemberReceiptSchema.parse(await app.dispatch('workspace.members.commit',input));
+  const receipt=workspaceMemberReceiptSchema.parse(await app.Dispatch('workspace.members.commit',input));
   return {preview,input,receipt};
 }

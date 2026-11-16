@@ -16,6 +16,8 @@
 
 私有和受保护字段使用 `_camelCase`，公开字段使用 `camelCase`；所有方法使用大驼峰 `PascalCase`，包含实例、静态及接口方法，属性仍使用小驼峰 `camelCase`。方法与属性不因访问级别添加字段前缀；静态、只读及构造函数参数属性按字段规则命名。保留运行时私有标记、框架约定和外部协议键，命名迁移须同步全部引用。具体边界与示例以文档 05 为准。
 
+方法命名执行 `pnpm check:method-names`，CI 同步检查。例外必须在检查器中按文件、所属声明和方法名登记原因；保留浏览器、Node、Electron、React 及已发布引擎包协议的固定名称。函数值成员实现方法契约时遵循契约名称；普通函数变量仍按变量规则。静态命名检查不能代替调用方、字符串索引、测试替身和运行包兼容验证。
+
 开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 保存 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则；`design/` 保存关联方案、设计说明和验证记录；产品运行规范与 Schema 位于 `assets/`，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
 
 开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。

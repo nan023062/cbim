@@ -22,19 +22,19 @@ const provider=mode==='direct'?await knowledgeContractProvider('malformed-after-
 const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.workspace(entry.id);
- if(mode==='object')await workspace.commit(request(await workspace.snapshot(),moduleFiles()));if(mode==='refresh')for(const file of moduleFiles()){const target=path.join(project,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
- let writes=0;const actual=workspace.commit.bind(workspace),planned=workspace.commitPlanned.bind(workspace);
- if(mode!=='object')workspace.commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
- else workspace.commitPlanned=async input=>{const value=await planned(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
- const started=await setup.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:started.taskId};
+ setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const {entry}=await seedKnowledgeContract(setup,project,provider),workspace=setup.Workspace(entry.id);
+ if(mode==='object')await workspace.Commit(request(await workspace.Snapshot(),moduleFiles()));if(mode==='refresh')for(const file of moduleFiles()){const target=path.join(project,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
+ let writes=0;const actual=workspace.Commit.bind(workspace),planned=workspace.CommitPlanned.bind(workspace);
+ if(mode!=='object')workspace.Commit=async input=>{const value=await actual(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
+ else workspace.CommitPlanned=async input=>{const value=await planned(input);writes++;return {...value,changed:'PRIVATE_INVALID_OUTPUT_SENTINEL'} as unknown as typeof value};
+ const started=await setup.Dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}),identity={workspaceId:entry.id,rootSessionId:started.taskId};
  const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+90000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('Knowledge effect UI timeout: '+label)};
- await until(async()=>{const records=await knowledgeContractRecords(user,entry.id);return records.scopes[0]?.status==='closed'&&setup!.runtime.snapshot().pressure.activeRuns===0},'original scope closed');
- const summary=await setup.dispatch('loop.inspect',{id:entry.id,taskId:started.taskId,runId:started.runId}) as RunSummary;assert.equal(summary.toolReceipts?.find(r=>r.toolCallId===callId)?.outcome,'failed');assert.equal(writes,1);assert.equal(provider.requests.length,expectedRequests);
+ await until(async()=>{const records=await knowledgeContractRecords(user,entry.id);return records.scopes[0]?.status==='closed'&&setup!.runtime.Snapshot().pressure.activeRuns===0},'original scope closed');
+ const summary=await setup.Dispatch('loop.inspect',{id:entry.id,taskId:started.taskId,runId:started.runId}) as RunSummary;assert.equal(summary.toolReceipts?.find(r=>r.toolCallId===callId)?.outcome,'failed');assert.equal(writes,1);assert.equal(provider.requests.length,expectedRequests);
  const requestId='requestId'in provider?provider.requestId:provider.state.planId!;assert.ok(requestId);
- const selection={...identity,subject:{kind:'main_run',runId:started.runId,toolCallIds:[callId]}},originalRecords=await knowledgeContractRecords(user,entry.id),originalLogs=await knowledgeContractLogBytes(user,entry.id),native=await fs.readFile(summary.sessionFile!),journalFile=path.join(user,entry.id,'transactions',requestId+'.json'),journalBytes=await fs.readFile(journalFile),knowledgeRevision=(await workspace.snapshot()).revision;
+ const selection={...identity,subject:{kind:'main_run',runId:started.runId,toolCallIds:[callId]}},originalRecords=await knowledgeContractRecords(user,entry.id),originalLogs=await knowledgeContractLogBytes(user,entry.id),native=await fs.readFile(summary.sessionFile!),journalFile=path.join(user,entry.id,'transactions',requestId+'.json'),journalBytes=await fs.readFile(journalFile),knowledgeRevision=(await workspace.Snapshot()).revision;
  const archive='test-results/'+artifact+'-ui-original';await fs.mkdir(archive,{recursive:true});await fs.writeFile(path.join(archive,'knowledge-journal.json'),journalBytes);await fs.writeFile(path.join(archive,'native.jsonl'),native);await fs.writeFile(path.join(archive,'canonical-native-logs.json'),JSON.stringify(originalLogs,null,2));
- await setup.shutdown();setup=undefined;
+ await setup.Shutdown();setup=undefined;
  const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',e=>pageErrors.push(e.message));page.on('requestfailed',r=>transportErrors.push(r.url()+': '+r.failure()?.errorText))};
  const active=()=>page.locator('.workspace-panel:not([hidden])'),draft=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
  const call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
@@ -51,7 +51,7 @@ try{
  report={mode,exe,identity,runId:started.runId,requestId,requests:provider.requests.length,actualOriginalWrites:writes,finalObservation:first,reopened,receipt:saved,originalJournalBytes:journalBytes.length,originalJournalHash:hash(journalBytes),originalNativeHash:hash(native),originalCanonicalUnchanged:true,reopenAddedRequests:0,pageErrors,transportErrors,providerErrors:provider.errors,screenshots,cleanup};
 }catch(error){keep=true;await fs.mkdir('test-results',{recursive:true});if(page)await page.screenshot({path:'test-results/'+artifact+'-failure.png'}).catch(()=>{});await fs.writeFile('test-results/'+artifact+'-failure.json',JSON.stringify({mode,exe,temp,error:String(error),providerErrors:provider.errors,pageErrors,transportErrors},null,2));throw error}
 finally{
- await setup?.shutdown();if(desktop)await desktop.close();cleanup.desktopClosed=true;await provider.close();cleanup.providerClosed=true;
+ await setup?.Shutdown();if(desktop)await desktop.close();cleanup.desktopClosed=true;await provider.close();cleanup.providerClosed=true;
  if(!keep){const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-knowledge-effect-ui-'))throw Error('Refusing unexpected test cleanup');await fs.rm(target,{recursive:true,force:true});cleanup.tempRemoved=true}
  if(report)await fs.writeFile('test-results/'+artifact+'-ui-smoke.json',JSON.stringify(report,null,2));
 }

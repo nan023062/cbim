@@ -29,8 +29,8 @@ class N_src_logic_execution_storage_business_runs_ts["business-runs.ts"] {
 }
 class N_src_logic_execution_storage_business_runs_ts_AgentBusinessRuns["AgentBusinessRuns"] {
   +constructor()
-  +start()
-  +close()
+  +Start()
+  +Close()
   -store
   -assertCurrent
   -inspect
@@ -52,10 +52,10 @@ class N_src_logic_execution_storage_run_journal_ts_RunJournal["RunJournal"] {
   +task
   +runId
   +constructor()
-  +init()
-  +append()
-  +flush()
-  +read()$
+  +Init()
+  +Append()
+  +Flush()
+  +Read()$
   -tail
   -events
 }
@@ -72,10 +72,10 @@ class N_src_logic_execution_storage_run_storage_ts["run-storage.ts"] {
   <<module>>
 }
 class N_src_logic_execution_storage_run_storage_ts_FileRunStorage["FileRunStorage"] {
-  +reserveTask()
-  +createJournal()
-  +read()
-  +list()
+  +ReserveTask()
+  +CreateJournal()
+  +Read()
+  +List()
 }
 N_src_logic_execution_storage_run_storage_ts ..> N_src_logic_execution_storage_run_storage_ts_FileRunStorage : 声明
 class N_src_logic_execution_storage_run_storage_ts_external_RunStorage["RunStorage (外部契约)"] {
@@ -116,7 +116,7 @@ N_src_logic_execution_storage_run_storage_ts ..> N_src_logic_execution_storage_r
 
 ### 运行日志的只读完整性诊断
 
-`RunJournal.read` 仅解析完整行并报告 `logIntegrity.partialTail`，保留未完成尾行的原始字节、不截断或修复。零字节文件返回 `RUN_LOG_EMPTY`；结构、绑定或 JSON 损坏返回 `RUN_LOG_INVALID`，错误不包含原始片段。文件系统错误保留系统码，缺失日志不能解释为未执行。正常读取依旧重建可信回执、未知工具与终态，完成前缀不代表尾行也完整。
+`RunJournal.Read` 仅解析完整行并报告 `logIntegrity.partialTail`，保留未完成尾行的原始字节、不截断或修复。零字节文件返回 `RUN_LOG_EMPTY`；结构、绑定或 JSON 损坏返回 `RUN_LOG_INVALID`，错误不包含原始片段。文件系统错误保留系统码，缺失日志不能解释为未执行。正常读取依旧重建可信回执、未知工具与终态，完成前缀不代表尾行也完整。
 
 `session.bound` 可以先只登记原生线程 ID，稍后再确认文件。缺少 `sessionFile` 保持缺省，不能调用 `String(undefined)` 伪造恢复路径；已存在的非字符串或空路径拒绝为坏记录。历史读取不回写任何字节，是否可显式继续由执行层依据完整终态、工具和输出记录决定，日志层不自动启动或猜测原生文件。
 

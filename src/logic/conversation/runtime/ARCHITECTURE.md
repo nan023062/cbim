@@ -30,10 +30,10 @@ class N_src_logic_conversation_runtime_approvals_ts["approvals.ts"] {
   <<module>>
 }
 class N_src_logic_conversation_runtime_approvals_ts_ApprovalQueue["ApprovalQueue"] {
-  +request()
-  +list()
-  +answer()
-  +cancel()
+  +Request()
+  +List()
+  +Answer()
+  +Cancel()
   -approvedRuns
   -approvals
 }
@@ -59,46 +59,46 @@ N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversati
 class N_src_logic_conversation_runtime_execution_manager_ts_MainStartup["MainStartup"] {
   <<interface>>
   +signal
-  +prepare()
+  +Prepare()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_MainStartup : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
   <<interface>>
-  +validateFollowup()
-  +interruptTopic()
-  +activeInputReceipt()
-  +insertActiveInput()
-  +humanContinuationReceipt()
-  +humanContinuationPreflight()
-  +acceptHumanContinuation()
-  +replanReceipt()
-  +replanPreflight()
-  +acceptReplan()
-  +recoveryReceipt()
-  +recoveryPreflight()
-  +acceptRecovery()
-  +recoveryContext()
-  +recoveryRunIds()
-  +continuationReceipt()
+  +ValidateFollowup()
+  +InterruptTopic()
+  +ActiveInputReceipt()
+  +InsertActiveInput()
+  +HumanContinuationReceipt()
+  +HumanContinuationPreflight()
+  +AcceptHumanContinuation()
+  +ReplanReceipt()
+  +ReplanPreflight()
+  +AcceptReplan()
+  +RecoveryReceipt()
+  +RecoveryPreflight()
+  +AcceptRecovery()
+  +RecoveryContext()
+  +RecoveryRunIds()
+  +ContinuationReceipt()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
   +workspace
-  +cancelPendingLaunches()
-  +attachCollaboration()
-  +observeQueue()
-  +initializeQueueMonitoring()
-  +queued()
-  +queueDelta()
-  +enqueue()
-  +changeQueued()
-  +editQueued()
-  +moveQueued()
-  +insertQueued()
-  +continueQueue()
-  +pendingQuestions()
-  +answerQuestion()
-  +pendingApprovals()
+  +CancelPendingLaunches()
+  +AttachCollaboration()
+  +ObserveQueue()
+  +InitializeQueueMonitoring()
+  +Queued()
+  +QueueDelta()
+  +Enqueue()
+  +ChangeQueued()
+  +EditQueued()
+  +MoveQueued()
+  +InsertQueued()
+  +ContinueQueue()
+  +PendingQuestions()
+  +AnswerQuestion()
+  +PendingApprovals()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -112,34 +112,34 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration["ExecutionCollaboration"] {
   <<interface>>
-  +continuationCheckpoint()
-  +acceptContinuation()
-  +starting()
-  +holdMain()
-  +startFailed()
-  +busy()
-  +waiting()
-  +settled()
-  +stop()
+  +ContinuationCheckpoint()
+  +AcceptContinuation()
+  +Starting()
+  +HoldMain()
+  +StartFailed()
+  +Busy()
+  +Waiting()
+  +Settled()
+  +Stop()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_ExecutionCollaboration : 声明
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
-  +answerApproval()
+  +AnswerApproval()
   +constructor()
-  +subscribe()
-  +prepare()
-  +choices()
-  +thread()
-  +threadView()
-  +start()
-  +chat()
-  +recoverExecution()
-  +replanExecution()
-  +continueGoal()
-  +interruptTopic()
-  +continueFromHumanDecisions()
-  +resume()
-  +continueFromResults()
+  +Subscribe()
+  +Prepare()
+  +Choices()
+  +Thread()
+  +ThreadView()
+  +Start()
+  +Chat()
+  +RecoverExecution()
+  +ReplanExecution()
+  +ContinueGoal()
+  +InterruptTopic()
+  +ContinueFromHumanDecisions()
+  +Resume()
+  +ContinueFromResults()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -152,14 +152,14 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
   <<module>>
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
-  +continueGoalRepair()
-  +collaborationReady()
-  +holdCollaboration()
-  +pauseCollaboration()
-  +stop()
-  +inspect()
-  +list()
-  +close()
+  +ContinueGoalRepair()
+  +CollaborationReady()
+  +HoldCollaboration()
+  +PauseCollaboration()
+  +Stop()
+  +Inspect()
+  +List()
+  +Close()
   -storage
   -factory
   -inputImages
@@ -183,13 +183,13 @@ class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionMa
   -pendingLaunches
   -pendingInsertions
   -insertionsClosed
-  -cancelInsertions()
+  -CancelInsertions()
   -messageQueue
   -queueSubscriptions
-  -queueSource()
-  -queue()
-  -queuedImages()
-  -pump()
+  -QueueSource()
+  -Queue()
+  -QueuedImages()
+  -Pump()
   -topicInterruptions
   -active
   -pending
@@ -209,12 +209,12 @@ class N_src_logic_conversation_runtime_execution_manager_ts["execution-manager.t
 }
 class N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager["WorkspaceExecutionManager"] {
   -approvalQueue
-  -cancelApprovals()
-  -serial()
-  -checkedCurrentHistory()
-  -launch()
-  -continueSystem()
-  -directory()
+  -CancelApprovals()
+  -Serial()
+  -CheckedCurrentHistory()
+  -Launch()
+  -ContinueSystem()
+  -Directory()
 }
 N_src_logic_conversation_runtime_execution_manager_ts ..> N_src_logic_conversation_runtime_execution_manager_ts_WorkspaceExecutionManager : 声明
 ```
@@ -252,20 +252,20 @@ class N_src_logic_conversation_runtime_message_queue_ts_QueueCounts["QueueCounts
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_QueueCounts : 声明
 class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQueue"] {
   +constructor()
-  +load()
-  +subscribe()
-  +counts()
-  +list()
-  +delta()
-  +add()
-  +change()
-  +edit()
-  +move()
-  +claim()
-  +pause()
-  +resume()
-  +take()
-  +complete()
+  +Load()
+  +Subscribe()
+  +Counts()
+  +List()
+  +Delta()
+  +Add()
+  +Change()
+  +Edit()
+  +Move()
+  +Claim()
+  +Pause()
+  +Resume()
+  +Take()
+  +Complete()
   -file
 }
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_MessageQueue : 声明
@@ -286,11 +286,11 @@ class N_src_logic_conversation_runtime_message_queue_ts_MessageQueue["MessageQue
   -epoch
   -revision
   -published
-  -publish()
-  -loadOnce()
-  -notify()
-  -reportFailure()
-  -save()
+  -Publish()
+  -LoadOnce()
+  -Notify()
+  -ReportFailure()
+  -Save()
 }
 N_src_logic_conversation_runtime_message_queue_ts ..> N_src_logic_conversation_runtime_message_queue_ts_MessageQueue : 声明
 ```
@@ -305,10 +305,10 @@ class N_src_logic_conversation_runtime_questions_ts["questions.ts"] {
   <<module>>
 }
 class N_src_logic_conversation_runtime_questions_ts_QuestionQueue["QuestionQueue"] {
-  +list()
-  +ask()
-  +answer()
-  +cancel()
+  +List()
+  +Ask()
+  +Answer()
+  +Cancel()
   -pending
 }
 N_src_logic_conversation_runtime_questions_ts ..> N_src_logic_conversation_runtime_questions_ts_QuestionQueue : 声明
@@ -484,7 +484,7 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。
 
 
-统一 Agent 主轮直接使用 LoopRuntime.start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
+统一 Agent 主轮直接使用 LoopRuntime.Start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
 
 ### 递归调用等待时的普通补充
 
@@ -493,7 +493,7 @@ resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运�
 
 ## 根运行插入回执
 
-新 Agent 运行的队列插入通过 AgentLifecycle.insertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
+新 Agent 运行的队列插入通过 AgentLifecycle.InsertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
 
 ## 关闭时的统一 Agent 结算
 ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获运行的 settled。统一 Agent 的生命周期结算在 closing 时仍执行，把真实终态封存到原 scope；关闭不再跳过它。关闭期间不 pump 队列、不继续模型；结算失败向关闭调用方报告，不冒充成功释放。旧协作协议的关闭协调保持原所有者。

@@ -25,7 +25,7 @@ export interface LockedEngineModelConfiguration
 {
   profile: ResolvedEngineModel['profile'];
 
-  resolve(): ResolvedEngineModel
+  Resolve(): ResolvedEngineModel
 }
 
 const profileForEngine = (profile: ResolvedLlm['profile'], engine?: LoopEngine): ResolvedEngineModel['profile'] => engine === undefined ? profile : { ...profile, engine };
@@ -88,18 +88,18 @@ async function selecting<T>(engine: LoopEngine | undefined, use: () => Promise<T
 
 export class EngineModelProfiles
 {
-  constructor(private readonly models: Pick<LlmProfiles, 'list' | 'resolve' | 'configuration' | 'withModelOperations' | 'test'>)
+  constructor(private readonly models: Pick<LlmProfiles, 'List' | 'Resolve' | 'Configuration' | 'WithModelOperations' | 'Test'>)
   {
   }
 
   /** 公开供应商目录仍由模型服务拥有；读取不探测网络。 */
-  list()
+  List()
   {
-    return this.models.list()
+    return this.models.List()
   }
 
   /** 执行准备时选择协议并取凭据；无显式模型时允许模型服务使用当前默认值，不保存该选择。 */
-  resolve(id?: string, modelId?: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel>
+  Resolve(id?: string, modelId?: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel>
   {
     return selecting(engine ?? 'pi', async () =>
     {
@@ -107,28 +107,28 @@ export class EngineModelProfiles
       {
         if (!id || !modelId)
           fail('LLM_REQUIRED', '多模型执行必须明确指定主模型');
-        return this.withRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.resolve())
+        return this.WithRuntimeConfiguration({ profileId: id, modelId, engine, modelRoles }, async locked => locked.Resolve())
       }
       operations({ profileId: id ?? '', modelId: modelId ?? '', engine });
-      const resolved = await this.models.resolve(id, modelId, requirement(engine));
+      const resolved = await this.models.Resolve(id, modelId, requirement(engine));
       return { ...resolved, profile: profileForEngine(resolved.profile, engine) };
     });
   }
 
   /** 岗位登记读取明确模型的公开快照；不解密、不联网，也不保证运行时凭据有效。 */
-  configuration(profileId: string, modelId: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel['profile']>
+  Configuration(profileId: string, modelId: string, engine?: LoopEngine, modelRoles?: ModelRolesSelection): Promise<ResolvedEngineModel['profile']>
   {
-    return this.withConfigurations([{ profileId, modelId, engine, ...(modelRoles === undefined ? {} : { modelRoles }) }], async profiles => profiles[0]);
+    return this.WithConfigurations([{ profileId, modelId, engine, ...(modelRoles === undefined ? {} : { modelRoles }) }], async profiles => profiles[0]);
   }
 
   /** 所有引用在进入队列前捕获，映射与使用均在模型服务原来的同一短事务内。 */
-  withConfigurations<T>(refs: readonly EngineModelReference[], use: (profiles: readonly ResolvedEngineModel['profile'][]) => Promise<T>): Promise<T>
+  WithConfigurations<T>(refs: readonly EngineModelReference[], use: (profiles: readonly ResolvedEngineModel['profile'][]) => Promise<T>): Promise<T>
   {
     const fixed = structuredClone(refs);
     return selecting(undefined, () =>
     {
       const grouped = fixed.map(references);
-      return this.models.withModelOperations(grouped.flat(), async locked =>
+      return this.models.WithModelOperations(grouped.flat(), async locked =>
       {
         let offset = 0;
         const profiles = fixed.map((ref, index) =>
@@ -143,20 +143,20 @@ export class EngineModelProfiles
   }
 
   /** 领取事务中的引擎投影；延迟凭据解析只在 use 回调内有效，启动引擎应等事务与锁释放。 */
-  withRuntimeConfiguration<T>(ref: EngineModelReference, use: (configuration: LockedEngineModelConfiguration) => Promise<T>): Promise<T>
+  WithRuntimeConfiguration<T>(ref: EngineModelReference, use: (configuration: LockedEngineModelConfiguration) => Promise<T>): Promise<T>
   {
     const fixed = structuredClone(ref);
-    return selecting(fixed.engine ?? 'pi', () => this.models.withModelOperations(references(fixed), async locked =>
+    return selecting(fixed.engine ?? 'pi', () => this.models.WithModelOperations(references(fixed), async locked =>
     {
       let resolved: ResolvedEngineModel | undefined;
       return use({
-        profile: snapshot(fixed, locked.profiles), resolve: () =>
+        profile: snapshot(fixed, locked.profiles), Resolve: () =>
         {
           // 每次都检查原锁的存活期，不能用本层缓存绕过过期检查。
-          const primary = locked.resolve(0);
+          const primary = locked.Resolve(0);
           if (resolved)
             return resolved;
-          const extra = operations(fixed).map((role, index) => ({ slot: role.slot, value: locked.resolve(index + 1) }));
+          const extra = operations(fixed).map((role, index) => ({ slot: role.slot, value: locked.Resolve(index + 1) }));
           return resolved = { profile: snapshot(fixed, [primary.profile, ...extra.map(role => role.value.profile)]), apiKey: primary.apiKey, ...(fixed.modelRoles === undefined ? {} : { modelRoles: Object.fromEntries(extra.map(role => [role.slot, role.value])) }) };
         }
       });
@@ -164,8 +164,8 @@ export class EngineModelProfiles
   }
 
   /** 保留现有按引擎诊断接口；HTTP 请求、凭据和响应校验仍由模型服务负责。 */
-  test(id: string, modelId?: string, engine: LoopEngine = 'pi')
+  Test(id: string, modelId?: string, engine: LoopEngine = 'pi')
   {
-    return selecting(engine, async () => ({ ...await this.models.test(id, modelId, requirement(engine)), engine }));
+    return selecting(engine, async () => ({ ...await this.models.Test(id, modelId, requirement(engine)), engine }));
   }
 }

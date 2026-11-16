@@ -15,7 +15,7 @@ import { workspaceMemberActorSchema, workspaceMemberMainActorSchema, type Worksp
 /** 对象键排序、数组保序；只用于已经过 strict schema 的 JSON 领域值。 */
 export function workspaceMemberCanonical(value: unknown): string
 {
-  const order = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
+  const order = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
   return JSON.stringify(order(value));
 }
 

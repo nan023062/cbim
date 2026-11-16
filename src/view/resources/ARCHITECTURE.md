@@ -72,9 +72,9 @@ class N_src_view_resources_repository_connection_state_ts["repository-connection
 }
 class N_src_view_resources_repository_connection_state_ts_RepositoryConnectionPendingStore["RepositoryConnectionPendingStore"] {
   <<interface>>
-  +read()
-  +save()
-  +remove()
+  +Read()
+  +Save()
+  +Remove()
 }
 N_src_view_resources_repository_connection_state_ts ..> N_src_view_resources_repository_connection_state_ts_RepositoryConnectionPendingStore : 声明
 ```

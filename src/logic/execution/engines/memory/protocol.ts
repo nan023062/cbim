@@ -34,7 +34,7 @@ export function memoryDecision(value: Record<string, any>, allowed: ReadonlySet<
     {
       if (!allowed.has(call.function.name))
         throw Error('记忆模型请求未提供的工具');
-      const input = JsonUtils.parseStrictJson(call.function.arguments);
+      const input = JsonUtils.ParseStrictJson(call.function.arguments);
       if (!input || typeof input !== 'object' || Array.isArray(input))
         throw Error('记忆工具参数必须为对象')
     }

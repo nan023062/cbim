@@ -21,13 +21,13 @@ test('real Pi discovers task tools and persists a delivery candidate backed by a
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),manager=f.app.execution(entry.id);
+    const entry=await f.app.Dispatch('add',{path:f.a}),manager=f.app.Execution(entry.id);
     await fs.writeFile(path.join(f.a,'proof.txt'),'ACTUAL_FILE_PROOF');
-    const home=path.join(f.app.paths.project(entry.id),'loop-engine','pi');await fs.mkdir(home,{recursive:true});
+    const home=path.join(f.app.paths.Project(entry.id),'loop-engine','pi');await fs.mkdir(home,{recursive:true});
     await fs.writeFile(path.join(home,'models.json'),JSON.stringify({providers:{'task-provider':{baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,api:'openai-completions',apiKey:'test-only',models:[{id:'task-model',reasoning:false,input:['text'],contextWindow:32768,maxTokens:1024,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}));
-    const run=await manager.chat('核实文件并记录交付候选',{provider:'task-provider',model:'task-model',permission:'read',allowNativeExecution:false,turnTimeoutMs:20000});
-    await expect.poll(async()=>(await manager.inspect(run.taskId,run.runId)).status,{timeout:25000}).not.toBe('running');
-    const result=await manager.inspect(run.taskId,run.runId);
+    const run=await manager.Chat('核实文件并记录交付候选',{provider:'task-provider',model:'task-model',permission:'read',allowNativeExecution:false,turnTimeoutMs:20000});
+    await expect.poll(async()=>(await manager.Inspect(run.taskId,run.runId)).status,{timeout:25000}).not.toBe('running');
+    const result=await manager.Inspect(run.taskId,run.runId);
     expect(result.status).toBe('completed');
     expect(result.taskProgress,JSON.stringify(result.events.filter(e=>e.type==='tool.finished'))).toMatchObject({version:3,state:'awaiting_review',steps:[{state:'reported_done',evidence:['call-1']}]});
     expect(result.acceptance).toBe('not_evaluated');expect(result.events.filter(e=>e.type==='task.updated')).toHaveLength(3);

@@ -2,6 +2,7 @@
  * 作用定位：前端本地 JSON 记录的有界同步读写机制，通过注入端口使用存储。
  * 设计原因：序列化及 UTF-8 容量检查可复用，业务记录格式、损坏锁定和恢复策略必须留在控制器。
  */
+/** 直接接受浏览器 Web Storage；方法名保留标准契约，不添加大小写转换适配。 */
 export interface TextStorage
 {
   getItem(key: string): string | null;
@@ -17,7 +18,7 @@ export class JsonRecordStorage
   }
 
   /** null/空串视为缺失；其余先按 UTF-8 检查上限再解析。返回未校验数据，业务方必须核验。 */
-  read(limitMessage: string): any
+  Read(limitMessage: string): any
   {
     const raw = this.storage.getItem(this.key);
     if (!raw)
@@ -28,7 +29,7 @@ export class JsonRecordStorage
   }
 
   /** 保留 JSON.stringify 次序及错误；超限不调用 setItem，成功返回只表示同步写入完成。 */
-  write(value: unknown, limitMessage: string): void
+  Write(value: unknown, limitMessage: string): void
   {
     const raw = JSON.stringify(value);
     if (new TextEncoder().encode(raw).length > this.maxBytes)

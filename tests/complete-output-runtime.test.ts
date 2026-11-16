@@ -15,7 +15,7 @@ import {workflowContractSchema} from '../src/logic/workspace/rules/workflow-cont
 it('完整出口必须声明范围，显式选择原清单并让 JSON/候选/历史重算共享身份',async()=>{
   expect(workflowContractSchema.safeParse({version:1,delivery:{requireCompleteManifest:true}}).success).toBe(false);
   const f=await completeFixture(async c=>{const id=await prepareComplete(c);await completeStep(c);const result=await invoke(c,'cbim_delivery_prepare','delivery',delivery(id));expect(result.delivery.workflow.manifest.manifestId).toBe(id);expect(result.delivery.workflow.validationChecks[0].manifest.manifestId).toBe(id)});
-  try{const summary=await(await f.start()).done;expect(summary.status).toBe('completed');const manifest=verifyManifests(summary.events).records[0],records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',completeContracts(),f.port.normalizePath),proof=completeOutputProof(manifest);expect(validateWorkflowEvidence(summary.events,f.task,completeContracts(),records,proof)).toEqual(summary.taskProgress?.delivery?.workflow);expect(f.captureManifest).toHaveBeenCalledTimes(4);expect(records[0].result.baselineId).toBeUndefined();expect(f.validateFile).toHaveBeenCalledTimes(1)}finally{await f.cleanup()}
+  try{const summary=await(await f.start()).done;expect(summary.status).toBe('completed');const manifest=verifyManifests(summary.events).records[0],records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',completeContracts(),f.port.NormalizePath),proof=completeOutputProof(manifest);expect(validateWorkflowEvidence(summary.events,f.task,completeContracts(),records,proof)).toEqual(summary.taskProgress?.delivery?.workflow);expect(f.captureManifest).toHaveBeenCalledTimes(4);expect(records[0].result.baselineId).toBeUndefined();expect(f.validateFile).toHaveBeenCalledTimes(1)}finally{await f.cleanup()}
 });
 it.each(['before-json','during-json','after-json'] as const)('未变 JSON 之外增加文件阻止 %s 窗口的完整出口',async mode=>{
   const f=await completeFixture(async c=>{
@@ -24,7 +24,7 @@ it.each(['before-json','during-json','after-json'] as const)('未变 JSON 之外
     const args={moduleId:manifestContracts[0].moduleId,requirementId:'json',manifestId:id,expectedTaskProgressVersion:1};
     if(mode!=='after-json')await rejected(c,'cbim_validation_run','validation',args,'MANIFEST_OUTPUT_CHANGED');else{await invoke(c,'cbim_validation_run','validation',args);await completeStep(c);await fs.writeFile(path.join(c.task.root,'outputs','extra.txt'),'added');await rejected(c,'cbim_delivery_prepare','delivery',delivery(id),'MANIFEST_OUTPUT_CHANGED')}
   });
-  if(mode==='during-json')f.validateFile.mockImplementation(async(file,schema,signal)=>{const value=await f.filePort.validateFile(file,schema,signal);await fs.writeFile(path.join(f.directory,'outputs','extra.txt'),'added');return value});
+  if(mode==='during-json')f.validateFile.mockImplementation(async(file,schema,signal)=>{const value=await f.filePort.ValidateFile(file,schema,signal);await fs.writeFile(path.join(f.directory,'outputs','extra.txt'),'added');return value});
   try{const summary=await(await f.start()).done;expect(summary.status).toBe('completed');expect(summary.taskProgress?.delivery).toBeUndefined();expect(summary.events.filter(e=>e.type==='validation.checked')).toHaveLength(mode==='after-json'?1:0);expect(await fs.readFile(path.join(f.directory,'File.txt'),'utf8')).toBe('{"count":1}')}finally{await f.cleanup()}
 });
 it('完整模式不能退回文件基线或混用另一份相同字节清单，省略选择也不自动取最新',async()=>{
@@ -54,11 +54,11 @@ it('交付门闩覆盖审批、全集合读取及候选落盘后的全部窗口�
 it('交付读取中停止保留原采集及验证，不能保存新候选',async()=>{
   const entered=deferred(),release=deferred(),f=await completeFixture(async c=>{const id=await prepareComplete(c,false);await completeStep(c,false);const error=await rejected(c,'cbim_delivery_prepare','delivery',delivery(id));expect(error.message).toContain('停止')},{},false);
   const original=f.captureManifest.getMockImplementation()!;f.captureManifest.mockImplementationOnce(original).mockImplementationOnce(async(scopes,signal)=>{entered.resolve();await release.promise;signal.throwIfAborted();return original(scopes,signal)});
-  try{const handle=await f.start();await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();const summary=await handle.done;expect(summary.status).toBe('cancelled');expect(summary.taskProgress?.delivery).toBeUndefined();expect(verifyManifests(summary.events).records).toHaveLength(1)}finally{release.resolve();await f.cleanup()}
+  try{const handle=await f.start();await entered.promise;await f.runtime.Stop(f.task.taskId);release.resolve();const summary=await handle.done;expect(summary.status).toBe('cancelled');expect(summary.taskProgress?.delivery).toBeUndefined();expect(verifyManifests(summary.events).records).toHaveLength(1)}finally{release.resolve();await f.cleanup()}
 });
 it('JSON真实检查已保存后坏wire不能换绑完整哈希，也不重新执行检查',async()=>{
   const f=await completeFixture(async c=>{const id=await prepareComplete(c,false),port=RunValidation.prototype as unknown as {run(input:ValidationInput,id:string):Promise<ValidationResult>},run=port.run;const changed=vi.spyOn(port,'run').mockImplementationOnce(async function(this:typeof port,input,call){const value=await run.call(this,input,call);return {...value,manifest:{...value.manifest!,manifestHash:'f'.repeat(64)}}});await rejected(c,'cbim_validation_run','validation',{moduleId:manifestContracts[0].moduleId,requirementId:'json',manifestId:id,expectedTaskProgressVersion:1},'TOOL_OUTPUT_INVALID');expect(changed).toHaveBeenCalledTimes(1);await invoke(c,'read','after-failure',{path:'File.txt'})});
-  try{const summary=await(await f.start()).done;expect(summary.events.filter(e=>e.type==='validation.checked')).toHaveLength(1);expect(verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',completeContracts(),f.port.normalizePath)).toEqual([]);expect(f.validateFile).toHaveBeenCalledTimes(1);expect(summary.taskProgress?.delivery).toBeUndefined()}finally{await f.cleanup()}
+  try{const summary=await(await f.start()).done;expect(summary.events.filter(e=>e.type==='validation.checked')).toHaveLength(1);expect(verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',completeContracts(),f.port.NormalizePath)).toEqual([]);expect(f.validateFile).toHaveBeenCalledTimes(1);expect(summary.taskProgress?.delivery).toBeUndefined()}finally{await f.cleanup()}
 });
 
 afterEach(()=>vi.restoreAllMocks());

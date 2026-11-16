@@ -43,13 +43,13 @@ class N_src_logic_file_operations_service_controlled_files_ts["controlled-files.
 }
 class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["ControlledFiles"] {
   +constructor()
-  +forRun()
-  +write()
-  +report()
-  +preview()
-  +compensate()
-  +receipt()
-  +close()
+  +ForRun()
+  +Write()
+  +Report()
+  +Preview()
+  +Compensate()
+  +Receipt()
+  +Close()
   -owner
   -store
   -lease
@@ -73,16 +73,16 @@ class N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles["C
   -operations
   -controllers
   -heldReleases
-  -assert()
-  -platform()
-  -protectedRoots()
-  -tracked()
-  -phase()
-  -execute()
-  -original()
-  -settled()
-  -available()
-  -previewInternal()
+  -Assert()
+  -Platform()
+  -ProtectedRoots()
+  -Tracked()
+  -Phase()
+  -Execute()
+  -Original()
+  -Settled()
+  -Available()
+  -PreviewInternal()
 }
 N_src_logic_file_operations_service_controlled_files_ts ..> N_src_logic_file_operations_service_controlled_files_ts_ControlledFiles : 声明
 ```
@@ -101,10 +101,10 @@ class N_src_logic_file_operations_service_isolated_executions_ts["isolated-execu
 class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
   +records
   +constructor()
-  +forRun()
-  +report()
-  +cleanup()
-  +close()
+  +ForRun()
+  +Report()
+  +Cleanup()
+  +Close()
   -owner
   -store
   -lease
@@ -112,9 +112,9 @@ class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecuti
   -isCurrent
   -tail
   -closed
-  -assert()
-  -platform()
-  -run()
+  -Assert()
+  -Platform()
+  -Run()
 }
 N_src_logic_file_operations_service_isolated_executions_ts ..> N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions : 声明
 ```
@@ -127,8 +127,8 @@ class N_src_logic_file_operations_service_isolated_executions_ts["isolated-execu
   <<module>>
 }
 class N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions["IsolatedExecutions"] {
-  -source()
-  -item()
+  -Source()
+  -Item()
 }
 N_src_logic_file_operations_service_isolated_executions_ts ..> N_src_logic_file_operations_service_isolated_executions_ts_IsolatedExecutions : 声明
 ```

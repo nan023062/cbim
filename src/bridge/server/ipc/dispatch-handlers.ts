@@ -12,162 +12,162 @@ export function dispatchIpcHandlers(app: ApplicationServices): IpcHandlers<keyof
   return {
     'dispatch.isolatedExecutionReport': async args =>
     {
-      return app.isolatedExecutions(args.workspaceId).report(args);
+      return app.IsolatedExecutions(args.workspaceId).Report(args);
     },
     'dispatch.isolatedExecutionCleanup': async args =>
     {
-      return app.isolatedExecutions(args.workspaceId).cleanup(args);
+      return app.IsolatedExecutions(args.workspaceId).Cleanup(args);
     },
     'dispatch.controlledFileReport': async args =>
     {
-      return app.controlledFiles(args.workspaceId).report(args);
+      return app.ControlledFiles(args.workspaceId).Report(args);
     },
     'dispatch.fileCompensationPreview': async args =>
     {
-      return app.controlledFiles(args.workspaceId).preview(args);
+      return app.ControlledFiles(args.workspaceId).Preview(args);
     },
     'dispatch.fileCompensate': async args =>
     {
-      return app.controlledFiles(args.workspaceId).compensate(args);
+      return app.ControlledFiles(args.workspaceId).Compensate(args);
     },
     'dispatch.fileCompensationReceipt': async args =>
     {
-      return app.controlledFiles(args.workspaceId).receipt(args);
+      return app.ControlledFiles(args.workspaceId).Receipt(args);
     },
     'dispatch.open': async args =>
     {
-      return app.memberDispatch(args.workspaceId).openGraph(args);
+      return app.MemberDispatch(args.workspaceId).OpenGraph(args);
     },
     'dispatch.memberCreate': async args =>
     {
-      return app.memberDispatch(args.workspaceId).createMember(args);
+      return app.MemberDispatch(args.workspaceId).CreateMember(args);
     },
     'dispatch.task': async args =>
     {
       const { scopeId, ...request } = args;
-      return app.memberDispatch(args.workspaceId).dispatchTask(request, scopeId)
+      return app.MemberDispatch(args.workspaceId).DispatchTask(request, scopeId)
     },
     'dispatch.ownerInspect': async args =>
     {
-      return app.memberDispatch(args.workspaceId).ownerInspect(args);
+      return app.MemberDispatch(args.workspaceId).OwnerInspect(args);
     },
     'dispatch.commandReport': async args =>
     {
-      return app.memberDispatch(args.workspaceId).commandReport(args);
+      return app.MemberDispatch(args.workspaceId).CommandReport(args);
     },
     'dispatch.effectObserve': async args =>
     {
-      return app.memberDispatch(args.workspaceId).effects.observe(args);
+      return app.MemberDispatch(args.workspaceId).effects.Observe(args);
     },
     'dispatch.effectDispositionList': async args =>
     {
-      return app.memberDispatch(args.workspaceId).effects.list(args);
+      return app.MemberDispatch(args.workspaceId).effects.List(args);
     },
     'dispatch.effectDispositionReceipt': async args =>
     {
-      return app.memberDispatch(args.workspaceId).effects.receipt(args);
+      return app.MemberDispatch(args.workspaceId).effects.Receipt(args);
     },
     'dispatch.effectRelations': async args =>
     {
-      return app.memberDispatch(args.workspaceId).effects.relations(args);
+      return app.MemberDispatch(args.workspaceId).effects.Relations(args);
     },
     'dispatch.effectDisposition': async args =>
     {
-      return app.memberDispatch(args.workspaceId).effects.record(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
+      return app.MemberDispatch(args.workspaceId).effects.Record(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
     },
     'dispatch.graphSnapshot': async args =>
     {
-      return app.memberDispatch(args.identity?.workspaceId).snapshot(args.identity);
+      return app.MemberDispatch(args.identity?.workspaceId).Snapshot(args.identity);
     },
     'dispatch.graphDelta': async args =>
     {
-      return app.memberDispatch(args.identity?.workspaceId).delta(args.identity, args.cursor, args.limit);
+      return app.MemberDispatch(args.identity?.workspaceId).Delta(args.identity, args.cursor, args.limit);
     },
     'dispatch.sessionRead': async args =>
     {
-      return app.memberDispatch(args.identity?.workspaceId).sessionRead(args);
+      return app.MemberDispatch(args.identity?.workspaceId).SessionRead(args);
     },
     'dispatch.scopeUsage': async args =>
     {
-      return app.memberDispatch(args.workspaceId).usage.read(args);
+      return app.MemberDispatch(args.workspaceId).usage.Read(args);
     },
     'dispatch.requestBudget': async args =>
     {
-      return app.requestBudgets(args.workspaceId).report(args);
+      return app.RequestBudgets(args.workspaceId).Report(args);
     },
     'dispatch.executionStart': async args =>
     {
-      return app.memberExecution(args.workspaceId).start(args);
+      return app.MemberExecution(args.workspaceId).Start(args);
     },
     'dispatch.executionStop': async args =>
     {
-      return app.memberExecution(args.workspaceId).stop(args);
+      return app.MemberExecution(args.workspaceId).Stop(args);
     },
     'dispatch.executionInspect': async args =>
     {
-      return app.memberExecution(args.workspaceId).inspect(args);
+      return app.MemberExecution(args.workspaceId).Inspect(args);
     },
     'dispatch.executionReport': async args =>
     {
-      return app.memberExecution(args.workspaceId).report(args);
+      return app.MemberExecution(args.workspaceId).Report(args);
     },
     'dispatch.artifactReport': async args =>
     {
-      return app.memberExecution(args.workspaceId).artifactReport(args);
+      return app.MemberExecution(args.workspaceId).ArtifactReport(args);
     },
     'dispatch.manifestReport': async args =>
     {
-      return app.memberExecution(args.workspaceId).manifestReport(args);
+      return app.MemberExecution(args.workspaceId).ManifestReport(args);
     },
     'dispatch.replans.preview': async args =>
     {
-      return app.memberDispatch(args.workspaceId).replans.preview(args);
+      return app.MemberDispatch(args.workspaceId).replans.Preview(args);
     },
     'dispatch.humanPreview': async args =>
     {
-      return app.memberDispatch(args.workspaceId).humanDecisions.preview(args);
+      return app.MemberDispatch(args.workspaceId).humanDecisions.Preview(args);
     },
     'dispatch.humanReceipt': async args =>
     {
-      return app.memberDispatch(args.workspaceId).humanDecisions.inspect(args);
+      return app.MemberDispatch(args.workspaceId).humanDecisions.Inspect(args);
     },
     'dispatch.humanHistory': async args =>
     {
-      return app.memberDispatch(args.workspaceId).humanDecisions.history(args);
+      return app.MemberDispatch(args.workspaceId).humanDecisions.History(args);
     },
     'dispatch.humanDecide': async args =>
     {
-      return app.memberDispatch(args.workspaceId).humanDecisions.decide(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
+      return app.MemberDispatch(args.workspaceId).humanDecisions.Decide(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
     },
     'dispatch.executionEvents': async args =>
     {
-      return app.memberExecution(args.workspaceId).events(args);
+      return app.MemberExecution(args.workspaceId).Events(args);
     },
     'dispatch.messages': async args =>
     {
-      return app.memberExecution(args.workspaceId).messages(args);
+      return app.MemberExecution(args.workspaceId).Messages(args);
     },
     'dispatch.acknowledge': async args =>
     {
-      return app.memberExecution(args.workspaceId).acknowledge(args);
+      return app.MemberExecution(args.workspaceId).Acknowledge(args);
     },
     'dispatch.approvals': async args =>
     {
-      return app.memberExecution(args.workspaceId).pendingApprovals(args);
+      return app.MemberExecution(args.workspaceId).PendingApprovals(args);
     },
     'dispatch.approve': async args =>
     {
       const { approvalId, allow, allowAll, ...identity } = args;
-      return app.memberExecution(identity.workspaceId).answerApproval(identity, approvalId, allow, allowAll === true)
+      return app.MemberExecution(identity.workspaceId).AnswerApproval(identity, approvalId, allow, allowAll === true)
     },
     'dispatch.questions': async args =>
     {
-      return app.memberExecution(args.workspaceId).pendingQuestions(args);
+      return app.MemberExecution(args.workspaceId).PendingQuestions(args);
     },
     'dispatch.answerQuestion': async args =>
     {
       const { questionId, answers, ...identity } = args;
-      return app.memberExecution(identity.workspaceId).answerQuestion(identity, questionId, answers)
+      return app.MemberExecution(identity.workspaceId).AnswerQuestion(identity, questionId, answers)
     },
   };
 }

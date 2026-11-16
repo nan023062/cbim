@@ -19,11 +19,11 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
   useEffect(() =>
   {
     mounted.current = true;
-    const off = store.subscribe(() => render(value => value + 1));
+    const off = store.Subscribe(() => render(value => value + 1));
     return () =>
     {
       mounted.current = false;
-      store.cancelImport();
+      store.CancelImport();
       off()
     }
   }, [store]);
@@ -31,7 +31,7 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
   {
     if (!active)
     {
-      store.cancelImport();
+      store.CancelImport();
       lock.current = false;
       setBusy(false)
     }
@@ -55,14 +55,14 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
     lock.current = true;
     setBusy(true);
     setError('');
-    const token = store.beginImport(),
+    const token = store.BeginImport(),
       generation = selection.current.generation;
     const current = () => mounted.current && selection.current.store === store && selection.current.active && selection.current.generation === generation;
     try
     {
-      const items = files ? await window.cbim.importFiles(identity.workspaceId, files) : await window.cbim.call('chat.pick', { id: identity.workspaceId, kind: 'file' });
+      const items = files ? await window.cbim.ImportFiles(identity.workspaceId, files) : await window.cbim.call('chat.pick', { id: identity.workspaceId, kind: 'file' });
       if (current())
-        store.finishImport(token, items)
+        store.FinishImport(token, items)
     }
     catch (e)
     {
@@ -78,7 +78,7 @@ export function useChannelDraft(identity: ChannelDraftIdentity, active: boolean)
       }
     }
   };
-  return { store, value: store.snapshot, error: error || store.error, busy, edit: (text: string) => change(() => store.edit({ text })), remove: (id: string) => change(() => store.edit({ attachments: store.snapshot.attachments.filter(item => item.id !== id) })), importFiles, clear: (revision: number) => change(() => store.clearIfUnchanged(revision)) };
+  return { store, value: store.snapshot, error: error || store.error, busy, edit: (text: string) => change(() => store.Edit({ text })), remove: (id: string) => change(() => store.Edit({ attachments: store.snapshot.attachments.filter(item => item.id !== id) })), importFiles, clear: (revision: number) => change(() => store.ClearIfUnchanged(revision)) };
 }
 
 export type ChannelDraftView = ReturnType<typeof useChannelDraft>;

@@ -84,7 +84,7 @@ export class RequestBudgetUsageStream
   }
 
   /** 返回可立即转发的非终态帧；终态只由 finish 在完整 EOF 后提供。 */
-  push(bytes: Uint8Array): string[]
+  Push(bytes: Uint8Array): string[]
   {
     this.bytes += bytes.byteLength;
     if (this.bytes > RequestBudgetUsageStream.responseBytes)
@@ -101,7 +101,7 @@ export class RequestBudgetUsageStream
       this.pending = this.pending.slice(end);
       if (Buffer.byteLength(frame) > RequestBudgetUsageStream.frameBytes)
         throw Error('请求事件超过受管上限');
-      if (!this.accept(frame))
+      if (!this.Accept(frame))
         out.push(frame)
     }
     if (Buffer.byteLength(this.pending) > RequestBudgetUsageStream.frameBytes)
@@ -109,7 +109,7 @@ export class RequestBudgetUsageStream
     return out;
   }
 
-  finish(): { usage: RequestBudgetUsage; terminal: string }
+  Finish(): { usage: RequestBudgetUsage; terminal: string }
   {
     this.pending += this.decoder.decode();
     if (this.pending.trim() || !this.terminal || !this.result)
@@ -117,7 +117,7 @@ export class RequestBudgetUsageStream
     return { usage: this.result, terminal: this.terminal };
   }
 
-  private accept(frame: string): boolean
+  private Accept(frame: string): boolean
   {
     const lines = frame.split(/\r\n|\r|\n/),
       data = lines.filter(l => l.startsWith('data:')).map(l => l.slice(5).replace(/^ /, '')).join('\n');

@@ -24,59 +24,59 @@ const fields={observation:'  已看到文件存在，但结果尚未确认\n  ',
 
 it('显式发送前保存完整请求；观察与目标分离且权限只能read，双击不重复创建',async()=>{
   let finish!:(value:unknown)=>void;const f=fixture(request=>{expect(JSON.parse(f.saved.get(f.controller.storageKey)!).records[0].attempt.request).toEqual(request);return new Promise(resolve=>{finish=resolve})});
-  f.controller.edit(target.source,fields);const running=f.controller.submit(target,options);await f.controller.submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
+  f.controller.Edit(target.source,fields);const running=f.controller.Submit(target,options);await f.controller.Submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
   const request=f.send.mock.calls[0][0];expect(request.observation.text).toBe(fields.observation);expect(request.input.message).toBe(fields.message);expect(request.options.permission).toBe('read');expect(request).not.toHaveProperty('attachments');
-  finish(receipt(request));await running;expect(f.controller.record(target.source)?.attempt?.phase).toBe('accepted');
-  f.controller.edit(target.source,{...fields,message:'不能改写'});await f.controller.submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
-  const wrong=fixture();wrong.controller.edit(target.source,fields);await wrong.controller.submit(target,{...options,permission:'execute' as 'read'});expect(wrong.send).not.toHaveBeenCalled();expect(wrong.controller.snapshot.error).toContain('无效');
+  finish(receipt(request));await running;expect(f.controller.Record(target.source)?.attempt?.phase).toBe('accepted');
+  f.controller.Edit(target.source,{...fields,message:'不能改写'});await f.controller.Submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
+  const wrong=fixture();wrong.controller.Edit(target.source,fields);await wrong.controller.Submit(target,{...options,permission:'execute' as 'read'});expect(wrong.send).not.toHaveBeenCalled();expect(wrong.controller.snapshot.error).toContain('无效');
 });
 
 it('未知请求跨报告版本仍锁定，同ID重试冻结正文和模型，undefined不是未执行',async()=>{
-  const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});f.controller.edit(target.source,fields);await f.controller.submit(target,options);const request=f.send.mock.calls[0][0];
-  f.controller.edit({...target.source},{observation:'修改',message:'修改'});await f.controller.submit({...target,source:{...target.source,reportBasis:'b'.repeat(64)}},{...options,model:'other'});
-  expect(f.send).toHaveBeenCalledTimes(1);expect(f.controller.record(target.source)?.message).toBe(fields.message);
-  await f.controller.query(target.source);expect(f.query.mock.calls[0][0]).toEqual({workspaceId:'workspace',rootSessionId:'root',commandId:command});expect(f.controller.record(target.source)?.attempt?.phase).toBe('unknown');
-  f.send.mockImplementation(async request=>receipt(request));await f.controller.retry(target.source);expect(f.send.mock.calls[1][0]).toEqual(request);expect(f.controller.record(target.source)?.attempt?.phase).toBe('accepted');
+  const f=fixture(async()=>{throw Error('IPC_TIMEOUT')});f.controller.Edit(target.source,fields);await f.controller.Submit(target,options);const request=f.send.mock.calls[0][0];
+  f.controller.Edit({...target.source},{observation:'修改',message:'修改'});await f.controller.Submit({...target,source:{...target.source,reportBasis:'b'.repeat(64)}},{...options,model:'other'});
+  expect(f.send).toHaveBeenCalledTimes(1);expect(f.controller.Record(target.source)?.message).toBe(fields.message);
+  await f.controller.Query(target.source);expect(f.query.mock.calls[0][0]).toEqual({workspaceId:'workspace',rootSessionId:'root',commandId:command});expect(f.controller.Record(target.source)?.attempt?.phase).toBe('unknown');
+  f.send.mockImplementation(async request=>receipt(request));await f.controller.Retry(target.source);expect(f.send.mock.calls[1][0]).toEqual(request);expect(f.controller.Record(target.source)?.attempt?.phase).toBe('accepted');
 });
 
 it('已受理但响应丢失，重开仅查原命令；节点切换不覆盖另一来源草稿',async()=>{
   let accepted:RecoveryReceipt|undefined;const f=fixture(async request=>{accepted=receipt(request);throw Error('连接中断')},async()=>accepted);
-  f.controller.edit(target.source,fields);await f.controller.submit(target,options);f.controller.edit({...target.source,taskId:'another'}, {observation:'另一现象',message:'另一核实目标'});
-  const reopened=new ExecutionRecoveryController('workspace','root',f.ports);expect(reopened.record(target.source)?.attempt?.phase).toBe('unknown');await reopened.restore();
-  expect(f.send).toHaveBeenCalledTimes(1);expect(reopened.record(target.source)?.attempt?.phase).toBe('accepted');expect(reopened.record({...target.source,taskId:'another'})?.message).toBe('另一核实目标');
-  await reopened.retry(target.source);expect(f.send).toHaveBeenCalledTimes(1);
+  f.controller.Edit(target.source,fields);await f.controller.Submit(target,options);f.controller.Edit({...target.source,taskId:'another'}, {observation:'另一现象',message:'另一核实目标'});
+  const reopened=new ExecutionRecoveryController('workspace','root',f.ports);expect(reopened.Record(target.source)?.attempt?.phase).toBe('unknown');await reopened.Restore();
+  expect(f.send).toHaveBeenCalledTimes(1);expect(reopened.Record(target.source)?.attempt?.phase).toBe('accepted');expect(reopened.Record({...target.source,taskId:'another'})?.message).toBe('另一核实目标');
+  await reopened.Retry(target.source);expect(f.send).toHaveBeenCalledTimes(1);
 });
 
 it('工作区重访复用在途控制器，迟到回执只能写原来源；错误回执保持未知',async()=>{
-  let finish!:(value:unknown)=>void;const f=fixture(()=>new Promise(resolve=>{finish=resolve})),pool=new ExecutionRecoveryPool(1),first=pool.get('workspace','root',f.ports);
-  first.edit(target.source,fields);const pending=first.submit(target,options);pool.get('workspace','another-root',f.ports);expect(pool.get('workspace','root',f.ports)).toBe(first);
-  const request=f.send.mock.calls[0][0];finish({...receipt(request),rootSessionId:'other'});await pending;expect(first.record(target.source)?.attempt?.phase).toBe('unknown');
+  let finish!:(value:unknown)=>void;const f=fixture(()=>new Promise(resolve=>{finish=resolve})),pool=new ExecutionRecoveryPool(1),first=pool.Get('workspace','root',f.ports);
+  first.Edit(target.source,fields);const pending=first.Submit(target,options);pool.Get('workspace','another-root',f.ports);expect(pool.Get('workspace','root',f.ports)).toBe(first);
+  const request=f.send.mock.calls[0][0];finish({...receipt(request),rootSessionId:'other'});await pending;expect(first.Record(target.source)?.attempt?.phase).toBe('unknown');
   expect(()=>checkedRecoveryReceipt({...receipt(request),scopeId:target.source.scopeId},request)).toThrow('不一致');
   expect(()=>checkedRecoveryReceipt({...receipt(request),recovery:{...receipt(request).recovery,input:{message:'改写目标'}}},request)).toThrow('不一致');
-  const other=new ExecutionRecoveryController('workspace','other-root',f.ports);expect(other.snapshot.records).toEqual([]);await other.submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
+  const other=new ExecutionRecoveryController('workspace','other-root',f.ports);expect(other.snapshot.records).toEqual([]);await other.Submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);
 });
 
 it('明确预受理拒绝允许修正，曾未知后的拒绝及命令冲突不释放原请求',async()=>{
-  const f=fixture(async()=>{throw Error('RECOVERY_REPORT_STALE: 依据已变化')});f.controller.edit(target.source,fields);await f.controller.submit(target,options);expect(f.controller.record(target.source)?.attempt?.phase).toBe('rejected');f.controller.edit(target.source,{...fields,message:'修正核实目标'});expect(f.controller.record(target.source)?.message).toBe('修正核实目标');
-  const unknown=fixture(async()=>{throw Error('网络中断')});unknown.controller.edit(target.source,fields);await unknown.controller.submit(target,options);unknown.send.mockRejectedValueOnce(Error('RECOVERY_REPORT_STALE: 旧基线'));await unknown.controller.retry(target.source);expect(unknown.controller.record(target.source)?.attempt?.phase).toBe('unknown');
+  const f=fixture(async()=>{throw Error('RECOVERY_REPORT_STALE: 依据已变化')});f.controller.Edit(target.source,fields);await f.controller.Submit(target,options);expect(f.controller.Record(target.source)?.attempt?.phase).toBe('rejected');f.controller.Edit(target.source,{...fields,message:'修正核实目标'});expect(f.controller.Record(target.source)?.message).toBe('修正核实目标');
+  const unknown=fixture(async()=>{throw Error('网络中断')});unknown.controller.Edit(target.source,fields);await unknown.controller.Submit(target,options);unknown.send.mockRejectedValueOnce(Error('RECOVERY_REPORT_STALE: 旧基线'));await unknown.controller.Retry(target.source);expect(unknown.controller.Record(target.source)?.attempt?.phase).toBe('unknown');
   for(const code of ['RECOVERY_COMMAND_CONFLICT','COMMAND_ID_CONFLICT','RECOVERY_UNKNOWN','COLLABORATION_STOPPED'])expect(recoveryRejected(Error(code+': 不能解冻'))).toBe(false);
 });
 
 it('本机保存失败不发送，损坏本地记录不覆盖；已有受理不因查询失败降为未受理',async()=>{
-  const f=fixture();f.controller.edit(target.source,fields);const save=f.ports.storage.setItem;f.ports.storage.setItem=()=>{throw Error('QuotaExceededError')};await f.controller.submit(target,options);expect(f.send).not.toHaveBeenCalled();expect(f.controller.snapshot.error).toContain('未能保存');
-  f.ports.storage.setItem=save;await f.controller.submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);f.query.mockRejectedValueOnce(Error('查询断开'));await f.controller.query(target.source);expect(f.controller.record(target.source)?.attempt?.phase).toBe('accepted');
-  f.saved.set(f.controller.storageKey,'{broken');const broken=new ExecutionRecoveryController('workspace','root',f.ports);broken.edit(target.source,fields);await broken.submit(target,options);expect(broken.available).toBe(false);expect(f.saved.get(f.controller.storageKey)).toBe('{broken');expect(f.send).toHaveBeenCalledTimes(1);
+  const f=fixture();f.controller.Edit(target.source,fields);const save=f.ports.storage.setItem;f.ports.storage.setItem=()=>{throw Error('QuotaExceededError')};await f.controller.Submit(target,options);expect(f.send).not.toHaveBeenCalled();expect(f.controller.snapshot.error).toContain('未能保存');
+  f.ports.storage.setItem=save;await f.controller.Submit(target,options);expect(f.send).toHaveBeenCalledTimes(1);f.query.mockRejectedValueOnce(Error('查询断开'));await f.controller.Query(target.source);expect(f.controller.Record(target.source)?.attempt?.phase).toBe('accepted');
+  f.saved.set(f.controller.storageKey,'{broken');const broken=new ExecutionRecoveryController('workspace','root',f.ports);broken.Edit(target.source,fields);await broken.Submit(target,options);expect(broken.available).toBe(false);expect(f.saved.get(f.controller.storageKey)).toBe('{broken');expect(f.send).toHaveBeenCalledTimes(1);
 });
 
 it('同命令只允许周期状态更新，不能覆盖已受理运行或可信来源事实',async()=>{
-  const f=fixture();f.controller.edit(target.source,fields);await f.controller.submit(target,options);const request=f.send.mock.calls[0][0],original=f.controller.record(target.source)!.attempt!.receipt!;
+  const f=fixture();f.controller.Edit(target.source,fields);await f.controller.Submit(target,options);const request=f.send.mock.calls[0][0],original=f.controller.Record(target.source)!.attempt!.receipt!;
   expect(()=>checkedRecoveryReceipt({...original,scopeId:'different-new-scope'},request)).toThrow('不一致');
   for(const change of [{runId:'other-run'},{acceptedAt:'2026-11-08T00:00:00.000Z'},{source:{...original.recovery.source,unknownToolCount:2}}]){
-    f.query.mockResolvedValueOnce({...original,recovery:{...original.recovery,...change}});await f.controller.query(target.source);
-    expect(f.controller.record(target.source)?.attempt?.receipt).toBe(original);expect(f.controller.record(target.source)?.attempt?.error).toContain('冲突');
+    f.query.mockResolvedValueOnce({...original,recovery:{...original.recovery,...change}});await f.controller.Query(target.source);
+    expect(f.controller.Record(target.source)?.attempt?.receipt).toBe(original);expect(f.controller.Record(target.source)?.attempt?.error).toContain('冲突');
   }
-  f.query.mockResolvedValueOnce({...original,scopeStatus:'closed'});await f.controller.query(target.source);expect(f.controller.record(target.source)?.attempt?.receipt?.scopeStatus).toBe('closed');
-  f.query.mockResolvedValueOnce(original);await f.controller.query(target.source);expect(f.controller.record(target.source)?.attempt?.receipt?.scopeStatus).toBe('closed');expect(f.controller.record(target.source)?.attempt?.error).toContain('冲突');
+  f.query.mockResolvedValueOnce({...original,scopeStatus:'closed'});await f.controller.Query(target.source);expect(f.controller.Record(target.source)?.attempt?.receipt?.scopeStatus).toBe('closed');
+  f.query.mockResolvedValueOnce(original);await f.controller.Query(target.source);expect(f.controller.Record(target.source)?.attempt?.receipt?.scopeStatus).toBe('closed');expect(f.controller.Record(target.source)?.attempt?.error).toContain('冲突');
 });
 
 function graphFixture(){
@@ -119,17 +119,17 @@ it('表单观察与目标分开；未知请求只有查询和同命令重试，�
 
 it('归档准备同步清除同来源各视图报告，迟到旧读取无效，必须显式重读；其他节点保持原报告',async()=>{
   const graph=graphFixture(),f=fixture(async request=>({...receipt(request),scopeStatus:'closed'}));
-  f.controller.edit(target.source,fields);await f.controller.submit(target,options);
+  f.controller.Edit(target.source,fields);await f.controller.Submit(target,options);
   f.query.mockResolvedValue({...receipt(f.send.mock.calls[0][0]),scopeStatus:'closed'});
   let finish!:(value:ExecutionReport)=>void;const read=vi.fn(async()=>graph.report),one=new ExecutionReportController({...target.source,workspaceId:'workspace',rootSessionId:'root'},read),two=new ExecutionReportController({...target.source,workspaceId:'workspace',rootSessionId:'root'},read);
-  await one.inspect();await two.inspect();read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const late=one.inspect();
-  const different=vi.fn(),stopOne=f.controller.subscribeSource(target.source,()=>{},()=>one.invalidate()),stopTwo=f.controller.subscribeSource(target.source,()=>{},()=>two.invalidate()),stopOther=f.controller.subscribeSource({...target.source,taskId:'another'},()=>{},different);
-  expect(await f.controller.prepareAgain(target.source,command)).toBe(true);
+  await one.Inspect();await two.Inspect();read.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}));const late=one.Inspect();
+  const different=vi.fn(),stopOne=f.controller.SubscribeSource(target.source,()=>{},()=>one.Invalidate()),stopTwo=f.controller.SubscribeSource(target.source,()=>{},()=>two.Invalidate()),stopOther=f.controller.SubscribeSource({...target.source,taskId:'another'},()=>{},different);
+  expect(await f.controller.PrepareAgain(target.source,command)).toBe(true);
   expect(one.snapshot).toEqual({loading:false,error:''});expect(two.snapshot).toEqual({loading:false,error:''});expect(different).not.toHaveBeenCalled();expect(read).toHaveBeenCalledTimes(3);expect(f.send).toHaveBeenCalledTimes(1);
   finish(graph.report);await late;expect(one.snapshot.report).toBeUndefined();expect(recoveryTarget('workspace','root',graph.task,'old-run',one.snapshot.report,false,graph.state).target).toBeUndefined();
-  await one.inspect();expect(one.snapshot.report).toEqual(graph.report);expect(two.snapshot.report).toBeUndefined();expect(recoveryTarget('workspace','root',graph.task,'old-run',one.snapshot.report,false,graph.state).target).toEqual(target);
+  await one.Inspect();expect(one.snapshot.report).toEqual(graph.report);expect(two.snapshot.report).toBeUndefined();expect(recoveryTarget('workspace','root',graph.task,'old-run',one.snapshot.report,false,graph.state).target).toEqual(target);
   // 刚挂载的第二处视图在 render 与订阅之间错过归档，也必须清旧缓存。
-  const missed=vi.fn();const stopMissed=f.controller.subscribeSource(target.source,()=>{},missed,0);expect(missed).toHaveBeenCalledTimes(1);
+  const missed=vi.fn();const stopMissed=f.controller.SubscribeSource(target.source,()=>{},missed,0);expect(missed).toHaveBeenCalledTimes(1);
   stopOne();stopTwo();stopOther();stopMissed();
 });
 

@@ -88,13 +88,13 @@ class N_src_logic_execution_engines_claude_engine_ts["engine.ts"] {
 class N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine["ClaudeCodeEngine"] {
   -fatal
   -inactivity
-  -findSession()
-  -bindSession()
-  -checkPath()
-  -readSession()
-  -redact()
-  -emit()
-  -consume()
+  -FindSession()
+  -BindSession()
+  -CheckPath()
+  -ReadSession()
+  -Redact()
+  -Emit()
+  -Consume()
 }
 N_src_logic_execution_engines_claude_engine_ts ..> N_src_logic_execution_engines_claude_engine_ts_ClaudeCodeEngine : 声明
 class N_src_logic_execution_engines_claude_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -204,7 +204,7 @@ SDK 0.3.322 的实际 schema 运行依赖是 zod/v4 与 zod/v4/core。工程保�
 
 ### 凭据文本替换
 
-精确字符串替换使用后端 utility 的 StringUtils.redactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
+精确字符串替换使用后端 utility 的 StringUtils.RedactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
 
 ### 包工厂
 
@@ -215,4 +215,4 @@ package.ts 导出协议 1、适配器版本 1.0.0 的统一工厂；SDK 仍由 s
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `StringUtils.redactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `StringUtils.RedactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

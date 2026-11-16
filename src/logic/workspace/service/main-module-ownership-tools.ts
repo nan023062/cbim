@@ -29,28 +29,28 @@ export function mainModuleOwnershipTools(owner: KnowledgeWorkspace, service: Mod
   const current = (signal: AbortSignal) =>
   {
     signal.throwIfAborted();
-    owner.assert(identity);
-    context.assertCurrent(signal)
+    owner.Assert(identity);
+    context.AssertCurrent(signal)
   };
   return {
-    inspect: async (raw, signal) =>
+    Inspect: async (raw, signal) =>
     {
       current(signal);
       const input = moduleOwnerInspectInputSchema.parse(raw);
       if ('members' in input)
       {
         const { members: _, ...query } = input,
-          memberPage = await members.list({ ...identity, ...query, limit: query.limit ?? 20 });
+          memberPage = await members.List({ ...identity, ...query, limit: query.limit ?? 20 });
         current(signal);
         return { identity: publicIdentity, readOnly: true, selection: input, memberPage }
       }
-      const page = 'moduleIds' in input ? await service.inspectModules(identity, input.moduleIds) : await service.byMember({ ...identity, ...input });
+      const page = 'moduleIds' in input ? await service.InspectModules(identity, input.moduleIds) : await service.ByMember({ ...identity, ...input });
       current(signal);
       if ('moduleIds' in input)
       {
         if (!execution)
           fail('OWNER_EXECUTION_UNAVAILABLE', '本轮未装配岗位执行发现');
-        const discovered = await execution.discover(input.moduleIds, input.matches);
+        const discovered = await execution.Discover(input.moduleIds, input.matches);
         current(signal);
         if (page.basis.knowledgeRevision !== discovered.knowledgeRevision || !isDeepStrictEqual(page.basis.memberRegistryCursor, discovered.registryCursor) || !isDeepStrictEqual(page.basis.ownershipCursor, discovered.ownershipCursor) || !isDeepStrictEqual(page.basis.sourceCursor, discovered.sourceCursor))
           fail('OWNER_READ_STALE', '责任和执行选择在查询期间变化，请重新查询');
@@ -58,32 +58,32 @@ export function mainModuleOwnershipTools(owner: KnowledgeWorkspace, service: Mod
       }
       return { identity: publicIdentity, readOnly: true, selection: input, page };
     },
-    preview: async (raw, signal) =>
+    Preview: async (raw, signal) =>
     {
       current(signal);
       const input = moduleOwnerPreviewInputSchema.parse(raw),
-        preview = await service.preview({ ...identity, ...input });
+        preview = await service.Preview({ ...identity, ...input });
       current(signal);
       return { identity: publicIdentity, preview }
     },
-    commit: (raw, toolCallId, signal) =>
+    Commit: (raw, toolCallId, signal) =>
     {
       const input = moduleOwnerCommitInputSchema.parse(raw),
         actor = moduleOwnershipMainActorSchema.parse({ kind: 'main_agent', rootSessionId: fixed.rootSessionId, scopeId: fixed.scopeId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId: fixed.runId, toolCallId, toolName: 'cbim_module_owner_change_commit' });
       const commandId = moduleOwnershipMainCommandId(identity.workspaceId, actor),
         request = { ...identity, ...input, commandId };
       // 先登记 pending Promise 再启动异步查询/保存，关闭必须排空原请求；fresh 的停止检查由服务受理前执行。
-      return context.track(async () =>
+      return context.Track(async () =>
       {
-        const receipt = await service.commit(request, actor, () => current(signal));
+        const receipt = await service.Commit(request, actor, () => current(signal));
         return { identity: publicIdentity, status: 'recorded', commandId, receipt }
       });
     },
-    receipt: async (raw, signal) =>
+    Receipt: async (raw, signal) =>
     {
       current(signal);
       const input = moduleOwnerReceiptInputSchema.parse(raw),
-        receipt = await service.receipt({ ...input, workspaceId: identity.workspaceId });
+        receipt = await service.Receipt({ ...input, workspaceId: identity.workspaceId });
       current(signal);
       if (receipt && (receipt.actor.kind !== 'main_agent' || receipt.actor.rootSessionId !== main.rootSessionId))
         fail('OWNERSHIP_IDENTITY', '只能查询本根会话主工具的原责任命令');

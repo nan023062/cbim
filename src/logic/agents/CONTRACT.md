@@ -4,7 +4,7 @@
 
 `Agent` 冻结专业指令、权限、无凭据模型选择与对话引用，不保存第二份消息正文。主 Agent 与执行 Agent 是相对调用角色；Application 以同一对象和循环协议装配。
 
-主与子 Agent 都直接使用 execution 的 `LoopRuntime.start/stop/close`；此目录不再拥有运行循环。Runtime 负责工具授权、日志、取消、引擎关闭和真实排空，调用者仅负责在 done 后关闭所拥有的 Runtime。
+主与子 Agent 都直接使用 execution 的 `LoopRuntime.Start/stop/close`；此目录不再拥有运行循环。Runtime 负责工具授权、日志、取消、引擎关闭和真实排空，调用者仅负责在 done 后关闭所拥有的 Runtime。
 
 `execution/assembly/AgentCallScheduler` 仅协调调用身份、深度、暂停答复和直接结果路由，通过 prepare 取得已获全局准入的 task/runtime/release；不另存本根并发计数。此目录的 contracts 是 Runtime/Bridge 的便携协议入口，不导出调度实现。
 
@@ -49,4 +49,4 @@ Exchange 校验并持有原题与答案，publish 适配器只取得深拷贝快
 agentCallReferenceSchema 是日志读取与派生索引共用的严格格式；checkedAgentCallReference 另校验工作区、当前子 task/run，拒绝自引用。它不证明父级授权或周期归属；用量报告仍从可信父工具事实逐层核验，历史索引仍匹配 canonical 首条记录。
 
 ## 人工意见后的副作用边界
-AgentToolsBinding.guardEffects 只返回当前调用的拒绝理由，不授予权限。它由执行调度绑定原 runId；人工意见不授权返工时只允许明确 read/preview，未知或混合副作用均拒绝。独立新运行不继承旧运行的阻止集合，仍重新经过权限和业务校验。
+AgentToolsBinding.GuardEffects 只返回当前调用的拒绝理由，不授予权限。它由执行调度绑定原 runId；人工意见不授权返工时只允许明确 read/preview，未知或混合副作用均拒绝。独立新运行不继承旧运行的阻止集合，仍重新经过权限和业务校验。

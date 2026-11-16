@@ -16,11 +16,11 @@ it.each(['complete','missing-intent','lease-failed','pre-aborted','before-intent
   const binding:ConversationAgentBinding={workspaceId:task.workspaceId,rootSessionId:task.taskId,teamId:'.cbim/team',agentId:'cbim:main',agentInstanceId:'retained-main-instance',agentSessionId:'retained-conversation-channel'};
   const excludedRunIds=['old-run-a','old-run-b'],oldBytes='Unparseable old canonical log: keep this exact text';
   for(const id of excludedRunIds){const target=path.join(directory,'main-root',id);await fs.mkdir(target,{recursive:true});await fs.writeFile(path.join(target,'events.jsonl'),oldBytes);await fs.writeFile(path.join(target,'native.jsonl'),'PRIVATE_OLD_NATIVE_CONTEXT_MUST_NOT_BE_READ')}
-  const storage=new FileRunStorage(),realRead=storage.read.bind(storage),read=vi.spyOn(storage,'read').mockImplementation(async target=>{if(excludedRunIds.includes(path.basename(target)))throw Error('Fresh main attempted to inspect broken history');return realRead(target)});
-  const reserve=vi.spyOn(storage,'reserveTask').mockImplementation(async()=>{throw Error('Fresh main must not reserve or replace the existing root')});
-  const createJournal=storage.createJournal.bind(storage);storage.createJournal=(target,task,runId)=>{const journal=createJournal(target,task,runId),init=journal.init.bind(journal);journal.init=async()=>{await init();if(mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
+  const storage=new FileRunStorage(),realRead=storage.Read.bind(storage),read=vi.spyOn(storage,'Read').mockImplementation(async target=>{if(excludedRunIds.includes(path.basename(target)))throw Error('Fresh main attempted to inspect broken history');return realRead(target)});
+  const reserve=vi.spyOn(storage,'ReserveTask').mockImplementation(async()=>{throw Error('Fresh main must not reserve or replace the existing root')});
+  const createJournal=storage.CreateJournal.bind(storage);storage.CreateJournal=(target,task,runId)=>{const journal=createJournal(target,task,runId),init=journal.Init.bind(journal);journal.Init=async()=>{await init();if(mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
   let leases=0;const contexts:EngineContext[]=[],states:{ran:boolean;closed:boolean;stopped:boolean}[]=[];
-  const runtime=new LoopRuntime({directory,storage,...(mode==='unbound-main'?{}:{conversationBinding:binding}),acquireLease:async()=>{if(mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},toolPolicy:async()=>({allow:false}),onEngineReady:async()=>{if(mode==='engine-ready'){entered.resolve();await boundary.promise}},createEngine:()=>{
+  const runtime=new LoopRuntime({directory,storage,...(mode==='unbound-main'?{}:{conversationBinding:binding}),AcquireLease:async()=>{if(mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(mode==='engine-ready'){entered.resolve();await boundary.promise}},CreateEngine:()=>{
     const state={ran:false,closed:false,stopped:false};states.push(state);
     const engine:AgentEngine={kind:'test',start:async context=>{contexts.push(context);await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId,sessionFile:path.join(context.directory,'fresh-native.jsonl')}})},run:async()=>{state.ran=true;return {status:'completed'}},stop:async()=>{state.stopped=true},close:async()=>{state.closed=true}};return engine;
   }});
@@ -32,7 +32,7 @@ it.each(['complete','missing-intent','lease-failed','pre-aborted','before-intent
       if(mode==='before-intent'){entered.resolve();await boundary.promise}
     });
     if(mode==='pre-aborted')controller.abort(Error('Stopped before fresh start'));
-    const pending=runtime.startFreshMain(task,'Only inspect existing effects',{signal:controller.signal,beforeRun,...(mode==='missing-intent'?{knownRunIds:async()=>['missing-intent','old-run-a']}:{})});
+    const pending=runtime.StartFreshMain(task,'Only inspect existing effects',{signal:controller.signal,BeforeRun: beforeRun,...(mode==='missing-intent'?{KnownRunIds:async()=>['missing-intent','old-run-a']}:{})});
     if(['lease-failed','pre-aborted','intent-rejected','missing-directory','unbound-main'].includes(mode)){
       await expect(pending).rejects.toThrow();expect(states).toEqual([]);expect(beforeRun).toHaveBeenCalledTimes(mode==='intent-rejected'?1:0);
     }else if(mode==='before-intent'){
@@ -50,5 +50,5 @@ it.each(['complete','missing-intent','lease-failed','pre-aborted','before-intent
     expect(leases).toBe(0);expect(reserve).not.toHaveBeenCalled();expect(read.mock.calls.every(([target])=>!excludedRunIds.includes(path.basename(target)))).toBe(true);
     for(const id of excludedRunIds)expect(await fs.readFile(path.join(directory,'main-root',id,'events.jsonl'),'utf8')).toBe(oldBytes);
     if(mode!=='missing-directory')for(const id of await fs.readdir(path.join(directory,'main-root'))){if(!excludedRunIds.includes(id)){const summary=await realRead(path.join(directory,'main-root',id));expect(summary.events[0].type).toBe('run.started');expect(summary.status).toBe(completed?'completed':'cancelled')}}
-  }finally{boundary.resolve();await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-runtime-fresh-'))throw Error('Invalid fresh-runtime cleanup target');await fs.rm(target,{recursive:true,force:true})}
+  }finally{boundary.resolve();await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-runtime-fresh-'))throw Error('Invalid fresh-runtime cleanup target');await fs.rm(target,{recursive:true,force:true})}
 });

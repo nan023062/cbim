@@ -10,11 +10,11 @@ import { context } from './read-models';
 /** 实现必须在提交事务内再次核版本；回执查询不重放请求，写入权限由调用入口单独核实。 */
 export interface KnowledgeRefreshPort extends KnowledgeSnapshotReader
 {
-  assert(identity: { workspaceId: string; instanceId: string }): void;
+  Assert(identity: { workspaceId: string; instanceId: string }): void;
 
-  committedReceipt(request: ChangeRequest): Promise<KnowledgeCommit | undefined>;
+  CommittedReceipt(request: ChangeRequest): Promise<KnowledgeCommit | undefined>;
 
-  commit(request: ChangeRequest): Promise<KnowledgeCommit>;
+  Commit(request: ChangeRequest): Promise<KnowledgeCommit>;
 }
 
 export class KnowledgeRefresh
@@ -24,18 +24,18 @@ export class KnowledgeRefresh
   }
 
   /** 原成功回执优先；重复不再提交，返回的校验仍来自当前快照，不冒充原时刻状态。 */
-  async refresh(input: KnowledgeRefreshInput)
+  async Refresh(input: KnowledgeRefreshInput)
   {
     const request = knowledgeRefreshRequest(input);
-    this.workspace.assert(request);
-    const previous = await this.workspace.committedReceipt(request);
-    const s = await this.workspace.snapshot();
+    this.workspace.Assert(request);
+    const previous = await this.workspace.CommittedReceipt(request);
+    const s = await this.workspace.Snapshot();
     if (!previous && s.revision !== request.revision)
       fail('CONFLICT', '知识已变化，请重新读取；不能将原刷新请求绑定到今日版本');
     if (!previous && !s.validation!.structural)
       return { ...context(s), state: 'invalid', indexesUpdated: false, validation: s.validation };
-    const result = previous ?? await this.workspace.commit(request);
-    const final = await this.workspace.snapshot();
+    const result = previous ?? await this.workspace.Commit(request);
+    const final = await this.workspace.Snapshot();
     return { ...context(final), state: final.validation!.structural ? 'refreshed' : 'invalid', indexesUpdated: true, changed: result.changed, validation: final.validation, notice: '只更新派生注册表，未改写用户知识正文；仍需语义 review。' };
   }
 }

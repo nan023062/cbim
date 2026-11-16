@@ -53,7 +53,7 @@ export class ArtifactFiles
   {
   }
 
-  private async resolve(raw: string, signal: AbortSignal)
+  private async Resolve(raw: string, signal: AbortSignal)
   {
     this.assert();
     signal.throwIfAborted();
@@ -79,13 +79,13 @@ export class ArtifactFiles
   }
 
   /** 输入与输出逐项对应；重复别名也占读取额度，调用方只能在可信指纹返回后归并。 */
-  async captureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>
+  async CaptureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>
   {
-    return this.readFiles(paths, signal, { readBytes: 0 });
+    return this.ReadFiles(paths, signal, { readBytes: 0 });
   }
 
   /** 原授权路径的当前观察不要求成功基线；不存在与空文件分开，失败不读取正文或推断旧操作结果。 */
-  async observeFiles(paths: readonly string[], signal: AbortSignal): Promise<EffectFileObservation[]>
+  async ObserveFiles(paths: readonly string[], signal: AbortSignal): Promise<EffectFileObservation[]>
   {
     if (!paths.length || paths.length > artifactFileLimits.files)
       fail('ARTIFACT_LIMIT', '一次最多观察 16 个文件');
@@ -96,7 +96,7 @@ export class ArtifactFiles
       const relativePath = normalizeArtifactPath(this.root, raw);
       try
       {
-        const { fact } = await this.readFile(relativePath, signal, budget, artifactFileLimits.bytesPerFile, false);
+        const { fact } = await this.ReadFile(relativePath, signal, budget, artifactFileLimits.bytesPerFile, false);
         result.push({ relativePath, state: 'present', byteLength: fact.byteLength, sha256: fact.sha256 })
       }
       catch (error)
@@ -114,9 +114,9 @@ export class ArtifactFiles
   }
 
   /** 仅可信冻结要求调用；同一 Buffer 同时确定哈希、严格解析与验证，正文不离开平台端口。 */
-  async validateFile(expected: ArtifactFileFact, schema: BoundedJsonSchema, signal: AbortSignal)
+  async ValidateFile(expected: ArtifactFileFact, schema: BoundedJsonSchema, signal: AbortSignal)
   {
-    const { fact, bytes } = await this.readFile(expected.relativePath, signal, { readBytes: 0 }, jsonValidationLimits.fileBytes, true);
+    const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, jsonValidationLimits.fileBytes, true);
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
       fail('VALIDATION_BASELINE_CHANGED', 'JSON 文件已偏离明确基线，请重新读取与采集');
     const result = validateJsonArtifact(schema, bytes!);
@@ -126,9 +126,9 @@ export class ArtifactFiles
   }
 
   /** CSV 使用同一安全句柄取得指纹与全部表格字节；解析不执行公式，错误不返回单元格正文。 */
-  async validateTable(expected: ArtifactFileFact, schema: CsvTableSchema, signal: AbortSignal)
+  async ValidateTable(expected: ArtifactFileFact, schema: CsvTableSchema, signal: AbortSignal)
   {
-    const { fact, bytes } = await this.readFile(expected.relativePath, signal, { readBytes: 0 }, csvValidationLimits.fileBytes, true);
+    const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, csvValidationLimits.fileBytes, true);
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
       fail('VALIDATION_BASELINE_CHANGED', 'CSV 文件已偏离明确基线，请重新读取与采集');
     const result = validateCsvArtifact(schema, bytes!);
@@ -138,9 +138,9 @@ export class ArtifactFiles
   }
 
   /** PNG指纹与有界解码共用完整读取；像素不出平台，解码结束再次核停止与工作区有效性。 */
-  async validateImage(expected: ArtifactFileFact, schema: PngImageSchema, signal: AbortSignal)
+  async ValidateImage(expected: ArtifactFileFact, schema: PngImageSchema, signal: AbortSignal)
   {
-    const { fact, bytes } = await this.readFile(expected.relativePath, signal, { readBytes: 0 }, pngValidationLimits.fileBytes, true);
+    const { fact, bytes } = await this.ReadFile(expected.relativePath, signal, { readBytes: 0 }, pngValidationLimits.fileBytes, true);
     if (fact.relativePath !== normalizeArtifactPath(this.root, expected.relativePath) || fact.byteLength !== expected.byteLength || fact.sha256 !== expected.sha256)
       fail('VALIDATION_BASELINE_CHANGED', 'PNG文件已偏离明确基线，请重新读取与采集');
     const result = validatePngArtifact(schema, bytes!);
@@ -150,7 +150,7 @@ export class ArtifactFiles
   }
 
   /** 一份明确基线的逐文件只读结果；失败不抹去其它文件观察，所有读取共用总字节上限。 */
-  async checkFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>
+  async CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>
   {
     if (!files.length || files.length > artifactFileLimits.files)
       fail('ARTIFACT_LIMIT', '一次最多核实 16 个文件');
@@ -161,7 +161,7 @@ export class ArtifactFiles
       const expected = { byteLength: file.byteLength, sha256: file.sha256 };
       try
       {
-        const [observed] = await this.readFiles([file.relativePath], signal, budget);
+        const [observed] = await this.ReadFiles([file.relativePath], signal, budget);
         result.push({ relativePath: file.relativePath, state: observed.byteLength === file.byteLength && observed.sha256 === file.sha256 ? 'matches' : 'changed', expected, observed: { byteLength: observed.byteLength, sha256: observed.sha256 } });
       }
       catch (error)
@@ -176,18 +176,18 @@ export class ArtifactFiles
     return result;
   }
 
-  private async readFiles(paths: readonly string[], signal: AbortSignal, budget: { readBytes: number }): Promise<ArtifactFileFact[]>
+  private async ReadFiles(paths: readonly string[], signal: AbortSignal, budget: { readBytes: number }): Promise<ArtifactFileFact[]>
   {
     if (!paths.length || paths.length > artifactFileLimits.files)
       fail('ARTIFACT_LIMIT', '一次最多核实 16 个文件');
     const result: ArtifactFileFact[] = [];
     for (const raw of paths)
-      result.push((await this.readFile(raw, signal, budget, artifactFileLimits.bytesPerFile, false)).fact);
+      result.push((await this.ReadFile(raw, signal, budget, artifactFileLimits.bytesPerFile, false)).fact);
     return result;
   }
 
   /** 哈希与可选的验证字节共用一个有界读取循环；原采集接口仍不保留或返回正文。 */
-  private async readFile(raw: string, signal: AbortSignal, budget: { readBytes: number }, maxBytes: number, retainBytes: boolean)
+  private async ReadFile(raw: string, signal: AbortSignal, budget: { readBytes: number }, maxBytes: number, retainBytes: boolean)
   {
     // 范围模式由宿主注入实际 Win32 锁定读取；旧任务保留原来的尽力检测语义。
     if (this.secureRead)
@@ -201,7 +201,7 @@ export class ArtifactFiles
         fail('ARTIFACT_LIMIT', '文件超过本次读取上限');
       return { fact: { relativePath, ...value.fact }, ...(retainBytes ? { bytes: value.bytes } : {}) }
     }
-    const target = await this.resolve(raw, signal),
+    const target = await this.Resolve(raw, signal),
       before = await fs.lstat(target.file);
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1)
       fail('ARTIFACT_PATH', '只核实未链接的普通业务文件');
@@ -234,7 +234,7 @@ export class ArtifactFiles
           chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
       }
       const after = await handle.stat(),
-        again = await this.resolve(raw, signal),
+        again = await this.Resolve(raw, signal),
         current = await fs.lstat(again.file);
       if (length !== opened.size || after.nlink !== 1 || current.nlink !== 1 || !sameFile(opened, after) || !sameFile(after, current) || normal(again.file) !== normal(target.file))
         fail('ARTIFACT_CHANGED', '读取期间产物已经变化，请重新核实');

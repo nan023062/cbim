@@ -87,7 +87,7 @@ export function useHumanDecisions(workspaceId: string, rootSessionId: string | u
   const identity = JSON.stringify([workspaceId, rootSessionId]),
     identityRef = useRef(identity);
   identityRef.current = identity;
-  const controller = useMemo(() => rootSessionId ? controllers.get(workspaceId, rootSessionId, {
+  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, uuid: () => crypto.randomUUID(),
     preview: input => window.cbim.call('dispatch.humanPreview', input), submit: input => window.cbim.call('dispatch.humanDecide', input), lookup: input => window.cbim.call('dispatch.humanReceipt', input),
   }) : undefined, [workspaceId, rootSessionId]);
@@ -95,8 +95,8 @@ export function useHumanDecisions(workspaceId: string, rootSessionId: string | u
   {
     if (!controller)
       return;
-    const unsubscribe = controller.subscribe(() => render(value => value + 1));
-    void controller.restore().then(() =>
+    const unsubscribe = controller.Subscribe(() => render(value => value + 1));
+    void controller.Restore().then(() =>
     {
       if (identityRef.current === identity)
         refreshRef.current()
@@ -107,11 +107,11 @@ export function useHumanDecisions(workspaceId: string, rootSessionId: string | u
     criteria = (scope?.goal?.plan?.criteria ?? []).filter(value => value.kind === 'human'),
     criterionId = criteria.some(value => value.id === selection) ? selection : criteria[0]?.id ?? '';
   const target = humanDecisionTarget(workspaceId, rootSessionId, state, criterionId),
-    record = scope && controller?.record(scope.scopeId, criterionId),
-    pending = controller?.isPending(record) ?? false;
-  const preview = target ? controller?.previewState(target) : undefined,
-    current = target ? controller?.currentPreview(target) : undefined;
-  const editable = !!target && !!controller?.available && !controller.locked(record);
+    record = scope && controller?.Record(scope.scopeId, criterionId),
+    pending = controller?.IsPending(record) ?? false;
+  const preview = target ? controller?.PreviewState(target) : undefined,
+    current = target ? controller?.CurrentPreview(target) : undefined;
+  const editable = !!target && !!controller?.available && !controller.Locked(record);
   const after = async (action: () => Promise<void>) =>
   {
     await action();
@@ -121,7 +121,7 @@ export function useHumanDecisions(workspaceId: string, rootSessionId: string | u
   const edit = (change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>) =>
   {
     if (target && editable)
-      controller?.edit(target, change)
+      controller?.Edit(target, change)
   };
   return {
     scopeId: scope?.scopeId, waitId: scope?.wait?.waitId, criterionId, criteria, record, preview, history: scope?.humanDecisions?.records ?? [], eligible: !!target, editable, pending, previewCurrent: !!current,
@@ -145,29 +145,29 @@ export function useHumanDecisions(workspaceId: string, rootSessionId: string | u
     inspect: async () =>
     {
       if (target)
-        await controller?.preview(target)
+        await controller?.Preview(target)
     }, clearBaselines: async () =>
     {
-      if (target && editable && controller?.resetBaselines(target))
-        await controller.preview(target)
+      if (target && editable && controller?.ResetBaselines(target))
+        await controller.Preview(target)
     }, submit: async () =>
     {
       if (target && controller)
-        await after(() => controller.submit(target))
+        await after(() => controller.Submit(target))
     },
     reconsider: async decisionId =>
     {
       if (target && editable)
-        await controller?.reconsider(target, decisionId)
+        await controller?.Reconsider(target, decisionId)
     },
     query: async () =>
     {
       if (scope && controller)
-        await after(() => controller.query(scope.scopeId, criterionId))
+        await after(() => controller.Query(scope.scopeId, criterionId))
     }, retry: async () =>
     {
       if (scope && controller)
-        await after(() => controller.retry(scope.scopeId, criterionId))
+        await after(() => controller.Retry(scope.scopeId, criterionId))
     },
   };
 }

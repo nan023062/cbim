@@ -46,7 +46,7 @@ export class ToolRegistry<Context>
     return this.entries
   }
 
-  register(tool: ToolDefinition<Context>)
+  Register(tool: ToolDefinition<Context>)
   {
     if (!/^cbim_[A-Za-z0-9_]+$/.test(tool.name))
       fail('TOOL_NAME', 'CBIM 工具名称必须以 cbim_ 开头，后接字母、数字或下划线');
@@ -61,30 +61,30 @@ export class ToolRegistry<Context>
   }
 
   /** 引擎注册保持紧凑输入清单，不把全部输出 Schema 注入每次模型上下文。 */
-  list()
+  List()
   {
-    return this.entries.map(t => ({ ...this.summary(t), inputSchema: zodToJsonSchema(z.object(t.inputSchema)) as Record<string, unknown> }))
+    return this.entries.map(t => ({ ...this.Summary(t), inputSchema: zodToJsonSchema(z.object(t.inputSchema)) as Record<string, unknown> }))
   }
 
-  private summary(tool: ToolDefinition<Context>)
+  private Summary(tool: ToolDefinition<Context>)
   {
     return { name: tool.name, ...(tool.description === undefined ? {} : { description: tool.description }), version: tool.version, effects: [...tool.effects] }
   }
 
   /** 只列实际注册条目的摘要，不承诺原生、调度或外部工具可用。 */
-  catalog()
+  Catalog()
   {
-    return { family: 'knowledge' as const, tools: this.entries.map(tool => this.summary(tool)) }
+    return { family: 'knowledge' as const, tools: this.entries.map(tool => this.Summary(tool)) }
   }
 
   /** 按需导出有限 JSON Schema 和说明；不执行领域调用，不把函数、凭据或其它工具清单嵌入结果。 */
-  describe(name: string)
+  Describe(name: string)
   {
-    const tool = this.entry(name);
-    return { family: 'knowledge' as const, tool: { ...this.summary(tool), inputSchema: zodToJsonSchema(z.object(tool.inputSchema)), outputSchema: zodToJsonSchema(tool.outputSchema), cancellation: structuredClone(tool.cancellation), recovery: structuredClone(tool.recovery) } }
+    const tool = this.Entry(name);
+    return { family: 'knowledge' as const, tool: { ...this.Summary(tool), inputSchema: zodToJsonSchema(z.object(tool.inputSchema)), outputSchema: zodToJsonSchema(tool.outputSchema), cancellation: structuredClone(tool.cancellation), recovery: structuredClone(tool.recovery) } }
   }
 
-  private entry(name: string)
+  private Entry(name: string)
   {
     const tool = this.entries.find(t => t.name === name);
     if (!tool)
@@ -93,9 +93,9 @@ export class ToolRegistry<Context>
   }
 
   /** 只解析，不执行；错误只列字段和修正方式，不回显输入正文。调用方随后校验身份与授权。 */
-  resolve(name: string, input: unknown)
+  Resolve(name: string, input: unknown)
   {
-    const tool = this.entry(name);
+    const tool = this.Entry(name);
     const parsed = z.object(tool.inputSchema).safeParse(input);
     if (!parsed.success)
     {
@@ -107,9 +107,9 @@ export class ToolRegistry<Context>
   }
 
   /** 已由调用边界核对身份与授权后使用；只执行一次，不因业务输出损坏重放或补造字段。 */
-  async invokeResolved(tool: ToolDefinition<Context>, args: unknown, context: Context)
+  async InvokeResolved(tool: ToolDefinition<Context>, args: unknown, context: Context)
   {
-    if (this.entry(tool.name) !== tool)
+    if (this.Entry(tool.name) !== tool)
       fail('TOOL_CONTRACT', '只能执行本注册表解析的实际工具');
     const value = await tool.execute(args, context);
     return checkedJsonToolResult(tool.name, value, tool.outputSchema);

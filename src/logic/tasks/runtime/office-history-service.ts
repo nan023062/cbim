@@ -15,9 +15,9 @@ import { officeHistoryQuerySchema, type OfficeHistoryEntry, type OfficeHistoryQu
 /** 只接受已登记运行，不接受模型给出的磁盘路径；不包含启动、恢复或写入端口。 */
 export interface OfficeHistoryPorts
 {
-  inspectMain(rootSessionId: string, runId: string): Promise<RunSummary>;
+  InspectMain(rootSessionId: string, runId: string): Promise<RunSummary>;
 
-  inspectMember(run: DispatchRun): Promise<RunSummary>
+  InspectMember(run: DispatchRun): Promise<RunSummary>
 }
 
 interface Entry
@@ -34,7 +34,7 @@ export class OfficeHistoryService
   {
   }
 
-  private index(state: DispatchState, identity: GraphIdentity, scopeId: string): Entry[]
+  private Index(state: DispatchState, identity: GraphIdentity, scopeId: string): Entry[]
   {
     const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === identity.rootSessionId && value.workspaceId === identity.workspaceId);
     if (!scope)
@@ -47,7 +47,7 @@ export class OfficeHistoryService
         {
           if (!this.ports)
             fail('OFFICE_HISTORY_UNAVAILABLE', '原对话日志读取尚未装配');
-          return this.publicRun(await this.ports.inspectMain(identity.rootSessionId, runId), identity, identity.rootSessionId, runId);
+          return this.PublicRun(await this.ports.InspectMain(identity.rootSessionId, runId), identity, identity.rootSessionId, runId);
         }
       });
     for (const task of tasks)
@@ -63,7 +63,7 @@ export class OfficeHistoryService
           {
             if (!this.ports)
               fail('OFFICE_HISTORY_UNAVAILABLE', '原成员日志读取尚未装配');
-            return this.publicRun(await this.ports.inspectMember(run), identity, task.taskId, runId);
+            return this.PublicRun(await this.ports.InspectMember(run), identity, task.taskId, runId);
           }
         });
       }
@@ -75,7 +75,7 @@ export class OfficeHistoryService
     return entries;
   }
 
-  private publicRun(run: RunSummary, identity: GraphIdentity, taskId: string, runId: string)
+  private PublicRun(run: RunSummary, identity: GraphIdentity, taskId: string, runId: string)
   {
     if (run.task.workspaceId !== identity.workspaceId || run.task.taskId !== taskId || run.runId !== runId || run.events.some(event => event.workspaceId !== identity.workspaceId || event.taskId !== taskId || event.runId !== runId))
       fail('OFFICE_HISTORY_IDENTITY', '原日志身份与话题引用不一致');
@@ -95,13 +95,13 @@ export class OfficeHistoryService
   }
 
   /** offset>0 必须携带上页版本；变更时拒绝混读，查询与翻页从不恢复任何运行。 */
-  async read(identity: GraphIdentity, raw: unknown, signal: AbortSignal): Promise<OfficeHistoryResult>
+  async Read(identity: GraphIdentity, raw: unknown, signal: AbortSignal): Promise<OfficeHistoryResult>
   {
     signal.throwIfAborted();
     if (identity.workspaceId !== this.workspaceId)
       fail('OFFICE_HISTORY_IDENTITY', '归档不属于当前工作区');
     const query: OfficeHistoryQuery = officeHistoryQuerySchema.parse(raw),
-      state = await this.store.read();
+      state = await this.store.Read();
     signal.throwIfAborted();
     if (state.workspaceId !== identity.workspaceId || !state.graphs.some(graph => graph.identity.workspaceId === identity.workspaceId && graph.identity.rootSessionId === identity.rootSessionId))
       fail('OFFICE_HISTORY_IDENTITY', '办公室归档不存在');
@@ -110,7 +110,7 @@ export class OfficeHistoryService
       payload = (state.scopes ?? []).filter(scope => scope.rootSessionId === identity.rootSessionId && scope.workspaceId === identity.workspaceId).map(scope => ({ scopeId: scope.scopeId, status: scope.status, title: (scope.goal?.plan?.objective ?? scope.goal?.input.message ?? '历史话题').slice(0, 240), ...(scope.followupOf ? { followupOf: scope.followupOf } : {}) }));
     else
     {
-      const index = this.index(state, identity, query.scopeId);
+      const index = this.Index(state, identity, query.scopeId);
       if (query.action === 'topic')
         payload = index.map(entry => entry.reference);
       else

@@ -31,11 +31,11 @@ it('整话题暂停只显示已提交阶段，摘要详情不一致时保持旧�
   const value=scope(),command='22222222-2222-4222-8222-222222222222';
   value.topicInterruptions=[{requestedAt:time,request:{...identity,scopeId:value.scopeId,expectedInputRevision:1,commandId:command,input:{message:'调整当前话题'},options:{provider:'cbim-11111111-1111-4111-8111-111111111111',profileId:'11111111-1111-4111-8111-111111111111',model:'model',permission:'ask'}}}];
   expect(scopeGoalView(summarizeScope(value,streamId,1)).phase).toBe('topic_pausing');
-  const projection=new SessionReadProjection(identity);projection.apply(reset(value));const prior=projection.detail();
+  const projection=new SessionReadProjection(identity);projection.Apply(reset(value));const prior=projection.Detail();
   const broken=reset(value,2);if(broken.scopes.mode==='reset')delete broken.scopes.snapshot.scopes[0].interruption;
-  expect(()=>projection.apply(broken)).toThrow('话题暂停');expect(projection.detail()).toBe(prior);
+  expect(()=>projection.Apply(broken)).toThrow('话题暂停');expect(projection.Detail()).toBe(prior);
   value.status='waiting';value.wait={waitId:command,interruptionId:command,reason:'全部参与者可靠退出',createdAt:time,runId:'main-run',goalRevision:1,graphCursor:{streamId:'graph',seq:1},knowledgeRevision:'knowledge',mainRunIds:['main-run']};
-  projection.apply(reset(value,2));expect(scopeGoalView(summarizeScope(value,streamId,2)).phase).toBe('topic_paused');
+  projection.Apply(reset(value,2));expect(scopeGoalView(summarizeScope(value,streamId,2)).phase).toBe('topic_paused');
   value.status='closed';value.outcome='interrupted';value.closedAt=time;expect(scopeGoalView(summarizeScope(value,streamId,3)).phase).toBe('interrupted');
 });
 function view(value:DispatchScope):ScopeGoalState{const summary=summarizeScope(value,streamId,1),goalView=scopeGoalView(summary,graph);return {scopes:[summary],selectedScopeId:value.scopeId,selectedScope:value,openScope:value.status!=='closed'?summary:undefined,activeScope:value.status==='active'?summary:undefined,waitingScope:value.status==='waiting'?summary:undefined,selectedGoalView:goalView,currentGoalView:goalView,graph,loading:false,detailLoading:false,error:'',selectScope:()=>{}}}
@@ -57,9 +57,9 @@ it('替代审阅只导航已同步的本周期节点，旧节点与新成果各�
 
 it('联合投影只发布本办公室稳定对话，身份错误或改绑不污染既有状态',()=>{
   const projection=new SessionReadProjection(identity),response=reset(),session={...identity,sessionId:'main-logical',teamId:'team',agentId:'cbim:main',createdAt:time};
-  projection.apply({...response,teamSessions:[session]});const previous=projection.teamSessions;
-  projection.apply({...response,teamSessions:[{...session}]});expect(projection.teamSessions).toBe(previous);
-  for(const teamSessions of [[{...session,rootSessionId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.apply({...response,teamSessions})).toThrow();
+  projection.Apply({...response,teamSessions:[session]});const previous=projection.teamSessions;
+  projection.Apply({...response,teamSessions:[{...session}]});expect(projection.teamSessions).toBe(previous);
+  for(const teamSessions of [[{...session,rootSessionId:'other'}],[{...session,sessionId:'rebound'}],[session,session],[]])expect(()=>projection.Apply({...response,teamSessions})).toThrow();
   expect(projection.teamSessions).toBe(previous);expect(completeSessionRead(response,projection)!.teamSessions).toBe(previous);
 });
 
@@ -76,65 +76,65 @@ it('目标与成员只展示各自持久的指定流程，切回无选择历史�
 });
 
 it('目标变化独立于graph游标，noop保留全部对象引用并省略大正文',()=>{
-  const state=new SessionReadProjection(identity),first=reset();state.apply(first);
-  const priorGraph=state.graph,priorScopes=state.scopes,priorDetail=state.detail();
-  state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.detailStamp()!}});
-  expect(state.graph).toBe(priorGraph);expect(state.scopes).toBe(priorScopes);expect(state.detail()).toBe(priorDetail);
+  const state=new SessionReadProjection(identity),first=reset();state.Apply(first);
+  const priorGraph=state.graph,priorScopes=state.scopes,priorDetail=state.Detail();
+  state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.DetailStamp()!}});
+  expect(state.graph).toBe(priorGraph);expect(state.scopes).toBe(priorScopes);expect(state.Detail()).toBe(priorDetail);
   const next=planned(),summary=summarizeScope(next,streamId,2);
-  state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summary]}],hasMore:false},detail:detail(next,2)});
-  expect(state.graph).toBe(priorGraph);expect(state.detail()!.goal!.plan!.objective).toBe('当前周期的治理目标');expect(state.scopeCursor!.seq).toBe(2);
+  state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summary]}],hasMore:false},detail:detail(next,2)});
+  expect(state.graph).toBe(priorGraph);expect(state.Detail()!.goal!.plan!.objective).toBe('当前周期的治理目标');expect(state.scopeCursor!.seq).toBe(2);
 });
 
 it('组合读取任一部分错身份/断档/同版冲突均不提交另一部分的新图',()=>{
-  const state=new SessionReadProjection(identity);state.apply(reset());const priorGraph=state.graph,priorScope=state.scopes;
+  const state=new SessionReadProjection(identity);state.Apply(reset());const priorGraph=state.graph,priorScope=state.scopes;
   const batch:GraphEventBatch={...initial,seq:2,eventId:'second',commandId:'update',cause:'agent.state_changed',changes:[{type:'agent.upserted',agent:{...graph.agents[0],revision:2,state:'communicating'}}]};
   const update={mode:'delta' as const,from:graph.cursor,cursor:{...graph.cursor,seq:2},batches:[batch],hasMore:false};
-  expect(()=>state.apply({graph:update,scopes:{mode:'noop',cursor:{...state.scopeCursor!,rootSessionId:'foreign'}},detail:{mode:'empty'}})).toThrow('其他会话');
+  expect(()=>state.Apply({graph:update,scopes:{mode:'noop',cursor:{...state.scopeCursor!,rootSessionId:'foreign'}},detail:{mode:'empty'}})).toThrow('其他会话');
   expect(state.graph).toBe(priorGraph);expect(state.scopes).toBe(priorScope);
-  const wrong=scope();wrong.rootSessionId='foreign';expect(()=>state.apply({graph:update,scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(wrong)})).toThrow('其他会话');expect(state.graph).toBe(priorGraph);
-  const changed=scope();changed.goal!.input.message='同版本偷偷改写';expect(()=>state.apply({graph:update,scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(changed)})).toThrow('内容不一致');expect(state.graph).toBe(priorGraph);
+  const wrong=scope();wrong.rootSessionId='foreign';expect(()=>state.Apply({graph:update,scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(wrong)})).toThrow('其他会话');expect(state.graph).toBe(priorGraph);
+  const changed=scope();changed.goal!.input.message='同版本偷偷改写';expect(()=>state.Apply({graph:update,scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(changed)})).toThrow('内容不一致');expect(state.graph).toBe(priorGraph);
 });
 
 it('分页中的详情领先摘要时先缓存，追齐同stamp后显示，不拼接两个版本',()=>{
-  const state=new SessionReadProjection(identity),first=reset();state.apply(first);
+  const state=new SessionReadProjection(identity),first=reset();state.Apply(first);
   const newest=reviewed(),middle=planned();
-  state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summarizeScope(middle,streamId,2)]}],hasMore:true},detail:detail(newest,3)});
-  expect(state.scopes![0].goalRevision).toBe(2);expect(state.detail()).toBeUndefined();expect(state.detailStamp()!.seq).toBe(3);
-  state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:3},batches:[{identity,streamId,seq:3,scopes:[summarizeScope(newest,streamId,3)]}],hasMore:false},detail:{mode:'noop',stamp:state.detailStamp()!}});
-  expect(state.detail()).toBe(newest);expect(state.scopes![0].goalRevision).toBe(3);
+  state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summarizeScope(middle,streamId,2)]}],hasMore:true},detail:detail(newest,3)});
+  expect(state.scopes![0].goalRevision).toBe(2);expect(state.Detail()).toBeUndefined();expect(state.DetailStamp()!.seq).toBe(3);
+  state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:3},batches:[{identity,streamId,seq:3,scopes:[summarizeScope(newest,streamId,3)]}],hasMore:false},detail:{mode:'noop',stamp:state.DetailStamp()!}});
+  expect(state.Detail()).toBe(newest);expect(state.scopes![0].goalRevision).toBe(3);
 });
 
 it('任一增量流仍分页就保留上个完整组合，后续失败不发布已关闭目标与旧运行节点',()=>{
-  const state=new SessionReadProjection(identity),first=reset();state.apply(first);
+  const state=new SessionReadProjection(identity),first=reset();state.Apply(first);
   let published=completeSessionRead(first,state)!;const original=published;
   const task={kind:'task' as const,nodeId:'task:member',taskId:'member',scopeId:'scope-one',identity,requester:agent,assignee:{...agent,agentId:'cbim:executor',name:'执行 Agent',agentInstanceId:'executor'},modules:[{moduleId:'module',name:'业务模块',knowledgeRevision:'k',maintenanceBindingId:'binding',maintainerPersonIds:['person'],workflow:{kind:'general' as const,id:'workflow',version:'v1',reason:'通用流程'}}],goal:'成员目标',acceptance:[{id:'check',text:'验证成果'}],revision:1,planRevision:1,status:'running' as const,awaitedChildren:[],runIds:['member-run'],createdAt:time,updatedAt:time};
   const partial:GraphEventBatch={...initial,seq:2,eventId:'task-planned',commandId:'dispatch',cause:'task.dispatched',changes:[{type:'task.upserted',task:{...task,status:'planned',runIds:[]}},{type:'agent.upserted',agent:{agentId:'cbim:executor',agentInstanceId:'executor',name:'执行 Agent',revision:1,state:'working',waitingTaskIds:[]}},{type:'edge.upserted',edge:{edgeId:'dispatch',identity,kind:'dispatch',fromNodeId:graph.root.nodeId,toNodeId:task.nodeId,revision:1,enabled:true}}]};
   const running:GraphEventBatch={...partial,seq:3,eventId:'task-running',commandId:'start',cause:'task.started',changes:[{type:'task.upserted',task:{...task,revision:2}}]};
   const closed={...reviewed(),status:'closed' as const,outcome:'completed' as const,closedAt:time};
   const page:DispatchSessionRead={graph:{mode:'delta',from:graph.cursor,cursor:{...graph.cursor,seq:3},batches:[partial,running],hasMore:true},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summarizeScope(closed,streamId,2)]}],hasMore:false},detail:detail(closed,2)};
-  state.apply(page);published=completeSessionRead(page,state)??published;
+  state.Apply(page);published=completeSessionRead(page,state)??published;
   expect(state.scopes![0].outcome).toBe('completed');expect(state.graph!.tasks[0].status).toBe('running');expect(published).toBe(original);
-  expect(()=>state.apply({graph:{mode:'noop',cursor:{...state.graphCursor!,seq:99}},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.detailStamp()!}})).toThrow();expect(published).toBe(original);
+  expect(()=>state.Apply({graph:{mode:'noop',cursor:{...state.graphCursor!,seq:99}},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.DetailStamp()!}})).toThrow();expect(published).toBe(original);
   const finished:GraphEventBatch={...partial,seq:4,eventId:'task-completed',commandId:'finish',cause:'task.result_ready',changes:[{type:'task.upserted',task:{...task,revision:3,status:'result_ready',result:{resultId:'candidate',runId:'member-run',planRevision:1,summary:'已生成候选',evidenceRefs:[],limitations:[],acceptance:'not_evaluated'}}}]};
-  const last:DispatchSessionRead={graph:{mode:'delta',from:state.graphCursor!,cursor:{...state.graphCursor!,seq:4},batches:[finished],hasMore:false},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.detailStamp()!}};
-  state.apply(last);published=completeSessionRead(last,state)??published;
+  const last:DispatchSessionRead={graph:{mode:'delta',from:state.graphCursor!,cursor:{...state.graphCursor!,seq:4},batches:[finished],hasMore:false},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:{mode:'noop',stamp:state.DetailStamp()!}};
+  state.Apply(last);published=completeSessionRead(last,state)??published;
   expect(published).not.toBe(original);expect(published.scopes[0].outcome).toBe('completed');expect(published.graph!.tasks[0].status).toBe('result_ready');
 });
 
 it('同版本详情必须与摘要字段一致，旧页签响应不得改写新目标详情',()=>{
-  const state=new SessionReadProjection(identity);state.apply(reset());
+  const state=new SessionReadProjection(identity);state.Apply(reset());
   const second=scope('scope-two'),closed={...scope(),status:'closed' as const,closedAt:time,outcome:'completed' as const},summaries=[summarizeScope(closed,streamId,2),summarizeScope(second,streamId,2)];
-  state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:summaries}],hasMore:false},detail:detail(second,2)});
-  const current=state.detail();state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(closed,2)},closed.scopeId);
-  expect(state.detail()).toBe(current);expect(state.detail(closed.scopeId)).toBe(closed);
-  const inconsistent=planned();inconsistent.scopeId='scope-two';expect(()=>state.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(inconsistent,2)},second.scopeId)).toThrow('内容不一致');
-  const fresh=new SessionReadProjection(identity),response=reset();if(response.detail.mode==='updated')response.detail.scope={...response.detail.scope,goal:undefined};expect(()=>fresh.apply(response)).toThrow('摘要与同版本详情');expect(fresh.graph).toBeUndefined();
+  state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:state.scopeCursor!,cursor:{...state.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:summaries}],hasMore:false},detail:detail(second,2)});
+  const current=state.Detail();state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(closed,2)},closed.scopeId);
+  expect(state.Detail()).toBe(current);expect(state.Detail(closed.scopeId)).toBe(closed);
+  const inconsistent=planned();inconsistent.scopeId='scope-two';expect(()=>state.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:state.scopeCursor!},detail:detail(inconsistent,2)},second.scopeId)).toThrow('内容不一致');
+  const fresh=new SessionReadProjection(identity),response=reset();if(response.detail.mode==='updated')response.detail.scope={...response.detail.scope,goal:undefined};expect(()=>fresh.Apply(response)).toThrow('摘要与同版本详情');expect(fresh.graph).toBeUndefined();
 });
 
 it('自动目标按真实创建事务序列选择，旧周期更新或同毫秒随机ID不会抢占当前目标',()=>{
   const older=summarizeScope({...scope('z-old'),status:'closed',outcome:'cancelled',closedAt:time},streamId,99),newer=summarizeScope({...scope('a-new'),status:'closed',outcome:'completed',closedAt:time},streamId,2);
   expect(currentScope([older,newer])).toBe(newer);expect(currentScope([{...older,status:'active'},newer])?.scopeId).toBe('z-old');
-  const projected=new SessionScopeProjection(identity);const first=snapshot([scope()],1);projected.apply({mode:'reset',reason:'initial',snapshot:first,cursor:first.cursor});expect(()=>projected.apply({mode:'delta',from:first.cursor,cursor:{...first.cursor,seq:3},batches:[{identity,streamId,seq:3,scopes:[summarizeScope(scope(),streamId,3)]}],hasMore:false})).toThrow();expect(projected.snapshot).toBe(first);
+  const projected=new SessionScopeProjection(identity);const first=snapshot([scope()],1);projected.Apply({mode:'reset',reason:'initial',snapshot:first,cursor:first.cursor});expect(()=>projected.Apply({mode:'delta',from:first.cursor,cursor:{...first.cursor,seq:3},batches:[{identity,streamId,seq:3,scopes:[summarizeScope(scope(),streamId,3)]}],hasMore:false})).toThrow();expect(projected.snapshot).toBe(first);
 });
 
 it('完成申请不是目标完成，普通对话、legacy和完成依据不足的历史分别呈现',()=>{
@@ -171,7 +171,7 @@ it('补充后旧计划保持可查但不能冒充新目标完成，输入版本�
   expect(scopeGoalView({...summary,status:'closed',outcome:'completed',closedAt:time})).toMatchObject({phase:'completion_unverified',tone:'warning'});
   const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state:view(revised)}));expect(html).toContain('补充已受理');expect(html).toContain('输入第 1 版');expect(html).not.toContain('目标已完成');
   const response=reset(revised,2);if(response.scopes.mode==='reset')response.scopes.snapshot.scopes[0].inputRevision=1;
-  const state=new SessionReadProjection(identity);expect(()=>state.apply(response)).toThrow('目标补充版本');expect(state.graph).toBeUndefined();
+  const state=new SessionReadProjection(identity);expect(()=>state.Apply(response)).toThrow('目标补充版本');expect(state.graph).toBeUndefined();
 });
 
 it('同一目标卡展示原始输入、计划、审阅、完整阻塞原因，但不伪造人工验收',()=>{
@@ -197,8 +197,8 @@ it('只有持久waiting才显示执行暂停，历史选择不覆盖当前等待
   const requested=reviewed();requested.goal!.review!.decision='awaiting_user';
   expect(scopeGoalView(summarizeScope(requested,streamId,1))).toMatchObject({phase:'awaiting_user',label:'已请求补充 · 等待暂停确认'});
   const waiting:DispatchScope={...requested,status:'waiting',wait:{waitId:'wait-one',reason:'需要用户补充 '.repeat(100)+'完整原因末尾',createdAt:time,runId:'main-run',goalRevision:3,graphCursor:{streamId:'graph',seq:1},knowledgeRevision:'knowledge',mainRunIds:['main-run']}};
-  const state=view(waiting),projection=new SessionReadProjection(identity);projection.apply(reset(waiting));
-  expect(state.activeScope).toBeUndefined();expect(state.openScope).toBe(state.waitingScope);expect(state.currentGoalView.phase).toBe('waiting');expect(projection.detail()?.wait?.reason).toContain('完整原因末尾');
+  const state=view(waiting),projection=new SessionReadProjection(identity);projection.Apply(reset(waiting));
+  expect(state.activeScope).toBeUndefined();expect(state.openScope).toBe(state.waitingScope);expect(state.currentGoalView.phase).toBe('waiting');expect(projection.Detail()?.wait?.reason).toContain('完整原因末尾');
   const html=renderToStaticMarkup(createElement(ScopeGoalPanel,{state}));expect(html).toContain('data-goal-state="waiting"');expect(html).toContain('scope-goal-wait-detail');expect(html).toContain('完整原因末尾');expect(html).toContain('普通排队消息不会恢复本目标');expect(html).not.toContain('<button');
   const historical=view({...scope('closed'),status:'closed',closedAt:time,outcome:'completed'}),browsing={...historical,scopes:[state.openScope!,...historical.scopes],openScope:state.openScope,waitingScope:state.waitingScope,currentGoalView:state.currentGoalView};
   expect(currentScope(browsing.scopes)).toBe(state.waitingScope);

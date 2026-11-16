@@ -38,39 +38,39 @@ it('rejects the old Application business entry while trusted Core Pi gates tools
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id);
-    await expect(fs.access(path.join(f.app.paths.project(entry.id),'discovery.json'))).rejects.toThrow();
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id);
+    await expect(fs.access(path.join(f.app.paths.Project(entry.id),'discovery.json'))).rejects.toThrow();
     await expect(fs.access(path.join(f.a,'.mcp.json'))).rejects.toThrow();
-    const agentHome=path.join(f.app.paths.project(entry.id),'loop-engine','pi');
+    const agentHome=path.join(f.app.paths.Project(entry.id),'loop-engine','pi');
     await fs.mkdir(agentHome,{recursive:true});
     const address=server.address();if(!address||typeof address==='string')throw Error('Local test server did not bind');
     await fs.writeFile(path.join(agentHome,'models.json'),JSON.stringify({providers:{'cbim-test':{baseUrl:`http://127.0.0.1:${address.port}/v1`,api:'openai-completions',apiKey:'test-not-a-secret',models:[{id:'cbim-test-model',reasoning:false,input:['text'],contextWindow:32768,maxTokens:1024,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}}));
     const seeded=await seedTeam(workspace),options={provider:'cbim-test',model:'cbim-test-model',turnTimeoutMs:20000};
-    await expect(f.app.dispatch('loop.start',{id:entry.id,task:seeded.input,options})).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
-    expect(requests).toBe(0);expect(await f.app.execution(entry.id).list()).toEqual([]);
+    await expect(f.app.Dispatch('loop.start',{id:entry.id,task:seeded.input,options})).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    expect(requests).toBe(0);expect(await f.app.Execution(entry.id).List()).toEqual([]);
 
     // Kernel/native compatibility coverage deliberately has no fabricated owner binding. Formal business admission is tested above and in owner-execution Pi tests.
     const task=await prepareTeamTask(workspace,seeded.input),service=knowledgeTools(workspace);
     runtime=new LoopRuntime({
-      storage:new FileRunStorage(),directory:path.join(f.app.paths.project(entry.id),'loop-engine','tasks'),
-      acquireLease:async candidate=>{workspace.assert();expect(candidate.workspaceId).toBe(entry.id);expect(candidate.root).toBe(f.a);return ()=>{}},
-      describeTool:call=>{
-        workspace.assert();if(call.name.startsWith('cbim_'))return service.describe(call.name,call.input);
+      storage:new FileRunStorage(),directory:path.join(f.app.paths.Project(entry.id),'loop-engine','tasks'),
+      AcquireLease:async candidate=>{workspace.Assert();expect(candidate.workspaceId).toBe(entry.id);expect(candidate.root).toBe(f.a);return ()=>{}},
+      DescribeTool:call=>{
+        workspace.Assert();if(call.name.startsWith('cbim_'))return service.Describe(call.name,call.input);
         const descriptor=nativeToolDescriptor(call.name);if(!descriptor)throw Error('Unsupported kernel test tool');return descriptor;
       },
-      toolPolicy:async(call,descriptor)=>{
+      ToolPolicy:async(call,descriptor)=>{
         if(!descriptor)throw Error('Missing real tool descriptor');
-        return authorizeRunTool(call,descriptor,{workspaceId:entry.id,permission:'read',guard:async native=>{
+        return authorizeRunTool(call,descriptor,{workspaceId:entry.id,permission:'read',Guard:async native=>{
           const reason=guard({name:native.name==='find'?'Glob':native.name,input:native.input},f.a);return {allow:!reason,reason};
         }});
       },
-      createEngine:()=>new PiEngine({
+      CreateEngine:()=>new PiEngine({
         process:{command:process.execPath,args:[path.resolve('node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js')],env:{ELECTRON_RUN_AS_NODE:'1'}},
         ...options,agentHome,prompt:loopInstructions,
-        knowledge:{list:async()=>service.list(),call:(name,args,signal)=>service.callFromRun(name,args,false,signal)},
+        knowledge:{list:async()=>service.List(),call:(name,args,signal)=>service.CallFromRun(name,args,false,signal)},
       }),
     });
-    const first=await runtime.start(task),result=await first.done;
+    const first=await runtime.Start(task),result=await first.done;
     expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');expect(result.acceptance).toBe('not_evaluated');
     expect(result.task.ownerBinding).toBeUndefined();
     expect(result.events.some(e=>e.type==='tool.allowed'&&e.data.name==='cbim_workspace_identity')).toBe(true);
@@ -81,15 +81,15 @@ it('rejects the old Application business entry while trusted Core Pi gates tools
     await fs.access(result.sessionFile);
     const nativeId=result.events.find(e=>e.type==='session.bound')?.data.sessionId;expect(typeof nativeId).toBe('string');expect(nativeId).toBeTruthy();
     const beforeDeniedResume=await fs.readFile(result.sessionFile);
-    await expect(f.app.dispatch('loop.resume',{id:entry.id,taskId:task.taskId,runId:first.runId,message:'不能绕过正式派发',options})).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
+    await expect(f.app.Dispatch('loop.resume',{id:entry.id,taskId:task.taskId,runId:first.runId,message:'不能绕过正式派发',options})).rejects.toMatchObject({code:'OWNER_DISPATCH_REQUIRED'});
     expect(await fs.readFile(result.sessionFile)).toEqual(beforeDeniedResume);expect(requests).toBe(3);
 
-    const second=await runtime.start(task,'仅总结已有结果，不重复操作。',{runId:first.runId}),resumed=await second.done;
+    const second=await runtime.Start(task,'仅总结已有结果，不重复操作。',{runId:first.runId}),resumed=await second.done;
     expect(resumed.status,JSON.stringify(resumed.events.at(-1))).toBe('completed');expect(resumed.sessionFile).toBe(result.sessionFile);
     expect(resumed.events.find(e=>e.type==='session.bound')?.data.sessionId).toBe(nativeId);expect(requests).toBe(4);
     hold=true;const received=new Promise<void>(resolve=>{requestStarted=resolve});
-    const third=await runtime.start(task,'等待模型时测试中断。',{runId:second.runId});
-    await received;await runtime.stop(task.taskId);
+    const third=await runtime.Start(task,'等待模型时测试中断。',{runId:second.runId});
+    await received;await runtime.Stop(task.taskId);
     expect((await third.done).status).toBe('cancelled');expect(requests).toBe(5);expect(transportErrors).toEqual([]);
-  }finally{await runtime?.close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
+  }finally{await runtime?.Close();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },60000);

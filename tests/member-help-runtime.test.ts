@@ -14,12 +14,12 @@ const gate=()=>{let resolve!:()=>void;const promise=new Promise<void>(r=>{resolv
 async function fixture(work:(context:EngineContext)=>Promise<void>,policy:(name:string)=>Promise<ToolDecision>=async()=>({allow:true,effects:['maintenance']}),beforeAppend?:(event:EngineEvent)=>Promise<void>){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-help-runtime-'));let context!:EngineContext,closed=false,leases=0,stops=0;
   const engine:AgentEngine={kind:'pi',start:async c=>{context=c;await c.emit({type:'session.bound',data:{sessionId:c.nativeSessionId,sessionFile:path.join(c.directory,'native.jsonl')}})},run:async()=>{await work(context);return {status:'completed'}},stop:async()=>{stops++},close:async()=>{closed=true}};
-  const storage=new FileRunStorage(),create=storage.createJournal.bind(storage);
-  if(beforeAppend)storage.createJournal=(...args)=>{const journal=create(...args),append=journal.append.bind(journal);journal.append=async event=>{await beforeAppend(event);return append(event)};return journal};
-  const runtime=new LoopRuntime({directory,storage,acquireLease:async()=>{leases++;return()=>{leases--}},createEngine:()=>engine,toolPolicy:call=>policy(call.name)});
+  const storage=new FileRunStorage(),create=storage.CreateJournal.bind(storage);
+  if(beforeAppend)storage.CreateJournal=(...args)=>{const journal=create(...args),append=journal.Append.bind(journal);journal.Append=async event=>{await beforeAppend(event);return append(event)};return journal};
+  const runtime=new LoopRuntime({directory,storage,AcquireLease:async()=>{leases++;return()=>{leases--}},CreateEngine:()=>engine,ToolPolicy:call=>policy(call.name)});
   const task:TaskSpec={taskId:binding.taskId,workspaceId:binding.workspaceId,root:directory,agentId:binding.agentId,goal:'处理目标模块',moduleIds:['.cbim/workspace/project/module'],acceptance:['核实目标']};
   const launch:MemberRunLaunch={binding,session:{nativeSessionId:'native-one'}};
-  return {runtime,task,launch,get closed(){return closed},get leases(){return leases},get stops(){return stops},cleanup:async()=>{await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-help-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}};
+  return {runtime,task,launch,get closed(){return closed},get leases(){return leases},get stops(){return stops},cleanup:async()=>{await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-help-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}};
 }
 async function help(c:EngineContext,id='help-one',value=input){
   const decision=await c.beforeTool({id,name:'cbim_task_help',input:value});expect(decision.allow).toBe(true);
@@ -34,7 +34,7 @@ it('stages one identity-bound help before its successful receipt and prevents fu
     staged=await help(c);
     for(const [id,name] of [['write-after','write'],['delivery-after','cbim_delivery_prepare'],['help-after','cbim_task_help']])expect((await c.beforeTool({id,name,input})).allow).toBe(false);
   });try{
-    const run=await f.runtime.startMember(f.task,'处理',f.launch),s=await run.done;
+    const run=await f.runtime.StartMember(f.task,'处理',f.launch),s=await run.done;
     expect(staged.state).toBe('staged');expect(memberHelpStagedSchema.parse(staged.help).binding).toEqual(binding);
     const requested=s.events.find(e=>e.type==='task.help_requested')!,finished=s.events.find(e=>e.type==='tool.finished')!;
     expect(requested.seq).toBeLessThan(finished.seq);expect(finished.data.receipt).toMatchObject({outcome:'succeeded',toolCallId:'help-one'});
@@ -51,7 +51,7 @@ it('refuses help while a write is awaiting policy, then accepts a new help only 
     await c.emit({type:'tool.finished',data:{id:'pending-write',name:'write',result:{content:[{type:'text',text:'written'}]},isError:false}});
     await help(c,'safe-help',{...input,attemptedToolCallIds:['pending-write']});
   },async name=>{if(name==='write'){entered.resolve();await release.promise}return {allow:true,effects:name==='write'?['business-write']:['maintenance']}});
-  try{const run=await f.runtime.startMember(f.task,'处理',f.launch);expect((await run.done).status).toBe('completed')}finally{release.resolve();await f.cleanup()}
+  try{const run=await f.runtime.StartMember(f.task,'处理',f.launch);expect((await run.done).status).toBe('completed')}finally{release.resolve();await f.cleanup()}
 });
 
 it('reserves the help fence before awaiting its policy, so concurrent commands cannot slip through',async()=>{
@@ -62,12 +62,12 @@ it('reserves the help fence before awaiting its policy, so concurrent commands c
     release.resolve();expect((await awaiting).allow).toBe(true);
     const result=await runtimeToolGroup(c,'member-help')!.call('cbim_task_help',input,'help-one');await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result}});
   },async name=>{if(name==='cbim_task_help'){entered.resolve();await release.promise}else commandPolicies++;return {allow:true,effects:['maintenance']}});
-  try{const run=await f.runtime.startMember(f.task,'处理',f.launch);expect((await run.done).status).toBe('completed');expect(commandPolicies).toBe(0)}finally{release.resolve();await f.cleanup()}
+  try{const run=await f.runtime.StartMember(f.task,'处理',f.launch);expect((await run.done).status).toBe('completed');expect(commandPolicies).toBe(0)}finally{release.resolve();await f.cleanup()}
 });
 
 it('does not expose or authorize member help for an ordinary main run',async()=>{
   const f=await fixture(async c=>{expect(runtimeToolGroup(c,'member-help')).toBeUndefined();expect((await c.beforeTool({id:'fake-help',name:'cbim_task_help',input})).allow).toBe(false)});
-  try{const run=await f.runtime.start({...f.task,mode:'chat',agentId:'cbim:main'});expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{await f.cleanup()}
+  try{const run=await f.runtime.Start({...f.task,mode:'chat',agentId:'cbim:main'});expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{await f.cleanup()}
 });
 
 it('logging a concurrently rejected tool does not poison the already authorized help fence',async()=>{
@@ -78,7 +78,7 @@ it('logging a concurrently rejected tool does not poison the already authorized 
     release.resolve();expect((await rejected).allow).toBe(false);
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result,isError:false}});
   },undefined,async event=>{if(event.type==='tool.proposed'&&event.data.id==='rejected-write'){entered.resolve();await release.promise}});
-  try{const run=await f.runtime.startMember(f.task,'处理',f.launch);const s=await run.done;expect(s.status).toBe('completed');expect(s.events.filter(e=>e.type==='task.help_requested')).toHaveLength(1)}finally{release.resolve();await f.cleanup()}
+  try{const run=await f.runtime.StartMember(f.task,'处理',f.launch);const s=await run.done;expect(s.status).toBe('completed');expect(s.events.filter(e=>e.type==='task.help_requested')).toHaveLength(1)}finally{release.resolve();await f.cleanup()}
 });
 
 it('rechecks cancellation before committing an already authorized help',async()=>{
@@ -86,7 +86,7 @@ it('rechecks cancellation before committing an already authorized help',async()=
     expect((await c.beforeTool({id:'help-one',name:'cbim_task_help',input})).allow).toBe(true);entered.resolve();await release.promise;
     await expect(runtimeToolGroup(c,'member-help')!.call('cbim_task_help',input,'help-one')).rejects.toThrow('停止');
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result:{content:[{type:'text',text:'stopped'}]},isError:true}});
-  });try{const run=await f.runtime.startMember(f.task,'处理',f.launch);await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{release.resolve();await f.cleanup()}
+  });try{const run=await f.runtime.StartMember(f.task,'处理',f.launch);await entered.promise;await f.runtime.Stop(f.task.taskId);release.resolve();expect((await run.done).events.some(e=>e.type==='task.help_requested')).toBe(false)}finally{release.resolve();await f.cleanup()}
 });
 
 it('rejects invented attempted tool IDs and permits corrected help only with a new authorized call',async()=>{
@@ -95,43 +95,43 @@ it('rejects invented attempted tool IDs and permits corrected help only with a n
     await expect(runtimeToolGroup(c,'member-help')!.call('cbim_task_help',forged,'help-one')).rejects.toThrow('不存在');
     await c.emit({type:'tool.finished',data:{id:'help-one',name:'cbim_task_help',result:{content:[{type:'text',text:'invalid'}]},isError:true}});
     await help(c,'corrected-help');
-  });try{const run=await f.runtime.startMember(f.task,'处理',f.launch);const events=(await run.done).events.filter(e=>e.type==='task.help_requested');expect(events).toHaveLength(1);expect((events[0].data.help as any).toolCallId).toBe('corrected-help')}finally{await f.cleanup()}
+  });try{const run=await f.runtime.StartMember(f.task,'处理',f.launch);const events=(await run.done).events.filter(e=>e.type==='task.help_requested');expect(events).toHaveLength(1);expect((events[0].data.help as any).toolCallId).toBe('corrected-help')}finally{await f.cleanup()}
 });
 
 it('does not replay a help whose canonical append failed, or change its authorized body',async()=>{
-  let writes=0;const tool=new MemberHelpTools(binding,{save:async()=>{writes++;throw Error('disk unavailable')},assertReady:()=>{}});
-  expect(tool.guard('cbim_task_help','help-one',input,[])).toBeUndefined();
-  await expect(tool.call('cbim_task_help',{...input,question:'changed'},'help-one')).rejects.toThrow('不一致');expect(writes).toBe(0);
-  expect(tool.guard('cbim_task_help','help-two',input,[])).toBeUndefined();await expect(tool.call('cbim_task_help',input,'help-two')).rejects.toThrow('disk unavailable');
-  tool.denied('help-two');expect(tool.guard('write','write-one',{},[])).toContain('结束本轮');
-  await expect(tool.call('cbim_task_help',input,'help-two')).rejects.toThrow('一次性');expect(writes).toBe(1);
+  let writes=0;const tool=new MemberHelpTools(binding,{Save:async()=>{writes++;throw Error('disk unavailable')},AssertReady:()=>{}});
+  expect(tool.Guard('cbim_task_help','help-one',input,[])).toBeUndefined();
+  await expect(tool.Call('cbim_task_help',{...input,question:'changed'},'help-one')).rejects.toThrow('不一致');expect(writes).toBe(0);
+  expect(tool.Guard('cbim_task_help','help-two',input,[])).toBeUndefined();await expect(tool.Call('cbim_task_help',input,'help-two')).rejects.toThrow('disk unavailable');
+  tool.Denied('help-two');expect(tool.Guard('write','write-one',{},[])).toContain('结束本轮');
+  await expect(tool.Call('cbim_task_help',input,'help-two')).rejects.toThrow('一次性');expect(writes).toBe(1);
 });
 
 it('still aborts the engine when the stop intent cannot be written, retaining interrupted status',async()=>{
   const entered=gate(),release=gate();const f=await fixture(async()=>{entered.resolve();await release.promise},undefined,async event=>{if(event.type==='run.stop_requested')throw Error('stop disk failed')});
   try{
-    const run=await f.runtime.startMember(f.task,'处理',f.launch);await entered.promise;
-    await expect(f.runtime.stop(f.task.taskId)).rejects.toThrow('stop disk failed');expect(f.stops).toBe(1);release.resolve();
+    const run=await f.runtime.StartMember(f.task,'处理',f.launch);await entered.promise;
+    await expect(f.runtime.Stop(f.task.taskId)).rejects.toThrow('stop disk failed');expect(f.stops).toBe(1);release.resolve();
     const s=await run.done;expect(s.status).toBe('interrupted');expect(s.events.at(-1)?.data.error).toBe('stop disk failed');expect(f.closed).toBe(true);
   }finally{release.resolve();await f.cleanup()}
 });
 
 it('releases only an unconsumed policy-denied reservation and rejects unknown runtime identity parameters',async()=>{
-  const tool=new MemberHelpTools(binding,{save:async()=>{},assertReady:()=>{}});
-  expect(tool.guard('cbim_task_help','invalid',{...input,rootSessionId:'other'},[])).toContain('参数');
-  expect(tool.guard('cbim_task_help','denied',input,[])).toBeUndefined();tool.denied('other');expect(tool.guard('read','read-one',{},[])).toBeTruthy();
-  tool.denied('denied');expect(tool.guard('read','read-two',{},[])).toBeUndefined();
-  expect(tool.guard('cbim_task_help','retry',input,[])).toBeUndefined();await expect(tool.call('cbim_task_help',input)).rejects.toThrow('一次性');
-  expect(JSON.parse(((await tool.call('cbim_task_help',input,'retry')).content[0] as {text:string}).text).state).toBe('staged');
+  const tool=new MemberHelpTools(binding,{Save:async()=>{},AssertReady:()=>{}});
+  expect(tool.Guard('cbim_task_help','invalid',{...input,rootSessionId:'other'},[])).toContain('参数');
+  expect(tool.Guard('cbim_task_help','denied',input,[])).toBeUndefined();tool.Denied('other');expect(tool.Guard('read','read-one',{},[])).toBeTruthy();
+  tool.Denied('denied');expect(tool.Guard('read','read-two',{},[])).toBeUndefined();
+  expect(tool.Guard('cbim_task_help','retry',input,[])).toBeUndefined();await expect(tool.Call('cbim_task_help',input)).rejects.toThrow('一次性');
+  expect(JSON.parse(((await tool.Call('cbim_task_help',input,'retry')).content[0] as {text:string}).text).state).toBe('staged');
 });
 
 it('cancellation during engine close cannot commit a normal help terminal',async()=>{
   const closing=gate(),release=gate();const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-help-runtime-'));let context!:EngineContext;
   const engine:AgentEngine={kind:'pi',start:async c=>{context=c},run:async()=>{await help(context);return {status:'completed'}},stop:async()=>{},close:async()=>{closing.resolve();await release.promise}};
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),acquireLease:async()=>()=>{},createEngine:()=>engine,toolPolicy:async()=>({allow:true,effects:['maintenance']})});
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},CreateEngine:()=>engine,ToolPolicy:async()=>({allow:true,effects:['maintenance']})});
   const task:TaskSpec={taskId:binding.taskId,workspaceId:binding.workspaceId,root:directory,agentId:binding.agentId,goal:'处理',moduleIds:['.cbim/workspace/module'],acceptance:['检查']};
   try{
-    const run=await runtime.startMember(task,'处理',{binding,session:{nativeSessionId:'native-one'}});await closing.promise;await runtime.stop(task.taskId);release.resolve();
+    const run=await runtime.StartMember(task,'处理',{binding,session:{nativeSessionId:'native-one'}});await closing.promise;await runtime.Stop(task.taskId);release.resolve();
     const s=await run.done;expect(s.status).toBe('cancelled');expect(s.events.some(e=>e.type==='task.help_requested')).toBe(true);expect(s.events.at(-1)?.data.status).toBe('cancelled');
-  }finally{release.resolve();await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-help-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}
+  }finally{release.resolve();await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-help-runtime-'))throw Error('Unexpected cleanup');await fs.rm(target,{recursive:true,force:true})}
 });

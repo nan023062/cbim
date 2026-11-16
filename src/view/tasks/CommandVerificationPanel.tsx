@@ -77,6 +77,6 @@ export function MainCommandVerification({ selection, latestSeq }: { selection: C
   const key = commandVerificationKey(selection),
     controller = useMemo(() => new CommandVerificationController(selection, request => window.cbim.call('dispatch.commandReport', request)), [key]);
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
-  useEffect(() => () => controller.cancel(), [controller]);
-  return <CommandVerificationPanel selection={selection} state={{ ...state, stale: commandVerificationStale(state.report, latestSeq) || !!state.error, inspect: () => controller.inspect() }} />;
+  useEffect(() => () => controller.Cancel(), [controller]);
+  return <CommandVerificationPanel selection={selection} state={{ ...state, stale: commandVerificationStale(state.report, latestSeq) || !!state.error, inspect: () => controller.Inspect() }} />;
 }

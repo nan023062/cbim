@@ -40,38 +40,38 @@ it('回执固定原身份、当前选择及本机来源，后续查询不能更�
 it('发送前保存完整请求，双击与跨面板共享不会并发创建两次命令',async()=>{
   let resolve!:(value:ModuleOwnershipReceipt)=>void,captured!:ModuleOwnershipCommitInput;const wait=new Promise<ModuleOwnershipReceipt>(done=>{resolve=done});
   const f=fixture({commit:vi.fn(async request=>{captured=request;expect(JSON.parse([...f.saved.values()][0]).records[0].request).toEqual(request);return wait})});
-  const first=f.controller.submit(input,preview);await f.controller.submit(input,preview);expect(f.ports.commit).toHaveBeenCalledTimes(1);expect(f.controller.blocked).toBe(true);resolve(receipt(captured));await first;expect(f.controller.snapshot.records[0].phase).toBe('accepted');
-  const pool=new ModuleOwnershipCommandPool();expect(pool.get(identity.workspaceId,f.ports)).toBe(pool.get(identity.workspaceId,f.ports));
+  const first=f.controller.Submit(input,preview);await f.controller.Submit(input,preview);expect(f.ports.commit).toHaveBeenCalledTimes(1);expect(f.controller.blocked).toBe(true);resolve(receipt(captured));await first;expect(f.controller.snapshot.records[0].phase).toBe('accepted');
+  const pool=new ModuleOwnershipCommandPool();expect(pool.Get(identity.workspaceId,f.ports)).toBe(pool.Get(identity.workspaceId,f.ports));
 });
 
 it('回复未知后重建只查原命令，回执原实例不被新UI实例改写',async()=>{
   let accepted!:ModuleOwnershipReceipt;const f=fixture({commit:vi.fn(async request=>{accepted=receipt(request);throw Error('IPC_TIMEOUT')}),lookup:vi.fn(async()=>accepted)});
-  await f.controller.submit(input,preview);const request=f.controller.snapshot.records[0].request;
-  await f.controller.submit({...input,instanceId:randomUUID()},preview);expect(f.ports.commit).toHaveBeenCalledTimes(1);
-  const restored=new ModuleOwnershipCommands(identity.workspaceId,f.ports);await restored.restore();expect(f.ports.commit).toHaveBeenCalledTimes(1);expect(f.ports.lookup).toHaveBeenCalledWith({workspaceId:identity.workspaceId,commandId:request.commandId});expect(restored.snapshot.records[0].request).toEqual(request);expect(restored.snapshot.records[0].receipt).toEqual(accepted);
+  await f.controller.Submit(input,preview);const request=f.controller.snapshot.records[0].request;
+  await f.controller.Submit({...input,instanceId:randomUUID()},preview);expect(f.ports.commit).toHaveBeenCalledTimes(1);
+  const restored=new ModuleOwnershipCommands(identity.workspaceId,f.ports);await restored.Restore();expect(f.ports.commit).toHaveBeenCalledTimes(1);expect(f.ports.lookup).toHaveBeenCalledWith({workspaceId:identity.workspaceId,commandId:request.commandId});expect(restored.snapshot.records[0].request).toEqual(request);expect(restored.snapshot.records[0].receipt).toEqual(accepted);
 });
 
 it('空查询及晚到预拒仍是未知，明确重送保持完全相同的请求',async()=>{
-  const commit=vi.fn(async()=>{throw Error('IPC_TIMEOUT')}),f=fixture({commit});await f.controller.submit(input,preview);const original=f.controller.snapshot.records[0];await f.controller.query(original.request.commandId);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
-  commit.mockImplementation(async()=>{throw Error('OWNERSHIP_MEMBER_UNAVAILABLE: 岗位暂停')});await f.controller.retry(original.request.commandId);expect(commit.mock.calls[0]).toEqual(commit.mock.calls[1]);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
+  const commit=vi.fn(async()=>{throw Error('IPC_TIMEOUT')}),f=fixture({commit});await f.controller.Submit(input,preview);const original=f.controller.snapshot.records[0];await f.controller.Query(original.request.commandId);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
+  commit.mockImplementation(async()=>{throw Error('OWNERSHIP_MEMBER_UNAVAILABLE: 岗位暂停')});await f.controller.Retry(original.request.commandId);expect(commit.mock.calls[0]).toEqual(commit.mock.calls[1]);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
   for(const code of ['OWNERSHIP_INPUT','OWNERSHIP_MEMBER_CHANGED','OWNERSHIP_BINDING_STALE'])expect(moduleOwnershipPreRejected(Error(code+': 拒绝'))).toBe(true);
   for(const code of ['OWNERSHIP_COMMAND_CONFLICT','OWNERSHIP_RECEIPT_INVALID','OWNERSHIP_UNAVAILABLE','OWNERSHIP_ACTOR','GRAPH_STORAGE_FAILED','OWNERSHIP_NEW_ERROR'])expect(moduleOwnershipPreRejected(Error(code+': 未确认'))).toBe(false);
-  const rejected=fixture({commit:async()=>{throw Error('OWNERSHIP_BASIS_STALE: 已过期')}});await rejected.controller.submit(input,preview);expect(rejected.controller.snapshot.records[0].phase).toBe('rejected');expect(rejected.controller.blocked).toBe(false);
+  const rejected=fixture({commit:async()=>{throw Error('OWNERSHIP_BASIS_STALE: 已过期')}});await rejected.controller.Submit(input,preview);expect(rejected.controller.snapshot.records[0].phase).toBe('rejected');expect(rejected.controller.blocked).toBe(false);
 });
 
 it('提交后坏回包保留原命令，已受理回执不被矛盾查询覆盖',async()=>{
-  const f=fixture({commit:async request=>({...receipt(request),basis:otherHash})});await f.controller.submit(input,preview);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
-  const g=fixture();await g.controller.submit(input,preview);const accepted=g.controller.snapshot.records[0];g.ports.lookup=async()=>({...accepted.receipt,ownerMemberId:randomUUID()});await g.controller.query(accepted.request.commandId);expect(g.controller.snapshot.records[0].receipt).toEqual(accepted.receipt);expect(g.controller.snapshot.records[0].phase).toBe('accepted');
+  const f=fixture({commit:async request=>({...receipt(request),basis:otherHash})});await f.controller.Submit(input,preview);expect(f.controller.snapshot.records[0].phase).toBe('unknown');
+  const g=fixture();await g.controller.Submit(input,preview);const accepted=g.controller.snapshot.records[0];g.ports.lookup=async()=>({...accepted.receipt,ownerMemberId:randomUUID()});await g.controller.Query(accepted.request.commandId);expect(g.controller.snapshot.records[0].receipt).toEqual(accepted.receipt);expect(g.controller.snapshot.records[0].phase).toBe('accepted');
 });
 
 it('本机保存失败不先发送，保存成功后的本机故障仍保留已受理并可查修复',async()=>{
-  const f=fixture({storage:{getItem:()=>null,setItem:()=>{throw Error('quota')}}});await f.controller.submit(input,preview);expect(f.ports.commit).not.toHaveBeenCalled();expect(f.controller.blocked).toBe(true);
-  let writes=0;const saved=new Map<string,string>(),g=fixture({storage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>{if(++writes===2)throw Error('quota');saved.set(key,value)}}});await g.controller.submit(input,preview);const accepted=g.controller.snapshot.records[0];expect(accepted.phase).toBe('accepted');expect(g.controller.blocked).toBe(true);g.ports.lookup=async()=>accepted.receipt;await g.controller.query(accepted.request.commandId);expect(g.controller.blocked).toBe(false);expect(g.ports.commit).toHaveBeenCalledTimes(1);
-  const corrupt=fixture({storage:{getItem:()=>'{broken',setItem:vi.fn()}});await corrupt.controller.submit(input,preview);expect(corrupt.ports.commit).not.toHaveBeenCalled();expect(corrupt.controller.blocked).toBe(true);
+  const f=fixture({storage:{getItem:()=>null,setItem:()=>{throw Error('quota')}}});await f.controller.Submit(input,preview);expect(f.ports.commit).not.toHaveBeenCalled();expect(f.controller.blocked).toBe(true);
+  let writes=0;const saved=new Map<string,string>(),g=fixture({storage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>{if(++writes===2)throw Error('quota');saved.set(key,value)}}});await g.controller.Submit(input,preview);const accepted=g.controller.snapshot.records[0];expect(accepted.phase).toBe('accepted');expect(g.controller.blocked).toBe(true);g.ports.lookup=async()=>accepted.receipt;await g.controller.Query(accepted.request.commandId);expect(g.controller.blocked).toBe(false);expect(g.ports.commit).toHaveBeenCalledTimes(1);
+  const corrupt=fixture({storage:{getItem:()=>'{broken',setItem:vi.fn()}});await corrupt.controller.Submit(input,preview);expect(corrupt.ports.commit).not.toHaveBeenCalled();expect(corrupt.controller.blocked).toBe(true);
 });
 
 it('本机记录不能把已有未知事实伪装成明确未受理',async()=>{
-  const f=fixture({commit:async()=>{throw Error('IPC_TIMEOUT')}});await f.controller.submit(input,preview);const key=f.controller.storageKey,raw=JSON.parse(f.saved.get(key)!);raw.records[0].phase='rejected';f.saved.set(key,JSON.stringify(raw));
+  const f=fixture({commit:async()=>{throw Error('IPC_TIMEOUT')}});await f.controller.Submit(input,preview);const key=f.controller.storageKey,raw=JSON.parse(f.saved.get(key)!);raw.records[0].phase='rejected';f.saved.set(key,JSON.stringify(raw));
   const restored=new ModuleOwnershipCommands(identity.workspaceId,f.ports);expect(restored.blocked).toBe(true);expect(restored.snapshot.error).toContain('无法读取');
 });
 

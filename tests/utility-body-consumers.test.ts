@@ -8,7 +8,7 @@ import {MAX_BYTES} from '../src/logic/resources/service';
 
 // 所有断言围绕同一组合契约：utility 的取消事实由调用方映射，不丢失原业务错误或触发重发。
 const consumers:Array<{name:string;code?:string;read:(signal:AbortSignal)=>Promise<unknown>}>= [
-  {name:'repository',code:'CANCELLED',read:signal=>new RemoteRepository('http://127.0.0.1','private-token').read(signal)},
+  {name:'repository',code:'CANCELLED',read:signal=>new RemoteRepository('http://127.0.0.1','private-token').Read(signal)},
   {name:'github',code:'GITHUB_NETWORK',read:signal=>githubRequest('https://api.github.com/user',{method:'GET',signal,token:'private-token'})},
   {name:'materials',read:signal=>readUrlSource('web','https://example.com/page',signal)},
   {name:'release',read:signal=>releaseRequest('https://api.github.com/repos/nan023062/cbim/releases',{method:'GET',signal})},

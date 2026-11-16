@@ -38,18 +38,18 @@ export class Win32IsolationRecovery
     this.api.deleteProfile = this.k.load('userenv.dll').func('int32 __stdcall DeleteAppContainerProfile(str16)');
   }
 
-  private check(value: unknown, stage: string)
+  private Check(value: unknown, stage: string)
   {
     if (!value)
       fault(stage, this.api.last())
   }
 
-  private close(handle: any)
+  private Close(handle: any)
   {
-    this.check(this.api.close(handle), 'CLOSE')
+    this.Check(this.api.close(handle), 'CLOSE')
   }
 
-  private processHandle(pid: number)
+  private ProcessHandle(pid: number)
   {
     const handle = this.api.process(0x100000 | 0x1000, 0, pid);
     if (!handle)
@@ -62,46 +62,46 @@ export class Win32IsolationRecovery
     return handle
   }
 
-  private processFacts(handle: any, pid: number): IsolationProcess
+  private ProcessFacts(handle: any, pid: number): IsolationProcess
   {
     const created = Buffer.alloc(8),
       exit = Buffer.alloc(8),
       kernel = Buffer.alloc(8),
       user = Buffer.alloc(8),
       session = Buffer.alloc(4);
-    this.check(this.api.times(handle, created, exit, kernel, user), 'PROCESS_TIME');
-    this.check(this.api.session(pid, session), 'PROCESS_SESSION');
+    this.Check(this.api.times(handle, created, exit, kernel, user), 'PROCESS_TIME');
+    this.Check(this.api.session(pid, session), 'PROCESS_SESSION');
     return { pid, created: created.readBigUInt64LE().toString(), session: session.readUInt32LE() }
   }
 
   /** 创建时间保留 FILETIME 原始整数，避免毫秒截断产生身份碰撞。 */
-  processIdentity(pid: number = process.pid): IsolationProcess
+  ProcessIdentity(pid: number = process.pid): IsolationProcess
   {
-    const handle = this.processHandle(pid);
+    const handle = this.ProcessHandle(pid);
     if (!handle)
       fault('PROCESS_ABSENT');
     try
     {
-      return this.processFacts(handle, pid)
+      return this.ProcessFacts(handle, pid)
     }
     finally
     {
-      this.close(handle)
+      this.Close(handle)
     }
   }
 
-  host(original: IsolationProcess): 'live' | 'exited' | 'reused' | 'unknown'
+  Host(original: IsolationProcess): 'live' | 'exited' | 'reused' | 'unknown'
   {
     try
     {
-      if (this.processIdentity().session !== original.session)
+      if (this.ProcessIdentity().session !== original.session)
         return 'unknown';
-      const handle = this.processHandle(original.pid);
+      const handle = this.ProcessHandle(original.pid);
       if (!handle)
         return 'exited';
       try
       {
-        const current = this.processFacts(handle, original.pid);
+        const current = this.ProcessFacts(handle, original.pid);
         if (current.created !== original.created || current.session !== original.session)
           return 'reused';
         const state = this.api.wait(handle, 0);
@@ -109,7 +109,7 @@ export class Win32IsolationRecovery
       }
       finally
       {
-        this.close(handle)
+        this.Close(handle)
       }
     }
     catch
@@ -119,9 +119,9 @@ export class Win32IsolationRecovery
   }
 
   /** 只在 host 已可靠退出后调用，避免观察者提前持句柄延长 KILL_ON_JOB_CLOSE 生命周期。 */
-  job(resource: IsolationResource): 'active' | 'empty' | 'absent' | 'unknown'
+  Job(resource: IsolationResource): 'active' | 'empty' | 'absent' | 'unknown'
   {
-    if (!['exited', 'reused'].includes(this.host(resource.host)))
+    if (!['exited', 'reused'].includes(this.Host(resource.host)))
       return 'unknown';
     const handle = this.api.job(4, 0, resource.jobName);
     if (!handle)
@@ -135,11 +135,11 @@ export class Win32IsolationRecovery
     }
     finally
     {
-      this.close(handle)
+      this.Close(handle)
     }
   }
 
-  private final(handle: any)
+  private Final(handle: any)
   {
     const value = Buffer.alloc(65536),
       length = this.api.final(handle, value, 32768, 0);
@@ -148,14 +148,14 @@ export class Win32IsolationRecovery
     return value.subarray(0, length * 2).toString('utf16le')
   }
 
-  private information(handle: any)
+  private Information(handle: any)
   {
     const value = Buffer.alloc(52);
-    this.check(this.api.info(handle, value), 'FILE_INFO');
+    this.Check(this.api.info(handle, value), 'FILE_INFO');
     return { identity: { volumeId: value.readUInt32LE(28).toString(16), fileId: value.subarray(44, 52).toString('hex') }, attributes: value.readUInt32LE(0), links: value.readUInt32LE(40) }
   }
 
-  private open(file: string, remove: boolean)
+  private Open(file: string, remove: boolean)
   {
     const handle = this.api.file(file, 0x81 | (remove ? 0x10000 : 0), 3, null, 3, 0x2000000 | 0x200000, null),
       code = this.api.last();
@@ -163,8 +163,8 @@ export class Win32IsolationRecovery
       fault('OPEN', code);
     try
     {
-      const info = this.information(handle);
-      if (info.attributes & 0x400 || normal(this.final(handle)) !== normal(file))
+      const info = this.Information(handle);
+      if (info.attributes & 0x400 || normal(this.Final(handle)) !== normal(file))
         fault('PATH');
       if (!(info.attributes & 0x10) && info.links !== 1)
         fault('LINK');
@@ -172,12 +172,12 @@ export class Win32IsolationRecovery
     }
     catch (error)
     {
-      this.close(handle);
+      this.Close(handle);
       throw error
     }
   }
 
-  private parents(root: string)
+  private Parents(root: string)
   {
     const held: any[] = [],
       drive = path.parse(root).root;
@@ -188,7 +188,7 @@ export class Win32IsolationRecovery
       {
         if (part)
           current = path.join(current, part);
-        const entry = this.open(current, false);
+        const entry = this.Open(current, false);
         held.push(entry.handle);
         if (!(entry.attributes & 0x10))
           fault('PATH')
@@ -198,26 +198,26 @@ export class Win32IsolationRecovery
     catch (error)
     {
       for (const handle of held.reverse())
-        this.close(handle);
+        this.Close(handle);
       throw error
     }
   }
 
-  private rootPath(root: string)
+  private RootPath(root: string)
   {
     const temp = fs.realpathSync(os.tmpdir());
     if (path.dirname(root) !== temp || !/^cbim-isolated-[A-Za-z0-9]+$/.test(path.basename(root)))
       fault('ROOT_PATH')
   }
 
-  directoryIdentity(root: string): IsolationDirectory
+  DirectoryIdentity(root: string): IsolationDirectory
   {
-    this.rootPath(root);
-    const parents = this.parents(root);
-    let entry: ReturnType<Win32IsolationRecovery['open']> | undefined;
+    this.RootPath(root);
+    const parents = this.Parents(root);
+    let entry: ReturnType<Win32IsolationRecovery['Open']> | undefined;
     try
     {
-      entry = this.open(root, false);
+      entry = this.Open(root, false);
       if (!(entry.attributes & 0x10))
         fault('ROOT_PATH');
       return entry.identity
@@ -225,35 +225,35 @@ export class Win32IsolationRecovery
     finally
     {
       if (entry)
-        this.close(entry.handle);
+        this.Close(entry.handle);
       for (const handle of parents.reverse())
-        this.close(handle)
+        this.Close(handle)
     }
   }
 
   /** 持根和全部待删对象，扫描完成前不删除。返回的闭包只删除这些原句柄，最多4096对象／64层。 */
-  lockTree(resource: IsolationResource, ownerRequired: boolean)
+  LockTree(resource: IsolationResource, ownerRequired: boolean)
   {
-    this.rootPath(resource.root);
-    const parents = this.parents(resource.root),
-      held: ReturnType<Win32IsolationRecovery['open']>[] = [],
+    this.RootPath(resource.root);
+    const parents = this.Parents(resource.root),
+      held: ReturnType<Win32IsolationRecovery['Open']>[] = [],
       ordered: typeof held = [];
     const release = () =>
     {
       for (let i = held.length - 1; i >= 0; i--)
       {
-        this.close(held[i].handle);
+        this.Close(held[i].handle);
         held.splice(i, 1)
       }
       for (let i = parents.length - 1; i >= 0; i--)
       {
-        this.close(parents[i]);
+        this.Close(parents[i]);
         parents.splice(i, 1)
       }
     };
     try
     {
-      const root = this.open(resource.root, true);
+      const root = this.Open(resource.root, true);
       held.push(root);
       if (!(root.attributes & 0x10) || JSON.stringify(root.identity) !== JSON.stringify(resource.rootIdentity))
         fault('ROOT_CHANGED');
@@ -269,7 +269,7 @@ export class Win32IsolationRecovery
             const target = path.resolve(entry.file, name);
             if (path.dirname(target) !== entry.file)
               fault('PATH');
-            const child = this.open(target, true);
+            const child = this.Open(target, true);
             held.push(child);
             visit(child, depth + 1)
           }
@@ -289,8 +289,8 @@ export class Win32IsolationRecovery
         {
           for (const entry of ordered)
           {
-            this.check(this.api.dispose(entry.handle, 4, Buffer.from([1]), 1), 'DELETE');
-            this.close(entry.handle);
+            this.Check(this.api.dispose(entry.handle, 4, Buffer.from([1]), 1), 'DELETE');
+            this.Close(entry.handle);
             held.splice(held.indexOf(entry), 1)
           }
         }, close: release
@@ -304,7 +304,7 @@ export class Win32IsolationRecovery
   }
 
   /** 删除只依据私有生成的唯一 profile 名称；不存在也是幂等清理，未知错误不得忽略。 */
-  deleteProfile(resource: IsolationResource)
+  DeleteProfile(resource: IsolationResource)
   {
     if (resource.profileName !== 'CBIM.Isolated.' + resource.executionId)
       fault('PROFILE_IDENTITY');

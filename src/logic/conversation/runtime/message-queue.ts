@@ -54,7 +54,7 @@ export class MessageQueue
       item: QueuedMessage
     }>();
 
-  private publish()
+  private Publish()
   {
     const next = new Map<string,
       {
@@ -73,7 +73,7 @@ export class MessageQueue
     }
     this.published = next;
     for (const observer of this.observers)
-      this.notify(observer)
+      this.Notify(observer)
   }
 
   constructor(private file: string)
@@ -81,16 +81,16 @@ export class MessageQueue
   }
 
   /** 并发初始化共享一次恢复；损坏记录不发布假空队列。 */
-  load(): Promise<void>
+  Load(): Promise<void>
   {
-    return this.loading ??= this.loadOnce().catch(error =>
+    return this.loading ??= this.LoadOnce().catch(error =>
     {
-      this.reportFailure(error);
+      this.ReportFailure(error);
       throw error
     })
   }
 
-  private async loadOnce()
+  private async LoadOnce()
   {
     try
     {
@@ -102,16 +102,16 @@ export class MessageQueue
         throw e
     }
     this.loaded = true;
-    this.publish()
+    this.Publish()
   }
 
   /** 初始成功恢复及后续保存完成后通知；取消订阅不影响队列所有权。 */
-  subscribe(listener: (counts: QueueCounts) => void, failed?: (error: Error) => void)
+  Subscribe(listener: (counts: QueueCounts) => void, failed?: (error: Error) => void)
   {
     const observer = { listener, failed };
     this.observers.add(observer);
     if (this.loaded)
-      this.notify(observer);
+      this.Notify(observer);
     return () =>
     {
       this.observers.delete(observer)
@@ -119,7 +119,7 @@ export class MessageQueue
   }
 
   /** 计数依据最后成功发布状态，不读取尚未保存的工作副本。 */
-  counts(): QueueCounts
+  Counts(): QueueCounts
   {
     const counts: QueueCounts = { pending: 0, paused: 0, inserting: 0 };
     for (const { item } of this.published.values())
@@ -127,11 +127,11 @@ export class MessageQueue
     return counts
   }
 
-  private notify(observer: { listener: (counts: QueueCounts) => void; failed?: (error: Error) => void })
+  private Notify(observer: { listener: (counts: QueueCounts) => void; failed?: (error: Error) => void })
   {
     try
     {
-      observer.listener(this.counts())
+      observer.listener(this.Counts())
     }
     catch (error)
     {
@@ -146,7 +146,7 @@ export class MessageQueue
     }
   }
 
-  private reportFailure(error: unknown)
+  private ReportFailure(error: unknown)
   {
     for (const observer of this.observers)
       try
@@ -159,13 +159,13 @@ export class MessageQueue
       }
   }
 
-  list(taskId: string)
+  List(taskId: string)
   {
     return this.items.filter(x => x.taskId === taskId)
   }
 
   /** 返回已提交的增量；纯排序只传 ID 顺序，删除由 order 缺失表示。 */
-  delta(taskId: string, input?: unknown): QueueDelta
+  Delta(taskId: string, input?: unknown): QueueDelta
   {
     const cursor = input === undefined ? undefined : z.object({ epoch: z.string().uuid(), revision: z.number().int().nonnegative(), items: z.record(z.number().int().nonnegative()).refine(x => Object.keys(x).length <= 30) }).strict().parse(input);
     if (cursor?.epoch === this.epoch && cursor.revision === this.revision)
@@ -176,7 +176,7 @@ export class MessageQueue
   }
 
   /** 临时文件与原文件位于同目录，提交完成后才允许启动下一轮。 */
-  private async save()
+  private async Save()
   {
     try
     {
@@ -188,23 +188,23 @@ export class MessageQueue
     catch (error)
     {
       this.items = [...this.published.values()].map(entry => structuredClone(entry.item));
-      this.reportFailure(error);
+      this.ReportFailure(error);
       throw error
     }
-    this.publish()
+    this.Publish()
   }
 
-  async add(taskId: string, message: string, config: QueuedMessage['options'], followupOf?: string, attachmentManifest?: QueuedMessage['attachmentManifest'])
+  async Add(taskId: string, message: string, config: QueuedMessage['options'], followupOf?: string, attachmentManifest?: QueuedMessage['attachmentManifest'])
   {
-    if (this.list(taskId).length >= 30)
+    if (this.List(taskId).length >= 30)
       throw Error('最多排队 30 条消息');
     const entry: QueuedMessage = { id: randomUUID(), taskId, message, options: config, status: 'pending', ...(attachmentManifest ? { attachmentManifest: structuredClone(attachmentManifest) } : {}), ...(followupOf ? { followupOf } : {}) };
     this.items.push(entry);
-    await this.save();
+    await this.Save();
     return entry
   }
 
-  async change(taskId: string, id: string, action: 'first' | 'up' | 'down' | 'remove')
+  async Change(taskId: string, id: string, action: 'first' | 'up' | 'down' | 'remove')
   {
     const i = this.items.findIndex(x => x.id === id && x.taskId === taskId);
     if (i < 0 || this.items[i].status === 'starting')
@@ -222,13 +222,13 @@ export class MessageQueue
         this.items.splice(target, 0, entry)
       }
     }
-    await this.save();
+    await this.Save();
   }
 
   /** 编辑仅替换用户文字，保留附件快照与发送设置；旧页面不能覆盖已更新消息。 */
-  async edit(taskId: string, id: string, message: string, expected: string)
+  async Edit(taskId: string, id: string, message: string, expected: string)
   {
-    const entry = this.list(taskId).find(x => x.id === id);
+    const entry = this.List(taskId).find(x => x.id === id);
     if (!entry || entry.status === 'starting')
       throw Error('队列项已开始或不存在');
     if (entry.message !== expected)
@@ -239,69 +239,69 @@ export class MessageQueue
     entry.message = text + (offset < 0 ? '' : entry.message.slice(offset));
     if (entry.attachmentManifest)
       entry.attachmentManifest = { ...entry.attachmentManifest, expandedMessageHash: hash(entry.message), expandedMessageBytes: Buffer.byteLength(entry.message, 'utf8') };
-    await this.save();
+    await this.Save();
   }
 
   /** 将源项移动到目标项之前；仅操作同一会话内尚未启动的条目。 */
-  async move(taskId: string, id: string, beforeId?: string)
+  async Move(taskId: string, id: string, beforeId?: string)
   {
-    const source = this.list(taskId).find(x => x.id === id),
-      target = this.list(taskId).find(x => x.id === beforeId);
+    const source = this.List(taskId).find(x => x.id === id),
+      target = this.List(taskId).find(x => x.id === beforeId);
     if (!source || beforeId !== undefined && !target || source.status === 'starting' || target?.status === 'starting')
       throw Error('队列项已开始或不存在');
     if (id === beforeId)
       return;
     this.items.splice(this.items.indexOf(source), 1);
-    const last = this.list(taskId).at(-1),
+    const last = this.List(taskId).at(-1),
       index = target ? this.items.indexOf(target) : last ? this.items.indexOf(last) + 1 : this.items.length;
     this.items.splice(index, 0, source);
-    await this.save();
+    await this.Save();
   }
 
   /** 先持久化占用，再向引擎发送；重启时转为暂停，避免未知结果被自动重复插入。 */
-  async claim(taskId: string, id: string)
+  async Claim(taskId: string, id: string)
   {
-    const entry = this.list(taskId).find(x => x.id === id);
+    const entry = this.List(taskId).find(x => x.id === id);
     if (!entry || entry.status === 'starting')
       throw Error('队列项已开始或不存在');
     entry.status = 'starting';
-    await this.save();
+    await this.Save();
     return entry
   }
 
-  async pause(taskId: string, reason: string)
+  async Pause(taskId: string, reason: string)
   {
-    for (const x of this.list(taskId))
+    for (const x of this.List(taskId))
     {
       x.status = 'paused';
       x.reason = reason
     }
-    await this.save()
+    await this.Save()
   }
 
-  async resume(taskId: string)
+  async Resume(taskId: string)
   {
-    for (const x of this.list(taskId))
+    for (const x of this.List(taskId))
     {
       x.status = 'pending';
       delete x.reason
     }
-    await this.save()
+    await this.Save()
   }
 
-  async take(taskId: string)
+  async Take(taskId: string)
   {
-    const next = this.list(taskId)[0];
+    const next = this.List(taskId)[0];
     if (!next || next.status !== 'pending')
       return;
     next.status = 'starting';
-    await this.save();
+    await this.Save();
     return next
   }
 
-  async complete(id: string)
+  async Complete(id: string)
   {
     this.items = this.items.filter(x => x.id !== id);
-    await this.save()
+    await this.Save()
   }
 }

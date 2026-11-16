@@ -70,8 +70,8 @@ class N_src_logic_automation_rules_contracts_ts_AutomationSave["AutomationSave"]
 N_src_logic_automation_rules_contracts_ts ..> N_src_logic_automation_rules_contracts_ts_AutomationSave : 声明
 class N_src_logic_automation_rules_contracts_ts_AutomationStorage["AutomationStorage"] {
   <<interface>>
-  +read()
-  +write()
+  +Read()
+  +Write()
 }
 N_src_logic_automation_rules_contracts_ts ..> N_src_logic_automation_rules_contracts_ts_AutomationStorage : 声明
 ```
@@ -83,10 +83,10 @@ class N_src_logic_automation_rules_contracts_ts["contracts.ts"] {
 }
 class N_src_logic_automation_rules_contracts_ts_AutomationRunner["AutomationRunner"] {
   <<interface>>
-  +validate()
-  +start()
-  +inspect()
-  +stop()
+  +Validate()
+  +Start()
+  +Inspect()
+  +Stop()
 }
 N_src_logic_automation_rules_contracts_ts ..> N_src_logic_automation_rules_contracts_ts_AutomationRunner : 声明
 class N_src_logic_automation_rules_contracts_ts_AutomationCatalog["AutomationCatalog"] {

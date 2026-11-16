@@ -137,8 +137,8 @@ N_src_view_tasks_admission_state_ts ..> N_src_view_tasks_admission_state_ts_Admi
 class N_src_view_tasks_admission_state_ts_AdmissionFeed["AdmissionFeed"] {
   +constructor()
   +snapshot
-  +subscribe()
-  +refresh()
+  +Subscribe()
+  +Refresh()
   -read
   -intervalMs
   -value
@@ -146,7 +146,7 @@ class N_src_view_tasks_admission_state_ts_AdmissionFeed["AdmissionFeed"] {
   -timer
   -generation
   -pending
-  -emit()
+  -Emit()
 }
 N_src_view_tasks_admission_state_ts ..> N_src_view_tasks_admission_state_ts_AdmissionFeed : 声明
 ```
@@ -209,17 +209,17 @@ class N_src_view_tasks_artifact_report_state_ts_ArtifactReportController["Artifa
   +constructor()
   +snapshot
   +subscribe
-  +cancel()
-  +select()
-  +list()
-  +inspect()
+  +Cancel()
+  +Select()
+  +List()
+  +Inspect()
   -read
   -version
   -value
   -generation
   -listeners
-  -publish()
-  -pull()
+  -Publish()
+  -Pull()
 }
 N_src_view_tasks_artifact_report_state_ts ..> N_src_view_tasks_artifact_report_state_ts_ArtifactReportController : 声明
 ```
@@ -282,13 +282,13 @@ class N_src_view_tasks_command_verification_state_ts_CommandVerificationControll
   +constructor()
   +snapshot
   +subscribe
-  +cancel()
-  +inspect()
+  +Cancel()
+  +Inspect()
   -read
   -value
   -generation
   -listeners
-  -publish()
+  -Publish()
 }
 N_src_view_tasks_command_verification_state_ts ..> N_src_view_tasks_command_verification_state_ts_CommandVerificationController : 声明
 ```
@@ -485,19 +485,19 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   +available
   +canRelease
   +isImporting
-  +subscribe()
-  +record()
-  +isPending()
-  +edit()
-  +pickFiles()
-  +cancelImport()
-  +importSource()
-  +materialTargets()
+  +Subscribe()
+  +Record()
+  +IsPending()
+  +Edit()
+  +PickFiles()
+  +CancelImport()
+  +ImportSource()
+  +MaterialTargets()
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ScopeContinuationController : 声明
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationPool["ScopeContinuationPool"] {
   +constructor()
-  +get()
+  +Get()
   -idleLimit
   -controllers
 }
@@ -512,13 +512,13 @@ class N_src_view_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
-  +materialList()
-  +removeFile()
-  +submitInput()
-  +submit()
-  +retry()
-  +query()
-  +restore()
+  +MaterialList()
+  +RemoveFile()
+  +SubmitInput()
+  +Submit()
+  +Retry()
+  +Query()
+  +Restore()
   -ports
   -value
   -unavailable
@@ -526,8 +526,8 @@ class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeC
   -pending
   -importing
   -sourceOperation
-  -emit()
-  -store()
+  -Emit()
+  -Store()
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ScopeContinuationController : 声明
 ```
@@ -540,10 +540,10 @@ class N_src_view_tasks_continuation_state_ts["continuation-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_continuation_state_ts_ScopeContinuationController["ScopeContinuationController"] {
-  -update()
-  -canEdit()
-  -source()
-  -send()
+  -Update()
+  -CanEdit()
+  -Source()
+  -Send()
 }
 N_src_view_tasks_continuation_state_ts ..> N_src_view_tasks_continuation_state_ts_ScopeContinuationController : 声明
 ```
@@ -653,19 +653,19 @@ class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["Contro
   +available
   +canRelease
   +subscribe
-  +read()
-  +draft()
-  +attempt()
-  +isPending()
-  +observeAnchor()
-  +fresh()
-  +edit()
-  +prepare()
+  +Read()
+  +Draft()
+  +Attempt()
+  +IsPending()
+  +ObserveAnchor()
+  +Fresh()
+  +Edit()
+  +Prepare()
 }
 N_src_view_tasks_controlled_file_state_ts ..> N_src_view_tasks_controlled_file_state_ts_ControlledFileController : 声明
 class N_src_view_tasks_controlled_file_state_ts_ControlledFilePool["ControlledFilePool"] {
   +constructor()
-  +get()
+  +Get()
   -idleLimit
   -values
 }
@@ -680,21 +680,21 @@ class N_src_view_tasks_controlled_file_state_ts["controlled-file-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_controlled_file_state_ts_ControlledFileController["ControlledFileController"] {
-  +inspect()
-  +preview()
-  +submit()
-  +query()
+  +Inspect()
+  +Preview()
+  +Submit()
+  +Query()
   -ports
   -value
   -listeners
   -pending
   -anchors
   -unavailable
-  -owns()
-  -publish()
-  -setRead()
-  -persist()
-  -saveAttempt()
+  -Owns()
+  -Publish()
+  -SetRead()
+  -Persist()
+  -SaveAttempt()
 }
 N_src_view_tasks_controlled_file_state_ts ..> N_src_view_tasks_controlled_file_state_ts_ControlledFileController : 声明
 ```
@@ -810,19 +810,19 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   +available
   +canRelease
   +subscribe
-  +draft()
-  +attempt()
-  +read()
-  +isPending()
-  +selected()
-  +observeAnchor()
-  +fresh()
-  +edit()
+  +Draft()
+  +Attempt()
+  +Read()
+  +IsPending()
+  +Selected()
+  +ObserveAnchor()
+  +Fresh()
+  +Edit()
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectObservationController : 声明
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationPool["EffectObservationPool"] {
   +constructor()
-  +get()
+  +Get()
   -idleLimit
   -values
 }
@@ -837,12 +837,12 @@ class N_src_view_tasks_effect_observation_state_ts["effect-observation-state.ts"
   <<module>>
 }
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["EffectObservationController"] {
-  +prepare()
-  +observe()
-  +submit()
-  +query()
-  +list()
-  +relations()
+  +Prepare()
+  +Observe()
+  +Submit()
+  +Query()
+  +List()
+  +Relations()
   -ports
   -value
   -listeners
@@ -851,8 +851,8 @@ class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["
   -selectionGenerations
   -anchors
   -unavailable
-  -owns()
-  -publish()
+  -Owns()
+  -Publish()
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectObservationController : 声明
 ```
@@ -865,9 +865,9 @@ class N_src_view_tasks_effect_observation_state_ts["effect-observation-state.ts"
   <<module>>
 }
 class N_src_view_tasks_effect_observation_state_ts_EffectObservationController["EffectObservationController"] {
-  -setRead()
-  -persist()
-  -saveAttempt()
+  -SetRead()
+  -Persist()
+  -SaveAttempt()
 }
 N_src_view_tasks_effect_observation_state_ts ..> N_src_view_tasks_effect_observation_state_ts_EffectObservationController : 声明
 ```
@@ -944,17 +944,17 @@ class N_src_view_tasks_execution_report_state_ts_ExecutionReportController["Exec
   +constructor()
   +snapshot
   +subscribe
-  +cancel()
-  +invalidate()
-  +inspect()
-  +more()
+  +Cancel()
+  +Invalidate()
+  +Inspect()
+  +More()
   -read
   -limit
   -value
   -generation
   -listeners
-  -publish()
-  -pull()
+  -Publish()
+  -Pull()
 }
 N_src_view_tasks_execution_report_state_ts ..> N_src_view_tasks_execution_report_state_ts_ExecutionReportController : 声明
 ```
@@ -994,8 +994,8 @@ class N_src_view_tasks_graph_state_ts_SessionGraphProjection["SessionGraphProjec
   +constructor()
   +snapshot
   +cursor
-  +fork()
-  +apply()
+  +Fork()
+  +Apply()
   -value
 }
 N_src_view_tasks_graph_state_ts ..> N_src_view_tasks_graph_state_ts_SessionGraphProjection : 声明
@@ -1071,19 +1071,19 @@ class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["
   +snapshot
   +available
   +canRelease
-  +subscribe()
-  +record()
-  +isPending()
-  +submit()
-  +retry()
-  +query()
-  +restore()
+  +Subscribe()
+  +Record()
+  +IsPending()
+  +Submit()
+  +Retry()
+  +Query()
+  +Restore()
   -ports
   -value
 }
 N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continuation_state_ts_HumanContinuationController : 声明
 class N_src_view_tasks_human_continuation_state_ts_HumanContinuationPool["HumanContinuationPool"] {
-  +get()
+  +Get()
   -controllers
 }
 N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continuation_state_ts_HumanContinuationPool : 声明
@@ -1100,9 +1100,9 @@ class N_src_view_tasks_human_continuation_state_ts_HumanContinuationController["
   -unavailable
   -listeners
   -pending
-  -emit()
-  -update()
-  -send()
+  -Emit()
+  -Update()
+  -Send()
 }
 N_src_view_tasks_human_continuation_state_ts ..> N_src_view_tasks_human_continuation_state_ts_HumanContinuationController : 声明
 ```
@@ -1206,19 +1206,19 @@ class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDec
   +snapshot
   +available
   +canRelease
-  +subscribe()
-  +record()
-  +previewState()
-  +isPending()
-  +locked()
-  +edit()
-  +resetBaselines()
-  +reconsider()
-  +currentPreview()
+  +Subscribe()
+  +Record()
+  +PreviewState()
+  +IsPending()
+  +Locked()
+  +Edit()
+  +ResetBaselines()
+  +Reconsider()
+  +CurrentPreview()
 }
 N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_state_ts_HumanDecisionController : 声明
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionPool["HumanDecisionPool"] {
-  +get()
+  +Get()
   -values
 }
 N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_state_ts_HumanDecisionPool : 声明
@@ -1232,21 +1232,21 @@ class N_src_view_tasks_human_decision_state_ts["human-decision-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_human_decision_state_ts_HumanDecisionController["HumanDecisionController"] {
-  +preview()
-  +submit()
-  +retry()
-  +query()
-  +restore()
+  +Preview()
+  +Submit()
+  +Retry()
+  +Query()
+  +Restore()
   -ports
   -value
   -unavailable
   -listeners
   -pending
   -previews
-  -emit()
-  -belongs()
-  -update()
-  -send()
+  -Emit()
+  -Belongs()
+  -Update()
+  -Send()
 }
 N_src_view_tasks_human_decision_state_ts ..> N_src_view_tasks_human_decision_state_ts_HumanDecisionController : 声明
 ```
@@ -1671,9 +1671,9 @@ class N_src_view_tasks_MemberOutputManifest_tsx["MemberOutputManifest.tsx"] {
 class N_src_view_tasks_MemberOutputManifest_tsx_ManifestPanelState["ManifestPanelState"] {
   <<interface>>
   +stale
-  +list()
-  +inspect()
-  +select()
+  +List()
+  +Inspect()
+  +Select()
 }
 N_src_view_tasks_MemberOutputManifest_tsx ..> N_src_view_tasks_MemberOutputManifest_tsx_ManifestPanelState : 声明
 class N_src_view_tasks_MemberOutputManifest_tsx_external_ManifestReportState["ManifestReportState (外部契约)"] {
@@ -1804,7 +1804,7 @@ class N_src_view_tasks_office_state_ts["office-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_office_state_ts_OfficeEventTracker["OfficeEventTracker"] {
-  +observe()
+  +Observe()
   -key
   -seq
   -known
@@ -1882,17 +1882,17 @@ class N_src_view_tasks_output_manifest_state_ts_ManifestReportController["Manife
   +constructor()
   +snapshot
   +subscribe
-  +cancel()
-  +select()
-  +list()
-  +inspect()
+  +Cancel()
+  +Select()
+  +List()
+  +Inspect()
   -read
   -version
   -value
   -generation
   -listeners
-  -publish()
-  -pull()
+  -Publish()
+  -Pull()
 }
 N_src_view_tasks_output_manifest_state_ts ..> N_src_view_tasks_output_manifest_state_ts_ManifestReportController : 声明
 ```
@@ -1939,17 +1939,17 @@ N_src_view_tasks_owner_execution_state_ts ..> N_src_view_tasks_owner_execution_s
 class N_src_view_tasks_owner_execution_state_ts_OwnerInspectionController["OwnerInspectionController"] {
   +constructor()
   +snapshot
-  +subscribe()
-  +observe()
-  +inspect()
-  +dispose()
+  +Subscribe()
+  +Observe()
+  +Inspect()
+  +Dispose()
   -read
   -task
   -serial
   -inFlight
   -listeners
   -value
-  -publish()
+  -Publish()
 }
 N_src_view_tasks_owner_execution_state_ts ..> N_src_view_tasks_owner_execution_state_ts_OwnerInspectionController : 声明
 ```
@@ -2073,14 +2073,14 @@ class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionR
   +snapshot
   +available
   +canRelease
-  +subscribe()
-  +subscribeSource()
-  +record()
-  +isPending()
-  +edit()
-  +submit()
-  +prepareAgain()
-  +retry()
+  +Subscribe()
+  +SubscribeSource()
+  +Record()
+  +IsPending()
+  +Edit()
+  +Submit()
+  +PrepareAgain()
+  +Retry()
 }
 N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
 ```
@@ -2093,16 +2093,16 @@ class N_src_view_tasks_recovery_state_ts["recovery-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController["ExecutionRecoveryController"] {
-  +query()
-  +restore()
+  +Query()
+  +Restore()
   -ports
   -value
   -unavailable
   -listeners
   -pending
-  -emit()
-  -update()
-  -send()
+  -Emit()
+  -Update()
+  -Send()
 }
 N_src_view_tasks_recovery_state_ts ..> N_src_view_tasks_recovery_state_ts_ExecutionRecoveryController : 声明
 ```
@@ -2114,7 +2114,7 @@ class N_src_view_tasks_recovery_state_ts["recovery-state.ts"] {
 }
 class N_src_view_tasks_recovery_state_ts_ExecutionRecoveryPool["ExecutionRecoveryPool"] {
   +constructor()
-  +get()
+  +Get()
   -idleLimit
   -controllers
 }
@@ -2212,20 +2212,20 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
   +snapshot
   +available
   +canRelease
-  +subscribe()
-  +record()
-  +isPending()
-  +observeTarget()
-  +edit()
-  +preview()
-  +ready()
-  +submit()
-  +query()
+  +Subscribe()
+  +Record()
+  +IsPending()
+  +ObserveTarget()
+  +Edit()
+  +Preview()
+  +Ready()
+  +Submit()
+  +Query()
 }
 N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ScopeReplanController : 声明
 class N_src_view_tasks_replan_state_ts_ScopeReplanPool["ScopeReplanPool"] {
   +constructor()
-  +get()
+  +Get()
   -idleLimit
   -controllers
 }
@@ -2240,8 +2240,8 @@ class N_src_view_tasks_replan_state_ts["replan-state.ts"] {
   <<module>>
 }
 class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanController"] {
-  +retry()
-  +restore()
+  +Retry()
+  +Restore()
   -ports
   -value
   -unavailable
@@ -2249,9 +2249,9 @@ class N_src_view_tasks_replan_state_ts_ScopeReplanController["ScopeReplanControl
   -previewGeneration
   -pending
   -listeners
-  -emit()
-  -save()
-  -send()
+  -Emit()
+  -Save()
+  -Send()
 }
 N_src_view_tasks_replan_state_ts ..> N_src_view_tasks_replan_state_ts_ScopeReplanController : 声明
 ```
@@ -2283,15 +2283,15 @@ class N_src_view_tasks_request_budget_state_ts_RequestBudgetController["RequestB
   +constructor()
   +snapshot
   +subscribe
-  +dispose()
-  +load()
+  +Dispose()
+  +Load()
   -query
   -revision
   -call
   -state
   -generation
   -listeners
-  -publish()
+  -Publish()
 }
 N_src_view_tasks_request_budget_state_ts ..> N_src_view_tasks_request_budget_state_ts_RequestBudgetController : 声明
 ```
@@ -2351,8 +2351,8 @@ class N_src_view_tasks_scope_state_ts_SessionScopeProjection["SessionScopeProjec
   +constructor()
   +snapshot
   +cursor
-  +fork()
-  +apply()
+  +Fork()
+  +Apply()
   -value
 }
 N_src_view_tasks_scope_state_ts ..> N_src_view_tasks_scope_state_ts_SessionScopeProjection : 声明
@@ -2371,10 +2371,10 @@ class N_src_view_tasks_scope_state_ts_SessionReadProjection["SessionReadProjecti
   +teamSessions
   +graphCursor
   +scopeCursor
-  +selected()
-  +detailStamp()
-  +detail()
-  +apply()
+  +Selected()
+  +DetailStamp()
+  +Detail()
+  +Apply()
   -graphs
   -goals
   -details
@@ -2433,13 +2433,13 @@ class N_src_view_tasks_scope_usage_state_ts_ScopeUsageController["ScopeUsageCont
   +constructor()
   +snapshot
   +subscribe
-  +cancel()
-  +read()
+  +Cancel()
+  +Read()
   -request
   -value
   -generation
   -listeners
-  -publish()
+  -Publish()
 }
 N_src_view_tasks_scope_usage_state_ts ..> N_src_view_tasks_scope_usage_state_ts_ScopeUsageController : 声明
 ```
@@ -4485,7 +4485,7 @@ HumanDecisionController保留显式manifests选择并随原请求持久冻结；
 
 ## R08 跨等待意见与明确新决定
 
-`HumanDecisionController.reconsider` 仅由明确点击触发，清空原选择、意见和决定后列出当前菜单；不会复制旧接受或自动读产物。原意见 ID 随草稿/冻结命令保存，预览与回执必须精确匹配。退出对照同样是明确操作；未知/在途请求不能退出、改 ID 或清空，重开只查原命令。成功后再编辑表示独立新决定，移除已经消费的旧关联并使旧预览失效。
+`HumanDecisionController.Reconsider` 仅由明确点击触发，清空原选择、意见和决定后列出当前菜单；不会复制旧接受或自动读产物。原意见 ID 随草稿/冻结命令保存，预览与回执必须精确匹配。退出对照同样是明确操作；未知/在途请求不能退出、改 ID 或清空，重开只查原命令。成功后再编辑表示独立新决定，移除已经消费的旧关联并使旧预览失效。
 
 `useHumanDecisions` 公开当前 waitId，`HumanDecisionPanel` 只对本项最新且来自先前等待的记录提供对照入口；显示八项原因、“所比较证据一致仍须重新决定”和历史新旧链接。选择、目标或原意见变化及迟到响应均不能混用。坏旧来源可以退出对照，但当前等待的其他可信证据仍须满足原核验条件，不能借独立入口绕过损坏的当前日志。保存与独立继续保持分离，普通对话草稿不受影响。
 
@@ -4533,7 +4533,7 @@ member-review-state 只从 TaskNode 的精确候选及审阅绑定派生等待�
 
 ## 等待时聊天补充转交
 
-`useScopeContinuation.submitInput` 复用当前选中等待的严格身份、版本和模型校验。`ScopeContinuationController.submitInput` 先保存聊天正文与有序附件，再使用既有冻结命令提交；不同的已有目标草稿不会被覆盖。保存成功后补充记录持有正文，拒绝和未知结果也可在输入区表单找回；保存失败不清聊天草稿。表单、任务根与聊天共用同一控制器和锁，已受理或未知命令不能再次构造新提交。补充继续仍不代表人工验收，后端等待与队列准入不变。
+`useScopeContinuation.submitInput` 复用当前选中等待的严格身份、版本和模型校验。`ScopeContinuationController.SubmitInput` 先保存聊天正文与有序附件，再使用既有冻结命令提交；不同的已有目标草稿不会被覆盖。保存成功后补充记录持有正文，拒绝和未知结果也可在输入区表单找回；保存失败不清聊天草稿。表单、任务根与聊天共用同一控制器和锁，已受理或未知命令不能再次构造新提交。补充继续仍不代表人工验收，后端等待与队列准入不变。
 
 
 ### 控制器订阅边界

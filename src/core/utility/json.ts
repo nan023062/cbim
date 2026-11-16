@@ -48,7 +48,7 @@ export class JsonUtils
      * 不改字段、不做 schema、危险键过滤或深度/大小限制；资源上限与输入来源由调用方负责。
      * 返回类型兼容既有动态 JSON 消费者，不宣称数据已经通过业务校验。
      */
-  public static parseStrictJson(text: string): any
+  public static ParseStrictJson(text: string): any
   {
     const errors: ParseError[] = [];
     const tree = parseTree(text, errors, { disallowComments: true, allowTrailingComma: false });
@@ -78,7 +78,7 @@ export class JsonUtils
        * 保留 JSON.stringify 原语义及属性顺序，不作校验、深拷贝或 canonical 排序。
        * 循环引用与 BigInt 仍抛错；顶层不可序列化值沿旧入口行为返回 "undefined\n"，不是合法 JSON。
        */
-  public static formatJson(value: unknown): string
+  public static FormatJson(value: unknown): string
   {
     return JSON.stringify(value, null, 2) + '\n';
   }
@@ -88,7 +88,7 @@ export class JsonUtils
        * 面向既有 JSON 快照，不做 Schema/危险键过滤、循环检测、深度限制或自定义 toJSON 处理。
        * 非 JSON 对象与访问器由调用者约束，比较/读取错误原样传播。
        */
-  public static orderJsonValue(value: unknown, policy: JsonKeyOrder): unknown
+  public static OrderJsonValue(value: unknown, policy: JsonKeyOrder): unknown
   {
     const visit = (item: unknown): unknown =>
     {

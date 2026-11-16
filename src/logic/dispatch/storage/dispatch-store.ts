@@ -131,7 +131,7 @@ export class FileDispatchStore implements DispatchStore
     this.state = { workspaceId, members: [], sessions: [], graphs: [], outbox: [], runs: [], scopes: [], workspaceMembers: [], workspaceMemberChanges: [], registryCursor: null, moduleOwnerships: [], ownershipChanges: [], ownershipCursor: null, knowledgeSourceGenerations: [], knowledgeSourceTransitions: [], knowledgeSourceChanges: [], sourceCursor: null };
   }
 
-  private available()
+  private Available()
   {
     if (this.closing)
       fail('GRAPH_STORE_CLOSED', '任务派发存储正在关闭或已关闭');
@@ -139,21 +139,21 @@ export class FileDispatchStore implements DispatchStore
       throw this.storageFailure;
   }
 
-  private init()
+  private Init()
   {
-    return this.initialization ??= this.load().then(() => this.observe(() => this.observer?.loaded(clone(this.state)))).catch(error =>
+    return this.initialization ??= this.Load().then(() => this.Observe(() => this.observer?.Loaded(clone(this.state)))).catch(error =>
     {
-      this.observationFailed(error);
+      this.ObservationFailed(error);
       throw error
     })
   }
 
   /** 观察端异常与存储事务分离；失败处理自身也不能破坏已确认提交的回执。 */
-  private observationFailed(error: unknown)
+  private ObservationFailed(error: unknown)
   {
     try
     {
-      this.observer?.failed(error instanceof Error ? error : Error(String(error)))
+      this.observer?.Failed(error instanceof Error ? error : Error(String(error)))
     }
     catch
     {
@@ -161,7 +161,7 @@ export class FileDispatchStore implements DispatchStore
     }
   }
 
-  private observe(notify: () => void)
+  private Observe(notify: () => void)
   {
     try
     {
@@ -169,20 +169,20 @@ export class FileDispatchStore implements DispatchStore
     }
     catch (error)
     {
-      this.observationFailed(error)
+      this.ObservationFailed(error)
     }
   }
 
-  private checkIdentity(identity: GraphIdentity)
+  private CheckIdentity(identity: GraphIdentity)
   {
     if (!identity || identity.workspaceId !== this.workspaceId)
       fail('GRAPH_IDENTITY_MISMATCH', '任务图不属于此工作区');
     valid(text(identity.rootSessionId), '缺少主会话身份');
   }
 
-  private graph(identity: GraphIdentity)
+  private Graph(identity: GraphIdentity)
   {
-    this.checkIdentity(identity);
+    this.CheckIdentity(identity);
     const graph = this.state.graphs.find(g => sameGraph(g.identity, identity));
     if (!graph)
       fail('GRAPH_NOT_FOUND', '当前主会话尚未创建任务派发图');
@@ -190,10 +190,10 @@ export class FileDispatchStore implements DispatchStore
   }
 
   /** 内部管理快照；返回深拷贝，不允许调用方改写权威内存状态。 */
-  async read(): Promise<DispatchState>
+  async Read(): Promise<DispatchState>
   {
-    this.available();
-    await this.init();
+    this.Available();
+    await this.Init();
     await this.tail;
     if (this.storageFailure)
       throw this.storageFailure;
@@ -201,65 +201,65 @@ export class FileDispatchStore implements DispatchStore
   }
 
   /** 原命令查询只读日志恢复出的索引；不触发新事务，也不按当前知识或配置重算历史结果。 */
-  async commandReceipt(commandId: string): Promise<{ fingerprint: string; receipt: unknown } | undefined>
+  async CommandReceipt(commandId: string): Promise<{ fingerprint: string; receipt: unknown } | undefined>
   {
-    this.available();
+    this.Available();
     valid(text(commandId), '查询需要原命令身份');
-    await this.init();
+    await this.Init();
     await this.tail;
-    this.available();
+    this.Available();
     const record = this.commands.get(commandId);
     return record ? clone({ fingerprint: record.fingerprint, receipt: record.receipt }) : undefined;
   }
 
   /** 内部原命令证据不重算当前业务状态；没有记录不是未执行证明，完整回执不得原样公开。 */
-  async commandEvidence(commandId: string): Promise<DispatchCommandEvidence | undefined>
+  async CommandEvidence(commandId: string): Promise<DispatchCommandEvidence | undefined>
   {
-    this.available();
+    this.Available();
     valid(text(commandId), '查询需要原命令身份');
     if (!this.initialization)
       fail('GRAPH_STORE_NOT_READY', '工作区尚未初始化，不能通过原命令查询触发恢复');
     await this.initialization;
     await this.tail;
-    this.available();
+    this.Available();
     return clone(this.commands.get(commandId));
   }
 
   /** 只返回明确主会话的图，不暴露全工作区邮箱或其他会话正文。 */
-  async snapshot(identity: GraphIdentity): Promise<GraphSnapshot>
+  async Snapshot(identity: GraphIdentity): Promise<GraphSnapshot>
   {
-    this.available();
-    await this.init();
+    this.Available();
+    await this.Init();
     await this.tail;
     if (this.storageFailure)
       throw this.storageFailure;
-    return clone(this.graph(identity))
+    return clone(this.Graph(identity))
   }
 
   /** 无变化时只生成游标响应；不重新打开日志或复制全部工作区状态。 */
-  async delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>
+  async Delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>
   {
-    this.available();
-    await this.init();
+    this.Available();
+    await this.Init();
     await this.tail;
     if (this.storageFailure)
       throw this.storageFailure;
-    const graph = this.graph(identity);
+    const graph = this.Graph(identity);
     return clone(readGraphDelta(graph, this.events.get(identity.rootSessionId) ?? [], cursor, limit));
   }
 
   /** 图和周期在一个屏障内同步取值；无变化不复制目标正文，不回读知识或运行日志。 */
-  async sessionRead(raw: DispatchSessionReadInput): Promise<DispatchSessionRead>
+  async SessionRead(raw: DispatchSessionReadInput): Promise<DispatchSessionRead>
   {
     const parsed = dispatchSessionReadInput.safeParse(raw);
     valid(parsed.success, '主会话读取参数无效');
     const input = parsed.data;
-    this.available();
-    await this.init();
+    this.Available();
+    await this.Init();
     await this.tail;
     if (this.storageFailure)
       throw this.storageFailure;
-    const graph = this.graph(input.identity),
+    const graph = this.Graph(input.identity),
       root = input.identity.rootSessionId;
     const scopes = this.scopeViews.get(root) ?? emptyScopeSnapshot(graph.identity, graph.cursor.streamId);
     return clone({ graph: readGraphDelta(graph, this.events.get(root) ?? [], input.graphCursor, input.limit), scopes: readScopeDelta(scopes, this.scopeEvents.get(root) ?? [], input.scopeCursor, input.limit), detail: readScopeDetail(scopes, this.state.scopes ?? [], input.selectedScopeId, input.detailStamp), ...(this.state.teamSessions ? { teamSessions: this.state.teamSessions.filter(session => session.rootSessionId === root) } : {}) });
@@ -269,11 +269,11 @@ export class FileDispatchStore implements DispatchStore
        * 工作区级幂等查找先于 prepare；同键重发不会重新查知识或生成成员/任务 ID。
        * prepare 或领域校验失败不污染后续事务；实际写入失败会封闭本实例，须重新打开核实日志。
        */
-  transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>
+  Transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>
   {
     try
     {
-      this.available();
+      this.Available();
       valid(text(command?.commandId) && text(command?.fingerprint), '缺少命令幂等键或指纹')
     }
     catch (error)
@@ -283,7 +283,7 @@ export class FileDispatchStore implements DispatchStore
     const fixedCommand = clone(command);
     const pending = this.tail.then(async () =>
     {
-      await this.init();
+      await this.Init();
       if (this.storageFailure)
         throw this.storageFailure;
       const committed = this.commands.get(fixedCommand.commandId);
@@ -307,7 +307,7 @@ export class FileDispatchStore implements DispatchStore
       {
         fail('GRAPH_INPUT_INVALID', '事务必须是可序列化 JSON')
       }
-      const next = this.project(mutation, fixedCommand, 'module_owner_v1');
+      const next = this.Project(mutation, fixedCommand, 'module_owner_v1');
       const body: TransactionBody = { version: 1, executionProtocol: 'module_owner_v1', workspaceId: this.workspaceId, transactionSeq: this.transactionSeq + 1, previousHash: this.lastHash, command: fixedCommand, mutation };
       const checksum = hash(JSON.stringify(body));
       try
@@ -334,11 +334,11 @@ export class FileDispatchStore implements DispatchStore
         {
           this.storageFailure = error as Error
         }
-        this.observationFailed(this.storageFailure);
+        this.ObservationFailed(this.storageFailure);
         throw this.storageFailure;
       }
-      this.publish(body, checksum, next);
-      this.observe(() => this.observer?.committed(clone(mutation)));
+      this.Publish(body, checksum, next);
+      this.Observe(() => this.observer?.Committed(clone(mutation)));
       return clone(mutation.receipt);
     });
     this.tail = pending.then(() =>
@@ -353,7 +353,7 @@ export class FileDispatchStore implements DispatchStore
        * 停止接收新操作并等待已接受操作收尾；失败已由原调用报告，关闭仍应成功释放工作区生命周期。
        * 不在 close 重抛损坏/写入错误，避免应用无法释放工作区锁后重新打开核实日志。
        */
-  close(): Promise<void>
+  Close(): Promise<void>
   {
     if (!this.closePromise)
     {
@@ -369,7 +369,7 @@ export class FileDispatchStore implements DispatchStore
     return this.closePromise;
   }
 
-  private publish(body: TransactionBody, checksum: string, next: DispatchState)
+  private Publish(body: TransactionBody, checksum: string, next: DispatchState)
   {
     // 必须先取原前态；实时 fsync 与已验证 load 共用此处，后来的根版本不能改变原命令依据。
     const batch = body.mutation.batch;
@@ -396,7 +396,7 @@ export class FileDispatchStore implements DispatchStore
     }
     for (const [root, updates] of groups)
     {
-      const graph = this.graph({ workspaceId: this.workspaceId, rootSessionId: root });
+      const graph = this.Graph({ workspaceId: this.workspaceId, rootSessionId: root });
       const previous = this.scopeViews.get(root) ?? emptyScopeSnapshot(graph.identity, graph.cursor.streamId),
         seq = previous.cursor.seq + 1;
       const event: ScopeEventBatch = { identity: graph.identity, streamId: previous.cursor.streamId, seq, scopes: updates.map(scope => summarizeScope(scope, previous.cursor.streamId, seq)) };
@@ -410,7 +410,7 @@ export class FileDispatchStore implements DispatchStore
   }
 
   /** 验证整次 mutation 后才返回候选投影；图、成员会话与信封引用在同一个候选状态内核对。 */
-  private project(mutation: DispatchMutation, command: DispatchCommand, protocol: DispatchExecutionProtocol): DispatchState
+  private Project(mutation: DispatchMutation, command: DispatchCommand, protocol: DispatchExecutionProtocol): DispatchState
   {
     valid(mutation && typeof mutation === 'object', '无效调度事务');
     const agentRuns = projectAgentBusinessRuns(this.state, mutation, command);
@@ -467,7 +467,7 @@ export class FileDispatchStore implements DispatchStore
     const batch = mutation.batch;
     if (batch)
     {
-      this.checkIdentity(batch.identity);
+      this.CheckIdentity(batch.identity);
       valid(batch.commandId === command.commandId, '图批次与事务命令不一致');
       const old = this.state.graphs.find(g => sameGraph(g.identity, batch.identity));
       const graph = applyGraphBatch(old, batch);
@@ -513,7 +513,7 @@ export class FileDispatchStore implements DispatchStore
     return next;
   }
 
-  private async load()
+  private async Load()
   {
     let bytes: Buffer;
     try
@@ -547,8 +547,8 @@ export class FileDispatchStore implements DispatchStore
         valid(body.mutation && Object.hasOwn(body.mutation, 'receipt'), '日志缺少命令回执');
         valid(body.executionProtocol === undefined || body.executionProtocol === 'module_owner_v1', '不支持的执行协议');
         valid(!this.ownerProtocolSeen || body.executionProtocol === 'module_owner_v1', '负责人执行协议开始后不能回退旧日志格式');
-        const next = this.project(body.mutation, body.command, body.executionProtocol ?? 'legacy');
-        this.publish(body, record.checksum, next);
+        const next = this.Project(body.mutation, body.command, body.executionProtocol ?? 'legacy');
+        this.Publish(body, record.checksum, next);
       }
       catch (error: any)
       {

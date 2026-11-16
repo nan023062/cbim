@@ -71,7 +71,7 @@ export interface ApplicationServices
   /** 真正执行准入独立于监管索引；只暴露游标读取和可靠设置，不把领取能力交给页面。 */
   readonly admission:
   {
-    read(cursor?: AdmissionCursor): AdmissionRead
+    Read(cursor?: AdmissionCursor): AdmissionRead
   };
 
   readonly admissionSettings: AdmissionSettings;
@@ -82,11 +82,11 @@ export interface ApplicationServices
   /** 应用级活动和用量投影；只读路由不向渲染进程暴露写入事实或接管任务的能力。 */
   readonly runtime:
   {
-    snapshot(): RuntimeSnapshot;
+    Snapshot(): RuntimeSnapshot;
 
-    read(cursor?: RuntimeCursor): RuntimeRead;
+    Read(cursor?: RuntimeCursor): RuntimeRead;
 
-    rename(workspaceId: string, name: string): void
+    Rename(workspaceId: string, name: string): void
   };
 
   /** 仅观察已运行实例；路由重命名时同步实例显示名，不负责增删实例。 */
@@ -94,49 +94,49 @@ export interface ApplicationServices
 
   readonly isStopping: boolean;
 
-  list(): Promise<Omit<CatalogData, 'entries'> & { warning: string; entries: WorkspaceView[] }>;
+  List(): Promise<Omit<CatalogData, 'entries'> & { warning: string; entries: WorkspaceView[] }>;
 
-  workspace(id: string): Workspace;
+  Workspace(id: string): Workspace;
 
   /** 仅桌面明确治理请求；批准不由模型构造，应用与记录决定是两个独立动作。 */
-  governance(id: string): ModuleGovernanceService;
+  Governance(id: string): ModuleGovernanceService;
 
   /** 稳定岗位登记独立于执行实例；只读公开配置，无模型调用或派发副作用。 */
-  workspaceMembers(id: string): WorkspaceMembers;
+  WorkspaceMembers(id: string): WorkspaceMembers;
 
   /** 桌面责任写入只注入本机提交来源，和主工具共用同一服务及持久化裁决。 */
-  workspaceOwnerships(id: string): ModuleOwnerships;
+  WorkspaceOwnerships(id: string): ModuleOwnerships;
 
   /** 仅已打开工作区；报告只读，补偿必须由明确桌面提交生成新命令。 */
-  controlledFiles(id: string): ControlledFiles;
+  ControlledFiles(id: string): ControlledFiles;
 
   /** 原运行资源的显式核实与清理，不提供执行或按PID终止入口。 */
-  isolatedExecutions(id: string): IsolatedExecutions;
+  IsolatedExecutions(id: string): IsolatedExecutions;
 
-  requestBudgets(id: string): Pick<ModelRequestBudgetService, 'report'>;
+  RequestBudgets(id: string): Pick<ModelRequestBudgetService, 'Report'>;
 
-  execution(id: string): WorkspaceExecutionManager;
+  Execution(id: string): WorkspaceExecutionManager;
 
-  automations(id: string): WorkspaceAutomations;
+  Automations(id: string): WorkspaceAutomations;
 
   /** 取得已装配的工作区成员图及人工决定服务；未就绪则拒绝，人工记录不隐式启动大脑或改变权限。 */
-  memberDispatch(id: string): WorkspaceDispatchService;
+  MemberDispatch(id: string): WorkspaceDispatchService;
 
   /** 只接收已派发任务的可信执行命令，成员会话与模型快照由后端绑定。 */
-  memberExecution(id: string): MemberExecutionManager;
+  MemberExecution(id: string): MemberExecutionManager;
 
   /** 按静态角色读取持久 Session 履历；已释放实例和已删除定义仍可追溯，不启动或恢复执行。 */
-  agentHistory(id: string): AgentHistoryService;
+  AgentHistory(id: string): AgentHistoryService;
 
   /** 合并并发打开；restart 要先停止旧执行实例再重建工作区。 */
-  open(id: string, restart?: boolean): Promise<Workspace>;
+  Open(id: string, restart?: boolean): Promise<Workspace>;
 
-  stop(id: string): Promise<void>;
+  Stop(id: string): Promise<void>;
 
-  remove(id: string): Promise<void>;
+  Remove(id: string): Promise<void>;
 
   /** 保留现有动态模型选项协议；模型身份解析和附件能力验证由应用负责。 */
-  modelOptions(input?: any): Promise<any>;
+  ModelOptions(input?: any): Promise<any>;
 
-  chatOptions(id: string, input: any, attachments: unknown): Promise<any>;
+  ChatOptions(id: string, input: any, attachments: unknown): Promise<any>;
 }

@@ -14,23 +14,23 @@ import { RunJournal } from './run-journal';
 export class FileRunStorage implements RunStorage
 {
   /** 非递归创建任务目录，已有任务须走显式恢复而不能覆盖。 */
-  async reserveTask(directory: string, taskId: string)
+  async ReserveTask(directory: string, taskId: string)
   {
     await fs.mkdir(directory, { recursive: true });
     await fs.mkdir(path.join(directory, safeId(taskId)))
   }
 
-  createJournal(directory: string, task: TaskSpec, runId: string)
+  CreateJournal(directory: string, task: TaskSpec, runId: string)
   {
     return new RunJournal(directory, task, runId)
   }
 
-  read(directory: string)
+  Read(directory: string)
   {
-    return RunJournal.read(directory)
+    return RunJournal.Read(directory)
   }
 
-  list(directory: string)
+  List(directory: string)
   {
     return fs.readdir(directory)
   }

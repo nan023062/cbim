@@ -44,44 +44,44 @@ export class CodexRpc
   {
   }
 
-  start(binary: string, cwd: string, env: NodeJS.ProcessEnv, args: string[])
+  Start(binary: string, cwd: string, env: NodeJS.ProcessEnv, args: string[])
   {
     const child = this.child = spawn(binary, ['app-server', '--listen', 'stdio://', ...args], { cwd, env, windowsHide: true, shell: false, stdio: 'pipe' });
     this.exit = new Promise(resolve =>
     {
       child.once('error', error =>
       {
-        this.fail(error);
+        this.Fail(error);
         resolve()
       });
       child.once('close', (code, signal) =>
       {
         if (!this.closing)
-          this.fail(Error('Codex 进程提前退出 (' + (code ?? signal) + ')'));
+          this.Fail(Error('Codex 进程提前退出 (' + (code ?? signal) + ')'));
         resolve()
       })
     });
     child.stderr.resume();
-    child.stdin.on('error', error => this.fail(error));
+    child.stdin.on('error', error => this.Fail(error));
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk: string) =>
     {
       try
       {
-        this.frames.push(chunk, line =>
+        this.frames.Push(chunk, line =>
         {
           if (line.trim())
-            this.receive(JSON.parse(line))
+            this.Receive(JSON.parse(line))
         })
       }
       catch (error)
       {
-        this.fail(error instanceof Error ? error : Error(String(error)))
+        this.Fail(error instanceof Error ? error : Error(String(error)))
       }
     });
   }
 
-  private receive(value: any)
+  private Receive(value: any)
   {
     if (!value || typeof value !== 'object' || Array.isArray(value))
       throw Error('Codex 返回无效协议消息');
@@ -90,15 +90,15 @@ export class CodexRpc
       const work = (value.id !== undefined ? (async () =>
       {
         const result = await this.requestHandler(value.method, value.params);
-        this.send({ id: value.id, result })
-      })() : this.notifications.then(() => this.notify(value.method, value.params))).catch(error => this.fail(error instanceof Error ? error : Error(String(error))));
+        this.Send({ id: value.id, result })
+      })() : this.notifications.then(() => this.notify(value.method, value.params))).catch(error => this.Fail(error instanceof Error ? error : Error(String(error))));
       if (value.id === undefined)
         this.notifications = work;
-      this.handling.track(work);
+      this.handling.Track(work);
     }
     else if (value.id !== undefined)
     {
-      const pending = this.pending.take(value.id);
+      const pending = this.pending.Take(value.id);
       if (!pending)
         return;
       value.error ? pending.reject(Error(String(value.error.message ?? 'Codex 拒绝请求'))) : pending.resolve(value.result)
@@ -108,53 +108,53 @@ export class CodexRpc
   }
 
   /** 请求只发一次；原生确认之前的断连保持失败，不猜测操作是否被受理。 */
-  request(method: string, params: unknown = {}, timeoutMs = 30000): Promise<any>
+  Request(method: string, params: unknown = {}, timeoutMs = 30000): Promise<any>
   {
     if (this.failure || this.closing)
       return Promise.reject(this.failure ?? Error('Codex 已关闭'));
     const id = ++this.sequence;
     return new Promise((resolve, reject) =>
     {
-      this.pending.register(id, { resolve, reject }, timeoutMs, () => this.fail(Error('Codex ' + method + ' 超时，请核实原运行')));
+      this.pending.Register(id, { resolve, reject }, timeoutMs, () => this.Fail(Error('Codex ' + method + ' 超时，请核实原运行')));
       try
       {
-        this.send({ id, method, params })
+        this.Send({ id, method, params })
       }
       catch (error)
       {
-        this.fail(error instanceof Error ? error : Error(String(error)))
+        this.Fail(error instanceof Error ? error : Error(String(error)))
       }
     });
   }
 
-  send(value: unknown)
+  Send(value: unknown)
   {
     if (this.failure || this.closing || !this.child)
       throw this.failure ?? Error('Codex 不可用');
     this.child.stdin.write(JSON.stringify(value) + '\n')
   }
 
-  private fail(error: Error)
+  private Fail(error: Error)
   {
     if (this.failure)
       return;
     this.failure = error;
-    this.pending.rejectAll(error);
+    this.pending.RejectAll(error);
     this.child?.kill();
     this.failed(error)
   }
 
   /** 停止接收后续请求并等待操作处理排空；不将进程退出解释为已撤销工具副作用。 */
-  async close()
+  async Close()
   {
     this.closing = true;
-    this.pending.rejectAll(() => Error('Codex 已关闭'));
+    this.pending.RejectAll(() => Error('Codex 已关闭'));
     this.child?.stdin.end();
     const timer = setTimeout(() => this.child?.kill(), 1000);
     try
     {
       await this.exit;
-      await this.handling.drain()
+      await this.handling.Drain()
     }
     finally
     {

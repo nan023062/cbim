@@ -5,13 +5,13 @@ import {Fault} from '../src/core/errors';
 
 it('连续失败按提出顺序计算，参数键序一致，重复结束不计数，成功或不同参数重置',()=>{
  const tracker=new RepeatedToolFailures();
- const add=(id:string,input:Record<string,unknown>={a:1,b:2})=>tracker.proposed({id,name:'write',input});
+ const add=(id:string,input:Record<string,unknown>={a:1,b:2})=>tracker.Proposed({id,name:'write',input});
  add('a');add('b',{b:2,a:1});add('c');
- expect(tracker.settled('c',true)).toBeUndefined();expect(tracker.settled('b',true)).toBeUndefined();
- expect(tracker.settled('a',true)).toMatchObject({code:'TOOL_REPEAT_BLOCKED',consecutive:3,tool:'write'});
+ expect(tracker.Settled('c',true)).toBeUndefined();expect(tracker.Settled('b',true)).toBeUndefined();
+ expect(tracker.Settled('a',true)).toMatchObject({code:'TOOL_REPEAT_BLOCKED',consecutive:3,tool:'write'});
  const reset=new RepeatedToolFailures();
  for(const [id,failed,input] of [['1',true,{a:1}],['2',true,{a:1}],['3',false,{a:1}],['4',true,{a:1}],['5',true,{a:2}]] as const){
-  reset.proposed({id,name:'read',input});expect(reset.settled(id,failed)).toBeUndefined();expect(reset.settled(id,true)).toBeUndefined();
+  reset.Proposed({id,name:'read',input});expect(reset.Settled(id,failed)).toBeUndefined();expect(reset.Settled(id,true)).toBeUndefined();
  }
  expect(reset.blocked).toBeUndefined();
 });

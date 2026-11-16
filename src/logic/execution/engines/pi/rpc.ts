@@ -41,7 +41,7 @@ export class PiRpc
   {
   }
 
-  start(config: PiCommand, cwd: string, args: string[], env: NodeJS.ProcessEnv)
+  Start(config: PiCommand, cwd: string, args: string[], env: NodeJS.ProcessEnv)
   {
     this.child = spawn(config.command, [...config.args, ...args], { cwd, env: { ...env, ...config.env }, windowsHide: true, shell: false, stdio: 'pipe' });
     const child = this.child;
@@ -51,22 +51,22 @@ export class PiRpc
     {
       child.once('error', error =>
       {
-        this.fail(error);
+        this.Fail(error);
         resolve()
       });
       child.once('close', (code, signal) =>
       {
-        this.fail(Error(`Pi 进程已退出 (${code ?? signal})`));
+        this.Fail(Error(`Pi 进程已退出 (${code ?? signal})`));
         resolve()
       });
     });
-    child.stdin.on('error', error => this.fail(error));
+    child.stdin.on('error', error => this.Fail(error));
     child.stdout.on('data', (chunk: string) =>
     {
       // 用户消息事件包含图片 base64；容纳附件总计 20 MiB 后的编码开销，仍限制单行大小。
       try
       {
-        this.frames.push(chunk, raw =>
+        this.frames.Push(chunk, raw =>
         {
           const line = raw.replace(/\r$/, '');
           if (!line.trim())
@@ -74,7 +74,7 @@ export class PiRpc
           const event = JSON.parse(line);
           if (event.type === 'response')
           {
-            const pending = this.pending.take(event.id);
+            const pending = this.pending.Take(event.id);
             if (!pending)
               return;
             if (event.success)
@@ -88,48 +88,48 @@ export class PiRpc
       }
       catch (error)
       {
-        this.fail(error instanceof Error ? error : Error(String(error)));
+        this.Fail(error instanceof Error ? error : Error(String(error)));
         child.kill()
       }
     });
   }
 
   /** 使用独立命令 ID 等待对应回复；超时只报告未知结果，不自动重试。 */
-  request(type: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any>
+  Request(type: string, data: Record<string, unknown> = {}, timeoutMs = 30000): Promise<any>
   {
     if (this.dead || !this.child)
       return Promise.reject(Error('Pi 进程不可用'));
     const id = randomUUID();
     return new Promise((resolve, reject) =>
     {
-      this.pending.register(id, { resolve, reject }, timeoutMs, () =>
+      this.pending.Register(id, { resolve, reject }, timeoutMs, () =>
       {
-        this.pending.take(id);
+        this.pending.Take(id);
         reject(Error(`Pi ${type} 请求超时；不自动重放`))
       });
-      this.send({ ...data, id, type });
+      this.Send({ ...data, id, type });
     });
   }
 
-  send(value: unknown)
+  Send(value: unknown)
   {
     if (this.dead || !this.child)
       throw Error('Pi 进程不可用');
     this.child.stdin.write(JSON.stringify(value) + '\n')
   }
 
-  private fail(error: Error)
+  private Fail(error: Error)
   {
     error = Error(this.redact(error.message));
     if (this.dead)
       return;
     this.dead = true;
-    this.pending.rejectAll(error);
+    this.pending.RejectAll(error);
     this.onExit(error);
   }
 
   /** 关闭 stdin 并等待子进程退出，超过宽限期后终止子进程。 */
-  async close()
+  async Close()
   {
     if (!this.child)
       return;

@@ -27,7 +27,7 @@ it('原生工具拒绝显式知识文件、补丁和宽泛搜索，放行普通�
 });
 it('目录别名不能绕过内部知识访问保护，普通业务别名不受影响',async()=>{
   const f=await fixture();try{
-    await f.app.dispatch('add',{path:f.a});await fs.mkdir(path.join(f.a,'src'));
+    await f.app.Dispatch('add',{path:f.a});await fs.mkdir(path.join(f.a,'src'));
     await fs.symlink(path.join(f.a,'.cbim'),path.join(f.a,'hidden-knowledge'),'junction');
     await fs.symlink(path.join(f.a,'src'),path.join(f.a,'business'),'junction');
     expect(guard({name:'read',input:{path:'hidden-knowledge/README.md'}},f.a)).toBeTruthy();

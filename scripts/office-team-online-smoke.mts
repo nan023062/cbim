@@ -77,19 +77,19 @@ try {
   await fs.copyFile(path.join(os.homedir(), '.cbim/llm.json'), path.join(user, 'llm.json'));
   await fs.copyFile(path.join(os.homedir(), '.cbim/desktop/Local State'), path.join(user, 'desktop/Local State'));
   setup = new Application(new Paths(user, repo), path.join(repo, 'assets'));
-  await setup.init();
-  const models = await setup.models.list();
+  await setup.Init();
+  const models = await setup.models.List();
   const model = models.profiles.find(item => item.id === models.selectedId);
   assert.ok(model, '本机没有默认模型');
   report.model = {name: model.name, model: model.defaultModel};
-  const entry = await setup.dispatch('add', {path: project});
+  const entry = await setup.Dispatch('add', {path: project});
   workspaceId = entry.id;
-  const workspace = setup.workspace(entry.id), team = await seedTeam(workspace);
-  const snapshot = await workspace.snapshot(), modulePath = team.input.moduleId + '/module.json';
+  const workspace = setup.Workspace(entry.id), team = await seedTeam(workspace);
+  const snapshot = await workspace.Snapshot(), modulePath = team.input.moduleId + '/module.json';
   const definition = JSON.parse(snapshot.files.find(file => file.path === modulePath)!.text);
   definition.maintenance = {bindingId: 'online-maintainer', maintainerPersonIds: ['owner'], revision: 1,
     state: 'active', confirmation: {recordId: 'online-review', source: 'local_user', confirmedAt: new Date().toISOString()}};
-  await workspace.commit(request(snapshot, [
+  await workspace.Commit(request(snapshot, [
     {path: modulePath, text: JSON.stringify(definition)},
     {path: '.cbim/team/people.json', text: JSON.stringify({people: [{id: 'owner', name: '验收维护人', team: '.cbim/team'}]})},
   ]));
@@ -97,7 +97,7 @@ try {
     moduleIds: [team.input.moduleId], profileId: model.id, modelId: model.defaultModel, name: '在线验收执行员'});
   await fs.writeFile(path.join(project, 'office-alpha.txt'), 'OFFICE_ALPHA_9462\n');
   await fs.writeFile(path.join(project, 'office-beta.txt'), 'OFFICE_BETA_7318\n');
-  await setup.shutdown(); setup = undefined;
+  await setup.Shutdown(); setup = undefined;
 
   const env = {...process.env, CBIM_USER_DATA_ROOT: user};
   for (const key of ['GH_TOKEN', 'GITHUB_TOKEN', 'ELECTRON_RUN_AS_NODE', 'CBIM_RUNTIME_SIGNING_KEY']) delete env[key];
@@ -166,7 +166,7 @@ try {
     if (!report.passed) await call('loop.stop', {id: workspaceId, taskId: rootSessionId}).catch(() => {});
     await page.screenshot({path: path.join(output, 'conversation.png'), timeout: 5000}).catch(() => {});
   }
-  await desktop?.close(); await setup?.shutdown();
+  await desktop?.close(); await setup?.Shutdown();
   await fs.rm(path.join(user, 'llm.json'), {force: true});
   await fs.rm(path.join(user, 'desktop/Local State'), {force: true});
   report.finishedAt = new Date().toISOString();

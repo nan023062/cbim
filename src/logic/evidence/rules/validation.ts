@@ -52,7 +52,7 @@ export type WorkflowValidationCheck = z.infer<typeof workflowValidationCheckSche
 /** records 包含本轮当前代次的已核实调用；被拒结论保留事实，verifyCurrent 只核实际被选作出口的 passed 文件。 */
 export interface ProgressValidationPort
 {
-  records(): readonly ValidationRecord[];
+  Records(): readonly ValidationRecord[];
 
-  verifyCurrent(records: readonly ValidationRecord[]): Promise<void>
+  VerifyCurrent(records: readonly ValidationRecord[]): Promise<void>
 }

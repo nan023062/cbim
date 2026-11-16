@@ -18,7 +18,7 @@ it('completed model turn and waiting goal remain distinct facts with exact root 
 });
 
 it('unreported and unpriced usage never renders zero cost or complete billing, partial price is named',()=>{
-  const data=new GlobalRuntimeManager().snapshot();data.usage={...data.usage,runCount:3,unreportedRuns:1,reportedRuns:2,unpricedRuns:1,total:1200,usageReported:true,costPartial:true};
+  const data=new GlobalRuntimeManager().Snapshot();data.usage={...data.usage,runCount:3,unreportedRuns:1,reportedRuns:2,unpricedRuns:1,total:1200,usageReported:true,costPartial:true};
   let html=renderToStaticMarkup(createElement(RuntimeMetrics,{data}));expect(html).toContain('未计价');expect(html).not.toContain('$0.0000');expect(html).toContain('用量缺失');expect(html).toContain('不是上下文占用');
   data.usage.cost=.04;html=renderToStaticMarkup(createElement(RuntimeMetrics,{data}));expect(html).toContain('$0.0400');expect(html).toContain('已知部分');
   data.usage.cost=0;data.usage.costPartial=false;data.usage.unreportedRuns=0;html=renderToStaticMarkup(createElement(RuntimeMetrics,{data}));expect(html).toContain('$0.0000');
@@ -28,5 +28,5 @@ it('dispatch/result candidate routes to its own original node; old unbound run d
   const task={source:'dispatch' as const,binding:'instance' as const,workspaceId:'b',rootSessionId:'different-root',taskId:'member-task',scopeId:'member-scope',agentId:'role',agentInstanceId:'instance',moduleIds:['game'],status:'result_ready' as const,revision:1,planRevision:1,runIds:['run'],updatedAt:scope.createdAt};
   expect(runtimeTaskTarget(task)).toEqual({workspaceId:'b',rootSessionId:'different-root',taskId:'member-task',scopeId:'member-scope'});expect(runtimeTaskMatches(task,'current')).toBe(false);
   expect(renderToStaticMarkup(createElement(RuntimeTaskRow,{value:task,workspace:'B',canOpen:false,onOpen:()=>{}}))).toContain('候选不代表已验收');
-  expect(runtimeRunTarget({workspaceId:'b',taskId:'old',runId:'run',status:'completed',phase:'settled',lastSeq:1,updatedAt:scope.createdAt,usage:new GlobalRuntimeManager().snapshot().usage})).toBeUndefined();
+  expect(runtimeRunTarget({workspaceId:'b',taskId:'old',runId:'run',status:'completed',phase:'settled',lastSeq:1,updatedAt:scope.createdAt,usage:new GlobalRuntimeManager().Snapshot().usage})).toBeUndefined();
 });

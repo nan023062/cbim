@@ -13,7 +13,7 @@ import { artifactScopeBindingsSchema, type ArtifactScopeBinding } from '../../wo
 import { outputManifestRefSchema, outputManifestSnapshotSchema, type OutputManifestSnapshot, type OutputManifestStaged, type OutputManifestRef } from './output-manifest';
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
+const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
 
 /** 全部冻结根、模块和操作声明进入同一范围身份。 */
 export const outputManifestScopeHash = (scopes: readonly ArtifactScopeBinding[]) => hash(JSON.stringify(ordered(artifactScopeBindingsSchema.parse(scopes))));

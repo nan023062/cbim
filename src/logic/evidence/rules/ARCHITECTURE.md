@@ -167,8 +167,8 @@ class N_src_logic_evidence_rules_artifact_tools_ts["artifact-tools.ts"] {
 }
 class N_src_logic_evidence_rules_artifact_tools_ts_ArtifactTools["ArtifactTools"] {
   +constructor()
-  +list()
-  +call()
+  +List()
+  +Call()
   -binding
   -ports
   -knowledgeRevision
@@ -248,7 +248,7 @@ class N_src_logic_evidence_rules_code_check_ts_CodeCheckProof["CodeCheckProof"] 
 N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_code_check_ts_CodeCheckProof : 声明
 class N_src_logic_evidence_rules_code_check_ts_CodeCheckPort["CodeCheckPort"] {
   <<interface>>
-  +run()
+  +Run()
 }
 N_src_logic_evidence_rules_code_check_ts ..> N_src_logic_evidence_rules_code_check_ts_CodeCheckPort : 声明
 ```
@@ -348,8 +348,8 @@ class N_src_logic_evidence_rules_output_manifest_tools_ts_Binding["Binding"] {
 N_src_logic_evidence_rules_output_manifest_tools_ts ..> N_src_logic_evidence_rules_output_manifest_tools_ts_Binding : 声明
 class N_src_logic_evidence_rules_output_manifest_tools_ts_OutputManifestTools["OutputManifestTools"] {
   +constructor()
-  +list()
-  +call()
+  +List()
+  +Call()
   -binding
   -knowledgeRevision
   -scopes
@@ -423,8 +423,8 @@ class N_src_logic_evidence_rules_output_manifest_ts["output-manifest.ts"] {
 }
 class N_src_logic_evidence_rules_output_manifest_ts_ProgressManifestPort["ProgressManifestPort"] {
   <<interface>>
-  +select()
-  +verifyCurrent()
+  +Select()
+  +VerifyCurrent()
 }
 N_src_logic_evidence_rules_output_manifest_ts ..> N_src_logic_evidence_rules_output_manifest_ts_ProgressManifestPort : 声明
 class N_src_logic_evidence_rules_output_manifest_ts_OutputManifestQuery["OutputManifestQuery"] {
@@ -495,14 +495,14 @@ class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgressTools"] {
-  +list()
+  +List()
   +generation
   +constructor()
-  +current()
-  +beforeEffects()
-  +invalidate()
-  +record()
-  +call()
+  +Current()
+  +BeforeEffects()
+  +Invalidate()
+  +Record()
+  +Call()
   -save
   -ports
   -state
@@ -523,8 +523,8 @@ class N_src_logic_evidence_rules_progress_tools_ts["progress-tools.ts"] {
   <<module>>
 }
 class N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools["TaskProgressTools"] {
-  -serial()
-  -persist()
+  -Serial()
+  -Persist()
 }
 N_src_logic_evidence_rules_progress_tools_ts ..> N_src_logic_evidence_rules_progress_tools_ts_TaskProgressTools : 声明
 ```
@@ -617,8 +617,8 @@ class N_src_logic_evidence_rules_validation_tools_ts["validation-tools.ts"] {
 }
 class N_src_logic_evidence_rules_validation_tools_ts_ValidationTools["ValidationTools"] {
   +constructor()
-  +list()
-  +call()
+  +List()
+  +Call()
   -binding
   -port
   -knowledgeRevision
@@ -670,8 +670,8 @@ class N_src_logic_evidence_rules_validation_ts_WorkflowValidationCheck["Workflow
 N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_validation_ts_WorkflowValidationCheck : 声明
 class N_src_logic_evidence_rules_validation_ts_ProgressValidationPort["ProgressValidationPort"] {
   <<interface>>
-  +records()
-  +verifyCurrent()
+  +Records()
+  +VerifyCurrent()
 }
 N_src_logic_evidence_rules_validation_ts ..> N_src_logic_evidence_rules_validation_ts_ProgressValidationPort : 声明
 ```
@@ -1058,4 +1058,4 @@ validateWorkflowEvidence 的可信 requireDelivery 选项用于没有附加 Work
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

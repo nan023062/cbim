@@ -27,14 +27,14 @@ export function EngineSettings({ active = true }: { active?: boolean })
     generation = useRef(new AsyncGeneration());
   const reload = useCallback(async (includeModels = false) =>
   {
-    if (reading.current === generation.current.capture())
+    if (reading.current === generation.current.Capture())
       return;
-    const request = generation.current.capture();
+    const request = generation.current.Capture();
     reading.current = request;
     try
     {
       const [engines, models] = await Promise.all([api.call('engines.settings'), includeModels ? api.call('models.list') : Promise.resolve(undefined)]);
-      if (alive.current && generation.current.isCurrent(request))
+      if (alive.current && generation.current.IsCurrent(request))
       {
         setState(engines);
         setReadError('');
@@ -44,7 +44,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
     }
     catch (error: any)
     {
-      if (alive.current && generation.current.isCurrent(request))
+      if (alive.current && generation.current.IsCurrent(request))
         setReadError(error.message)
     }
     finally
@@ -67,7 +67,7 @@ export function EngineSettings({ active = true }: { active?: boolean })
     return () =>
     {
       alive.current = false;
-      generation.current.advance();
+      generation.current.Advance();
       clearInterval(timer)
     };
   }, [active, reload]);
@@ -76,20 +76,20 @@ export function EngineSettings({ active = true }: { active?: boolean })
     if (acting.current)
       return;
     acting.current = true;
-    generation.current.advance();
+    generation.current.Advance();
     setBusy(true);
     setError('');
     setNotice('');
     try
     {
       const next = await work();
-      generation.current.advance();
+      generation.current.Advance();
       setState(next);
       setNotice(message)
     }
     catch (error: any)
     {
-      generation.current.advance();
+      generation.current.Advance();
       setError(error.message)
     }
     finally

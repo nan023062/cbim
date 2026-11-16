@@ -18,7 +18,7 @@ export class Team
   }
 
   /** authors 仅作历史来源说明；authorPeople 固定为空以兼容旧查询响应，不再读取或关联真人。 */
-  async agents(query = '')
+  async Agents(query = '')
   {
     const s = this.snapshot,
       index = parseJson(s.validation!.indexes['.cbim/team/registry.json']);
@@ -33,7 +33,7 @@ export class Team
     };
   }
 
-  async agent(id: string)
+  async Agent(id: string)
   {
     const s = this.snapshot;
     if (!Object.hasOwn(s.validation!.skills || {}, id))

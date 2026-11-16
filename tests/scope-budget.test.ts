@@ -116,12 +116,12 @@ it('scope增量公开冻结策略和拒绝，证明仅在详情，legacy不补�
 it('真实事务重开保留冻结额度和拒绝，预算独立增量不推进任务图',async()=>{
   const f=await fixture();let writer:FileDispatchStore|undefined,reader:FileDispatchStore|undefined;
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),owner=f.app.workspace(entry.id),directory=path.join(f.user,'budget-scopes');writer=new FileDispatchStore(directory,entry.id);const dispatch=new WorkspaceDispatchService(owner,writer),identity={workspaceId:entry.id,rootSessionId:'root'};await dispatch.openGraph({...identity,commandId:'graph'});
-    const first={...scope(),...identity,createdAt:new Date().toISOString()};await writer.transact({commandId:'first',fingerprint:'first'},async()=>({scopes:[first],receipt:true}));const graph=(await writer.snapshot(identity)).cursor;
+    const entry=await f.app.Dispatch('add',{path:f.a}),owner=f.app.Workspace(entry.id),directory=path.join(f.user,'budget-scopes');writer=new FileDispatchStore(directory,entry.id);const dispatch=new WorkspaceDispatchService(owner,writer),identity={workspaceId:entry.id,rootSessionId:'root'};await dispatch.OpenGraph({...identity,commandId:'graph'});
+    const first={...scope(),...identity,createdAt:new Date().toISOString()};await writer.Transact({commandId:'first',fingerprint:'first'},async()=>({scopes:[first],receipt:true}));const graph=(await writer.Snapshot(identity)).cursor;
     const blocked={...first,budget:{...first.budget!,blocked:{decisionId:'denied',policyRevision:3,reason:'token_limit' as const,observation:observed({tokens:100})}}};
-    await writer.transact({commandId:'block',fingerprint:'block'},async()=>({scopes:[blocked],receipt:true}));expect((await writer.snapshot(identity)).cursor).toEqual(graph);
-    const view=await writer.sessionRead({identity});expect(view.scopes.mode==='reset'&&view.scopes.snapshot.scopes[0].budget?.blocked?.reason).toBe('token_limit');
-    await dispatch.closeScope(identity,'scope','cancelled');const expected=await writer.read();await writer.close();writer=undefined;
-    reader=new FileDispatchStore(directory,entry.id);expect(await reader.read()).toEqual(expected);
-  }finally{await reader?.close();await writer?.close();await f.cleanup()}
+    await writer.Transact({commandId:'block',fingerprint:'block'},async()=>({scopes:[blocked],receipt:true}));expect((await writer.Snapshot(identity)).cursor).toEqual(graph);
+    const view=await writer.SessionRead({identity});expect(view.scopes.mode==='reset'&&view.scopes.snapshot.scopes[0].budget?.blocked?.reason).toBe('token_limit');
+    await dispatch.CloseScope(identity,'scope','cancelled');const expected=await writer.Read();await writer.Close();writer=undefined;
+    reader=new FileDispatchStore(directory,entry.id);expect(await reader.Read()).toEqual(expected);
+  }finally{await reader?.Close();await writer?.Close();await f.cleanup()}
 });

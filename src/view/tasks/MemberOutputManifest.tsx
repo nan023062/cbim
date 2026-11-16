@@ -13,11 +13,11 @@ export interface ManifestPanelState extends ManifestReportState
 {
   stale: boolean;
 
-  list(): Promise<void>;
+  List(): Promise<void>;
 
-  inspect(): Promise<void>;
+  Inspect(): Promise<void>;
 
-  select(id: string): void
+  Select(id: string): void
 }
 
 /** 不分页截取集合；细节折叠只改变显示，不省略完整根和条目。 */
@@ -36,7 +36,7 @@ export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestP
     verification = report?.verification,
     selected = report?.manifests.find(item => item.manifestId === selectedId);
   return <section className="artifact-report" aria-label="完整产物清单" data-testid="output-manifest-panel" data-task-id={taskId} data-run-id={runId}>
-    <header><h4>声明范围内完整产物清单</h4><button data-testid="output-manifest-list" disabled={loading} onClick={() => void state.list()}>{report ? '重新加载清单' : '加载清单列表'}</button></header>
+    <header><h4>声明范围内完整产物清单</h4><button data-testid="output-manifest-list" disabled={loading} onClick={() => void state.List()}>{report ? '重新加载清单' : '加载清单列表'}</button></header>
     <p className="member-muted">加载列表只读原记录。选择清单后，重新观察声明根下全部受支持文件和目录，包括新增条目与空目录。</p>
     {loading && <p role="status">正在读取完整产物记录…</p>}{error && <p className="member-error" role="alert">读取失败：{error}。{report ? '保留上次报告，请重新核实。' : '请重试，不能据此判断产物未变。'}</p>}
     {report && <><p className="member-muted">{report.log === 'verified' ? '原日志已核实' : '原日志不可核实'} · {new Date(report.checkedAt).toLocaleString()}</p>
@@ -44,8 +44,8 @@ export function ManifestReportPanel({ state, taskId, runId }: { state: ManifestP
       {report.scopes && <ul data-testid="output-manifest-roots">{report.scopes.flatMap(binding => binding.scope.roots.map(root => <li key={binding.moduleId + ':' + root.path}><strong>{root.path}</strong> · {root.kind === 'directory' ? '完整目录树' : '单文件'} · 模块 {binding.moduleId}</li>))}</ul>}
       {!!report.issues.length && <ul className="artifact-report-issues">{report.issues.map((issue, index) => <li key={issue.code + index}>{issue.message}<small>{issue.code}</small></li>)}</ul>}
       {!report.manifests.length && <p data-testid="output-manifest-empty">本轮没有可核实的完整清单；不会将旧文件基线转换或自动补采。</p>}
-      {!!report.manifests.length && <><label>选择本轮完整清单<select data-testid="output-manifest-select" value={selectedId} onChange={event => state.select(event.target.value)}><option value="">请选择，不自动使用最新记录</option>{report.manifests.map(item => <option key={item.manifestId} value={item.manifestId}>{new Date(item.capturedAt).toLocaleTimeString()} · {item.entryCount} 条目 / {item.fileCount} 文件{item.invalidated ? ' · 后续有操作' : ''}</option>)}</select></label>
-        <button data-testid="output-manifest-inspect" disabled={loading || !selected} onClick={() => void state.inspect()}>{verification ? '重新复核完整范围' : '复核所选完整范围'}</button>
+      {!!report.manifests.length && <><label>选择本轮完整清单<select data-testid="output-manifest-select" value={selectedId} onChange={event => state.Select(event.target.value)}><option value="">请选择，不自动使用最新记录</option>{report.manifests.map(item => <option key={item.manifestId} value={item.manifestId}>{new Date(item.capturedAt).toLocaleTimeString()} · {item.entryCount} 条目 / {item.fileCount} 文件{item.invalidated ? ' · 后续有操作' : ''}</option>)}</select></label>
+        <button data-testid="output-manifest-inspect" disabled={loading || !selected} onClick={() => void state.Inspect()}>{verification ? '重新复核完整范围' : '复核所选完整范围'}</button>
         {selected?.invalidated && <p className="member-warning">此清单之后有副作用或重规划，历史记录不能直接作为当前交付依据。</p>}
         <ArtifactTransitionProofs operations={selected?.operations} />
       </>}
@@ -69,6 +69,6 @@ export function MemberOutputManifest({ identity, task, graphCursor, scope }: { i
   const key = manifestSelectionKey(identity),
     controller = useMemo(() => new ManifestReportController(identity, input => window.cbim.call('dispatch.manifestReport', input), () => current.current), [key]);
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
-  useEffect(() => () => controller.cancel(), [controller]);
-  return <ManifestReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, list: () => controller.list(), inspect: () => controller.inspect(), select: id => controller.select(id) }} />;
+  useEffect(() => () => controller.Cancel(), [controller]);
+  return <ManifestReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, List: () => controller.List(), Inspect: () => controller.Inspect(), Select: id => controller.Select(id) }} />;
 }

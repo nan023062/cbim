@@ -82,68 +82,68 @@ export class ArtifactReportController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(next: ArtifactReportState)
+  private Publish(next: ArtifactReportState)
   {
     this.value = next;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
   /** 卸载只忽略读取结果；后端只读调用不产生可重放操作。 */
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.value = { ...this.value, loading: false }
   }
 
   /** 用户选择不读取文件；更换选项清除旧观察，防止旧基线结果留在新选项下面。 */
-  select(id: string)
+  Select(id: string)
   {
     if (id && !this.value.report?.baselines.some(item => item.baselineId === id))
       throw Error('所选文件基线不在已核实列表中');
     if (id === this.value.selectedId)
       return;
-    this.generation.advance();
+    this.generation.Advance();
     const report = this.value.report ? { ...this.value.report, verification: undefined } : undefined;
-    this.publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
+    this.Publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
   }
 
   /** 只列本轮真实记录，不自动选择最新基线或连带读取业务文件。 */
-  async list()
+  async List()
   {
-    await this.pull()
+    await this.Pull()
   }
 
   /** 只有明确选择才有文件读取；双击合并为同一在途查询，错误保留上次报告供辨认。 */
-  async inspect()
+  async Inspect()
   {
     if (this.value.selectedId)
-      await this.pull(this.value.selectedId)
+      await this.Pull(this.value.selectedId)
   }
 
-  private async pull(baselineId?: string)
+  private async Pull(baselineId?: string)
   {
     if (this.value.loading)
       return;
-    const token = this.generation.advance(),
+    const token = this.generation.Advance(),
       sourceVersion = this.version(),
       request = { ...this.identity, ...(baselineId ? { baselineId } : {}) };
-    this.publish({ ...this.value, loading: true, error: '' });
+    this.Publish({ ...this.value, loading: true, error: '' });
     try
     {
       const raw = await this.read(request);
-      if (!this.generation.isCurrent(token))
+      if (!this.generation.IsCurrent(token))
         return;
       const report = checkedArtifactReport(raw, request),
         selectedId = report.baselines.some(item => item.baselineId === this.value.selectedId) ? this.value.selectedId : '';
-      this.publish({ report, selectedId, loading: false, error: '', sourceVersion });
+      this.Publish({ report, selectedId, loading: false, error: '', sourceVersion });
     }
     catch (error)
     {
-      if (this.generation.isCurrent(token))
-        this.publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '文件复核失败，请重新读取' })
+      if (this.generation.IsCurrent(token))
+        this.Publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '文件复核失败，请重新读取' })
     }
   }
 }

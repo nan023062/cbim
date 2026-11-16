@@ -15,11 +15,11 @@ function budgetState(state: DispatchState): RequestBudgetState
 }
 
 /** 不获取新锁或另建日志；原 Store 负责幂等、预算不变量、可靠落盘和恢复。 */
-export function requestBudgetStore(store: Pick<DispatchStore, 'read' | 'transact'>): RequestBudgetStore
+export function requestBudgetStore(store: Pick<DispatchStore, 'Read' | 'Transact'>): RequestBudgetStore
 {
   return {
-    readBudget: async () => budgetState(await store.read()),
-    transactBudget: (command, prepare) => store.transact(command, async state =>
+    ReadBudget: async () => budgetState(await store.Read()),
+    TransactBudget: (command, prepare) => store.Transact(command, async state =>
     {
       const proposed = await prepare(budgetState(state));
       if (Reflect.ownKeys(proposed).some(key => key !== 'modelRequestBudgetChanges' && key !== 'receipt'))

@@ -137,7 +137,7 @@ N_src_logic_execution_context_execution_context_ts ..> N_src_logic_execution_con
 
 `logic/knowledge/rules/knowledge-queries.ts` 组合该域 read-models 中的 Team 与 BusinessWorkspace 视图，只接收 `KnowledgeSnapshotReader`，不持有完整工作区或写入端口。本目录的执行上下文和内部知识工具使用同一个查询入口。每次方法调用读取一个完整快照；跨查询可能版本变化，`prepareTeamTask` 继续在返回前比较模块、Agent 和当前 revision，冲突时拒绝，不自动重试或换成最新正文。
 
-索引刷新由 `logic/knowledge/rules/knowledge-refresh.ts` 的 `KnowledgeRefresh.refresh` 单独处理，工具注册层装配读/写两条路径；查询类没有 refresh 方法。职责、状态归属和允许依赖见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。新增查询通常修改知识域读取视图与查询组合，本层只维护执行准备，不要求修改刷新事务或运行引擎。
+索引刷新由 `logic/knowledge/rules/knowledge-refresh.ts` 的 `KnowledgeRefresh.Refresh` 单独处理，工具注册层装配读/写两条路径；查询类没有 refresh 方法。职责、状态归属和允许依赖见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。新增查询通常修改知识域读取视图与查询组合，本层只维护执行准备，不要求修改刷新事务或运行引擎。
 
 ### 多成员、多模块任务上下文契约
 
@@ -239,7 +239,7 @@ automatic-context.ts 是隐式全项目范围的唯一解析位置，仅完整�
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.OrderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 ## 内置运行资源边界
 
@@ -248,4 +248,4 @@ team-workflow 与 execution-context 使用 workspace.rules.assetsRoot 读取 Bui
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

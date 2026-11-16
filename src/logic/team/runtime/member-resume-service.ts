@@ -25,7 +25,7 @@ export class MemberResumeService
   }
 
   /** 同命令只返回已保存预约；新命令不复用旧回执冒领。assertCurrent覆盖所有异步核实至提交准备末端。 */
-  async request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: ResumeMemberInput, assertCurrent: () => void): Promise<ResumeMemberReceipt>
+  async Request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: ResumeMemberInput, assertCurrent: () => void): Promise<ResumeMemberReceipt>
   {
     const parsed = resumeMemberInputSchema.safeParse(raw);
     if (!parsed.success)
@@ -34,25 +34,25 @@ export class MemberResumeService
       command = memberResumeCommand(identity, scopeId, mainRunId, commandId, input);
     if (!this.owners)
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位检查点核验');
-    const old = await this.owners.replay<ResumeMemberReceipt>(command);
+    const old = await this.owners.Replay<ResumeMemberReceipt>(command);
     if (old)
       return old.receipt;
     const check = () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       assertCurrent();
       if (identity.workspaceId !== this.owner.entry.id)
         fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区')
     };
     check();
-    return this.owners.withContext(state => this.owners!.selections([memberResumeSelection(state, identity, scopeId, mainRunId, input).task]), context => this.store.transact(command, async state =>
+    return this.owners.WithContext(state => this.owners!.Selections([memberResumeSelection(state, identity, scopeId, mainRunId, input).task]), context => this.store.Transact(command, async state =>
     {
       check();
       const selected = memberResumeSelection(state, identity, scopeId, mainRunId, input),
         { graph, scope, task, run, checkpoint, trackedTaskIds } = selected;
       if (scopeHasUnresolvedActiveInput(scope))
         fail('GOAL_ACTIVE_INPUT_UNRESOLVED', '运行中补充尚未核实，不能预约成员续执行');
-      await this.owners!.verifyTask(state, context, task);
+      await this.owners!.VerifyTask(state, context, task);
       check();
       await verifyMemberCheckpointProof(this.owner, task, run, this.ports, check, run.checkpointProof, state.runs);
       check();

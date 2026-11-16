@@ -72,14 +72,14 @@ const server=http.createServer(async(req,res)=>{
 await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
 let desktop:ElectronApplication|undefined,setup:Application|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  await setup.models.save({profile:{name:'Local goal status UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'goal-status-ui',models:[{id:'goal-status-ui',name:'Goal status UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);agentId=team.input.agentId;moduleId=team.input.moduleId;
-  if(defaultExecutor){const snapshot=await workspace.snapshot(),plan=await team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'agent',action:'delete',id:agentId,cascade:true}]});await team.call('cbim_object_commit',{planId:plan.planId},true)}
-  const knowledge=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  await setup.models.Save({profile:{name:'Local goal status UI',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'goal-status-ui',models:[{id:'goal-status-ui',name:'Goal status UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);agentId=team.input.agentId;moduleId=team.input.moduleId;
+  if(defaultExecutor){const snapshot=await workspace.Snapshot(),plan=await team.call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'agent',action:'delete',id:agentId,cascade:true}]});await team.call('cbim_object_commit',{planId:plan.planId},true)}
+  const knowledge=await workspace.Snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'goal-status-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'goal-status-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-  await setup.shutdown();setup=undefined;
+  await workspace.Commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  await setup.Shutdown();setup=undefined;
   const scopes=async()=>{
     // Pure reader: do not open a recovering writer over a live partial transaction line.
     const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
@@ -222,6 +222,6 @@ try{
   await fs.mkdir('test-results',{recursive:true});if(desktop)await desktop.firstWindow().then(page=>page.screenshot({path:`test-results/${artifact}-failure.png`})).catch(()=>{});
   await fs.writeFile(`test-results/${artifact}-ui-failure.json`,JSON.stringify({packagedExe:exe,error:String(error),mainRequests:mainRequests.length,memberRequests:memberRequests.length,pageErrors,transportErrors},null,2));throw error;
 }finally{
-  releaseMember();releaseFinal();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
+  releaseMember();releaseFinal();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.Shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
   const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-goal-status-ui-'));await fs.rm(target,{recursive:true,force:true});
 }

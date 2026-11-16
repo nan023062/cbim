@@ -143,11 +143,11 @@ export class WorkspaceDispatchService
     this.continuations = new ScopeContinuationService(owner, store, this.budgets, this.memberPauses);
     this.interruptions = new TopicInterruptionService(owner, store);
     this.activeInputs = new ScopeActiveInputService(owner, store);
-    this.commandVerification = new CommandVerificationService(owner, store, goalPorts?.inspectMain ? { inspectMain: goalPorts.inspectMain } : undefined);
+    this.commandVerification = new CommandVerificationService(owner, store, goalPorts?.InspectMain ? { InspectMain: goalPorts.InspectMain } : undefined);
     this.effects = new EffectObservationService(owner, store, this.commandVerification, effectPorts);
     this.recoveries = new ScopeRecoveryService(owner, store, goalPorts, this.budgets, this.effects);
     this.replans = new ScopeReplanService(owner, store, this.goals, goalPorts, this.budgets, this.effects);
-    this.humanDecisions = new ScopeHumanDecisionService(owner, store, this.goals, goalPorts, humanPorts, () => this.check(owner.entry.id));
+    this.humanDecisions = new ScopeHumanDecisionService(owner, store, this.goals, goalPorts, humanPorts, () => this.Check(owner.entry.id));
     this.humanContinuations = new ScopeHumanContinuationService(owner, store, this.goals, goalPorts, humanPorts, this.budgets);
     this.queuedCancellation = new QueuedTaskCancelService(owner, store);
     this.queuedDependencyReplacement = new QueuedDependencyReplacementService(owner, store, this.goals, this.owners);
@@ -157,76 +157,76 @@ export class WorkspaceDispatchService
   }
 
   /** 原任务与当前岗位观察分开返回，不刷新或领取旧待办。 */
-  ownerInspect(raw: unknown)
+  OwnerInspect(raw: unknown)
   {
-    return this.owners.inspectTask(raw)
+    return this.owners.InspectTask(raw)
   }
 
   /** 仅读原 canonical 与已提交命令，不打开工作区、不重放，也不改变原未知或验收状态。 */
-  commandReport(raw: unknown, signal?: AbortSignal)
+  CommandReport(raw: unknown, signal?: AbortSignal)
   {
-    this.check(this.owner.entry.id);
-    return this.commandVerification.read(raw, signal)
+    this.Check(this.owner.entry.id);
+    return this.commandVerification.Read(raw, signal)
   }
 
   /** 主调度显式撤销未领取的完整依赖集合；不停止活动运行、不把撤销当作完成。 */
-  cancelQueued(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: CancelQueuedTasksInput): Promise<CancelQueuedTasksReceipt>
+  CancelQueued(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: CancelQueuedTasksInput): Promise<CancelQueuedTasksReceipt>
   {
-    this.check(identity.workspaceId);
-    return this.queuedCancellation.cancel(identity, scopeId, runId, commandId, input)
+    this.Check(identity.workspaceId);
+    return this.queuedCancellation.Cancel(identity, scopeId, runId, commandId, input)
   }
 
   /** 主轮显式修订未启动前置；停止检查覆盖证据读取前后，成功只返回待跟踪集合，不启动执行。 */
-  replaceQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
+  ReplaceQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
   {
-    return this.queuedDependencyReplacement.replace(identity, scopeId, runId, commandId, input, () =>
+    return this.queuedDependencyReplacement.Replace(identity, scopeId, runId, commandId, input, () =>
     {
-      this.check(identity.workspaceId);
+      this.Check(identity.workspaceId);
       assertCurrent?.()
     })
   }
 
   /** 只加强尚未领取待办的前置门禁；后继闭包、知识和停止均在提交内复核，不启动成员。 */
-  addQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
+  AddQueuedDependency(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
   {
-    return this.queuedDependencyAddition.add(identity, scopeId, runId, commandId, input, () =>
+    return this.queuedDependencyAddition.Add(identity, scopeId, runId, commandId, input, () =>
     {
-      this.check(identity.workspaceId);
+      this.Check(identity.workspaceId);
       assertCurrent?.()
     })
   }
 
   /** 同一未领取目标原子增删多条前置；完整闭包重新核实，成功不创建运行或改原信封。 */
-  reviseQueuedDependencies(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
+  ReviseQueuedDependencies(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
   {
-    return this.queuedDependencyRevision.revise(identity, scopeId, runId, commandId, input, () =>
+    return this.queuedDependencyRevision.Revise(identity, scopeId, runId, commandId, input, () =>
     {
-      this.check(identity.workspaceId);
+      this.Check(identity.workspaceId);
       assertCurrent?.()
     })
   }
 
   /** 原回执优先；只明确封存未消费检查点，新执行仍由岗位派发与领取门禁决定。 */
-  abandonCheckpoint(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
+  AbandonCheckpoint(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
   {
-    return this.checkpointAbandonment.abandon(identity, scopeId, runId, commandId, input, () =>
+    return this.checkpointAbandonment.Abandon(identity, scopeId, runId, commandId, input, () =>
     {
-      this.check(identity.workspaceId);
+      this.Check(identity.workspaceId);
       assertCurrent()
     })
   }
 
   /** 回包损坏或停止后仅查原命令；不启动历史核验或重复处置事务。 */
-  checkpointAbandonmentReceipt(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput)
+  CheckpointAbandonmentReceipt(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, input: AbandonCheckpointInput)
   {
-    return this.checkpointAbandonment.receipt(identity, scopeId, runId, commandId, input)
+    return this.checkpointAbandonment.Receipt(identity, scopeId, runId, commandId, input)
   }
 
   /** 工作区启动时恢复事务存储，触发存储观察者的基线；不创建成员、不消费任务。 */
-  async initialize()
+  async Initialize()
   {
-    this.check(this.owner.entry.id);
-    await this.store.read()
+    this.Check(this.owner.entry.id);
+    await this.store.Read()
   }
 
   /**
@@ -234,14 +234,14 @@ export class WorkspaceDispatchService
        * followupOf 来自明确新任务入队，创建时核实同根且关闭；原话题永不重开，关联不可改变。
        * 第三/四参数缺省仅兼容旧调用；有真实runId时原子创建完整清单。同 scope 重发须保持输入及首轮身份，不能通过幂等回执绕过校验。
        */
-  async openScope(identity: GraphIdentity, scopeId: string, rawInput?: DispatchScopeInput, trustedRunId?: string, options?: { collaborationMode?: 'auto' | 'team'; profileId?: string; model: string }, followupOf?: string): Promise<DispatchScope>
+  async OpenScope(identity: GraphIdentity, scopeId: string, rawInput?: DispatchScopeInput, trustedRunId?: string, options?: { collaborationMode?: 'auto' | 'team'; profileId?: string; model: string }, followupOf?: string): Promise<DispatchScope>
   {
-    const input = this.parse(scopeIdentityInput, { ...identity, scopeId });
-    this.check(input.workspaceId);
+    const input = this.Parse(scopeIdentityInput, { ...identity, scopeId });
+    this.Check(input.workspaceId);
     // 在第一次 await 前校验并复制，调用者之后修改原对象不能改变正在保存的输入。
-    const parsed = rawInput === undefined ? undefined : this.parse(dispatchScopeInputSchema, rawInput);
+    const parsed = rawInput === undefined ? undefined : this.Parse(dispatchScopeInputSchema, rawInput);
     const goal: DispatchScopeGoal | undefined = parsed ? { revision: 1, input: { message: parsed.message, attachmentIds: [...(parsed.attachmentIds ?? [])] } } : undefined;
-    const executionPolicy = options ? await this.owners.policy(options) : undefined;
+    const executionPolicy = options ? await this.owners.Policy(options) : undefined;
     const runTracking = trustedRunId === undefined ? undefined : createScopeRunTracking(trustedRunId);
     const verifyGoal = (scope: DispatchScope) =>
     {
@@ -254,13 +254,13 @@ export class WorkspaceDispatchService
       if ((scope.runTracking === undefined) !== (runTracking === undefined) || scope.runTracking?.mainRunIds[0] !== runTracking?.mainRunIds[0])
         fail('DISPATCH_SCOPE_RUN_CONFLICT', '同一周期不能重新绑定首个主运行');
     };
-    await this.openGraph({ ...identity, commandId: 'scope-root-' + hash(json(input)) });
+    await this.OpenGraph({ ...identity, commandId: 'scope-root-' + hash(json(input)) });
     // 命令键保持身份稳定，输入进入指纹；无 goal 的旧调用保留原指纹以读取历史回执。
     const command = { ...input, ...(followupOf ? { followupOf } : {}), commandId: 'scope-open-' + hash(json(input)), ...(goal ? { goal } : {}), ...(runTracking ? { runTracking } : {}), ...(executionPolicy ? { executionPolicy } : {}) };
-    await this.store.transact(this.command('scope.open', command), async state =>
+    await this.store.Transact(this.Command('scope.open', command), async state =>
     {
-      this.check(input.workspaceId);
-      this.graph(state, input.rootSessionId);
+      this.Check(input.workspaceId);
+      this.Graph(state, input.rootSessionId);
       const previous = state.scopes?.find(scope => scope.scopeId === scopeId);
       if (previous)
       {
@@ -283,10 +283,10 @@ export class WorkspaceDispatchService
       }
       let scope: DispatchScope = { ...input, ...(followupOf ? { followupOf } : {}), status: 'active', createdAt: new Date().toISOString(), ...(goal ? { goal } : {}), ...(runTracking ? { runTracking } : {}), ...(executionPolicy ? { executionPolicy } : {}) };
       if (trustedRunId)
-        scope = this.budgets.initialize(scope, { kind: 'main', taskId: input.rootSessionId, runId: trustedRunId });
+        scope = this.budgets.Initialize(scope, { kind: 'main', taskId: input.rootSessionId, runId: trustedRunId });
       return { scopes: [scope], receipt: scope };
     });
-    const scope = (await this.store.read()).scopes?.find(value => value.scopeId === scopeId);
+    const scope = (await this.store.Read()).scopes?.find(value => value.scopeId === scopeId);
     if (!scope || scope.workspaceId !== input.workspaceId || scope.rootSessionId !== input.rootSessionId)
       fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话');
     verifyGoal(scope);
@@ -298,21 +298,21 @@ export class WorkspaceDispatchService
   }
 
   /** beforeRun 同事务核实软限额并登记回注轮次；拒绝先保存 blocked 再抛错，旧周期不补造清单或策略。 */
-  async registerMainRun(identity: GraphIdentity, scopeId: string, runId: string): Promise<DispatchScope>
+  async RegisterMainRun(identity: GraphIdentity, scopeId: string, runId: string): Promise<DispatchScope>
   {
-    const input = this.parse(scopeIdentityInput, { ...identity, scopeId }),
+    const input = this.Parse(scopeIdentityInput, { ...identity, scopeId }),
       checked = createScopeRunTracking(runId).mainRunIds[0];
-    this.check(input.workspaceId);
+    this.Check(input.workspaceId);
     const command = { ...input, runId: checked, commandId: 'scope-main-' + hash(json({ ...input, runId: checked })) };
-    const receipt = await this.store.transact<true | ScopeBudgetRejected>(this.command('scope.main', command), async state =>
+    const receipt = await this.store.Transact<true | ScopeBudgetRejected>(this.Command('scope.main', command), async state =>
     {
-      this.check(input.workspaceId);
+      this.Check(input.workspaceId);
       const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId);
       if (!scope)
         fail('DISPATCH_SCOPE_IDENTITY', '主运行不属于当前目标周期');
       if (scope.runTracking?.mainRunIds.includes(checked))
         return { receipt: true };
-      const admitted = await this.budgets.admit(state, scope, { kind: 'main', taskId: input.rootSessionId, runId: checked });
+      const admitted = await this.budgets.Admit(state, scope, { kind: 'main', taskId: input.rootSessionId, runId: checked });
       if (admitted.rejected)
         return { scopes: [admitted.scope], receipt: admitted.rejected };
       const next = appendScopeMainRun(admitted.scope, checked);
@@ -320,7 +320,7 @@ export class WorkspaceDispatchService
     });
     if (receipt !== true)
       rejectBudget(receipt);
-    const scope = (await this.store.read()).scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId);
+    const scope = (await this.store.Read()).scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId);
     if (!scope)
       fail('DISPATCH_SCOPE_IDENTITY', '主运行所属目标周期不可读');
     return scope;
@@ -331,15 +331,15 @@ export class WorkspaceDispatchService
        * 失败/取消可原子取消未执行任务并释放执行实例；mainSummary 只能由可信运行结算传入，不能由模型或公开 IPC 伪造。
        * 同周期重复关闭返回已保存结果；已关闭实例不可复活，未确认运行不能通过关闭隐藏。
        */
-  async closeScope(identity: GraphIdentity, scopeId: string, outcome: DispatchScopeOutcome, mainSummary?: RunSummary): Promise<DispatchScope>
+  async CloseScope(identity: GraphIdentity, scopeId: string, outcome: DispatchScopeOutcome, mainSummary?: RunSummary): Promise<DispatchScope>
   {
-    const input = this.parse(scopeIdentityInput.extend({ outcome: z.enum(['completed', 'failed', 'cancelled', 'interrupted']) }), { ...identity, scopeId, outcome });
-    this.check(input.workspaceId);
+    const input = this.Parse(scopeIdentityInput.extend({ outcome: z.enum(['completed', 'failed', 'cancelled', 'interrupted']) }), { ...identity, scopeId, outcome });
+    this.Check(input.workspaceId);
     const command = { ...input, commandId: 'scope-close-' + hash(json(input)) };
-    return this.store.transact(this.command('scope.close', command), async state =>
+    return this.store.Transact(this.Command('scope.close', command), async state =>
     {
-      this.check(input.workspaceId);
-      const graph = this.graph(state, input.rootSessionId),
+      this.Check(input.workspaceId);
+      const graph = this.Graph(state, input.rootSessionId),
         scope = state.scopes?.find(value => value.scopeId === scopeId);
       if (!scope || scope.rootSessionId !== input.rootSessionId)
         fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话');
@@ -347,7 +347,7 @@ export class WorkspaceDispatchService
         return { receipt: scope };
       // 即使尚未建业务计划，也不能把未知插入当成普通对话顺利结束。
       if (outcome === 'completed')
-        await this.goals.validateActiveInputs(scope, mainSummary);
+        await this.goals.ValidateActiveInputs(scope, mainSummary);
       if (scope.status === 'waiting' && outcome === 'completed')
         fail('GOAL_WAITING', '等待周期不能跳过目标完成复核，请保留或显式停止');
       const tasks = graph.tasks.filter(task => task.scopeId === scopeId),
@@ -360,7 +360,7 @@ export class WorkspaceDispatchService
       {
         if (!mainSummary)
           fail('GOAL_REVIEW_REQUIRED', '业务任务需要主调度的结构化目标审阅，不能直接标为完成');
-        await this.goals.validateCompletion(state, scope, mainSummary);
+        await this.goals.ValidateCompletion(state, scope, mainSummary);
       }
       if (state.runs?.some(run => taskIds.has(run.binding.taskId) && ['starting', 'running'].includes(run.status)))
         fail('DISPATCH_SCOPE_BUSY', '调度周期仍有未结算运行，请先停止并等待成员结束');
@@ -389,7 +389,7 @@ export class WorkspaceDispatchService
             changes.push({ type: 'agent.upserted', agent: { ...view, revision: view.revision + 1, state: 'idle', runningTaskId: undefined, waitingTaskIds: [] } });
         }
       const closed: DispatchScope = { ...scope, status: 'closed', closedAt: now, outcome };
-      return { scopes: [closed], members, messages, batch: changes.length ? this.batch(graph.identity, command.commandId, 'agent.state_changed', changes, graph) : undefined, receipt: closed };
+      return { scopes: [closed], members, messages, batch: changes.length ? this.Batch(graph.identity, command.commandId, 'agent.state_changed', changes, graph) : undefined, receipt: closed };
     });
   }
 
@@ -397,73 +397,73 @@ export class WorkspaceDispatchService
        * 可信协调器在主运行释放占用后请求停泊；与当前审阅、图及成员终态一起核实并提交，不关闭或释放执行实例。
        * mainRunIds 来自本周期真实运行集合，仅用于冻结预算；模型和公开 IPC 不提供此接口。
        */
-  async parkScope(identity: GraphIdentity, scopeId: string, rawSummary: RunSummary, rawMainRunIds: string[]): Promise<DispatchScope>
+  async ParkScope(identity: GraphIdentity, scopeId: string, rawSummary: RunSummary, rawMainRunIds: string[]): Promise<DispatchScope>
   {
-    const input = this.parse(scopeIdentityInput, { ...identity, scopeId });
-    this.check(input.workspaceId);
+    const input = this.Parse(scopeIdentityInput, { ...identity, scopeId });
+    this.Check(input.workspaceId);
     const summary = structuredClone(rawSummary),
       mainRunIds = structuredClone(rawMainRunIds);
     // 同周期可以多次显式补充后再等待；幂等键绑定真实主运行，避免第二个检查点撞上第一次的提交。
     const command = { ...input, runId: summary.runId, mainRunIds, commandId: 'scope-wait-' + hash(json({ ...input, runId: summary.runId })) };
-    await this.store.transact(this.command('scope.wait', command), async state =>
+    await this.store.Transact(this.Command('scope.wait', command), async state =>
     {
-      this.check(input.workspaceId);
+      this.Check(input.workspaceId);
       const scope = state.scopes?.find(value => value.scopeId === scopeId && value.rootSessionId === input.rootSessionId);
       if (!scope)
         fail('DISPATCH_SCOPE_IDENTITY', '调度周期不属于当前主会话');
       if (scope.status !== 'active')
         fail(scope.status === 'waiting' ? 'DISPATCH_SCOPE_WAITING' : 'DISPATCH_SCOPE_CLOSED', '当前周期不能建立新的等待检查点');
-      await this.goals.validateWaiting(state, scope, summary, mainRunIds);
+      await this.goals.ValidateWaiting(state, scope, summary, mainRunIds);
       const review = scope.goal!.review!;
       const parked: DispatchScope = { ...scope, status: 'waiting', wait: { waitId: randomUUID(), reason: review.reason, createdAt: new Date().toISOString(), runId: summary.runId, goalRevision: scope.goal!.revision, graphCursor: { ...review.graphCursor }, knowledgeRevision: review.knowledgeRevision, mainRunIds: [...mainRunIds], ...(review.memberPause ? { memberPause: structuredClone(review.memberPause) } : {}) } };
       return { scopes: [parked], receipt: parked };
     });
     // 去重回执可能早于后续停止；不把旧 waiting 快照作为已关闭周期的当前状态返回。
-    const current = (await this.store.read()).scopes?.find(scope => scope.scopeId === scopeId && scope.rootSessionId === input.rootSessionId);
+    const current = (await this.store.Read()).scopes?.find(scope => scope.scopeId === scopeId && scope.rootSessionId === input.rootSessionId);
     if (!current || current.status !== 'waiting')
       fail('DISPATCH_SCOPE_CLOSED', '等待周期已经结束，不能重新停泊');
     return current;
   }
 
   /** 应用恢复时只登记已保存的等待槽；不读取模型上下文、重放消息或自动续跑。 */
-  async waitingScopes(): Promise<DispatchScope[]>
+  async WaitingScopes(): Promise<DispatchScope[]>
   {
-    this.check(this.owner.entry.id);
-    return (await this.store.read()).scopes?.filter(scope => scope.status === 'waiting') ?? []
+    this.Check(this.owner.entry.id);
+    return (await this.store.Read()).scopes?.filter(scope => scope.status === 'waiting') ?? []
   }
 
   /** 重启先结算旧运行；仅保留可核实的已完成待回传批次，其他 active 封存，waiting 不自动消费。 */
-  async recoverScopes(): Promise<void>
+  async RecoverScopes(): Promise<void>
   {
-    this.check(this.owner.entry.id);
-    const state = await this.store.read();
+    this.Check(this.owner.entry.id);
+    const state = await this.store.Read();
     for (const scope of state.scopes ?? [])
       if (scope.status === 'active')
       {
         try
         {
-          if (await this.automaticReturns.inspect(scope))
+          if (await this.automaticReturns.Inspect(scope))
             continue
         }
         catch (error)
         {
           if (scope.automaticReturns?.length)
-            await this.goals.block({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, '自动接收暂停：' + (error instanceof Error ? error.message : String(error)))
+            await this.goals.Block({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, '自动接收暂停：' + (error instanceof Error ? error.message : String(error)))
         }
-        await this.closeScope({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, 'interrupted');
+        await this.CloseScope({ workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId }, scope.scopeId, 'interrupted');
       }
   }
 
-  private check(workspaceId: string)
+  private Check(workspaceId: string)
   {
     if (this.closed)
       fail('DISPATCH_CLOSED', '成员调度服务已关闭');
-    this.owner.assert();
+    this.owner.Assert();
     if (workspaceId !== this.owner.entry.id)
       fail('GRAPH_IDENTITY_MISMATCH', '派发目标不属于当前工作区');
   }
 
-  private parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
+  private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
   {
     const parsed = schema.safeParse(input);
     if (!parsed.success)
@@ -471,7 +471,7 @@ export class WorkspaceDispatchService
     return parsed.data;
   }
 
-  private graph(state: DispatchState, rootSessionId: string)
+  private Graph(state: DispatchState, rootSessionId: string)
   {
     const graph = state.graphs.find(g => g.identity.rootSessionId === rootSessionId);
     if (!graph)
@@ -479,50 +479,50 @@ export class WorkspaceDispatchService
     return graph;
   }
 
-  private command<T extends { commandId: string }>(operation: string, input: T)
+  private Command<T extends { commandId: string }>(operation: string, input: T)
   {
     // 保留旧命令指纹的盐值以兼容已保存回执；此字段不是认证主体，真实来源由入口和运行工具回执核验。
     return dispatchCommand(operation, input);
   }
 
-  private batch(identity: GraphIdentity, commandId: string, cause: GraphEventBatch['cause'], changes: GraphChange[], graph?: GraphSnapshot): GraphEventBatch
+  private Batch(identity: GraphIdentity, commandId: string, cause: GraphEventBatch['cause'], changes: GraphChange[], graph?: GraphSnapshot): GraphEventBatch
   {
     return { version: 1, identity, streamId: graph?.cursor.streamId ?? randomUUID(), seq: (graph?.cursor.seq ?? 0) + 1, eventId: randomUUID(), commandId, cause, committedAt: new Date().toISOString(), changes };
   }
 
-  private cursor(batch: GraphEventBatch): GraphCursor
+  private Cursor(batch: GraphEventBatch): GraphCursor
   {
     return { ...batch.identity, streamId: batch.streamId, seq: batch.seq }
   }
 
   /** 读取之后再次核验知识版本；外部知识编辑不能在派发准备时静默换入另一基线。 */
-  private async recheck(snapshot: Snapshot)
+  private async Recheck(snapshot: Snapshot)
   {
-    this.check(snapshot.workspaceId);
-    if ((await this.owner.read()).revision !== snapshot.revision)
+    this.Check(snapshot.workspaceId);
+    if ((await this.owner.Read()).revision !== snapshot.revision)
       fail('KNOWLEDGE_REVISION_CONFLICT', '知识在派发准备期间变化，请重新读取后派发');
   }
 
   /** 创建主会话根及主成员通道；相同图的新请求复用根，重发原命令返回原回执。 */
-  async openGraph(raw: unknown): Promise<OpenGraphReceipt>
+  async OpenGraph(raw: unknown): Promise<OpenGraphReceipt>
   {
-    const input = this.parse(openGraphInput, raw);
-    this.check(input.workspaceId);
-    return this.store.transact(this.command('open', input), async state =>
+    const input = this.Parse(openGraphInput, raw);
+    this.Check(input.workspaceId);
+    return this.store.Transact(this.Command('open', input), async state =>
     {
-      this.check(input.workspaceId);
+      this.Check(input.workspaceId);
       const existing = state.graphs.find(g => g.identity.rootSessionId === input.rootSessionId);
       if (existing)
         return { receipt: { agent: existing.root.agent, cursor: existing.cursor } };
-      const snapshot = await this.owner.snapshot();
+      const snapshot = await this.owner.Snapshot();
       const prepared = prepareMember(state, resolveConversationAgent(snapshot), input.rootSessionId);
       const identity = { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId };
-      const batch = this.batch(identity, input.commandId, 'graph.created', [
+      const batch = this.Batch(identity, input.commandId, 'graph.created', [
         { type: 'root.upserted', root: { kind: 'session-root', nodeId: 'session:' + input.rootSessionId, identity, agent: prepared.agent, revision: 1, createdAt: new Date().toISOString() } },
         { type: 'agent.upserted', agent: { agentInstanceId: prepared.agent.agentInstanceId, agentId: prepared.agent.agentId, name: prepared.agent.name, revision: 1, state: 'idle', waitingTaskIds: [] } },
       ]);
-      await this.recheck(snapshot);
-      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { agent: prepared.agent, cursor: this.cursor(batch) } };
+      await this.Recheck(snapshot);
+      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { agent: prepared.agent, cursor: this.Cursor(batch) } };
     });
   }
 
@@ -530,63 +530,63 @@ export class WorkspaceDispatchService
        * 为普通主对话可靠取得当前根会话的主实例。先保存图根，再保存独立 conversation 通道；稳定命令键让并发调用和重启复用同一身份。
        * 不创建业务任务、不改活动状态、不改绑旧根或原生历史；主对话原生位置仍由执行层核对同根 Loop 日志。
        */
-  async conversationBinding(task: TaskSpec): Promise<ConversationAgentBinding>
+  async ConversationBinding(task: TaskSpec): Promise<ConversationAgentBinding>
   {
     if (task?.mode !== 'chat' || task.agentId !== 'cbim:main' || task.root !== this.owner.entry.path)
       fail('CONVERSATION_IDENTITY', '主对话绑定必须属于当前工作区的 cbim:main 普通对话');
-    const identity = this.parse(graphIdentityInput, { workspaceId: task.workspaceId, rootSessionId: task.taskId });
-    this.check(identity.workspaceId);
+    const identity = this.Parse(graphIdentityInput, { workspaceId: task.workspaceId, rootSessionId: task.taskId });
+    this.Check(identity.workspaceId);
     const key = hash(json(identity));
-    await this.openGraph({ ...identity, commandId: 'conversation-open-' + key });
+    await this.OpenGraph({ ...identity, commandId: 'conversation-open-' + key });
     const input = { ...identity, commandId: 'conversation-binding-' + key };
-    return this.store.transact(this.command('conversation.bind', input), async state =>
+    return this.store.Transact(this.Command('conversation.bind', input), async state =>
     {
-      this.check(identity.workspaceId);
-      const graph = this.graph(state, identity.rootSessionId);
-      const snapshot = await this.owner.snapshot();
+      this.Check(identity.workspaceId);
+      const graph = this.Graph(state, identity.rootSessionId);
+      const snapshot = await this.owner.Snapshot();
       const prepared = prepareMember(state, resolveConversationAgent(snapshot), identity.rootSessionId, 'conversation');
       if (graph.root.agent.agentId !== prepared.agent.agentId || graph.root.agent.agentInstanceId !== prepared.agent.agentInstanceId)
         fail('CONVERSATION_IDENTITY', '主对话实例与任务图根不一致');
-      await this.recheck(snapshot);
+      await this.Recheck(snapshot);
       const binding: ConversationAgentBinding = { ...identity, teamId: prepared.member.teamId, agentId: prepared.member.agentId, agentInstanceId: prepared.member.agentInstanceId, agentSessionId: prepared.session.agentSessionId };
       return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], receipt: binding };
     });
   }
 
   /** 为已建图注册角色与会话；只返回本次成员，不暴露其其他根会话通道。 */
-  async createMember(raw: unknown): Promise<CreateMemberReceipt>
+  async CreateMember(raw: unknown): Promise<CreateMemberReceipt>
   {
-    const input = this.parse(createMemberInput, raw);
-    this.check(input.workspaceId);
-    return this.store.transact(this.command('member', input), async state =>
+    const input = this.Parse(createMemberInput, raw);
+    this.Check(input.workspaceId);
+    return this.store.Transact(this.Command('member', input), async state =>
     {
-      this.check(input.workspaceId);
-      const graph = this.graph(state, input.rootSessionId);
-      const snapshot = await this.owner.snapshot(),
+      this.Check(input.workspaceId);
+      const graph = this.Graph(state, input.rootSessionId);
+      const snapshot = await this.owner.Snapshot(),
         prepared = prepareMember(state, await resolveDispatchAgent(snapshot, input.agentId), input.rootSessionId);
       const old = graph.agents.find(a => a.agentInstanceId === prepared.member.agentInstanceId);
       const view: AgentGraphView = old ? { ...old, name: prepared.agent.name, revision: old.revision + 1 } : { agentInstanceId: prepared.member.agentInstanceId, agentId: input.agentId, name: prepared.agent.name, revision: 1, state: 'idle', waitingTaskIds: [] };
       const changed = !old || old.name !== prepared.agent.name;
-      const batch = changed ? this.batch(graph.identity, input.commandId, 'agent.state_changed', [{ type: 'agent.upserted', agent: view }], graph) : undefined;
-      await this.recheck(snapshot);
+      const batch = changed ? this.Batch(graph.identity, input.commandId, 'agent.state_changed', [{ type: 'agent.upserted', agent: view }], graph) : undefined;
+      await this.Recheck(snapshot);
       // 注册回执仅公开本图 Session；全局成员状态仍留在后端。
       const member = { ...prepared.member, agentSessionIds: [prepared.session.agentSessionId], activity: view.state, activeTaskId: view.runningTaskId, activeRunId: undefined, waitingTaskIds: [...view.waitingTaskIds], communicatingMessageIds: [] };
-      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { member, session: prepared.session, agent: prepared.agent, cursor: batch ? this.cursor(batch) : graph.cursor } };
+      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, receipt: { member, session: prepared.session, agent: prepared.agent, cursor: batch ? this.Cursor(batch) : graph.cursor } };
     });
   }
 
   /** 可信桌面或绑定主轮的协调器从主会话派发任务；身份从根取得，不接受模型冒充其他成员递归派发。 */
-  async dispatchTask(raw: unknown, trustedScopeId?: string, assertCurrent?: () => void): Promise<DispatchReceipt>
+  async DispatchTask(raw: unknown, trustedScopeId?: string, assertCurrent?: () => void): Promise<DispatchReceipt>
   {
-    const input = this.parse(dispatchTaskInput, raw),
-      command = this.command('dispatch', trustedScopeId === undefined ? input : { ...input, scopeId: trustedScopeId });
-    const old = await this.owners.replay<DispatchReceipt>(command);
+    const input = this.Parse(dispatchTaskInput, raw),
+      command = this.Command('dispatch', trustedScopeId === undefined ? input : { ...input, scopeId: trustedScopeId });
+    const old = await this.owners.Replay<DispatchReceipt>(command);
     if (old)
       return old.receipt;
-    this.check(input.workspaceId);
+    this.Check(input.workspaceId);
     const alive = () =>
     {
-      this.check(input.workspaceId);
+      this.Check(input.workspaceId);
       assertCurrent?.()
     };
     alive();
@@ -596,11 +596,11 @@ export class WorkspaceDispatchService
       fail('AGENT_NOT_EXECUTABLE', '主 Agent 请在当前会话直接执行，不创建独立成员任务');
     if (new Set(input.task.moduleIds).size !== input.task.moduleIds.length || new Set(input.task.acceptance.map(a => a.id)).size !== input.task.acceptance.length || new Set(input.task.prerequisites.map(p => p.taskId)).size !== input.task.prerequisites.length)
       fail('GRAPH_INPUT_INVALID', '模块、验收条目和前置任务不能重复');
-    return this.owners.withContext(state => [this.owners.selection(state, trustedScopeId, input.task.ownerSelection)], context => this.store.transact(command, async state =>
+    return this.owners.WithContext(state => [this.owners.Selection(state, trustedScopeId, input.task.ownerSelection)], context => this.store.Transact(command, async state =>
     {
       alive();
-      this.check(input.workspaceId);
-      const graph = this.graph(state, input.rootSessionId);
+      this.Check(input.workspaceId);
+      const graph = this.Graph(state, input.rootSessionId);
       if (state.scopes?.some(scope => scope.rootSessionId === input.rootSessionId && scope.status === 'waiting'))
         fail('DISPATCH_SCOPE_WAITING', '当前主会话正在安全等待，不能派发新任务');
       if (trustedScopeId !== undefined)
@@ -619,12 +619,12 @@ export class WorkspaceDispatchService
       if (graph.root.revision !== input.expectedParentRevision)
         fail('GRAPH_REVISION_CONFLICT', '主会话根版本已变化');
       const snapshot = context.snapshot,
-        { ownerBinding, fallbackBinding } = await this.owners.resolveExecution(state, context, trustedScopeId, input.task.ownerSelection, input.task.moduleIds, input.task.assigneeAgentId);
+        { ownerBinding, fallbackBinding } = await this.owners.ResolveExecution(state, context, trustedScopeId, input.task.ownerSelection, input.task.moduleIds, input.task.assigneeAgentId);
       const registered = ownerBinding ? state.workspaceMembers!.find(member => member.memberId === ownerBinding.memberId) : undefined;
       if (trustedScopeId !== undefined)
       {
         const scope = state.scopes!.find(value => value.scopeId === trustedScopeId)!;
-        this.goals.validateDispatch(state, scope, input.task, snapshot.revision, ownerBinding, fallbackBinding);
+        this.goals.ValidateDispatch(state, scope, input.task, snapshot.revision, ownerBinding, fallbackBinding);
       }
       const taskId = randomUUID();
       const prepared = prepareMember(state, await resolveDispatchAgent(snapshot, input.task.assigneeAgentId), input.rootSessionId, 'task', trustedScopeId === undefined ? undefined : { scopeId: trustedScopeId, taskId });
@@ -660,42 +660,42 @@ export class WorkspaceDispatchService
         if (!prepared.member.activeRunId)
           prepared.member.activity = 'waiting'
       }
-      const batch = this.batch(graph.identity, input.commandId, 'task.dispatched', [{ type: 'task.upserted', task }, ...edges.map(edge => ({ type: 'edge.upserted' as const, edge })), { type: 'agent.upserted', agent }], graph);
+      const batch = this.Batch(graph.identity, input.commandId, 'task.dispatched', [{ type: 'task.upserted', task }, ...edges.map(edge => ({ type: 'edge.upserted' as const, edge })), { type: 'agent.upserted', agent }], graph);
       const messageId = randomUUID();
-      await this.recheck(snapshot);
+      await this.Recheck(snapshot);
       alive();
-      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, messages: [{ kind: 'assignment', messageId, commandId: input.commandId, identity: graph.identity, from: graph.root.agent, to: prepared.agent, taskId, planRevision: 1, createdAt: now, delivery: 'pending' }], receipt: { commandId: input.commandId, taskId, messageId, cursor: this.cursor(batch), disposition: waiting ? 'waiting' : 'queued', ...(fallbackBinding ? { fallbackBinding } : {}) } };
+      return { teamSessions: [prepared.teamSession], members: [prepared.member], sessions: [prepared.session], batch, messages: [{ kind: 'assignment', messageId, commandId: input.commandId, identity: graph.identity, from: graph.root.agent, to: prepared.agent, taskId, planRevision: 1, createdAt: now, delivery: 'pending' }], receipt: { commandId: input.commandId, taskId, messageId, cursor: this.Cursor(batch), disposition: waiting ? 'waiting' : 'queued', ...(fallbackBinding ? { fallbackBinding } : {}) } };
     }), alive);
   }
 
   /** 首次只读不会创建任务图；公开查询不包含成员其他 Session、邮箱和模型凭据。 */
-  snapshot(raw: unknown)
+  Snapshot(raw: unknown)
   {
-    const identity = this.parse(graphIdentityInput, raw);
-    this.check(identity.workspaceId);
-    return this.store.snapshot(identity)
+    const identity = this.Parse(graphIdentityInput, raw);
+    this.Check(identity.workspaceId);
+    return this.store.Snapshot(identity)
   }
 
   /** 无变化返回 noop，读取内存游标与已提交批次，不重复回读知识或整份日志。 */
-  delta(raw: unknown, cursor?: GraphCursor, limit?: number)
+  Delta(raw: unknown, cursor?: GraphCursor, limit?: number)
   {
-    const identity = this.parse(graphIdentityInput, raw);
-    this.check(identity.workspaceId);
-    return this.store.delta(identity, cursor, limit)
+    const identity = this.Parse(graphIdentityInput, raw);
+    this.Check(identity.workspaceId);
+    return this.store.Delta(identity, cursor, limit)
   }
 
   /** 同屏读取图、独立周期摘要与选中详情；读取不启动调度，周期变化不使审阅保存的图游标过期。 */
-  sessionRead(raw: unknown)
+  SessionRead(raw: unknown)
   {
-    const input = this.parse(dispatchSessionReadInput, raw);
-    this.check(input.identity.workspaceId);
-    return this.store.sessionRead(input)
+    const input = this.Parse(dispatchSessionReadInput, raw);
+    this.Check(input.identity.workspaceId);
+    return this.store.SessionRead(input)
   }
 
   /** 先阻止新请求，再等待已经入队的事务；由应用在释放工作区锁前调用。 */
-  async close()
+  async Close()
   {
     this.closed = true;
-    await this.store.close()
+    await this.store.Close()
   }
 }

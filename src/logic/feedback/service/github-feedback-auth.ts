@@ -67,7 +67,7 @@ export class GitHubFeedbackAuth
   {
   }
 
-  private serial<T>(work: () => Promise<T>)
+  private Serial<T>(work: () => Promise<T>)
   {
     const next = this.queue.then(async () =>
     {
@@ -87,7 +87,7 @@ export class GitHubFeedbackAuth
       }
       finally
       {
-        lock.close()
+        lock.Close()
       }
     });
     this.queue = next.catch(() =>
@@ -96,7 +96,7 @@ export class GitHubFeedbackAuth
     return next
   }
 
-  private async read(): Promise<Disk>
+  private async Read(): Promise<Disk>
   {
     try
     {
@@ -113,32 +113,32 @@ export class GitHubFeedbackAuth
     }
   }
 
-  private secure()
+  private Secure()
   {
-    if (!this.cipher?.available())
+    if (!this.cipher?.Available())
       fail('GITHUB_SECRET_STORAGE', '系统安全存储不可用，未保存 GitHub 凭据')
   }
 
-  private view(data: Disk): GitHubFeedbackStatus
+  private View(data: Disk): GitHubFeedbackStatus
   {
     // 正式产品预置公开 Client ID；用户仍须自己完成 OAuth，不随安装包分发任何访问凭据。
     const config = data.config ?? { clientId: process.env.CBIM_GITHUB_CLIENT_ID ?? 'Ov23liSMDZneBd3gSyTo', owner: 'nan023062', repo: 'cbim', visibility: 'public' as const, autoSubmit: true as const };
     const flow = this.flow && this.now() < this.flow.expiresAt ? this.flow : undefined;
-    return { secureStorage: this.cipher?.available() === true, config: { clientId: config.clientId, owner: config.owner, repo: config.repo, visibility: config.visibility }, ...(data.connection ? { connected: { login: data.connection.login, owner: config.owner, repo: config.repo } } : {}), ...(flow ? { flow: { id: flow.id, userCode: flow.userCode, verificationUri: 'https://github.com/login/device' as const, expiresAt: flow.expiresAt, nextPollAt: flow.nextPollAt } } : {}) };
+    return { secureStorage: this.cipher?.Available() === true, config: { clientId: config.clientId, owner: config.owner, repo: config.repo, visibility: config.visibility }, ...(data.connection ? { connected: { login: data.connection.login, owner: config.owner, repo: config.repo } } : {}), ...(flow ? { flow: { id: flow.id, userCode: flow.userCode, verificationUri: 'https://github.com/login/device' as const, expiresAt: flow.expiresAt, nextPollAt: flow.nextPollAt } } : {}) };
   }
 
   /** 在配置队列内读取公开摘要；不解密或发送网络请求，也不自动推进授权轮询。 */
-  status()
+  Status()
   {
-    return this.serial(async () => this.view(await this.read()))
+    return this.Serial(async () => this.View(await this.Read()))
   }
 
   /** 诊断不能凭“工具缺失”推断未登录；本机仍等待授权回包、读取失败与账号断开分开。旧绑定变化只提示开启新一轮。 */
-  checkConnection(scope?: FeedbackScope): Promise<FeedbackConnectionCheck>
+  CheckConnection(scope?: FeedbackScope): Promise<FeedbackConnectionCheck>
   {
-    return this.serial(async (): Promise<FeedbackConnectionCheck> =>
+    return this.Serial(async (): Promise<FeedbackConnectionCheck> =>
     {
-      const data = await this.read();
+      const data = await this.Read();
       if (!data.config || !data.connection)
         return { code: this.flow && data.flowId === this.flow.id && this.now() < this.flow.expiresAt ? 'GITHUB_AUTH_PENDING' : 'GITHUB_NOT_CONNECTED' };
       const repository = { owner: data.config.owner, repo: data.config.repo };
@@ -146,30 +146,30 @@ export class GitHubFeedbackAuth
         return { code: 'GITHUB_CONNECTION_CHANGED', repository };
       if (data.connection.expiresAt && this.now() >= data.connection.expiresAt)
         return { code: 'GITHUB_EXPIRED', repository };
-      if (!this.cipher?.available())
+      if (!this.cipher?.Available())
         return { code: 'GITHUB_SECRET_STORAGE', repository };
       return { code: 'GITHUB_CONNECTED', repository };
     }).catch(() => ({ code: 'GITHUB_SETTINGS' as const }))
   }
 
   /** 开始新的明确授权；不接收客户端令牌。先可靠保存公开设置，才向固定 GitHub 地址请求设备码。 */
-  begin(input: unknown)
+  Begin(input: unknown)
   {
     const requested = this.generation;
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
       if (requested !== this.generation)
         fail('GITHUB_CANCELLED', 'GitHub 授权已取消');
       const parsed = githubFeedbackConfigSchema.safeParse(input);
       if (!parsed.success)
         fail('GITHUB_CONFIG', '请填写有效的公开 Client ID、仓库所有者和仓库名，并允许反馈自动提交');
-      this.secure();
-      const previous = await this.read();
+      this.Secure();
+      const previous = await this.Read();
       if (previous.connection)
         fail('GITHUB_CONNECTED', '请先断开当前 GitHub 连接，再更换账号或仓库');
       if (requested !== this.generation)
         fail('GITHUB_CANCELLED', 'GitHub 授权已取消');
-      this.cancelFlow();
+      this.CancelFlow();
       const generation = this.generation,
         config = parsed.data,
         data: Disk = { version: 1, config, flowId: randomUUID() };
@@ -187,58 +187,58 @@ export class GitHubFeedbackAuth
         if (reply.status !== 200 || !body.success)
           fail('GITHUB_DEVICE_FLOW', 'GitHub 设备授权未启动，请检查 Client ID，并在 OAuth App 中启用 Device Flow');
         Object.assign(flow, { deviceCode: body.data.device_code, userCode: body.data.user_code, expiresAt: this.now() + body.data.expires_in * 1000, interval: body.data.interval * 1000, nextPollAt: this.now() + body.data.interval * 1000 });
-        return this.view(data);
+        return this.View(data);
       }
       catch (error)
       {
         if (this.flow === flow)
-          this.cancelFlow();
+          this.CancelFlow();
         throw error
       }
     })
   }
 
   /** 只轮询本机生成的 flowId；页面刷新或重复轮询不会超过 GitHub 返回的间隔。 */
-  poll(input: unknown)
+  Poll(input: unknown)
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
       const parsed = z.object({ flowId: z.string().uuid() }).strict().safeParse(input);
       if (!parsed.success)
         fail('GITHUB_FLOW', '授权会话无效，请重新连接');
       const flow = this.flow,
-        data = await this.read();
+        data = await this.Read();
       if (!flow || flow.id !== parsed.data.flowId)
         fail('GITHUB_FLOW', '授权会话已结束，请重新连接');
       if (data.flowId !== flow.id || !data.config)
       {
-        this.cancelFlow();
+        this.CancelFlow();
         fail('GITHUB_FLOW', '授权会话已由另一个窗口替换，请重新连接')
       }
       if (this.now() >= flow.expiresAt)
       {
-        this.cancelFlow();
+        this.CancelFlow();
         fail('GITHUB_EXPIRED', 'GitHub 授权码已过期，请重新连接')
       }
       if (this.now() < flow.nextPollAt)
-        return this.view(data);
+        return this.View(data);
       flow.nextPollAt = this.now() + flow.interval;
       const signal = AbortSignal.any([flow.controller.signal, this.lifetime.signal]);
       const reply = await this.request('https://github.com/login/oauth/access_token', { method: 'POST', body: { client_id: data.config.clientId, device_code: flow.deviceCode, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' }, signal });
       signal.throwIfAborted();
       const body = reply.data as Record<string, unknown> | null;
       if (reply.status === 200 && body?.error === 'authorization_pending')
-        return this.view(data);
+        return this.View(data);
       if (reply.status === 200 && body?.error === 'slow_down')
       {
         flow.interval += 5000;
         flow.nextPollAt = this.now() + flow.interval;
-        return this.view(data)
+        return this.View(data)
       }
       const token = z.object({ access_token: z.string().regex(/^[A-Za-z0-9_]{10,1000}$/), token_type: z.string().refine(value => value.toLowerCase() === 'bearer'), scope: z.string().max(1000), expires_in: z.number().positive().optional() }).safeParse(body);
       if (reply.status !== 200 || !token.success)
       {
-        this.cancelFlow();
+        this.CancelFlow();
         fail('GITHUB_AUTH', 'GitHub 授权未完成或已被拒绝，请重新连接')
       }
       try
@@ -246,10 +246,10 @@ export class GitHubFeedbackAuth
         const scopes = token.data.scope.split(/[ ,]+/);
         if (!scopes.includes('repo') && !(data.config.visibility === 'public' && scopes.includes('public_repo')))
           fail('GITHUB_SCOPE', 'GitHub 未授予所选仓库的 Issue 提交权限，请重新连接');
-        const identity = await this.verifyIdentity(data.config, token.data.access_token, signal);
+        const identity = await this.VerifyIdentity(data.config, token.data.access_token, signal);
         signal.throwIfAborted();
-        this.secure();
-        data.connection = { id: randomUUID(), ...identity, encryptedToken: this.cipher!.encrypt(token.data.access_token), ...(token.data.expires_in ? { expiresAt: this.now() + token.data.expires_in * 1000 } : {}) };
+        this.Secure();
+        data.connection = { id: randomUUID(), ...identity, encryptedToken: this.cipher!.Encrypt(token.data.access_token), ...(token.data.expires_in ? { expiresAt: this.now() + token.data.expires_in * 1000 } : {}) };
         delete data.flowId;
         await atomic(this.filename, JSON.stringify(data));
         if (signal.aborted || this.flow !== flow)
@@ -258,19 +258,19 @@ export class GitHubFeedbackAuth
           await atomic(this.filename, JSON.stringify(data));
           fail('GITHUB_CANCELLED', 'GitHub 授权已取消')
         }
-        this.cancelFlow();
-        return this.view(data);
+        this.CancelFlow();
+        return this.View(data);
       }
       catch
       {
-        this.cancelFlow();
+        this.CancelFlow();
         fail('GITHUB_BINDING', 'GitHub 账号或仓库核验／凭据保存失败，请检查仓库可见性、Issues 开关和系统安全存储后重新连接')
       }
     })
   }
 
   /** 网络核验账号及不可变仓库 ID；无法核实就不发 Issue。 */
-  async verifyIdentity(config: NonNullable<Disk['config']>, token: string, signal: AbortSignal)
+  async VerifyIdentity(config: NonNullable<Disk['config']>, token: string, signal: AbortSignal)
   {
     const user = await this.request('https://api.github.com/user', { method: 'GET', token, signal });
     const account = z.object({ id: z.number().int().positive(), login: z.string().regex(/^[A-Za-z0-9-]{1,100}$/) }).safeParse(user.data);
@@ -284,11 +284,11 @@ export class GitHubFeedbackAuth
   }
 
   /** 捕获无密钥范围；断开或重连使旧范围失效，运行时不能静默改投新仓库。 */
-  capture(workspaceId: string)
+  Capture(workspaceId: string)
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
-      const data = await this.read();
+      const data = await this.Read();
       if (!data.config || !data.connection)
         return undefined;
       return { kind: 'github-feedback' as const, workspaceId, connectionId: data.connection.id, repositoryId: data.connection.repositoryId, owner: data.config.owner, repo: data.config.repo };
@@ -296,22 +296,22 @@ export class GitHubFeedbackAuth
   }
 
   /** 持有设置队列直到一次有界请求结束；凭据仅交主进程闭包，不交模型或 IPC。 */
-  withConnection<T>(scope: FeedbackScope, signal: AbortSignal, use: (identity: GitHubFeedbackIdentity, signal: AbortSignal) => Promise<T>)
+  WithConnection<T>(scope: FeedbackScope, signal: AbortSignal, use: (identity: GitHubFeedbackIdentity, signal: AbortSignal) => Promise<T>)
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
-      const data = await this.read(),
+      const data = await this.Read(),
         connection = data.connection,
         config = data.config;
       if (!connection || !config || connection.id !== scope.connectionId || connection.repositoryId !== scope.repositoryId || config.owner !== scope.owner || config.repo !== scope.repo)
         fail('GITHUB_CONNECTION_CHANGED', 'GitHub 连接已改变，请重新发起反馈；原未知提交仍需核实');
-      this.secure();
+      this.Secure();
       if (connection.expiresAt && this.now() >= connection.expiresAt)
         fail('GITHUB_EXPIRED', 'GitHub 登录已过期，请重新连接');
       let token: string;
       try
       {
-        token = this.cipher!.decrypt(connection.encryptedToken)
+        token = this.cipher!.Decrypt(connection.encryptedToken)
       }
       catch
       {
@@ -323,7 +323,7 @@ export class GitHubFeedbackAuth
     })
   }
 
-  private cancelFlow()
+  private CancelFlow()
   {
     this.generation++;
     this.flow?.controller.abort();
@@ -331,31 +331,31 @@ export class GitHubFeedbackAuth
   }
 
   /** 撤销本机使用许可，不声称删除 GitHub 网站上的 OAuth 授权。 */
-  disconnect()
+  Disconnect()
   {
-    this.cancelFlow();
-    return this.serial(async () =>
+    this.CancelFlow();
+    return this.Serial(async () =>
     {
-      const data = await this.read();
+      const data = await this.Read();
       delete data.connection;
       delete data.flowId;
       await atomic(this.filename, JSON.stringify(data));
-      return this.view(data)
+      return this.View(data)
     })
   }
 
   /** 立即作废当前设备授权代际，随后返回公开状态；已保存连接不被删除。 */
-  cancel()
+  Cancel()
   {
-    this.cancelFlow();
-    return this.status()
+    this.CancelFlow();
+    return this.Status()
   }
 
   /** 停止接单并中断本实例网络请求，等待已入队操作退出，不删除持久连接或原提交事实。 */
-  async close()
+  async Close()
   {
     this.closed = true;
-    this.cancelFlow();
+    this.CancelFlow();
     this.lifetime.abort();
     await this.queue
   }

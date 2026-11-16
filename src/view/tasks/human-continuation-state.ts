@@ -137,27 +137,27 @@ export class HumanContinuationController
     return !this.listeners.size && !this.pending.size
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  record(scopeId: string, waitId: string)
+  Record(scopeId: string, waitId: string)
   {
     return this.value.records.find(value => value.scopeId === scopeId && value.waitId === waitId)
   }
 
-  isPending(record?: HumanContinuationDraft)
+  IsPending(record?: HumanContinuationDraft)
   {
     return !!record && this.pending.has(record.attempt.request.commandId)
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  private update(record: HumanContinuationDraft): boolean
+  private Update(record: HumanContinuationDraft): boolean
   {
     const records = [...this.value.records],
       index = records.findIndex(value => value.scopeId === record.scopeId && value.waitId === record.waitId);
@@ -173,25 +173,25 @@ export class HumanContinuationController
         throw Error('本地记录超过容量上限');
       this.ports.storage.setItem(this.storageKey, raw);
       this.unavailable = false;
-      this.emit();
+      this.Emit();
       return true
     }
     catch (error)
     {
       this.unavailable = true;
       this.value = { records, error: '接续意图未能保存，保留当前请求并停止发送：' + textError(error) };
-      this.emit();
+      this.Emit();
       return false
     }
   }
 
   /** 只有明确点击调用；无需自由正文，最新决定、等待版本与执行配置一并冻结。 */
-  async submit(target: HumanContinuationTarget, options: HumanContinuationRequest['options'])
+  async Submit(target: HumanContinuationTarget, options: HumanContinuationRequest['options'])
   {
     if (!this.available || target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId)
       return;
-    const old = this.record(target.scopeId, target.waitId);
-    if (old && (old.attempt.phase !== 'rejected' || this.isPending(old)))
+    const old = this.Record(target.scopeId, target.waitId);
+    if (old && (old.attempt.phase !== 'rejected' || this.IsPending(old)))
       return;
     let request: HumanContinuationRequest;
     try
@@ -201,79 +201,79 @@ export class HumanContinuationController
     catch (error)
     {
       this.value = { ...this.value, error: textError(error) };
-      this.emit();
+      this.Emit();
       return
     }
     const record: HumanContinuationDraft = { scopeId: target.scopeId, waitId: target.waitId, attempt: { request, phase: 'submitting', uncertain: false } };
-    if (this.update(record))
-      await this.send(record);
+    if (this.Update(record))
+      await this.Send(record);
   }
 
-  private async send(record: HumanContinuationDraft)
+  private async Send(record: HumanContinuationDraft)
   {
     const { attempt } = record,
       request = attempt.request;
     if (this.pending.has(request.commandId))
       return;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const receipt = checkedHumanContinuationReceipt(await this.ports.submit(structuredClone(request)), request, attempt.receipt);
-      this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
+      this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
     }
     catch (error)
     {
       const rejected = !attempt.uncertain && humanContinuationRejected(error);
-      this.update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
+      this.Update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 原命令重试不采纳后来选择的意见、模型或权限。 */
-  async retry(scopeId: string, waitId: string)
+  async Retry(scopeId: string, waitId: string)
   {
-    const record = this.record(scopeId, waitId);
-    if (this.available && record?.attempt.phase === 'unknown' && !this.isPending(record))
-      await this.send(record)
+    const record = this.Record(scopeId, waitId);
+    if (this.available && record?.attempt.phase === 'unknown' && !this.IsPending(record))
+      await this.Send(record)
   }
 
   /** 未找到回执不能推出未执行；存储暂时不可写仍允许核实已有请求，只读查询不发起新运行。 */
-  async query(scopeId: string, waitId: string)
+  async Query(scopeId: string, waitId: string)
   {
-    const record = this.record(scopeId, waitId);
-    if (!record || this.isPending(record))
+    const record = this.Record(scopeId, waitId);
+    if (!record || this.IsPending(record))
       return;
     const { attempt } = record,
       request = attempt.request;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, scopeId: request.scopeId, commandId: request.commandId });
       if (raw !== undefined)
-        this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanContinuationReceipt(raw, request, attempt.receipt), error: undefined } });
+        this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanContinuationReceipt(raw, request, attempt.receipt), error: undefined } });
       else if (attempt.phase !== 'accepted')
-        this.update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；保留原请求，请继续查询或原请求重试。' } })
+        this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；保留原请求，请继续查询或原请求重试。' } })
     }
     catch (error)
     {
-      this.update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
+      this.Update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
-  async restore()
+  async Restore()
   {
-    await Promise.all(this.value.records.filter(value => value.attempt.phase === 'unknown').map(value => this.query(value.scopeId, value.waitId)))
+    await Promise.all(this.value.records.filter(value => value.attempt.phase === 'unknown').map(value => this.Query(value.scopeId, value.waitId)))
   }
 }
 
@@ -282,7 +282,7 @@ export class HumanContinuationPool
 {
   private controllers = new Map<string, HumanContinuationController>();
 
-  get(workspaceId: string, rootSessionId: string, ports: HumanContinuationPorts)
+  Get(workspaceId: string, rootSessionId: string, ports: HumanContinuationPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
       value = this.controllers.get(key) ?? new HumanContinuationController(workspaceId, rootSessionId, ports);

@@ -130,32 +130,32 @@ export function useRecoverySource(workspaceId: string, rootSessionId: string, so
   keyRef.current = key;
   const refreshRef = useRef(context?.refresh);
   refreshRef.current = context?.refresh;
-  const controller = useMemo(() => context ? controllers.get(workspaceId, rootSessionId, {
+  const controller = useMemo(() => context ? controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: name => window.localStorage.getItem(name), setItem: (name, value) => window.localStorage.setItem(name, value) },
     submit: request => window.cbim.call('loop.recoveryStart', request), lookup: request => window.cbim.call('loop.recoveryReceipt', request), uuid: () => crypto.randomUUID(),
   }) : undefined, [workspaceId, rootSessionId, Boolean(context)]);
   const [, changed] = useState(0);
   const sourceKey = source ? recoverySourceKey(source) : '',
-    observedHistoryCount = source ? controller?.record(source)?.history?.length ?? 0 : 0;
+    observedHistoryCount = source ? controller?.Record(source)?.history?.length ?? 0 : 0;
   // 同来源两处卡片共用命令，但各自报告独立；归档通知必须让两份旧报告都失效。
   useEffect(() =>
   {
     if (!controller)
       return;
-    return source ? controller.subscribeSource(source, () => changed(value => value + 1), () => invalidateReport?.(), observedHistoryCount) : controller.subscribe(() => changed(value => value + 1))
+    return source ? controller.SubscribeSource(source, () => changed(value => value + 1), () => invalidateReport?.(), observedHistoryCount) : controller.Subscribe(() => changed(value => value + 1))
   }, [controller, key, sourceKey, invalidateReport]);
   useEffect(() =>
   {
     if (controller)
-      void controller.restore().then(() =>
+      void controller.Restore().then(() =>
       {
         if (keyRef.current === key)
           refreshRef.current?.()
       })
   }, [controller, key]);
-  const record = source ? controller?.record(source) : undefined,
+  const record = source ? controller?.Record(source) : undefined,
     attempt = record?.attempt,
-    pending = controller?.isPending(record) ?? false;
+    pending = controller?.IsPending(record) ?? false;
   const editable = Boolean(eligibility.target && controller?.available && !pending && (!attempt || attempt.phase === 'rejected'));
   const canPrepare = Boolean(context && source && controller?.available && !pending && attempt?.phase === 'accepted' && attempt.receipt?.scopeStatus === 'closed' && !prepareReason);
   const after = async (work: () => Promise<void>) =>
@@ -171,28 +171,28 @@ export function useRecoverySource(workspaceId: string, rootSessionId: string, so
     edit: fields =>
     {
       if (editable && source)
-        controller!.edit(source, fields)
+        controller!.Edit(source, fields)
     },
     submit: () => after(async () =>
     {
       if (editable && eligibility.target && context?.model)
-        await controller!.submit(eligibility.target, { ...context.model.options, permission: 'read' })
+        await controller!.Submit(eligibility.target, { ...context.model.options, permission: 'read' })
     }),
     prepare: () => after(async () =>
     {
       if (canPrepare && source && attempt)
-        await controller!.prepareAgain(source, attempt.request.commandId)
+        await controller!.PrepareAgain(source, attempt.request.commandId)
     }),
     query: () => after(async () =>
     {
       if (record)
-        await controller!.query(record.source)
+        await controller!.Query(record.source)
     }),
     // 未知命令可以在图已改变后重试原请求；服务端先去重，不能用新请求准入条件隐藏其查询入口。
     retry: () => after(async () =>
     {
       if (record && attempt?.phase === 'unknown')
-        await controller!.retry(record.source)
+        await controller!.Retry(record.source)
     }),
     showCreated: () =>
     {

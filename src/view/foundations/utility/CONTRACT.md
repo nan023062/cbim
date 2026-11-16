@@ -4,7 +4,7 @@
 
 ## JSON 比较
 
-`equalJson(left, right)` 调用共享 JsonUtils.orderJsonValue，显式用 localeCompare 排列键、略去对象 undefined、保持数组顺序，再比较 JSON.stringify 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。比较策略保留在视图适配，算法与后端共享。
+`equalJson(left, right)` 调用共享 JsonUtils.OrderJsonValue，显式用 localeCompare 排列键、略去对象 undefined、保持数组顺序，再比较 JSON.stringify 输出。不修改输入，不生成身份、授权、哈希或持久化记录，不校验字段有效性。比较策略保留在视图适配，算法与后端共享。
 
 真实消费者为岗位登记、模块责任、目标接续、人工决定、人工继续五个控制器。它们原有的同类本地算法收敛到此入口；身份、版本、原请求匹配、回执合法性及未知结果处理仍归各控制器。
 
@@ -53,4 +53,4 @@ storage.ts 的 JsonRecordStorage 注入 TextStorage、键及字节上限，每�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

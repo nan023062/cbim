@@ -23,11 +23,11 @@ import { memberPublicTask } from '../../runtime/monitoring/member-events';
 /** 仅可信平台注入，不能调用会重新读取本事务 store 的报告服务。 */
 export interface WorkflowFileVerification
 {
-  normalizePath(raw: string): string;
+  NormalizePath(raw: string): string;
 
-  checkFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
+  CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
 
-  checkManifest?(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
+  CheckManifest?(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
 
   signal?: AbortSignal;
 }
@@ -95,7 +95,7 @@ export async function validateMemberWorkflow(task: TaskNode, run: DispatchRun, s
 /** 共用原日志、结构验证和完整出口检查；调用者另核来源身份与结算状态。 */
 export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<DispatchRun, 'prepared' | 'binding' | 'session'>, summary: RunSummary, port?: WorkflowFileVerification): Promise<void>
 {
-  const { files, manifest } = businessWorkflowEvidence(task, run, summary, port?.normalizePath);
+  const { files, manifest } = businessWorkflowEvidence(task, run, summary, port?.NormalizePath);
   if (!files.length && !manifest)
     return;
   if (!port)
@@ -105,14 +105,14 @@ export async function validateBusinessWorkflow(task: TaskSpec, run: Pick<Dispatc
   // 完整清单已经覆盖每个验证文件，同一集合重读取代选定文件子集读取。
   if (manifest)
   {
-    if (!port.checkManifest)
+    if (!port.CheckManifest)
       fail('MANIFEST_UNAVAILABLE', '完整出口缺少真实全集合复核端口');
-    const observed = await port.checkManifest(manifest.manifest.snapshot, signal);
+    const observed = await port.CheckManifest(manifest.manifest.snapshot, signal);
     signal.throwIfAborted();
     assertCompleteOutputCurrent(manifest.manifest.snapshot, observed);
     return
   }
-  const checks = await port.checkFiles(files, signal);
+  const checks = await port.CheckFiles(files, signal);
   signal.throwIfAborted();
   if (!Array.isArray(checks) || checks.length !== files.length)
     fail('WORKFLOW_VALIDATION_STALE', '验证产物未返回完整文件复核结果');

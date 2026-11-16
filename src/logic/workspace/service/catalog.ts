@@ -25,7 +25,7 @@ export class Catalog
   {
   }
 
-  async init()
+  async Init()
   {
     await fs.mkdir(this.paths.userRoot, { recursive: true, mode: 0o700 });
     if (process.platform === 'win32')
@@ -37,7 +37,7 @@ export class Catalog
       await fs.chmod(this.paths.userRoot, 0o700);
   }
 
-  async read(): Promise<Data>
+  async Read(): Promise<Data>
   {
     const p = path.join(this.paths.userRoot, 'workspaces.json');
     if (!await exists(p))
@@ -58,7 +58,7 @@ export class Catalog
     }
   }
 
-  async update(edit: (data: Data) => void)
+  async Update(edit: (data: Data) => void)
   {
     let lock: KernelLock | undefined;
     const canonical = await fs.realpath(this.paths.userRoot);
@@ -81,7 +81,7 @@ export class Catalog
       fail('BUSY', '工作区列表正在被其他窗口更新，请重试');
     try
     {
-      const data = await this.read();
+      const data = await this.Read();
       if (this.warning && await exists(path.join(canonical, 'workspaces.json')))
         await fs.copyFile(path.join(canonical, 'workspaces.json'), path.join(canonical, `workspaces.corrupt-${Date.now()}.json`));
       edit(data);
@@ -90,15 +90,15 @@ export class Catalog
     }
     finally
     {
-      lock.close()
+      lock.Close()
     }
   }
 
-  async add(root: string)
+  async Add(root: string)
   {
-    const identity = await this.paths.identity(root);
+    const identity = await this.paths.Identity(root);
     let entry!: WorkspaceEntry;
-    await this.update(data =>
+    await this.Update(data =>
     {
       entry = data.entries.find(x => x.id === identity.id)!;
       if (!entry)
@@ -107,7 +107,7 @@ export class Catalog
         data.entries.push(entry)
       }
     });
-    const mapping = path.join(this.paths.project(entry.id), 'identity.json');
+    const mapping = path.join(this.paths.Project(entry.id), 'identity.json');
     if (await exists(mapping))
     {
       if ((await readJson(mapping)).path !== entry.path)
@@ -119,12 +119,12 @@ export class Catalog
   }
 
   /** 仅修改登记显示名，不移动目录、不改变工作区身份或历史关联。 */
-  async rename(id: string, name: string)
+  async Rename(id: string, name: string)
   {
     if (typeof name !== 'string' || !name.trim() || name.trim().length > 80 || /[\r\n\x00-\x1f]/.test(name))
       fail('NAME', '项目名称须为 1 至 80 个字符的单行文字');
     let entry!: WorkspaceEntry;
-    await this.update(data =>
+    await this.Update(data =>
     {
       const found = data.entries.find(x => x.id === id);
       if (!found)
@@ -135,28 +135,28 @@ export class Catalog
     return entry;
   }
 
-  async remove(id: string)
+  async Remove(id: string)
   {
-    await this.update(d =>
+    await this.Update(d =>
     {
       d.entries = d.entries.filter(x => x.id !== id);
       d.recent = d.recent.filter(x => x !== id)
     })
   }
 
-  async relocate(id: string, newPath: string, confirm: boolean)
+  async Relocate(id: string, newPath: string, confirm: boolean)
   {
     if (!confirm)
       fail('CONFIRM', '重新定位需确认新路径；旧历史保留并通过 previousIds 关联，不合并或搬移');
-    const identity = await this.paths.identity(newPath);
-    const data = await this.read();
+    const identity = await this.paths.Identity(newPath);
+    const data = await this.Read();
     const old = data.entries.find(x => x.id === id);
     if (!old)
       fail('NOT_FOUND', '工作区不存在');
     if (await exists(old.path) && identity.id !== id)
       fail('RELOCATE', '原项目仍存在，请将新目录作为独立工作区添加');
-    const entry = await this.add(newPath);
-    await this.update(d =>
+    const entry = await this.Add(newPath);
+    await this.Update(d =>
     {
       d.entries = d.entries.filter(x => x.id !== id || x.id === entry.id);
       const target = d.entries.find(x => x.id === entry.id)!;

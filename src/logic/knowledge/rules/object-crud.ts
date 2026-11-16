@@ -28,9 +28,9 @@ export class ObjectCrud
   }
 
   /** 按输入顺序在同一候选快照创建父子对象，再校验完整事务并持久化预览计划；不会自动编造原则或模块正文。提交仍由调用边界检查当前写授权。 */
-  async preview(revision: string, operations: ObjectOperation[]): Promise<ObjectPreview>
+  async Preview(revision: string, operations: ObjectOperation[]): Promise<ObjectPreview>
   {
-    const s = await this.w.snapshot();
+    const s = await this.w.Snapshot();
     if (s.revision !== revision)
       fail('CONFLICT', '知识版本已变化，请重新查询');
     const map = new Map(s.files.map(f => [f.path, f.text])),
@@ -90,12 +90,12 @@ export class ObjectCrud
           if (op.kind === 'workflow' && op.slug.includes('-'))
             fail('OBJECT_ID', 'Workflow 使用 snake_case')
         }
-        await this.w.paths.knowledge(this.w.entry.path, id + '/__check__');
+        await this.w.paths.Knowledge(this.w.entry.path, id + '/__check__');
         if ([...map.keys()].some(p => p.toLowerCase() === id.toLowerCase() || p.toLowerCase().startsWith(id.toLowerCase() + '/')))
           fail('EXISTS', '对象位置已被使用');
         // 同一已核知识专用删除计划可在原位置重建；这不是对现存目录的任意覆盖，生命周期保留有序删除事实。
         if (!deletedRoots.some(root => id === root || id.startsWith(root + '/')))
-          await this.w.objects.assertAbsent(id);
+          await this.w.objects.AssertAbsent(id);
         if (!op.body?.trim())
           fail('BODY', '创建必须提供正文，不自动编造专业原则或业务知识');
       }
@@ -103,7 +103,7 @@ export class ObjectCrud
       {
         if (!id || op.parentId || op.slug)
           fail('OBJECT_ID', '更新或删除只接受查询返回的 id');
-        await this.w.paths.knowledge(this.w.entry.path, id + '/__check__');
+        await this.w.paths.Knowledge(this.w.entry.path, id + '/__check__');
         if (op.kind === 'agent')
           get(id + '/agent.json');
         else if (op.kind === 'module')
@@ -179,7 +179,7 @@ export class ObjectCrud
         if (!method && dependents.length && !op.cascade)
           fail('HAS_CHILDREN', '对象仍包含子模块或方法；需显式 cascade 才能删除');
         // Non-knowledge resources must not be silently orphaned or deleted by a text transaction.
-        await this.w.objects.assertKnowledgeOnly(id, s.files);
+        await this.w.objects.AssertKnowledgeOnly(id, s.files);
         for (const p of owned)
           map.delete(p);
         if (op.kind === 'module')
@@ -198,29 +198,29 @@ export class ObjectCrud
     }
     const changes = [...new Set([...s.files.map(f => f.path), ...map.keys()])].filter(p => !INDEXES.includes(p) && s.files.find(f => f.path === p)?.text !== map.get(p)).map(p => ({ path: p, text: map.get(p) ?? null }));
     const request: ChangeRequest = { workspaceId: s.workspaceId, instanceId: s.instanceId, revision, requestId: randomUUID(), changes };
-    const preview = await this.w.preview(request);
+    const preview = await this.w.Preview(request);
     const planId = request.requestId;
     const plan = { version: 2 as const, request, operations: resolvedOperations, deletedRoots };
-    await this.w.objects.savePlan(planId, { ...plan, planHash: knowledgePlanHash(plan) });
+    await this.w.objects.SavePlan(planId, { ...plan, planHash: knowledgePlanHash(plan) });
     return { ...preview, planId, objects, notice: '仅预览。调用 cbim_object_commit(planId) 才提交；校验失败不能提交。空目录可能保留，不删除业务源码或资源。' };
   }
 
   /** 读取计划并核验指纹、实例和版本；写授权由核心知识服务调用边界检查。 */
-  async commit(planId: string): Promise<ObjectCommit>
+  async Commit(planId: string): Promise<ObjectCommit>
   {
     if (!/^[0-9a-f-]{36}$/.test(planId))
       fail('PLAN', '无效预览标识');
-    const plan = await this.w.objects.readPlan(planId);
+    const plan = await this.w.objects.ReadPlan(planId);
     if (plan.request.requestId !== planId)
       fail('PLAN', '预览数据不一致');
-    const result = await this.w.commitPlanned({ kind: 'object_plan', planId });
+    const result = await this.w.CommitPlanned({ kind: 'object_plan', planId });
     // Prune only empty object directories; never recursively delete resources.
     const cleanupWarnings: string[] = [];
     for (const id of plan.deletedRoots || [])
       if (plan.request.changes.some((c: any) => c.path.startsWith(id + '/') && c.text === null) && id.split('/').length > 2)
         try
         {
-          await this.w.objects.pruneEmpty(id)
+          await this.w.objects.PruneEmpty(id)
         }
         catch (e: any)
         {

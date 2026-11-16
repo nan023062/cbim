@@ -51,7 +51,7 @@ export class GitHubFeedback
     this.auth = new GitHubFeedbackAuth(path.join(directory, 'connection.json'), cipher, request, now)
   }
 
-  private serial<T>(work: () => Promise<T>)
+  private Serial<T>(work: () => Promise<T>)
   {
     const next = this.queue.then(async () =>
     {
@@ -63,7 +63,7 @@ export class GitHubFeedback
       }
       finally
       {
-        lock.close()
+        lock.Close()
       }
     });
     this.queue = next.catch(() =>
@@ -72,16 +72,16 @@ export class GitHubFeedback
     return next
   }
 
-  private filename(binding: { workspaceId: string })
+  private Filename(binding: { workspaceId: string })
   {
     return path.join(this.directory, 'submissions', hash(binding.workspaceId) + '.json')
   }
 
-  private async read(binding: Binding): Promise<Ledger>
+  private async Read(binding: Binding): Promise<Ledger>
   {
     try
     {
-      const parsed = ledgerSchema.safeParse(JSON.parse(await fs.readFile(this.filename(binding), 'utf8')));
+      const parsed = ledgerSchema.safeParse(JSON.parse(await fs.readFile(this.Filename(binding), 'utf8')));
       if (!parsed.success || parsed.data.workspaceId !== binding.workspaceId || new Set(parsed.data.entries.map(e => e.operationId)).size !== parsed.data.entries.length)
         throw Error();
       return parsed.data
@@ -94,42 +94,42 @@ export class GitHubFeedback
     }
   }
 
-  private save(ledger: Ledger)
+  private Save(ledger: Ledger)
   {
-    return atomic(this.filename(ledger), JSON.stringify(ledger))
+    return atomic(this.Filename(ledger), JSON.stringify(ledger))
   }
 
   /** 仅桌面主会话调用，捕获原目标且每次使用前由工作区所有者检查实例仍有效。 */
-  async prepare(binding: Binding, assertCurrent: () => void): Promise<FeedbackToolsPort | undefined>
+  async Prepare(binding: Binding, assertCurrent: () => void): Promise<FeedbackToolsPort | undefined>
   {
     id.parse(binding.workspaceId);
     id.parse(binding.rootSessionId);
     assertCurrent();
-    const scope = await this.auth.capture(binding.workspaceId);
+    const scope = await this.auth.Capture(binding.workspaceId);
     if (!scope)
       return;
     const fixed = Object.freeze({ ...binding });
-    return { scope: Object.freeze(scope), submit: (input, signal) => this.submit(fixed, scope, input, signal, assertCurrent), receipt: signal => this.receipt(fixed, scope, signal, assertCurrent) };
+    return { scope: Object.freeze(scope), Submit: (input, signal) => this.Submit(fixed, scope, input, signal, assertCurrent), Receipt: signal => this.Receipt(fixed, scope, signal, assertCurrent) };
   }
 
-  private result(entry: Entry): FeedbackResult
+  private Result(entry: Entry): FeedbackResult
   {
     if (entry.status !== 'submitted' || !entry.issueNumber)
       unknown();
     return { status: 'submitted', operationId: entry.operationId }
   }
 
-  private async verify(identity: GitHubFeedbackIdentity, signal: AbortSignal)
+  private async Verify(identity: GitHubFeedbackIdentity, signal: AbortSignal)
   {
-    const actual = await this.auth.verifyIdentity(identity.config, identity.token, signal);
+    const actual = await this.auth.VerifyIdentity(identity.config, identity.token, signal);
     if (actual.accountId !== identity.connection.accountId || actual.repositoryId !== identity.connection.repositoryId)
       fail('GITHUB_IDENTITY_CHANGED', 'GitHub 账号或仓库身份已改变，未提交，请在设置中重新连接');
   }
 
   /** 串行、单次 POST；sending 是持久写屏障，任何不同调用 ID／正文都不能绕过未知结果。 */
-  private submit(binding: Binding, scope: FeedbackScope, raw: FeedbackInput, signal: AbortSignal, assertCurrent: () => void)
+  private Submit(binding: Binding, scope: FeedbackScope, raw: FeedbackInput, signal: AbortSignal, assertCurrent: () => void)
   {
-    return this.serial(() => this.auth.withConnection(scope, signal, async (identity, bounded) =>
+    return this.Serial(() => this.auth.WithConnection(scope, signal, async (identity, bounded) =>
     {
       assertCurrent();
       bounded.throwIfAborted();
@@ -139,7 +139,7 @@ export class GitHubFeedback
       const issue = feedbackIssue(parsed.data);
       if (Buffer.byteLength(issue.body, 'utf8') > 48000)
         fail('GITHUB_FEEDBACK_SIZE', '反馈正文过长，请缩短上下文后提交');
-      const ledger = await this.read(binding),
+      const ledger = await this.Read(binding),
         fingerprint = hash(JSON.stringify(issue));
       const pending = ledger.entries.find(entry => entry.status === 'sending');
       if (pending)
@@ -150,17 +150,17 @@ export class GitHubFeedback
       }
       const previous = ledger.entries.find(entry => entry.fingerprint === fingerprint && entry.repositoryId === scope.repositoryId && entry.accountId === identity.connection.accountId && entry.status === 'submitted');
       if (previous)
-        return this.result(previous);
+        return this.Result(previous);
       if (ledger.entries.length >= 1000)
         fail('GITHUB_FEEDBACK_LIMIT', '本工作区反馈记录已达上限，未提交');
-      await this.verify(identity, bounded);
+      await this.Verify(identity, bounded);
       assertCurrent();
       bounded.throwIfAborted();
       const operationId = randomUUID(),
         body = issue.body + `\n\n<!-- cbim-feedback:${operationId} -->`;
       const entry: Entry = { operationId, rootSessionId: binding.rootSessionId, connectionId: scope.connectionId, accountId: identity.connection.accountId, login: identity.connection.login, repositoryId: scope.repositoryId, owner: scope.owner, repo: scope.repo, fingerprint, bodyHash: hash(body), titleHash: hash(issue.title), createdAt: new Date().toISOString(), status: 'sending' };
       ledger.entries.push(entry);
-      await this.save(ledger);
+      await this.Save(ledger);
       // 从意图落盘开始，任何取消或传输异常都保留 sending；未收到可靠拒绝不能断言没有写入。
       let reply,
         issued = false;
@@ -178,7 +178,7 @@ export class GitHubFeedback
           entry.status = 'rejected';
           try
           {
-            await this.save(ledger)
+            await this.Save(ledger)
           }
           catch
           {
@@ -193,7 +193,7 @@ export class GitHubFeedback
         entry.status = 'rejected';
         try
         {
-          await this.save(ledger)
+          await this.Save(ledger)
         }
         catch
         {
@@ -203,25 +203,25 @@ export class GitHubFeedback
       }
       if (reply!.status !== 201)
         unknown();
-      const number = this.issueNumber(reply!.data, entry);
+      const number = this.IssueNumber(reply!.data, entry);
       if (!number)
         unknown();
       entry.status = 'submitted';
       entry.issueNumber = number;
       try
       {
-        await this.save(ledger)
+        await this.Save(ledger)
       }
       catch
       {
         unknown()
       }
-      return this.result(entry);
+      return this.Result(entry);
     }))
   }
 
   /** 核实严格匹配原账号、不可变仓库 ID、标题／正文指纹和隐藏标记；不查开发处理状态。 */
-  private issueNumber(value: unknown, entry: Entry): number | undefined
+  private IssueNumber(value: unknown, entry: Entry): number | undefined
   {
     const parsed = z.object({ number: z.number().int().positive(), title: z.string(), body: z.string(), html_url: z.string(), url: z.string(), user: z.object({ id: z.number().int().positive() }), pull_request: z.unknown().optional() }).safeParse(value);
     if (!parsed.success)
@@ -235,22 +235,22 @@ export class GitHubFeedback
     return issue.number;
   }
 
-  private receipt(binding: Binding, scope: FeedbackScope, signal: AbortSignal, assertCurrent: () => void)
+  private Receipt(binding: Binding, scope: FeedbackScope, signal: AbortSignal, assertCurrent: () => void)
   {
-    return this.serial(() => this.auth.withConnection(scope, signal, async (identity, bounded) =>
+    return this.Serial(() => this.auth.WithConnection(scope, signal, async (identity, bounded) =>
     {
       assertCurrent();
-      const ledger = await this.read(binding),
+      const ledger = await this.Read(binding),
         entry = ledger.entries.find(entry => entry.status === 'sending') ?? ledger.entries.filter(entry => entry.rootSessionId === binding.rootSessionId).at(-1);
       if (!entry)
         fail('GITHUB_RECEIPT_MISSING', '本会话没有已发起的反馈提交');
       if (entry.accountId !== identity.connection.accountId || entry.repositoryId !== scope.repositoryId || entry.owner !== scope.owner || entry.repo !== scope.repo)
         fail('GITHUB_RECEIPT_TARGET', '请连接原账号和原仓库后核实，不能把原提交改投其它目标');
       if (entry.status === 'submitted')
-        return this.result(entry);
+        return this.Result(entry);
       if (entry.status === 'rejected')
         fail('GITHUB_REJECTED', '原反馈已被 GitHub 明确拒绝，尚未提交');
-      await this.verify(identity, bounded);
+      await this.Verify(identity, bounded);
       // 最多核实最近 500 条原作者 Issue；未找到不是“未写入”证明，超范围仍保持未知。
       for (let page = 1; page <= 5; page++)
       {
@@ -259,7 +259,7 @@ export class GitHubFeedback
         const reply = await this.request(`https://api.github.com/repos/${entry.owner}/${entry.repo}/issues?state=all&creator=${encodeURIComponent(identity.connection.login)}&sort=created&direction=desc&per_page=100&page=${page}`, { method: 'GET', token: identity.token, signal: bounded });
         if (reply.status !== 200 || !Array.isArray(reply.data) || reply.data.length > 100)
           unknown();
-        const matches = (reply.data as unknown[]).map(value => this.issueNumber(value, entry)).filter((value): value is number => !!value);
+        const matches = (reply.data as unknown[]).map(value => this.IssueNumber(value, entry)).filter((value): value is number => !!value);
         if (matches.length > 1)
           unknown();
         if (matches.length === 1)
@@ -268,13 +268,13 @@ export class GitHubFeedback
           entry.issueNumber = matches[0];
           try
           {
-            await this.save(ledger)
+            await this.Save(ledger)
           }
           catch
           {
             unknown()
           }
-          return this.result(entry)
+          return this.Result(entry)
         }
         if ((reply.data as unknown[]).length < 100)
           break;
@@ -284,9 +284,9 @@ export class GitHubFeedback
   }
 
   /** 先取消授权与连接请求，再等待提交队列退出；保留 sending，不能把关闭视为未提交。 */
-  async close()
+  async Close()
   {
-    await this.auth.close();
+    await this.auth.Close();
     await this.queue
   }
 }

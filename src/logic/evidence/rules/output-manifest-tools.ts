@@ -26,13 +26,13 @@ type Binding = OutputManifestStaged['binding'];
 
 export class OutputManifestTools
 {
-  constructor(private readonly binding: Binding, private readonly knowledgeRevision: string, private readonly scopes: ArtifactScopeBinding[], private readonly ports: { capture(input: OutputManifestInput, id: string): Promise<OutputManifestStaged>; inspect(): ReturnType<typeof verifyOutputManifests> })
+  constructor(private readonly binding: Binding, private readonly knowledgeRevision: string, private readonly scopes: ArtifactScopeBinding[], private readonly ports: { Capture(input: OutputManifestInput, id: string): Promise<OutputManifestStaged>; Inspect(): ReturnType<typeof verifyOutputManifests> })
   {
     this.binding = structuredClone(binding);
     this.scopes = structuredClone(scopes);
   }
 
-  async list()
+  async List()
   {
     return [
       { name: outputManifestToolName, description: '完整采集本轮冻结 artifactScope 中的全部文件、目录与缺失根。仅传当前计划版本，不能选择路径或裁剪集合；需无其它在途工具。返回原清单引用，不是交付或业务验收。', input: outputManifestInputSchema, output: outputManifestResultSchema, recovery: { mode: 'inspect_before_retry', queryTool: outputManifestInspectToolName, description: '先查询原本轮记录；保存后坏回包不等于未保存，不自动重新采集。' } },
@@ -41,20 +41,20 @@ export class OutputManifestTools
   }
 
   /** 只编码一次实际返回值；身份、范围、进度与原本轮端口分别核对，不能接受端口换绑。 */
-  async call(name: string, raw: unknown, toolCallId?: string)
+  async Call(name: string, raw: unknown, toolCallId?: string)
   {
     const input = outputManifestTool(name, raw);
     if (!input || !toolCallId || toolCallId.length > 128 || toolCallId.trim() !== toolCallId || /[\x00-\x1f]/.test(toolCallId))
       throw Error('完整清单工具须来自本轮真实调用');
     if (name === outputManifestInspectToolName)
     {
-      const evidence = this.ports.inspect(),
+      const evidence = this.ports.Inspect(),
         value = { binding: structuredClone(this.binding), scopes: structuredClone(this.scopes), manifests: evidence.refs, issues: evidence.issues },
         expected = structuredClone(value);
       return checkedJsonToolResult(name, value, outputManifestInspectSchema.refine(value => equal(value, expected), '查询结果已变化'));
     }
     const args = structuredClone(input.args) as OutputManifestInput,
-      manifest = await this.ports.capture(args, toolCallId),
+      manifest = await this.ports.Capture(args, toolCallId),
       ref = outputManifestReference(manifest);
     const value = { state: 'captured' as const, binding: manifest.binding, manifest: ref },
       expected = structuredClone(value);

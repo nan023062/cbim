@@ -39,116 +39,116 @@ export class WorkspaceRuntimeMonitor
 
   constructor(private readonly global: GlobalRuntimeManager, private readonly workspaceId: string, name: string, private readonly history?: AgentHistoryService)
   {
-    this.epoch = global.begin(workspaceId, name);
+    this.epoch = global.Begin(workspaceId, name);
     this.dispatchObserver = {
-      loaded: state =>
+      Loaded: state =>
       {
-        this.history?.restoreDispatch(state);
-        global.restoreDispatch(workspaceId, this.epoch, state)
+        this.history?.RestoreDispatch(state);
+        global.RestoreDispatch(workspaceId, this.epoch, state)
       },
-      committed: mutation =>
+      Committed: mutation =>
       {
-        this.history?.dispatchCommitted(mutation);
-        global.dispatchCommitted(workspaceId, this.epoch, mutation)
+        this.history?.DispatchCommitted(mutation);
+        global.DispatchCommitted(workspaceId, this.epoch, mutation)
       },
-      failed: error => this.issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error),
+      Failed: error => this.Issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error),
     };
   }
 
   /** 工作区本身无法运行；与部分历史文件损坏的监控降级分开。 */
-  unavailable(error: unknown)
+  Unavailable(error: unknown)
   {
-    this.global.unavailable(this.workspaceId, this.epoch, diagnostic('工作区无法打开，请查看工作区错误', error))
+    this.global.Unavailable(this.workspaceId, this.epoch, diagnostic('工作区无法打开，请查看工作区错误', error))
   }
 
-  private issue(source: string, label: string, error: unknown)
+  private Issue(source: string, label: string, error: unknown)
   {
-    this.global.issue(this.workspaceId, this.epoch, source, diagnostic(label, error))
+    this.global.Issue(this.workspaceId, this.epoch, source, diagnostic(label, error))
   }
 
   /** 派生历史索引失败不回抛到执行链，查询页与全局监管均保留可见诊断。 */
-  historyIssue(message: string)
+  HistoryIssue(message: string)
   {
-    this.global.issue(this.workspaceId, this.epoch, 'agent-history', message)
+    this.global.Issue(this.workspaceId, this.epoch, 'agent-history', message)
   }
 
   /** 自动协作暂停保留为可查询诊断，不把协调错误吞掉或伪装成任务已完成。 */
-  collaborationIssue(rootSessionId: string, error: unknown)
+  CollaborationIssue(rootSessionId: string, error: unknown)
   {
-    this.issue('collaboration:' + rootSessionId, '自动协作暂停，请核实主会话与成员任务后继续', error)
+    this.Issue('collaboration:' + rootSessionId, '自动协作暂停，请核实主会话与成员任务后继续', error)
   }
 
   /**
        * 由 Workspace 的可信 beforeDispatchLoad 阶段调用；先装载磁盘索引，防止 Store 投影提前写入后被误判为持久索引重复。
        * 复用历史服务的初始化 promise；后续 initialize 再调用不会重复读取，也不缓存、遗漏或重播已提交观察事件。
        */
-  async initializeHistory()
+  async InitializeHistory()
   {
-    await this.history?.initialize()
+    await this.history?.Initialize()
   }
 
   /**
        * 每次工作区装配调用一次：历史索引已在 Store 加载前恢复；这里复核初始化完成，再接订阅和回补两套运行日志，成员 initialize 只收口中断。
        * 各来源恢复失败记录为独立 issue，其他来源继续恢复；最终 ready 不表示统计一定完整。
        */
-  async initialize(workspace: Workspace, dispatch: WorkspaceDispatchService, execution: WorkspaceExecutionManager, members?: MemberExecutionManager)
+  async Initialize(workspace: Workspace, dispatch: WorkspaceDispatchService, execution: WorkspaceExecutionManager, members?: MemberExecutionManager)
   {
     const id = this.workspaceId,
       epoch = this.epoch;
-    await this.initializeHistory();
-    this.unsubscribers.push(execution.subscribe(event =>
+    await this.InitializeHistory();
+    this.unsubscribers.push(execution.Subscribe(event =>
     {
-      this.history?.observeRun(event, 'loop');
+      this.history?.ObserveRun(event, 'loop');
       try
       {
-        this.global.runEvent(id, epoch, event)
+        this.global.RunEvent(id, epoch, event)
       }
       catch (error)
       {
-        this.issue('run', '运行事实无法更新，当前统计可能不完整', error)
+        this.Issue('run', '运行事实无法更新，当前统计可能不完整', error)
       }
     }));
     if (members)
-      this.unsubscribers.push(members.subscribe(event =>
+      this.unsubscribers.push(members.Subscribe(event =>
       {
-        this.history?.observeRun(event, 'member');
+        this.history?.ObserveRun(event, 'member');
         try
         {
-          this.global.runEvent(id, epoch, event)
+          this.global.RunEvent(id, epoch, event)
         }
         catch (error)
         {
-          this.issue('member-run', '成员运行事实无法更新，当前统计可能不完整', error)
+          this.Issue('member-run', '成员运行事实无法更新，当前统计可能不完整', error)
         }
       }));
-    this.unsubscribers.push(execution.observeQueue(counts => this.global.queue(id, epoch, counts), error => this.issue('queue', '对话队列记录不可用，排队统计可能不完整', error)));
-    await dispatch.initialize().catch(error => this.issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error));
+    this.unsubscribers.push(execution.ObserveQueue(counts => this.global.Queue(id, epoch, counts), error => this.Issue('queue', '对话队列记录不可用，排队统计可能不完整', error)));
+    await dispatch.Initialize().catch(error => this.Issue('dispatch', '派发记录不可用，成员和任务统计可能不完整', error));
     // scope 关闭会释放执行实例，必须先把崩溃遗留的活动运行可靠结算，不能跳过 active run 校验。
-    await members?.initialize().catch(error => this.issue('member-runs', '成员执行恢复未完成，统计可能不完整', error));
-    await dispatch.recoverScopes().catch(error => this.issue('dispatch-scopes', '调度周期恢复未完成，执行实例可能仍占用', error));
+    await members?.Initialize().catch(error => this.Issue('member-runs', '成员执行恢复未完成，统计可能不完整', error));
+    await dispatch.RecoverScopes().catch(error => this.Issue('dispatch-scopes', '调度周期恢复未完成，执行实例可能仍占用', error));
     await Promise.all([
-      this.restoreRuns(workspace).catch(error =>
+      this.RestoreRuns(workspace).catch(error =>
       {
-        this.history?.issue('runs', '运行历史无法完整读取，Agent 历史可能不完整');
-        this.issue('runs', '运行历史无法完整读取，用量统计可能不完整', error)
+        this.history?.Issue('runs', '运行历史无法完整读取，Agent 历史可能不完整');
+        this.Issue('runs', '运行历史无法完整读取，用量统计可能不完整', error)
       }),
-      execution.initializeQueueMonitoring().catch(error => this.issue('queue', '对话队列记录不可用，排队统计可能不完整', error)),
+      execution.InitializeQueueMonitoring().catch(error => this.Issue('queue', '对话队列记录不可用，排队统计可能不完整', error)),
     ]);
-    await this.history?.flush();
-    this.global.ready(id, epoch);
+    await this.history?.Flush();
+    this.global.Ready(id, epoch);
   }
 
-  private async restoreRuns(workspace: Workspace)
+  private async RestoreRuns(workspace: Workspace)
   {
-    const project = workspace.paths.project(this.workspaceId);
+    const project = workspace.paths.Project(this.workspaceId);
     await Promise.all([
-      this.restoreRunDirectory(workspace, path.join(project, 'loop-engine', 'tasks'), 'run'),
-      this.restoreRunDirectory(workspace, path.join(project, 'dispatch', 'runs', 'tasks'), 'member-run'),
+      this.RestoreRunDirectory(workspace, path.join(project, 'loop-engine', 'tasks'), 'run'),
+      this.RestoreRunDirectory(workspace, path.join(project, 'dispatch', 'runs', 'tasks'), 'member-run'),
     ]);
   }
 
   /** 旧成员日志固定成员目录；新递归业务日志核对原父引用后保留 loop 路径，拒绝跨目录复制造成重复计量。 */
-  private async restoreRunDirectory(workspace: Workspace, root: string, source: 'run' | 'member-run')
+  private async RestoreRunDirectory(workspace: Workspace, root: string, source: 'run' | 'member-run')
   {
     const storage = new FileRunStorage();
     // 使用 Dirent 只跟随应用自己的目录，不跟随符号链接或任意名字构造路径。
@@ -167,8 +167,8 @@ export class WorkspaceRuntimeMonitor
     {
       if (!task.isDirectory())
       {
-        this.history?.issue('runs', '运行历史含无法识别的条目，Agent 历史可能不完整');
-        this.issue('runs', '运行历史含无法识别的条目，统计可能不完整', undefined);
+        this.history?.Issue('runs', '运行历史含无法识别的条目，Agent 历史可能不完整');
+        this.Issue('runs', '运行历史含无法识别的条目，统计可能不完整', undefined);
         continue
       }
       try
@@ -182,7 +182,7 @@ export class WorkspaceRuntimeMonitor
             if (!run.isDirectory())
               throw Error('invalid directory');
             const runId = safeId(run.name),
-              summary = await storage.read(path.join(root, taskId, runId));
+              summary = await storage.Read(path.join(root, taskId, runId));
             if (summary.task.workspaceId !== this.workspaceId || summary.task.root !== workspace.entry.path || summary.task.taskId !== taskId || summary.runId !== runId)
               throw Error('identity mismatch');
             const started = summary.events[0]?.data,
@@ -195,30 +195,30 @@ export class WorkspaceRuntimeMonitor
             }
             if ((source === 'member-run') !== (!!summary.memberBinding && !recursive))
               throw Error('run source mismatch');
-            this.history?.restoreRun(summary, source === 'member-run' ? 'member' : 'loop');
-            this.global.restoreRun(this.workspaceId, this.epoch, summary);
+            this.history?.RestoreRun(summary, source === 'member-run' ? 'member' : 'loop');
+            this.global.RestoreRun(this.workspaceId, this.epoch, summary);
           }
           catch (error)
           {
-            this.history?.issue(`${source}:${taskId}/${run.name}`, '部分运行记录不可读取或身份不匹配，Agent 历史可能不完整');
-            this.issue(`${source}:${taskId}/${/^[\w-]+$/.test(run.name) ? run.name : 'unknown'}`, '运行记录不可读取或身份不匹配，用量统计可能不完整', error)
+            this.history?.Issue(`${source}:${taskId}/${run.name}`, '部分运行记录不可读取或身份不匹配，Agent 历史可能不完整');
+            this.Issue(`${source}:${taskId}/${/^[\w-]+$/.test(run.name) ? run.name : 'unknown'}`, '运行记录不可读取或身份不匹配，用量统计可能不完整', error)
           }
         }
       }
       catch (error)
       {
-        this.history?.issue('runs', '任务历史目录无法读取，Agent 历史可能不完整');
-        this.issue('runs', '任务历史目录无法读取，用量统计可能不完整', error)
+        this.history?.Issue('runs', '任务历史目录无法读取，Agent 历史可能不完整');
+        this.Issue('runs', '任务历史目录无法读取，用量统计可能不完整', error)
       }
     }
   }
 
   /** 调用者先停止运行、排空日志和派发事务；最后一个完成事件仍会进入全局历史。 */
-  close()
+  Close()
   {
     for (const unsubscribe of this.unsubscribers)
       unsubscribe();
     this.unsubscribers = [];
-    this.global.detach(this.workspaceId, this.epoch)
+    this.global.Detach(this.workspaceId, this.epoch)
   }
 }

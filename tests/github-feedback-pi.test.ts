@@ -11,10 +11,10 @@ import {transcript} from '../src/view/execution-view/transcript';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Skill and guarded submission (%s)',async mode=>{
-  const f=await fixture();await f.app.shutdown();
-  const cipher={available:()=>true,encrypt:(value:string)=>Buffer.from(value).toString('base64'),decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
-  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.init();
-  const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),before=await workspace.snapshot();
+  const f=await fixture();await f.app.Shutdown();
+  const cipher={Available:()=>true,Encrypt:(value:string)=>Buffer.from(value).toString('base64'),Decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
+  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.Init();
+  const entry=await app.Dispatch('add',{path:f.a}),workspace=app.Workspace(entry.id),before=await workspace.Snapshot();
   const input={kind:'bug',summary:'安装后的桌面图标与启动后窗口图标不一致'};
   const token='gho_private_fixture_token',issues:unknown[]=[],requests:any[]=[],errors:string[]=[];const actualFetch=globalThis.fetch;
   vi.spyOn(globalThis,'fetch').mockImplementation(async(url,options)=>{
@@ -46,21 +46,21 @@ it.each(['ask','read','unconnected'] as const)('real Pi main invokes feedback Sk
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     if(mode!=='unconnected'){
-      const started=await app.dispatch('github.feedback.begin',{clientId:'fixture_client',owner:'owner',repo:'repo',visibility:'public',autoSubmit:true});
-      await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:required(started.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
+      const started=await app.Dispatch('github.feedback.begin',{clientId:'fixture_client',owner:'owner',repo:'repo',visibility:'public',autoSubmit:true});
+      await vi.waitFor(async()=>expect((await app.Dispatch('github.feedback.poll',{flowId:required(started.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
     }
     const address=server.address();assert.ok(address&&typeof address!=='string');
-    await app.models.save({profile:{name:'Feedback fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-fixture',models:[{id:'feedback-fixture',name:'Feedback fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const started=await app.dispatch('loop.chat',{id:entry.id,message:'请按 BUG 反馈 Skill 提交以下用户上下文：'+JSON.stringify(input),options:{permission:mode==='read'?'read':'ask',turnTimeoutMs:60000}});
+    await app.models.Save({profile:{name:'Feedback fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-fixture',models:[{id:'feedback-fixture',name:'Feedback fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+    const started=await app.Dispatch('loop.chat',{id:entry.id,message:'请按 BUG 反馈 Skill 提交以下用户上下文：'+JSON.stringify(input),options:{permission:mode==='read'?'read':'ask',turnTimeoutMs:60000}});
     let summary!:RunSummary;
-    await vi.waitFor(async()=>{expect(errors).toEqual([]);summary=await app.dispatch('loop.inspect',{id:entry.id,taskId:started.taskId,runId:started.runId});expect(summary.status).toBe('completed')},{timeout:30000,interval:50});
-    expect(await app.dispatch('loop.approvals',{id:entry.id,taskId:started.taskId})).toEqual([]);expect(issues).toHaveLength(mode==='ask'?1:0);expect(JSON.stringify(summary)).not.toContain(token);
+    await vi.waitFor(async()=>{expect(errors).toEqual([]);summary=await app.Dispatch('loop.inspect',{id:entry.id,taskId:started.taskId,runId:started.runId});expect(summary.status).toBe('completed')},{timeout:30000,interval:50});
+    expect(await app.Dispatch('loop.approvals',{id:entry.id,taskId:started.taskId})).toEqual([]);expect(issues).toHaveLength(mode==='ask'?1:0);expect(JSON.stringify(summary)).not.toContain(token);
     const receipts=summary.toolReceipts?.filter(receipt=>receipt.toolName==='cbim_feedback_submit')??[];
     if(mode==='ask'){
-      expect(String((issues[0] as any).body).match(/用户未提供/g)).toHaveLength(4);expect(await app.dispatch('loop.questions',{id:entry.id,taskId:started.taskId})).toEqual([]);
+      expect(String((issues[0] as any).body).match(/用户未提供/g)).toHaveLength(4);expect(await app.Dispatch('loop.questions',{id:entry.id,taskId:started.taskId})).toEqual([]);
       expect(receipts).toHaveLength(2);for(const receipt of receipts)expect(receipt).toMatchObject({outcome:'succeeded',effects:['external-write'],scope:{kind:'github-feedback',workspaceId:entry.id,owner:'owner',repo:'repo',repositoryId:2}});
       expect(transcript(summary).some(item=>item.kind==='assistant'&&item.text.includes('FEEDBACK_SUBMITTED_NOT_IMPLEMENTED'))).toBe(true);
     }else if(mode==='read'){expect(receipts[0].outcome).toBe('denied');expect(transcript(summary).some(item=>item.text==='当前只读，尚未提交')).toBe(true)}else expect(receipts).toEqual([]);
-    expect((await workspace.snapshot()).files).toEqual(before.files);expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
-  }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.shutdown();await f.cleanup()}
+    expect((await workspace.Snapshot()).files).toEqual(before.files);expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+  }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.Shutdown();await f.cleanup()}
 },60000);

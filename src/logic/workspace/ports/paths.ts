@@ -11,11 +11,11 @@ export interface StoragePaths
   /** 安装目录之外仍须保护的程序缓存根；可选以兼容无桌面更新的 CLI 与测试宿主。 */
   readonly protectedRoots?: readonly string[];
 
-  identity(input: string): Promise<{ id: string; path: string }>;
+  Identity(input: string): Promise<{ id: string; path: string }>;
 
-  project(id: string): string;
+  Project(id: string): string;
 
-  local(id: string, kind: 'memory' | 'task-records' | 'logs' | 'cache' | 'transactions'): string;
+  Local(id: string, kind: 'memory' | 'task-records' | 'logs' | 'cache' | 'transactions'): string;
 
-  knowledge(root: string, relative: string): Promise<string>;
+  Knowledge(root: string, relative: string): Promise<string>;
 }

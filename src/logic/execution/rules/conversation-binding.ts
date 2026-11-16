@@ -72,8 +72,8 @@ export interface MainToolContext
       runId: string
     }>;
 
-  assertCurrent(signal: AbortSignal): void;
+  AssertCurrent(signal: AbortSignal): void;
 
   /** 先登记在途再启动操作，关闭等待原提交，不自动重试保存未知。 */
-  track<T>(operation: () => Promise<T>): Promise<T>;
+  Track<T>(operation: () => Promise<T>): Promise<T>;
 }

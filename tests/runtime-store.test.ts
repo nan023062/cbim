@@ -10,11 +10,11 @@ import {pipeline} from 'node:stream/promises';
 it('coalesces preparations, verifies the exact extracted set and never overwrites a changed cached version',async()=>{
   const f=await runtimeFixture();try{
     const download=vi.fn(f.download),store=new RuntimeStore(path.join(f.root,'cache'),f.cold,download),signal=new AbortController().signal;
-    const a=store.prepare(f.manifest.resource,signal),b=store.prepare(f.manifest.resource,signal);expect(a).toBe(b);
-    const cached=await a;expect(download).toHaveBeenCalledOnce();await store.prepare(f.manifest.resource,signal);expect(download).toHaveBeenCalledOnce();
-    await fs.writeFile(path.join(cached,'.vite/build/main.js'),'tampered');await expect(store.prepare(f.manifest.resource,signal)).rejects.toThrow();
+    const a=store.Prepare(f.manifest.resource,signal),b=store.Prepare(f.manifest.resource,signal);expect(a).toBe(b);
+    const cached=await a;expect(download).toHaveBeenCalledOnce();await store.Prepare(f.manifest.resource,signal);expect(download).toHaveBeenCalledOnce();
+    await fs.writeFile(path.join(cached,'.vite/build/main.js'),'tampered');await expect(store.Prepare(f.manifest.resource,signal)).rejects.toThrow();
     expect(await fs.readFile(path.join(cached,'.vite/build/main.js'),'utf8')).toBe('tampered');expect(download).toHaveBeenCalledOnce();
-    const checked=await store.saveManifest(f.envelope());expect((await store.readManifest(checked.digest)).manifest).toEqual(f.manifest);await store.saveManifest(f.envelope());
+    const checked=await store.SaveManifest(f.envelope());expect((await store.ReadManifest(checked.digest)).manifest).toEqual(f.manifest);await store.SaveManifest(f.envelope());
   }finally{await f.cleanup()}
 });
 it('rejects incorrect ZIP file sets, lengths and digests before an active directory exists',async()=>{
@@ -35,8 +35,8 @@ it('rejects symlinks and ZIP path traversal; a failed download removes only its 
       await expect(extractRuntimeArchive(file,path.join(f.root,'evil-'+index),files,new AbortController().signal)).rejects.toThrow();
     }
     const store=new RuntimeStore(path.join(f.root,'cache'),f.cold,async(_pkg,file)=>{await fs.writeFile(file,'partial');throw Error('network failed')});
-    await expect(store.prepare(f.manifest.resource,new AbortController().signal)).rejects.toThrow(/network failed/);
-    expect(await fs.readdir(path.join(f.root,'cache/staging'))).toEqual([]);await expect(fs.access(store.packageRoot(f.manifest.resource))).rejects.toThrow();
+    await expect(store.Prepare(f.manifest.resource,new AbortController().signal)).rejects.toThrow(/network failed/);
+    expect(await fs.readdir(path.join(f.root,'cache/staging'))).toEqual([]);await expect(fs.access(store.PackageRoot(f.manifest.resource))).rejects.toThrow();
     expect(await fs.readFile(path.join(f.source,'.vite/build/main.js'),'utf8')).toContain('startDesktop');
   }finally{await f.cleanup()}
 });
@@ -44,10 +44,10 @@ it('rejects symlinks and ZIP path traversal; a failed download removes only its 
 it('同一 E 从旧 C 缓存迁入共享目录，后续不同 C 离线复用；损坏缓存不触发下载循环',async()=>{
   const f=await runtimeFixture();try{
     const download=vi.fn(f.download),oldRoot=path.join(f.root,'0.1.1'),sharedRoot=path.join(f.root,'engines'),pkg=f.manifest.engines[0].package,signal=new AbortController().signal;
-    const old=new RuntimeStore(oldRoot,f.cold,download),oldPath=await old.prepare(pkg,signal);expect(download).toHaveBeenCalledOnce();
+    const old=new RuntimeStore(oldRoot,f.cold,download),oldPath=await old.Prepare(pkg,signal);expect(download).toHaveBeenCalledOnce();
     const migrated=new RuntimeStore(sharedRoot,{...f.cold,codeVersion:'0.1.2'},download,[oldRoot]);
-    const shared=await migrated.prepare(pkg,signal);expect(shared).not.toBe(oldPath);expect(download).toHaveBeenCalledOnce();
-    const next=new RuntimeStore(sharedRoot,{...f.cold,codeVersion:'0.1.3'},download);expect(await next.prepare(pkg,signal)).toBe(shared);expect(download).toHaveBeenCalledOnce();
-    await fs.writeFile(path.join(shared,pkg.files[0].path),'broken');await expect(next.prepare(pkg,signal)).rejects.toThrow();expect(download).toHaveBeenCalledOnce();
+    const shared=await migrated.Prepare(pkg,signal);expect(shared).not.toBe(oldPath);expect(download).toHaveBeenCalledOnce();
+    const next=new RuntimeStore(sharedRoot,{...f.cold,codeVersion:'0.1.3'},download);expect(await next.Prepare(pkg,signal)).toBe(shared);expect(download).toHaveBeenCalledOnce();
+    await fs.writeFile(path.join(shared,pkg.files[0].path),'broken');await expect(next.Prepare(pkg,signal)).rejects.toThrow();expect(download).toHaveBeenCalledOnce();
   }finally{await f.cleanup()}
 });

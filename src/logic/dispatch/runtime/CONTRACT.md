@@ -30,7 +30,7 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 
 ## 指定话题补充与排空
 
-`AutoCollaboration.interruptTopic` 冻结指定办公室原 Cycle 及全部 Batch，先持久保存补充，调用可信主轮停止端口，等待在途调度/领取退出，再按已提交图停止原话题的全部成员并等真实结算。暂停占位仍由同一个主会话持有；不调用 closeScope 伪装暂停，不停止其它话题成员。迟到结果继续归原任务；旧 Batch 在排空期间不能派工或自动结束。取消和关闭仍可封存原周期；未确认排空保留意图，不重放未知结果。
+`AutoCollaboration.InterruptTopic` 冻结指定办公室原 Cycle 及全部 Batch，先持久保存补充，调用可信主轮停止端口，等待在途调度/领取退出，再按已提交图停止原话题的全部成员并等真实结算。暂停占位仍由同一个主会话持有；不调用 closeScope 伪装暂停，不停止其它话题成员。迟到结果继续归原任务；旧 Batch 在排空期间不能派工或自动结束。取消和关闭仍可封存原周期；未确认排空保留意图，不重放未知结果。
 
 本进程中新建安全等待时只调用 holdCollaboration，随后原目标显式接续并完成会自动交还普通队列。initialize 恢复旧等待仍调用持久暂停，保留应用重启后必须确认队列的规则；执行错误和未知结果继续使用 pauseCollaboration，不与安全等待混为一种状态。
 
@@ -45,7 +45,7 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 
 ## 根运行插入回执
 
-旧协调器的 insertActiveInput 复用 ScopeActiveInputService.send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。
+旧协调器的 insertActiveInput 复用 ScopeActiveInputService.Send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。
 
 MainToolContext 的公共定义移至 execution/rules/conversation-binding；AutoCollaboration 仍按旧批次实现相同语义，没有新增执行队列或改变旧恢复行为。
 
@@ -56,7 +56,7 @@ WorkspaceDispatchService 的 goalPorts 可同时提供 ScopeUsageLogs.inspectAge
 
 ## 递归核实意图的所有权
 
-AutoCollaboration.recoveryPreflight 返回已核实来源的协议。acceptRecovery 仍提交真实新核实意图，但对 agent-tools-v1 来源不创建旧 cycles；预算、子调用和终态由新根 AgentLifecycle 负责。旧来源继续保留旧协调器的恢复语义，不将旧任务冒充新调用。
+AutoCollaboration.RecoveryPreflight 返回已核实来源的协议。acceptRecovery 仍提交真实新核实意图，但对 agent-tools-v1 来源不创建旧 cycles；预算、子调用和终态由新根 AgentLifecycle 负责。旧来源继续保留旧协调器的恢复语义，不将旧任务冒充新调用。
 
 
 ### 递归工具迁移收口

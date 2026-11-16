@@ -1,6 +1,6 @@
 # 单模块知识治理服务
 
-`ModuleGovernanceService` 是每个工作区唯一的治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
+`ModuleGovernanceService` 是每个工作区唯一的治理门面，同时实现知识提交所需的私有授权端口。服务不拥有第二个队列；登记、观察、提案、决定、实施和回执读取都通过 `Workspace.Governed` 进入 `KnowledgeStore` 的同一串行屏障。回调内只能使用未再次排队的事务端口，不得重入公开 `commit/preview`。
 
 `mainGovernanceTools` 只在真实主运行工厂创建，固定 workspace/instance、根会话、主实例/逻辑通道与 run。模型端口仅有 get/observe/propose/receipt，原输入先严格校验再注入可信身份；普通桌面 IPC 没有 origin 参数。模型观察和提案记录 `main_agent` 来源，新的桌面观察/提案记录本机来源，旧缺省不补造。模型提案只能引用同一主实例/逻辑通道的真实观察。
 

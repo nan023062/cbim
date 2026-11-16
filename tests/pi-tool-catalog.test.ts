@@ -4,7 +4,7 @@ import {openBridge} from '../src/logic/execution/engines/pi/bridge';
 it('records active tool names and diagnoses missing registration without invoking any tool',async()=>{
   const report=vi.fn(async()=>{}),call=vi.fn(async()=>({content:[{type:'text',text:'unused'}]}));
   const expected=['cbim_feedback_submit','cbim_feedback_receipt'];
-  const bridge=await openBridge({list:async()=>expected.map(name=>({name,inputSchema:{type:'object'}})),call},async()=>({allow:true}),undefined,undefined,report);
+  const bridge=await openBridge({list:async()=>expected.map(name=>({name,inputSchema:{type:'object'}})),call: call},async()=>({allow:true}),undefined,undefined,report);
   const post=(body:unknown,authorized=true)=>fetch(bridge.url+'/tools',{method:'POST',headers:{Authorization:'Bearer '+(authorized?bridge.token:'wrong'),'Content-Type':'application/json'},body:JSON.stringify(body)});
   try{
     expect((await post({active:expected},false)).status).toBe(403);expect(report).not.toHaveBeenCalled();

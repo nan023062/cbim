@@ -88,65 +88,65 @@ export class ManifestReportController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: ManifestReportState)
+  private Publish(value: ManifestReportState)
   {
     this.value = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.value = { ...this.value, loading: false }
   }
 
   /** 选择本身不扫描；清掉上一个选项的观察，未选择时不默认最新。 */
-  select(id: string)
+  Select(id: string)
   {
     if (id && !this.value.report?.manifests.some(item => item.manifestId === id))
       throw Error('所选清单不在已核实列表中');
     if (id === this.value.selectedId)
       return;
-    this.generation.advance();
+    this.generation.Advance();
     const report = this.value.report ? { ...this.value.report, verification: undefined } : undefined;
-    this.publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
+    this.Publish({ ...this.value, report, selectedId: id, loading: false, error: '' });
   }
 
-  async list()
+  async List()
   {
-    await this.pull()
+    await this.Pull()
   }
 
-  async inspect()
+  async Inspect()
   {
     if (this.value.selectedId)
-      await this.pull(this.value.selectedId)
+      await this.Pull(this.value.selectedId)
   }
 
-  private async pull(manifestId?: string)
+  private async Pull(manifestId?: string)
   {
     if (this.value.loading)
       return;
-    const generation = this.generation.advance(),
+    const generation = this.generation.Advance(),
       sourceVersion = this.version(),
       request = { ...this.identity, ...(manifestId ? { manifestId } : {}) };
-    this.publish({ ...this.value, loading: true, error: '' });
+    this.Publish({ ...this.value, loading: true, error: '' });
     try
     {
       const raw = await this.read(request);
-      if (!this.generation.isCurrent(generation))
+      if (!this.generation.IsCurrent(generation))
         return;
       const report = checkedManifestReport(raw, request),
         selectedId = report.manifests.some(item => item.manifestId === this.value.selectedId) ? this.value.selectedId : '';
-      this.publish({ report, selectedId, loading: false, error: '', sourceVersion })
+      this.Publish({ report, selectedId, loading: false, error: '', sourceVersion })
     }
     catch (error)
     {
-      if (this.generation.isCurrent(generation))
-        this.publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '完整产物读取失败，请重试' })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '完整产物读取失败，请重试' })
     }
   }
 }

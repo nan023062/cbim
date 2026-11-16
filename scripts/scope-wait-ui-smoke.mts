@@ -28,15 +28,15 @@ const desktopProcesses:{pid:number;stderr:string[]}[]=[],crashProcesses:unknown[
 function observeDesktop(app:ElectronApplication){const child=app.process(),record={pid:child.pid!,stderr:[] as string[]};desktopProcesses.push(record);child.stderr?.on('data',chunk=>record.stderr.push(String(chunk)))}
 function processTree(pid:number){return JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',`Get-CimInstance Win32_Process -Filter 'ProcessId=${pid} OR ParentProcessId=${pid}' | Select-Object ProcessId,ParentProcessId,Name,ExecutablePath,CommandLine | ConvertTo-Json -Depth 3`],{encoding:'utf8',windowsHide:true}).trim()||'[]')}
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  await setup.models.save({profile:{name:'Local scope waiting UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'wait-fixture',models:[{id:'wait-fixture',name:'Wait fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
-  const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  await setup.models.Save({profile:{name:'Local scope waiting UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'wait-fixture',models:[{id:'wait-fixture',name:'Wait fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
+  const knowledge=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'wait-ui-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'wait-ui-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-  const owner=await registerExplicitFixtureOwner(setup,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await setup.models.list()).selectedId!,modelId:'wait-fixture'});
+  await workspace.Commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const owner=await registerExplicitFixtureOwner(setup,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await setup.models.List()).selectedId!,modelId:'wait-fixture'});
   provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
-  await setup.shutdown();setup=undefined;
+  await setup.Shutdown();setup=undefined;
   const scopes=async()=>{
     const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
     // Read committed lines only; never instantiate another writer against the live app's store.
@@ -140,6 +140,6 @@ try{
   const state=desktop?await desktop.firstWindow().then(page=>page.evaluate(()=>(window as any).cbim.call('list'))).catch(error=>String(error)):undefined;
   await fs.writeFile(`test-results/${artifact}-ui-failure.json`,JSON.stringify({packagedExe:exe,temp,user,error:String(error),workspaceState:state,desktopProcesses,crashProcesses,mainRequests:provider.mainRequests.length,memberRequests:provider.memberRequests.length,pageErrors,transportErrors:provider.errors},null,2));throw error;
 }finally{
-  provider.releaseFinal();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.shutdown();await provider.close();
+  provider.releaseFinal();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.Shutdown();await provider.close();
   if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-scope-wait-ui-'));await fs.rm(target,{recursive:true,force:true})}
 }

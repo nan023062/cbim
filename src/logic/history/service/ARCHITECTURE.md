@@ -38,7 +38,7 @@ class N_src_logic_history_service_assembly_ts_AgentHistoryWorkspace["AgentHistor
   <<interface>>
   +entry
   +paths
-  +assert()
+  +Assert()
 }
 N_src_logic_history_service_assembly_ts ..> N_src_logic_history_service_assembly_ts_AgentHistoryWorkspace : 声明
 ```
@@ -55,12 +55,12 @@ class N_src_logic_history_service_file_store_ts["file-store.ts"] {
 class N_src_logic_history_service_file_store_ts_FileAgentHistoryStore["FileAgentHistoryStore"] {
   +directory
   +constructor()
-  +put()
-  +load()
+  +Put()
+  +Load()
   -workspaceId
   -root
-  -location()
-  -safeDirectory()
+  -Location()
+  -SafeDirectory()
 }
 N_src_logic_history_service_file_store_ts ..> N_src_logic_history_service_file_store_ts_FileAgentHistoryStore : 声明
 class N_src_logic_history_service_file_store_ts_external_AgentHistoryStore["AgentHistoryStore (外部契约)"] {

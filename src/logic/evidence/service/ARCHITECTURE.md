@@ -37,8 +37,8 @@ class N_src_logic_evidence_service_knowledge_effect_reader_ts_KnowledgeEffectOwn
   <<interface>>
   +entry
   +paths
-  +assert()
-  +governed()
+  +Assert()
+  +Governed()
 }
 N_src_logic_evidence_service_knowledge_effect_reader_ts ..> N_src_logic_evidence_service_knowledge_effect_reader_ts_KnowledgeEffectOwner : 声明
 ```
@@ -63,10 +63,10 @@ class N_src_logic_evidence_service_persistent_effect_reader_ts["persistent-effec
 class N_src_logic_evidence_service_persistent_effect_reader_ts_PersistentEffectOwner["PersistentEffectOwner"] {
   <<interface>>
   +entry
-  +assert()
+  +Assert()
   +dispatchStore
   +governance
-  +governed()
+  +Governed()
 }
 N_src_logic_evidence_service_persistent_effect_reader_ts ..> N_src_logic_evidence_service_persistent_effect_reader_ts_PersistentEffectOwner : 声明
 ```

@@ -16,25 +16,25 @@ it.each(['complete','answer-retry','prepare-stop','lost-output'] as const)('hand
  try{
   const seed=await seedCheckpointHandoff(app,f.a,provider.urls),id=seed.entry.id;provider.bind(seed.moduleId);
   if(mode==='lost-output'){
-   const bind=AgentCallScheduler.prototype.bind;
-   vi.spyOn(AgentCallScheduler.prototype,'bind').mockImplementation(function(this:AgentCallScheduler,...args:Parameters<typeof bind>){
+   const bind=AgentCallScheduler.prototype.Bind;
+   vi.spyOn(AgentCallScheduler.prototype,'Bind').mockImplementation(function(this:AgentCallScheduler,...args:Parameters<typeof bind>){
     const binding=bind.apply(this,args),call=binding.capability.tools.call.bind(binding.capability.tools);
     binding.capability.tools.call=async(...input:Parameters<typeof call>)=>{const result=await call(...input);if(input[0]==='cbim_agent_call'&&input[3]==='handoff-new-0'){lost++;return {...jsonToolResult(input[0],{error:{code:'HANDOFF_REPLY_LOST'}}),isError:true}}return result};return binding;
    });
   }
-  const start=await app.dispatch('loop.chat',{id,message:data.goal,options:seed.mainOptions}),until=(check:()=>void|Promise<void>)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await check()},{timeout:60000,interval:30});
-  const state=()=>app.workspace(id).dispatchStore.read(),questions=()=>app.dispatch('loop.questions',{id,taskId:start.taskId});
+  const start=await app.Dispatch('loop.chat',{id,message:data.goal,options:seed.mainOptions}),until=(check:()=>void|Promise<void>)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await check()},{timeout:60000,interval:30});
+  const state=()=>app.Workspace(id).dispatchStore.Read(),questions=()=>app.Dispatch('loop.questions',{id,taskId:start.taskId});
   await until(async()=>expect(await questions()).toHaveLength(1));const question=(await questions())[0];
   const before=await state(),old=before.agentBusinessRuns![0];expect(old.status).toBe('active');expect(provider.a).toHaveLength(5);expect(provider.b).toEqual([]);
-  const directory=path.join(f.user,id,'loop-engine/tasks',old.binding.taskId,old.binding.runId),storage=new FileRunStorage(),original=await storage.read(directory),marker=(await fs.stat(path.join(f.a,data.files[0]))).mtimeMs;
+  const directory=path.join(f.user,id,'loop-engine/tasks',old.binding.taskId,old.binding.runId),storage=new FileRunStorage(),original=await storage.Read(directory),marker=(await fs.stat(path.join(f.a,data.files[0]))).mtimeMs;
   const prefix=await fs.readFile(path.join(directory,'events.jsonl'));expect(original.task.ownerBinding?.memberId).toBe(seed.positions[0].member.memberId);
   await changeCheckpointOwner(app,seed);
   expect((await state()).agentBusinessRuns).toEqual(before.agentBusinessRuns);expect(provider.b).toEqual([]);
-  const answer=()=>app.dispatch('loop.answerQuestion',{id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:''}]});
-  if(mode==='prepare-stop')await app.dispatch('loop.stop',{id,taskId:start.taskId});
+  const answer=()=>app.Dispatch('loop.answerQuestion',{id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:''}]});
+  if(mode==='prepare-stop')await app.Dispatch('loop.stop',{id,taskId:start.taskId});
   else{await answer();if(mode==='answer-retry'){await until(async()=>expect(await questions()).toEqual([]));await expect(answer()).rejects.toThrow()}}
-  await until(async()=>{expect((await state()).scopes?.[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)});
-  const saved=await state(),runs=saved.agentBusinessRuns!,summaries=await Promise.all(runs.map(r=>storage.read(path.join(f.user,id,'loop-engine/tasks',r.binding.taskId,r.binding.runId))));
+  await until(async()=>{expect((await state()).scopes?.[0].status).toBe('closed');expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0)});
+  const saved=await state(),runs=saved.agentBusinessRuns!,summaries=await Promise.all(runs.map(r=>storage.Read(path.join(f.user,id,'loop-engine/tasks',r.binding.taskId,r.binding.runId))));
   expect(saved.scopes?.[0].outcome).toBe(mode==='prepare-stop'?'cancelled':'completed');expect(saved.graphs[0].tasks).toEqual([]);expect(saved.runs??[]).toEqual([]);
   expect(runs).toHaveLength(mode==='prepare-stop'?1:4);expect(runs[0].prepared).toEqual(old.prepared);expect(runs[0].binding).toEqual(old.binding);expect(runs.every(r=>r.status==='closed')).toBe(true);
   expect(summaries[0].sessionFile).toBe(original.sessionFile);expect(summaries[0].taskProgress?.delivery).toBeUndefined();
@@ -52,9 +52,9 @@ it.each(['complete','answer-retry','prepare-stop','lost-output'] as const)('hand
    expect(new Set(summaries.map(s=>s.sessionFile)).size).toBe(4);
   }
   if(mode==='lost-output'){expect(lost).toBe(1);expect(provider.state.checks).toMatchObject({state:'verified',acceptance:'not_evaluated'})}
-  const thread=await app.execution(id).thread(start.taskId);expect(thread).toHaveLength(1);
+  const thread=await app.Execution(id).Thread(start.taskId);expect(thread).toHaveLength(1);
   const paths=[...thread,...summaries].flatMap(s=>[path.join(f.user,id,'loop-engine/tasks',s.task.taskId,s.runId,'events.jsonl'),s.sessionFile!]),bytes=await Promise.all(paths.map(p=>fs.readFile(p))),counts=[provider.main.length,provider.a.length,provider.b.length];
-  vi.restoreAllMocks();await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  vi.restoreAllMocks();await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
   expect(await state()).toEqual(saved);expect(await Promise.all(paths.map(p=>fs.readFile(p)))).toEqual(bytes);expect([provider.main.length,provider.a.length,provider.b.length]).toEqual(counts);
- }finally{vi.restoreAllMocks();await app.shutdown();await provider.close();await f.cleanup()}
+ }finally{vi.restoreAllMocks();await app.Shutdown();await provider.close();await f.cleanup()}
 },120000);

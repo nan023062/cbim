@@ -34,20 +34,20 @@ test('请求目录只承认精确 action，列表与身份读取不接额外私�
 test('实际 IPC 将测试引擎和型号交给同一配置服务',async()=>{
   const f=await fixture(),id='11111111-1111-4111-8111-111111111111';
   const receipt={ok:true,model:'test',engine:'claude-code' as const,api:'anthropic-messages' as const,baseUrl:'https://example.com',latencyMs:1};
-  const probe=vi.spyOn(f.app.engineModels,'test').mockResolvedValue(receipt);
+  const probe=vi.spyOn(f.app.engineModels,'Test').mockResolvedValue(receipt);
   try{
-    expect(await f.app.dispatch('models.test',{id,modelId:'test',engine:'claude-code'})).toEqual(receipt);
+    expect(await f.app.Dispatch('models.test',{id,modelId:'test',engine:'claude-code'})).toEqual(receipt);
     expect(probe).toHaveBeenCalledExactlyOnceWith(id,'test','claude-code');
   }finally{probe.mockRestore();await f.cleanup()}
 });
 
 test('实际 Application 先校验模型请求，失败不调用配置写入服务',async()=>{
-  const f=await fixture(),save=vi.spyOn(f.app.models,'save'),select=vi.spyOn(f.app.models,'select');
+  const f=await fixture(),save=vi.spyOn(f.app.models,'Save'),select=vi.spyOn(f.app.models,'Select');
   try{
-    await expect(f.app.dispatch('models.save',{profile:{},program:'unexpected'})).rejects.toThrow();
-    await expect(f.app.dispatch('models.select',{})).rejects.toThrow();
+    await expect(f.app.Dispatch('models.save',{profile:{},program:'unexpected'})).rejects.toThrow();
+    await expect(f.app.Dispatch('models.select',{})).rejects.toThrow();
     expect(save).not.toHaveBeenCalled();expect(select).not.toHaveBeenCalled();
-    expect(await f.app.dispatch('models.list')).toMatchObject({profiles:[]});
-    await expect(f.app.dispatch('models.arbitraryCommand',{})).rejects.toMatchObject({code:'ACTION'});
+    expect(await f.app.Dispatch('models.list')).toMatchObject({profiles:[]});
+    await expect(f.app.Dispatch('models.arbitraryCommand',{})).rejects.toMatchObject({code:'ACTION'});
   }finally{save.mockRestore();select.mockRestore();await f.cleanup()}
 });

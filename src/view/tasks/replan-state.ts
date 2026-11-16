@@ -219,40 +219,40 @@ export class ScopeReplanController
     return this.listeners.size === 0 && this.pending.size === 0 && !this.value.preview?.loading
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  record(inspectionScopeId: string)
+  Record(inspectionScopeId: string)
   {
     return this.value.records.find(item => item.inspectionScopeId === inspectionScopeId)
   }
 
-  isPending(record?: ReplanDraft)
+  IsPending(record?: ReplanDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
 
   /** 历史选择、图或模型版本改变只作废预览，绝不改写冻结提交和它的迟到回执。 */
-  observeTarget(target: ReplanTarget | undefined)
+  ObserveTarget(target: ReplanTarget | undefined)
   {
     if (target && (target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId))
       target = undefined;
     if (key(target) === key(this.target))
       return;
     this.target = target;
-    this.previewGeneration.advance();
+    this.previewGeneration.Advance();
     this.value = { ...this.value, preview: undefined };
-    this.emit();
+    this.Emit();
   }
 
-  private save(record: ReplanDraft, clearPreview = false): boolean
+  private Save(record: ReplanDraft, clearPreview = false): boolean
   {
     const records = [...this.value.records],
       index = records.findIndex(item => item.inspectionScopeId === record.inspectionScopeId);
@@ -276,71 +276,71 @@ export class ScopeReplanController
     catch (error)
     {
       this.value = { ...this.value, error: '业务请求未能保存：' + textError(error) };
-      this.emit();
+      this.Emit();
       return false
     }
     if (clearPreview)
-      this.previewGeneration.advance();
+      this.previewGeneration.Advance();
     this.value = { records, preview: clearPreview ? undefined : this.value.preview, error: '' };
-    this.emit();
+    this.Emit();
     return true;
   }
 
   /** 独立保存新业务目标及明确权限；写入失败不发布更改，不影响聊天草稿或只读核实权限。 */
-  edit(inspectionScopeId: string, message: string, permission: 'ask' | 'execute')
+  Edit(inspectionScopeId: string, message: string, permission: 'ask' | 'execute')
   {
     if (this.unavailable || message.length > 64000 || !['ask', 'execute'].includes(permission) || !replanRequestSchema.shape.source.shape.inspectionScopeId.safeParse(inspectionScopeId).success)
       return;
-    const old = this.record(inspectionScopeId);
-    if (old?.attempt && old.attempt.phase !== 'rejected' || this.isPending(old))
+    const old = this.Record(inspectionScopeId);
+    if (old?.attempt && old.attempt.phase !== 'rejected' || this.IsPending(old))
       return;
     if (old && old.message === message && old.permission === permission)
       return;
-    this.save({ inspectionScopeId, message, permission, attempt: old?.attempt }, true);
+    this.Save({ inspectionScopeId, message, permission, attempt: old?.attempt }, true);
   }
 
   /** 仅显式读取；返回后来源/图/草稿已改变则丢弃，不把迟到依据赋给新的目标。 */
-  async preview(target: ReplanTarget)
+  async Preview(target: ReplanTarget)
   {
-    const record = this.record(target.inspectionScopeId);
-    if (this.unavailable || key(target) !== key(this.target) || this.value.preview?.loading || record?.attempt && record.attempt.phase !== 'rejected' || this.isPending(record))
+    const record = this.Record(target.inspectionScopeId);
+    if (this.unavailable || key(target) !== key(this.target) || this.value.preview?.loading || record?.attempt && record.attempt.phase !== 'rejected' || this.IsPending(record))
       return;
-    const generation = this.previewGeneration.advance(),
+    const generation = this.previewGeneration.Advance(),
       fields = draftKey(record);
     this.value = { ...this.value, preview: { target, draftKey: fields, loading: true, error: '' } };
-    this.emit();
+    this.Emit();
     try
     {
       const result = checkedReplanPreview(await this.ports.preview({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, inspectionScopeId: target.inspectionScopeId }), target);
-      if (!this.previewGeneration.isCurrent(generation) || key(target) !== key(this.target) || fields !== draftKey(this.record(target.inspectionScopeId)))
+      if (!this.previewGeneration.IsCurrent(generation) || key(target) !== key(this.target) || fields !== draftKey(this.Record(target.inspectionScopeId)))
         return;
       if (result.eligible && (result.graphCursor?.streamId !== target.graphCursor.streamId || result.graphCursor.seq !== target.graphCursor.seq || result.inspectionGoalRevision !== target.inspectionGoalRevision))
         throw Error('来源或任务图已变化，请同步后重新核验条件');
       this.value = { ...this.value, preview: { target, draftKey: fields, loading: false, result, error: '' } };
-      this.emit();
+      this.Emit();
     }
     catch (error)
     {
-      if (this.previewGeneration.isCurrent(generation))
+      if (this.previewGeneration.IsCurrent(generation))
       {
         this.value = { ...this.value, preview: { target, draftKey: fields, loading: false, error: '条件核验失败：' + textError(error) } };
-        this.emit()
+        this.Emit()
       }
     }
   }
 
-  ready(target: ReplanTarget | undefined): ReplanPreview | undefined
+  Ready(target: ReplanTarget | undefined): ReplanPreview | undefined
   {
     const preview = this.value.preview;
-    return target && key(target) === key(this.target) && preview && key(preview.target) === key(target) && !preview.loading && !preview.error && preview.draftKey === draftKey(this.record(target.inspectionScopeId)) && preview.result?.eligible ? preview.result : undefined;
+    return target && key(target) === key(this.target) && preview && key(preview.target) === key(target) && !preview.loading && !preview.error && preview.draftKey === draftKey(this.Record(target.inspectionScopeId)) && preview.result?.eligible ? preview.result : undefined;
   }
 
   /** 创建 UUID 只发生在最终提交；持久化的完整请求是后续查询/重试的唯一依据。 */
-  async submit(target: ReplanTarget, model: Omit<ReplanRequest['options'], 'permission'>)
+  async Submit(target: ReplanTarget, model: Omit<ReplanRequest['options'], 'permission'>)
   {
-    const record = this.record(target.inspectionScopeId),
-      proof = this.ready(target);
-    if (this.unavailable || !record || !proof?.basis || record.attempt && record.attempt.phase !== 'rejected' || this.isPending(record))
+    const record = this.Record(target.inspectionScopeId),
+      proof = this.Ready(target);
+    if (this.unavailable || !record || !proof?.basis || record.attempt && record.attempt.phase !== 'rejected' || this.IsPending(record))
       return;
     let request: ReplanRequest;
     try
@@ -352,82 +352,82 @@ export class ScopeReplanController
     catch (error)
     {
       this.value = { ...this.value, error: '新业务目标或模型无效：' + textError(error) };
-      this.emit();
+      this.Emit();
       return
     }
     const next = { ...record, attempt: { request, proof, phase: 'submitting' as const, uncertain: false } };
-    if (this.save(next))
-      await this.send(next);
+    if (this.Save(next))
+      await this.Send(next);
   }
 
-  private async send(record: ReplanDraft)
+  private async Send(record: ReplanDraft)
   {
     const attempt = record.attempt!,
       request = attempt.request;
     if (this.pending.has(request.commandId))
       return;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const receipt = checkedReplanReceipt(await this.ports.submit(structuredClone(request)), request, attempt.proof, attempt.receipt);
-      this.save({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
+      this.Save({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
     }
     catch (error)
     {
       const rejected = !attempt.uncertain && replanRejected(error);
-      this.save({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
+      this.Save({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 查询 undefined 仍是未知；受理事实不因网络失败退回可编辑状态。 */
-  async query(inspectionScopeId: string)
+  async Query(inspectionScopeId: string)
   {
-    const record = this.record(inspectionScopeId),
+    const record = this.Record(inspectionScopeId),
       attempt = record?.attempt;
-    if (this.unavailable || !record || !attempt || this.isPending(record))
+    if (this.unavailable || !record || !attempt || this.IsPending(record))
       return;
     const request = attempt.request;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId: request.commandId });
       if (raw !== undefined)
-        this.save({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedReplanReceipt(raw, request, attempt.proof, attempt.receipt), error: undefined } });
+        this.Save({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedReplanReceipt(raw, request, attempt.proof, attempt.receipt), error: undefined } });
       else if (attempt.phase !== 'accepted')
-        this.save({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查询到受理回执；保留原请求，不创建另一命令。' } });
+        this.Save({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查询到受理回执；保留原请求，不创建另一命令。' } });
     }
     catch (error)
     {
-      this.save({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
+      this.Save({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
-  async retry(inspectionScopeId: string)
+  async Retry(inspectionScopeId: string)
   {
-    const record = this.record(inspectionScopeId);
-    if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.isPending(record))
+    const record = this.Record(inspectionScopeId);
+    if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
       return;
     const next = { ...record, attempt: { ...record.attempt, uncertain: true } };
-    if (this.save(next))
-      await this.send(next)
+    if (this.Save(next))
+      await this.Send(next)
   }
 
   /** 恢复仅查未知命令；预览不持久为有效资格，重新进入草稿必须再次明确核验。 */
-  async restore()
+  async Restore()
   {
-    await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.query(item.inspectionScopeId)))
+    await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.Query(item.inspectionScopeId)))
   }
 }
 
@@ -440,7 +440,7 @@ export class ScopeReplanPool
   {
   }
 
-  get(workspaceId: string, rootSessionId: string, ports: ReplanPorts)
+  Get(workspaceId: string, rootSessionId: string, ports: ReplanPorts)
   {
     const identity = JSON.stringify([workspaceId, rootSessionId]),
       controller = this.controllers.get(identity) ?? new ScopeReplanController(workspaceId, rootSessionId, ports);

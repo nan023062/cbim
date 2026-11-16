@@ -12,7 +12,7 @@ export class SerialQueue
   private tail: Promise<void> = Promise.resolve();
 
   /** 返回本次原始结果/错误；失败不会阻断后续任务。任务内等待本队列的新任务会死锁，禁止重入等待。 */
-  public run<T>(work: () => T | PromiseLike<T>): Promise<T>
+  public Run<T>(work: () => T | PromiseLike<T>): Promise<T>
   {
     const result = this.tail.then(work);
     this.tail = result.then(
@@ -27,7 +27,7 @@ export class SerialQueue
   }
 
   /** 等待调用时已提交的任务结束，不收集错误，也不禁止后续入队；错误由各次 run 的调用者处理。 */
-  public drain(): Promise<void>
+  public Drain(): Promise<void>
   {
     return this.tail;
   }
@@ -56,7 +56,7 @@ export class PendingRequests<K, T = unknown>
   >();
 
   /** timeoutMs 为毫秒，沿用平台定时器语义；重复 ID 拒绝覆盖，超时回调负责取出/拒绝单项或整体失败。 */
-  public register(id: K, reply: PendingReply<T>, timeoutMs: number, onTimeout: () => void): void
+  public Register(id: K, reply: PendingReply<T>, timeoutMs: number, onTimeout: () => void): void
   {
     if (this.entries.has(id))
       throw Error('Duplicate pending request');
@@ -65,7 +65,7 @@ export class PendingRequests<K, T = unknown>
   }
 
   /** 先移除并清理计时器再交还结算入口；未知或重复回包返回 undefined，不触发回调。 */
-  public take(id: K): PendingReply<T> | undefined
+  public Take(id: K): PendingReply<T> | undefined
   {
     const entry = this.entries.get(id);
     if (!entry)
@@ -76,7 +76,7 @@ export class PendingRequests<K, T = unknown>
   }
 
   /** 按登记顺序清理并拒绝；工厂可保留逐请求错误身份，工厂/reject 须不抛错，不代表进程已退出。 */
-  public rejectAll(error: Error | (() => Error)): void
+  public RejectAll(error: Error | (() => Error)): void
   {
     for (const entry of this.entries.values())
     {
@@ -100,7 +100,7 @@ export class InFlightOperations
   }
 
   /** 原样返回同一个 Promise；按身份去重，完成或失败后自动移除，不改写结果、不重试。 */
-  public track<T>(operation: Promise<T>): Promise<T>
+  public Track<T>(operation: Promise<T>): Promise<T>
   {
     if (!this.pending.has(operation))
     {
@@ -120,7 +120,7 @@ export class InFlightOperations
   }
 
   /** 只等调用时快照，吞吐中的新任务不延长等待；错误仍由原调用者观察，不封闭集合。 */
-  public async drain(): Promise<void>
+  public async Drain(): Promise<void>
   {
     await Promise.allSettled([...this.pending]);
   }

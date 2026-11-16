@@ -32,13 +32,13 @@ class N_src_logic_team_settings_main_agent_settings_ts_Identity["Identity"] {
 N_src_logic_team_settings_main_agent_settings_ts ..> N_src_logic_team_settings_main_agent_settings_ts_Identity : 声明
 class N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings["MainAgentSettings"] {
   +constructor()
-  +read()
-  +configure()
+  +Read()
+  +Configure()
   -filename
   -assertCurrent
   -models
   -queue
-  -readStored()
+  -ReadStored()
 }
 N_src_logic_team_settings_main_agent_settings_ts ..> N_src_logic_team_settings_main_agent_settings_ts_MainAgentSettings : 声明
 ```

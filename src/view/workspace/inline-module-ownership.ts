@@ -143,7 +143,7 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
       const input: WorkspaceMemberPreviewInput = { ...identity, change: { kind: 'register', agentId: agent.id, name: agent.name.slice(0, 100), position: '承担所选 Agent 在本项目的模块责任', adaptation: { instructions: '', references: [] }, runtimePolicy: { engine: agent.runtime?.engine ?? 'pi', profileId: profile.id, modelId: model.id }, reason: '用户在模块卡片直接选择 Agent：' + agent.name } };
       const preview = checkedWorkspaceMemberPreview(await ports.call('workspace.members.preview', input), input);
       current();
-      const record = await ports.members.submit(input, preview);
+      const record = await ports.members.Submit(input, preview);
       if (record?.phase !== 'accepted')
         throw Error('岗位登记尚未确认，负责人未保存。' + (record?.error ?? ports.members.snapshot.error));
       current();
@@ -160,7 +160,7 @@ export async function assignInlineOwner(identity: ModuleOwnershipIdentity, modul
   const input = { ...identity, change: { moduleId, expectedBinding: previous ? { bindingId: previous.bindingId, revision: previous.revision, ownerMemberId: previous.ownerMemberId } : null, nextOwner: member ? { memberId: member.memberId, expectedRevision: member.revision } : null, reason: member ? '用户在模块卡片选择负责人：' + member.name : '用户解除显式负责人，恢复父级继承、模型匹配与主 Agent 兜底' } };
   const preview = checkedModuleOwnershipPreview(await ports.call('workspace.ownerships.preview', input), input);
   current();
-  const record = await ports.ownerships.submit(input, preview);
+  const record = await ports.ownerships.Submit(input, preview);
   if (record?.phase !== 'accepted')
     throw Error('负责人保存尚未确认，请核实原操作。' + (record?.error ?? ports.ownerships.snapshot.error));
 }

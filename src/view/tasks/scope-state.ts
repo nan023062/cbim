@@ -30,14 +30,14 @@ export class SessionScopeProjection
     return this.value?.cursor
   }
 
-  fork()
+  Fork()
   {
     const next = new SessionScopeProjection(this.identity);
     next.value = this.value;
     return next
   }
 
-  apply(response: ScopeDelta): ScopeSnapshot
+  Apply(response: ScopeDelta): ScopeSnapshot
   {
     const cursor = response.cursor;
     if (cursor.kind !== 'scopes' || cursor.workspaceId !== this.identity.workspaceId || cursor.rootSessionId !== this.identity.rootSessionId)
@@ -198,30 +198,30 @@ export class SessionReadProjection
     return this.goals.cursor
   }
 
-  selected(id?: string)
+  Selected(id?: string)
   {
     return id ? this.scopes?.find(scope => scope.scopeId === id) : currentScope(this.scopes ?? [])
   }
 
-  detailStamp(id?: string)
+  DetailStamp(id?: string)
   {
-    const selected = this.selected(id);
+    const selected = this.Selected(id);
     return selected ? this.details.get(selected.scopeId)?.stamp : undefined
   }
 
-  detail(id?: string)
+  Detail(id?: string)
   {
-    const selected = this.selected(id),
+    const selected = this.Selected(id),
       cached = selected ? this.details.get(selected.scopeId) : undefined;
     return selected && cached && sameStamp(selected.stamp, cached.stamp) ? cached.scope : undefined
   }
 
-  apply(response: DispatchSessionRead, requestedScopeId?: string): void
+  Apply(response: DispatchSessionRead, requestedScopeId?: string): void
   {
-    const graphs = this.graphs.fork(),
-      goals = this.goals.fork();
-    graphs.apply(response.graph);
-    goals.apply(response.scopes);
+    const graphs = this.graphs.Fork(),
+      goals = this.goals.Fork();
+    graphs.Apply(response.graph);
+    goals.Apply(response.scopes);
     let sessions = this.sessions;
     if (response.teamSessions !== undefined)
     {
@@ -312,7 +312,7 @@ export function completeSessionRead(response: DispatchSessionRead, projection: S
 {
   if (response.graph.mode === 'delta' && response.graph.hasMore || response.scopes.mode === 'delta' && response.scopes.hasMore)
     return undefined;
-  return { graph: projection.graph, scopes: projection.scopes ?? [], detail: projection.detail(selectedScopeId), teamSessions: projection.teamSessions };
+  return { graph: projection.graph, scopes: projection.scopes ?? [], detail: projection.Detail(selectedScopeId), teamSessions: projection.teamSessions };
 }
 
 /** 对话摘要和任务根共用的只读状态；当前周期与历史选择刻意分开。 */

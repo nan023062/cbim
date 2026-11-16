@@ -46,17 +46,17 @@ N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_mo
 class N_src_logic_engines_service_model_profiles_ts_LockedEngineModelConfiguration["LockedEngineModelConfiguration"] {
   <<interface>>
   +profile
-  +resolve()
+  +Resolve()
 }
 N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_model_profiles_ts_LockedEngineModelConfiguration : 声明
 class N_src_logic_engines_service_model_profiles_ts_EngineModelProfiles["EngineModelProfiles"] {
   +constructor()
-  +list()
-  +resolve()
-  +configuration()
-  +withConfigurations()
-  +withRuntimeConfiguration()
-  +test()
+  +List()
+  +Resolve()
+  +Configuration()
+  +WithConfigurations()
+  +WithRuntimeConfiguration()
+  +Test()
   -models
 }
 N_src_logic_engines_service_model_profiles_ts ..> N_src_logic_engines_service_model_profiles_ts_EngineModelProfiles : 声明

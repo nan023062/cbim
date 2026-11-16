@@ -5,9 +5,9 @@
 /** 不可用时调用方必须拒绝保存密钥，不能自动回退明文。 */
 export interface SecretCipher
 {
-  available(): boolean;
+  Available(): boolean;
 
-  encrypt(value: string): string;
+  Encrypt(value: string): string;
 
-  decrypt(value: string): string;
+  Decrypt(value: string): string;
 }

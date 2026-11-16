@@ -128,7 +128,7 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。
 
 
-统一 Agent 主轮直接使用 LoopRuntime.start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
+统一 Agent 主轮直接使用 LoopRuntime.Start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
 
 ### 递归调用等待时的普通补充
 
@@ -137,7 +137,7 @@ resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运�
 
 ## 根运行插入回执
 
-新 Agent 运行的队列插入通过 AgentLifecycle.insertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
+新 Agent 运行的队列插入通过 AgentLifecycle.InsertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
 
 ## 关闭时的统一 Agent 结算
 ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获运行的 settled。统一 Agent 的生命周期结算在 closing 时仍执行，把真实终态封存到原 scope；关闭不再跳过它。关闭期间不 pump 队列、不继续模型；结算失败向关闭调用方报告，不冒充成功释放。旧协作协议的关闭协调保持原所有者。

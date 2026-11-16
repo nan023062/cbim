@@ -126,85 +126,85 @@ export class GlobalRuntimeManager
 
   private readonly workspaces = new Map<string, WorkspaceIndex>();
 
-  private changed()
+  private Changed()
   {
     this.revision++
   }
 
-  private current(id: string, epoch: number)
+  private Current(id: string, epoch: number)
   {
     const state = this.workspaces.get(id);
     return state?.view.epoch === epoch && state.view.availability !== 'closed' ? state : undefined
   }
 
-  private cursor(): RuntimeCursor
+  private Cursor(): RuntimeCursor
   {
     return { streamId: this.streamId, revision: this.revision }
   }
 
   /** 开始接管工作区投影；旧代际即刻失效，恢复期间的数据完整性明确标为 loading。 */
-  begin(workspaceId: string, name: string): number
+  Begin(workspaceId: string, name: string): number
   {
     const epoch = ++this.nextEpoch;
     this.workspaces.set(workspaceId, { view: { workspaceId, name, epoch, availability: 'loading', issues: [], queue: { pending: 0, paused: 0, inserting: 0 } }, members: new Map(), tasks: new Map(), scopes: new Map(), runs: new Map(), outbox: new Set(), graphSequences: new Map() });
-    this.changed();
+    this.Changed();
     return epoch;
   }
 
   /** 仅装配方在派发、历史运行和排队恢复完成后调用；有 issues 时快照仍标记不完整。 */
-  ready(id: string, epoch: number)
+  Ready(id: string, epoch: number)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (state && state.view.availability !== 'ready')
     {
       state.view.availability = 'ready';
-      this.changed()
+      this.Changed()
     }
   }
 
   /** 项目重命名仅更新显示名，不改变工作区身份、接入代际或执行归属。 */
-  rename(id: string, name: string)
+  Rename(id: string, name: string)
   {
     const state = this.workspaces.get(id);
     if (state && state.view.name !== name)
     {
       state.view.name = name;
-      this.changed()
+      this.Changed()
     }
   }
 
-  unavailable(id: string, epoch: number, error: string)
+  Unavailable(id: string, epoch: number, error: string)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
-    this.issue(id, epoch, 'workspace', error);
+    this.Issue(id, epoch, 'workspace', error);
     if (state.view.availability !== 'unavailable')
     {
       state.view.availability = 'unavailable';
-      this.interrupt(state);
-      this.changed()
+      this.Interrupt(state);
+      this.Changed()
     }
   }
 
   /** 关闭后保留已知消费及任务记录，但不能再把历史运行或成员计为活跃。 */
-  detach(id: string, epoch: number)
+  Detach(id: string, epoch: number)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     state.view.availability = 'closed';
-    this.interrupt(state);
-    this.changed()
+    this.Interrupt(state);
+    this.Changed()
   }
 
-  forget(id: string)
+  Forget(id: string)
   {
     if (this.workspaces.delete(id))
-      this.changed()
+      this.Changed()
   }
 
-  private interrupt(state: WorkspaceIndex)
+  private Interrupt(state: WorkspaceIndex)
   {
     for (const run of state.runs.values())
       if (run.view.status === 'running')
@@ -215,21 +215,21 @@ export class GlobalRuntimeManager
   }
 
   /** 诊断为可信装配层的简短说明；调用方不得传原始异常堆栈、绝对路径或工具正文。 */
-  issue(id: string, epoch: number, source: string, message: string)
+  Issue(id: string, epoch: number, source: string, message: string)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state || state.view.issues.some(i => i.source === source && i.message === message))
       return;
     state.view.issues.push({ source, message });
     if (state.view.issues.length > 100)
       state.view.issues.shift();
-    this.changed();
+    this.Changed();
   }
 
   /** 首次恢复基线，不用于定时回读；旧记录没有周期时保持空集，恢复等待也不代表重新启动模型。 */
-  restoreDispatch(id: string, epoch: number, baseline: DispatchState)
+  RestoreDispatch(id: string, epoch: number, baseline: DispatchState)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     if (baseline.workspaceId !== id)
@@ -246,7 +246,7 @@ export class GlobalRuntimeManager
     {
       if (member.workspaceId !== id)
         throw Error('成员身份与工作区不一致');
-      members.set(member.agentInstanceId, this.member(member, false))
+      members.set(member.agentInstanceId, this.Member(member, false))
     }
     for (const graph of baseline.graphs)
     {
@@ -254,21 +254,21 @@ export class GlobalRuntimeManager
         throw Error('派发图身份与工作区不一致');
       sequences.set(graph.identity.rootSessionId, { streamId: graph.cursor.streamId, seq: graph.cursor.seq });
       for (const task of graph.tasks)
-        tasks.set(key(task.identity.rootSessionId, task.taskId), this.task(task));
+        tasks.set(key(task.identity.rootSessionId, task.taskId), this.Task(task));
     }
-    const scopes = this.projectScopes(id, sequences, new Map(), baseline.scopes ?? []);
+    const scopes = this.ProjectScopes(id, sequences, new Map(), baseline.scopes ?? []);
     state.members = members;
     state.tasks = tasks;
     state.scopes = scopes;
     state.graphSequences = sequences;
     state.outbox = new Set(baseline.outbox.filter(m => m.delivery === 'pending').map(m => m.messageId));
-    this.changed();
+    this.Changed();
   }
 
   /** 同工作区提交由 store 同步串行通知；scope-only 也更新全局版本，不借用图序号或目标版本，不读取日志。 */
-  dispatchCommitted(id: string, epoch: number, mutation: DispatchMutation)
+  DispatchCommitted(id: string, epoch: number, mutation: DispatchMutation)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     const batch = mutation.batch;
@@ -285,7 +285,7 @@ export class GlobalRuntimeManager
         return;
       if (previous && (previous.streamId !== batch.streamId || batch.seq !== previous.seq + 1))
       {
-        this.issue(id, epoch, 'dispatch', '派发事件游标不连续，需要重新载入');
+        this.Issue(id, epoch, 'dispatch', '派发事件游标不连续，需要重新载入');
         return
       }
     }
@@ -296,12 +296,12 @@ export class GlobalRuntimeManager
       const roots = new Map(state.graphSequences);
       if (batch)
         roots.set(batch.identity.rootSessionId, { streamId: batch.streamId, seq: batch.seq });
-      scopes = this.projectScopes(id, roots, state.scopes, mutation.scopes)
+      scopes = this.ProjectScopes(id, roots, state.scopes, mutation.scopes)
     }
     let changed = false;
     for (const member of mutation.members ?? [])
     {
-      const view = this.member(member, true),
+      const view = this.Member(member, true),
         old = state.members.get(member.agentInstanceId);
       if (JSON.stringify(old) !== JSON.stringify(view))
       {
@@ -314,7 +314,7 @@ export class GlobalRuntimeManager
       for (const change of batch.changes)
         if (change.type === 'task.upserted')
         {
-          state.tasks.set(key(change.task.identity.rootSessionId, change.task.taskId), this.task(change.task));
+          state.tasks.set(key(change.task.identity.rootSessionId, change.task.taskId), this.Task(change.task));
           changed = true;
         }
       state.graphSequences.set(batch.identity.rootSessionId, { streamId: batch.streamId, seq: batch.seq });
@@ -343,11 +343,11 @@ export class GlobalRuntimeManager
       }
     }
     if (changed)
-      this.changed();
+      this.Changed();
   }
 
   /** 只接受明确属于现有/同事务新建根的周期；不能用同 scope ID 改写主会话归属。 */
-  private projectScopes(id: string, roots: ReadonlyMap<string, unknown>, previous: ReadonlyMap<string, RuntimeScope>, updates: NonNullable<DispatchState['scopes']>): Map<string, RuntimeScope>
+  private ProjectScopes(id: string, roots: ReadonlyMap<string, unknown>, previous: ReadonlyMap<string, RuntimeScope>, updates: NonNullable<DispatchState['scopes']>): Map<string, RuntimeScope>
   {
     if (!Array.isArray(updates) || new Set(updates.map(scope => scope?.scopeId)).size !== updates.length)
       throw Error('周期提交集合无效或身份重复');
@@ -371,20 +371,20 @@ export class GlobalRuntimeManager
     return next;
   }
 
-  private member(value: AgentInstance, current: boolean): RuntimeMember
+  private Member(value: AgentInstance, current: boolean): RuntimeMember
   {
     return { workspaceId: value.workspaceId, teamId: value.teamId, agentId: value.agentId, agentInstanceId: value.agentInstanceId, leaseEpoch: value.leaseEpoch, ...(value.mainRootSessionId ? { mainRootSessionId: value.mainRootSessionId } : {}), ...(value.executionScopeId ? { executionScopeId: value.executionScopeId, executionTaskId: value.executionTaskId } : {}), ...(value.lifecycle ? { lifecycle: value.lifecycle, releasedAt: value.releasedAt } : {}), activity: value.activity, activityCurrent: current && value.lifecycle !== 'released', availability: 'loading', sessionCount: value.agentSessionIds.length, activeTaskId: value.activeTaskId, activeRunId: value.activeRunId, waitingTaskIds: [...value.waitingTaskIds], communicatingMessageIds: [...value.communicatingMessageIds] };
   }
 
-  private task(value: TaskNode): RuntimeDispatchTask
+  private Task(value: TaskNode): RuntimeDispatchTask
   {
     return { source: 'dispatch', binding: 'instance', workspaceId: value.identity.workspaceId, rootSessionId: value.identity.rootSessionId, taskId: value.taskId, ...(value.scopeId ? { scopeId: value.scopeId } : {}), agentId: value.assignee.agentId, agentInstanceId: value.assignee.agentInstanceId, moduleIds: value.modules.map(m => m.moduleId), status: value.status, revision: value.revision, planRevision: value.planRevision, runIds: [...value.runIds], updatedAt: value.updatedAt };
   }
 
   /** 恢复可信 RunSummary；重复恢复相同轮次不累计消费，历史 running 强制降为 interrupted。 */
-  restoreRun(id: string, epoch: number, summary: RunSummary)
+  RestoreRun(id: string, epoch: number, summary: RunSummary)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     if (summary.task.workspaceId !== id)
@@ -400,7 +400,7 @@ export class GlobalRuntimeManager
     const started = summary.events.find(event => event.type === 'run.started')?.data,
       recorded = started?.memberBinding,
       conversation = started?.conversationBinding;
-    const value = this.newRun(summary.task, summary.runId, summary.events[0]?.time ?? '', summary.memberBinding ?? recorded, summary.conversationBinding ?? conversation);
+    const value = this.NewRun(summary.task, summary.runId, summary.events[0]?.time ?? '', summary.memberBinding ?? recorded, summary.conversationBinding ?? conversation);
     if (recorded !== undefined)
     {
       const checked = checkedMemberRunBinding(recorded, summary.task, summary.runId);
@@ -434,16 +434,16 @@ export class GlobalRuntimeManager
       value.view.status = existing!.view.status;
       value.view.phase = existing!.view.phase;
       for (const event of summary.events)
-        this.phase(value, event);
+        this.Phase(value, event);
     }
     state.runs.set(runKey, value);
-    this.changed();
+    this.Changed();
   }
 
   /** 已落盘事件按 workspace/task/run/seq 去重；只接收有明确 run.started 身份的运行。 */
-  runEvent(id: string, epoch: number, event: StoredEvent)
+  RunEvent(id: string, epoch: number, event: StoredEvent)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     if (event.workspaceId !== id)
@@ -457,17 +457,17 @@ export class GlobalRuntimeManager
       const task = event.data?.task as TaskSpec | undefined;
       if (event.type !== 'run.started' || event.seq !== 1 || task?.workspaceId !== id || task.taskId !== event.taskId)
       {
-        this.issue(id, epoch, 'run', '运行缺少起始身份事件，需要重新载入');
+        this.Issue(id, epoch, 'run', '运行缺少起始身份事件，需要重新载入');
         return
       }
-      run = this.newRun(task, event.runId, event.time, event.data?.memberBinding, event.data?.conversationBinding);
+      run = this.NewRun(task, event.runId, event.time, event.data?.memberBinding, event.data?.conversationBinding);
       state.runs.set(runKey, run);
       run.liveEstablished = true;
     }
     if (event.seq <= run.receivedSeq)
       return;
     if (event.seq !== run.receivedSeq + 1)
-      this.issue(id, epoch, 'run', '运行事件序号有缺口，当前统计可能不完整');
+      this.Issue(id, epoch, 'run', '运行事件序号有缺口，当前统计可能不完整');
     run.receivedSeq = event.seq;
     const item = measurement(event);
     let changed = event.type === 'run.started';
@@ -479,17 +479,17 @@ export class GlobalRuntimeManager
     }
     const phase = run.view.phase,
       status = run.view.status;
-    this.phase(run, event);
+    this.Phase(run, event);
     changed ||= phase !== run.view.phase || status !== run.view.status;
     if (changed)
     {
       run.view.lastSeq = event.seq;
       run.view.updatedAt = event.time;
-      this.changed()
+      this.Changed()
     }
   }
 
-  private phase(run: ObservedRun, event: StoredEvent)
+  private Phase(run: ObservedRun, event: StoredEvent)
   {
     if (event.type === 'run.settled')
     {
@@ -515,7 +515,7 @@ export class GlobalRuntimeManager
   }
 
   /** 两种运行绑定互斥；主会话与正式成员任务共享实例但保留各自通道，旧对话不猜映射。 */
-  private newRun(task: TaskSpec, runId: string, time: string, memberBinding?: unknown, conversationBinding?: unknown): ObservedRun
+  private NewRun(task: TaskSpec, runId: string, time: string, memberBinding?: unknown, conversationBinding?: unknown): ObservedRun
   {
     if (!task || typeof task !== 'object' || typeof task.workspaceId !== 'string' || !task.workspaceId || typeof task.taskId !== 'string' || !task.taskId || typeof runId !== 'string' || !runId || !Array.isArray(task.moduleIds) || task.moduleIds.some(id => typeof id !== 'string') || task.agentId !== undefined && typeof task.agentId !== 'string')
       throw Error('运行任务概要无效');
@@ -527,9 +527,9 @@ export class GlobalRuntimeManager
   }
 
   /** 队列变化后由唯一队列实例报告，重复计数不推进全局版本。 */
-  queue(id: string, epoch: number, counts: RuntimeQueueCounts)
+  Queue(id: string, epoch: number, counts: RuntimeQueueCounts)
   {
-    const state = this.current(id, epoch);
+    const state = this.Current(id, epoch);
     if (!state)
       return;
     if (!count(counts.pending) || !count(counts.paused) || !count(counts.inserting))
@@ -537,21 +537,21 @@ export class GlobalRuntimeManager
     if (JSON.stringify(state.view.queue) !== JSON.stringify(counts))
     {
       state.view.queue = { pending: counts.pending, paused: counts.paused, inserting: counts.inserting };
-      this.changed()
+      this.Changed()
     }
   }
 
   /** 无变化时只返回游标；不扫描磁盘，也不重建完整快照。 */
-  read(cursor?: RuntimeCursor): RuntimeRead
+  Read(cursor?: RuntimeCursor): RuntimeRead
   {
-    const current = this.cursor();
+    const current = this.Cursor();
     if (cursor?.streamId === current.streamId && cursor.revision === current.revision)
       return { mode: 'noop', cursor: current };
-    return { mode: 'snapshot', cursor: current, snapshot: this.snapshot() };
+    return { mode: 'snapshot', cursor: current, snapshot: this.Snapshot() };
   }
 
   /** 汇总只读副本；多个工作区使用相同任务/运行字符串也不会相互覆盖。 */
-  snapshot(): RuntimeSnapshot
+  Snapshot(): RuntimeSnapshot
   {
     const workspaces: RuntimeWorkspace[] = [],
       members: RuntimeMember[] = [],
@@ -666,6 +666,6 @@ export class GlobalRuntimeManager
         usage.cost = (usage.cost ?? 0) + value.cost;
       usage.costPartial ||= value.costPartial || !value.usageReported;
     }
-    return clone({ cursor: this.cursor(), workspaces, members, tasks, runs, scopes, pressure, usage, complete: workspaces.every(w => (w.availability === 'ready' || w.availability === 'closed') && !w.issues.length) });
+    return clone({ cursor: this.Cursor(), workspaces, members, tasks, runs, scopes, pressure, usage, complete: workspaces.every(w => (w.availability === 'ready' || w.availability === 'closed') && !w.issues.length) });
   }
 }

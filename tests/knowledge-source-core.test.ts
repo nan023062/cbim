@@ -56,10 +56,10 @@ function prepare(state:DispatchState,key:KnowledgeSourceKey=agent,reason:'create
 }
 function resolve(state:DispatchState,pending:KnowledgeSourcePrepared,outcome:'committed'|'rolled_back'='committed'):KnowledgeSourceResolved{return {version:1,kind:'resolved',changeId:randomUUID(),workspaceId,sourceCursor:nextKnowledgeSourceCursor(state,randomUUID()),recordedAt:later,transitionId:pending.transition.transitionId,requestFingerprint:pending.transition.requestFingerprint,journalBindingHash:pending.transition.journalBindingHash,outcome,journalProofHash:hash('actual-terminal-journal'),...(outcome==='committed'?{committedRevision:'knowledge-2'}:{})}}
 const evolve=(state:DispatchState,event:KnowledgeSourceChange):DispatchState=>({...state,...applyKnowledgeSourceChange(state,event)});
-const sourceCommit=(store:FileDispatchStore,event:KnowledgeSourcePrepared|KnowledgeSourceResolved)=>store.transact(knowledgeSourceCommand(event),async()=>({knowledgeSourceChanges:[event],receipt:knowledgeSourceReceipt(event)}));
-const memberCommit=(store:FileDispatchStore,m:ReturnType<typeof memberMutation>)=>store.transact(workspaceMemberCommand(m.event.request),async()=>m.mutation);
-const ownerCommit=(store:FileDispatchStore,m:ReturnType<typeof ownerMutation>)=>store.transact(moduleOwnershipCommand(m.event.request,m.event.actor),async()=>m.mutation);
-async function setup(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-source-core-')),store=new FileDispatchStore(directory,workspaceId);return {store,directory,file:path.join(directory,'dispatch.jsonl'),cleanup:async()=>{await store.close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-source-core-')))throw Error('bad temp');await fs.rm(directory,{recursive:true,force:true})}}}
+const sourceCommit=(store:FileDispatchStore,event:KnowledgeSourcePrepared|KnowledgeSourceResolved)=>store.Transact(knowledgeSourceCommand(event),async()=>({knowledgeSourceChanges:[event],receipt:knowledgeSourceReceipt(event)}));
+const memberCommit=(store:FileDispatchStore,m:ReturnType<typeof memberMutation>)=>store.Transact(workspaceMemberCommand(m.event.request),async()=>m.mutation);
+const ownerCommit=(store:FileDispatchStore,m:ReturnType<typeof ownerMutation>)=>store.Transact(moduleOwnershipCommand(m.event.request,m.event.actor),async()=>m.mutation);
+async function setup(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-source-core-')),store=new FileDispatchStore(directory,workspaceId);return {store,directory,file:path.join(directory,'dispatch.jsonl'),cleanup:async()=>{await store.Close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-source-core-')))throw Error('bad temp');await fs.rm(directory,{recursive:true,force:true})}}}
 afterEach(()=>vi.restoreAllMocks());
 
 it('公开选择不能跨workspace/逻辑源；客户端提交不能携带来源证明',()=>{
@@ -98,35 +98,35 @@ it('错误前序/重复代次/错误terminal/混合source事务拒绝且不改�
 });
 
 it('真实Store首次capture与唯一登记原子提交，重复和重开不再捕获',async()=>{
-  const f=await setup();try{const initial=await f.store.read();expect(initial.sourceCursor).toBeNull();expect(initial.knowledgeSourceChanges).toEqual([]);const m=memberMutation(initial),command=workspaceMemberCommand(m.event.request),callback=vi.fn(async()=>m.mutation);
-    await Promise.all([f.store.transact(command,callback),f.store.transact(command,callback)]);expect(callback).toHaveBeenCalledTimes(1);const state=await f.store.read();expect(state.knowledgeSourceChanges).toHaveLength(1);expect(state.workspaceMembers).toHaveLength(1);expect(state.graphs).toEqual([]);expect(state.runs).toEqual([]);const bytes=await fs.readFile(f.file);
-    await f.store.close();const reopened=new FileDispatchStore(f.directory,workspaceId);try{expect(await reopened.read()).toEqual(state);expect((await reopened.commandReceipt(command.commandId))?.receipt).toEqual(workspaceMemberReceipt(m.event));expect(await fs.readFile(f.file)).toEqual(bytes)}finally{await reopened.close()}
+  const f=await setup();try{const initial=await f.store.Read();expect(initial.sourceCursor).toBeNull();expect(initial.knowledgeSourceChanges).toEqual([]);const m=memberMutation(initial),command=workspaceMemberCommand(m.event.request),callback=vi.fn(async()=>m.mutation);
+    await Promise.all([f.store.Transact(command,callback),f.store.Transact(command,callback)]);expect(callback).toHaveBeenCalledTimes(1);const state=await f.store.Read();expect(state.knowledgeSourceChanges).toHaveLength(1);expect(state.workspaceMembers).toHaveLength(1);expect(state.graphs).toEqual([]);expect(state.runs).toEqual([]);const bytes=await fs.readFile(f.file);
+    await f.store.Close();const reopened=new FileDispatchStore(f.directory,workspaceId);try{expect(await reopened.Read()).toEqual(state);expect((await reopened.CommandReceipt(command.commandId))?.receipt).toEqual(workspaceMemberReceipt(m.event));expect(await fs.readFile(f.file)).toEqual(bytes)}finally{await reopened.Close()}
   }finally{await f.cleanup()}
 });
 
 it('capture不能单独落盘或夹带另一消费者/图；伪匹配ref/selection/actor不能靠basis重算通过',async()=>{
-  const f=await setup();try{const state=await f.store.read(),m=memberMutation(state),command=workspaceMemberCommand(m.event.request),original=structuredClone(m.mutation);
+  const f=await setup();try{const state=await f.store.Read(),m=memberMutation(state),command=workspaceMemberCommand(m.event.request),original=structuredClone(m.mutation);
     const bads:DispatchMutation[]=[{knowledgeSourceChanges:original.knowledgeSourceChanges,receipt:{}},{...original,batch:{} as any},{...original,ownershipChanges:[]},{...original,workspaceMemberChanges:[m.event,m.event]}];
     const refBad=structuredClone(original);refBad.workspaceMemberChanges![0].next.adoption.sourceRef={...m.event.next.adoption.sourceRef!,workspaceId:'elsewhere'} as any;bads.push(refBad);
     const consumerBad=structuredClone(original);(consumerBad.knowledgeSourceChanges![0] as any).consumer.changeId=randomUUID();bads.push(consumerBad);
     const claimBad=structuredClone(original);claimBad.workspaceMemberChanges![0].sourceSelection={kind:'workspace',workspaceId,source:agent,expectedRef:{version:1,workspaceId,source:agent,generationId:randomUUID()},observation};bads.push(claimBad);
-    for(const bad of bads)await expect(f.store.transact(command,async()=>bad)).rejects.toBeDefined();expect(await f.store.read()).toEqual(state);await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
-    await memberCommit(f.store,m);expect((await f.store.read()).knowledgeSourceChanges).toHaveLength(1);
+    for(const bad of bads)await expect(f.store.Transact(command,async()=>bad)).rejects.toBeDefined();expect(await f.store.Read()).toEqual(state);await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
+    await memberCommit(f.store,m);expect((await f.store.Read()).knowledgeSourceChanges).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 
 it('旧原日志不补source；显式相同内容采纳才建立来源，元信息/model操作保留原ref',async()=>{
-  const f=await setup();try{const old=memberMutation(await f.store.read(),false);await memberCommit(f.store,old);let state=await f.store.read();const prefix=await fs.readFile(f.file);expect(state.workspaceMembers![0].adoption).not.toHaveProperty('sourceRef');
-    const change:WorkspaceMemberChangeInput={kind:'adopt',memberId:old.event.next.memberId,expectedRevision:1,target:'capability',reason:'bind source'};const adopted=memberMutation(state,true,change);expect(adopted.event.next.adoption.capabilityHash).toBe(old.event.next.adoption.capabilityHash);expect(workspaceMemberChangedFields(old.event.next,workspaceMemberProposed(adopted.event.next))).toEqual(['capability']);await memberCommit(f.store,adopted);state=await f.store.read();expect((await fs.readFile(f.file)).subarray(0,prefix.length)).toEqual(prefix);
-    const edit=memberMutation(state,false,{kind:'update',memberId:old.event.next.memberId,expectedRevision:2,patch:{name:'renamed'},reason:'rename'});await memberCommit(f.store,edit);expect((await f.store.read()).workspaceMembers![0].adoption).toEqual(adopted.event.next.adoption);
-    const silent=memberMutation(await f.store.read(),false,{kind:'state',memberId:old.event.next.memberId,expectedRevision:3,nextState:'suspended',reason:'pause'});delete silent.event.next.adoption.sourceRef;silent.mutation.receipt=workspaceMemberReceipt(silent.event);await expect(memberCommit(f.store,silent)).rejects.toThrow(/不能改写来源/);
+  const f=await setup();try{const old=memberMutation(await f.store.Read(),false);await memberCommit(f.store,old);let state=await f.store.Read();const prefix=await fs.readFile(f.file);expect(state.workspaceMembers![0].adoption).not.toHaveProperty('sourceRef');
+    const change:WorkspaceMemberChangeInput={kind:'adopt',memberId:old.event.next.memberId,expectedRevision:1,target:'capability',reason:'bind source'};const adopted=memberMutation(state,true,change);expect(adopted.event.next.adoption.capabilityHash).toBe(old.event.next.adoption.capabilityHash);expect(workspaceMemberChangedFields(old.event.next,workspaceMemberProposed(adopted.event.next))).toEqual(['capability']);await memberCommit(f.store,adopted);state=await f.store.Read();expect((await fs.readFile(f.file)).subarray(0,prefix.length)).toEqual(prefix);
+    const edit=memberMutation(state,false,{kind:'update',memberId:old.event.next.memberId,expectedRevision:2,patch:{name:'renamed'},reason:'rename'});await memberCommit(f.store,edit);expect((await f.store.Read()).workspaceMembers![0].adoption).toEqual(adopted.event.next.adoption);
+    const silent=memberMutation(await f.store.Read(),false,{kind:'state',memberId:old.event.next.memberId,expectedRevision:3,nextState:'suspended',reason:'pause'});delete silent.event.next.adoption.sourceRef;silent.mutation.receipt=workspaceMemberReceipt(silent.event);await expect(memberCommit(f.store,silent)).rejects.toThrow(/不能改写来源/);
   }finally{await f.cleanup()}
 });
 
 it('pending先提交阻止新采纳，但原回执/改名仍可读写；terminal按原command幂等',async()=>{
-  const f=await setup();try{const m=memberMutation(await f.store.read());await memberCommit(f.store,m);let state=await f.store.read();const next=memberMutation(state),p=prepare(state,agent,'replaced');await sourceCommit(f.store,p);const callback=vi.fn(async()=>next.mutation);await expect(f.store.transact(workspaceMemberCommand(next.event.request),callback)).rejects.toMatchObject({code:'SOURCE_PENDING'});
-    expect((await f.store.commandReceipt(workspaceMemberCommand(m.event.request).commandId))?.receipt).toEqual(workspaceMemberReceipt(m.event));state=await f.store.read();await memberCommit(f.store,memberMutation(state,false,{kind:'update',memberId:m.event.next.memberId,expectedRevision:1,patch:{name:'still editable'},reason:'rename'}));
-    state=await f.store.read();const done=resolve(state,p);const first=await sourceCommit(f.store,done),bytes=await fs.readFile(f.file);expect(await sourceCommit(f.store,done)).toEqual(first);expect(await fs.readFile(f.file)).toEqual(bytes);expect((await f.store.read()).workspaceMembers![0].adoption.sourceRef).toEqual(m.event.next.adoption.sourceRef);
+  const f=await setup();try{const m=memberMutation(await f.store.Read());await memberCommit(f.store,m);let state=await f.store.Read();const next=memberMutation(state),p=prepare(state,agent,'replaced');await sourceCommit(f.store,p);const callback=vi.fn(async()=>next.mutation);await expect(f.store.Transact(workspaceMemberCommand(next.event.request),callback)).rejects.toMatchObject({code:'SOURCE_PENDING'});
+    expect((await f.store.CommandReceipt(workspaceMemberCommand(m.event.request).commandId))?.receipt).toEqual(workspaceMemberReceipt(m.event));state=await f.store.Read();await memberCommit(f.store,memberMutation(state,false,{kind:'update',memberId:m.event.next.memberId,expectedRevision:1,patch:{name:'still editable'},reason:'rename'}));
+    state=await f.store.Read();const done=resolve(state,p);const first=await sourceCommit(f.store,done),bytes=await fs.readFile(f.file);expect(await sourceCommit(f.store,done)).toEqual(first);expect(await fs.readFile(f.file)).toEqual(bytes);expect((await f.store.Read()).workspaceMembers![0].adoption.sourceRef).toEqual(m.event.next.adoption.sourceRef);
   }finally{await f.cleanup()}
 });
 
@@ -162,33 +162,33 @@ it('同路径同字节来源受控删除重建仍使岗位原预览失效',()=>{
 });
 
 it('builtin只采纳内容引用，不创建工作区代次；伪builtin hash拒绝',async()=>{
-  const f=await setup();try{const m=memberMutation(await f.store.read(),true,undefined,true);expect(m.mutation.knowledgeSourceChanges).toBeUndefined();await memberCommit(f.store,m);const state=await f.store.read();expect(state.knowledgeSourceGenerations).toEqual([]);expect(state.workspaceMembers![0].adoption.sourceRef).toMatchObject({kind:'builtin',id:'cbim:executor'});
+  const f=await setup();try{const m=memberMutation(await f.store.Read(),true,undefined,true);expect(m.mutation.knowledgeSourceChanges).toBeUndefined();await memberCommit(f.store,m);const state=await f.store.Read();expect(state.knowledgeSourceGenerations).toEqual([]);expect(state.workspaceMembers![0].adoption.sourceRef).toMatchObject({kind:'builtin',id:'cbim:executor'});
     const bad=memberMutation(state,true,undefined,true);(bad.event.sourceSelection as Extract<SourceSelection,{kind:'builtin'}>).ref.contentHash=hash('fake');bad.event.next.adoption.sourceRef=(bad.event.sourceSelection as Extract<SourceSelection,{kind:'builtin'}>).ref;await expect(memberCommit(f.store,bad)).rejects.toThrow(/内容指纹/);
   }finally{await f.cleanup()}
 });
 
 it('同owner只允许明确adopt_source，旧关系可补来源且责任版本/原owner保持',async()=>{
-  const f=await setup();try{await memberCommit(f.store,memberMutation(await f.store.read(),false));const original=ownerMutation(await f.store.read(),undefined,false);await ownerCommit(f.store,original);let state=await f.store.read();const binding=state.moduleOwnerships![0],input:ModuleOwnershipChangeInput={kind:'adopt_source',moduleId:moduleKey.sourceId,expectedBinding:{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId},reason:'explicit source adoption'};
+  const f=await setup();try{await memberCommit(f.store,memberMutation(await f.store.Read(),false));const original=ownerMutation(await f.store.Read(),undefined,false);await ownerCommit(f.store,original);let state=await f.store.Read();const binding=state.moduleOwnerships![0],input:ModuleOwnershipChangeInput={kind:'adopt_source',moduleId:moduleKey.sourceId,expectedBinding:{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId},reason:'explicit source adoption'};
     expect(moduleOwnershipChangeInputSchema.safeParse(input).success).toBe(true);expect(moduleOwnershipChangeInputSchema.safeParse({...input,nextOwner:{memberId:binding.ownerMemberId,expectedRevision:1}}).success).toBe(false);
     expect(moduleOwnershipChangeInputSchema.safeParse({...input,kind:undefined,nextOwner:{memberId:binding.ownerMemberId,expectedRevision:1}}).success).toBe(false);
-    const adopted=ownerMutation(state,input);await ownerCommit(f.store,adopted);state=await f.store.read();expect(state.moduleOwnerships![0]).toMatchObject({bindingId:binding.bindingId,ownerMemberId:binding.ownerMemberId,revision:2});expect(state.ownershipChanges![0]).toEqual(original.event);expect(moduleOwnershipReceiptSchema.parse(adopted.mutation.receipt).action).toBe('adopt_source');
+    const adopted=ownerMutation(state,input);await ownerCommit(f.store,adopted);state=await f.store.Read();expect(state.moduleOwnerships![0]).toMatchObject({bindingId:binding.bindingId,ownerMemberId:binding.ownerMemberId,revision:2});expect(state.ownershipChanges![0]).toEqual(original.event);expect(moduleOwnershipReceiptSchema.parse(adopted.mutation.receipt).action).toBe('adopt_source');
     const duplicate=ownerMutation(state,{...input,expectedBinding:{...input.expectedBinding!,revision:2}});await expect(ownerCommit(f.store,duplicate)).rejects.toMatchObject({code:'OWNERSHIP_NO_CHANGE'});
-    const unlink=ownerMutation(state,{moduleId:moduleKey.sourceId,expectedBinding:{bindingId:binding.bindingId,revision:2,ownerMemberId:binding.ownerMemberId},nextOwner:null,reason:'source may be missing'});await ownerCommit(f.store,unlink);expect((await f.store.read()).moduleOwnerships![0].sourceRef).toEqual(adopted.event.next.sourceRef);
+    const unlink=ownerMutation(state,{moduleId:moduleKey.sourceId,expectedBinding:{bindingId:binding.bindingId,revision:2,ownerMemberId:binding.ownerMemberId},nextOwner:null,reason:'source may be missing'});await ownerCommit(f.store,unlink);expect((await f.store.Read()).moduleOwnerships![0].sourceRef).toEqual(adopted.event.next.sourceRef);
   }finally{await f.cleanup()}
 });
 
 it('source-only事务不能改变两登记游标/图；容量预留与伪造回放拒绝',async()=>{
-  const f=await setup();try{const before=await f.store.read(),p=prepare(before);await sourceCommit(f.store,p);let state=await f.store.read();expect(state.registryCursor).toEqual(before.registryCursor);expect(state.ownershipCursor).toEqual(before.ownershipCursor);expect(state.graphs).toEqual(before.graphs);await sourceCommit(f.store,resolve(state,p));state=await f.store.read();
-    const raw=await fs.readFile(f.file,'utf8'),lines=raw.trimEnd().split('\n').map(line=>JSON.parse(line));lines[1].body.mutation.knowledgeSourceChanges[0].journalBindingHash=hash('forged');lines[1].checksum=hash(JSON.stringify(lines[1].body));await f.store.close();await fs.writeFile(f.file,lines.map(line=>JSON.stringify(line)).join('\n')+'\n');const reopened=new FileDispatchStore(f.directory,workspaceId);try{await expect(reopened.read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reopened.close()}
+  const f=await setup();try{const before=await f.store.Read(),p=prepare(before);await sourceCommit(f.store,p);let state=await f.store.Read();expect(state.registryCursor).toEqual(before.registryCursor);expect(state.ownershipCursor).toEqual(before.ownershipCursor);expect(state.graphs).toEqual(before.graphs);await sourceCommit(f.store,resolve(state,p));state=await f.store.Read();
+    const raw=await fs.readFile(f.file,'utf8'),lines=raw.trimEnd().split('\n').map(line=>JSON.parse(line));lines[1].body.mutation.knowledgeSourceChanges[0].journalBindingHash=hash('forged');lines[1].checksum=hash(JSON.stringify(lines[1].body));await f.store.Close();await fs.writeFile(f.file,lines.map(line=>JSON.stringify(line)).join('\n')+'\n');const reopened=new FileDispatchStore(f.directory,workspaceId);try{await expect(reopened.Read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reopened.Close()}
     const source=prepare(empty());const almost={...empty(),knowledgeSourceChanges:Array.from({length:knowledgeSourceLimits.events-1},(_,n)=>({...source,changeId:String(n)})),sourceCursor:{...source.sourceCursor,seq:knowledgeSourceLimits.events-1}};const last=prepare(almost);expect(()=>applyKnowledgeSourceChange(almost,last)).toThrow(/保留容量/);
   }finally{await f.cleanup()}
 });
 
 it('详情严格核sourceStatus与已采纳ref，不把别对象current或缺省ref显示成一致',async()=>{
-  const f=await setup();try{const m=memberMutation(await f.store.read());await memberCommit(f.store,m);const state=await f.store.read(),member=state.workspaceMembers![0],ref=member.adoption.sourceRef!;
+  const f=await setup();try{const m=memberMutation(await f.store.Read());await memberCommit(f.store,m);const state=await f.store.Read(),member=state.workspaceMembers![0],ref=member.adoption.sourceRef!;
     const detail={identity:{workspaceId,instanceId},registryCursor:state.registryCursor,member,currentDiff:{checkedAt:at,capability:{status:'same',adoptedHash:member.adoption.capabilityHash,currentHash:member.adoption.capabilityHash},model:{status:'same',adoptedHash:policy.configurationHash,currentHash:policy.configurationHash}},sourceStatus:{status:'current',ref}};
     expect(workspaceMemberDetailSchema.safeParse(detail).success).toBe(true);expect(workspaceMemberDetailSchema.safeParse({...detail,sourceStatus:{status:'needs_adoption',currentRef:ref}}).success).toBe(false);expect(workspaceMemberDetailSchema.safeParse({...detail,sourceStatus:{status:'current',ref:{...ref,workspaceId:'foreign'}}}).success).toBe(false);
-    const own=ownerMutation(state);await ownerCommit(f.store,own);const current=await f.store.read(),binding=current.moduleOwnerships![0];const view={moduleId:binding.moduleId,binding,owner:summarizeWorkspaceMember(member),status:'assigned',source:{status:'same',knowledgeRevision:observation.knowledgeRevision,definitionHash:observation.definitionHash},sourceStatus:{status:'current',ref:binding.sourceRef}};
+    const own=ownerMutation(state);await ownerCommit(f.store,own);const current=await f.store.Read(),binding=current.moduleOwnerships![0];const view={moduleId:binding.moduleId,binding,owner:summarizeWorkspaceMember(member),status:'assigned',source:{status:'same',knowledgeRevision:observation.knowledgeRevision,definitionHash:observation.definitionHash},sourceStatus:{status:'current',ref:binding.sourceRef}};
     const d={identity:{workspaceId,instanceId},readOnly:true,checkedAt:at,basis:{ownershipCursor:current.ownershipCursor,memberRegistryCursor:current.registryCursor,knowledgeRevision:observation.knowledgeRevision},view,history:{total:1,truncated:false,items:[summarizeModuleOwnershipChange(own.event)]}};expect(moduleOwnershipDetailSchema.safeParse(d).success).toBe(true);expect(moduleOwnershipDetailSchema.safeParse({...d,view:{...view,sourceStatus:{status:'current',ref}}}).success).toBe(false);
     expect(moduleOwnershipDetailSchema.parse(d).basis).not.toHaveProperty('sourceCursor');const basis={...d.basis,sourceCursor:current.sourceCursor};expect(moduleOwnershipDetailSchema.safeParse({...d,basis}).success).toBe(true);
     const cross={...basis,sourceCursor:{...current.sourceCursor,workspaceId:'other'}};expect(moduleOwnershipDetailSchema.safeParse({...d,basis:cross}).success).toBe(false);expect(moduleOwnershipListInputSchema.safeParse({workspaceId,instanceId,offset:1,expectedReadBasis:cross}).success).toBe(false);
@@ -196,8 +196,8 @@ it('详情严格核sourceStatus与已采纳ref，不把别对象current或缺省
 });
 
 it('同来源并发capture只有一个可提交，另一预览不能借旧basis建立第二代次',async()=>{
-  const f=await setup();try{const state=await f.store.read(),first=memberMutation(state),second=memberMutation(state);const values=await Promise.allSettled([memberCommit(f.store,first),memberCommit(f.store,second)]);expect(values.filter(value=>value.status==='fulfilled')).toHaveLength(1);expect(values.filter(value=>value.status==='rejected')).toHaveLength(1);const next=await f.store.read();expect(next.workspaceMembers).toHaveLength(1);expect(next.knowledgeSourceGenerations).toHaveLength(1);expect(next.sourceCursor?.seq).toBe(1);
-    const following=memberMutation(next);expect(following.mutation.knowledgeSourceChanges).toBeUndefined();await memberCommit(f.store,following);expect((await f.store.read()).knowledgeSourceGenerations).toHaveLength(1);
+  const f=await setup();try{const state=await f.store.Read(),first=memberMutation(state),second=memberMutation(state);const values=await Promise.allSettled([memberCommit(f.store,first),memberCommit(f.store,second)]);expect(values.filter(value=>value.status==='fulfilled')).toHaveLength(1);expect(values.filter(value=>value.status==='rejected')).toHaveLength(1);const next=await f.store.Read();expect(next.workspaceMembers).toHaveLength(1);expect(next.knowledgeSourceGenerations).toHaveLength(1);expect(next.sourceCursor?.seq).toBe(1);
+    const following=memberMutation(next);expect(following.mutation.knowledgeSourceChanges).toBeUndefined();await memberCommit(f.store,following);expect((await f.store.Read()).knowledgeSourceGenerations).toHaveLength(1);
   }finally{await f.cleanup()}
 });
 
@@ -213,8 +213,8 @@ it('generation数量与UTF8历史容量在prepare前拒绝，并为最坏termina
 });
 
 it('已有代次字段不能被普通岗位编辑、暂停或责任解除暗中删除',async()=>{
-  const f=await setup();try{await memberCommit(f.store,memberMutation(await f.store.read()));await ownerCommit(f.store,ownerMutation(await f.store.read()));const state=await f.store.read(),binding=state.moduleOwnerships![0],unlink=ownerMutation(state,{moduleId:binding.moduleId,expectedBinding:{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId},nextOwner:null,reason:'unlink'});
+  const f=await setup();try{await memberCommit(f.store,memberMutation(await f.store.Read()));await ownerCommit(f.store,ownerMutation(await f.store.Read()));const state=await f.store.Read(),binding=state.moduleOwnerships![0],unlink=ownerMutation(state,{moduleId:binding.moduleId,expectedBinding:{bindingId:binding.bindingId,revision:binding.revision,ownerMemberId:binding.ownerMemberId},nextOwner:null,reason:'unlink'});
     delete unlink.event.next.sourceRef;unlink.mutation.receipt=moduleOwnershipReceipt(unlink.event);const bytes=await fs.readFile(f.file);await expect(ownerCommit(f.store,unlink)).rejects.toThrow(/不能改写来源/);expect(await fs.readFile(f.file)).toEqual(bytes);
-    const member=state.workspaceMembers![0],retire=memberMutation(state,false,{kind:'state',memberId:member.memberId,expectedRevision:member.revision,nextState:'retired',reason:'retire'});await expect(memberCommit(f.store,retire)).rejects.toMatchObject({code:'MEMBER_OWNERSHIP_ACTIVE'});expect(await f.store.read()).toEqual(state);
+    const member=state.workspaceMembers![0],retire=memberMutation(state,false,{kind:'state',memberId:member.memberId,expectedRevision:member.revision,nextState:'retired',reason:'retire'});await expect(memberCommit(f.store,retire)).rejects.toMatchObject({code:'MEMBER_OWNERSHIP_ACTIVE'});expect(await f.store.Read()).toEqual(state);
   }finally{await f.cleanup()}
 });

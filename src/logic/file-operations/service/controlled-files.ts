@@ -62,35 +62,35 @@ export class ControlledFiles
 
   constructor(private readonly owner: Workspace, private readonly store: DispatchStore, private readonly lease: WorkspaceExecutionLease, private readonly transport: ControlledFileTransport | undefined, private readonly inspect: (run: BusinessRunSource) => Promise<RunSummary>, private readonly isCurrent: () => boolean)
   {
-    this.blobs = new ControlledFileBlobs(path.join(owner.paths.project(owner.entry.id), 'controlled-files', 'blobs'))
+    this.blobs = new ControlledFileBlobs(path.join(owner.paths.Project(owner.entry.id), 'controlled-files', 'blobs'))
   }
 
-  private assert(identity?: { workspaceId: string; instanceId: string })
+  private Assert(identity?: { workspaceId: string; instanceId: string })
   {
-    this.owner.assert(identity);
+    this.owner.Assert(identity);
     if (this.closed || !this.isCurrent())
       fail('CONTROLLED_UNAVAILABLE', '工作区正在关闭，不能开始文件操作')
   }
 
-  private platform()
+  private Platform()
   {
     if (!this.transport)
       fail('CONTROLLED_PLATFORM_UNSUPPORTED', '当前宿主没有受控文件 utility 传输');
     return this.transport
   }
 
-  private protectedRoots()
+  private ProtectedRoots()
   {
     return [this.owner.paths.userRoot, this.owner.paths.installRoot, ...(this.owner.paths.protectedRoots ?? [])]
   }
 
-  private tracked<T>(signal: AbortSignal | undefined, use: (signal: AbortSignal) => Promise<T>): Promise<T>
+  private Tracked<T>(signal: AbortSignal | undefined, use: (signal: AbortSignal) => Promise<T>): Promise<T>
   {
     const controller = new AbortController();
     this.controllers.add(controller);
     const combined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
     const result = use(combined);
-    this.operations.track(result);
+    this.operations.Track(result);
     void result.finally(() =>
     {
       this.controllers.delete(controller)
@@ -101,7 +101,7 @@ export class ControlledFiles
   }
 
   /** 工厂冻结真实已领取上下文；以后岗位变化不替换原运行配置，写前仍核原 run/lease 和停止。 */
-  forRun(run: BusinessRunSource, scopeId: string): ControlledFileRunPort | undefined
+  ForRun(run: BusinessRunSource, scopeId: string): ControlledFileRunPort | undefined
   {
     if (!this.transport)
       return;
@@ -109,29 +109,29 @@ export class ControlledFiles
     if (!saved.prepared.memberContext && !saved.prepared.fallbackBinding)
       return;
     return {
-      scopeId, write: (input, authorization, signal, assertCurrent) => this.write(saved, scopeId, input, authorization, signal, assertCurrent), confirmNotApplied: async authorization =>
+      scopeId, Write: (input, authorization, signal, assertCurrent) => this.Write(saved, scopeId, input, authorization, signal, assertCurrent), ConfirmNotApplied: async authorization =>
       {
-        await this.platform().drain(this.owner.entry.path);
-        const head = controlledFileOperation(await this.store.read(), controlledFileOperationId(saved.binding, authorization.toolCallId));
+        await this.Platform().Drain(this.owner.entry.path);
+        const head = controlledFileOperation(await this.store.Read(), controlledFileOperationId(saved.binding, authorization.toolCallId));
         if (head?.phase !== 'not_applied' || head.intent.kind !== 'member_write')
           return false;
         const origin = head.intent.origin;
         return equal(origin.binding, saved.binding) && origin.scopeId === scopeId && origin.workspaceInstanceId === this.owner.instanceId && origin.toolCallId === authorization.toolCallId && origin.inputHash === authorization.inputHash && origin.allowedSeq === authorization.allowedSeq;
-      }, drain: () => this.platform().drain(this.owner.entry.path)
+      }, Drain: () => this.Platform().Drain(this.owner.entry.path)
     };
   }
 
   /** Runtime 的一次性授权是唯一入口；重复 operation 先查询原记录，不再读取或改写业务文件。 */
-  write(run: BusinessRunSource, scopeId: string, input: ControlledFileWriteInput, authorization: { toolCallId: string; inputHash: string; allowedSeq: number }, signal: AbortSignal, assertCurrent: () => void)
+  Write(run: BusinessRunSource, scopeId: string, input: ControlledFileWriteInput, authorization: { toolCallId: string; inputHash: string; allowedSeq: number }, signal: AbortSignal, assertCurrent: () => void)
   {
     const frozen = controlledFileWriteInputSchema.parse(structuredClone(input)),
       origin = controlledFileOriginSchema.parse({ kind: 'member_tool', workspaceInstanceId: this.owner.instanceId, scopeId, binding: run.binding, ownerBindingHash: controlledFileOwnerBindingHash((run.prepared.memberContext?.binding ?? run.prepared.fallbackBinding)!), knowledgeRevision: run.prepared.knowledgeRevision, toolName: controlledFileWriteToolName, ...authorization, permission: run.permission });
-    return this.tracked(signal, async active =>
+    return this.Tracked(signal, async active =>
     {
       const operationId = controlledFileOperationId(origin.binding, origin.toolCallId),
         request = { relativePath: frozen.path, expectedBefore: frozen.expectedBefore, after: fact(Buffer.from(frozen.content, 'utf8')) },
         fingerprint = controlledFileRequestFingerprint(origin, request),
-        prior = controlledFileOperation(await this.store.read(), operationId);
+        prior = controlledFileOperation(await this.store.Read(), operationId);
       if (prior)
       {
         if (prior.intent.kind !== 'member_write' || prior.intent.requestFingerprint !== fingerprint)
@@ -141,31 +141,31 @@ export class ControlledFiles
       const alive = () =>
       {
         active.throwIfAborted();
-        this.assert();
+        this.Assert();
         assertCurrent()
       };
       alive();
-      return this.platform().withExclusiveExisting(this.owner.entry.path, frozen.path, this.protectedRoots(), active, async file =>
+      return this.Platform().WithExclusiveExisting(this.owner.entry.path, frozen.path, this.ProtectedRoots(), active, async file =>
       {
-        const before = await file.readBefore();
+        const before = await file.ReadBefore();
         alive();
         if (!equal(before.fact, request.expectedBefore))
           fail('CONTROLLED_BEFORE_CHANGED', '当前文件已经偏离 expectedBefore，未写入');
-        const pair = await this.blobs.savePair(operationId, before.bytes, Buffer.from(frozen.content, 'utf8'));
+        const pair = await this.blobs.SavePair(operationId, before.bytes, Buffer.from(frozen.content, 'utf8'));
         alive();
         const at = now(),
           intent: ControlledWritePrepared = { version: 1, kind: 'member_write', operationId, origin, request, requestFingerprint: fingerprint, fileIdentity: before.identity, ...pair, preparedAt: at };
-        await this.phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive);
-        const head = await this.execute(intent, file, Buffer.from(frozen.content, 'utf8'), alive);
+        await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive);
+        const head = await this.Execute(intent, file, Buffer.from(frozen.content, 'utf8'), alive);
         return controlledFileWriteApplied(head);
       });
     });
   }
 
-  private async phase(change: ControlledFileChange, assertCurrent?: () => void)
+  private async Phase(change: ControlledFileChange, assertCurrent?: () => void)
   {
     const command = controlledFilePhaseCommand(change);
-    await this.store.transact(command, async state =>
+    await this.store.Transact(command, async state =>
     {
       assertCurrent?.();
       const mutation = { controlledFileChanges: [change], receipt: controlledFilePhaseReceipt(change) };
@@ -175,7 +175,7 @@ export class ControlledFiles
   }
 
   /** prepared 保存未知不进入此处；executing 保存失败也不发送写。已发送后的任何错误只追加 unknown，不回滚。 */
-  private async execute(intent: ControlledFileIntent, file: ExclusiveControlledFile, bytes: Uint8Array, alive: () => void): Promise<ControlledFileOperation>
+  private async Execute(intent: ControlledFileIntent, file: ExclusiveControlledFile, bytes: Uint8Array, alive: () => void): Promise<ControlledFileOperation>
   {
     const operationId = intent.operationId,
       intentHash = controlledFileIntentHash(intent);
@@ -183,36 +183,36 @@ export class ControlledFiles
     try
     {
       alive();
-      const checked = await file.recheckIdentity();
+      const checked = await file.RecheckIdentity();
       alive();
       if (!equal(checked.identity, intent.fileIdentity) || !equal(checked.fact, content(intent.before)))
         fail('CONTROLLED_BEFORE_CHANGED', '写入前文件身份或字节发生变化')
     }
     catch (error)
     {
-      await this.phase({ version: 1, operationId, phase: 'not_applied', revision: 2, previousRevision: 1, intentHash, reasonCode: code(error), confirmation: 'write_not_issued', recordedAt: now() });
+      await this.Phase({ version: 1, operationId, phase: 'not_applied', revision: 2, previousRevision: 1, intentHash, reasonCode: code(error), confirmation: 'write_not_issued', recordedAt: now() });
       throw error
     }
-    await this.phase({ version: 1, operationId, phase: 'executing', revision: 2, previousRevision: 1, intentHash, recordedAt: now() }, alive);
+    await this.Phase({ version: 1, operationId, phase: 'executing', revision: 2, previousRevision: 1, intentHash, recordedAt: now() }, alive);
     executing = true;
-    let observed: Awaited<ReturnType<ExclusiveControlledFile['replaceAndFlush']>>;
+    let observed: Awaited<ReturnType<ExclusiveControlledFile['ReplaceAndFlush']>>;
     try
     {
       alive();
-      observed = await file.replaceAndFlush(bytes)
+      observed = await file.ReplaceAndFlush(bytes)
     }
     catch (error)
     {
-      await this.phase(file.writeIssued ? { version: 1, operationId, phase: 'unknown', revision: 3, previousRevision: 2, intentHash, reasonCode: code(error), recordedAt: now() } : { version: 1, operationId, phase: 'not_applied', revision: 3, previousRevision: 2, intentHash, reasonCode: code(error), confirmation: 'write_not_issued', recordedAt: now() });
+      await this.Phase(file.writeIssued ? { version: 1, operationId, phase: 'unknown', revision: 3, previousRevision: 2, intentHash, reasonCode: code(error), recordedAt: now() } : { version: 1, operationId, phase: 'not_applied', revision: 3, previousRevision: 2, intentHash, reasonCode: code(error), confirmation: 'write_not_issued', recordedAt: now() });
       throw error
     }
     // 平台已返回可靠 flush/readback；终态持久失败不落 unknown 第二命令，更不能反向恢复文件。
     if (executing)
-      await this.phase({ version: 1, operationId, phase: 'applied', revision: 3, previousRevision: 2, intentHash, observedAfter: observed.fact, fileIdentity: observed.identity, recordedAt: now() });
-    return controlledFileOperation(await this.store.read(), operationId)!;
+      await this.Phase({ version: 1, operationId, phase: 'applied', revision: 3, previousRevision: 2, intentHash, observedAfter: observed.fact, fileIdentity: observed.identity, recordedAt: now() });
+    return controlledFileOperation(await this.store.Read(), operationId)!;
   }
 
-  private original(state: DispatchState, id: string, identity: { workspaceId: string; rootSessionId: string })
+  private Original(state: DispatchState, id: string, identity: { workspaceId: string; rootSessionId: string })
   {
     const value = controlledFileOperation(state, id);
     if (!value || value.intent.kind !== 'member_write' || value.intent.origin.binding.workspaceId !== identity.workspaceId || value.intent.origin.binding.rootSessionId !== identity.rootSessionId)
@@ -223,7 +223,7 @@ export class ControlledFiles
     }
   }
 
-  private settled(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
+  private Settled(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
   {
     const b = original.intent.origin.binding,
       run = state.runs?.find(r => r.binding.runId === b.runId) ?? state.agentBusinessRuns?.find(r => r.binding.runId === b.runId),
@@ -231,19 +231,19 @@ export class ControlledFiles
     return !!run && equal(run.binding, b) && scope?.status === 'closed' && !['starting', 'running', 'active'].includes(run.status) && !state.members.some(m => m.activeRunId === b.runId)
   }
 
-  private available(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
+  private Available(state: DispatchState, original: ControlledFileOperation & { intent: ControlledWritePrepared })
   {
-    return original.phase === 'applied' && this.settled(state, original) && (state.controlledFileChanges ?? []).filter(c => c.phase === 'prepared' && c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === original.intent.operationId).every(c => controlledFileOperation(state, c.operationId)?.phase === 'not_applied') && fileCompensationRevision(state, original.intent.operationId) < controlledFileLimits.compensations
+    return original.phase === 'applied' && this.Settled(state, original) && (state.controlledFileChanges ?? []).filter(c => c.phase === 'prepared' && c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === original.intent.operationId).every(c => controlledFileOperation(state, c.operationId)?.phase === 'not_applied') && fileCompensationRevision(state, original.intent.operationId) < controlledFileLimits.compensations
   }
 
   /** 原 canonical 授权和持久化附录分别核对；没有记录不能据此声称原工具没有副作用。 */
-  async report(raw: unknown)
+  async Report(raw: unknown)
   {
     const input = controlledFileReportInputSchema.parse(raw);
-    this.owner.assert();
+    this.owner.Assert();
     if (input.workspaceId !== this.owner.entry.id)
       fail('CONTROLLED_FILE_IDENTITY', '工作区身份不一致');
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       run = [...(state.runs ?? []), ...(state.agentBusinessRuns ?? [])].find(r => r.binding.runId === input.runId && r.binding.taskId === input.taskId && r.binding.rootSessionId === input.rootSessionId && r.binding.workspaceId === input.workspaceId);
     let verified = false,
       origin: ControlledFileOrigin | undefined;
@@ -279,7 +279,7 @@ export class ControlledFiles
     {
       verified = false
     }
-    const latest = await this.store.read();
+    const latest = await this.store.Read();
     if (!equal(head, run ? controlledFileOperation(latest, controlledFileOperationId(run.binding, input.toolCallId)) : undefined))
       verified = false;
     const ledger = verified && head?.intent.kind === 'member_write' ? { state: 'recorded' as const, operation: summarizeControlledFileOperation(head), originalExecution: ![...(latest.runs ?? []), ...(latest.agentBusinessRuns ?? [])].some(r => r.binding.runId === input.runId) ? 'unavailable' as const : [...(latest.runs ?? []), ...(latest.agentBusinessRuns ?? [])].some(r => r.binding.runId === input.runId && ['starting', 'running', 'active'].includes(r.status)) ? 'in_flight' as const : 'settled' as const, compensationRevision: fileCompensationRevision(latest, head.intent.operationId), compensations: (latest.controlledFileChanges ?? []).filter(c => c.phase === 'prepared' && c.intent.kind === 'desktop_compensation' && c.intent.original.operationId === head.intent.operationId).map(c => summarizeFileCompensation(controlledFileOperation(latest, c.operationId)!)) } : { state: verified ? 'absent' as const : 'unverifiable' as const, issues: [{ code: verified ? 'CONTROLLED_RECORD_ABSENT' : 'CONTROLLED_SOURCE_UNVERIFIABLE', message: verified ? '没有已保存受控记录；这不证明原调用没有执行' : '原调用或读取一致性无法核实' }] };
@@ -287,17 +287,17 @@ export class ControlledFiles
   }
 
   /** 显式只读预览取得短租约与原文件句柄，核实备份及原 after；释放句柄后依据可能过期，不能代替实际提交再核。 */
-  preview(raw: unknown): Promise<FileCompensationPreview>
+  Preview(raw: unknown): Promise<FileCompensationPreview>
   {
-    return this.tracked(undefined, signal => this.previewInternal(raw, signal))
+    return this.Tracked(undefined, signal => this.PreviewInternal(raw, signal))
   }
 
-  private async previewInternal(raw: unknown, signal: AbortSignal): Promise<FileCompensationPreview>
+  private async PreviewInternal(raw: unknown, signal: AbortSignal): Promise<FileCompensationPreview>
   {
     const input = fileCompensationPreviewInputSchema.parse(raw);
-    this.assert(input);
-    const state = await this.store.read(),
-      original = this.original(state, input.operationId, input),
+    this.Assert(input);
+    const state = await this.store.Read(),
+      original = this.Original(state, input.operationId, input),
       compensationRevision = fileCompensationRevision(state, input.operationId),
       source = summarizeControlledFileOperation(original),
       restore = content(original.intent.before),
@@ -309,22 +309,22 @@ export class ControlledFiles
         }[] = [];
     let observed: FileCompensationPreview['observed'] = { state: 'unverifiable' },
       basis: string | undefined;
-    const release = this.lease.acquire('file-preview:' + randomUUID(), 'read');
+    const release = this.lease.Acquire('file-preview:' + randomUUID(), 'read');
     this.heldReleases.add(release);
     try
     {
-      if (!this.available(state, original))
+      if (!this.Available(state, original))
         fail('FILE_COMPENSATION_SOURCE', '原操作不符合补偿条件');
-      await this.blobs.read(original.intent.before);
-      await this.blobs.read(original.intent.intendedAfter);
-      await this.platform().withExclusiveExisting(this.owner.entry.path, source.relativePath, this.protectedRoots(), signal, async file =>
+      await this.blobs.Read(original.intent.before);
+      await this.blobs.Read(original.intent.intendedAfter);
+      await this.Platform().WithExclusiveExisting(this.owner.entry.path, source.relativePath, this.ProtectedRoots(), signal, async file =>
       {
-        const current = await file.readBefore();
+        const current = await file.ReadBefore();
         observed = { state: equal(current.identity, original.intent.fileIdentity) && equal(current.fact, source.intendedAfter) ? 'matches' : 'changed', fact: current.fact };
-        this.assert(input);
+        this.Assert(input);
         signal.throwIfAborted();
-        const latest = await this.store.read();
-        if (!equal(original, this.original(latest, input.operationId, input)) || fileCompensationRevision(latest, input.operationId) !== compensationRevision || !this.available(latest, original))
+        const latest = await this.store.Read();
+        if (!equal(original, this.Original(latest, input.operationId, input)) || fileCompensationRevision(latest, input.operationId) !== compensationRevision || !this.Available(latest, original))
           fail('FILE_COMPENSATION_CHANGED', '预览期间原事实变化');
         if (observed.state === 'matches')
           basis = fileCompensationBasis({ original, compensationRevision, fileIdentity: current.identity, observedBefore: current.fact })
@@ -337,7 +337,7 @@ export class ControlledFiles
     }
     finally
     {
-      await this.transport?.drain(this.owner.entry.path);
+      await this.transport?.Drain(this.owner.entry.path);
       release();
       this.heldReleases.delete(release)
     }
@@ -345,18 +345,18 @@ export class ControlledFiles
   }
 
   /** 已保存原命令优先于新实例/当前文件；新补偿只接受桌面明确来源，不由模型调用。 */
-  compensate(raw: unknown)
+  Compensate(raw: unknown)
   {
     const parsed = fileCompensationInputSchema.safeParse(raw);
     if (!parsed.success)
       fail('FILE_COMPENSATION_PRE_ACCEPT_INPUT', '补偿请求结构无效');
     const input = structuredClone(parsed.data),
       actor = { kind: 'local_desktop' as const, interaction: 'explicit_submit' as const, instanceId: input.instanceId };
-    return this.tracked(undefined, async signal =>
+    return this.Tracked(undefined, async signal =>
     {
       const operationId = fileCompensationId(input),
         fingerprint = fileCompensationRequestFingerprint(input, actor),
-        state = await this.store.read(),
+        state = await this.store.Read(),
         prior = controlledFileOperation(state, operationId);
       if (prior)
       {
@@ -368,20 +368,20 @@ export class ControlledFiles
         submitted = false;
       try
       {
-        this.assert(input);
+        this.Assert(input);
         signal.throwIfAborted();
-        const original = this.original(state, input.operationId, input);
-        if (!this.available(state, original))
+        const original = this.Original(state, input.operationId, input);
+        if (!this.Available(state, original))
           fail('FILE_COMPENSATION_SOURCE', '原操作尚未可靠完成、已补偿或仍在途');
         if (original.revision !== input.expectedOperationRevision || fileCompensationRevision(state, input.operationId) !== input.expectedCompensationRevision)
           fail('FILE_COMPENSATION_CHANGED', '补偿依据已变化');
-        release = this.lease.acquire('file-compensation:' + operationId, 'execute');
+        release = this.lease.Acquire('file-compensation:' + operationId, 'execute');
         this.heldReleases.add(release);
-        const bytes = await this.blobs.read(original.intent.before);
-        await this.blobs.read(original.intent.intendedAfter);
-        return await this.platform().withExclusiveExisting(this.owner.entry.path, original.intent.request.relativePath, this.protectedRoots(), signal, async file =>
+        const bytes = await this.blobs.Read(original.intent.before);
+        await this.blobs.Read(original.intent.intendedAfter);
+        return await this.Platform().WithExclusiveExisting(this.owner.entry.path, original.intent.request.relativePath, this.ProtectedRoots(), signal, async file =>
         {
-          const current = await file.readBefore(),
+          const current = await file.ReadBefore(),
             basis = fileCompensationBasis({ original, compensationRevision: input.expectedCompensationRevision, fileIdentity: current.identity, observedBefore: current.fact });
           if (!equal(current.identity, original.intent.fileIdentity) || !equal(current.fact, content(original.intent.intendedAfter)) || basis !== input.expectedBasis)
             fail('FILE_COMPENSATION_CHANGED', '当前文件不再等于预览的原 after');
@@ -390,12 +390,12 @@ export class ControlledFiles
           const alive = () =>
           {
             signal.throwIfAborted();
-            this.assert(input)
+            this.Assert(input)
           };
           alive();
           submitted = true;
-          await this.phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive);
-          const head = await this.execute(intent, file, bytes, alive);
+          await this.Phase({ version: 1, operationId, phase: 'prepared', revision: 1, previousRevision: 0, intent, recordedAt: at }, alive);
+          const head = await this.Execute(intent, file, bytes, alive);
           return publicValue(fileCompensationReceiptSchema.parse(fileCompensationReceipt(head)));
         });
       }
@@ -413,7 +413,7 @@ export class ControlledFiles
       {
         if (release)
         {
-          await this.transport?.drain(this.owner.entry.path);
+          await this.transport?.Drain(this.owner.entry.path);
           release();
           this.heldReleases.delete(release)
         }
@@ -422,13 +422,13 @@ export class ControlledFiles
   }
 
   /** 按稳定本机 commandId 只读原阶段；缺记录不证明未执行，也不创建子进程、补偿或第二个命令。 */
-  async receipt(raw: unknown)
+  async Receipt(raw: unknown)
   {
     const input = fileCompensationLookupSchema.parse(raw);
-    this.owner.assert();
+    this.owner.Assert();
     if (input.workspaceId !== this.owner.entry.id)
       fail('CONTROLLED_FILE_IDENTITY', '工作区身份不一致');
-    const head = controlledFileOperation(await this.store.read(), fileCompensationId(input));
+    const head = controlledFileOperation(await this.store.Read(), fileCompensationId(input));
     if (!head)
       return undefined;
     if (head.intent.kind !== 'desktop_compensation' || head.intent.request.rootSessionId !== input.rootSessionId)
@@ -437,13 +437,13 @@ export class ControlledFiles
   }
 
   /** 停止后仅排空原操作；无法确认 child 退出时保留租约与服务实例，调用方不得继续关闭 Store。 */
-  async close()
+  async Close()
   {
     this.closed = true;
     for (const controller of this.controllers)
       controller.abort(Error('工作区关闭'));
-    await this.operations.drain();
-    await this.transport?.drain(this.owner.entry.path);
+    await this.operations.Drain();
+    await this.transport?.Drain(this.owner.entry.path);
     for (const release of this.heldReleases)
       release();
     this.heldReleases.clear()

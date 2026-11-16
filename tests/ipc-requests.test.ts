@@ -37,5 +37,5 @@ it('源浏览保持默认目录参数，拒绝写入字段且退出时不取得�
  const input={workspaceId:'w',instanceId:'i',revision:'r',moduleId:'.cbim/workspace/app',source:'src'};
  expect(parseIpcRequest('source.list',input)).toEqual({...input,path:'',offset:0});
  expect(()=>parseIpcRequest('source.read',{...input,write:true})).toThrow();
- const workspace=vi.fn();await expect(dispatchApplication({isStopping:true,workspace} as unknown as ApplicationServices,'source.read',input)).rejects.toMatchObject({code:'SHUTTING_DOWN'});expect(workspace).not.toHaveBeenCalled();
+ const workspace=vi.fn();await expect(dispatchApplication({isStopping:true,Workspace: workspace} as unknown as ApplicationServices,'source.read',input)).rejects.toMatchObject({code:'SHUTTING_DOWN'});expect(workspace).not.toHaveBeenCalled();
 });

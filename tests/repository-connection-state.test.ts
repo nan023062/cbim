@@ -16,22 +16,22 @@ function commitReceipt(pending:RepositoryConnectionCommitPending){return {identi
 
 it('冻结小记录可跨卸载恢复，读取不执行操作或覆盖原实例',()=>{
   const disk=storage(),pending=commit(),first=createRepositoryConnectionPendingStore(disk);
-  first.save(pending);const encoded=disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY)!;
+  first.Save(pending);const encoded=disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY)!;
   expect(JSON.parse(encoded).records).toEqual([pending]);expect(encoded).not.toMatch(/preview|token|url|changes|diff/);
-  const reopened=createRepositoryConnectionPendingStore(disk),recovered=reopened.read('workspace');expect(recovered).toEqual(pending);
-  expect(reopened.read('other')).toBeUndefined();expect(disk.setItem).toHaveBeenCalledTimes(1);
-  if(recovered)recovered.input.instanceId=randomUUID();expect(reopened.read('workspace')).toEqual(pending);
-  expect(()=>reopened.save({...pending,input:{...pending.input,instanceId:randomUUID()}})).toThrow('未确认');
-  expect(reopened.read('workspace')).toEqual(pending);
+  const reopened=createRepositoryConnectionPendingStore(disk),recovered=reopened.Read('workspace');expect(recovered).toEqual(pending);
+  expect(reopened.Read('other')).toBeUndefined();expect(disk.setItem).toHaveBeenCalledTimes(1);
+  if(recovered)recovered.input.instanceId=randomUUID();expect(reopened.Read('workspace')).toEqual(pending);
+  expect(()=>reopened.Save({...pending,input:{...pending.input,instanceId:randomUUID()}})).toThrow('未确认');
+  expect(reopened.Read('workspace')).toEqual(pending);
 });
 
 it('未知或错误回执保留原命令，只有准确确认后才能显式清除',()=>{
-  const disk=storage(),store=createRepositoryConnectionPendingStore(disk),pending=grant();store.save(pending);
+  const disk=storage(),store=createRepositoryConnectionPendingStore(disk),pending=grant();store.Save(pending);
   for(const raw of [undefined,null,{}, {...grantReceipt(pending),commandId:randomUUID()}])expect(()=>checkedRepositoryConnectionReceipt(raw,pending)).toThrow();
-  expect(store.read('workspace')).toEqual(pending);
+  expect(store.Read('workspace')).toEqual(pending);
   const receipt=checkedRepositoryConnectionReceipt(grantReceipt(pending),pending);expect(receipt.commandId).toBe(pending.input.commandId);
-  store.remove(pending);expect(store.read('workspace')).toBeUndefined();
-  const next=grant();store.save(next);expect(()=>store.remove(pending)).toThrow('迟到回执');expect(store.read('workspace')).toEqual(next);
+  store.Remove(pending);expect(store.Read('workspace')).toBeUndefined();
+  const next=grant();store.Save(next);expect(()=>store.Remove(pending)).toThrow('迟到回执');expect(store.Read('workspace')).toEqual(next);
 });
 
 it('坏本地JSON、未知字段、重复工作区与重复命令不降级空表或自动覆盖',()=>{
@@ -45,8 +45,8 @@ it('坏本地JSON、未知字段、重复工作区与重复命令不降级空表
   ];
   for(const [,value] of invalid){
     const disk=storage(),raw=typeof value==='string'?value:JSON.stringify(value);disk.items.set(REPOSITORY_CONNECTION_PENDING_KEY,raw);
-    const store=createRepositoryConnectionPendingStore(disk);expect(()=>store.read('workspace')).toThrow('原数据已保留');
-    expect(()=>store.save(pending)).toThrow();expect(()=>store.remove(pending)).toThrow();
+    const store=createRepositoryConnectionPendingStore(disk);expect(()=>store.Read('workspace')).toThrow('原数据已保留');
+    expect(()=>store.Save(pending)).toThrow();expect(()=>store.Remove(pending)).toThrow();
     expect(disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY)).toBe(raw);expect(disk.setItem).not.toHaveBeenCalled();
   }
 });
@@ -54,24 +54,24 @@ it('坏本地JSON、未知字段、重复工作区与重复命令不降级空表
 it('读取或保存配额失败阻止发送，确认后清除失败仍保留原请求供再次核对',async()=>{
   const disk=storage(),store=createRepositoryConnectionPendingStore(disk),pending=grant(),send=vi.fn();
   disk.setItem.mockImplementation(()=>{throw Error('QuotaExceededError')});
-  async function submit(){store.save(pending);await send(pending.input)}
+  async function submit(){store.Save(pending);await send(pending.input)}
   await expect(submit()).rejects.toThrow('无法保存');expect(send).not.toHaveBeenCalled();
-  disk.setItem.mockImplementation((key,value)=>{disk.items.set(key,value)});store.save(pending);
+  disk.setItem.mockImplementation((key,value)=>{disk.items.set(key,value)});store.Save(pending);
   disk.setItem.mockImplementation(()=>{throw Error('QuotaExceededError')});
-  expect(()=>store.save(pending)).toThrow('无法保存');expect(()=>store.remove(pending)).toThrow('无法保存');
-  expect(createRepositoryConnectionPendingStore(disk).read('workspace')).toEqual(pending);
-  disk.getItem.mockImplementation(()=>{throw Error('SecurityError')});expect(()=>store.read('workspace')).toThrow('无法读取');
+  expect(()=>store.Save(pending)).toThrow('无法保存');expect(()=>store.Remove(pending)).toThrow('无法保存');
+  expect(createRepositoryConnectionPendingStore(disk).Read('workspace')).toEqual(pending);
+  disk.getItem.mockImplementation(()=>{throw Error('SecurityError')});expect(()=>store.Read('workspace')).toThrow('无法读取');
 });
 
 it('最多64工作区且有字节上限，不淘汰旧未知请求或跨工作区重复命令',()=>{
   const disk=storage(),store=createRepositoryConnectionPendingStore(disk),pending:RepositoryConnectionPending[]=[];
-  for(let index=0;index<64;index++){const value=grant('workspace-'+index);pending.push(value);store.save(value)}
-  const before=disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY);expect(()=>store.save(grant('workspace-65'))).toThrow('64');
+  for(let index=0;index<64;index++){const value=grant('workspace-'+index);pending.push(value);store.Save(value)}
+  const before=disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY);expect(()=>store.Save(grant('workspace-65'))).toThrow('64');
   expect(disk.items.get(REPOSITORY_CONNECTION_PENDING_KEY)).toBe(before);
   const duplicate=grant('new');duplicate.input.commandId=(pending[0] as RepositoryConnectionGrantPending).input.commandId;
-  expect(()=>store.save(duplicate)).toThrow('其他工作区');
-  store.remove(pending[0]);store.save(grant('workspace-65'));expect(store.read('workspace-65')).toBeDefined();
-  const small=storage(),smallStore=createRepositoryConnectionPendingStore(small);expect(()=>smallStore.save(grant('x'.repeat(REPOSITORY_CONNECTION_PENDING_BYTES)))).toThrow('容量');expect(small.setItem).not.toHaveBeenCalled();
+  expect(()=>store.Save(duplicate)).toThrow('其他工作区');
+  store.Remove(pending[0]);store.Save(grant('workspace-65'));expect(store.Read('workspace-65')).toBeDefined();
+  const small=storage(),smallStore=createRepositoryConnectionPendingStore(small);expect(()=>smallStore.Save(grant('x'.repeat(REPOSITORY_CONNECTION_PENDING_BYTES)))).toThrow('容量');expect(small.setItem).not.toHaveBeenCalled();
 });
 
 it('定义提交回执严格绑定原workspace/instance/plan/connector/repository/hash',()=>{
@@ -116,10 +116,10 @@ it('未受理核实严格匹配原退役实例和操作，只有明确true才可
     expect(checkedRepositoryConnectionUnaccepted(proof,pending)).toBe(true);
     expect(checkedRepositoryConnectionUnaccepted({...proof,unaccepted:false},pending)).toBe(false);
     for(const raw of [undefined,null,{}, {...proof,unaccepted:'true'},{...proof,identity:{...proof.identity,workspaceId:'other'}},{...proof,identity:{...proof.identity,instanceId:randomUUID()}},{...proof,action:pending.action==='commit'?'grant':'commit'},{...proof,id:randomUUID()},{...proof,confirmed:true}])expect(()=>checkedRepositoryConnectionUnaccepted(raw,pending)).toThrow();
-    const disk=storage(),store=createRepositoryConnectionPendingStore(disk);store.save(pending);
-    if(checkedRepositoryConnectionUnaccepted({...proof,unaccepted:false},pending))store.remove(pending);
-    expect(store.read('workspace')).toEqual(pending);
-    if(checkedRepositoryConnectionUnaccepted(proof,pending))store.remove(pending);
-    expect(store.read('workspace')).toBeUndefined();
+    const disk=storage(),store=createRepositoryConnectionPendingStore(disk);store.Save(pending);
+    if(checkedRepositoryConnectionUnaccepted({...proof,unaccepted:false},pending))store.Remove(pending);
+    expect(store.Read('workspace')).toEqual(pending);
+    if(checkedRepositoryConnectionUnaccepted(proof,pending))store.Remove(pending);
+    expect(store.Read('workspace')).toBeUndefined();
   }
 });

@@ -19,15 +19,15 @@ class Engine implements AgentEngine {
 async function setup(result:'completed'|'failed'|'cancelled'='completed'){
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-continuation-')),engines:Engine[]=[],identities:{task:TaskSpec;runId:string}[]=[];
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Deliver reviewed result',moduleIds:[],acceptance:[],mode:'chat'};
-  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),acquireLease:async()=>()=>{},toolPolicy:async()=>({allow:false}),createEngine:identity=>{identities.push(identity);const engine=new Engine(result);engines.push(engine);return engine}});
-  return {directory,task,runtime,engines,identities,cleanup:async()=>{await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-continuation-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}};
+  const runtime=new LoopRuntime({directory,storage:new FileRunStorage(),AcquireLease:async()=>()=>{},ToolPolicy:async()=>({allow:false}),CreateEngine:identity=>{identities.push(identity);const engine=new Engine(result);engines.push(engine);return engine}});
+  return {directory,task,runtime,engines,identities,cleanup:async()=>{await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-continuation-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}};
 }
 
 it('persists trusted continuation identity without a fake user message and keeps the first assistant response',async()=>{
   const f=await setup();try{
-    const first=await f.runtime.start(f.task,'Original user goal'),original=await first.done;
+    const first=await f.runtime.Start(f.task,'Original user goal'),original=await first.done;
     const input=source(),expected=source();
-    const pending=f.runtime.start(f.task,'Candidate data, not authorization',{runId:first.runId},input);
+    const pending=f.runtime.Start(f.task,'Candidate data, not authorization',{runId:first.runId},input);
     input.taskIds.push('mutated-after-start');
     const second=await pending,result=await second.done;
     expect(result.source).toEqual(expected);expect(result.events[0].data.source).toEqual(expected);
@@ -35,8 +35,8 @@ it('persists trusted continuation identity without a fake user message and keeps
     expect(f.identities[1]).toEqual({task:f.task,runId:second.runId});
     const messages=transcript(result);expect(messages.map(item=>item.kind)).toEqual(['system','assistant']);
     expect(messages.slice(1)[0].text).toBe('First assistant response');expect(messages.some(item=>item.kind==='user')).toBe(false);
-    expect((await f.runtime.inspect(f.task.taskId,second.runId)).source).toEqual(expected);
-    const third=await f.runtime.start(f.task,'Genuine user follow-up',{runId:second.runId}),user=await third.done;
+    expect((await f.runtime.Inspect(f.task.taskId,second.runId)).source).toEqual(expected);
+    const third=await f.runtime.Start(f.task,'Genuine user follow-up',{runId:second.runId}),user=await third.done;
     expect(user.source).toBeUndefined();expect(transcript(user)[0]).toMatchObject({kind:'user',text:'Genuine user follow-up'});
   }finally{await f.cleanup()}
 });
@@ -48,20 +48,20 @@ it('validates source independently of payload and allows failed-member batches w
 
 it('requires a completed original main conversation before accepting trusted result data',async()=>{
   for(const status of ['failed','cancelled'] as const){const f=await setup(status);try{
-    await expect(f.runtime.start(f.task,'data',undefined,source())).rejects.toThrow('已有主对话');
-    const first=await f.runtime.start(f.task);await first.done;
-    await expect(f.runtime.start(f.task,'data',{runId:first.runId},source())).rejects.toThrow('未安全完成');
+    await expect(f.runtime.Start(f.task,'data',undefined,source())).rejects.toThrow('已有主对话');
+    const first=await f.runtime.Start(f.task);await first.done;
+    await expect(f.runtime.Start(f.task,'data',{runId:first.runId},source())).rejects.toThrow('未安全完成');
     expect(f.engines).toHaveLength(1);
   }finally{await f.cleanup()}}
 });
 
 it('rejects corrupt trusted metadata in a durable journal instead of treating it as user input',async()=>{
   const f=await setup();try{
-    const first=await f.runtime.start(f.task);await first.done;
-    const second=await f.runtime.start(f.task,'candidate',{runId:first.runId},source());await second.done;
+    const first=await f.runtime.Start(f.task);await first.done;
+    const second=await f.runtime.Start(f.task,'candidate',{runId:first.runId},source());await second.done;
     const file=path.join(f.directory,f.task.taskId,second.runId,'events.jsonl');
     const lines=(await fs.readFile(file,'utf8')).trimEnd().split('\n'),entry=JSON.parse(lines[0]);entry.data.source.taskIds=[];lines[0]=JSON.stringify(entry);await fs.writeFile(file,lines.join('\n')+'\n');
-    await expect(f.runtime.inspect(f.task.taskId,second.runId)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});
+    await expect(f.runtime.Inspect(f.task.taskId,second.runId)).rejects.toMatchObject({code:'RUN_LOG_INVALID'});
   }finally{await f.cleanup()}
 });
 

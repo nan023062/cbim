@@ -34,7 +34,7 @@ export class LineFramer
      * 同步依次交付完整帧；检查或接收回调抛错即停止，已交付帧不撤回，后续完整帧不提前丢弃。
      * 不 trim、不解析 JSON、不 flush EOF；不支持回调重入 push，同一实例仅供一个输入流使用。
      */
-  public push(chunk: string, receive: (line: string) => void): void
+  public Push(chunk: string, receive: (line: string) => void): void
   {
     this.remainder += chunk;
     let offset: number;
@@ -58,7 +58,7 @@ export class StringUtils
   }
 
   /** 精确、区分大小写地替换所有凭据文本；空/缺失凭据不改输入，不识别正则、转义或凭据来源。 */
-  public static redactLiteral(text: string, secret: string | undefined): string
+  public static RedactLiteral(text: string, secret: string | undefined): string
   {
     return secret ? text.split(secret).join('[REDACTED]') : text;
   }

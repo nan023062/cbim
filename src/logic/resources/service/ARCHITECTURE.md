@@ -51,11 +51,11 @@ class N_src_logic_resources_service_resource_http_ts_RemoteRepository["RemoteRep
   +url
   +expectedId
   +constructor()
-  +read()
-  +save()
-  +remove()
+  +Read()
+  +Save()
+  +Remove()
   -token
-  -request()
+  -Request()
 }
 N_src_logic_resources_service_resource_http_ts ..> N_src_logic_resources_service_resource_http_ts_RemoteRepository : 声明
 class N_src_logic_resources_service_resource_http_ts_external_RepositoryStore["RepositoryStore (外部契约)"] {
@@ -86,8 +86,8 @@ class N_src_logic_resources_service_resource_repository_ts_SharedRepositoryReadC
   <<interface>>
   +repositoryId
   +connectionId
-  +assertCurrent()
-  +read()
+  +AssertCurrent()
+  +Read()
 }
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_SharedRepositoryReadConnection : 声明
 class N_src_logic_resources_service_resource_repository_ts_Config["Config"] {
@@ -97,19 +97,19 @@ class N_src_logic_resources_service_resource_repository_ts_Config["Config"] {
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_Config : 声明
 class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories["ResourceRepositories"] {
   +constructor()
-  +init()
-  +status()
-  +sharedIdentity()
-  +readConnection()
-  +configure()
-  +setAccountSession()
-  +read()
-  +save()
-  +remove()
-  +startSharing()
-  +connection()
-  +stopSharing()
-  +close()
+  +Init()
+  +Status()
+  +SharedIdentity()
+  +ReadConnection()
+  +Configure()
+  +SetAccountSession()
+  +Read()
+  +Save()
+  +Remove()
+  +StartSharing()
+  +Connection()
+  +StopSharing()
+  +Close()
   -paths
   -session
 }
@@ -132,11 +132,11 @@ class N_src_logic_resources_service_resource_repository_ts_ResourceRepositories[
   -queue
   -readSharing
   -settingsFile
-  -serial()
-  -store()
-  -identity()
-  -retireSharing()
-  -applyConfig()
+  -Serial()
+  -Store()
+  -Identity()
+  -RetireSharing()
+  -ApplyConfig()
 }
 N_src_logic_resources_service_resource_repository_ts ..> N_src_logic_resources_service_resource_repository_ts_ResourceRepositories : 声明
 ```
@@ -152,22 +152,22 @@ class N_src_logic_resources_service_resource_store_ts["resource-store.ts"] {
 }
 class N_src_logic_resources_service_resource_store_ts_RepositoryStore["RepositoryStore"] {
   <<interface>>
-  +read()
-  +save()
-  +remove()
+  +Read()
+  +Save()
+  +Remove()
 }
 N_src_logic_resources_service_resource_store_ts ..> N_src_logic_resources_service_resource_store_ts_RepositoryStore : 声明
 class N_src_logic_resources_service_resource_store_ts_LocalRepository["LocalRepository"] {
   +root
   +constructor()
-  +initialize()
-  +read()
-  +save()
-  +remove()
+  +Initialize()
+  +Read()
+  +Save()
+  +Remove()
   -file
-  -lock()
-  -checkFile()
-  -update()
+  -Lock()
+  -CheckFile()
+  -Update()
 }
 N_src_logic_resources_service_resource_store_ts ..> N_src_logic_resources_service_resource_store_ts_LocalRepository : 声明
 N_src_logic_resources_service_resource_store_ts_RepositoryStore <|.. N_src_logic_resources_service_resource_store_ts_LocalRepository
@@ -242,4 +242,4 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `ByteUtils.readBoundedBytes`、`JsonUtils.formatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `ByteUtils.ReadBoundedBytes`、`JsonUtils.FormatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

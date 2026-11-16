@@ -15,7 +15,7 @@ it.each(['complete','stop','restart','command-rejected'] as const)('keeps one pa
   if(mode==='stop')await c.stop();
   else if(mode==='restart')await c.reopen();
   else await c.answer(c.first);
-  await c.until(async()=>{expect((await c.state()).scopes?.[0].status).toBe('closed');expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  await c.until(async()=>{expect((await c.state()).scopes?.[0].status).toBe('closed');expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0)});
   const state=await c.state(),child=await c.child(),runs=state.agentBusinessRuns!;
   expect(runs).toHaveLength(mode==='complete'?3:1);expect(runs.every(r=>r.status==='closed')).toBe(true);expect(runs[0].binding).toEqual(c.binding);
   expect(child.sessionFile).toBe(original.sessionFile);expect(child.events.find(e=>e.type==='session.bound')?.data.sessionId).toBe(nativeSession);

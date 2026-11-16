@@ -22,12 +22,12 @@ export interface ScopedExecutionPort
 {
   readonly scope: ExecutionScope;
 
-  read(path: string, signal: AbortSignal): Promise<unknown>;
+  Read(path: string, signal: AbortSignal): Promise<unknown>;
 
-  node(input: ScopedNodeInput, signal: AbortSignal, authorization: ScopedExecutionAuthorization): Promise<unknown>;
+  Node(input: ScopedNodeInput, signal: AbortSignal, authorization: ScopedExecutionAuthorization): Promise<unknown>;
 
   /** 只有已发出的实际平台资源全部收束才返回；失败保留租约，不重放任何程序。 */
-  drain(): Promise<void>;
+  Drain(): Promise<void>;
 }
 
 export class RunScopedExecution
@@ -64,7 +64,7 @@ export class RunScopedExecution
       fail('EXECUTION_SCOPE_PORT', '平台与原冻结范围不一致')
   }
 
-  guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
+  Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.physicalUnknown && name !== scopedReadToolName)
       return '原隔离资源尚未确认收尾，仅允许只读核实；请先停止并清理原资源';
@@ -92,13 +92,13 @@ export class RunScopedExecution
     this.reserved = { id, name, input: structuredClone(input), hash: hash(JSON.stringify(input)), consumed: false, finished: false, settled: false };
   }
 
-  authorize(id: string, seq: number)
+  Authorize(id: string, seq: number)
   {
     if (this.reserved?.id === id && !this.controller.signal.aborted)
       this.reserved.allowedSeq = seq
   }
 
-  observed(type: string, id: unknown)
+  Observed(type: string, id: unknown)
   {
     const r = this.reserved;
     if (!r || r.id !== id)
@@ -108,28 +108,28 @@ export class RunScopedExecution
     else if (type === 'tool.finished')
     {
       r.finished = true;
-      this.release()
+      this.Release()
     }
   }
 
-  private release()
+  private Release()
   {
     if (this.reserved?.finished && this.reserved.settled)
       this.reserved = undefined
   }
 
-  stop()
+  Stop()
   {
     this.controller.abort(Error('运行已停止'))
   }
 
   /** 统一保留未退出分类，让上层成员与应用关闭链继续持原租约；再次关闭只收尾原资源。 */
-  async drain()
+  async Drain()
   {
-    await this.pending.drain();
+    await this.pending.Drain();
     try
     {
-      await this.port.drain()
+      await this.port.Drain()
     }
     catch
     {
@@ -137,7 +137,7 @@ export class RunScopedExecution
     }
   }
 
-  async list()
+  async List()
   {
     const base = { version: 1, cancellation: { mode: 'during_execution' as const, description: '停止同一次读取或隔离Job；实际退出前保留运行占用。' }, recovery: { mode: 'inspect_before_retry' as const, description: '先查原调用回执；不自动重放未知执行，私有输出不回写工程。' } };
     return [
@@ -146,7 +146,7 @@ export class RunScopedExecution
     ]
   }
 
-  async call(name: string, input: unknown, id?: string, signal?: AbortSignal)
+  async Call(name: string, input: unknown, id?: string, signal?: AbortSignal)
   {
     const r = this.reserved;
     if (!id || !r || r.id !== id || r.name !== name || r.consumed || !r.allowedSeq || !equal(input, r.input) || hash(JSON.stringify(input)) !== r.hash)
@@ -159,8 +159,8 @@ export class RunScopedExecution
     {
       current.throwIfAborted();
       this.assertReady(id);
-      operation = name === scopedReadToolName ? this.port.read(scopedReadInputSchema.parse(frozen).path, current) : this.port.node(scopedNodeInputSchema.parse(frozen), current, { toolCallId: id, inputHash: r.hash, allowedSeq: r.allowedSeq });
-      this.pending.track(operation);
+      operation = name === scopedReadToolName ? this.port.Read(scopedReadInputSchema.parse(frozen).path, current) : this.port.Node(scopedNodeInputSchema.parse(frozen), current, { toolCallId: id, inputHash: r.hash, allowedSeq: r.allowedSeq });
+      this.pending.Track(operation);
       const result = await operation;
       if (name === scopedReadToolName)
       {
@@ -185,14 +185,14 @@ export class RunScopedExecution
       if (name === scopedNodeToolName)
         try
         {
-          await this.port.drain()
+          await this.port.Drain()
         }
         catch
         {
           this.physicalUnknown = true
         }
       r.settled = true;
-      this.release()
+      this.Release()
     }
   }
 }

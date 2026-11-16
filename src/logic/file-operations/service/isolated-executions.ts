@@ -44,17 +44,17 @@ export class IsolatedExecutions
 
   constructor(private readonly owner: Workspace, private readonly store: DispatchStore, private readonly lease: WorkspaceExecutionLease, private readonly inspect: (run: BusinessRunSource) => Promise<RunSummary>, private readonly isCurrent: () => boolean)
   {
-    this.records = new FileIsolationRecords(path.join(owner.paths.project(owner.entry.id), 'isolated-executions'))
+    this.records = new FileIsolationRecords(path.join(owner.paths.Project(owner.entry.id), 'isolated-executions'))
   }
 
-  private assert()
+  private Assert()
   {
-    this.owner.assert();
+    this.owner.Assert();
     if (this.closed || !this.isCurrent())
       fail('ISOLATION_UNAVAILABLE', '工作区正在关闭，不能开始核实或清理')
   }
 
-  private platform()
+  private Platform()
   {
     const host = process as NodeJS.Process &
     {
@@ -65,12 +65,12 @@ export class IsolatedExecutions
     return new Win32IsolationRecovery(host.resourcesPath && !host.defaultApp ? path.join(host.resourcesPath, 'koffi') : requireRuntime.resolve('koffi'))
   }
 
-  private async run(identity: IsolatedExecutionRun)
+  private async Run(identity: IsolatedExecutionRun)
   {
-    this.assert();
+    this.Assert();
     if (identity.workspaceId !== this.owner.entry.id)
       fail('ISOLATION_IDENTITY', '工作区身份不一致');
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       run = [...(state.runs ?? []), ...(state.agentBusinessRuns ?? [])].find(r => r.binding.runId === identity.runId);
     if (!run || Object.entries(identity).some(([key, value]) => run.binding[key as keyof typeof run.binding] !== value))
       fail('ISOLATION_IDENTITY', '没有所选原成员运行');
@@ -80,7 +80,7 @@ export class IsolatedExecutions
     return { run, task }
   }
 
-  private async source(run: BusinessRunSource, origin: IsolationOrigin, scopeId: string | undefined)
+  private async Source(run: BusinessRunSource, origin: IsolationOrigin, scopeId: string | undefined)
   {
     if (!equal(run.binding, origin.binding) || origin.permission !== run.permission || origin.scopeId !== scopeId || hash(JSON.stringify(preparedExecutionScope(run.prepared.modules.map(m => ({ contract: m.workflowContract }))))) !== origin.scopeHash)
       fail('ISOLATION_ORIGIN', '隔离来源与原冻结任务不一致');
@@ -92,39 +92,39 @@ export class IsolatedExecutions
   }
 
   /** 工厂冻结完整运行来源；每个工具调用各持一个生命周期对象，不能凭参数重用旧执行。 */
-  forRun(run: BusinessRunSource, scopeId: string, scope: ExecutionScope)
+  ForRun(run: BusinessRunSource, scopeId: string, scope: ExecutionScope)
   {
     const saved = structuredClone(run),
       scopeHash = hash(JSON.stringify(scope));
     return async (raw: ScopedExecutionAuthorization): Promise<IsolationLifecycle> =>
     {
-      this.assert();
+      this.Assert();
       const authorization = scopedExecutionAuthorizationSchema.parse(raw),
         origin = isolationOriginSchema.parse({ ...authorization, workspaceInstanceId: this.owner.instanceId, scopeId, binding: saved.binding, scopeHash, permission: saved.permission }),
         operationId = isolationOperationId(saved.binding.runId, authorization.toolCallId);
-      await this.source(saved, origin, scopeId);
-      if (await this.records.read(saved.binding.runId, operationId))
+      await this.Source(saved, origin, scopeId);
+      if (await this.records.Read(saved.binding.runId, operationId))
         fail('ISOLATION_ALREADY_RECORDED', '原调用已有隔离记录，不能重新执行');
       let head: IsolationHead | undefined;
       const append = async (change: IsolationChange) =>
       {
-        head = await this.records.append(saved.binding.runId, operationId, change, head?.revision ?? 0)
+        head = await this.records.Append(saved.binding.runId, operationId, change, head?.revision ?? 0)
       };
       return {
-        prepared: async (resource, requestHash) =>
+        Prepared: async (resource, requestHash) =>
         {
-          this.assert();
+          this.Assert();
           await append({ kind: 'prepared', record: { version: 1, origin, resource, requestHash, createdAt: new Date().toISOString() } })
-        }, started: async process =>
+        }, Started: async process =>
         {
-          this.assert();
+          this.Assert();
           await append({ kind: 'started', process })
-        }, settled: () => append({ kind: 'settled' }), cleaned: () => append({ kind: 'cleaned' })
+        }, Settled: () => append({ kind: 'settled' }), Cleaned: () => append({ kind: 'cleaned' })
       };
     }
   }
 
-  private async item(head: IsolationHead, run: BusinessRunSource, scopeId: string | undefined): Promise<IsolatedExecutionItem>
+  private async Item(head: IsolationHead, run: BusinessRunSource, scopeId: string | undefined): Promise<IsolatedExecutionItem>
   {
     const { record, revision, phase } = head,
       resource = record.resource,
@@ -135,7 +135,7 @@ export class IsolatedExecutions
       verified = false;
     try
     {
-      await this.source(run, record.origin, scopeId);
+      await this.Source(run, record.origin, scopeId);
       verified = true
     }
     catch (error)
@@ -144,13 +144,13 @@ export class IsolatedExecutions
     }
     try
     {
-      const platform = this.platform();
-      host = platform.host(resource.host);
+      const platform = this.Platform();
+      host = platform.Host(resource.host);
       if (['exited', 'reused'].includes(host))
-        job = platform.job(resource);
+        job = platform.Job(resource);
       try
       {
-        const identity = platform.directoryIdentity(resource.root);
+        const identity = platform.DirectoryIdentity(resource.root);
         files = equal(identity, resource.rootIdentity) ? 'present' : 'changed';
         if (files === 'present' && phase !== 'cleanup_requested')
         {
@@ -187,16 +187,16 @@ export class IsolatedExecutions
   }
 
   /** 显式查询只访问所选运行；没有新协议记录不能据此判定旧调用未执行。 */
-  async report(raw: unknown)
+  async Report(raw: unknown)
   {
     const identity = isolatedExecutionRunSchema.parse(raw),
-      { run, task } = await this.run(identity),
+      { run, task } = await this.Run(identity),
       issues: string[] = [];
     let items: IsolatedExecutionItem[] = [];
     try
     {
-      for (const { head } of await this.records.list(identity.runId))
-        items.push(await this.item(head, run, task.scopeId))
+      for (const { head } of await this.records.List(identity.runId))
+        items.push(await this.Item(head, run, task.scopeId))
     }
     catch (error)
     {
@@ -206,15 +206,15 @@ export class IsolatedExecutions
   }
 
   /** 已登记的清理只可按原 commandId 显式继续；每次重核原物理资源，不重发原业务程序。 */
-  cleanup(raw: unknown)
+  Cleanup(raw: unknown)
   {
     const input = isolatedExecutionCleanupSchema.parse(raw);
     const pending = this.tail.then(async () =>
     {
-      this.owner.assert({ workspaceId: input.workspaceId, instanceId: input.instanceId });
+      this.owner.Assert({ workspaceId: input.workspaceId, instanceId: input.instanceId });
       const identity = isolatedExecutionRunSchema.parse({ workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, taskId: input.taskId, runId: input.runId }),
-        { run, task } = await this.run(identity),
-        entry = (await this.records.list(input.runId)).find(value => value.head.record.resource.executionId === input.executionId);
+        { run, task } = await this.Run(identity),
+        entry = (await this.records.List(input.runId)).find(value => value.head.record.resource.executionId === input.executionId);
       if (!entry)
         fail('ISOLATION_NOT_FOUND', '没有该原执行的可靠资源记录');
       let { head } = entry;
@@ -225,7 +225,7 @@ export class IsolatedExecutions
           fail('ISOLATION_CLEANUP_CONFLICT', '原资源已由另一清理请求完成');
         return isolatedExecutionCleanupReceiptSchema.parse({ executionId: input.executionId, commandId: input.commandId, state: 'cleaned', revision: head.revision })
       }
-      const report = await this.item(head, run, task.scopeId);
+      const report = await this.Item(head, run, task.scopeId);
       if (!report.cleanupAllowed)
         fail('ISOLATION_CLEANUP_UNAVAILABLE', '原资源尚未核实为可清理，请重新核实');
       if (last.kind === 'cleanup_requested')
@@ -235,20 +235,20 @@ export class IsolatedExecutions
       }
       else if (report.basis !== input.basis)
         fail('ISOLATION_CLEANUP_STALE', '原报告已变化，请重新核实');
-      const release = this.lease.acquire('isolation-cleanup:' + input.executionId, 'execute');
+      const release = this.lease.Acquire('isolation-cleanup:' + input.executionId, 'execute');
       try
       {
-        this.assert();
-        this.owner.assert({ workspaceId: input.workspaceId, instanceId: input.instanceId });
-        const platform = this.platform(),
+        this.Assert();
+        this.owner.Assert({ workspaceId: input.workspaceId, instanceId: input.instanceId });
+        const platform = this.Platform(),
           resource = head.record.resource;
-        await this.source(run, head.record.origin, task.scopeId);
-        if (!['exited', 'reused'].includes(platform.host(resource.host)) || !['empty', 'absent'].includes(platform.job(resource)))
+        await this.Source(run, head.record.origin, task.scopeId);
+        if (!['exited', 'reused'].includes(platform.Host(resource.host)) || !['empty', 'absent'].includes(platform.Job(resource)))
           fail('ISOLATION_CLEANUP_UNAVAILABLE', '原宿主或进程树尚未可靠退出');
-        let tree: ReturnType<Win32IsolationRecovery['lockTree']> | undefined;
+        let tree: ReturnType<Win32IsolationRecovery['LockTree']> | undefined;
         try
         {
-          tree = platform.lockTree(resource, last.kind !== 'cleanup_requested')
+          tree = platform.LockTree(resource, last.kind !== 'cleanup_requested')
         }
         catch (error)
         {
@@ -264,11 +264,11 @@ export class IsolatedExecutions
         try
         {
           if (last.kind !== 'cleanup_requested')
-            head = await this.records.append(input.runId, entry.operationId, { kind: 'cleanup_requested', commandId: input.commandId, basis: input.basis }, head.revision);
-          this.assert();
-          platform.deleteProfile(resource);
+            head = await this.records.Append(input.runId, entry.operationId, { kind: 'cleanup_requested', commandId: input.commandId, basis: input.basis }, head.revision);
+          this.Assert();
+          platform.DeleteProfile(resource);
           tree?.remove();
-          head = await this.records.append(input.runId, entry.operationId, { kind: 'cleanup_complete', commandId: input.commandId }, head.revision)
+          head = await this.records.Append(input.runId, entry.operationId, { kind: 'cleanup_complete', commandId: input.commandId }, head.revision)
         }
         finally
         {
@@ -290,10 +290,10 @@ export class IsolatedExecutions
   }
 
   /** 成员先完成原收尾，随后等待已受理的显式清理，最后才释放工作区锁。 */
-  async close()
+  async Close()
   {
     this.closed = true;
     await this.tail;
-    await this.records.drain()
+    await this.records.Drain()
   }
 }

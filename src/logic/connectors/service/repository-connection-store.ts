@@ -27,7 +27,7 @@ export class RepositoryConnectionStore
   {
   }
 
-  async init()
+  async Init()
   {
     let text: string;
     try
@@ -79,29 +79,29 @@ export class RepositoryConnectionStore
     }
   }
 
-  grants(workspaceId: string)
+  Grants(workspaceId: string)
   {
     return structuredClone(this.state.grants.filter(grant => grant.workspaceId === workspaceId))
   }
 
-  grant(workspaceId: string, connectorId: string)
+  Grant(workspaceId: string, connectorId: string)
   {
-    return this.grants(workspaceId).find(grant => grant.connectorId === connectorId)
+    return this.Grants(workspaceId).find(grant => grant.connectorId === connectorId)
   }
 
-  receipt(workspaceId: string, commandId: string)
+  Receipt(workspaceId: string, commandId: string)
   {
     const command = this.state.commands.find(item => item.commandId === commandId);
     return command?.workspaceId === workspaceId ? structuredClone(command.receipt) : undefined
   }
 
   /** 未受理证明检查全局命令占用；不同工作区记录同样不能被当成不存在。 */
-  hasCommand(commandId: string)
+  HasCommand(commandId: string)
   {
     return this.state.commands.some(item => item.commandId === commandId)
   }
 
-  replay(workspaceId: string, commandId: string, inputHash: string)
+  Replay(workspaceId: string, commandId: string, inputHash: string)
   {
     const command = this.state.commands.find(item => item.commandId === commandId);
     if (!command)
@@ -112,7 +112,7 @@ export class RepositoryConnectionStore
   }
 
   /** 成功回执与授权同一次原子文件替换；失败不发布新内存状态，不删除旧历史腾空间。 */
-  async save(grant: RepositoryConnectionGrant, receipt: RepositoryConnectionReceipt, inputHash: string)
+  async Save(grant: RepositoryConnectionGrant, receipt: RepositoryConnectionReceipt, inputHash: string)
   {
     const next = stateSchema.parse({ version: 1, grants: [...this.state.grants.filter(item => item.workspaceId !== grant.workspaceId || item.connectorId !== grant.connectorId), grant], commands: [...this.state.commands, { workspaceId: grant.workspaceId, commandId: receipt.commandId, inputHash, receipt }] });
     const encoded = json(next);

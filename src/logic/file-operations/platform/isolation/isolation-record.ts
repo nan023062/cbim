@@ -32,11 +32,11 @@ export type IsolationRecord = z.infer<typeof isolationRecordSchema>;
 /** 所有回调都在原调用内等待；prepared/started 失败时不得运行脚本，cleaned 失败不得假定可靠完成。 */
 export interface IsolationLifecycle
 {
-  prepared(resource: IsolationResource, requestHash: string): Promise<void>;
+  Prepared(resource: IsolationResource, requestHash: string): Promise<void>;
 
-  started(process: IsolationProcess): Promise<void>;
+  Started(process: IsolationProcess): Promise<void>;
 
-  settled(): Promise<void>;
+  Settled(): Promise<void>;
 
-  cleaned(): Promise<void>;
+  Cleaned(): Promise<void>;
 }

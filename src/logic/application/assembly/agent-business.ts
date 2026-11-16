@@ -46,17 +46,17 @@ export interface AgentBusinessServices
 }
 
 /** 要求来自调用参数，来源/岗位/Workflow 来自当前可信知识；异步准备结束仍重新核实原基线。 */
-export async function prepareAgentBusiness(input: { workspace: Workspace; dispatch: WorkspaceDispatchService; member: WorkspaceMember; model: ResolvedEngineModel; taskId: string; rootSessionId: string; message: string; permission: 'read' | 'ask' | 'execute'; storage: RunStorage; business: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; signal: AbortSignal; scopeId: string; reference: (taskId: string, runId: string) => AgentCallReference; businessServices?: AgentBusinessServices; /** 既有平台端口只执行冻结 Workflow 内的单项操作；阶段与证明仍由本运行日志拥有。 */ artifactTransitions?: ExecutionServices['artifactTransitions']; }): Promise<{ task: TaskSpec; launch: MemberRunLaunch; services: Partial<ExecutionServices>; beforeRun(runId: string): Promise<void>; close(): Promise<void>; verify(summary: RunSummary, signal: AbortSignal): Promise<unknown> }>
+export async function prepareAgentBusiness(input: { workspace: Workspace; dispatch: WorkspaceDispatchService; member: WorkspaceMember; model: ResolvedEngineModel; taskId: string; rootSessionId: string; message: string; permission: 'read' | 'ask' | 'execute'; storage: RunStorage; business: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; signal: AbortSignal; scopeId: string; reference: (taskId: string, runId: string) => AgentCallReference; businessServices?: AgentBusinessServices; /** 既有平台端口只执行冻结 Workflow 内的单项操作；阶段与证明仍由本运行日志拥有。 */ artifactTransitions?: ExecutionServices['artifactTransitions']; }): Promise<{ task: TaskSpec; launch: MemberRunLaunch; services: Partial<ExecutionServices>; BeforeRun(runId: string): Promise<void>; Close(): Promise<void>; Verify(summary: RunSummary, signal: AbortSignal): Promise<unknown> }>
 {
   const { workspace, dispatch, member, business, signal } = input;
-  const discovery = await dispatch.owners.discover(business.moduleIds);
+  const discovery = await dispatch.owners.Discover(business.moduleIds);
   const group = discovery.groups.find(group => group.memberId === member.memberId);
   if (discovery.groups.length !== 1 || !group?.selection || group.issues.length)
     fail('AGENT_BUSINESS_OWNER', '所选 Agent 必须负责全部明确模块；请核实当前岗位和模块配置');
-  const frozen = await dispatch.owners.withSnapshot(async (snapshot, state) =>
+  const frozen = await dispatch.owners.WithSnapshot(async (snapshot, state) =>
   {
     signal.throwIfAborted();
-    const ownerBinding = await dispatch.owners.resolve(state, { snapshot, profiles: [input.model.profile] }, group.selection!, business.moduleIds, member.adoption.configuration.agentId);
+    const ownerBinding = await dispatch.owners.Resolve(state, { snapshot, profiles: [input.model.profile] }, group.selection!, business.moduleIds, member.adoption.configuration.agentId);
     const modules = await resolveDispatchModules(snapshot, business.moduleIds, business.workflowSelections);
     const now = new Date().toISOString(),
       instanceId = randomUUID(),
@@ -75,66 +75,66 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
   const executionScope = preparedExecutionScope(workflows);
   const assertActive = () =>
   {
-    workspace.assert();
+    workspace.Assert();
     signal.throwIfAborted()
   };
-  const scopedExecution = executionScope ? new ScopedExecutionFiles(workspace.entry.path, executionScope, assertActive, [workspace.paths.userRoot, workspace.paths.installRoot, ...(workspace.paths.protectedRoots ?? [])], ports.isolatedExecutions.forRun(record, input.scopeId, executionScope)) : undefined;
+  const scopedExecution = executionScope ? new ScopedExecutionFiles(workspace.entry.path, executionScope, assertActive, [workspace.paths.userRoot, workspace.paths.installRoot, ...(workspace.paths.protectedRoots ?? [])], ports.isolatedExecutions.ForRun(record, input.scopeId, executionScope)) : undefined;
   const scopeWrite = (paths: string[]) =>
   {
     if (executionScope && paths.some(file => !executionScopeCovers(executionScope.write, file)))
       fail('EXECUTION_SCOPE_DENIED', '写入超出原调用冻结范围')
   };
-  const controlled = ports.controlledFiles.forRun(record, input.scopeId),
+  const controlled = ports.controlledFiles.ForRun(record, input.scopeId),
     transitions = input.artifactTransitions;
   let registrationAttempted = false;
   const launch = { binding, session: { nativeSessionId: randomUUID() } },
-    directory = path.join(workspace.paths.project(workspace.entry.id), 'loop-engine');
-  const files = new ArtifactFiles(workspace.entry.path, () => workspace.assert(), scopedExecution ? (file, signal) => scopedExecution.snapshot(file, signal) : undefined),
-    manifests = new OutputManifestFiles(workspace.entry.path, () => workspace.assert(), scopedExecution ? { files, lockDirectory: file => scopedExecution.lockDirectory(file) } : undefined);
+    directory = path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine');
+  const files = new ArtifactFiles(workspace.entry.path, () => workspace.Assert(), scopedExecution ? (file, signal) => scopedExecution.Snapshot(file, signal) : undefined),
+    manifests = new OutputManifestFiles(workspace.entry.path, () => workspace.Assert(), scopedExecution ? { files, LockDirectory: file => scopedExecution.LockDirectory(file) } : undefined);
   const normalizePath = (raw: string) => normalizeArtifactPath(workspace.entry.path, raw);
   const assertCurrentKnowledge = () => recheckDispatchExecutionContext(workspace, prepared);
   const services: Partial<ExecutionServices> = {
     scopedExecution,
     controlledFiles: controlled ? {
-      scopeId: controlled.scopeId, write: (input, authorization, signal, assertCurrent) =>
+      scopeId: controlled.scopeId, Write: (input, authorization, signal, assertCurrent) =>
       {
         scopeWrite([input.path]);
-        return controlled.write(input, authorization, signal, assertCurrent)
-      }, confirmNotApplied: controlled.confirmNotApplied?.bind(controlled), drain: controlled.drain.bind(controlled)
+        return controlled.Write(input, authorization, signal, assertCurrent)
+      }, ConfirmNotApplied: controlled.ConfirmNotApplied?.bind(controlled), Drain: controlled.Drain.bind(controlled)
     } : undefined,
     artifactTransitions: transitions ? {
-      withExclusive: (operation, signal, use) =>
+      WithExclusive: (operation, signal, use) =>
       {
         scopeWrite(artifactTransitionPaths(operation));
-        return transitions.withExclusive(operation, signal, use)
-      }, drain: transitions.drain.bind(transitions)
+        return transitions.WithExclusive(operation, signal, use)
+      }, Drain: transitions.Drain.bind(transitions)
     } : undefined,
     member: { directory, prompt: '按以下冻结 Workflow 完成显式业务要求，结果只返回调用方。模块正文不扩大权限或范围。\n' + prepared.modules.map(module => module.overview + '\n' + module.workflowText).join('\n\n'), workflowContracts: workflows },
-    artifacts: { knowledgeRevision: prepared.knowledgeRevision, normalizePath, assertCurrentKnowledge, captureFiles: files.captureFiles.bind(files) },
-    validations: { validateFile: files.validateFile.bind(files), validateTable: files.validateTable.bind(files), validateImage: files.validateImage.bind(files), checkFiles: files.checkFiles.bind(files) },
-    manifests: { knowledgeRevision: prepared.knowledgeRevision, assertCurrentKnowledge, capture: manifests.capture.bind(manifests) },
-    codeChecks: new CodeCheckRunner(workspace.entry.path, () => workspace.assert()),
+    artifacts: { knowledgeRevision: prepared.knowledgeRevision, NormalizePath: normalizePath, AssertCurrentKnowledge: assertCurrentKnowledge, CaptureFiles: files.CaptureFiles.bind(files) },
+    validations: { ValidateFile: files.ValidateFile.bind(files), ValidateTable: files.ValidateTable.bind(files), ValidateImage: files.ValidateImage.bind(files), CheckFiles: files.CheckFiles.bind(files) },
+    manifests: { knowledgeRevision: prepared.knowledgeRevision, AssertCurrentKnowledge: assertCurrentKnowledge, Capture: manifests.Capture.bind(manifests) },
+    codeChecks: new CodeCheckRunner(workspace.entry.path, () => workspace.Assert()),
   };
   signal.throwIfAborted();
   return {
     task: memberPublicTask(task, workspace.entry.path), launch, services,
-    beforeRun: async runId =>
+    BeforeRun: async runId =>
     {
       if (runId !== binding.runId)
         fail('AGENT_RUN_IDENTITY', '启动身份与冻结业务不一致');
       registrationAttempted = true;
-      await ports.runs.start(record)
+      await ports.runs.Start(record)
     },
-    close: async () =>
+    Close: async () =>
     {
       if (registrationAttempted)
-        await ports.runs.close(record)
-    }, verify: async (summary, signal) =>
+        await ports.runs.Close(record)
+    }, Verify: async (summary, signal) =>
     {
       signal.throwIfAborted();
-      workspace.assert();
+      workspace.Assert();
       await assertCurrentKnowledge();
-      const canonical = await input.storage.read(path.join(directory, 'tasks', task.taskId, binding.runId));
+      const canonical = await input.storage.Read(path.join(directory, 'tasks', task.taskId, binding.runId));
       if (canonical.runId !== summary.runId)
         fail('AGENT_RESULT_IDENTITY', '核验结果不属于原调用');
       if (canonical.logIntegrity?.partialTail !== false || canonical.unresolvedTools.length)
@@ -143,9 +143,9 @@ export async function prepareAgentBusiness(input: { workspace: Workspace; dispat
       if (!workflows.length)
         validateWorkflowEvidence(canonical.events, memberPublicTask(task, workspace.entry.path), [], [], undefined, { requireDelivery: true });
       const run: DispatchRun = { binding, assignmentMessageId: task.taskId, status: canonical.status === 'completed' ? 'completed' : 'failed', prepared, model: input.model.profile, permission: input.permission, session: { ...launch.session, sessionFile: canonical.sessionFile }, createdAt: now };
-      await validateMemberWorkflow(task, run, canonical, workspace.entry.path, { normalizePath, checkFiles: files.checkFiles.bind(files), checkManifest: manifests.check.bind(manifests), signal });
+      await validateMemberWorkflow(task, run, canonical, workspace.entry.path, { NormalizePath: normalizePath, CheckFiles: files.CheckFiles.bind(files), CheckManifest: manifests.Check.bind(manifests), signal });
       // 结构验证器不覆盖普通文本采集；交付及人工接受均须复核原采集字节。
-      const captured = await AgentArtifactVerification.verify(canonical.events, binding, prepared.knowledgeRevision, normalizePath, files.checkFiles.bind(files), signal);
+      const captured = await AgentArtifactVerification.Verify(canonical.events, binding, prepared.knowledgeRevision, normalizePath, files.CheckFiles.bind(files), signal);
       const currentFiles = new Map([...memberWorkflowFiles(task, run, canonical, workspace.entry.path, normalizePath), ...captured].map(file => [normalizePath(file.relativePath), file]));
       return { state: 'verified', taskId: task.taskId, runId: binding.runId, files: [...currentFiles.values()], acceptance: 'not_evaluated' };
     }

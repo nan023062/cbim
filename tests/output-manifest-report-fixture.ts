@@ -20,8 +20,8 @@ export async function manifestReportFixture(recursive=false){
     state.agentBusinessRuns=[{protocol:'agent-tools-v1',binding:artifactBinding,scopeId:'scope',parent,lineage:[parent],prepared:{...previous.prepared,modules:previous.prepared.modules??f.task.moduleIds.map(moduleId=>({binding:{moduleId},workflowContract:undefined}))},permission:'read',status:'closed',createdAt:'2026-11-16T00:00:00Z',closedAt:'2026-11-16T00:01:00Z'}] as unknown as NonNullable<DispatchState['agentBusinessRuns']>;
     state.runs=[];state.graphs[0].tasks=[];
   }
-  const inspect=vi.fn(async()=>structuredClone(summary)),read=vi.fn(async()=>structuredClone(state)),knowledge=vi.fn(async()=>({revision:'knowledge-one'})),checks=vi.fn((snapshot:OutputManifestSnapshot,signal:AbortSignal)=>f.manifestFiles.check(snapshot,signal)),release=vi.fn(),acquire=vi.fn(()=>release);
-  const owner={entry:{id:identity.workspaceId,path:f.directory},assert:()=>{},read:knowledge} as unknown as Pick<KnowledgeWorkspace,'entry'|'assert'|'read'>;
-  const service=new OutputManifestReportService(owner,{read},{inspect,inspectAgent:inspect,check:checks,acquireRead:acquire}),input={...identity,taskId:artifactBinding.taskId,runId:artifactBinding.runId};
+  const inspect=vi.fn(async()=>structuredClone(summary)),read=vi.fn(async()=>structuredClone(state)),knowledge=vi.fn(async()=>({revision:'knowledge-one'})),checks=vi.fn((snapshot:OutputManifestSnapshot,signal:AbortSignal)=>f.manifestFiles.Check(snapshot,signal)),release=vi.fn(),acquire=vi.fn(()=>release);
+  const owner={entry:{id:identity.workspaceId,path:f.directory},Assert:()=>{},Read:knowledge} as unknown as Pick<KnowledgeWorkspace,'entry'|'Assert'|'Read'>;
+  const service=new OutputManifestReportService(owner,{Read: read},{Inspect: inspect,InspectAgent:inspect,Check:checks,AcquireRead:acquire}),input={...identity,taskId:artifactBinding.taskId,runId:artifactBinding.runId};
   return {...f,summary,state,service,input,selected:{...input,manifestId:manifest.manifestId},manifest,inspect,read,knowledge,checks,release,acquire};
 }

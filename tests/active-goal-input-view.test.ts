@@ -44,21 +44,21 @@ it('停止与中断保留终态，未知补充仍独立提示，损坏完成记�
 });
 
 it('目标补充独立增量刷新；noop不重建引用，旧会话图不变',()=>{
-  const projection=new SessionReadProjection(identity),value=scope();value.activeInputs=[pending()];projection.apply(read(value));const first=projection.detail(),oldGraph=projection.graph,oldSummary=projection.scopes;
-  projection.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:projection.scopeCursor!},detail:{mode:'noop',stamp:projection.detailStamp()!}});expect(projection.detail()).toBe(first);expect(projection.scopes).toBe(oldSummary);
+  const projection=new SessionReadProjection(identity),value=scope();value.activeInputs=[pending()];projection.Apply(read(value));const first=projection.Detail(),oldGraph=projection.graph,oldSummary=projection.scopes;
+  projection.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'noop',cursor:projection.scopeCursor!},detail:{mode:'noop',stamp:projection.DetailStamp()!}});expect(projection.Detail()).toBe(first);expect(projection.scopes).toBe(oldSummary);
   const next=structuredClone(value);next.activeInputs=[accepted()];next.goal!.revision=4;next.goal!.inputRevision=2;delete next.goal!.review;
-  const summary=summarizeScope(next,streamId,2);projection.apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:projection.scopeCursor!,cursor:{...projection.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summary]}],hasMore:false},detail:{mode:'updated',stamp:summary.stamp,scope:next}});
-  expect(projection.graph).toBe(oldGraph);expect(projection.detail()!.activeInputs![0].status).toBe('accepted');expect(scopeGoalView(projection.selected(),projection.graph).phase).toBe('replanning');
+  const summary=summarizeScope(next,streamId,2);projection.Apply({graph:{mode:'noop',cursor:graph.cursor},scopes:{mode:'delta',from:projection.scopeCursor!,cursor:{...projection.scopeCursor!,seq:2},batches:[{identity,streamId,seq:2,scopes:[summary]}],hasMore:false},detail:{mode:'updated',stamp:summary.stamp,scope:next}});
+  expect(projection.graph).toBe(oldGraph);expect(projection.Detail()!.activeInputs![0].status).toBe('accepted');expect(scopeGoalView(projection.Selected(),projection.graph).phase).toBe('replanning');
 });
 
 it.each(['status','count','shape'] as const)('摘要详情%s矛盾时保留上次完整投影',kind=>{
-  const projection=new SessionReadProjection(identity);projection.apply(read(scope()));const previous=projection.detail(),summary=projection.scopes;
+  const projection=new SessionReadProjection(identity);projection.Apply(read(scope()));const previous=projection.Detail(),summary=projection.scopes;
   const value=scope();value.activeInputs=[pending()];const next=read(value,2);
   if(next.scopes.mode!=='reset'||next.detail.mode!=='updated')throw Error('fixture');
   if(kind==='status')next.scopes.snapshot.scopes[0].activeInputStatus='unknown';
   if(kind==='count')next.scopes.snapshot.scopes[0].activeInputCount=2;
   if(kind==='shape')Object.assign(next.detail.scope.activeInputs![0],{input:{message:'伪造提前受理'}});
-  expect(()=>projection.apply(next)).toThrow();expect(projection.detail()).toBe(previous);expect(projection.scopes).toBe(summary);
+  expect(()=>projection.Apply(next)).toThrow();expect(projection.Detail()).toBe(previous);expect(projection.scopes).toBe(summary);
 });
 
 it('已拒绝记录不显示接受版本；异常记录保守报错；旧历史不补造字段',()=>{

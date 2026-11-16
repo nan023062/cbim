@@ -41,18 +41,18 @@ class N_src_logic_file_operations_platform_files_artifact_files_ts["artifact-fil
 }
 class N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles["ArtifactFiles"] {
   +constructor()
-  +captureFiles()
-  +observeFiles()
-  +validateFile()
-  +validateTable()
-  +validateImage()
-  +checkFiles()
+  +CaptureFiles()
+  +ObserveFiles()
+  +ValidateFile()
+  +ValidateTable()
+  +ValidateImage()
+  +CheckFiles()
   -root
   -assert
   -secureRead
-  -resolve()
-  -readFiles()
-  -readFile()
+  -Resolve()
+  -ReadFiles()
+  -ReadFile()
 }
 N_src_logic_file_operations_platform_files_artifact_files_ts ..> N_src_logic_file_operations_platform_files_artifact_files_ts_ArtifactFiles : 声明
 ```
@@ -68,12 +68,12 @@ class N_src_logic_file_operations_platform_files_code_check_runner_ts["code-chec
 }
 class N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner["CodeCheckRunner"] {
   +constructor()
-  +run()
+  +Run()
   -root
   -assertCurrent
   -manifests
-  -directory()
-  -command()
+  -Directory()
+  -Command()
 }
 N_src_logic_file_operations_platform_files_code_check_runner_ts ..> N_src_logic_file_operations_platform_files_code_check_runner_ts_CodeCheckRunner : 声明
 class N_src_logic_file_operations_platform_files_code_check_runner_ts_external_CodeCheckPort["CodeCheckPort (外部契约)"] {
@@ -93,12 +93,12 @@ class N_src_logic_file_operations_platform_files_controlled_file_blobs_ts["contr
 }
 class N_src_logic_file_operations_platform_files_controlled_file_blobs_ts_ControlledFileBlobs["ControlledFileBlobs"] {
   +constructor()
-  +savePair()
-  +read()
+  +SavePair()
+  +Read()
   -directory
   -tail
-  -checkedDirectory()
-  -save()
+  -CheckedDirectory()
+  -Save()
 }
 N_src_logic_file_operations_platform_files_controlled_file_blobs_ts ..> N_src_logic_file_operations_platform_files_controlled_file_blobs_ts_ControlledFileBlobs : 声明
 ```
@@ -146,26 +146,26 @@ class N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_Con
 N_src_logic_file_operations_platform_files_controlled_file_protocol_ts ..> N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ControlledChildReply : 声明
 class N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ExclusiveControlledFile["ExclusiveControlledFile"] {
   <<interface>>
-  +readBefore()
-  +recheckIdentity()
-  +replaceAndFlush()
+  +ReadBefore()
+  +RecheckIdentity()
+  +ReplaceAndFlush()
   +writeIssued
 }
 N_src_logic_file_operations_platform_files_controlled_file_protocol_ts ..> N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ExclusiveControlledFile : 声明
 class N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ExclusiveControlledTransition["ExclusiveControlledTransition"] {
   <<interface>>
-  +readBefore()
-  +recheckIdentity()
-  +transitionAndVerify()
+  +ReadBefore()
+  +RecheckIdentity()
+  +TransitionAndVerify()
   +writeIssued
 }
 N_src_logic_file_operations_platform_files_controlled_file_protocol_ts ..> N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ExclusiveControlledTransition : 声明
 class N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ControlledFileTransport["ControlledFileTransport"] {
   <<interface>>
-  +withExclusiveExisting()
-  +withExclusiveTransition()
-  +drain()
-  +close()
+  +WithExclusiveExisting()
+  +WithExclusiveTransition()
+  +Drain()
+  +Close()
 }
 N_src_logic_file_operations_platform_files_controlled_file_protocol_ts ..> N_src_logic_file_operations_platform_files_controlled_file_protocol_ts_ControlledFileTransport : 声明
 ```
@@ -183,10 +183,10 @@ class N_src_logic_file_operations_platform_files_controlled_file_win32_ts["contr
 class N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
   +writeIssued
   +constructor()
-  +read()
-  +replace()
-  +transition()
-  +close()
+  +Read()
+  +Replace()
+  +Transition()
+  +Close()
   -root
   -relativePath
   -namespaceChange
@@ -210,16 +210,16 @@ class N_src_logic_file_operations_platform_files_controlled_file_win32_ts["contr
 }
 class N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile["Win32ControlledFile"] {
   -original
-  -bool()
-  -openHandle()
-  -final()
-  -info()
-  -target()
-  -lockParents()
-  -missing()
-  -open()
-  -checkedIdentity()
-  -defaultStreamOnly()
+  -Bool()
+  -OpenHandle()
+  -Final()
+  -Info()
+  -Target()
+  -LockParents()
+  -Missing()
+  -Open()
+  -CheckedIdentity()
+  -DefaultStreamOnly()
 }
 N_src_logic_file_operations_platform_files_controlled_file_win32_ts ..> N_src_logic_file_operations_platform_files_controlled_file_win32_ts_Win32ControlledFile : 声明
 ```
@@ -235,15 +235,15 @@ class N_src_logic_file_operations_platform_files_output_manifest_files_ts["outpu
 }
 class N_src_logic_file_operations_platform_files_output_manifest_files_ts_OutputManifestFiles["OutputManifestFiles"] {
   +constructor()
-  +capture()
-  +check()
+  +Capture()
+  +Check()
   -root
   -assert
   -guarded
   -files
-  -current()
-  -locate()
-  -scan()
+  -Current()
+  -Locate()
+  -Scan()
 }
 N_src_logic_file_operations_platform_files_output_manifest_files_ts ..> N_src_logic_file_operations_platform_files_output_manifest_files_ts_OutputManifestFiles : 声明
 ```
@@ -290,11 +290,11 @@ class N_src_logic_file_operations_platform_files_scoped_execution_files_ts["scop
 class N_src_logic_file_operations_platform_files_scoped_execution_files_ts_ScopedExecutionFiles["ScopedExecutionFiles"] {
   +scope
   +constructor()
-  +snapshot()
-  +lockDirectory()
-  +read()
-  +node()
-  +drain()
+  +Snapshot()
+  +LockDirectory()
+  +Read()
+  +Node()
+  +Drain()
   -root
   -assertCurrent
   -protectedRoots

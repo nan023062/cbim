@@ -20,16 +20,16 @@ export async function globalRuntimeProviders(){
 export async function seedGlobalRuntime(app:Application,projects:{a:string;b:string},providers:Awaited<ReturnType<typeof globalRuntimeProviders>>){
   const seeded=await seedGlobalAdmission(app,projects,providers.admission),data=globalRuntimeFixture;
   await fs.writeFile(path.join(projects.a,'wait-input.txt'),waitFixture.fact);
-  await app.models.save({profile:{name:'Global runtime waiting fixture',api:'openai-completions',baseUrl:providers.waiting.url,auth:'none',defaultModel:data.waitingModel,models:[{id:data.waitingModel,name:data.waitingModelLabel,enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const waitingProfileId=(await app.models.list()).profiles.find(profile=>profile.name==='Global runtime waiting fixture')!.id;
+  await app.models.Save({profile:{name:'Global runtime waiting fixture',api:'openai-completions',baseUrl:providers.waiting.url,auth:'none',defaultModel:data.waitingModel,models:[{id:data.waitingModel,name:data.waitingModelLabel,enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const waitingProfileId=(await app.models.List()).profiles.find(profile=>profile.name==='Global runtime waiting fixture')!.id;
   // The waiting model owns its own module/position; it cannot replace A's admission binding or borrow A's model.
-  const workspace=app.workspace(seeded.a.entry.id),waitingModuleId='.cbim/workspace/runtime_waiting';
-  const preview=await seeded.a.team.call('cbim_object_preview',{revision:(await workspace.snapshot()).revision,operations:[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'runtime_waiting',data:{summary},body:moduleFiles('runtime_waiting')[1].text}]});
+  const workspace=app.Workspace(seeded.a.entry.id),waitingModuleId='.cbim/workspace/runtime_waiting';
+  const preview=await seeded.a.team.call('cbim_object_preview',{revision:(await workspace.Snapshot()).revision,operations:[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'runtime_waiting',data:{summary},body:moduleFiles('runtime_waiting')[1].text}]});
   assert.equal(preview.validation.structural,true);await seeded.a.team.call('cbim_object_commit',{planId:preview.planId},true);
-  const snapshot=await workspace.snapshot(),definitionFile=snapshot.files.find(file=>file.path===waitingModuleId+'/module.json');assert.ok(definitionFile);
+  const snapshot=await workspace.Snapshot(),definitionFile=snapshot.files.find(file=>file.path===waitingModuleId+'/module.json');assert.ok(definitionFile);
   const definition=JSON.parse(definitionFile.text);
   definition.maintenance={bindingId:'runtime-waiting-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'runtime-waiting-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(snapshot,[{path:definitionFile.path,text:JSON.stringify(definition)}]));
+  await workspace.Commit(request(snapshot,[{path:definitionFile.path,text:JSON.stringify(definition)}]));
   const waitingOwner=await registerExplicitFixtureOwner(app,seeded.a.entry.id,{agentId:seeded.a.team.input.agentId,moduleIds:[waitingModuleId],profileId:waitingProfileId,modelId:data.waitingModel,name:'全局视图等待岗位'});
   providers.waiting.bind(seeded.a.team.input.agentId,waitingModuleId,waitingOwner.selection);
   return {...seeded,waitingProfileId,waitingModuleId,waitingOwner};

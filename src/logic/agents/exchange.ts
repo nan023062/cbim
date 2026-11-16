@@ -56,17 +56,17 @@ export class AgentCallExchange
   {
   }
 
-  waiting()
+  Waiting()
   {
     return !!this.pending
   }
 
-  wait()
+  Wait()
   {
     return this.frame.promise
   }
 
-  async ask(raw: unknown, signal: AbortSignal): Promise<QuestionResult>
+  async Ask(raw: unknown, signal: AbortSignal): Promise<QuestionResult>
   {
     signal.throwIfAborted();
     if (this.ended || this.pending)
@@ -95,7 +95,7 @@ export class AgentCallExchange
   }
 
   /** questionId 在原调用内唯一；不同答案不得重用已消费问题，新轮问题必须使用新 ID。 */
-  reply(questionId: string, raw: unknown): Promise<ToolResult>
+  Reply(questionId: string, raw: unknown): Promise<ToolResult>
   {
     const fingerprint = JSON.stringify(raw),
       old = this.replies.get(questionId);
@@ -128,7 +128,7 @@ export class AgentCallExchange
     return result;
   }
 
-  finish(result: ToolResult)
+  Finish(result: ToolResult)
   {
     this.ended = true;
     this.pending?.answer.reject(error('AGENT_CALL_CLOSED', '原执行已结束'));
@@ -136,7 +136,7 @@ export class AgentCallExchange
     this.frame.resolve(result)
   }
 
-  fail(reason: unknown)
+  Fail(reason: unknown)
   {
     this.ended = true;
     this.pending?.answer.reject(reason);

@@ -13,83 +13,83 @@ export function resourcesIpcHandlers(app: ApplicationServices): IpcHandlers<keyo
   return {
     'resources.status': async args =>
     {
-      return app.resources.status();
+      return app.resources.Status();
     },
     'resources.configure': async args =>
     {
-      return app.resources.configure(args);
+      return app.resources.Configure(args);
     },
     'resources.list': async args =>
     {
-      return app.resources.read();
+      return app.resources.Read();
     },
     'resources.save': async args =>
     {
-      return app.resources.save(args);
+      return app.resources.Save(args);
     },
     'resources.remove': async args =>
     {
-      return app.resources.remove(args);
+      return app.resources.Remove(args);
     },
     'resources.share': async args =>
     {
-      return app.resources.startSharing(args);
+      return app.resources.StartSharing(args);
     },
     'resources.stopSharing': async args =>
     {
-      return app.resources.stopSharing();
+      return app.resources.StopSharing();
     },
     'resources.connection': async args =>
     {
-      return app.resources.connection();
+      return app.resources.Connection();
     },
     'resources.connection.list': async args =>
     {
-      return app.repositoryConnections.list(args);
+      return app.repositoryConnections.List(args);
     },
     'resources.connection.preview': async args =>
     {
-      return app.repositoryConnections.preview(args);
+      return app.repositoryConnections.Preview(args);
     },
     'resources.connection.commit': async args =>
     {
-      return app.repositoryConnections.commit(args);
+      return app.repositoryConnections.Commit(args);
     },
     'resources.connection.commitReceipt': async args =>
     {
-      return app.repositoryConnections.commitReceipt(args);
+      return app.repositoryConnections.CommitReceipt(args);
     },
     'resources.connection.unaccepted': async args =>
     {
-      return app.repositoryConnections.unaccepted(args);
+      return app.repositoryConnections.Unaccepted(args);
     },
     'resources.connection.grant': async args =>
     {
-      return app.repositoryConnections.grant(args);
+      return app.repositoryConnections.Grant(args);
     },
     'resources.connection.revoke': async args =>
     {
-      return app.repositoryConnections.revoke(args);
+      return app.repositoryConnections.Revoke(args);
     },
     'resources.connection.check': async args =>
     {
-      return app.repositoryConnections.check(args);
+      return app.repositoryConnections.Check(args);
     },
     'resources.connection.receipt': async args =>
     {
-      return app.repositoryConnections.receipt(args);
+      return app.repositoryConnections.Receipt(args);
     },
     'resources.publishWorkspace': async args =>
     {
-      return new WorkspacePackages(app.workspace(args.workspaceId), app.resources).publish(args);
+      return new WorkspacePackages(app.Workspace(args.workspaceId), app.resources).Publish(args);
     },
     'resources.importPreview': async args =>
     {
-      return new WorkspacePackages(app.workspace(args.workspaceId), app.resources).preview(args);
+      return new WorkspacePackages(app.Workspace(args.workspaceId), app.resources).Preview(args);
     },
     'resources.importCommit': async args =>
     {
-      return new WorkspacePackages(app.workspace(args.workspaceId), app.resources).commit(args);
+      return new WorkspacePackages(app.Workspace(args.workspaceId), app.resources).Commit(args);
     },
   };
 }

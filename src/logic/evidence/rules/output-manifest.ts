@@ -107,9 +107,9 @@ export type OutputManifestRecord = z.infer<typeof outputManifestRecordSchema>;
 /** 只有当前运行可信采集实例提供；选择不读文件，verifyCurrent 完整复核后才允许保存交付。 */
 export interface ProgressManifestPort
 {
-  select(manifestId: string, progressVersion: number): OutputManifestRecord;
+  Select(manifestId: string, progressVersion: number): OutputManifestRecord;
 
-  verifyCurrent(record: OutputManifestRecord): Promise<void>
+  VerifyCurrent(record: OutputManifestRecord): Promise<void>
 }
 
 export const outputManifestQuerySchema = artifactReportInputSchema.omit({ baselineId: true }).extend({ manifestId: id.optional() }).strict();

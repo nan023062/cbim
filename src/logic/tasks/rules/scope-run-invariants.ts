@@ -14,7 +14,7 @@ import { scopeFreshContext } from './fresh-context';
 const equal = (left: unknown, right: unknown): boolean =>
 {
   /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-  const normalize = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
+  const normalize = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
   return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
 };
 

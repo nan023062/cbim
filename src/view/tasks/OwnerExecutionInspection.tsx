@@ -17,12 +17,12 @@ export function OwnerExecutionInspection({ task }: { task: TaskNode })
     [, refresh] = useState(0);
   const key = ownerInspectionKey(task),
     state = controller.snapshot;
-  useEffect(() => controller.subscribe(() => refresh(value => value + 1)), [controller]);
+  useEffect(() => controller.Subscribe(() => refresh(value => value + 1)), [controller]);
   useEffect(() =>
   {
-    controller.observe(task)
+    controller.Observe(task)
   }, [controller, key]);
-  useEffect(() => () => controller.dispose(), [controller]);
+  useEffect(() => () => controller.Dispose(), [controller]);
   const shown = state.key === key ? state : undefined;
   if (task.fallbackBinding)
     return <p className="owner-execution-muted">自动兜底的模块、模型和负责人状态会在实际领取时重新核实；后续登记的负责人不会覆盖这份历史。</p>;
@@ -31,8 +31,8 @@ export function OwnerExecutionInspection({ task }: { task: TaskNode })
   return <section className="owner-execution-current" aria-label="当前负责人核实" data-testid="owner-current-inspection">
     <button disabled={!!shown?.loading} onClick={() =>
     {
-      controller.observe(task);
-      void controller.inspect()
+      controller.Observe(task);
+      void controller.Inspect()
     }} data-testid="owner-inspect-current">{shown?.loading ? '正在核实…' : '核实当前负责人配置'}</button>
     <p className="owner-execution-muted">只读取本任务涉及的岗位、模块及公开模型配置；不会启动模型、采纳配置或移交任务。</p>
     {shown?.error && <p className="owner-execution-warning" role="alert">{shown.error}；如有旧报告，仅保留当时观察。</p>}

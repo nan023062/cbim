@@ -36,9 +36,9 @@ export function assertLegacyWorkflowCompatible(task: TaskSpec): void
 export async function prepareTeamTask(workspace: KnowledgeWorkspace, input: TeamTaskInput): Promise<TaskSpec>
 {
   const selection = teamTaskInput.parse(input),
-    queries = new KnowledgeQueries({ snapshot: () => workspace.snapshot() });
-  const module = await queries.module(selection.moduleId),
-    agent = await queries.agent(selection.agentId);
+    queries = new KnowledgeQueries({ Snapshot: () => workspace.Snapshot() });
+  const module = await queries.Module(selection.moduleId),
+    agent = await queries.Agent(selection.agentId);
   if (!module.structural || !agent.structural)
     fail('VALIDATION', '知识结构存在错误，请先完成知识治理');
   if (!agent.skillSelectionValid)
@@ -50,11 +50,11 @@ export async function prepareTeamTask(workspace: KnowledgeWorkspace, input: Team
     fail('WORKFLOW_SCOPE', '只能选择当前模块登记且正文可用的 Workflow');
   if (parseWorkflowContract(workflow.content.text))
     fail('WORKFLOW_MEMBER_REQUIRED', '声明了程序执行约定的 Workflow 必须通过主调度派发正式成员；旧单任务入口不提供该门禁');
-  const current = await workspace.read();
+  const current = await workspace.Read();
   if ([agent.revision, current.revision].some(r => r !== module.revision))
     fail('CONFLICT', '任务准备期间知识变化，请重新准备');
   const builtins = new Builtins(workspace.rules.assetsRoot);
-  const standards = await Promise.all(['business-execution', 'common-rules'].map(id => builtins.read(id)));
+  const standards = await Promise.all(['business-execution', 'common-rules'].map(id => builtins.Read(id)));
   return {
     taskId: randomUUID(), workspaceId: workspace.entry.id, root: workspace.entry.path, goal: selection.goal, moduleIds: [module.id], agentId: agent.id, responsiblePerson: selection.responsiblePerson, acceptance: selection.acceptance,
     workflowContext: { revision: module.revision, workflowId: workflow.id, module, agent, workflow, standards }

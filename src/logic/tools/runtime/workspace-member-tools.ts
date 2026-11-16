@@ -26,27 +26,27 @@ export class WorkspaceMemberTools
   {
   }
 
-  has(name: string): name is MemberToolName
+  Has(name: string): name is MemberToolName
   {
     return Object.hasOwn(memberToolInputs, name)
   }
 
-  list()
+  List()
   {
     return (Object.keys(memberToolInputs) as MemberToolName[]).map(name => ({ name, version: 1, description: descriptions[name], effects: [memberToolEffects[name]], inputSchema: zodToJsonSchema(memberToolInputs[name]), outputSchema: zodToJsonSchema(memberToolOutputs[name]), cancellation: { mode: 'preflight_only', description: '保存前复核停止，保存后不承诺回滚。' }, recovery: name === 'cbim_member_change_commit' ? { mode: 'inspect_before_retry', queryTool: 'cbim_member_receipt', keyFields: ['commandId'], description: '保留原命令，未知不得自动重放。' } : { mode: 'read_again', description: '只读核实当前事实，不启动执行。' } }))
   }
 
-  describe(name: string, raw: unknown): RunToolDescriptor
+  Describe(name: string, raw: unknown): RunToolDescriptor
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
     memberToolInputs[name].parse(raw);
     return { effects: [memberToolEffects[name]], native: false, scope: { kind: 'knowledge', workspaceId: this.binding.workspaceId } };
   }
 
-  async call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
+  async Call(name: string, raw: unknown, signal: AbortSignal, toolCallId?: string)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('MEMBER_TOOL_UNKNOWN', '本轮未提供此岗位工具');
     signal.throwIfAborted();
     const input = memberToolInputs[name].parse(raw);
@@ -60,7 +60,7 @@ export class WorkspaceMemberTools
     }
     try
     {
-      const output = await this.port.call(name, structuredClone(input), signal, toolCallId);
+      const output = await this.port.Call(name, structuredClone(input), signal, toolCallId);
       signal.throwIfAborted();
       const base: z.ZodType<z.infer<(typeof memberToolOutputs)[MemberToolName]>> = memberToolOutputs[name];
       const schema = base.refine(value =>

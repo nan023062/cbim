@@ -22,17 +22,17 @@ interface PersistentEffectOwner
     id: string
   };
 
-  assert(): void;
+  Assert(): void;
 
-  dispatchStore: Pick<DispatchStore, 'read' | 'commandReceipt'>;
+  dispatchStore: Pick<DispatchStore, 'Read' | 'CommandReceipt'>;
 
   governance:
   {
-    store: Pick<ModuleGovernanceStore, 'find'>
+    store: Pick<ModuleGovernanceStore, 'Find'>
   };
 
   /** 仅借同一队列，闭包不取得任何事务写端口。 */
-  governed<T>(operation: () => Promise<T>): Promise<T>;
+  Governed<T>(operation: () => Promise<T>): Promise<T>;
 }
 
 function check(value: unknown): asserts value
@@ -50,7 +50,7 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
   const alive = () =>
   {
     signal?.throwIfAborted();
-    owner.assert()
+    owner.Assert()
   };
   alive();
   check(identity.workspaceId === owner.entry.id);
@@ -58,10 +58,10 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
   {
     let result: PersistentWriteObservation;
     if (reference.kind === 'governance')
-      result = await owner.governed(async () =>
+      result = await owner.Governed(async () =>
       {
         alive();
-        const command = owner.governance.store.find(identity.commandId);
+        const command = owner.governance.store.Find(identity.commandId);
         if (!command)
           return { ...base, state: 'absent' };
         const receipt = moduleGovernanceReceiptSchema.parse(command.receipt),
@@ -76,11 +76,11 @@ export async function observePersistentWrite(owner: PersistentEffectOwner, refer
       });
     else
     {
-      const state = await owner.dispatchStore.read();
+      const state = await owner.dispatchStore.Read();
       alive();
       check(state.workspaceId === identity.workspaceId);
       const changes = state.ownershipChanges?.filter(change => change.request.commandId === identity.commandId) ?? [];
-      const command = await owner.dispatchStore.commandReceipt('module-ownership-' + identity.commandId);
+      const command = await owner.dispatchStore.CommandReceipt('module-ownership-' + identity.commandId);
       alive();
       if (!command && !changes.length)
         result = { ...base, state: 'absent' };

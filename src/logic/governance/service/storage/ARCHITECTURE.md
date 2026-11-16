@@ -41,18 +41,18 @@ N_src_logic_governance_service_storage_module_governance_store_ts ..> N_src_logi
 class N_src_logic_governance_service_storage_module_governance_store_ts_ModuleGovernanceStore["ModuleGovernanceStore"] {
   +workspaceId
   +constructor()
-  +init()
-  +all()
-  +find()
-  +append()
+  +Init()
+  +All()
+  +Find()
+  +Append()
   -filename
   -commands
   -anchor
   -uncertain
   -anchorFile
-  -bytes()
-  -current()
-  -validate()
+  -Bytes()
+  -Current()
+  -Validate()
 }
 N_src_logic_governance_service_storage_module_governance_store_ts ..> N_src_logic_governance_service_storage_module_governance_store_ts_ModuleGovernanceStore : 声明
 ```

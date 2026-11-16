@@ -33,16 +33,16 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts["agent-call-schedul
 }
 class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts["AgentSchedulerPorts"] {
   <<interface>>
-  +capacity()
-  +list()
-  +requestReview()
-  +prepare()
+  +Capacity()
+  +List()
+  +RequestReview()
+  +Prepare()
 }
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentSchedulerPorts : 声明
 class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
   +constructor()
-  +bind()
-  +close()
+  +Bind()
+  +Close()
   -limits
   -ports
   -attempts
@@ -55,7 +55,7 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler[
   -reviews
   -humanBlocked
   -closed
-  -execute()
+  -Execute()
 }
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
 ```
@@ -68,10 +68,10 @@ class N_src_logic_execution_assembly_agent_call_scheduler_ts["agent-call-schedul
   <<module>>
 }
 class N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler["AgentCallScheduler"] {
-  -review()
-  -capacity()
-  -message()
-  -drain()
+  -Review()
+  -Capacity()
+  -Message()
+  -Drain()
 }
 N_src_logic_execution_assembly_agent_call_scheduler_ts ..> N_src_logic_execution_assembly_agent_call_scheduler_ts_AgentCallScheduler : 声明
 ```
@@ -133,8 +133,8 @@ class N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoopOptions["Worksp
   +profileId
   +allowNativeExecution
   +permission
-  +requestQuestion()
-  +requestApproval()
+  +RequestQuestion()
+  +RequestApproval()
   +process
   +turnTimeoutMs
 }
@@ -145,18 +145,18 @@ class N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices["Execution
   +agent
   +rootAgent
   +officeHistory
-  +agentTools()
-  +agentCall()
+  +AgentTools()
+  +AgentCall()
   +codeChecks
-  +requestBudget()
+  +RequestBudget()
   +conversationBinding
   +repositoryTools
   +webTools
-  +feedbackTools()
-  +feedbackStatus()
-  +governanceTools()
-  +memberTools()
-  +ownershipTools()
+  +FeedbackTools()
+  +FeedbackStatus()
+  +GovernanceTools()
+  +MemberTools()
+  +OwnershipTools()
 }
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices : 声明
 class N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoop["WorkspaceLoop"] {
@@ -167,7 +167,7 @@ class N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoop["WorkspaceLoop
   +agent
   +unifiedAgentTools
   +agentLifecycle
-  +newTask()
+  +NewTask()
 }
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoop : 声明
 ```
@@ -181,13 +181,13 @@ class N_src_logic_execution_assembly_loop_engine_ts["loop-engine.ts"] {
 }
 class N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoopOptions["WorkspaceLoopOptions"] {
   <<interface>>
-  +onEvent()
+  +OnEvent()
   +llm
 }
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_loop_engine_ts_WorkspaceLoopOptions : 声明
 class N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices["ExecutionServices"] {
   <<interface>>
-  +dispatchTools()
+  +DispatchTools()
   +member
   +artifacts
   +manifests
@@ -195,13 +195,13 @@ class N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices["Execution
   +controlledFiles
   +scopedExecution
   +artifactTransitions
-  +assertMemberResume()
+  +AssertMemberResume()
   +memberCheckpointAllowance
-  +assertMemberResumeInputs()
-  +onEngineReady()
+  +AssertMemberResumeInputs()
+  +OnEngineReady()
   +storage
-  +acquireLease()
-  +authorizeNative()
+  +AcquireLease()
+  +AuthorizeNative()
 }
 N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly_loop_engine_ts_ExecutionServices : 声明
 ```
@@ -252,11 +252,11 @@ N_src_logic_execution_assembly_loop_engine_ts ..> N_src_logic_execution_assembly
 
 ## 知识参数默认值装配
 
-新 Agent 工具装配经 ExecutionServices.agentTools 明确提供；仅此路径使用统一主／执行指令并不装配旧派发工具。根 Agent 对象保留主会话已有可用知识、网页和反馈授权，子对象只获得冻结指令、同权限工具与递归能力。`WorkspaceLoop.agent` 给主执行管理器和子调度使用同一 LoopRuntime 运行机制。旧未装配入口保留原运行协议，不能仅依据角色名开启递归。
+新 Agent 工具装配经 ExecutionServices.AgentTools 明确提供；仅此路径使用统一主／执行指令并不装配旧派发工具。根 Agent 对象保留主会话已有可用知识、网页和反馈授权，子对象只获得冻结指令、同权限工具与递归能力。`WorkspaceLoop.agent` 给主执行管理器和子调度使用同一 LoopRuntime 运行机制。旧未装配入口保留原运行协议，不能仅依据角色名开启递归。
 
 统一 Agent 工具列表不套用旧 Team 的业务工具过滤；工具可见性不提供授权，执行仍通过 Runtime 的本轮权限、审批和原服务写入检查。
 
-loop-engine 仅对 KnowledgeTools.has 命中的当前注册知识工具提供 normalizeToolInput；通过 normalizeInput 校验绑定实例和实际 Schema，在 Runtime 记录请求前补齐身份与默认值。派发、岗位、原生及其它工具保持原输入和独立校验。执行服务仍重新核对同一实例与写权限，不借规范化提升授权。
+loop-engine 仅对 KnowledgeTools.Has 命中的当前注册知识工具提供 normalizeToolInput；通过 normalizeInput 校验绑定实例和实际 Schema，在 Runtime 记录请求前补齐身份与默认值。派发、岗位、原生及其它工具保持原输入和独立校验。执行服务仍重新核对同一实例与写权限，不借规范化提升授权。
 
 ## 冻结引擎与启动预检
 
@@ -286,7 +286,7 @@ agent-call-scheduler.ts 持有父子调用关联、深度、去重、暂停答�
 
 ### 显式业务调用与当前结果核验
 
-AgentCallScheduler.prepare 可以返回可信 launch 及只读 verify。带 launch 调用同一个 LoopRuntime.startMember，beforeRun 仍将真实子 task/run 关联父工具；普通调用沿 start。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
+AgentCallScheduler.prepare 可以返回可信 launch 及只读 verify。带 launch 调用同一个 LoopRuntime.StartMember，beforeRun 仍将真实子 task/run 关联父工具；普通调用沿 start。只有 canonical 验证和当前字节复核通过，业务调用才返回 completed + verification。模型结束但验证失败返回工具错误。错误 details 保留工具 outcome，避免适配层把业务错误码二次封装丢失。
 
 cbim_agent_result_check 仅接受当前父运行已经完成的原 callId；从闭包取得原身份与验证器，模型不能提交路径或证明。外部文件变化返回 WORKFLOW_VALIDATION_STALE；不能据此重放子运行。调用图深度、全局准入、预算、停止及排空逻辑不变。业务 Agent 暴露原产物证据工具及递归求助，旧终止交接/检查点工具仅保留给旧运行。
 

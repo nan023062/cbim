@@ -22,8 +22,8 @@ const ordinaryDraft='普通输入框的下一任务草稿与附件，不是本�
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page:Page|undefined,keepTemp=false;
 await fs.mkdir('test-results',{recursive:true});
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  const seed=await seedWaitingAttachments(setup,project,provider);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  const seed=await seedWaitingAttachments(setup,project,provider);await setup.Shutdown();setup=undefined;
   const start=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));};
   await start();
   const active=()=>page!.locator('.workspace-panel:not([hidden])'),card=()=>active().getByTestId('conversation-goal-summary'),draft=()=>active().getByRole('textbox',{name:'对话草稿',exact:true});
@@ -95,4 +95,4 @@ try{
   const report={packagedExe:exe,mode,realPi:true,onlineProvider:false,isolatedLocalProvider:true,realNativePicker:true,pickerEvidence,overLimitRejectedBeforeImport,scopeId:original.scopeId,rootSessionId:original.rootSessionId,continuationId:frozen.commandId,sourceChangedUsesSnapshot:true,sharedCards:true,ordinaryDraftAndAttachmentPreserved:true,manifestMatchesActualBytes:true,oneNativeAttachmentUserMessage:true,laterFullRequestsContainHistoricalImage:true,memberResultsDoNotReappendImage:true,sameMainAndNativeSession:true,newReadOnlyMember:true,responseLoss,restartNoReplay:true,canonicalAndNativeHistoryUnchangedOnReopen:true,mainRequests:13,memberRequests:10,pageErrors,transportErrors:provider.errors};
   await fs.writeFile(`test-results/${prefix}-ui-smoke.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(error){keepTemp=true;if(page)await page.screenshot({path:`test-results/${prefix}-failure.png`}).catch(()=>{});await fs.writeFile(`test-results/${prefix}-ui-failure.json`,JSON.stringify({exe,temp,error:String(error),mainRequests:provider.mainRequests.length,memberRequests:provider.memberRequests.length,pageErrors,transportErrors:provider.errors,pickerEvidence},null,2));throw error}
-finally{provider.release();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.shutdown();await provider.close();if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-waiting-attachments-ui-'));await fs.rm(target,{recursive:true,force:true})}}
+finally{provider.release();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.Shutdown();await provider.close();if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-waiting-attachments-ui-'));await fs.rm(target,{recursive:true,force:true})}}

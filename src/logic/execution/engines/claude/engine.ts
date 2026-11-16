@@ -110,19 +110,19 @@ export class ClaudeCodeEngine implements AgentEngine
     {
       if (!context.nativeSessionId)
         throw Error('Claude Code 恢复缺少原生会话身份');
-      await this.checkPath(context.sessionFile, true);
-      await this.readSession(context.sessionFile);
+      await this.CheckPath(context.sessionFile, true);
+      await this.ReadSession(context.sessionFile);
     }
     await context.assertMemberResume?.();
     const budget = await this.options.requestBudget?.();
     if (budget)
       this.transport = await openRequestBudgetTransport(llm, budget, { anthropicClient: true });
-    const emit = (event: EngineEvent) => this.emit(event);
-    this.tools = await claudeTools({ ...context, emit }, await runtimeEngineTools(context, this.options.knowledge), !!this.options.allowNativeExecution, () => this.transport?.error(), async () =>
+    const emit = (event: EngineEvent) => this.Emit(event);
+    this.tools = await claudeTools({ ...context, emit: emit }, await runtimeEngineTools(context, this.options.knowledge), !!this.options.allowNativeExecution, () => this.transport?.Error(), async () =>
     {
       try
       {
-        await this.transport?.assertSettled()
+        await this.transport?.AssertSettled()
       }
       catch (error)
       {
@@ -175,12 +175,12 @@ export class ClaudeCodeEngine implements AgentEngine
     if (initialized.hooks_applied !== true || initialized.hook_on_failure_supported !== true)
       throw Error('Claude Code 未确认可靠工具门禁，拒绝发送模型请求');
     if (context.sessionFile)
-      await this.bindSession(context.sessionFile);
+      await this.BindSession(context.sessionFile);
     await emit({ type: 'engine.status', data: { label: 'Claude Code 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.expected } });
   }
 
   /** 从当前 CBIM 配置目录核实原生实际文件；只匹配固定 UUID，不使用最近会话或猜测目录编码。 */
-  private async findSession()
+  private async FindSession()
   {
     const root = path.join(this.options.agentHome, 'projects'),
       candidates: string[] = [];
@@ -204,20 +204,20 @@ export class ClaudeCodeEngine implements AgentEngine
       }
     if (candidates.length !== 1)
       throw Error('Claude Code 未提供唯一的真实会话文件');
-    await this.bindSession(candidates[0]);
+    await this.BindSession(candidates[0]);
   }
 
-  private async bindSession(file: string)
+  private async BindSession(file: string)
   {
-    await this.checkPath(file, true);
-    const entries = await this.readSession(file);
+    await this.CheckPath(file, true);
+    const entries = await this.ReadSession(file);
     if (!entries.some(entry => entry.sessionId === this.nativeId && path.resolve(entry.cwd ?? '') === path.resolve(this.context!.task.root)))
       throw Error('Claude Code 历史与当前工作区/会话不一致');
-    await this.emit({ type: 'session.bound', data: { sessionId: this.nativeId, sessionFile: file, provider: 'cbim-' + this.options.llm!.profile.id, model: this.options.llm!.profile.model } });
+    await this.Emit({ type: 'session.bound', data: { sessionId: this.nativeId, sessionFile: file, provider: 'cbim-' + this.options.llm!.profile.id, model: this.options.llm!.profile.model } });
     this.bound = true;
   }
 
-  private async checkPath(file: string, existing: boolean)
+  private async CheckPath(file: string, existing: boolean)
   {
     const root = await fs.realpath(this.options.agentHome),
       absolute = path.resolve(file),
@@ -236,7 +236,7 @@ export class ClaudeCodeEngine implements AgentEngine
     }
   }
 
-  private async readSession(file: string): Promise<Record<string, any>[]>
+  private async ReadSession(file: string): Promise<Record<string, any>[]>
   {
     const text = new TextDecoder('utf-8', { fatal: true }).decode(await fs.readFile(file));
     if (!text.endsWith('\n'))
@@ -250,20 +250,20 @@ export class ClaudeCodeEngine implements AgentEngine
     return entries;
   }
 
-  private redact(text: string)
+  private Redact(text: string)
   {
     const key = this.options.llm?.apiKey;
-    return StringUtils.redactLiteral(text, key)
+    return StringUtils.RedactLiteral(text, key)
   }
 
-  private async emit(event: EngineEvent)
+  private async Emit(event: EngineEvent)
   {
-    this.inactivity?.observe(event);
+    this.inactivity?.Observe(event);
     const key = this.options.llm?.apiKey;
     const encoded = JSON.stringify(event);
     try
     {
-      await this.context!.emit(key ? JSON.parse(StringUtils.redactLiteral(encoded, key)) : event)
+      await this.context!.emit(key ? JSON.parse(StringUtils.RedactLiteral(encoded, key)) : event)
     }
     catch (error)
     {
@@ -301,13 +301,13 @@ export class ClaudeCodeEngine implements AgentEngine
         if (event.type === 'result')
         {
           if (!this.bound)
-            await this.findSession();
+            await this.FindSession();
           const usage = event.usage;
-          await this.emit({ type: 'engine.status', data: { label: '本轮用量已汇总', metric: 'run-usage', tokens: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens ?? 0, cacheWrite: usage.cache_creation_input_tokens ?? 0 }, cost: event.total_cost_usd, pricingKnown: false } });
-          const error = this.transport?.error() ?? (event.is_error ? (event.subtype === 'success' ? 'Claude Code 本轮执行失败' : event.errors.join('\n')) : undefined);
-          return this.stopped ? { status: 'cancelled' as const } : error ? { status: 'failed' as const, error: this.redact(error) } : { status: 'completed' as const };
+          await this.Emit({ type: 'engine.status', data: { label: '本轮用量已汇总', metric: 'run-usage', tokens: { input: usage.input_tokens, output: usage.output_tokens, cacheRead: usage.cache_read_input_tokens ?? 0, cacheWrite: usage.cache_creation_input_tokens ?? 0 }, cost: event.total_cost_usd, pricingKnown: false } });
+          const error = this.transport?.Error() ?? (event.is_error ? (event.subtype === 'success' ? 'Claude Code 本轮执行失败' : event.errors.join('\n')) : undefined);
+          return this.stopped ? { status: 'cancelled' as const } : error ? { status: 'failed' as const, error: this.Redact(error) } : { status: 'completed' as const };
         }
-        await this.consume(event);
+        await this.Consume(event);
       }
       if (this.stopped)
         return { status: 'cancelled' as const };
@@ -317,35 +317,35 @@ export class ClaudeCodeEngine implements AgentEngine
     {
       if (this.stopped && !this.fatal)
         return { status: 'cancelled' as const };
-      throw Error(this.redact(this.fatal?.message ?? timeoutError?.message ?? (error instanceof Error ? error.message : String(error))))
+      throw Error(this.Redact(this.fatal?.message ?? timeoutError?.message ?? (error instanceof Error ? error.message : String(error))))
     }
     finally
     {
-      this.inactivity?.dispose()
+      this.inactivity?.Dispose()
     }
   }
 
-  private async consume(event: SDKMessage)
+  private async Consume(event: SDKMessage)
   {
     // thinking 和工具参数只更新时间，不进入公开消息；子任务的真实输出同样代表本轮进展。
     if (event.type === 'stream_event' && event.event.type === 'content_block_delta')
     {
       const delta = event.event.delta;
       if (delta.type === 'text_delta' && delta.text.length || delta.type === 'thinking_delta' && delta.thinking.length || delta.type === 'input_json_delta' && delta.partial_json.length)
-        this.inactivity?.progress();
+        this.inactivity?.Progress();
     }
     if (event.type === 'stream_event' && !event.parent_tool_use_id)
     {
       const value = event.event;
       if (value.type === 'content_block_delta' && value.delta.type === 'text_delta')
-        await this.emit({ type: 'message.delta', data: { text: value.delta.text } });
+        await this.Emit({ type: 'message.delta', data: { text: value.delta.text } });
     }
     else if (event.type === 'assistant' && !event.parent_tool_use_id)
     {
       const text = event.message.content.filter(part => part.type === 'text').map(part => part.text).join('');
       const toolCallIds = event.message.content.filter(part => part.type === 'tool_use').map(part => part.id);
       if (text || toolCallIds.length)
-        await this.emit({ type: 'message', data: { role: 'assistant', text, ...(toolCallIds.length ? { toolCallIds } : {}) } });
+        await this.Emit({ type: 'message', data: { role: 'assistant', text, ...(toolCallIds.length ? { toolCallIds } : {}) } });
     }
     else if (event.type === 'system' && event.subtype === 'init')
     {
@@ -354,7 +354,7 @@ export class ClaudeCodeEngine implements AgentEngine
       const expected = this.tools!.expected,
         active = event.tools,
         missing = expected.filter(name => !active.includes(name));
-      await this.emit({ type: 'engine.status', data: { label: 'Claude Code 工具目录已核实', metric: 'tool-catalog', stage: 'active', expected, active, missing } });
+      await this.Emit({ type: 'engine.status', data: { label: 'Claude Code 工具目录已核实', metric: 'tool-catalog', stage: 'active', expected, active, missing } });
       if (missing.length)
         throw Error('Claude Code 未启用本轮必需工具，已停止运行');
     }
@@ -364,9 +364,9 @@ export class ClaudeCodeEngine implements AgentEngine
   async stop()
   {
     this.stopped = true;
-    this.inactivity?.dispose();
-    this.tools?.stop();
-    await this.transport?.close();
+    this.inactivity?.Dispose();
+    this.tools?.Stop();
+    await this.transport?.Close();
     try
     {
       await this.query?.interrupt()
@@ -380,10 +380,10 @@ export class ClaudeCodeEngine implements AgentEngine
 
   async close()
   {
-    this.inactivity?.dispose();
+    this.inactivity?.Dispose();
     this.endInput?.();
     this.query?.close();
-    await this.transport?.close();
-    await this.tools?.close()
+    await this.transport?.Close();
+    await this.tools?.Close()
   }
 }

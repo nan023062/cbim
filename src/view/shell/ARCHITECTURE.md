@@ -132,8 +132,8 @@ class N_src_view_shell_runtime_navigation_ts["runtime-navigation.ts"] {
 }
 class N_src_view_shell_runtime_navigation_ts_RuntimeNavigationResolver["RuntimeNavigationResolver"] {
   +constructor()
-  +cancel()
-  +resolve()
+  +Cancel()
+  +Resolve()
   -read
   -generation
 }

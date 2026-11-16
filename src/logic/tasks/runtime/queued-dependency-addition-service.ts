@@ -32,7 +32,7 @@ export class QueuedDependencyAdditionService
   }
 
   /** 主轮闭包提供身份和停止屏障；同命令先返回原提交回执，变参拒绝，读取/停止不自动重新加边。 */
-  async add(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
+  async Add(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: AddQueuedDependencyInput, assertCurrent?: () => void): Promise<AddQueuedDependencyReceipt>
   {
     const parsed = addQueuedDependencyInputSchema.safeParse(raw),
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
@@ -42,7 +42,7 @@ export class QueuedDependencyAdditionService
       fixed = context.data,
       alive = () =>
       {
-        this.owner.assert();
+        this.owner.Assert();
         assertCurrent?.();
         if (fixed.workspaceId !== this.owner.entry.id)
           fail('GRAPH_IDENTITY_MISMATCH', '前置追加不属于当前工作区')
@@ -50,25 +50,25 @@ export class QueuedDependencyAdditionService
     const command = contextualMainCommand('dispatch.addDependency', fixed, input);
     if (!this.owners)
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位前置核验');
-    const old = await this.owners.replay<AddQueuedDependencyReceipt>(command);
+    const old = await this.owners.Replay<AddQueuedDependencyReceipt>(command);
     if (old)
       return old.receipt;
     alive();
-    return this.owners.withContext(state => this.owners!.selections(queuedDependencyAdditionSelection(state, fixed, scopeId, runId, input).tasks), context => this.store.transact(command, async state =>
+    return this.owners.WithContext(state => this.owners!.Selections(queuedDependencyAdditionSelection(state, fixed, scopeId, runId, input).tasks), context => this.store.Transact(command, async state =>
     {
       alive();
       const { graph, scope, source, target, tasks, members } = queuedDependencyAdditionSelection(state, fixed, scopeId, runId, input);
       const knowledgeRevision = scope.goal!.plan!.knowledgeRevision;
-      if ((await this.owner.read()).revision !== knowledgeRevision)
+      if ((await this.owner.Read()).revision !== knowledgeRevision)
         fail('DEPENDENCY_KNOWLEDGE_STALE', '知识基线已变化，不能给旧待办追加前置');
       alive();
       let latest: Awaited<ReturnType<typeof prepareDispatchExecutionContext>> | undefined;
       for (const task of tasks)
       {
-        await this.owners!.verifyTask(state, context, task);
+        await this.owners!.VerifyTask(state, context, task);
         alive();
         const binding = task.ownerBinding;
-        this.goals.validateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(module => module.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
+        this.goals.ValidateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(module => module.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
         latest = await prepareDispatchExecutionContext(this.owner, task, context.snapshot, binding ? state.workspaceMembers!.find(member => member.memberId === binding.memberId) : undefined);
         alive();
         if (latest.knowledgeRevision !== knowledgeRevision || latest.agent.teamId !== members.find(member => member.agentInstanceId === task.assignee.agentInstanceId)!.teamId)

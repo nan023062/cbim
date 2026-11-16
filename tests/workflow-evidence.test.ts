@@ -12,28 +12,28 @@ const bindings:WorkflowContractBinding[]=[{moduleId:'project/module',workflowId:
 const planInput={expectedVersion:0,goal:task.goal,acceptance:task.acceptance,reason:'按模块约定执行',steps:[{id:'implement',title:'实现并读取成果',owner:'executor'}]};
 const decision=(name:string):ToolDecision=>({allow:true,effects:name==='write'?['business-write']:name==='bash'?['command']:name.startsWith('cbim_')?['maintenance']:['read'],scope:{kind:name==='bash'?'unknown':'workspace',workspaceId:identity.workspaceId}});
 function evidence(name='read',id='read-one'):ToolReceipt{const call={id,name,input:{path:'result.txt'}};return toolReceipt(identity,call,decision(name),'succeeded',{content:[{type:'text',text:'actual result'}]})}
-function progress(){const states:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async value=>{states.push(structuredClone(value))},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});return {tools,states}}
+function progress(){const states:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async value=>{states.push(structuredClone(value))},{identity,Artifacts:()=>[],workflow:{bindings,task,identity}});return {tools,states}}
 
 it('有约定的业务操作先要求本轮原目标计划，审批后版本变化不得使旧操作获准',async()=>{
-  const f=progress();expect(()=>f.tools.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));expect(f.states).toEqual([]);
-  await f.tools.call('cbim_task_plan',planInput);const version=f.tools.beforeEffects();expect(version).toBe(1);
-  await f.tools.call('cbim_task_step',{expectedVersion:1,id:'implement',state:'working',evidenceIds:[]});await expect(f.tools.invalidate('写入前',version)).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_STALE'}));expect(f.tools.current()?.version).toBe(2);
-  await f.tools.invalidate('写入前',f.tools.beforeEffects());expect(f.tools.current()?.version).toBe(3);
+  const f=progress();expect(()=>f.tools.BeforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));expect(f.states).toEqual([]);
+  await f.tools.Call('cbim_task_plan',planInput);const version=f.tools.BeforeEffects();expect(version).toBe(1);
+  await f.tools.Call('cbim_task_step',{expectedVersion:1,id:'implement',state:'working',evidenceIds:[]});await expect(f.tools.Invalidate('写入前',version)).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_STALE'}));expect(f.tools.Current()?.version).toBe(2);
+  await f.tools.Invalidate('写入前',f.tools.BeforeEffects());expect(f.tools.Current()?.version).toBe(3);
 });
 it('旧轮计划不能冒充本轮前置，模型改写原目标也不能放行',async()=>{
-  const f=progress();await f.tools.call('cbim_task_plan',{...planInput,goal:'另一个目标'});expect(()=>f.tools.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
-  const resumed=new TaskProgressTools(f.tools.current(),async()=>{},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});expect(()=>resumed.beforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
+  const f=progress();await f.tools.Call('cbim_task_plan',{...planInput,goal:'另一个目标'});expect(()=>f.tools.BeforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
+  const resumed=new TaskProgressTools(f.tools.Current(),async()=>{},{identity,Artifacts:()=>[],workflow:{bindings,task,identity}});expect(()=>resumed.BeforeEffects()).toThrow(expect.objectContaining({code:'WORKFLOW_PLAN_REQUIRED'}));
 });
 it('交付缺指定read回执拒绝；实际引用后程序生成proof，模型不能传入pass',async()=>{
-  const f=progress();await f.tools.call('cbim_task_plan',planInput);f.tools.record(evidence('write','write-one'),f.tools.generation);
-  await f.tools.call('cbim_task_step',{expectedVersion:1,id:'implement',state:'reported_done',evidenceIds:['write-one']});await expect(f.tools.call('cbim_delivery_prepare',{expectedVersion:2,summary:'成果',limitations:[]})).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_EVIDENCE_REQUIRED'}));expect(f.tools.current()?.delivery).toBeUndefined();
-  f.tools.record(evidence(),f.tools.generation);await f.tools.call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one','read-one']});await f.tools.call('cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]});expect(f.tools.current()?.delivery?.workflow?.checks[0]).toMatchObject({moduleId:bindings[0].moduleId,requirementId:'read-result',toolCallIds:['read-one']});
-  await expect(f.tools.call('cbim_delivery_prepare',{expectedVersion:4,summary:'成果',limitations:[],workflow:{pass:true}})).rejects.toThrow();
+  const f=progress();await f.tools.Call('cbim_task_plan',planInput);f.tools.Record(evidence('write','write-one'),f.tools.generation);
+  await f.tools.Call('cbim_task_step',{expectedVersion:1,id:'implement',state:'reported_done',evidenceIds:['write-one']});await expect(f.tools.Call('cbim_delivery_prepare',{expectedVersion:2,summary:'成果',limitations:[]})).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_EVIDENCE_REQUIRED'}));expect(f.tools.Current()?.delivery).toBeUndefined();
+  f.tools.Record(evidence(),f.tools.generation);await f.tools.Call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one','read-one']});await f.tools.Call('cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]});expect(f.tools.Current()?.delivery?.workflow?.checks[0]).toMatchObject({moduleId:bindings[0].moduleId,requirementId:'read-result',toolCallIds:['read-one']});
+  await expect(f.tools.Call('cbim_delivery_prepare',{expectedVersion:4,summary:'成果',limitations:[],workflow:{pass:true}})).rejects.toThrow();
 });
 it('副作用后的代次使旧回执失效，交付不自动选取未列入步骤的成功read',async()=>{
-  const f=progress();await f.tools.call('cbim_task_plan',planInput);const generation=f.tools.generation;await f.tools.invalidate('业务写入',f.tools.beforeEffects());f.tools.record(evidence(),generation);
-  await expect(f.tools.call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['read-one']})).rejects.toThrow('证据不存在');f.tools.record(evidence('write','write-one'),f.tools.generation);f.tools.record(evidence(),f.tools.generation);
-  await f.tools.call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one']});await expect(f.tools.call('cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]})).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_EVIDENCE_REQUIRED'}));
+  const f=progress();await f.tools.Call('cbim_task_plan',planInput);const generation=f.tools.generation;await f.tools.Invalidate('业务写入',f.tools.BeforeEffects());f.tools.Record(evidence(),generation);
+  await expect(f.tools.Call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['read-one']})).rejects.toThrow('证据不存在');f.tools.Record(evidence('write','write-one'),f.tools.generation);f.tools.Record(evidence(),f.tools.generation);
+  await f.tools.Call('cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one']});await expect(f.tools.Call('cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]})).rejects.toThrow(expect.objectContaining({code:'WORKFLOW_EVIDENCE_REQUIRED'}));
 });
 it('所有模块条件分别评价，成功回执不能跨运行且命令范围保持unknown',()=>{
   const second:WorkflowContractBinding={...bindings[0],moduleId:'project/other',contract:{version:1,delivery:{requiredToolEvidence:[{id:'search',toolName:'grep'}]}}};
@@ -44,8 +44,8 @@ it('所有模块条件分别评价，成功回执不能跨运行且命令范围�
 
 async function canonical(withWorkflow=true){
   const events:ArtifactEvidenceEvent[]=[];const emit=(type:string,data:Record<string,unknown>)=>{events.push({...identity,seq:events.length+1,type,data:structuredClone(data)})};emit('run.started',{task,...(withWorkflow?{workflowContracts:bindings}:{})});
-  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],...(withWorkflow?{workflow:{bindings,task,identity}}:{})});
-  async function call(id:string,name:string,input:Record<string,unknown>){const call:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...call});if(name==='write')await tools.invalidate('写入前',tools.beforeEffects());emit('tool.allowed',{...call,...auth});const generation=tools.generation,result=name.startsWith('cbim_')?await tools.call(name,input):{content:[{type:'text',text:name==='read'?'actual file':'written'}]};const receipt=toolReceipt(identity,call,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.record(receipt,generation)}
+  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,Artifacts:()=>[],...(withWorkflow?{workflow:{bindings,task,identity}}:{})});
+  async function call(id:string,name:string,input:Record<string,unknown>){const call:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...call});if(name==='write')await tools.Invalidate('写入前',tools.BeforeEffects());emit('tool.allowed',{...call,...auth});const generation=tools.generation,result=name.startsWith('cbim_')?await tools.Call(name,input):{content:[{type:'text',text:name==='read'?'actual file':'written'}]};const receipt=toolReceipt(identity,call,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.Record(receipt,generation)}
   await call('plan','cbim_task_plan',planInput);await call('write-one','write',{path:'result.txt',content:'actual file'});await call('read-one','read',{path:'result.txt'});await call('step','cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one','read-one']});await call('deliver','cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]});emit('run.settled',{status:'completed'});return events;
 }
 it('结算重新核对完整canonical及程序proof，不依赖模型交付正文',async()=>{const events=await canonical();expect(validateWorkflowEvidence(events,task,bindings)?.checks[0].toolCallIds).toEqual(['read-one']);expect(validateWorkflowEvidence(events,task,[])).toBeUndefined()});
@@ -57,16 +57,16 @@ async function overlappingWrite(order:'after-delivery'|'before-delivery'|'before
   const events:ArtifactEvidenceEvent[]=[];
   const emit=(type:string,data:Record<string,unknown>)=>events.push({...identity,seq:events.length+1,type,data:structuredClone(data)});
   emit('run.started',{task,workflowContracts:bindings});
-  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});
+  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,Artifacts:()=>[],workflow:{bindings,task,identity}});
   async function call(id:string,name:string,input:Record<string,unknown>){
     const request:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...request});emit('tool.allowed',{...request,...auth});
-    const generation=tools.generation,result=name.startsWith('cbim_')?await tools.call(name,input):{content:[{type:'text',text:'read bytes'}]};
-    const receipt=toolReceipt(identity,request,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.record(receipt,generation);
+    const generation=tools.generation,result=name.startsWith('cbim_')?await tools.Call(name,input):{content:[{type:'text',text:'read bytes'}]};
+    const receipt=toolReceipt(identity,request,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.Record(receipt,generation);
   }
   await call('plan','cbim_task_plan',planInput);
   const write:ToolCall={id:'write-in-flight',name:'write',input:{path:'result.txt',content:'new bytes'}},auth=decision(write.name),result={content:[{type:'text',text:'written'}]};
-  emit('tool.proposed',{...write});await tools.invalidate('写入前',tools.beforeEffects());emit('tool.allowed',{...write,...auth});const writeGeneration=tools.generation;
-  const finishWrite=()=>{const receipt=toolReceipt(identity,write,auth,failedWrite?'failed':'succeeded',result);emit('tool.finished',{id:write.id,name:write.name,result,isError:failedWrite,receipt});tools.record(receipt,writeGeneration)};
+  emit('tool.proposed',{...write});await tools.Invalidate('写入前',tools.BeforeEffects());emit('tool.allowed',{...write,...auth});const writeGeneration=tools.generation;
+  const finishWrite=()=>{const receipt=toolReceipt(identity,write,auth,failedWrite?'failed':'succeeded',result);emit('tool.finished',{id:write.id,name:write.name,result,isError:failedWrite,receipt});tools.Record(receipt,writeGeneration)};
   if(order==='before-read')finishWrite();
   await call('read-overlap','read',{path:'result.txt'});
   if(order==='before-delivery')finishWrite();

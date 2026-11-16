@@ -35,9 +35,9 @@ function boot()
     const entry = path.join(__dirname, 'main.js');
     const implementation = loadApplication(entry) as
       {
-        startDesktop(runtime?: DesktopRuntimeHost): void
+        StartDesktop(runtime?: DesktopRuntimeHost): void
       };
-    implementation.startDesktop();
+    implementation.StartDesktop();
     return;
   }
   const cold: ColdRuntime = JSON.parse(fs.readFileSync(configFile, 'utf8'));
@@ -77,7 +77,7 @@ function boot()
       let retry = false;
       try
       {
-        retry = !!journal.read().pending
+        retry = !!journal.Read().pending
       }
       catch
       {
@@ -85,7 +85,7 @@ function boot()
       const result = await dialog.showMessageBox({ type: 'error', title: 'CBIM 更新恢复', message: '更新尚未确认完成，已保留原用户数据。', detail: String(error) + '\n可以重试同一资源版本；不要删除用户数据或用旧代码强行打开。', buttons: retry ? ['退出', '重试原候选'] : ['退出'], defaultId: 0, cancelId: 0 });
       if (retry && result.response === 1)
       {
-        journal.retryPending();
+        journal.RetryPending();
         app.relaunch();
       }
       app.exit(1);
@@ -97,7 +97,7 @@ function boot()
     return;
   }
   if (selection.pending)
-    selection.journal.accessData(selection.digest);
+    selection.journal.AccessData(selection.digest);
   app.setPath('userData', path.join(userRoot, 'desktop'));
   app.setPath('sessionData', path.join(userRoot, 'desktop'));
   const reuseRoots = fs.existsSync(cacheIdentityRoot) ? fs.readdirSync(cacheIdentityRoot, { withFileTypes: true }).filter(entry => entry.isDirectory() && /^\d+\.\d+\.\d+$/.test(entry.name)).map(entry => path.join(cacheIdentityRoot, entry.name)) : [];
@@ -124,31 +124,31 @@ function boot()
   const host: DesktopRuntimeHost = {
     assetsRoot: selection.root, cacheRoot: cacheIdentityRoot, codeVersion: cold.codeVersion, resourceVersion: selection.manifest.resourceVersion,
     engineArtifacts,
-    stopPreparingEngines()
+    StopPreparingEngines()
     {
       controller.abort()
     },
-    updates(beforeInstall, enabled)
+    Updates(beforeInstall, enabled)
     {
       const installer = new RuntimeUpdates(store, selection.journal, selection.manifest, new NsisUpdateInstaller(), () =>
       {
         app.relaunch();
         app.exit(0)
       }, undefined, () => []);
-      return new DesktopUpdates(cold.codeVersion, selection.manifest.notes, enabled, signal => installer.latest(signal), installer, beforeInstall, selection.manifest.resourceVersion, () => [...preparation.values()]);
+      return new DesktopUpdates(cold.codeVersion, selection.manifest.notes, enabled, signal => installer.Latest(signal), installer, beforeInstall, selection.manifest.resourceVersion, () => [...preparation.values()]);
     },
-    confirm()
+    Confirm()
     {
-      selection.journal.confirm(selection.digest)
+      selection.journal.Confirm(selection.digest)
     },
   };
   app.on('will-quit', () => controller.abort());
   const entry = path.join(selection.root, '.vite/build/main.js');
   const implementation = loadApplication(entry) as
     {
-      startDesktop(runtime?: DesktopRuntimeHost): void
+      StartDesktop(runtime?: DesktopRuntimeHost): void
     };
-  implementation.startDesktop(host);
+  implementation.StartDesktop(host);
 }
 
 try

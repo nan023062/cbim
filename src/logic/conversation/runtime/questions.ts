@@ -18,13 +18,13 @@ export class QuestionQueue
     }>();
 
   /** 返回独立视图；调用方或界面不得通过修改列表改写原题和选项。 */
-  list(taskId: string)
+  List(taskId: string)
   {
     return [...this.pending.values()].filter(p => p.view.taskId === taskId).map(p => structuredClone(p.view))
   }
 
   /** 先校验模型输入；取消信号监听在结束时移除，防止任务残留等待。 */
-  ask(taskId: string, args: unknown, signal: AbortSignal): Promise<QuestionResult>
+  Ask(taskId: string, args: unknown, signal: AbortSignal): Promise<QuestionResult>
   {
     const parsed = structuredClone(input.parse(args));
     if (signal.aborted)
@@ -51,7 +51,7 @@ export class QuestionQueue
   }
 
   /** 校验全部答案后一次性消费问题；重复提交或跨任务回答均拒绝。 */
-  answer(taskId: string, id: string, value: unknown)
+  Answer(taskId: string, id: string, value: unknown)
   {
     const item = this.pending.get(id);
     if (!item || item.view.taskId !== taskId)
@@ -76,7 +76,7 @@ export class QuestionQueue
     item.finish({ answers: result });
   }
 
-  cancel(taskId?: string)
+  Cancel(taskId?: string)
   {
     for (const item of [...this.pending.values()])
       if (!taskId || item.view.taskId === taskId)

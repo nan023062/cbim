@@ -25,11 +25,11 @@ const contextSchema = z.object({ workspaceId: id, rootSessionId: id, scopeId: id
 
 export class CheckpointAbandonmentService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, private readonly store: DispatchStore, private readonly ports?: MemberCheckpointHistoryPorts)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: DispatchStore, private readonly ports?: MemberCheckpointHistoryPorts)
   {
   }
 
-  private request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput)
+  private Request(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput)
   {
     const parsed = abandonCheckpointInputSchema.safeParse(raw),
       context = contextSchema.safeParse({ ...identity, scopeId, mainRunId, commandId });
@@ -41,9 +41,9 @@ export class CheckpointAbandonmentService
     return { input, fixed, command };
   }
 
-  private async lookup(command: { commandId: string; fingerprint: string }): Promise<AbandonCheckpointReceipt | undefined>
+  private async Lookup(command: { commandId: string; fingerprint: string }): Promise<AbandonCheckpointReceipt | undefined>
   {
-    const prior = await this.store.commandReceipt(command.commandId);
+    const prior = await this.store.CommandReceipt(command.commandId);
     if (prior)
     {
       if (prior.fingerprint !== command.fingerprint)
@@ -53,21 +53,21 @@ export class CheckpointAbandonmentService
   }
 
   /** 只查原命令，供回包未知后的进程内撤票使用；不重新执行事务或要求当前来源仍有效。 */
-  receipt(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput): Promise<AbandonCheckpointReceipt | undefined>
+  Receipt(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput): Promise<AbandonCheckpointReceipt | undefined>
   {
-    return this.lookup(this.request(identity, scopeId, mainRunId, commandId, raw).command)
+    return this.Lookup(this.Request(identity, scopeId, mainRunId, commandId, raw).command)
   }
 
   /** 原命令先于生命周期和来源校验；新请求的所有等待后检查停止，提交后不反悔为“未发生”。 */
-  async abandon(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
+  async Abandon(identity: GraphIdentity, scopeId: string, mainRunId: string, commandId: string, raw: AbandonCheckpointInput, assertCurrent: () => void): Promise<AbandonCheckpointReceipt>
   {
-    const { input, fixed, command } = this.request(identity, scopeId, mainRunId, commandId, raw),
-      prior = await this.lookup(command);
+    const { input, fixed, command } = this.Request(identity, scopeId, mainRunId, commandId, raw),
+      prior = await this.Lookup(command);
     if (prior)
       return prior;
     const check = () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       assertCurrent();
       if (fixed.workspaceId !== this.owner.entry.id)
         fail('GRAPH_IDENTITY_MISMATCH', '检查点不属于当前工作区')
@@ -75,11 +75,11 @@ export class CheckpointAbandonmentService
     check();
     if (!this.ports)
       fail('CHECKPOINT_HANDOFF_UNAVAILABLE', '未装配检查点历史核实端口');
-    const observed = structuredClone(checkpointAbandonmentSelection(await this.store.read(), identity, scopeId, mainRunId, input));
+    const observed = structuredClone(checkpointAbandonmentSelection(await this.store.Read(), identity, scopeId, mainRunId, input));
     check();
     await verifyMemberCheckpointHistory(this.owner, observed.task, observed.run, this.ports, check, observed.runs);
     check();
-    return this.store.transact(command, async state =>
+    return this.store.Transact(command, async state =>
     {
       check();
       const selected = checkpointAbandonmentSelection(state, identity, scopeId, mainRunId, input);

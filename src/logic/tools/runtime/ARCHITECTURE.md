@@ -44,10 +44,10 @@ class N_src_logic_tools_runtime_candidate_review_tools_ts["candidate-review-tool
 }
 class N_src_logic_tools_runtime_candidate_review_tools_ts_CandidateReviewTools["CandidateReviewTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -binding
   -save
 }
@@ -98,19 +98,19 @@ class N_src_logic_tools_runtime_coordination_tools_ts["coordination-tools.ts"] {
 }
 class N_src_logic_tools_runtime_coordination_tools_ts_ReadPort["ReadPort"] {
   <<interface>>
-  +list()
-  +describe()
-  +call()
+  +List()
+  +Describe()
+  +Call()
 }
 N_src_logic_tools_runtime_coordination_tools_ts ..> N_src_logic_tools_runtime_coordination_tools_ts_ReadPort : 声明
 class N_src_logic_tools_runtime_coordination_tools_ts_CoordinationTools["CoordinationTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -routes
-  -resolve()
+  -Resolve()
 }
 N_src_logic_tools_runtime_coordination_tools_ts ..> N_src_logic_tools_runtime_coordination_tools_ts_CoordinationTools : 声明
 ```
@@ -139,33 +139,33 @@ class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort["DispatchToo
   <<interface>>
   +binding
   +collaborationMode
-  +dispatch()
-  +inspect()
-  +commandReport()
-  +previewCancel()
-  +cancel()
-  +replaceDependency()
-  +addDependency()
-  +reviseDependencies()
-  +resume()
-  +abandonCheckpoint()
+  +Dispatch()
+  +Inspect()
+  +CommandReport()
+  +PreviewCancel()
+  +Cancel()
+  +ReplaceDependency()
+  +AddDependency()
+  +ReviseDependencies()
+  +Resume()
+  +AbandonCheckpoint()
 }
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchToolsPort : 声明
 class N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools["DispatchTools"] {
   +constructor()
   +collaborationMode
-  +list()
-  +has()
-  +describe()
-  +call()
+  +List()
+  +Has()
+  +Describe()
+  +Call()
   -port
   -goals
   -reviews
   -history
   -binding
-  -definition()
-  -available()
-  -parse()
+  -Definition()
+  -Available()
+  -Parse()
 }
 N_src_logic_tools_runtime_dispatch_tools_ts ..> N_src_logic_tools_runtime_dispatch_tools_ts_DispatchTools : 声明
 ```
@@ -181,15 +181,15 @@ class N_src_logic_tools_runtime_feedback_status_tool_ts["feedback-status-tool.ts
 }
 class N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool["FeedbackStatusTool"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +snapshot()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Snapshot()
+  +Call()
   -workspaceId
   -registered
   -check
-  -parse()
+  -Parse()
 }
 N_src_logic_tools_runtime_feedback_status_tool_ts ..> N_src_logic_tools_runtime_feedback_status_tool_ts_FeedbackStatusTool : 声明
 ```
@@ -206,12 +206,12 @@ class N_src_logic_tools_runtime_feedback_tools_ts["feedback-tools.ts"] {
 class N_src_logic_tools_runtime_feedback_tools_ts_FeedbackTools["FeedbackTools"] {
   +scope
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
-  -parse()
+  -Parse()
 }
 N_src_logic_tools_runtime_feedback_tools_ts ..> N_src_logic_tools_runtime_feedback_tools_ts_FeedbackTools : 声明
 ```
@@ -240,22 +240,22 @@ class N_src_logic_tools_runtime_goal_tools_ts_GoalToolsPort["GoalToolsPort"] {
   <<interface>>
   +binding
   +collaborationMode
-  +inspect()
-  +previewPause()
-  +plan()
-  +review()
+  +Inspect()
+  +PreviewPause()
+  +Plan()
+  +Review()
 }
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts_GoalToolsPort : 声明
 class N_src_logic_tools_runtime_goal_tools_ts_GoalTools["GoalTools"] {
   +constructor()
-  +list()
-  +has()
-  +describe()
-  +call()
+  +List()
+  +Has()
+  +Describe()
+  +Call()
   -port
   -binding
-  -definition()
-  -parse()
+  -Definition()
+  -Parse()
 }
 N_src_logic_tools_runtime_goal_tools_ts ..> N_src_logic_tools_runtime_goal_tools_ts_GoalTools : 声明
 ```
@@ -280,14 +280,14 @@ class N_src_logic_tools_runtime_governance_tools_ts_GovernanceRunBinding["Govern
 N_src_logic_tools_runtime_governance_tools_ts ..> N_src_logic_tools_runtime_governance_tools_ts_GovernanceRunBinding : 声明
 class N_src_logic_tools_runtime_governance_tools_ts_GovernanceTools["GovernanceTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
   -binding
-  -parse()
-  -command()
+  -Parse()
+  -Command()
 }
 N_src_logic_tools_runtime_governance_tools_ts ..> N_src_logic_tools_runtime_governance_tools_ts_GovernanceTools : 声明
 ```
@@ -325,13 +325,13 @@ class N_src_logic_tools_runtime_knowledge_tools_ts_KnowledgeTools["KnowledgeTool
   +workspace
   +queries
   +constructor()
-  +list()
-  +has()
-  +normalizeInput()
-  +describe()
-  +callFromRun()
+  +List()
+  +Has()
+  +NormalizeInput()
+  +Describe()
+  +CallFromRun()
   -registry
-  -invoke()
+  -Invoke()
 }
 N_src_logic_tools_runtime_knowledge_tools_ts ..> N_src_logic_tools_runtime_knowledge_tools_ts_KnowledgeTools : 声明
 ```
@@ -361,13 +361,13 @@ class N_src_logic_tools_runtime_module_ownership_tools_ts["module-ownership-tool
 }
 class N_src_logic_tools_runtime_module_ownership_tools_ts_ModuleOwnershipTools["ModuleOwnershipTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
   -binding
-  -parse()
+  -Parse()
 }
 N_src_logic_tools_runtime_module_ownership_tools_ts ..> N_src_logic_tools_runtime_module_ownership_tools_ts_ModuleOwnershipTools : 声明
 ```
@@ -383,10 +383,10 @@ class N_src_logic_tools_runtime_office_history_tools_ts["office-history-tools.ts
 }
 class N_src_logic_tools_runtime_office_history_tools_ts_OfficeHistoryTools["OfficeHistoryTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -read
   -identity
 }
@@ -404,12 +404,12 @@ class N_src_logic_tools_runtime_question_tools_ts["question-tools.ts"] {
 }
 class N_src_logic_tools_runtime_question_tools_ts_QuestionTools["QuestionTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -request
-  -parse()
+  -Parse()
 }
 N_src_logic_tools_runtime_question_tools_ts ..> N_src_logic_tools_runtime_question_tools_ts_QuestionTools : 声明
 ```
@@ -425,15 +425,15 @@ class N_src_logic_tools_runtime_repository_tools_ts["repository-tools.ts"] {
 }
 class N_src_logic_tools_runtime_repository_tools_ts_RepositoryTools["RepositoryTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
   -targets
-  -parse()
-  -target()
-  -scope()
+  -Parse()
+  -Target()
+  -Scope()
 }
 N_src_logic_tools_runtime_repository_tools_ts ..> N_src_logic_tools_runtime_repository_tools_ts_RepositoryTools : 声明
 ```
@@ -449,10 +449,10 @@ class N_src_logic_tools_runtime_web_tools_ts["web-tools.ts"] {
 }
 class N_src_logic_tools_runtime_web_tools_ts_WebTools["WebTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
   -workspaceId
 }
@@ -470,10 +470,10 @@ class N_src_logic_tools_runtime_workspace_member_tools_ts["workspace-member-tool
 }
 class N_src_logic_tools_runtime_workspace_member_tools_ts_WorkspaceMemberTools["WorkspaceMemberTools"] {
   +constructor()
-  +has()
-  +list()
-  +describe()
-  +call()
+  +Has()
+  +List()
+  +Describe()
+  +Call()
   -port
   -binding
 }
@@ -562,7 +562,7 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 ### 知识查询与刷新分别装配
 
-`KnowledgeTools` 将只读注册表/详情交给 logic/knowledge/rules 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
+`KnowledgeTools` 将只读注册表/详情交给 logic/knowledge/rules 的 `KnowledgeQueries`，将索引刷新交给 独立的 `KnowledgeRefresh.Refresh`。查询门面不再拥有刷新能力；调用前的 Schema、实例身份、写授权、取消检查及调用后的唯一输出快照校验保持在原工具边界。公开工具名称、版本与恢复协议不变，不因为重构重放提交。具体依赖与事务所有者见 [知识契约](../../knowledge/rules/CONTRACT.md#固定快照读取的逻辑边界与公共入口)。
 
 ### 项目根模块查询 v2
 
@@ -602,7 +602,7 @@ WebTools 将可信主进程端口装为 cbim_web_fetch 与 cbim_web_search，分
 
 ### 当前知识与维护工具边界
 
-知识接口先执行领域校验和授权，再由 `ToolRegistry.invokeResolved` 执行一次领域函数，并通过 logic/tools/rules 的 `checkedJsonToolResult` 校验实际业务输出的唯一 JSON 快照。返回协议外壳仍由 Pi 桥 `validateToolResult` 核验。输出无效为 `TOOL_OUTPUT_INVALID`，不回显正文、不把空值解释为操作成功，也不回滚或重放已执行的领域操作。
+知识接口先执行领域校验和授权，再由 `ToolRegistry.InvokeResolved` 执行一次领域函数，并通过 logic/tools/rules 的 `checkedJsonToolResult` 校验实际业务输出的唯一 JSON 快照。返回协议外壳仍由 Pi 桥 `validateToolResult` 核验。输出无效为 `TOOL_OUTPUT_INVALID`，不回显正文、不把空值解释为操作成功，也不回滚或重放已执行的领域操作。
 
 `knowledge-contracts.ts` 为原有 26 个真实知识工具和两个发现工具逐一绑定 Logic 领域规则 输出 Schema 与恢复说明。所有服务生成的结构严格校验；原始 definition、people 和不可用引用保留诊断 JSON，不把 `structural:false` 或 `not_found` 改写成工具错误。元数据不替代输入校验、可信实例身份、read/ask/execute 权限或单次审批。
 

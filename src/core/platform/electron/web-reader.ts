@@ -57,7 +57,7 @@ export class ElectronBrowserReader implements BrowserReader
   }
 
   /** 独占匿名会话。所有 HTTP 资源逐次 authorize，文档额外节流；只允许 GET，不承诺 canvas 像素识别。 */
-  async read(raw: string, signal: AbortSignal, authorize: (url: string, signal: AbortSignal, document?: boolean) => Promise<void>): Promise<BrowserPage>
+  async Read(raw: string, signal: AbortSignal, authorize: (url: string, signal: AbortSignal, document?: boolean) => Promise<void>): Promise<BrowserPage>
   {
     const url = publicUrl(raw);
     signal.throwIfAborted();

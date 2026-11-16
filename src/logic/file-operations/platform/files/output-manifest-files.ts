@@ -23,27 +23,27 @@ export class OutputManifestFiles
 {
   private readonly files: ArtifactFiles;
 
-  constructor(private readonly root: string, private readonly assert: () => void, private readonly guarded?: { files: ArtifactFiles; lockDirectory(path: string): () => void })
+  constructor(private readonly root: string, private readonly assert: () => void, private readonly guarded?: { files: ArtifactFiles; LockDirectory(path: string): () => void })
   {
     this.root = path.resolve(root);
     this.files = guarded?.files ?? new ArtifactFiles(this.root, assert)
   }
 
-  private current(signal: AbortSignal)
+  private Current(signal: AbortSignal)
   {
     this.assert();
     signal.throwIfAborted()
   }
 
   /** 逐级核路径；只有明确 ENOENT 才表示缺失，错误、链接或非目录祖先不能伪装成空集合。 */
-  private async locate(raw: string, signal: AbortSignal): Promise<{ file: string; stat: Stats } | undefined>
+  private async Locate(raw: string, signal: AbortSignal): Promise<{ file: string; stat: Stats } | undefined>
   {
-    this.current(signal);
+    this.Current(signal);
     artifactScopePathSchema.parse(raw);
     normalizeArtifactPath(this.root, raw);
     const root = await fs.realpath(this.root),
       rootStat = await fs.lstat(this.root);
-    this.current(signal);
+    this.Current(signal);
     if (normal(root) !== normal(this.root) || !rootStat.isDirectory() || rootStat.isSymbolicLink())
       fail('MANIFEST_PATH', '工作区位置或类型已变化');
     let current = this.root;
@@ -58,7 +58,7 @@ export class OutputManifestFiles
       }
       catch (error)
       {
-        this.current(signal);
+        this.Current(signal);
         if ((error as
           {
             code?: string
@@ -66,18 +66,18 @@ export class OutputManifestFiles
           return;
         throw error
       }
-      this.current(signal);
+      this.Current(signal);
       if (stat.isSymbolicLink() || index < parts.length - 1 && !stat.isDirectory())
         fail('MANIFEST_PATH', '产物路径含链接或非目录祖先');
     }
     const real = await fs.realpath(current);
-    this.current(signal);
+    this.Current(signal);
     if (normal(real) !== normal(current))
       fail('MANIFEST_PATH', '产物实际路径与声明不符');
     return { file: current, stat };
   }
 
-  private async scan(scopes: ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
+  private async Scan(scopes: ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
     const roots: OutputManifestSnapshot['roots'] = [],
       entries: OutputManifestEntry[] = [],
@@ -85,10 +85,10 @@ export class OutputManifestFiles
     let bytes = 0;
     const visit = async (relativePath: string, expected?: 'file' | 'directory') =>
     {
-      this.current(signal);
+      this.Current(signal);
       if (relativePath.split('/').length > artifactScopeLimits.depth)
         fail('MANIFEST_LIMIT', '产物目录超过32层');
-      const target = await this.locate(relativePath, signal);
+      const target = await this.Locate(relativePath, signal);
       if (!target)
       {
         if (expected)
@@ -113,8 +113,8 @@ export class OutputManifestFiles
       {
         if (stat.size > artifactScopeLimits.fileBytes || bytes + stat.size > artifactScopeLimits.totalBytes)
           fail('MANIFEST_LIMIT', '产物超过单文件8 MiB或总计32 MiB');
-        const [fact] = await this.files.captureFiles([relativePath], signal);
-        this.current(signal);
+        const [fact] = await this.files.CaptureFiles([relativePath], signal);
+        this.Current(signal);
         bytes += fact.byteLength;
         if (bytes > artifactScopeLimits.totalBytes)
           fail('MANIFEST_LIMIT', '读取期间产物总字节超过32 MiB');
@@ -124,16 +124,16 @@ export class OutputManifestFiles
       {
         entries.push({ relativePath, kind: 'directory' });
         // opendir 逐条读取，数量超限立即退出并关闭句柄，不先把任意大目录装入数组。
-        const release = this.guarded?.lockDirectory(relativePath);
+        const release = this.guarded?.LockDirectory(relativePath);
         try
         {
           const directory = await fs.opendir(file);
           for await (const child of directory)
           {
-            this.current(signal);
+            this.Current(signal);
             await visit(relativePath + '/' + child.name)
           }
-          const after = await this.locate(relativePath, signal);
+          const after = await this.Locate(relativePath, signal);
           if (!after || !same(stat, after.stat))
             fail('MANIFEST_CHANGED', '目录或条目集合在读取期间变化');
         }
@@ -146,38 +146,38 @@ export class OutputManifestFiles
     const declared = scopes.flatMap(value => value.scope.roots).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
     for (const root of declared)
       await visit(root.path, root.kind);
-    this.current(signal);
+    this.Current(signal);
     entries.sort((a, b) => a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0);
     return outputManifestSnapshotSchema.parse({ scopes, roots, entries });
   }
 
   /** 两次完整观察共用15秒期限；最多读取两份32 MiB，出现变化不返回局部或截断清单。 */
-  async capture(raw: readonly ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
+  async Capture(raw: readonly ArtifactScopeBinding[], signal: AbortSignal): Promise<OutputManifestSnapshot>
   {
     const scopes = artifactScopeBindingsSchema.parse(raw),
       limited = AbortSignal.any([signal, AbortSignal.timeout(artifactScopeLimits.readMs)]);
-    const first = await this.scan(scopes, limited),
-      second = await this.scan(scopes, limited);
-    this.current(limited);
+    const first = await this.Scan(scopes, limited),
+      second = await this.Scan(scopes, limited);
+    this.Current(limited);
     if (outputManifestHash(first) !== outputManifestHash(second))
       fail('MANIFEST_CHANGED', '两次完整产物观察不一致，请等待稳定后重新采集');
     return second;
   }
 
   /** 按原范围重新枚举，不只读旧路径；未知保持不可核实，不能当空清单或未变化。 */
-  async check(raw: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>
+  async Check(raw: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>
   {
     const expected = outputManifestSnapshotSchema.parse(raw),
       expectedHash = outputManifestHash(expected);
     try
     {
-      const observed = await this.capture(expected.scopes, signal),
+      const observed = await this.Capture(expected.scopes, signal),
         observedHash = outputManifestHash(observed);
       return { state: expectedHash === observedHash ? 'matches' : 'changed', expectedHash, observed, observedHash }
     }
     catch (error)
     {
-      this.current(signal);
+      this.Current(signal);
       const code = (error as
         {
           code?: string

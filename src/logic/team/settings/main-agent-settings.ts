@@ -26,7 +26,7 @@ export class MainAgentSettings
   {
   }
 
-  private async readStored(workspaceId: string)
+  private async ReadStored(workspaceId: string)
   {
     try
     {
@@ -44,25 +44,25 @@ export class MainAgentSettings
   }
 
   /** 只读取配置，不读取密钥或创建运行；两处界面及所有主会话看到相同 revision。 */
-  async read(raw: unknown): Promise<MainAgentSettingsView>
+  async Read(raw: unknown): Promise<MainAgentSettingsView>
   {
     const identity = mainAgentIdentitySchema.parse(raw);
     this.assertCurrent(identity);
-    const { version: _, ...value } = await this.readStored(identity.workspaceId);
+    const { version: _, ...value } = await this.ReadStored(identity.workspaceId);
     this.assertCurrent(identity);
     return { ...identity, agentId: 'cbim:main', ...value };
   }
 
   /** 保存完整选型；模型校验与写盘共享配置短锁，写盘成功才发布新 revision。 */
-  configure(raw: unknown): Promise<MainAgentSettingsView>
+  Configure(raw: unknown): Promise<MainAgentSettingsView>
   {
     const input = mainAgentSettingsSchema.parse(raw);
-    return this.queue.run(async () =>
+    return this.queue.Run(async () =>
     {
       const { workspaceId, instanceId } = input,
         identity = { workspaceId, instanceId };
       this.assertCurrent(identity);
-      const current = await this.readStored(workspaceId);
+      const current = await this.ReadStored(workspaceId);
       if (current.revision !== input.revision)
         fail('AGENT_SETTINGS_CONFLICT', '主 Agent 配置已在其他入口更新，请重新读取后保存');
       if (JSON.stringify(current.selection) === JSON.stringify(input.selection))
@@ -70,7 +70,7 @@ export class MainAgentSettings
       if (current.revision >= Number.MAX_SAFE_INTEGER)
         fail('AGENT_SETTINGS_LIMIT', '主 Agent 配置版本已达上限');
       const next = { version: 1 as const, revision: current.revision + 1, selection: input.selection };
-      await this.models.withConfigurations(input.selection ? [input.selection] : [], async () =>
+      await this.models.WithConfigurations(input.selection ? [input.selection] : [], async () =>
       {
         this.assertCurrent(identity);
         try

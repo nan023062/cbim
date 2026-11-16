@@ -11,18 +11,18 @@ function render(value:ArtifactReport,selectedId='',error=''){return renderToStat
 
 it('基线只显式加载，列表不自动选取或hash；选择不请求，明确复核才传baselineId',async()=>{
   const read=vi.fn(async(input:ArtifactReportInput)=>report(!!input.baselineId)),controller=new ArtifactReportController(identity,read);
-  const stop=controller.subscribe(vi.fn());expect(read).not.toHaveBeenCalled();await controller.inspect();expect(read).not.toHaveBeenCalled();
-  await controller.list();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual(identity);expect(controller.snapshot.selectedId).toBe('');
-  controller.select('baseline');expect(read).toHaveBeenCalledTimes(1);expect(controller.snapshot.report?.verification).toBeUndefined();
-  await controller.inspect();expect(read).toHaveBeenLastCalledWith({...identity,baselineId:'baseline'});expect(controller.snapshot.report?.verification?.state).toBe('matches');
-  await controller.list();expect(controller.snapshot.report?.verification).toBeUndefined();expect(controller.snapshot.selectedId).toBe('baseline');stop();
+  const stop=controller.subscribe(vi.fn());expect(read).not.toHaveBeenCalled();await controller.Inspect();expect(read).not.toHaveBeenCalled();
+  await controller.List();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual(identity);expect(controller.snapshot.selectedId).toBe('');
+  controller.Select('baseline');expect(read).toHaveBeenCalledTimes(1);expect(controller.snapshot.report?.verification).toBeUndefined();
+  await controller.Inspect();expect(read).toHaveBeenLastCalledWith({...identity,baselineId:'baseline'});expect(controller.snapshot.report?.verification?.state).toBe('matches');
+  await controller.List();expect(controller.snapshot.report?.verification).toBeUndefined();expect(controller.snapshot.selectedId).toBe('baseline');stop();
 });
 
 it('双击合并查询，切换基线或卸载丢弃迟到数据，不发恢复或取消任务请求',async()=>{
-  let resolve!:(value:ArtifactReport)=>void;const read=vi.fn(async()=>report()),controller=new ArtifactReportController(identity,read);await controller.list();controller.select('baseline');
-  read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const pending=controller.inspect();await controller.inspect();expect(read).toHaveBeenCalledTimes(2);
-  controller.select('');resolve(report(true));await pending;expect(controller.snapshot.selectedId).toBe('');expect(controller.snapshot.report?.verification).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
-  read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const next=controller.list();controller.cancel();resolve(report());await next;expect(controller.snapshot.loading).toBe(false);
+  let resolve!:(value:ArtifactReport)=>void;const read=vi.fn(async()=>report()),controller=new ArtifactReportController(identity,read);await controller.List();controller.Select('baseline');
+  read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const pending=controller.Inspect();await controller.Inspect();expect(read).toHaveBeenCalledTimes(2);
+  controller.Select('');resolve(report(true));await pending;expect(controller.snapshot.selectedId).toBe('');expect(controller.snapshot.report?.verification).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
+  read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const next=controller.List();controller.Cancel();resolve(report());await next;expect(controller.snapshot.loading).toBe(false);
 });
 
 it('跨工作区/任务/轮次、默认验证、重复基线和矛盾明细被拒绝',()=>{
@@ -38,10 +38,10 @@ it('跨工作区/任务/轮次、默认验证、重复基线和矛盾明细被�
 });
 
 it('读取失败保留原观察但显示明确错误，图版本在途变化不会冒称当前依据',async()=>{
-  let version='one';const read=vi.fn(async()=>report()),controller=new ArtifactReportController(identity,read,()=>version);await controller.list();const prior=controller.snapshot.report;
-  read.mockRejectedValueOnce(Error('读取中断'));await controller.list();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toBe('读取中断');
-  let resolve!:(value:ArtifactReport)=>void;read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const pending=controller.list();version='two';resolve(report());await pending;expect(controller.snapshot.sourceVersion).toBe('one');
-  read.mockResolvedValueOnce({...report(),identity:{...identity,runId:'other'}});const current=controller.snapshot.report;await controller.list();expect(controller.snapshot.report).toBe(current);expect(controller.snapshot.error).toContain('不属于');
+  let version='one';const read=vi.fn(async()=>report()),controller=new ArtifactReportController(identity,read,()=>version);await controller.List();const prior=controller.snapshot.report;
+  read.mockRejectedValueOnce(Error('读取中断'));await controller.List();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toBe('读取中断');
+  let resolve!:(value:ArtifactReport)=>void;read.mockImplementationOnce(()=>new Promise<ArtifactReport>(finish=>{resolve=finish}));const pending=controller.List();version='two';resolve(report());await pending;expect(controller.snapshot.sourceVersion).toBe('one');
+  read.mockResolvedValueOnce({...report(),identity:{...identity,runId:'other'}});const current=controller.snapshot.report;await controller.List();expect(controller.snapshot.report).toBe(current);expect(controller.snapshot.error).toContain('不属于');
 });
 
 it('所有文件状态有独立文案，只有relative路径/字节/哈希；无恢复验收入口且内容转义',()=>{
@@ -58,8 +58,8 @@ it('所有文件状态有独立文案，只有relative路径/字节/哈希；无
 it('未选定时复核按钮不可用，用户切换选项立即清除上一份结果',async()=>{
   expect(render(report())).toMatch(/data-testid="artifact-baseline-inspect" disabled/);
   const read=vi.fn(async(input:ArtifactReportInput)=>{const value=report(!!input.baselineId);value.baselines.push({...value.baselines[0],baselineId:'second'});return value}),controller=new ArtifactReportController(identity,read);
-  await controller.list();controller.select('baseline');await controller.inspect();controller.select('second');expect(controller.snapshot.report?.verification).toBeUndefined();expect(read).toHaveBeenCalledTimes(2);
-  expect(()=>controller.select('not-listed')).toThrow('不在');
+  await controller.List();controller.Select('baseline');await controller.Inspect();controller.Select('second');expect(controller.snapshot.report?.verification).toBeUndefined();expect(read).toHaveBeenCalledTimes(2);
+  expect(()=>controller.Select('not-listed')).toThrow('不在');
 });
 
 it('坏日志或丢失基线只显示不可核实，不把空列表解释为文件未变',()=>{

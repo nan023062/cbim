@@ -13,12 +13,12 @@ import {queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 /** Explicit local team and maintained business module; never reuse account settings or user projects. */
 export async function seedQueuedTaskCancel(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
   // Keep enough context for real sequential calls and explicit resume; no fixture compaction model.
-  await app.models.save({profile:{name:'Queued cancellation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'cancel-fixture',models:[{id:'cancel-fixture',name:'Cancel fixture',enabled:true,contextWindow:131072,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
-  const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
+  await app.models.Save({profile:{name:'Queued cancellation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'cancel-fixture',models:[{id:'cancel-fixture',name:'Cancel fixture',enabled:true,contextWindow:131072,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),team=await seedTeam(workspace);
+  const knowledge=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'cancel-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'cancel-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-  const profileId=(await app.models.list()).selectedId!,registered=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'cancel-fixture'});provider.bind(team.input.agentId,team.input.moduleId,registered.selection);
+  await workspace.Commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const profileId=(await app.models.List()).selectedId!,registered=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'cancel-fixture'});provider.bind(team.input.agentId,team.input.moduleId,registered.selection);
   await Promise.all(data.files.map((file,index)=>fs.writeFile(path.join(project,file),data.facts[index])));return {entry,team};
 }
 

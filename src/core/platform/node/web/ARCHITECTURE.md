@@ -38,8 +38,8 @@ class N_src_core_platform_node_web_browser_proxy_ts["browser-proxy.ts"] {
 }
 class N_src_core_platform_node_web_browser_proxy_ts_BrowserProxyTransport["BrowserProxyTransport"] {
   <<interface>>
-  +lookup()
-  +connect()
+  +Lookup()
+  +Connect()
 }
 N_src_core_platform_node_web_browser_proxy_ts ..> N_src_core_platform_node_web_browser_proxy_ts_BrowserProxyTransport : 声明
 ```
@@ -65,7 +65,7 @@ class N_src_core_platform_node_web_page_reader_ts["page-reader.ts"] {
 }
 class N_src_core_platform_node_web_page_reader_ts_WebPageReader["WebPageReader"] {
   +constructor()
-  +fetch()
+  +Fetch()
   -client
   -timing
   -browser
@@ -73,10 +73,10 @@ class N_src_core_platform_node_web_page_reader_ts_WebPageReader["WebPageReader"]
   -pages
   -robots
   -domains
-  -remember()
-  -pace()
-  -allowed()
-  -fetchStatic()
+  -Remember()
+  -Pace()
+  -Allowed()
+  -FetchStatic()
 }
 N_src_core_platform_node_web_page_reader_ts ..> N_src_core_platform_node_web_page_reader_ts_WebPageReader : 声明
 ```
@@ -115,14 +115,14 @@ class N_src_core_platform_node_web_public_http_ts_PublicHttpBytes["PublicHttpByt
 N_src_core_platform_node_web_public_http_ts ..> N_src_core_platform_node_web_public_http_ts_PublicHttpBytes : 声明
 class N_src_core_platform_node_web_public_http_ts_PublicHttpTransport["PublicHttpTransport"] {
   <<interface>>
-  +lookup()
+  +Lookup()
   +request
 }
 N_src_core_platform_node_web_public_http_ts ..> N_src_core_platform_node_web_public_http_ts_PublicHttpTransport : 声明
 class N_src_core_platform_node_web_public_http_ts_PublicHttp["PublicHttp"] {
   +constructor()
-  +read()
-  +readBytes()
+  +Read()
+  +ReadBytes()
   -transport
   -userAgent
 }

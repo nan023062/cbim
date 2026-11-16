@@ -33,7 +33,7 @@ export class RemoteRepository implements RepositoryStore
   {
   }
 
-  private async request(method = 'GET', body?: unknown, signal?: AbortSignal)
+  private async Request(method = 'GET', body?: unknown, signal?: AbortSignal)
   {
     const timeout = AbortSignal.timeout(8000),
       combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -58,7 +58,7 @@ export class RemoteRepository implements RepositoryStore
     let bytes: Uint8Array;
     try
     {
-      bytes = await ByteUtils.readBoundedBytes(response.body, { maxBytes: MAX_BYTES + 65536, signal: combined })
+      bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: MAX_BYTES + 65536, signal: combined })
     }
     catch (error)
     {
@@ -91,19 +91,19 @@ export class RemoteRepository implements RepositoryStore
   }
 
   /** 真实 HTTP 读取；信号作用到响应正文，不保存凭据、不自动重试。 */
-  read(signal?: AbortSignal)
+  Read(signal?: AbortSignal)
   {
-    return this.request('GET', undefined, signal)
+    return this.Request('GET', undefined, signal)
   }
 
-  save(args: unknown)
+  Save(args: unknown)
   {
-    return this.request('POST', args)
+    return this.Request('POST', args)
   }
 
-  remove(args: unknown)
+  Remove(args: unknown)
   {
-    return this.request('DELETE', args)
+    return this.Request('DELETE', args)
   }
 }
 
@@ -123,7 +123,7 @@ export async function serveRepository(store: RepositoryStore, token: string, opt
         if (!res.destroyed)
         {
           res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
-          res.end(JsonUtils.formatJson(value))
+          res.end(JsonUtils.FormatJson(value))
         }
       };
       try
@@ -147,7 +147,7 @@ export async function serveRepository(store: RepositoryStore, token: string, opt
         if (req.url !== '/v1/resources')
           return respond(404, { code: 'NOT_FOUND' });
         if (req.method === 'GET')
-          return respond(200, await store.read());
+          return respond(200, await store.Read());
         if (!['POST', 'DELETE'].includes(req.method || ''))
           return respond(405, { code: 'METHOD' });
         let size = 0;
@@ -168,7 +168,7 @@ export async function serveRepository(store: RepositoryStore, token: string, opt
         {
           return respond(400, { code: 'JSON' })
         }
-        respond(200, await (req.method === 'POST' ? store.save(args) : store.remove(args)));
+        respond(200, await (req.method === 'POST' ? store.Save(args) : store.Remove(args)));
       }
       catch (e: any)
       {
@@ -191,7 +191,7 @@ export async function serveRepository(store: RepositoryStore, token: string, opt
   });
   const port = (server.address() as AddressInfo).port;
   return {
-    url: `http://127.0.0.1:${port}`, host: options.host, port, async close()
+    url: `http://127.0.0.1:${port}`, host: options.host, port, async Close()
     {
       closing = true;
       const stopped = new Promise<void>((resolve, reject) => server.close(e => e ? reject(e) : resolve()));

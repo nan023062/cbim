@@ -66,15 +66,15 @@ export class RuntimeNavigationResolver
   {
   }
 
-  cancel()
+  Cancel()
   {
-    this.generation.advance()
+    this.generation.Advance()
   }
 
-  async resolve(raw: RuntimeNavigationTarget): Promise<VerifiedRuntimeNavigation | undefined>
+  async Resolve(raw: RuntimeNavigationTarget): Promise<VerifiedRuntimeNavigation | undefined>
   {
-    const generation = this.generation.advance();
-    const current = () => this.generation.isCurrent(generation);
+    const generation = this.generation.Advance();
+    const current = () => this.generation.IsCurrent(generation);
     const target: RuntimeNavigationTarget = { workspaceId: raw.workspaceId, rootSessionId: raw.rootSessionId, ...(raw.taskId ? { taskId: raw.taskId } : {}), ...(raw.scopeId ? { scopeId: raw.scopeId } : {}) };
     try
     {

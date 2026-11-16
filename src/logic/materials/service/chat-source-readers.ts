@@ -95,7 +95,7 @@ export async function readUrlSource(kind: 'link' | 'web', value: string, signal:
     let raw: Uint8Array;
     try
     {
-      raw = await ByteUtils.readBoundedBytes(response.body, { maxBytes: continuationSourceLimits.webResponseBytes, signal: combined })
+      raw = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: continuationSourceLimits.webResponseBytes, signal: combined })
     }
     catch (error)
     {

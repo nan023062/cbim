@@ -35,13 +35,13 @@ class N_src_logic_engines_packages_engine_packages_ts_State["State"] {
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_State : 声明
 class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePackages"] {
   +constructor()
-  +init()
-  +read()
-  +list()
-  +check()
-  +install()
-  +setEnabled()
-  +resolveEngine()
+  +Init()
+  +Read()
+  +List()
+  +Check()
+  +Install()
+  +SetEnabled()
+  +ResolveEngine()
   -file
   -artifacts
   -state
@@ -67,12 +67,12 @@ class N_src_logic_engines_packages_engine_packages_ts["engine-packages.ts"] {
 }
 class N_src_logic_engines_packages_engine_packages_ts_EnginePackages["EnginePackages"] {
   -failures
-  -save()
-  -trusted()
-  -closure()
-  -prepare()
-  -assertRevision()
-  -installNow()
+  -Save()
+  -Trusted()
+  -Closure()
+  -Prepare()
+  -AssertRevision()
+  -InstallNow()
 }
 N_src_logic_engines_packages_engine_packages_ts ..> N_src_logic_engines_packages_engine_packages_ts_EnginePackages : 声明
 class N_src_logic_engines_packages_engine_packages_ts_external_EngineRuntimeResolver["EngineRuntimeResolver (外部契约)"] {

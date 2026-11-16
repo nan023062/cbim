@@ -42,40 +42,40 @@ export class RequestBudgetController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: RequestBudgetState)
+  private Publish(value: RequestBudgetState)
   {
     this.state = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  dispose()
+  Dispose()
   {
-    this.generation.advance();
-    this.listeners.clear();
+    this.generation.Advance();
+    this.listeners.Clear();
     this.state = { ...this.state, busy: false }
   }
 
-  async load()
+  async Load()
   {
     if (this.state.busy)
       return;
-    const generation = this.generation.advance();
-    this.publish({ ...this.state, busy: true, error: '' });
+    const generation = this.generation.Advance();
+    this.Publish({ ...this.state, busy: true, error: '' });
     try
     {
       const report = requestBudgetReportSchema.parse(await this.call({ ...this.query }));
       if (report.workspaceId !== this.query.workspaceId || report.rootSessionId !== this.query.rootSessionId || report.scopeId !== this.query.scopeId || report.policyRevision !== this.revision)
         throw Error('请求账本返回了其它目标或策略的记录');
-      if (this.generation.isCurrent(generation))
-        this.publish({ busy: false, error: '', report })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ busy: false, error: '', report })
     }
     catch (error)
     {
-      if (this.generation.isCurrent(generation))
-        this.publish({ ...this.state, busy: false, error: (error instanceof Error ? error.message : String(error)) + '；未将读取失败计为零消耗。' })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ ...this.state, busy: false, error: (error instanceof Error ? error.message : String(error)) + '；未将读取失败计为零消耗。' })
     }
   }
 }

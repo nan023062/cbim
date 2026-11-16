@@ -14,12 +14,12 @@ export const budgetUnpriced=(mode:BudgetFixtureMode)=>mode==='unknown-price'||mo
 
 /** Isolated maintained module and actual profile, with absent prices only for the explicit unknown-price cases. */
 export async function seedScopeBudget(app:Application,project:string,provider:{url:string;bind:(agentId:string,moduleId:string,selection?:OwnerExecutionSelection)=>void},mode:BudgetFixtureMode){
-  await app.models.save({profile:{name:'Scope budget fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Scope budget fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,...(!budgetUnpriced(mode)?{pricing:{input:1,output:2,cacheRead:0,cacheWrite:0}}:{})}]}});
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
-  const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
+  await app.models.Save({profile:{name:'Scope budget fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Scope budget fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,...(!budgetUnpriced(mode)?{pricing:{input:1,output:2,cacheRead:0,cacheWrite:0}}:{})}]}});
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),team=await seedTeam(workspace);
+  const snapshot=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'budget-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'budget-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
-  const profileId=(await app.models.list()).selectedId!;
+  await workspace.Commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  const profileId=(await app.models.List()).selectedId!;
   const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:data.model});
   provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
   await fs.writeFile(path.join(project,data.file),data.fact);return {entry,team,profileId};

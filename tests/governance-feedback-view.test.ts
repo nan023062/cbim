@@ -52,7 +52,7 @@ it('新决定或缺失来源状态不能沿用旧勾选，其他提案评价不�
 });
 it('初始表单未评价且未确认；过期视图展示具体原意见但不改写历史',()=>{
   const s=selected();let sent=0;
-  const html=renderToStaticMarkup(createElement(GovernanceDecisionForm,{selected:s,disabled:false,onSubmit:()=>{sent++}}));
+  const html=renderToStaticMarkup(createElement(GovernanceDecisionForm,{selected:s,disabled:false,OnSubmit:()=>{sent++}}));
   expect(html).toContain('value="" selected=""');expect(html).not.toContain('checked=""');expect(sent).toBe(0);
   s.responseStates![0]={...s.responseStates![0],state:'superseded',latestDecisionId:id(8),latestDecisionRevision:2};const before=JSON.stringify(s);
   const stale=renderToStaticMarkup(createElement(GovernanceResponseDetails,{selected:s}));

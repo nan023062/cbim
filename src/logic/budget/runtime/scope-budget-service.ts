@@ -47,7 +47,7 @@ export class ScopeBudgetService
   }
 
   /** 必须覆盖 beforeRun 到引擎关闭全过程；仅内存可信占位，重开不复原它，也不修改持久计量。 */
-  holdMain(runId: string): () => void
+  HoldMain(runId: string): () => void
   {
     if (this.liveMain.has(runId))
       fail('SCOPE_BUDGET_RUN_CONFLICT', '主运行启动身份已被占用');
@@ -59,13 +59,13 @@ export class ScopeBudgetService
   }
 
   /** 仅可信请求账本核实当前主进程占位；历史登记不能替代这份运行生命周期。 */
-  isMainLive(runId: string): boolean
+  IsMainLive(runId: string): boolean
   {
     return this.liveMain.has(runId)
   }
 
   /** 新周期空历史允许首轮；策略与第一条运行证明一起进入创建事务，之后设置变化不会修改它。 */
-  initialize(scope: DispatchScope, candidate: BudgetCandidate): DispatchScope
+  Initialize(scope: DispatchScope, candidate: BudgetCandidate): DispatchScope
   {
     const policy = scopeBudgetPolicySchema.parse(structuredClone(this.policy())),
       observation: ScopeBudgetObservation = { basis: hash(json({ scopeId: scope.scopeId, empty: true })), observedAt: new Date().toISOString(), registeredRuns: 0, coverage: 'tracked', consistency: 'stable', liveRunIds: [], tokens: 0, tokensComplete: true, estimatedCostUsd: 0, costComplete: true, unknownRunIds: [] };
@@ -74,7 +74,7 @@ export class ScopeBudgetService
   }
 
   /** 只能在既有串行事务中调用；等待不写入回执，拒绝返回 mutation 所需的 scope，不在事务中抛掉拒绝事实。 */
-  async admit(state: DispatchState, scope: DispatchScope, candidate: BudgetCandidate): Promise<{ scope: DispatchScope; rejected?: ScopeBudgetRejected }>
+  async Admit(state: DispatchState, scope: DispatchScope, candidate: BudgetCandidate): Promise<{ scope: DispatchScope; rejected?: ScopeBudgetRejected }>
   {
     const budget = scope.budget;
     if (!budget?.policy.enabled)
@@ -86,7 +86,7 @@ export class ScopeBudgetService
     const live = [...(scope.runTracking?.mainRunIds ?? []).filter(id => this.liveMain.has(id)), ...(state.runs ?? []).filter(run => taskIds.has(run.binding.taskId) && ['starting', 'running'].includes(run.status)).map(run => run.binding.runId)];
     if (live.length)
       fail('SCOPE_BUDGET_WAITING', '本周期上一运行尚未可靠结算，等待释放后再核实软限额');
-    const observation = budget.policy.enforcement === 'request' ? this.requestObservation(state, scope) : await this.legacyObservation(state, scope);
+    const observation = budget.policy.enforcement === 'request' ? this.RequestObservation(state, scope) : await this.LegacyObservation(state, scope);
     const decision = evaluateScopeBudget(budget.policy, observation);
     if (decision.kind === 'wait')
       fail('SCOPE_BUDGET_WAITING', '本周期上一运行尚未可靠结算');
@@ -96,13 +96,13 @@ export class ScopeBudgetService
       return { scope: { ...scope, budget: { ...budget, blocked } }, rejected: { budgetRejected: blocked } };
     }
     if (candidate.model)
-      this.preflightRequest(state, scope, candidate.model);
+      this.PreflightRequest(state, scope, candidate.model);
     const { model: _model, ...identity } = candidate;
     return { scope: { ...scope, budget: { ...budget, lastAdmission: { ...identity, policyRevision: budget.policy.revision, observation } } } };
   }
 
   /** 等待补充或成员领取前先核保守容量，拒绝时不消费检查点；这是预检，不代替发送前的原子预留。 */
-  preflightRequest(state: RequestBudgetState, scope: RequestBudgetScope, model: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>): void
+  PreflightRequest(state: RequestBudgetState, scope: RequestBudgetScope, model: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>): void
   {
     const policy = scope.budget?.policy;
     if (!policy?.enabled || policy.enforcement !== 'request')
@@ -116,7 +116,7 @@ export class ScopeBudgetService
   }
 
   /** 已无真实在途运行时，所有未决请求均阻止下一轮；没有请求事实的旧运行也不凭空当零。 */
-  private requestObservation(state: DispatchState, scope: DispatchScope): ScopeBudgetObservation
+  private RequestObservation(state: DispatchState, scope: DispatchScope): ScopeBudgetObservation
   {
     const tasks = new Set(state.graphs.find(g => g.identity.rootSessionId === scope.rootSessionId)?.tasks.filter(t => t.scopeId === scope.scopeId).map(t => t.taskId) ?? []);
     const ids = [...scope.runTracking?.mainRunIds ?? [], ...(state.runs ?? []).filter(r => tasks.has(r.binding.taskId)).map(r => r.binding.runId)];
@@ -132,10 +132,10 @@ export class ScopeBudgetService
     return { basis: hash(json({ ids, records })), observedAt: new Date().toISOString(), registeredRuns: ids.length, coverage: scope.runTracking ? 'tracked' : 'legacy', consistency: 'stable', liveRunIds: [], tokens: report.tokens, tokensComplete: !unknownRunIds.length, estimatedCostUsd: report.estimatedCostUsd, costComplete: report.costComplete && !unknownRunIds.length, unknownRunIds };
   }
 
-  private async legacyObservation(state: DispatchState, scope: DispatchScope): Promise<ScopeBudgetObservation>
+  private async LegacyObservation(state: DispatchState, scope: DispatchScope): Promise<ScopeBudgetObservation>
   {
     const budget = scope.budget!,
-      collected = await this.usage.collect(state, { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId }),
+      collected = await this.usage.Collect(state, { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId }),
       coverage = scope.runTracking ? 'tracked' : 'legacy',
       totals = summarizeScopeUsage(collected.runs, coverage, 'stable');
     const unknownRunIds = collected.runs.filter(run => run.logState !== 'verified' || ['starting', 'running', 'unknown'].includes(run.status) || (budget.policy.limits.tokens !== undefined && run.usage.tokensState !== 'reported') || (budget.policy.limits.estimatedCostUsd !== undefined && run.usage.costState !== 'priced')).map(run => run.runId);

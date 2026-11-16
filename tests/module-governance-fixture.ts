@@ -7,10 +7,10 @@ export const moduleGovernanceFixture={slug:'governed',moduleId:'.cbim/workspace/
 
 /** Seed static modules through the actual object transaction. No model, member task, business code or protection is fabricated. */
 export async function seedModuleGovernance(app:Application,project:string){
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),{call}=internalKnowledge(workspace),snapshot=await workspace.snapshot();
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),{call}=internalKnowledge(workspace),snapshot=await workspace.Snapshot();
   const preview=await call('cbim_object_preview',{revision:snapshot.revision,operations:[{kind:'module',action:'create',parentId:'.cbim/workspace',slug:moduleGovernanceFixture.slug,data:{summary},body:moduleFiles(moduleGovernanceFixture.slug)[1].text},{kind:'module',action:'create',parentId:'.cbim/workspace',slug:'free',data:{summary},body:moduleFiles('free')[1].text}]});
   if(!preview.validation.structural)throw Error('隔离治理模块准备未通过真实结构校验');await call('cbim_object_commit',{planId:preview.planId},true);
-  const current=await workspace.snapshot(),definition=JSON.parse(current.files.find(file=>file.path===moduleGovernanceFixture.moduleId+'/module.json')!.text),overviewPath=moduleGovernanceFixture.moduleId+'/'+definition.overview,original=current.files.find(file=>file.path===overviewPath)!.text,proposed=original.replace('管理资源。','管理资源。\n\n'+moduleGovernanceFixture.marker+'\n\n只读资料与实际业务改动分别记录；修改应保持模块责任及依赖边界，并依据真实结果验证。');
-  const candidate=await workspace.preview(request(current,[{path:overviewPath,text:proposed}]));if(!candidate.validation.structural)throw Error('隔离提案正文未通过真实校验：'+JSON.stringify(candidate.validation.issues));
+  const current=await workspace.Snapshot(),definition=JSON.parse(current.files.find(file=>file.path===moduleGovernanceFixture.moduleId+'/module.json')!.text),overviewPath=moduleGovernanceFixture.moduleId+'/'+definition.overview,original=current.files.find(file=>file.path===overviewPath)!.text,proposed=original.replace('管理资源。','管理资源。\n\n'+moduleGovernanceFixture.marker+'\n\n只读资料与实际业务改动分别记录；修改应保持模块责任及依赖边界，并依据真实结果验证。');
+  const candidate=await workspace.Preview(request(current,[{path:overviewPath,text:proposed}]));if(!candidate.validation.structural)throw Error('隔离提案正文未通过真实校验：'+JSON.stringify(candidate.validation.issues));
   return {entry,identity:{workspaceId:entry.id,instanceId:workspace.instanceId},snapshot:current,definition,overviewPath,original,proposed,call};
 }

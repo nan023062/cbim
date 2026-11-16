@@ -70,7 +70,7 @@ export function OfficeScene({ graph, sessions, scopes, mainRunning, queued, acti
   }, []);
   useEffect(() =>
   {
-    const incoming = tracker.current.observe(graph, active);
+    const incoming = tracker.current.Observe(graph, active);
     if (!active || reduced)
       setEvents([]);
     if (incoming.length)

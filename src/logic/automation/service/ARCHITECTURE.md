@@ -29,15 +29,15 @@ class N_src_logic_automation_service_service_ts["service.ts"] {
 class N_src_logic_automation_service_service_ts_WorkspaceAutomations["WorkspaceAutomations"] {
   +scheduler
   +constructor()
-  +assert()
-  +catalog()
+  +Assert()
+  +Catalog()
   -workspace
   -execution
   -dispatch
   -collaboration
   -options
   -builtins
-  -prepare()
+  -Prepare()
 }
 N_src_logic_automation_service_service_ts ..> N_src_logic_automation_service_service_ts_WorkspaceAutomations : 声明
 ```
@@ -53,8 +53,8 @@ class N_src_logic_automation_service_storage_ts["storage.ts"] {
 }
 class N_src_logic_automation_service_storage_ts_FileAutomations["FileAutomations"] {
   +constructor()
-  +read()
-  +write()
+  +Read()
+  +Write()
   -file
   -workspaceId
 }

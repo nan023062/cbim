@@ -43,9 +43,9 @@ it('rejects malformed internal tool output before Pi persists it and can resume 
       models:[{id:'cbim-test-model',reasoning:false,input:['text'],contextWindow:32768,maxTokens:1024,cost:{input:0,output:0,cacheRead:0,cacheWrite:0}}],
     }}}));
     runtime=new LoopRuntime({
-      storage:new FileRunStorage(),directory:path.join(directory,'runs'),acquireLease:async()=>()=>{},
-      toolPolicy:async call=>({allow:call.name==='cbim_invalid_result',effects:['read']}),
-      createEngine:()=>new PiEngine({
+      storage:new FileRunStorage(),directory:path.join(directory,'runs'),AcquireLease:async()=>()=>{},
+      ToolPolicy:async call=>({allow:call.name==='cbim_invalid_result',effects:['read']}),
+      CreateEngine:()=>new PiEngine({
         process:{command:process.execPath,args:[path.resolve('node_modules/@earendil-works/pi-coding-agent/dist/bundle/rpc-entry.js')],env:{ELECTRON_RUN_AS_NODE:'1'}},
         provider:'cbim-test',model:'cbim-test-model',agentHome,prompt:'Exercise the internal tool result boundary.',turnTimeoutMs:15000,
         knowledge:{
@@ -55,7 +55,7 @@ it('rejects malformed internal tool output before Pi persists it and can resume 
       }),
     });
     const task:TaskSpec={taskId:randomUUID(),workspaceId:randomUUID(),root,mode:'chat',goal:'Call the regression fixture and continue after its error.',moduleIds:[],acceptance:[]};
-    const first=await runtime.start(task),result=await first.done;
+    const first=await runtime.Start(task),result=await first.done;
     expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
     expect(result.unresolvedTools).toEqual([]);
     const finished=result.events.filter(event=>event.type==='tool.finished'&&event.data.id==='invalid-result-call');
@@ -76,7 +76,7 @@ it('rejects malformed internal tool output before Pi persists it and can resume 
       for(const block of entry.message.content)if(block.type==='text')expect(typeof block.text).toBe('string');
     }
 
-    const next=await runtime.start(task,'Continue the original session without calling the fixture again.',{runId:first.runId});
+    const next=await runtime.Start(task,'Continue the original session without calling the fixture again.',{runId:first.runId});
     const resumed=await next.done;
     expect(resumed.status,JSON.stringify(resumed.events.at(-1))).toBe('completed');
     expect(resumed.sessionFile).toBe(result.sessionFile);
@@ -87,7 +87,7 @@ it('rejects malformed internal tool output before Pi persists it and can resume 
     expect(toolCalls).toBe(1);
     expect(transportErrors).toEqual([]);
   }finally{
-    await runtime?.close();server.closeAllConnections();
+    await runtime?.Close();server.closeAllConnections();
     await new Promise<void>(resolve=>server.close(()=>resolve()));
     const target=path.resolve(directory);
     if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-pi-tool-result-'))throw Error('Refusing to remove paths outside this test directory');

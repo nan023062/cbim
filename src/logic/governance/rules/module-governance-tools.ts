@@ -153,13 +153,13 @@ export type GovernanceBodyView = z.infer<typeof governanceBodyViewSchema>;
 /** Main 每个真实主运行单独创建；闭包持有 workspace/root/主实例/run，工具参数不得替换。 */
 export interface GovernanceToolsPort
 {
-  get(input: GovernanceGetInput, signal: AbortSignal): Promise<GovernanceGetOutput>;
+  Get(input: GovernanceGetInput, signal: AbortSignal): Promise<GovernanceGetOutput>;
 
-  observe(input: GovernanceObserveInput, toolCallId: string, signal: AbortSignal): Promise<GovernanceWriteOutput>;
+  Observe(input: GovernanceObserveInput, toolCallId: string, signal: AbortSignal): Promise<GovernanceWriteOutput>;
 
-  propose(input: GovernanceProposeInput, toolCallId: string, signal: AbortSignal): Promise<GovernanceWriteOutput>;
+  Propose(input: GovernanceProposeInput, toolCallId: string, signal: AbortSignal): Promise<GovernanceWriteOutput>;
 
-  receipt(input: GovernanceReceiptInput, signal: AbortSignal): Promise<GovernanceReceiptOutput>;
+  Receipt(input: GovernanceReceiptInput, signal: AbortSignal): Promise<GovernanceReceiptOutput>;
 }
 
 function textPreview(text: string): z.infer<typeof preview>

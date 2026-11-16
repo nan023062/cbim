@@ -38,7 +38,7 @@ class N_src_logic_evidence_runtime_agent_artifact_verification_ts["agent-artifac
   <<module>>
 }
 class N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification["AgentArtifactVerification"] {
-  +verify()$
+  +Verify()$
   -constructor()
 }
 N_src_logic_evidence_runtime_agent_artifact_verification_ts ..> N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification : 声明
@@ -55,22 +55,22 @@ class N_src_logic_evidence_runtime_artifact_report_service_ts["artifact-report-s
 }
 class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportPorts["ArtifactReportPorts"] {
   <<interface>>
-  +inspect()
-  +inspectAgent()
-  +normalizePath()
-  +checkFiles()
-  +acquireRead()
+  +Inspect()
+  +InspectAgent()
+  +NormalizePath()
+  +CheckFiles()
+  +AcquireRead()
 }
 N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportPorts : 声明
 class N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportService["ArtifactReportService"] {
   +constructor()
-  +read()
+  +Read()
   -owner
   -store
   -ports
-  -inspect()
-  -facts()
-  -stamp()
+  -Inspect()
+  -Facts()
+  -Stamp()
 }
 N_src_logic_evidence_runtime_artifact_report_service_ts ..> N_src_logic_evidence_runtime_artifact_report_service_ts_ArtifactReportService : 声明
 ```
@@ -106,7 +106,7 @@ class N_src_logic_evidence_runtime_command_verification_service_ts_ReadLog["Read
 N_src_logic_evidence_runtime_command_verification_service_ts ..> N_src_logic_evidence_runtime_command_verification_service_ts_ReadLog : 声明
 class N_src_logic_evidence_runtime_command_verification_service_ts_CommandVerificationPorts["CommandVerificationPorts"] {
   <<interface>>
-  +inspectMain()
+  +InspectMain()
 }
 N_src_logic_evidence_runtime_command_verification_service_ts ..> N_src_logic_evidence_runtime_command_verification_service_ts_CommandVerificationPorts : 声明
 ```
@@ -118,15 +118,15 @@ class N_src_logic_evidence_runtime_command_verification_service_ts["command-veri
 }
 class N_src_logic_evidence_runtime_command_verification_service_ts_CommandVerificationService["CommandVerificationService"] {
   +constructor()
-  +inspectSource()
-  +read()
+  +InspectSource()
+  +Read()
   -owner
   -store
   -ports
-  -state()
-  -scope()
-  -stamp()
-  -log()
+  -State()
+  -Scope()
+  -Stamp()
+  -Log()
 }
 N_src_logic_evidence_runtime_command_verification_service_ts ..> N_src_logic_evidence_runtime_command_verification_service_ts_CommandVerificationService : 声明
 ```
@@ -171,14 +171,14 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts["effect-observa
 }
 class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationPorts["EffectObservationPorts"] {
   <<interface>>
-  +normalizePath()
-  +observeFiles()
-  +acquireRead()
-  +acquireMainRead()
-  +observeKnowledge()
-  +observePersistent()
-  +observeControlled()
-  +assertCurrent()
+  +NormalizePath()
+  +ObserveFiles()
+  +AcquireRead()
+  +AcquireMainRead()
+  +ObserveKnowledge()
+  +ObservePersistent()
+  +ObserveControlled()
+  +AssertCurrent()
 }
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationPorts : 声明
 class N_src_logic_evidence_runtime_effect_observation_service_ts_external_EffectSourcePorts["EffectSourcePorts (外部契约)"] {
@@ -192,21 +192,21 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts_Owner["Owner"] 
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_Owner : 声明
 class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
   +constructor()
-  +observe()
-  +observeFromMain()
-  +list()
-  +receipt()
-  +record()
-  +relations()
+  +Observe()
+  +ObserveFromMain()
+  +List()
+  +Receipt()
+  +Record()
+  +Relations()
   -owner
   -store
   -commands
   -ports
-  -parse()
-  -output()
-  -alive()
-  -prepare()
-  -knowledge()
+  -Parse()
+  -Output()
+  -Alive()
+  -Prepare()
+  -Knowledge()
 }
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService : 声明
 ```
@@ -219,9 +219,9 @@ class N_src_logic_evidence_runtime_effect_observation_service_ts["effect-observa
   <<module>>
 }
 class N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService["EffectObservationService"] {
-  -persistent()
-  -baselines()
-  -recordReady()
+  -Persistent()
+  -Baselines()
+  -RecordReady()
 }
 N_src_logic_evidence_runtime_effect_observation_service_ts ..> N_src_logic_evidence_runtime_effect_observation_service_ts_EffectObservationService : 声明
 ```
@@ -246,7 +246,7 @@ class N_src_logic_evidence_runtime_effect_source_ts["effect-source.ts"] {
 }
 class N_src_logic_evidence_runtime_effect_source_ts_EffectSourcePorts["EffectSourcePorts"] {
   <<interface>>
-  +inspectMember()
+  +InspectMember()
 }
 N_src_logic_evidence_runtime_effect_source_ts ..> N_src_logic_evidence_runtime_effect_source_ts_EffectSourcePorts : 声明
 class N_src_logic_evidence_runtime_effect_source_ts_EffectSourceRead["EffectSourceRead"] {
@@ -295,18 +295,18 @@ class N_src_logic_evidence_runtime_execution_report_service_ts["execution-report
 }
 class N_src_logic_evidence_runtime_execution_report_service_ts_ExecutionReportService["ExecutionReportService"] {
   +constructor()
-  +read()
+  +Read()
   -owner
   -store
   -inspect
   -inspectAgent
-  -readRecursive()
-  -page()
-  -facts()
-  -cancelledWithoutRun()
-  -stamp()
-  -bound()
-  -matches()
+  -ReadRecursive()
+  -Page()
+  -Facts()
+  -CancelledWithoutRun()
+  -Stamp()
+  -Bound()
+  -Matches()
 }
 N_src_logic_evidence_runtime_execution_report_service_ts ..> N_src_logic_evidence_runtime_execution_report_service_ts_ExecutionReportService : 声明
 ```
@@ -332,18 +332,18 @@ class N_src_logic_evidence_runtime_human_decision_evidence_ts["human-decision-ev
 }
 class N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanDecisionPorts["HumanDecisionPorts"] {
   <<interface>>
-  +normalizePath()
-  +checkFiles()
-  +checkManifest()
-  +acquireRead()
-  +acquireMainRead()
-  +assertCurrent()
+  +NormalizePath()
+  +CheckFiles()
+  +CheckManifest()
+  +AcquireRead()
+  +AcquireMainRead()
+  +AssertCurrent()
 }
 N_src_logic_evidence_runtime_human_decision_evidence_ts ..> N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanDecisionPorts : 声明
 class N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanEvidenceLogs["HumanEvidenceLogs"] {
   <<interface>>
-  +inspectMember()
-  +inspectMain()
+  +InspectMember()
+  +InspectMain()
 }
 N_src_logic_evidence_runtime_human_decision_evidence_ts ..> N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanEvidenceLogs : 声明
 class N_src_logic_evidence_runtime_human_decision_evidence_ts_HumanCandidateValidator["HumanCandidateValidator"] {
@@ -376,21 +376,21 @@ class N_src_logic_evidence_runtime_output_manifest_report_service_ts["output-man
 }
 class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportPorts["OutputManifestReportPorts"] {
   <<interface>>
-  +inspect()
-  +inspectAgent()
-  +check()
-  +acquireRead()
+  +Inspect()
+  +InspectAgent()
+  +Check()
+  +AcquireRead()
 }
 N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportPorts : 声明
 class N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportService["OutputManifestReportService"] {
   +constructor()
-  +read()
+  +Read()
   -owner
   -store
   -ports
-  -inspect()
-  -facts()
-  -stamp()
+  -Inspect()
+  -Facts()
+  -Stamp()
 }
 N_src_logic_evidence_runtime_output_manifest_report_service_ts ..> N_src_logic_evidence_runtime_output_manifest_report_service_ts_OutputManifestReportService : 声明
 ```
@@ -419,16 +419,16 @@ class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts["recursive-i
 }
 class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports["Ports"] {
   <<interface>>
-  +validateActiveInputs()
-  +inspectMain()
-  +inspectAgent()
+  +ValidateActiveInputs()
+  +InspectMain()
+  +InspectAgent()
   +normalizeValidationPath
   +checkValidationFiles
   +checkManifest
 }
 N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_Ports : 声明
 class N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence["RecursiveInspectionEvidence"] {
-  +verify()$
+  +Verify()$
   -constructor()
 }
 N_src_logic_evidence_runtime_recursive_inspection_evidence_ts ..> N_src_logic_evidence_runtime_recursive_inspection_evidence_ts_RecursiveInspectionEvidence : 声明

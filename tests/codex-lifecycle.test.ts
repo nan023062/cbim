@@ -21,7 +21,7 @@ test.each(['fail','success'] as const)('真实 Codex 工具等待预算结算：
     await engine.start(f.context);const result=await engine.run('Write the file once.').catch(error=>{if(settlement==='success')throw error;return {status:'failed'}});
     expect(before).toBe(0);expect(result.status).toBe(settlement==='fail'?'failed':'completed');expect(f.calls).toHaveLength(settlement==='fail'?0:1);
     expect(await fs.access(path.join(f.cwd,'written.txt')).then(()=>true,()=>false)).toBe(settlement==='success');expect(f.requests).toHaveLength(settlement==='fail'?1:2);
-    expect(await budget.service.report(budget.query)).toMatchObject(settlement==='fail'?{reported:0,unknown:1}:{reported:2,unknown:0});
+    expect(await budget.service.Report(budget.query)).toMatchObject(settlement==='fail'?{reported:0,unknown:1}:{reported:2,unknown:0});
   }finally{await engine.close();await f.cleanup();await budget.cleanup()}
 },45000);
 

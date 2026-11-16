@@ -32,7 +32,7 @@ export class QueuedDependencyReplacementService
   }
 
   /** 身份由主轮闭包固定；版本/候选/停止任何核实失败都不改边，同命令只返回原回执，不再次排队或运行。 */
-  async replace(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
+  async Replace(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReplaceQueuedDependencyInput, assertCurrent?: () => void): Promise<ReplaceQueuedDependencyReceipt>
   {
     const parsed = replaceQueuedDependencyInputSchema.safeParse(raw),
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
@@ -42,7 +42,7 @@ export class QueuedDependencyReplacementService
       fixed = context.data,
       alive = () =>
       {
-        this.owner.assert();
+        this.owner.Assert();
         assertCurrent?.();
         if (fixed.workspaceId !== this.owner.entry.id)
           fail('GRAPH_IDENTITY_MISMATCH', '前置替换不属于当前工作区')
@@ -50,31 +50,31 @@ export class QueuedDependencyReplacementService
     const command = contextualMainCommand('dispatch.replaceDependency', fixed, input);
     if (!this.owners)
       fail('OWNER_EXECUTION_UNAVAILABLE', '未装配岗位前置核验');
-    const old = await this.owners.replay<ReplaceQueuedDependencyReceipt>(command);
+    const old = await this.owners.Replay<ReplaceQueuedDependencyReceipt>(command);
     if (old)
       return old.receipt;
     alive();
-    return this.owners.withContext(state => this.owners!.selections(queuedDependencyReplacementSelection(state, fixed, scopeId, input).tasks), context => this.store.transact(command, async state =>
+    return this.owners.WithContext(state => this.owners!.Selections(queuedDependencyReplacementSelection(state, fixed, scopeId, input).tasks), context => this.store.Transact(command, async state =>
     {
       alive();
       const { graph, scope, target, source, replacement, edge, tasks, members, status } = queuedDependencyReplacementSelection(state, fixed, scopeId, input);
       if (!scope.runTracking?.mainRunIds.includes(runId))
         fail('DEPENDENCY_MAIN_INVALID', '修订需要本周期完整登记的主运行；旧周期不能补造来源');
-      const current = await this.owner.read(),
+      const current = await this.owner.Read(),
         knowledgeRevision = scope.goal!.plan!.knowledgeRevision;
       if (current.revision !== knowledgeRevision)
         fail('DEPENDENCY_KNOWLEDGE_STALE', '知识基线已变化，不能刷新旧任务后继续执行');
-      await this.goals.validateDependencySource(state, scope, source);
+      await this.goals.ValidateDependencySource(state, scope, source);
       alive();
-      await this.goals.validateMemberCandidate(state, scope, graph, replacement, knowledgeRevision);
+      await this.goals.ValidateMemberCandidate(state, scope, graph, replacement, knowledgeRevision);
       alive();
       const candidateRun = state.runs!.find(run => run.binding.runId === replacement.result!.runId && run.binding.taskId === replacement.taskId)!;
       for (const task of tasks)
       {
-        await this.owners!.verifyTask(state, context, task);
+        await this.owners!.VerifyTask(state, context, task);
         alive();
         const binding = task.ownerBinding;
-        this.goals.validateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(module => module.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
+        this.goals.ValidateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(module => module.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
         const prepared = await prepareDispatchExecutionContext(this.owner, task, context.snapshot, binding ? state.workspaceMembers!.find(member => member.memberId === binding.memberId) : undefined);
         alive();
         if (prepared.knowledgeRevision !== knowledgeRevision || prepared.agent.teamId !== members.find(member => member.agentInstanceId === task.assignee.agentInstanceId)!.teamId)

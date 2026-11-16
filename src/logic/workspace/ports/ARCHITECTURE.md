@@ -30,10 +30,10 @@ class N_src_logic_workspace_ports_paths_ts_StoragePaths["StoragePaths"] {
   +userRoot
   +installRoot
   +protectedRoots
-  +identity()
-  +project()
-  +local()
-  +knowledge()
+  +Identity()
+  +Project()
+  +Local()
+  +Knowledge()
 }
 N_src_logic_workspace_ports_paths_ts ..> N_src_logic_workspace_ports_paths_ts_StoragePaths : 声明
 ```

@@ -162,7 +162,7 @@ export class PiEngine implements AgentEngine
         throw Error('Pi 恢复文件不属于此 CBIM 工作区');
     }
     const tools = await runtimeEngineTools(context, this.options.knowledge);
-    this.bridge = await openBridge(tools, call => this.budgetTransport?.error() ? Promise.resolve({ allow: false, reason: this.budgetTransport.error() }) : context.beforeTool(call), async usage =>
+    this.bridge = await openBridge(tools, call => this.budgetTransport?.Error() ? Promise.resolve({ allow: false, reason: this.budgetTransport.Error() }) : context.beforeTool(call), async usage =>
     {
       this.events = this.events.then(() => context.emit({ type: 'engine.status', data: { label: '上下文用量已更新', metric: 'context', ...usage } }));
       await this.events;
@@ -211,12 +211,12 @@ export class PiEngine implements AgentEngine
     await context.assertMemberResume?.();
     this.rpc = new PiRpc(event =>
     {
-      this.events = this.events.then(() => this.consume(event));
+      this.events = this.events.then(() => this.Consume(event));
       void this.events.catch(error =>
       {
         this.fatal = error;
         this.settlement?.reject(error);
-        void this.rpc?.close()
+        void this.rpc?.Close()
       });
     }, error =>
     {
@@ -225,7 +225,7 @@ export class PiEngine implements AgentEngine
         this.fatal = error;
         this.settlement?.reject(error)
       }
-    }, message => this.redact(message));
+    }, message => this.Redact(message));
     const allowed = [...(nativeToolsDisabled(context) ? [] : nativeToolNames(!!this.options.allowNativeExecution)), 'cbim_*'].join(',');
     // 禁止 Pi 自动加载用户机器上的外部连接；内部工具只由本次受控扩展注册。
     let command = this.options.process;
@@ -235,14 +235,14 @@ export class PiEngine implements AgentEngine
       await fs.writeFile(bootstrap, requestBudgetBootstrap({ endpoint: this.budgetTransport.endpoint, proxy: this.budgetTransport.url, token: this.budgetTransport.token, bridge: this.bridge.url }), { mode: 0o600 });
       command = { ...command, args: ['--import', pathToFileURL(bootstrap).href, ...command.args], env: { ...command.env, CBIM_LLM_API_KEY: modelEnv.CBIM_LLM_API_KEY } };
     }
-    this.rpc.start(command, context.task.root, [
+    this.rpc.Start(command, context.task.root, [
       '--mode', 'rpc', '--provider', this.options.provider, '--model', this.options.model,
       '--no-extensions', '--no-skills', '--no-prompt-templates', '--no-themes', '--no-mcp',
       '--extension', extension, '--append-system-prompt', prompt, '--tools', allowed,
       '--session-dir', sessionDir, ...(context.sessionFile ? ['--session', context.sessionFile] : ['--session-id', context.nativeSessionId ?? context.task.taskId]),
     ], { ...process.env, ...modelEnv, PI_CODING_AGENT_DIR: configHome, CBIM_LOOP_BRIDGE_URL: this.bridge.url, CBIM_LOOP_BRIDGE_TOKEN: this.bridge.token });
-    const initial = await this.rpc.request('get_state');
-    this.budgetTransport?.assertReady();
+    const initial = await this.rpc.Request('get_state');
+    this.budgetTransport?.AssertReady();
     if (context.nativeSessionId && initial.sessionId !== context.nativeSessionId)
       throw Error(context.memberBinding ? 'Pi 原生会话身份与当前成员通道不一致' : 'Pi 原生会话身份与原对话记录不一致');
     if (initial.isStreaming || initial.pendingMessageCount)
@@ -250,10 +250,10 @@ export class PiEngine implements AgentEngine
     // 载入不得悄悄修复或改写检查点历史；在本轮配置和输入写入前再次核实受管字节。
     await context.assertMemberResume?.();
     const thinking = requestedThinkingLevel(this.options.llm?.profile ?? { reasoning: initial.model?.reasoning === true });
-    await this.rpc.request('set_thinking_level', { level: thinking });
-    await this.rpc.request('set_auto_compaction', { enabled: true });
-    await this.rpc.request('set_auto_retry', { enabled: true });
-    const state = await this.rpc.request('get_state');
+    await this.rpc.Request('set_thinking_level', { level: thinking });
+    await this.rpc.Request('set_auto_compaction', { enabled: true });
+    await this.rpc.Request('set_auto_retry', { enabled: true });
+    const state = await this.rpc.Request('get_state');
     // Pi get_state 不返回重试开关；重试以已成功的 RPC 回执为准，压缩另读回核对。
     if (state.autoCompactionEnabled !== true)
       throw Error('Pi 自动压缩未启用，拒绝发送');
@@ -264,7 +264,7 @@ export class PiEngine implements AgentEngine
       throw Error('Pi 会话已有未完成执行，拒绝覆盖');
     if (!state.sessionFile || !state.sessionId)
       throw Error('Pi 未提供持久化会话身份');
-    this.usageBaseline = await this.rpc.request('get_session_stats').catch(() => undefined);
+    this.usageBaseline = await this.rpc.Request('get_session_stats').catch(() => undefined);
     await context.emit({ type: 'session.bound', data: { sessionId: state.sessionId, sessionFile: state.sessionFile, provider: this.options.provider, model: this.options.model } });
   }
 
@@ -293,11 +293,11 @@ export class PiEngine implements AgentEngine
       // 内部回传通过本轮扩展写成 custom 消息，不作为原生 user 记录；加前缀避免正文被解析为斜杠命令。
       const continuation = this.context.source?.kind === 'member-results' || this.context.source?.kind === 'human_decisions' || this.context.source?.kind === 'goal-repair';
       const label = this.context.source?.kind === 'human_decisions' ? 'CBIM 人工决定系统转交\n' : 'CBIM 成员执行回传\n';
-      const accepted = await this.rpc.request('prompt', { message: continuation ? label + message : message, ...(!continuation && this.options.images?.length ? { images: this.options.images } : {}) });
+      const accepted = await this.rpc.Request('prompt', { message: continuation ? label + message : message, ...(!continuation && this.options.images?.length ? { images: this.options.images } : {}) });
       if (accepted?.disposition !== (continuation ? 'handled' : 'started'))
         throw Error('Pi 没有按本轮输入来源启动任务，不能记为执行完成');
       const result = await settled;
-      const stats = await this.rpc.request('get_session_stats').catch(() => undefined);
+      const stats = await this.rpc.Request('get_session_stats').catch(() => undefined);
       if (stats && this.usageBaseline)
       {
         const keys = ['input', 'output', 'cacheRead', 'cacheWrite'];
@@ -310,20 +310,20 @@ export class PiEngine implements AgentEngine
     }
     finally
     {
-      this.inactivity?.dispose();
+      this.inactivity?.Dispose();
       this.settlement = undefined
     }
   }
 
-  private async consume(event: any)
+  private async Consume(event: any)
   {
     // 推理/参数增量只作为活性信号，既不记录正文，也不依赖 UI 状态文字是否变化。
     if (event.type === 'message_update' && ['thinking_delta', 'text_delta', 'toolcall_delta'].includes(event.assistantMessageEvent?.type) && typeof event.assistantMessageEvent.delta === 'string' && event.assistantMessageEvent.delta.length)
-      this.inactivity?.progress();
+      this.inactivity?.Progress();
     const emit = (e: EngineEvent) =>
     {
-      this.inactivity?.observe(e);
-      return this.context!.emit(JSON.parse(this.redact(JSON.stringify(e))))
+      this.inactivity?.Observe(e);
+      return this.context!.emit(JSON.parse(this.Redact(JSON.stringify(e))))
     };
     switch (event.type)
     {
@@ -358,7 +358,7 @@ export class PiEngine implements AgentEngine
           // Pi/provider 在已发起 abort 后有时仍用 error 返回标准取消文本；只归一这类明确取消，不掩盖普通模型错误。
           const cancelledMessage = this.stopped && message.stopReason === 'error' && /^(?:AbortError:\s*)?(?:This operation was aborted|The operation was aborted|Request aborted|Aborted)\.?$/i.test(String(message.errorMessage ?? '').trim());
           const failure = cancelledMessage ? undefined : modelStopError(message, this.options.llm?.profile.maxTokens, this.requestLimit);
-          this.assistantError = failure ? this.redact(failure) : undefined;
+          this.assistantError = failure ? this.Redact(failure) : undefined;
           // HTTP 工具门禁可能先于已排队的 stdout 文字落盘；只保留本回复的调用 ID，供界面还原因果顺序，不保存思维或工具参数。
           const toolCallIds = (message.content || []).filter((x: any) => x.type === 'toolCall' && typeof x.id === 'string').map((x: any) => x.id);
           await emit({ type: 'message', data: { role: 'assistant', text: (message.content || []).filter((x: any) => x.type === 'text').map((x: any) => x.text).join(''), ...(toolCallIds.length ? { toolCallIds } : {}), stopReason: cancelledMessage ? 'aborted' : message.stopReason, usage: message.usage, generationDurationMs, pricingKnown: this.options.llm ? !!this.options.llm.profile.pricing : undefined } });
@@ -382,7 +382,7 @@ export class PiEngine implements AgentEngine
       case 'auto_compaction_end':
         // 新版 Pi 使用 compaction_*；失败不能伪装成整理成功，重试仍由原生引擎负责。
         if (event.errorMessage && !event.willRetry)
-          this.assistantError = this.redact(String(event.errorMessage));
+          this.assistantError = this.Redact(String(event.errorMessage));
         await emit({ type: 'engine.status', data: { label: event.aborted ? '上下文整理已取消' : event.errorMessage ? '上下文整理失败' : '上下文整理结束', error: event.errorMessage, willRetry: event.willRetry } });
         return;
       case 'summarization_retry_scheduled':
@@ -402,7 +402,7 @@ export class PiEngine implements AgentEngine
         return;
       case 'agent_settled':
         {
-          const error = this.budgetTransport?.error() ?? this.assistantError;
+          const error = this.budgetTransport?.Error() ?? this.assistantError;
           this.settlement?.resolve(error ? { status: 'failed', error } : { status: this.stopped || event.aborted ? 'cancelled' : 'completed' });
           return;
         }
@@ -410,24 +410,24 @@ export class PiEngine implements AgentEngine
         // custom 启动由扩展异步触发，失败必须结束等待，不能把 handled 当成模型已完成。
         if (this.context?.source)
         {
-          this.fatal = Error(this.redact(String(event.error || '成员结果接续扩展失败')));
+          this.fatal = Error(this.Redact(String(event.error || '成员结果接续扩展失败')));
           this.settlement?.reject(this.fatal)
         }
         return;
       case 'extension_ui_request':
         // No implicit trust/approval fallback. Only our headless extension is intended to load.
         if (event.method === 'confirm')
-          this.rpc?.send({ type: 'extension_ui_response', id: event.id, confirmed: false });
+          this.rpc?.Send({ type: 'extension_ui_response', id: event.id, confirmed: false });
         else if (['select', 'input', 'editor'].includes(event.method))
-          this.rpc?.send({ type: 'extension_ui_response', id: event.id, cancelled: true });
+          this.rpc?.Send({ type: 'extension_ui_response', id: event.id, cancelled: true });
         return;
     }
   }
 
-  private redact(value: string)
+  private Redact(value: string)
   {
     const key = this.options.llm?.apiKey;
-    return key && this.options.llm?.profile.auth === 'api-key' ? StringUtils.redactLiteral(value, key) : value
+    return key && this.options.llm?.profile.auth === 'api-key' ? StringUtils.RedactLiteral(value, key) : value
   }
 
   /** 发送前取消可明确拒绝；发送后只认原回复，停止不能把 queued 改写成未接收。 */
@@ -442,7 +442,7 @@ export class PiEngine implements AgentEngine
     };
     assertReady();
     const rpc = this.rpc!;
-    const state = await rpc.request('get_state');
+    const state = await rpc.Request('get_state');
     assertReady();
     if (!state.isStreaming)
       fail('QUEUE_INSERT_STALE', '原主运行已结束，原消息仍保留在队列');
@@ -450,7 +450,7 @@ export class PiEngine implements AgentEngine
       throw Error('当前运行的模型不支持图片，请保留在队列中由视觉模型执行');
     try
     {
-      const result = await rpc.request('steer', { message, ...(images.length ? { images } : {}) });
+      const result = await rpc.Request('steer', { message, ...(images.length ? { images } : {}) });
       if (result?.disposition !== 'queued')
         throw Error('unconfirmed');
     }
@@ -464,16 +464,16 @@ export class PiEngine implements AgentEngine
   async stop()
   {
     this.stopped = true;
-    this.inactivity?.dispose();
-    await this.budgetTransport?.close();
+    this.inactivity?.Dispose();
+    await this.budgetTransport?.Close();
     if (this.rpc)
       try
       {
-        await this.rpc.request('abort', {}, 10000)
+        await this.rpc.Request('abort', {}, 10000)
       }
       catch
       {
-        await this.rpc.close()
+        await this.rpc.Close()
       }
   }
 
@@ -481,11 +481,11 @@ export class PiEngine implements AgentEngine
   async close()
   {
     this.closing = true;
-    this.inactivity?.dispose();
+    this.inactivity?.Dispose();
     try
     {
-      await this.budgetTransport?.close();
-      await this.rpc?.close();
+      await this.budgetTransport?.Close();
+      await this.rpc?.Close();
       await this.events
     }
     finally

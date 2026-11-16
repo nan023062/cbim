@@ -10,7 +10,7 @@ export type RequestUnknownReason = Extract<ModelRequestBudgetChange,
     phase: 'unknown'
   }>['reason'];
 
-/** 一个真实 HTTP 尝试对应一个凭据；issue 完成前不得发网，终态提交失败也不得交付模型结果。 */
+/** 已发布引擎包使用固定小写方法名；每个 HTTP 尝试一个凭据，issue 前不得发网，终态提交失败不交付结果。 */
 export interface RequestBudgetTicket
 {
   readonly requestId: string;
@@ -27,7 +27,7 @@ export interface RequestBudgetTicket
   notSent(reason: 'cancelled_before_send' | 'closed_before_send'): Promise<void>;
 }
 
-/** 工厂固定实际运行和模型；调用方只提供实际正文摘要及协议输出上限，不可选额度、身份或价格；向量请求明确传 maxOutputTokens=0，生成仍须正上限。 */
+/** reserve 是已发布包的固定入口；工厂固定实际运行和模型，调用方只提供正文摘要及协议输出上限，不可选额度、身份或价格；向量请求 maxOutputTokens=0，生成仍须正上限。 */
 export interface RequestBudgetPort
 {
   readonly model: RequestBudgetModel;

@@ -17,7 +17,7 @@ export async function readKnowledge(paths: Paths, root: string)
   const result: KnowledgeFile[] = [];
   async function walk(relative: string)
   {
-    const absolute = await paths.knowledge(root, relative + '/__check__');
+    const absolute = await paths.Knowledge(root, relative + '/__check__');
     const dir = path.dirname(absolute);
     for (const entry of await fs.readdir(dir, { withFileTypes: true }))
     {
@@ -34,7 +34,7 @@ export async function readKnowledge(paths: Paths, root: string)
       }
       else if (isKnowledge(p))
       {
-        const target = await paths.knowledge(root, p);
+        const target = await paths.Knowledge(root, p);
         const stat = await fs.stat(target);
         if (stat.size > 2 * 1024 * 1024)
           fail('SIZE', `知识文件超过 2 MiB：${p}`);

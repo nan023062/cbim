@@ -19,11 +19,11 @@ export interface ArtifactCapturePort
   knowledgeRevision: string;
 
   /** 与文件端口相同的纯路径归一化；只匹配来源引用，不执行文件读取。 */
-  normalizePath(raw: string): string;
+  NormalizePath(raw: string): string;
 
-  assertCurrentKnowledge(): Promise<void>;
+  AssertCurrentKnowledge(): Promise<void>;
 
-  captureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>;
+  CaptureFiles(paths: readonly string[], signal: AbortSignal): Promise<ArtifactFileFact[]>;
 }
 
 /** 每个运行独立拥有；门闩直到本工具结束或拒绝才释放，bridge丢失结束事件时保留阻断直到收尾。 */
@@ -44,14 +44,14 @@ export class RunArtifactCapture
 
   private controller = new AbortController();
 
-  constructor(private readonly binding: MemberRunBinding, private readonly port: ArtifactCapturePort, private readonly context: { current(): TaskProgress | undefined; assertReady(toolCallId: string): void; save(baseline: ArtifactBaselineStaged): Promise<void>; })
+  constructor(private readonly binding: MemberRunBinding, private readonly port: ArtifactCapturePort, private readonly context: { Current(): TaskProgress | undefined; AssertReady(toolCallId: string): void; Save(baseline: ArtifactBaselineStaged): Promise<void>; })
   {
     this.binding = Object.freeze(structuredClone(binding));
-    this.tools = new ArtifactTools(this.binding, { knowledgeRevision: port.knowledgeRevision, capture: (input, id) => this.capture(input, id) })
+    this.tools = new ArtifactTools(this.binding, { knowledgeRevision: port.knowledgeRevision, Capture: (input, id) => this.Capture(input, id) })
   }
 
   /** beforeTool 的同步入口；在其它操作进入异步审批之前预占，不能等待写入结束后偷偷补采。 */
-  guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
+  Guard(name: string, id: string, input: unknown, activeIds: readonly string[]): string | undefined
   {
     if (this.reserved)
       return '正在采集文件基线，请等待本次采集结束后再调用工具';
@@ -68,7 +68,7 @@ export class RunArtifactCapture
   }
 
   /** 只有已持久化的事件进入采集事实；不保留消息或推理正文的第二份副本。 */
-  observed(event: StoredEvent)
+  Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type === 'task.updated' || event.type === 'artifact.baseline_captured' || event.type === 'run.stop_requested')
       this.events.push(event);
@@ -76,18 +76,18 @@ export class RunArtifactCapture
       this.reserved = undefined;
   }
 
-  stop()
+  Stop()
   {
     this.controller.abort(Error('运行已停止，文件采集取消'))
   }
 
   /** 进度查询只返回已确认基线引用；旧进度、新副作用和后续修订不会改写历史字节记录。 */
-  refs(): ArtifactBaselineRef[]
+  Refs(): ArtifactBaselineRef[]
   {
-    return verifyArtifactBaselines(this.events, this.binding, this.port.knowledgeRevision, this.port.normalizePath).refs
+    return verifyArtifactBaselines(this.events, this.binding, this.port.knowledgeRevision, this.port.NormalizePath).refs
   }
 
-  private async capture(input: ArtifactCaptureInput, id: string): Promise<ArtifactBaselineStaged>
+  private async Capture(input: ArtifactCaptureInput, id: string): Promise<ArtifactBaselineStaged>
   {
     const reserved = this.reserved;
     if (!reserved || reserved.id !== id || reserved.consumed || JSON.stringify(reserved.input) !== JSON.stringify(input))
@@ -96,18 +96,18 @@ export class RunArtifactCapture
     const check = () =>
     {
       this.controller.signal.throwIfAborted();
-      this.context.assertReady(id);
-      if (this.context.current()?.version !== input.expectedTaskProgressVersion)
+      this.context.AssertReady(id);
+      if (this.context.Current()?.version !== input.expectedTaskProgressVersion)
         fail('ARTIFACT_PROGRESS_CHANGED', '任务进度已变化，请重新读取后采集')
     };
     check();
-    if (this.refs().length >= artifactLimits.baselines)
+    if (this.Refs().length >= artifactLimits.baselines)
       fail('ARTIFACT_LIMIT', '本轮最多保存 8 份成功文件基线');
     const facts = artifactSources(this.events, this.binding, input.sourceToolCallIds),
       lastEffectSeq = facts.lastEffectSeq;
-    await this.port.assertCurrentKnowledge();
+    await this.port.AssertCurrentKnowledge();
     check();
-    const returned = await this.port.captureFiles(facts.sources.map(source => source.path), this.controller.signal);
+    const returned = await this.port.CaptureFiles(facts.sources.map(source => source.path), this.controller.signal);
     check();
     if (returned.length !== facts.sources.length)
       fail('ARTIFACT_FILES_INVALID', '文件端口未返回完整对应结果');
@@ -117,7 +117,7 @@ export class RunArtifactCapture
       const fact = artifactFileFactSchema.parse(raw),
         sourceId = facts.sources[index].toolCallId,
         old = files.get(fact.relativePath);
-      if (this.port.normalizePath(fact.relativePath) !== this.port.normalizePath(facts.sources[index].path))
+      if (this.port.NormalizePath(fact.relativePath) !== this.port.NormalizePath(facts.sources[index].path))
         fail('ARTIFACT_FILES_INVALID', '文件端口返回了不属于原调用的路径');
       if (old)
       {
@@ -128,12 +128,12 @@ export class RunArtifactCapture
       else
         files.set(fact.relativePath, { ...fact, sourceToolCallIds: [sourceId] });
     });
-    await this.port.assertCurrentKnowledge();
+    await this.port.AssertCurrentKnowledge();
     check();
     if (artifactSources(this.events, this.binding, input.sourceToolCallIds).lastEffectSeq !== lastEffectSeq)
       fail('ARTIFACT_EFFECT_CHANGED', '采集期间出现了新的副作用');
     const baseline = artifactBaselineStagedSchema.parse({ version: 1, baselineId: randomUUID(), captureToolCallId: id, binding: this.binding, knowledgeRevision: this.port.knowledgeRevision, progressVersion: input.expectedTaskProgressVersion, capturedAt: new Date().toISOString(), lastEffectSeq, sourceCalls: facts.sources.map(({ path: _path, ...source }) => source), files: [...files.values()] });
-    await this.context.save(baseline);
+    await this.context.Save(baseline);
     check();
     return baseline;
   }

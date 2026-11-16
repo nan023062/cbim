@@ -19,17 +19,17 @@ import { AgentArtifactVerification } from './agent-artifact-verification';
 interface Ports
 {
   /** 目标服务核对本周期补充输入与实际根日志；证据模块不反向读取任务运行服务。 */
-  validateActiveInputs(summary: RunSummary): void;
+  ValidateActiveInputs(summary: RunSummary): void;
 
-  inspectMain(taskId: string, runId: string): Promise<RunSummary>;
+  InspectMain(taskId: string, runId: string): Promise<RunSummary>;
 
-  inspectAgent?(taskId: string, runId: string): Promise<RunSummary>;
+  InspectAgent?(taskId: string, runId: string): Promise<RunSummary>;
 
-  normalizeValidationPath?: WorkflowFileVerification['normalizePath'];
+  normalizeValidationPath?: WorkflowFileVerification['NormalizePath'];
 
-  checkValidationFiles?: WorkflowFileVerification['checkFiles'];
+  checkValidationFiles?: WorkflowFileVerification['CheckFiles'];
 
-  checkManifest?: WorkflowFileVerification['checkManifest'];
+  checkManifest?: WorkflowFileVerification['CheckManifest'];
 }
 
 function check(condition: unknown, message: string): asserts condition
@@ -45,14 +45,14 @@ export class RecursiveInspectionEvidence
   {
   }
 
-  static async verify(state: DispatchState, scope: DispatchScope, owner: Pick<KnowledgeWorkspace, 'entry' | 'read'>, ports: Ports)
+  static async Verify(state: DispatchState, scope: DispatchScope, owner: Pick<KnowledgeWorkspace, 'entry' | 'Read'>, ports: Ports)
   {
     const recovery = scope.recovery;
     check(recovery && scope.status === 'closed' && scope.outcome === 'completed' && recovery.options.permission === 'read', '只读核实尚未完成');
-    check(ports.inspectAgent && ports.normalizeValidationPath && ports.checkValidationFiles, '缺少递归运行或文件核证端口');
+    check(ports.InspectAgent && ports.normalizeValidationPath && ports.checkValidationFiles, '缺少递归运行或文件核证端口');
     check(scope.runTracking?.mainRunIds.length === 1 && scope.runTracking.mainRunIds[0] === recovery.context.initialRunId, '核实根身份不唯一');
-    const knowledge = await owner.read(),
-      main = await ports.inspectMain(scope.rootSessionId, recovery.context.initialRunId);
+    const knowledge = await owner.Read(),
+      main = await ports.InspectMain(scope.rootSessionId, recovery.context.initialRunId);
     const audit = (summary: RunSummary) =>
     {
       check(summary.status === 'completed' && summary.logIntegrity?.partialTail === false && !summary.unresolvedTools.length && summary.events.at(-1)?.type === 'run.settled', '核实日志缺失、未完成或有未决操作');
@@ -61,7 +61,7 @@ export class RecursiveInspectionEvidence
       check(!facts.items.some(item => item.allowedSeq !== undefined && (item.effects.some(effect => ['business-write', 'knowledge-write', 'external-write', 'command'].includes(effect)) || ['write', 'edit', 'bash'].includes(item.toolName))), '只读核实含写入或命令授权');
     };
     audit(main);
-    ports.validateActiveInputs(main);
+    ports.ValidateActiveInputs(main);
     const head = main.events[0],
       fresh = head?.data.freshMain as
         {
@@ -80,21 +80,21 @@ export class RecursiveInspectionEvidence
     {
       check(run.status === 'closed' && run.permission === 'read' && run.prepared.knowledgeRevision === knowledge.revision, '核实运行未封存、权限或知识已变化');
       check(recursiveEvidenceRun(state, scope.workspaceId, scope.rootSessionId, run.binding.taskId, run.binding.runId) === run, '核实业务来源不唯一');
-      const summary = await ports.inspectAgent(run.binding.taskId, run.binding.runId);
+      const summary = await ports.InspectAgent(run.binding.taskId, run.binding.runId);
       audit(summary);
       check(recursiveEvidenceLogMatches(run, summary, owner.entry.path), '核实子调用日志不匹配原登记');
       if (run.request)
         check(run.request.message === summary.task.goal && json(run.request.acceptance) === json(summary.task.acceptance), '核实要求与原登记不一致');
       if (!preparedWorkflowContracts(run.prepared).length)
         validateWorkflowEvidence(summary.events, summary.task, [], [], undefined, { requireDelivery: true });
-      await validateBusinessWorkflow(summary.task, { prepared: run.prepared, binding: run.binding, session: { nativeSessionId: String(summary.events[0].data.nativeSessionId), sessionFile: summary.sessionFile } }, summary, { normalizePath: ports.normalizeValidationPath, checkFiles: ports.checkValidationFiles, checkManifest: ports.checkManifest });
-      await AgentArtifactVerification.verify(summary.events, run.binding, run.prepared.knowledgeRevision, ports.normalizeValidationPath, ports.checkValidationFiles, new AbortController().signal);
+      await validateBusinessWorkflow(summary.task, { prepared: run.prepared, binding: run.binding, session: { nativeSessionId: String(summary.events[0].data.nativeSessionId), sessionFile: summary.sessionFile } }, summary, { NormalizePath: ports.normalizeValidationPath, CheckFiles: ports.checkValidationFiles, CheckManifest: ports.checkManifest });
+      await AgentArtifactVerification.Verify(summary.events, run.binding, run.prepared.knowledgeRevision, ports.normalizeValidationPath, ports.checkValidationFiles, new AbortController().signal);
       recorded.push(summary);
     }
-    check(json(await ports.inspectMain(scope.rootSessionId, main.runId)) === json(main), '核实根读取期间变化');
+    check(json(await ports.InspectMain(scope.rootSessionId, main.runId)) === json(main), '核实根读取期间变化');
     for (const summary of recorded)
-      check(json(await ports.inspectAgent(summary.task.taskId, summary.runId)) === json(summary), '核实子调用读取期间变化');
-    check((await owner.read()).revision === knowledge.revision, '核实期间知识变化');
+      check(json(await ports.InspectAgent(summary.task.taskId, summary.runId)) === json(summary), '核实子调用读取期间变化');
+    check((await owner.Read()).revision === knowledge.revision, '核实期间知识变化');
     return { knowledgeRevision: knowledge.revision, coveredModuleIds: [...new Set(runs.flatMap(run => run.prepared.modules.map(module => module.binding.moduleId)))].sort(), evidenceDigest: hash(json({ scope, runs, main, recorded })) };
   }
 }

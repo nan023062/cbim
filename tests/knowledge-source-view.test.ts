@@ -49,8 +49,8 @@ it('同负责人来源采纳必须绑定原版本，不能夹带换人或变造�
 it('来源采纳回复丢失后保存原请求，重建只查询，不再建立来源或升版',async()=>{
   const f=adoption(),saved=new Map<string,string>(),commit=vi.fn(async()=>{throw Error('IPC_TIMEOUT')}),lookup=vi.fn(async()=>f.receipt);
   const ports={storage:{getItem:(key:string)=>saved.get(key)??null,setItem:(key:string,value:string)=>{saved.set(key,value)}},commit,lookup,uuid:()=>f.request.commandId};
-  const first=new ModuleOwnershipCommands(workspaceId,ports);await first.submit(f.request,f.preview);expect(first.snapshot.records[0].phase).toBe('unknown');
-  const restored=new ModuleOwnershipCommands(workspaceId,ports);await restored.restore();expect(commit).toHaveBeenCalledTimes(1);expect(lookup).toHaveBeenCalledWith({workspaceId,commandId:f.request.commandId});expect(restored.snapshot.records[0].request).toEqual(f.request);expect(restored.snapshot.records[0].receipt).toEqual(f.receipt);
+  const first=new ModuleOwnershipCommands(workspaceId,ports);await first.Submit(f.request,f.preview);expect(first.snapshot.records[0].phase).toBe('unknown');
+  const restored=new ModuleOwnershipCommands(workspaceId,ports);await restored.Restore();expect(commit).toHaveBeenCalledTimes(1);expect(lookup).toHaveBeenCalledWith({workspaceId,commandId:f.request.commandId});expect(restored.snapshot.records[0].request).toEqual(f.request);expect(restored.snapshot.records[0].receipt).toEqual(f.receipt);
 });
 
 it('首次来源屏障拒绝可回到编辑，提交结果曾未知后同错误不能解锁新命令',async()=>{
@@ -59,6 +59,6 @@ it('首次来源屏障拒绝可回到编辑，提交结果曾未知后同错误�
   for(const code of ['SOURCE_FINAL_PENDING','SOURCE_UNKNOWN','SOURCE_JOURNAL_INVALID']){expect(moduleOwnershipPreRejected(Error(code+': 保留原请求'))).toBe(false);expect(workspaceMemberPreRejected(Error(code+': 保留原请求'))).toBe(false)}
   const f=adoption(),saved=new Map<string,string>(),commit=vi.fn(async()=>{throw Error('IPC_TIMEOUT')});
   const c=new ModuleOwnershipCommands(workspaceId,{storage:{getItem:key=>saved.get(key)??null,setItem:(key,value)=>{saved.set(key,value)}},commit,lookup:async()=>undefined,uuid:()=>f.request.commandId});
-  await c.submit(f.request,f.preview);commit.mockImplementation(async()=>{throw Error('OWNERSHIP_SOURCE_PENDING: 当前未开始')});await c.retry(f.request.commandId);
+  await c.Submit(f.request,f.preview);commit.mockImplementation(async()=>{throw Error('OWNERSHIP_SOURCE_PENDING: 当前未开始')});await c.Retry(f.request.commandId);
   expect(c.snapshot.records[0].phase).toBe('unknown');expect(c.blocked).toBe(true);expect(commit.mock.calls[0]).toEqual(commit.mock.calls[1]);
 });

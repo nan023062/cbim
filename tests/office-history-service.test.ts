@@ -12,8 +12,8 @@ function fixture(){
  const run=(taskId:string,runId:string,agentId:string,mode:'chat'|undefined):RunSummary=>({task:{taskId,workspaceId:identity.workspaceId,root:'C:/test',goal:'任务',moduleIds:[],acceptance:[],mode,agentId},runId,status:'completed',acceptance:'not_evaluated',unresolvedTools:[],events:[{version:1,seq:1,time:mainToolTime,...identity,taskId,runId,type:'run.started',data:{message:mode==='chat'?'用户原文':'PRIVATE_FROZEN_MEMBER_PROMPT'}},{version:1,seq:2,time:mainToolTime,workspaceId:identity.workspaceId,taskId,runId,type:'message',data:{role:'assistant',text:mode==='chat'?'主回答':'成员回答',internalReasoning:'PRIVATE_REASONING'}}]});
  const main=run(identity.rootSessionId,'main-run','cbim:main','chat'),member=run(task.taskId,'member-run',task.assignee.agentId,undefined);
  const read=vi.fn(async()=>structuredClone(state)),inspectMain=vi.fn(async()=>main),inspectMember=vi.fn(async()=>member);
- const service=new OfficeHistoryService(identity.workspaceId,{read} as unknown as DispatchStore,{inspectMain,inspectMember});
- const query=(input:unknown)=>service.read(identity,input,new AbortController().signal);
+ const service=new OfficeHistoryService(identity.workspaceId,{Read: read} as unknown as DispatchStore,{InspectMain: inspectMain,InspectMember: inspectMember});
+ const query=(input:unknown)=>service.Read(identity,input,new AbortController().signal);
  return {state,main,member,service,query,inspectMain,inspectMember};
 }
 it('按当前主根列话题和原引用，列表不读取正文，不把其它办公室或旧任务混入',async()=>{
@@ -38,6 +38,6 @@ it('翻页必须核原版本；新输入或正文变更后不能混接旧页',as
 it('拒绝跨根日志、取消与非法输入，不把读取异常包装成空历史',async()=>{
  const f=fixture();f.main.task.taskId='another-root';await expect(f.query({action:'content',scopeId,refId:'main:main-run'})).rejects.toMatchObject({code:'OFFICE_HISTORY_IDENTITY'});
  await expect(f.query({action:'content',scopeId,refId:'goal',rootSessionId:'another-root'})).rejects.toBeDefined();
- const stop=new AbortController();stop.abort();await expect(f.service.read(identity,{action:'topics'},stop.signal)).rejects.toBeDefined();
+ const stop=new AbortController();stop.abort();await expect(f.service.Read(identity,{action:'topics'},stop.signal)).rejects.toBeDefined();
  f.inspectMember.mockRejectedValue(Error('日志损坏'));await expect(f.query({action:'content',scopeId,refId:'member:task:member-run'})).rejects.toThrow('日志损坏');
 });

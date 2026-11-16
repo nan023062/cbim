@@ -23,7 +23,7 @@ export function useMessageQueue(workspaceId: string, taskId?: string)
       const delta = await window.cbim.call('loop.queueDelta', { id: workspaceId, taskId, cursor: current.projection.cursor });
       if (state.current !== current || sequence !== current.sequence)
         return;
-      setItems(current.projection.apply(delta));
+      setItems(current.projection.Apply(delta));
       setError('');
     }
     catch (e: any)

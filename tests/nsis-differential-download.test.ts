@@ -79,11 +79,11 @@ beforeEach(async()=>{
   }
   state.executor=new LocalExecutor();
   state.app={version:oldVersion,name:'cbim-test',isPackaged:true,appUpdateConfigPath:path.join(directory,'app-update.yml'),userDataPath:path.join(directory,'user'),baseCachePath:path.join(directory,'cache'),whenReady:async()=>{},quit:vi.fn(),relaunch:vi.fn(),onQuit:vi.fn()};
-  port=new NsisUpdateInstaller();await port.prepare(release);
+  port=new NsisUpdateInstaller();await port.Prepare(release);
   state.updater!.logger={info:value=>logs.push(String(value)),warn:value=>logs.push(String(value)),error:value=>logs.push(String(value))};
 });
 afterEach(async()=>{
-  port?.close();
+  port?.Close();
   if(server){server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
   // 仅清理本测试创建的系统临时目录，绝不触及真实更新缓存。
   if(directory)await fs.rm(directory,{recursive:true,force:true});
@@ -95,7 +95,7 @@ async function expectValidPackage(){
 }
 
 it('downloads only two changed ranges, resolves the old tag and verifies the entire reconstructed package',async()=>{
-  const progress:number[]=[];await port.download(value=>progress.push(value));await expectValidPackage();
+  const progress:number[]=[];await port.Download(value=>progress.push(value));await expectValidPackage();
   expect(payloadRequests().map(r=>r.range)).toEqual(['bytes=8192-16383','bytes=40960-49151']);
   expect(payloadRequests().reduce((n,r)=>n+r.bytes,0)).toBe(newBytes.length/4);
   expect(requests.some(r=>r.path===oldPath+'.blockmap')).toBe(true);
@@ -103,14 +103,14 @@ it('downloads only two changed ranges, resolves the old tag and verifies the ent
 });
 
 it('revalidates and reuses a staged package after reopening without downloading or installing it',async()=>{
-  await port.download(()=>{});port.close();requests=[];
-  port=new NsisUpdateInstaller();await port.prepare(release);await port.download(()=>{});
+  await port.Download(()=>{});port.Close();requests=[];
+  port=new NsisUpdateInstaller();await port.Prepare(release);await port.Download(()=>{});
   await expectValidPackage();expect(payloadRequests()).toEqual([]);expect(requests.every(r=>r.path.endsWith('/latest.yml'))).toBe(true);
 });
 
 it('uses the cached old blockmap when the old installation has one',async()=>{
   await fs.writeFile(path.join(cache,'current.blockmap'),blockmap(oldBlocks));
-  await port.download(()=>{});await expectValidPackage();
+  await port.Download(()=>{});await expectValidPackage();
   expect(requests.some(r=>r.path===oldPath+'.blockmap')).toBe(false);expect(payloadRequests().every(r=>!!r.range)).toBe(true);
 });
 
@@ -120,20 +120,20 @@ it.each(['missing installer','missing blockmap','corrupt old installer','corrupt
   if(fault==='corrupt old installer')await fs.writeFile(path.join(cache,'installer.exe'),Buffer.alloc(oldBytes.length));
   if(fault==='corrupt ranges')corruptRange=true;
   if(fault==='no range support')ignoreRange=true;
-  await port.download(()=>{});await expectValidPackage();
+  await port.Download(()=>{});await expectValidPackage();
   expect(payloadRequests().filter(r=>!r.range)).toEqual([{path:newPath,range:undefined,bytes:newBytes.length}]);
   expect(logs.some(line=>line.includes('fallback to full download'))).toBe(true);
 });
 
 it('rejects a corrupt full fallback and never makes it installable',async()=>{
   missingBlockmap=true;corruptFull=true;
-  await expect(port.download(()=>{})).rejects.toThrow(/checksum/i);
-  expect(()=>port.install()).toThrow('安装包尚未就绪');expect(state.updater!.quitAndInstall).not.toHaveBeenCalled();
+  await expect(port.Download(()=>{})).rejects.toThrow(/checksum/i);
+  expect(()=>port.Install()).toThrow('安装包尚未就绪');expect(state.updater!.quitAndInstall).not.toHaveBeenCalled();
 });
 
 it('does not trust a corrupted staged package after reopening',async()=>{
-  await port.download(()=>{});port.close();
+  await port.Download(()=>{});port.Close();
   await fs.writeFile(path.join(cache,'pending',desktopInstallerName(newVersion)),Buffer.alloc(newBytes.length));requests=[];
-  port=new NsisUpdateInstaller();await port.prepare(release);await port.download(()=>{});
+  port=new NsisUpdateInstaller();await port.Prepare(release);await port.Download(()=>{});
   await expectValidPackage();expect(payloadRequests().length).toBeGreaterThan(0);
 });

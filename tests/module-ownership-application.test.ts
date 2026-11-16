@@ -12,10 +12,10 @@ it('actual Application preserves one binding through A to B to none to A, blocks
   const f=await fixture(),probe=await moduleOwnershipHttpProbe();let app=f.app;
   try{
     const seeded=await seedModuleOwnership(app,f.temp,probe.url),id=seeded.entry.id,a=seeded.first.receipt.memberId,b=seeded.second.receipt.memberId,ids=[id,seeded.other.id];
-    const identity=()=>({workspaceId:id,instanceId:app.workspace(id).instanceId});
+    const identity=()=>({workspaceId:id,instanceId:app.Workspace(id).instanceId});
     const get=()=>moduleOwnershipDetail(app,id,seeded.moduleId);
-    const byMember=async(memberId:string)=>moduleOwnershipPageSchema.parse(await app.dispatch('workspace.ownerships.byMember',{...identity(),memberId}));
-    const member=async(memberId:string)=>workspaceMemberDetailSchema.parse(await app.dispatch('workspace.members.get',{...identity(),memberId})).member;
+    const byMember=async(memberId:string)=>moduleOwnershipPageSchema.parse(await app.Dispatch('workspace.ownerships.byMember',{...identity(),memberId}));
+    const member=async(memberId:string)=>workspaceMemberDetailSchema.parse(await app.Dispatch('workspace.members.get',{...identity(),memberId})).member;
     const runtimeBefore=await moduleOwnershipRuntimeEvidence(app,ids);let knowledgeBefore=await moduleOwnershipKnowledgeEvidence(app,f.user,id);
     const unchanged=async()=>{expect(await moduleOwnershipKnowledgeEvidence(app,f.user,id)).toEqual(knowledgeBefore);expect(await moduleOwnershipRuntimeEvidence(app,ids)).toEqual(runtimeBefore);expect(await moduleOwnershipRunFiles(f.user,ids)).toEqual([]);expect(probe.requests).toEqual([])};
     const initial=await get();expect(initial.view.binding).toBeNull();expect(initial.view.status).toBe('unassigned');expect(initial.view.source.status).toBe('observed');expect(initial.history.total).toBe(0);expect((await byMember(a)).items).toEqual([]);
@@ -41,7 +41,7 @@ it('actual Application preserves one binding through A to B to none to A, blocks
     const missing=await moduleOwnershipDetail(app,id,seeded.missingModuleId);expect(missing.view.source.status).toBe('missing');expect(missing.view.binding).toEqual(leafBefore);expect((await byMember(b)).items.map(item=>item.moduleId)).toEqual([seeded.missingModuleId]);
     const released=await commitModuleOwnership(app,id,await moduleOwnershipChange(app,id,seeded.missingModuleId,null));expect(released.preview.observedModule).toBeUndefined();expect(released.receipt).toMatchObject({bindingId:leaf.receipt.bindingId,revision:2,ownerMemberId:null});expect((await moduleOwnershipDetail(app,id,seeded.missingModuleId)).view.binding?.observedModule).toEqual(leafBefore.observedModule);expect((await byMember(b)).items).toEqual([]);await unchanged();
     const final=await get(),leafFinal=await moduleOwnershipDetail(app,id,seeded.missingModuleId),journal=await moduleOwnershipJournal(f.user,id),count=journal.records.flatMap(record=>(record.body.mutation.ownershipChanges??[]) as unknown[]).length;expect(count).toBe(7);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    expect((await get()).view).toEqual(final.view);expect((await get()).history).toEqual(final.history);expect((await moduleOwnershipDetail(app,id,seeded.missingModuleId)).view).toEqual(leafFinal.view);expect(await app.dispatch('workspace.ownerships.receipt',{workspaceId:id,commandId:assigned.input.commandId})).toEqual(assigned.receipt);expect(await app.dispatch('workspace.ownerships.commit',assigned.input)).toEqual(assigned.receipt);expect((await moduleOwnershipJournal(f.user,id)).bytes).toEqual(journal.bytes);await unchanged();
-  }finally{await app.shutdown();await probe.close();await f.cleanup()}
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    expect((await get()).view).toEqual(final.view);expect((await get()).history).toEqual(final.history);expect((await moduleOwnershipDetail(app,id,seeded.missingModuleId)).view).toEqual(leafFinal.view);expect(await app.Dispatch('workspace.ownerships.receipt',{workspaceId:id,commandId:assigned.input.commandId})).toEqual(assigned.receipt);expect(await app.Dispatch('workspace.ownerships.commit',assigned.input)).toEqual(assigned.receipt);expect((await moduleOwnershipJournal(f.user,id)).bytes).toEqual(journal.bytes);await unchanged();
+  }finally{await app.Shutdown();await probe.close();await f.cleanup()}
 },90000);

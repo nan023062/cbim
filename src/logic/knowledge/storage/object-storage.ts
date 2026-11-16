@@ -19,7 +19,7 @@ export class FileObjectStorage implements ObjectStorage
   {
   }
 
-  async assertAbsent(id: string)
+  async AssertAbsent(id: string)
   {
     try
     {
@@ -33,7 +33,7 @@ export class FileObjectStorage implements ObjectStorage
     }
   }
 
-  async assertKnowledgeOnly(id: string, files: KnowledgeFile[]): Promise<void>
+  async AssertKnowledgeOnly(id: string, files: KnowledgeFile[]): Promise<void>
   {
     try
     {
@@ -43,7 +43,7 @@ export class FileObjectStorage implements ObjectStorage
         if (e.isSymbolicLink())
           fail('PATH', '对象含链接');
         if (e.isDirectory())
-          await this.assertKnowledgeOnly(p, files);
+          await this.AssertKnowledgeOnly(p, files);
         else if (!files.some(f => f.path === p))
           fail('OBJECT_ASSETS', '对象含非知识资源，当前事务不支持删除这些资源')
       }
@@ -55,23 +55,23 @@ export class FileObjectStorage implements ObjectStorage
     }
   }
 
-  private planPath(id: string)
+  private PlanPath(id: string)
   {
     if (!/^[0-9a-f-]{36}$/.test(id))
       fail('PLAN', '无效预览标识');
-    return path.join(this.owner.paths.local(this.owner.entry.id, 'cache'), 'object-plans', id + '.json')
+    return path.join(this.owner.paths.Local(this.owner.entry.id, 'cache'), 'object-plans', id + '.json')
   }
 
-  savePlan(id: string, plan: ObjectPlan)
+  SavePlan(id: string, plan: ObjectPlan)
   {
-    return atomic(this.planPath(id), json(plan))
+    return atomic(this.PlanPath(id), json(plan))
   }
 
-  async readPlan(id: string): Promise<ObjectPlan>
+  async ReadPlan(id: string): Promise<ObjectPlan>
   {
     try
     {
-      return JSON.parse(await fs.readFile(this.planPath(id), 'utf8'))
+      return JSON.parse(await fs.readFile(this.PlanPath(id), 'utf8'))
     }
     catch
     {
@@ -80,15 +80,15 @@ export class FileObjectStorage implements ObjectStorage
   }
 
   /** 只做 rmdir；发现非空、已删除目录时保留现场，不删除任何文件。 */
-  async pruneEmpty(id: string): Promise<void>
+  async PruneEmpty(id: string): Promise<void>
   {
-    const checked = await this.owner.paths.knowledge(this.owner.entry.path, id + '/__check__'),
+    const checked = await this.owner.paths.Knowledge(this.owner.entry.path, id + '/__check__'),
       dir = path.dirname(checked);
     try
     {
       for (const e of await fs.readdir(dir, { withFileTypes: true }))
         if (e.isDirectory() && !e.isSymbolicLink())
-          await this.pruneEmpty(id + '/' + e.name);
+          await this.PruneEmpty(id + '/' + e.name);
       await fs.rmdir(dir)
     }
     catch (e: any)

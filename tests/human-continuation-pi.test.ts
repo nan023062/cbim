@@ -16,7 +16,7 @@ it.each(['accept','reject','request_evidence'] as const)('continues only after a
   if(decision==='accept')expect(JSON.stringify(c.provider.state.followup)).toContain(data.fact);
   else expect(c.provider.state.followup).toMatchObject({error:{code:'AGENT_HUMAN_DECISION_REQUIRED',started:false}});
   expect(c.provider.member).toHaveLength(7);expect(await fs.readFile(path.join(c.f.a,data.file),'utf8')).toBe(data.fact);
-  await c.until(()=>expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  await c.until(()=>expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0));
   expect(await c.stopAndReopen()).toEqual([record]);
  }finally{await c.cleanup()}
 },60000);
@@ -30,7 +30,7 @@ it.each(['accept','reject'] as const)('saving an opinion alone cannot authorize 
   expect(JSON.stringify(c.provider.state.followup)).toContain('AGENT_HUMAN_DECISION_REQUIRED');
   expect((await c.read()).toolReceipts?.find(r=>r.toolCallId==='human-followup')).toMatchObject({outcome:'denied'});
   expect(await fs.readFile(path.join(c.f.a,data.file),'utf8')).toBe(data.fact);
-  await c.until(()=>expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  await c.until(()=>expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0));
   expect(await c.stopAndReopen()).toEqual([record]);
  }finally{await c.cleanup()}
 },60000);
@@ -44,7 +44,7 @@ it('a changed file after saved acceptance blocks release and native repair while
   expect(c.provider.state.review.error.code).toBe('ARTIFACT_BASELINE_STALE');
   expect(JSON.stringify(c.provider.state.followup)).toContain('AGENT_HUMAN_DECISION_REQUIRED');
   expect((await c.read()).events.find(e=>e.data.phase==='decision_released')?.data).toMatchObject({continued:false,reason:'verification_failed'});
-  await c.until(()=>expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  await c.until(()=>expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0));
   expect(await c.stopAndReopen()).toEqual([record]);expect(c.provider.member).toHaveLength(7);
  }finally{await c.cleanup()}
 },60000);
@@ -62,9 +62,9 @@ it('a frozen request budget can deny continuation without losing the saved decis
  const c=await ready(false,'read',71551);
  try{
   const {continuation,record}=await c.saved(c.first,'accept');await c.answer(continuation,'继续处理意见');
-  await c.until(()=>expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0));
-  const scope=(await c.app.workspace(c.entry.id).dispatchStore.read()).scopes![0];
-  const budget=await c.app.dispatch('dispatch.requestBudget',{workspaceId:c.entry.id,rootSessionId:c.start.taskId,scopeId:scope.scopeId});
+  await c.until(()=>expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0));
+  const scope=(await c.app.Workspace(c.entry.id).dispatchStore.Read()).scopes![0];
+  const budget=await c.app.Dispatch('dispatch.requestBudget',{workspaceId:c.entry.id,rootSessionId:c.start.taskId,scopeId:scope.scopeId});
   expect(budget).toMatchObject({reported:9,denied:1,tokens:1920,lastDenial:'token_reserve'});
   expect(scope.outcome).toBe('failed');expect(c.provider.main).toHaveLength(2);expect(c.provider.member).toHaveLength(7);
   expect(await c.stopAndReopen()).toEqual([record]);

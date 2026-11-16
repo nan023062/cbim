@@ -17,7 +17,7 @@ export interface WorkspaceAdmission
 
   ownerEpoch: number;
 
-  isCurrent(): boolean;
+  IsCurrent(): boolean;
 
   signal?: AbortSignal
 }
@@ -32,22 +32,22 @@ export function admissionRequestId(source: 'main' | 'member', commandId: string)
 export function acquireExecutionLease(lease: WorkspaceExecutionLease, runKey: string, request: Omit<AdmissionRequest, 'ownerEpoch'>, admission?: WorkspaceAdmission, wait?: ExecutionAdmissionWait): () => void
 {
   if (!admission)
-    return lease.acquire(runKey, request.workspacePermission, request.agentInstanceId);
+    return lease.Acquire(runKey, request.workspacePermission, request.agentInstanceId);
   const fixed = { ...request, ownerEpoch: admission.ownerEpoch };
-  const attempt = admission.manager.attempt(fixed, {
-    canAcquire: () => lease.canAcquire(runKey, request.workspacePermission, request.agentInstanceId),
-    acquire: () => lease.acquire(runKey, request.workspacePermission, request.agentInstanceId),
-    isCurrent: () => admission.isCurrent() && (!wait || wait.isCurrent()),
-    onReady: wait?.onReady,
+  const attempt = admission.manager.Attempt(fixed, {
+    CanAcquire: () => lease.CanAcquire(runKey, request.workspacePermission, request.agentInstanceId),
+    Acquire: () => lease.Acquire(runKey, request.workspacePermission, request.agentInstanceId),
+    IsCurrent: () => admission.IsCurrent() && (!wait || wait.IsCurrent()),
+    OnReady: wait?.OnReady,
   });
   if (attempt.kind === 'granted')
     return attempt.release;
   if (attempt.kind === 'waiting')
   {
     const { source: _source, workspacePermission: _permission, ...identity } = fixed;
-    wait?.registerWithdraw(request.requestId, () =>
+    wait?.RegisterWithdraw(request.requestId, () =>
     {
-      admission.manager.withdraw(identity)
+      admission.manager.Withdraw(identity)
     });
     fail('CAPACITY_WAITING', '当前执行名额或工作区占用暂不可用，已受理的协作任务等待后重新核实启动');
   }

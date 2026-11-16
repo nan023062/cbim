@@ -8,10 +8,10 @@ export const repositoryConnectionFixture={name:'只读连接验收资源',summar
 export async function seedRepositoryConnection(app:Application,temp:string,seedLibrary=true){
   const repository=path.join(temp,'shared-resources'),a=path.join(temp,'workspace-alpha'),b=path.join(temp,'workspace-beta');
   await Promise.all([fs.mkdir(repository),fs.mkdir(a),fs.mkdir(b)]);
-  const first=await app.dispatch('add',{path:a}),second=await app.dispatch('add',{path:b});
+  const first=await app.Dispatch('add',{path:a}),second=await app.Dispatch('add',{path:b});
   if(seedLibrary){
-    await app.dispatch('resources.configure',{mode:'local',location:repository});const current=await app.dispatch('resources.list');
-    await app.dispatch('resources.save',{repositoryId:current.repositoryId,revision:current.revision,item:{kind:'skill',name:repositoryConnectionFixture.name,summary:repositoryConnectionFixture.summary,content:repositoryConnectionFixture.content}});
+    await app.Dispatch('resources.configure',{mode:'local',location:repository});const current=await app.Dispatch('resources.list');
+    await app.Dispatch('resources.save',{repositoryId:current.repositoryId,revision:current.revision,item:{kind:'skill',name:repositoryConnectionFixture.name,summary:repositoryConnectionFixture.summary,content:repositoryConnectionFixture.content}});
   }
   return {repository,a,b,first,second};
 }

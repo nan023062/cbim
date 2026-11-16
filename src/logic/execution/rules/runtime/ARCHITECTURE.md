@@ -29,8 +29,8 @@ class N_src_logic_execution_rules_runtime_runtime_ts["runtime.ts"] {
 }
 class N_src_logic_execution_rules_runtime_runtime_ts_RuntimeOptions["RuntimeOptions"] {
   <<interface>>
-  +agentTools()
-  +agentCall()
+  +AgentTools()
+  +AgentCall()
   +storage
   +directory
   +conversationBinding
@@ -42,15 +42,15 @@ class N_src_logic_execution_rules_runtime_runtime_ts_RuntimeOptions["RuntimeOpti
   +scopedExecution
   +artifactTransitions
   +workflowContracts
-  +describeTool()
-  +normalizeToolInput()
-  +assertMemberResume()
+  +DescribeTool()
+  +NormalizeToolInput()
+  +AssertMemberResume()
 }
 N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_runtime_runtime_ts_RuntimeOptions : 声明
 class N_src_logic_execution_rules_runtime_runtime_ts_RunStartControl["RunStartControl"] {
   <<interface>>
   +signal
-  +beforeRun()
+  +BeforeRun()
 }
 N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_runtime_runtime_ts_RunStartControl : 声明
 class N_src_logic_execution_rules_runtime_runtime_ts_RunSteerControl["RunSteerControl"] {
@@ -63,8 +63,8 @@ N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_r
 class N_src_logic_execution_rules_runtime_runtime_ts_FreshMainStartControl["FreshMainStartControl"] {
   <<interface>>
   +signal
-  +knownRunIds()
-  +beforeRun()
+  +KnownRunIds()
+  +BeforeRun()
 }
 N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_runtime_runtime_ts_FreshMainStartControl : 声明
 ```
@@ -79,13 +79,13 @@ class N_src_logic_execution_rules_runtime_runtime_ts["runtime.ts"] {
 class N_src_logic_execution_rules_runtime_runtime_ts_RuntimeOptions["RuntimeOptions"] {
   <<interface>>
   +memberCheckpointAllowance
-  +assertMemberResumeInputs()
-  +acquireLease()
+  +AssertMemberResumeInputs()
+  +AcquireLease()
   +engineKind
-  +createEngine()
-  +toolPolicy()
-  +onEngineReady()
-  +onEvent()
+  +CreateEngine()
+  +ToolPolicy()
+  +OnEngineReady()
+  +OnEvent()
 }
 N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_runtime_runtime_ts_RuntimeOptions : 声明
 ```
@@ -97,20 +97,20 @@ class N_src_logic_execution_rules_runtime_runtime_ts["runtime.ts"] {
 }
 class N_src_logic_execution_rules_runtime_runtime_ts_LoopRuntime["LoopRuntime"] {
   +constructor()
-  +start()
-  +startMember()
-  +resumeMember()
-  +startFreshMain()
-  +inspect()
-  +stop()
-  +steer()
-  +close()
+  +Start()
+  +StartMember()
+  +ResumeMember()
+  +StartFreshMain()
+  +Inspect()
+  +Stop()
+  +Steer()
+  +Close()
   -options
   -active
   -injections
   -starting
   -closing
-  -startInternal()
+  -StartInternal()
 }
 N_src_logic_execution_rules_runtime_runtime_ts ..> N_src_logic_execution_rules_runtime_runtime_ts_LoopRuntime : 声明
 ```
@@ -161,7 +161,7 @@ assertQuestionWait 要求唯一已授权问题工具且无其他在途操作。�
 
 ### 业务 Agent 的统一启动
 
-startMember 接受 RunStartControl.beforeRun，供可信调用装配记录原父工具与子运行关系；它仍执行 checkedMemberRunLaunch，不能将普通 chat 冒充业务身份。有 agentTools 的业务运行保留产物/验证门禁，但不创建旧 MemberHelpTools 或 RunMemberCheckpoint；求助统一经当前调用的问答端口暂停与继续。历史无 agentTools 的业务运行维持原交接行为。
+startMember 接受 RunStartControl.BeforeRun，供可信调用装配记录原父工具与子运行关系；它仍执行 checkedMemberRunLaunch，不能将普通 chat 冒充业务身份。有 agentTools 的业务运行保留产物/验证门禁，但不创建旧 MemberHelpTools 或 RunMemberCheckpoint；求助统一经当前调用的问答端口暂停与继续。历史无 agentTools 的业务运行维持原交接行为。
 
 ## 原运行人工意见的副作用门禁
 Runtime 在通常工具授权之后、实际放行和证据失效之前应用 agentTools.guardEffects。该门禁只能收紧已有决定，不能授权原来被拒绝的调用。拒绝进入普通工具回执，未知副作用默认拒绝；没有绑定该端口的历史运行保留原行为。

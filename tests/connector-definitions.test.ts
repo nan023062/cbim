@@ -51,18 +51,18 @@ it('静态定义两套校验一致拒绝混合来源、凭据、地址、错误�
 it('提供方身份不受 JSON 键序影响，不将不同仓库或插件混为一个目标',()=>{
   const other={...repository,id:'.cbim/connectors/other',repository:{repositoryId:randomUUID()}};
   const entries:ConnectorDefinition[]=[plugin,repository,other];
-  const registry=new ConnectorRegistry(entries);expect(registry.duplicates()).toEqual([]);
-  expect(registry.get(repository.id)).toEqual(repository);expect(registry.list('资源')).toEqual([repository,other]);
-  expect(new ConnectorRegistry([...entries,{...plugin,id:'.cbim/connectors/plugin_copy',plugin:{namespace:null,ghost_id:'docs'}}]).duplicates()).toEqual(['.cbim/connectors/plugin_copy']);
-  expect(new ConnectorRegistry([...entries,{...repository,id:'.cbim/connectors/repo_copy',repository:{repositoryId:repositoryId.toUpperCase()}}]).duplicates()).toEqual(['.cbim/connectors/repo_copy']);
-  expect(new ConnectorRegistry([...entries,{...other,id:repository.id.toUpperCase(),repository:{repositoryId:randomUUID()}}]).duplicates()).toEqual([repository.id.toUpperCase()]);
-  expect(new ConnectorRegistry([plugin,{...plugin,id:'.cbim/connectors/namespaced',plugin:{ghost_id:'docs',namespace:'null'}}]).duplicates()).toEqual([]);
+  const registry=new ConnectorRegistry(entries);expect(registry.Duplicates()).toEqual([]);
+  expect(registry.Get(repository.id)).toEqual(repository);expect(registry.List('资源')).toEqual([repository,other]);
+  expect(new ConnectorRegistry([...entries,{...plugin,id:'.cbim/connectors/plugin_copy',plugin:{namespace:null,ghost_id:'docs'}}]).Duplicates()).toEqual(['.cbim/connectors/plugin_copy']);
+  expect(new ConnectorRegistry([...entries,{...repository,id:'.cbim/connectors/repo_copy',repository:{repositoryId:repositoryId.toUpperCase()}}]).Duplicates()).toEqual(['.cbim/connectors/repo_copy']);
+  expect(new ConnectorRegistry([...entries,{...other,id:repository.id.toUpperCase(),repository:{repositoryId:randomUUID()}}]).Duplicates()).toEqual([repository.id.toUpperCase()]);
+  expect(new ConnectorRegistry([plugin,{...plugin,id:'.cbim/connectors/namespaced',plugin:{ghost_id:'docs',namespace:'null'}}]).Duplicates()).toEqual([]);
 });
 
 it('真实知识事务接受两类静态定义与模块/角色引用，幂等提交不产生运行授权',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),seed=await seedTeam(ws),{call}=internalKnowledge(ws);
-    const snapshot=await ws.snapshot(),changes=[{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors:[plugin,repository]})}];
+    const entry=await f.app.Dispatch('add',{path:f.a}),ws=f.app.Workspace(entry.id),seed=await seedTeam(ws),{call}=internalKnowledge(ws);
+    const snapshot=await ws.Snapshot(),changes=[{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors:[plugin,repository]})}];
     for(const id of [seed.input.moduleId,seed.input.agentId]){
       const file=snapshot.files.find(file=>file.path===id+(id.startsWith('.cbim/team')?'/agent.json':'/module.json'))!;
       const definition=JSON.parse(file.text);definition.connectors=[plugin.id,repository.id];changes.push({path:file.path,text:JSON.stringify(definition)});
@@ -71,7 +71,7 @@ it('真实知识事务接受两类静态定义与模块/角色引用，幂等提
     expect((await call('cbim_knowledge_preview',input)).validation.structural).toBe(true);
     const committed=await call('cbim_knowledge_commit',input,true);expect(committed.state).toBe('committed');
     expect(await call('cbim_knowledge_commit',input,true)).toEqual(committed);
-    const current=await ws.snapshot();expect(current.validation?.structural).toBe(true);
+    const current=await ws.Snapshot();expect(current.validation?.structural).toBe(true);
     expect(JSON.parse(current.files.find(file=>file.path==='.cbim/connectors/registry.json')!.text)).toEqual({connectors:[plugin,repository]});
     const names=(await call('cbim_knowledge_tool_catalog')).tools.map((item:{name:string})=>item.name);expect(names.length).toBeGreaterThan(0);
     expect(names.some((name:string)=>name.startsWith('cbim_repository_'))).toBe(false);
@@ -79,19 +79,19 @@ it('真实知识事务接受两类静态定义与模块/角色引用，幂等提
     const rejected=await call('cbim_knowledge_preview',remove);expect(rejected.validation.structural).toBe(false);
     expect(rejected.validation.issues.some((issue:{code:string})=>issue.code==='connector')).toBe(true);
     await expect(call('cbim_knowledge_commit',remove,true)).rejects.toMatchObject({code:'VALIDATION'});
-    expect((await ws.snapshot()).revision).toBe(current.revision);
+    expect((await ws.Snapshot()).revision).toBe(current.revision);
   }finally{await f.cleanup()}
 });
 
 it('真实预览保留重复仓库诊断，结构错误不能提交也不会改写知识',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),{call}=internalKnowledge(ws),snapshot=await ws.snapshot();
+    const entry=await f.app.Dispatch('add',{path:f.a}),ws=f.app.Workspace(entry.id),{call}=internalKnowledge(ws),snapshot=await ws.Snapshot();
     for(const connectors of [[repository,{...repository,id:'.cbim/connectors/copy'}],[{...repository,repository:{repositoryId,token:'forbidden'}}]]){
       const input={revision:snapshot.revision,requestId:randomUUID(),changes:[{path:'.cbim/connectors/registry.json',text:JSON.stringify({connectors})}]};
       const preview=await call('cbim_knowledge_preview',input);expect(preview.validation.structural).toBe(false);
       expect(preview.validation.issues.some((issue:{code:string})=>['duplicate','schema'].includes(issue.code))).toBe(true);
       await expect(call('cbim_knowledge_commit',input,true)).rejects.toMatchObject({code:'VALIDATION'});
-      expect((await ws.snapshot()).revision).toBe(snapshot.revision);
+      expect((await ws.Snapshot()).revision).toBe(snapshot.revision);
     }
   }finally{await f.cleanup()}
 });

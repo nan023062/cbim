@@ -31,7 +31,7 @@ MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登�
 
 ## 递归执行记录核实
 
-MemberExecutionManager.report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
+MemberExecutionManager.Report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
 
 
 ### 递归工具迁移收口

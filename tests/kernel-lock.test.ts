@@ -13,9 +13,9 @@ it('旧入口与 Core 共用构造器和原生锁，释放后可重新获取',()
     expect(LegacyLock).toBe(KernelLock);
     lock=new KernelLock(root,id,'migration');
     expect(()=>new LegacyLock(root,id,'migration')).toThrow(expect.objectContaining({code:'LOCKED'}));
-    lock.close();lock=undefined;
+    lock.Close();lock=undefined;
     lock=new LegacyLock(root,id,'migration');
   }finally{
-    lock?.close();fs.rmdirSync(root);
+    lock?.Close();fs.rmdirSync(root);
   }
 });

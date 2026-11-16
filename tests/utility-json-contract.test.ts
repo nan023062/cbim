@@ -9,5 +9,5 @@ it('Core 保留 JSON Fault 的 code、name 和原提示，不泄漏 utility 错�
       expect(error).toBeInstanceOf(Fault);expect(error).toMatchObject({code:'JSON',name:'JSON',message});
     }
   }
-  const text='{"list":[0,false,null,{"a":1}]}';expect(parseJson(text)).toEqual(JsonUtils.parseStrictJson(text));
+  const text='{"list":[0,false,null,{"a":1}]}';expect(parseJson(text)).toEqual(JsonUtils.ParseStrictJson(text));
 });

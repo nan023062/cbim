@@ -59,43 +59,43 @@ export class RuntimeFeed
     return this.value
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    const unsubscribe = this.listeners.subscribe(listener);
+    const unsubscribe = this.listeners.Subscribe(listener);
     if (this.listeners.size === 1)
     {
-      this.generation.advance();
-      void this.refresh()
+      this.generation.Advance();
+      void this.Refresh()
     }
     return () =>
     {
       unsubscribe();
       if (!this.listeners.size)
       {
-        this.generation.advance();
+        this.generation.Advance();
         clearTimeout(this.timer)
       }
     }
   }
 
   /** 在途读取复用，完成后再计时；手动刷新也不会发起并行请求。 */
-  refresh(): Promise<void>
+  Refresh(): Promise<void>
   {
     if (this.pending)
       return this.pending;
     clearTimeout(this.timer);
-    const generation = this.generation.capture();
+    const generation = this.generation.Capture();
     const pending = (async () =>
     {
       try
       {
         const parsed = runtimeReadSchema.safeParse(await this.read(this.value.data?.cursor));
-        if (!this.generation.isCurrent(generation))
+        if (!this.generation.IsCurrent(generation))
           return;
         if (!parsed.success)
           throw Error('运行监管数据格式异常，请刷新核实');
@@ -113,12 +113,12 @@ export class RuntimeFeed
           if (!old || old.streamId !== next.streamId || old.revision !== next.revision)
           {
             this.value = { data: reconcileRuntime(this.value.data, response.snapshot), error: '' };
-            this.emit()
+            this.Emit()
           }
           else if (this.value.error)
           {
             this.value = { ...this.value, error: '' };
-            this.emit()
+            this.Emit()
           }
         }
         else
@@ -128,19 +128,19 @@ export class RuntimeFeed
           if (this.value.error)
           {
             this.value = { ...this.value, error: '' };
-            this.emit()
+            this.Emit()
           }
         }
       }
       catch (error)
       {
-        if (this.generation.isCurrent(generation))
+        if (this.generation.IsCurrent(generation))
         {
           const message = error instanceof Error ? error.message : '运行监管读取失败，请刷新';
           if (message !== this.value.error)
           {
             this.value = { ...this.value, error: message };
-            this.emit()
+            this.Emit()
           }
         }
       }
@@ -151,7 +151,7 @@ export class RuntimeFeed
       if (this.pending === pending)
         this.pending = undefined;
       if (this.listeners.size)
-        this.timer = setTimeout(() => void this.refresh(), this.generation.isCurrent(generation) ? this.intervalMs : 0)
+        this.timer = setTimeout(() => void this.Refresh(), this.generation.IsCurrent(generation) ? this.intervalMs : 0)
     });
     return pending;
   }

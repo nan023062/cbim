@@ -20,22 +20,22 @@ export class RuntimeStore
   {
   }
 
-  packageRoot(pkg: RuntimePackage)
+  PackageRoot(pkg: RuntimePackage)
   {
     return path.join(this.root, 'packages', pkg.sha256)
   }
 
-  manifestPath(digest: string)
+  ManifestPath(digest: string)
   {
     if (!/^[a-f0-9]{64}$/.test(digest))
       throw Error('资源身份无效');
     return path.join(this.root, 'manifests', digest + '.json')
   }
 
-  async saveManifest(envelope: SignedRuntimeManifest)
+  async SaveManifest(envelope: SignedRuntimeManifest)
   {
     const checked = verifyRuntimeManifest(envelope, this.cold);
-    const file = this.manifestPath(checked.digest);
+    const file = this.ManifestPath(checked.digest);
     await fs.mkdir(path.dirname(file), { recursive: true });
     const existing = await fs.lstat(file).catch(error =>
     {
@@ -45,7 +45,7 @@ export class RuntimeStore
     });
     if (existing)
     {
-      const old = await this.readManifest(checked.digest);
+      const old = await this.ReadManifest(checked.digest);
       if (old.envelope.payload !== envelope.payload)
         throw Error('资源清单身份冲突');
       return checked;
@@ -62,13 +62,13 @@ export class RuntimeStore
       await handle.close()
     }
     await fs.rename(temporary, file);
-    await this.readManifest(checked.digest);
+    await this.ReadManifest(checked.digest);
     return checked;
   }
 
-  async readManifest(digest: string)
+  async ReadManifest(digest: string)
   {
-    const file = this.manifestPath(digest),
+    const file = this.ManifestPath(digest),
       stat = await fs.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 16 * 1024 * 1024)
       throw Error('本地资源清单无效');
@@ -79,12 +79,12 @@ export class RuntimeStore
   }
 
   /** download / extract / verify 均在后台完成；完整成功后目录才进入内容寻址缓存。 */
-  prepare(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void = () => { }): Promise<string>
+  Prepare(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void = () => { }): Promise<string>
   {
     const current = this.preparing.get(pkg.sha256);
     if (current)
       return current;
-    const job = this.preparePackage(pkg, signal, progress).finally(() =>
+    const job = this.PreparePackage(pkg, signal, progress).finally(() =>
     {
       if (this.preparing.get(pkg.sha256) === job)
         this.preparing.delete(pkg.sha256)
@@ -93,10 +93,10 @@ export class RuntimeStore
     return job;
   }
 
-  private async preparePackage(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void)
+  private async PreparePackage(pkg: RuntimePackage, signal: AbortSignal, progress: (percent: number) => void)
   {
     signal.throwIfAborted();
-    const target = this.packageRoot(pkg);
+    const target = this.PackageRoot(pkg);
     const existing = await fs.lstat(target).catch(error =>
     {
       if (error.code === 'ENOENT')

@@ -61,18 +61,18 @@ class N_src_logic_knowledge_storage_governance_port_ts_KnowledgeJournalStatus["K
 N_src_logic_knowledge_storage_governance_port_ts ..> N_src_logic_knowledge_storage_governance_port_ts_KnowledgeJournalStatus : 声明
 class N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceAuthority["KnowledgeGovernanceAuthority"] {
   <<interface>>
-  +request()
-  +hasIntent()
-  +verifyJournal()
-  +verify()
+  +Request()
+  +HasIntent()
+  +VerifyJournal()
+  +Verify()
 }
 N_src_logic_knowledge_storage_governance_port_ts ..> N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceAuthority : 声明
 class N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceTransaction["KnowledgeGovernanceTransaction"] {
   <<interface>>
-  +snapshot()
-  +preview()
-  +journal()
-  +apply()
+  +Snapshot()
+  +Preview()
+  +Journal()
+  +Apply()
 }
 N_src_logic_knowledge_storage_governance_port_ts ..> N_src_logic_knowledge_storage_governance_port_ts_KnowledgeGovernanceTransaction : 声明
 ```
@@ -100,7 +100,7 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStoreOwner["Know
   +lastRevision
   +changed
   +fault
-  +assert()
+  +Assert()
 }
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStoreOwner : 声明
 class N_src_logic_knowledge_storage_knowledge_store_ts_CommitResult["CommitResult"] {
@@ -130,20 +130,20 @@ N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_stora
 class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["KnowledgeStore"] {
   +activeOperations
   +constructor()
-  +attachSources()
-  +withSourceSnapshot()
-  +drain()
-  +committedReceipt()
-  +governed()
-  +hasRecordedRequest()
-  +initialize()
-  +read()
-  +snapshot()
-  +preview()
-  +commit()
-  +commitPlanned()
-  +recover()
-  +planMove()
+  +AttachSources()
+  +WithSourceSnapshot()
+  +Drain()
+  +CommittedReceipt()
+  +Governed()
+  +HasRecordedRequest()
+  +Initialize()
+  +Read()
+  +Snapshot()
+  +Preview()
+  +Commit()
+  +CommitPlanned()
+  +Recover()
+  +PlanMove()
 }
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore : 声明
 ```
@@ -161,12 +161,12 @@ class N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore["Knowledge
   -governance
   -sources
   -queue
-  -journalStatus()
-  -serial()
-  -draft()
-  -commitInternal()
-  -write()
-  -rollback()
+  -JournalStatus()
+  -Serial()
+  -Draft()
+  -CommitInternal()
+  -Write()
+  -Rollback()
 }
 N_src_logic_knowledge_storage_knowledge_store_ts ..> N_src_logic_knowledge_storage_knowledge_store_ts_KnowledgeStore : 声明
 ```
@@ -182,13 +182,13 @@ class N_src_logic_knowledge_storage_object_storage_ts["object-storage.ts"] {
 }
 class N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage["FileObjectStorage"] {
   +constructor()
-  +assertAbsent()
-  +assertKnowledgeOnly()
-  +savePlan()
-  +readPlan()
-  +pruneEmpty()
+  +AssertAbsent()
+  +AssertKnowledgeOnly()
+  +SavePlan()
+  +ReadPlan()
+  +PruneEmpty()
   -owner
-  -planPath()
+  -PlanPath()
 }
 N_src_logic_knowledge_storage_object_storage_ts ..> N_src_logic_knowledge_storage_object_storage_ts_FileObjectStorage : 声明
 class N_src_logic_knowledge_storage_object_storage_ts_external_ObjectStorage["ObjectStorage (外部契约)"] {
@@ -235,12 +235,12 @@ class N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceJournal["Kn
 N_src_logic_knowledge_storage_source_journal_ts ..> N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceJournal : 声明
 class N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceAuthority["KnowledgeSourceAuthority"] {
   <<interface>>
-  +build()
-  +prepare()
-  +settle()
-  +verify()
-  +pending()
-  +transitions()
+  +Build()
+  +Prepare()
+  +Settle()
+  +Verify()
+  +Pending()
+  +Transitions()
 }
 N_src_logic_knowledge_storage_source_journal_ts ..> N_src_logic_knowledge_storage_source_journal_ts_KnowledgeSourceAuthority : 声明
 ```

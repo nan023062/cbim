@@ -18,8 +18,8 @@ export function TopicInterruptionForm({ scope, options, active, onRefresh, draft
     state = controller.snapshot;
   useEffect(() =>
   {
-    const unsubscribe = controller.subscribe(() => render(value => value + 1));
-    void controller.restore(saved?.request);
+    const unsubscribe = controller.Subscribe(() => render(value => value + 1));
+    void controller.Restore(saved?.request);
     return unsubscribe
   }, [controller, saved?.request.commandId]);
   const canWrite = active && scope.status === 'active' && !!scope.goal && !scope.goal.blocked && draft.store.writable && !draft.busy && !state.pending && state.ready && !state.request && !saved;
@@ -44,12 +44,12 @@ export function TopicInterruptionForm({ scope, options, active, onRefresh, draft
       const value = draft.value;
       void execute(async () =>
       {
-        await controller.submit(value.text, selected!, value.attachments.map(item => item.id));
+        await controller.Submit(value.text, selected!, value.attachments.map(item => item.id));
         if (controller.snapshot.request)
           draft.clear(value.revision)
       })
     }}>暂停话题并提交补充</button>}
-    {state.request && <><button disabled={state.pending} onClick={() => void execute(() => controller.query())}>查询原请求</button>{!state.receipt && scope.status !== 'closed' && <button disabled={!active || state.pending} onClick={() => void execute(() => controller.retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
+    {state.request && <><button disabled={state.pending} onClick={() => void execute(() => controller.Query())}>查询原请求</button>{!state.receipt && scope.status !== 'closed' && <button disabled={!active || state.pending} onClick={() => void execute(() => controller.Retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
   </details>;
 }
 

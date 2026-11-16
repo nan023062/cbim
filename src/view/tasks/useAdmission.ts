@@ -12,7 +12,7 @@ const snapshot = () => feed.snapshot;
 /** active 为当前页面可见性；不订阅时仍返回最近已确认快照，但不会触发执行。 */
 export function useAdmission(active = true)
 {
-  const subscribe = useCallback((listener: () => void) => active ? feed.subscribe(listener) : () =>
+  const subscribe = useCallback((listener: () => void) => active ? feed.Subscribe(listener) : () =>
   {
   }, [active]);
   return useSyncExternalStore(subscribe, snapshot, snapshot);
@@ -21,5 +21,5 @@ export function useAdmission(active = true)
 /** 保存设置后按需刷新，已有在途请求会复用而不是并发再读。 */
 export function refreshAdmission()
 {
-  return feed.refresh()
+  return feed.Refresh()
 }

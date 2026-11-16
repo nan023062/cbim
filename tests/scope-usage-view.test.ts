@@ -12,15 +12,15 @@ function report():ScopeUsageReport{return {identity:{...identity},checkedAt:time
 
 it('周期用量只有显式读取，重复点击合并；卸载和切换隔离迟到响应',async()=>{
   let resolve!:(value:unknown)=>void;const request=vi.fn((_id:ScopeUsageInput)=>new Promise(done=>{resolve=done})),controller=new ScopeUsageController(identity,request),notify=vi.fn(),unsubscribe=controller.subscribe(notify);
-  expect(request).not.toHaveBeenCalled();expect(controller.snapshot.report).toBeUndefined();const first=controller.read();await controller.read();expect(request).toHaveBeenCalledTimes(1);expect(request).toHaveBeenCalledWith(identity);
-  unsubscribe();controller.cancel();resolve(report());await first;expect(controller.snapshot.report).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
-  const other=new ScopeUsageController({...identity,scopeId:'other'},async()=>report());await other.read();expect(other.snapshot.report).toBeUndefined();expect(other.snapshot.error).toContain('不属于');
+  expect(request).not.toHaveBeenCalled();expect(controller.snapshot.report).toBeUndefined();const first=controller.Read();await controller.Read();expect(request).toHaveBeenCalledTimes(1);expect(request).toHaveBeenCalledWith(identity);
+  unsubscribe();controller.Cancel();resolve(report());await first;expect(controller.snapshot.report).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
+  const other=new ScopeUsageController({...identity,scopeId:'other'},async()=>report());await other.Read();expect(other.snapshot.report).toBeUndefined();expect(other.snapshot.error).toContain('不属于');
 });
 
 it('刷新失败保留旧快照并显示问题，不将缺失数据清成零或自动重读',async()=>{
   const request=vi.fn().mockResolvedValueOnce(report()).mockRejectedValueOnce(Error('日志读取失败')),controller=new ScopeUsageController(identity,request);
-  await controller.read();const saved=controller.snapshot.report;expect(saved?.totals.tokens.total).toBe(180);await controller.read();expect(controller.snapshot.report).toBe(saved);expect(request).toHaveBeenCalledTimes(2);
-  const html=renderToStaticMarkup(createElement(ScopeUsageReadView,{state:controller.snapshot,onRead:()=>{throw Error('渲染不得读取')}}));expect(html).toContain('保留上次快照');expect(html).toContain('可能已过期');expect(html).toContain('180 token');
+  await controller.Read();const saved=controller.snapshot.report;expect(saved?.totals.tokens.total).toBe(180);await controller.Read();expect(controller.snapshot.report).toBe(saved);expect(request).toHaveBeenCalledTimes(2);
+  const html=renderToStaticMarkup(createElement(ScopeUsageReadView,{state:controller.snapshot,OnRead:()=>{throw Error('渲染不得读取')}}));expect(html).toContain('保留上次快照');expect(html).toContain('可能已过期');expect(html).toContain('180 token');
 });
 
 it('总数必须和来源一致，不重复计算推理或跨主会话/周期合并',()=>{

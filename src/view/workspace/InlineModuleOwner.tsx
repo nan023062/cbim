@@ -23,8 +23,8 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
   const epoch = useRef(0),
     lock = useRef(false);
   const controllers = useMemo(() => identity ? {
-    members: workspaceMemberCommands.get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }),
-    ownerships: moduleOwnershipCommands.get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }),
+    members: workspaceMemberCommands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.members.commit', input), lookup: input => window.cbim.call('workspace.members.receipt', input) }),
+    ownerships: moduleOwnershipCommands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }),
   } : undefined, [identity?.workspaceId]);
   const call: import('./inline-module-ownership').InlineOwnerCall = (action, args) => window.cbim.call(...checkedIpcCall(action, args));
   async function load(token: number)
@@ -55,12 +55,12 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
     if (!controllers || !identity)
       return;
     const notify = () => tick(value => value + 1),
-      off = [controllers.members.subscribe(notify), controllers.ownerships.subscribe(notify)];
+      off = [controllers.members.Subscribe(notify), controllers.ownerships.Subscribe(notify)];
     setLoading(true);
     void (async () =>
     {
-      await controllers.members.restore();
-      await controllers.ownerships.restore();
+      await controllers.members.Restore();
+      await controllers.ownerships.Restore();
       if (epoch.current === token)
         await load(token)
     })().finally(() =>
@@ -114,8 +114,8 @@ export function useInlineModuleOwners(identity: ModuleOwnershipIdentity | undefi
     setError('');
     try
     {
-      await controllers.members.restore();
-      await controllers.ownerships.restore();
+      await controllers.members.Restore();
+      await controllers.ownerships.Restore();
       await load(token)
     }
     finally

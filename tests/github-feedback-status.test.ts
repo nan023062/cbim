@@ -4,7 +4,7 @@ import {authorizeRunTool,type RunToolDescriptor} from '../src/logic/tools/rules/
 import type {FeedbackConnectionCheck} from '../src/logic/feedback';
 
 const signal=()=>new AbortController().signal;
-const read=async(tool:FeedbackStatusTool)=>JSON.parse((await tool.call('cbim_feedback_status',{},signal())).content[0].text);
+const read=async(tool:FeedbackStatusTool)=>JSON.parse((await tool.Call('cbim_feedback_status',{},signal())).content[0].text);
 
 it('distinguishes absent component, disconnected account and login after run preparation',async()=>{
   expect(await read(new FeedbackStatusTool('workspace',false))).toMatchObject({code:'FEEDBACK_TOOL_NOT_LOADED',submitAvailable:false,receiptAvailable:false});
@@ -25,16 +25,16 @@ it.each(['GITHUB_EXPIRED','GITHUB_SECRET_STORAGE','GITHUB_SETTINGS'] as const)('
 
 it('does not expose private exception content or accept status/target overrides',async()=>{
   const check=vi.fn(async()=>{throw Error('private-token-value')});const tool=new FeedbackStatusTool('workspace',false,check);
-  for(const input of [{token:'secret'},{owner:'other'},{connected:true},{workspaceId:'other'}])await expect(tool.call('cbim_feedback_status',input,signal())).rejects.toMatchObject({code:'GITHUB_FEEDBACK_INPUT'});
+  for(const input of [{token:'secret'},{owner:'other'},{connected:true},{workspaceId:'other'}])await expect(tool.Call('cbim_feedback_status',input,signal())).rejects.toMatchObject({code:'GITHUB_FEEDBACK_INPUT'});
   expect(check).not.toHaveBeenCalled();const result=await read(tool);expect(result.code).toBe('GITHUB_SETTINGS');expect(JSON.stringify(result)).not.toContain('private-token-value');
 });
 
 it('allows only the exact read-only status descriptor without granting external write or cross-workspace access',async()=>{
-  const tool=new FeedbackStatusTool('workspace',false),descriptor=tool.describe('cbim_feedback_status',{}),call={id:'call',name:'cbim_feedback_status',input:{}};
-  const context={workspaceId:'workspace',permission:'read' as const,guard:vi.fn(async()=>({allow:true})),approve:vi.fn(async()=>({allow:true}))};
+  const tool=new FeedbackStatusTool('workspace',false),descriptor=tool.Describe('cbim_feedback_status',{}),call={id:'call',name:'cbim_feedback_status',input:{}};
+  const context={workspaceId:'workspace',permission:'read' as const,Guard:vi.fn(async()=>({allow:true})),Approve:vi.fn(async()=>({allow:true}))};
   expect(await authorizeRunTool(call,descriptor,context)).toMatchObject({allow:true,effects:['read']});
   const altered:RunToolDescriptor[]=[{...descriptor,effects:['external-write']},{...descriptor,effects:['read','knowledge-write']},{...descriptor,native:true},{...descriptor,contractVersion:2},{...descriptor,scope:undefined},{...descriptor,scope:{kind:'workspace',workspaceId:'other'}}];
   for(const value of altered)expect(await authorizeRunTool(call,value,{...context,permission:'execute'})).toMatchObject({allow:false});
   for(const name of ['cbim_feedback_submit','cbim_feedback_receipt','cbim_feedback_forged'])expect(await authorizeRunTool({...call,name},descriptor,{...context,permission:'execute'})).toMatchObject({allow:false});
-  expect(context.approve).not.toHaveBeenCalled();expect(context.guard).not.toHaveBeenCalled();
+  expect(context.Approve).not.toHaveBeenCalled();expect(context.Guard).not.toHaveBeenCalled();
 });

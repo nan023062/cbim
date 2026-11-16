@@ -71,8 +71,8 @@ class N_src_logic_tasks_runtime_office_history_service_ts["office-history-servic
 }
 class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryPorts["OfficeHistoryPorts"] {
   <<interface>>
-  +inspectMain()
-  +inspectMember()
+  +InspectMain()
+  +InspectMember()
 }
 N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryPorts : 声明
 class N_src_logic_tasks_runtime_office_history_service_ts_Entry["Entry"] {
@@ -83,12 +83,12 @@ class N_src_logic_tasks_runtime_office_history_service_ts_Entry["Entry"] {
 N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_Entry : 声明
 class N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService["OfficeHistoryService"] {
   +constructor()
-  +read()
+  +Read()
   -workspaceId
   -store
   -ports
-  -index()
-  -publicRun()
+  -Index()
+  -PublicRun()
 }
 N_src_logic_tasks_runtime_office_history_service_ts ..> N_src_logic_tasks_runtime_office_history_service_ts_OfficeHistoryService : 声明
 ```
@@ -104,7 +104,7 @@ class N_src_logic_tasks_runtime_queued_dependency_addition_service_ts["queued-de
 }
 class N_src_logic_tasks_runtime_queued_dependency_addition_service_ts_QueuedDependencyAdditionService["QueuedDependencyAdditionService"] {
   +constructor()
-  +add()
+  +Add()
   -owner
   -store
   -goals
@@ -124,7 +124,7 @@ class N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts["queued
 }
 class N_src_logic_tasks_runtime_queued_dependency_replacement_service_ts_QueuedDependencyReplacementService["QueuedDependencyReplacementService"] {
   +constructor()
-  +replace()
+  +Replace()
   -owner
   -store
   -goals
@@ -144,7 +144,7 @@ class N_src_logic_tasks_runtime_queued_dependency_revision_service_ts["queued-de
 }
 class N_src_logic_tasks_runtime_queued_dependency_revision_service_ts_QueuedDependencyRevisionService["QueuedDependencyRevisionService"] {
   +constructor()
-  +revise()
+  +Revise()
   -owner
   -store
   -goals
@@ -164,7 +164,7 @@ class N_src_logic_tasks_runtime_queued_task_cancel_service_ts["queued-task-cance
 }
 class N_src_logic_tasks_runtime_queued_task_cancel_service_ts_QueuedTaskCancelService["QueuedTaskCancelService"] {
   +constructor()
-  +cancel()
+  +Cancel()
   -owner
   -store
 }
@@ -205,14 +205,14 @@ class N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInpu
 }
 N_src_logic_tasks_runtime_scope_active_input_service_ts ..> N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInput : 声明
 class N_src_logic_tasks_runtime_scope_active_input_service_ts_ScopeActiveInputService["ScopeActiveInputService"] {
-  +send()
+  +Send()
   +constructor()
-  +inspect()
-  +prepare()
-  +resolve()
+  +Inspect()
+  +Prepare()
+  +Resolve()
   -owner
   -store
-  -scope()
+  -Scope()
 }
 N_src_logic_tasks_runtime_scope_active_input_service_ts ..> N_src_logic_tasks_runtime_scope_active_input_service_ts_ScopeActiveInputService : 声明
 ```
@@ -240,14 +240,14 @@ class N_src_logic_tasks_runtime_scope_continuation_service_ts_AcceptedScopeConti
 N_src_logic_tasks_runtime_scope_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_continuation_service_ts_AcceptedScopeContinuation : 声明
 class N_src_logic_tasks_runtime_scope_continuation_service_ts_ScopeContinuationService["ScopeContinuationService"] {
   +constructor()
-  +inspect()
-  +accept()
+  +Inspect()
+  +Accept()
   -owner
   -store
   -budgets
   -memberPauses
-  -parse()
-  -scope()
+  -Parse()
+  -Scope()
 }
 N_src_logic_tasks_runtime_scope_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_continuation_service_ts_ScopeContinuationService : 声明
 ```
@@ -265,12 +265,12 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalPorts["ScopeGoalPorts"] {
   <<interface>>
-  +inspectAgent()
-  +inspectMember()
-  +inspectMain()
-  +normalizeValidationPath()
-  +checkValidationFiles()
-  +checkManifest()
+  +InspectAgent()
+  +InspectMember()
+  +InspectMain()
+  +NormalizeValidationPath()
+  +CheckValidationFiles()
+  +CheckManifest()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalPorts : 声明
 class N_src_logic_tasks_runtime_scope_goal_service_ts_Owner["Owner"] {
@@ -280,21 +280,21 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts_Owner["Owner"] {
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_Owner : 声明
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
   +constructor()
-  +reviewCandidate()
-  +inspect()
-  +inspectWithGraph()
-  +previewClosure()
-  +plan()
-  +validateDispatch()
-  +validateActiveInputs()
-  +repairContext()
-  +validateMemberCandidate()
-  +validateHistoricalMemberCandidate()
-  +validateHumanCandidates()
-  +validateDependencySource()
-  +review()
-  +validateCompletion()
-  +validateCompletedInspection()
+  +ReviewCandidate()
+  +Inspect()
+  +InspectWithGraph()
+  +PreviewClosure()
+  +Plan()
+  +ValidateDispatch()
+  +ValidateActiveInputs()
+  +RepairContext()
+  +ValidateMemberCandidate()
+  +ValidateHistoricalMemberCandidate()
+  +ValidateHumanCandidates()
+  +ValidateDependencySource()
+  +Review()
+  +ValidateCompletion()
+  +ValidateCompletedInspection()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -307,22 +307,22 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
-  +validateWaiting()
-  +block()
+  +ValidateWaiting()
+  +Block()
   -owner
   -store
   -ports
   -humanPorts
   -owners
   -memberPauses
-  -parse()
-  -scope()
-  -graph()
-  -editable()
-  -command()
-  -logs()
-  -main()
-  -receipt()
+  -Parse()
+  -Scope()
+  -Graph()
+  -Editable()
+  -Command()
+  -Logs()
+  -Main()
+  -Receipt()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -335,10 +335,10 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoalService"] {
-  -member()
-  -memberTerminal()
-  -evidence()
-  -supersessions()
+  -Member()
+  -MemberTerminal()
+  -Evidence()
+  -Supersessions()
 }
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
@@ -361,19 +361,19 @@ class N_src_logic_tasks_runtime_scope_human_continuation_service_ts_AcceptedHuma
 N_src_logic_tasks_runtime_scope_human_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_human_continuation_service_ts_AcceptedHumanContinuation : 声明
 class N_src_logic_tasks_runtime_scope_human_continuation_service_ts_ScopeHumanContinuationService["ScopeHumanContinuationService"] {
   +constructor()
-  +inspect()
-  +preflight()
-  +accept()
+  +Inspect()
+  +Preflight()
+  +Accept()
   -owner
   -store
   -goals
   -logs
   -artifacts
   -budgets
-  -parse()
-  -current()
-  -scope()
-  -proof()
+  -Parse()
+  -Current()
+  -Scope()
+  -Proof()
 }
 N_src_logic_tasks_runtime_scope_human_continuation_service_ts ..> N_src_logic_tasks_runtime_scope_human_continuation_service_ts_ScopeHumanContinuationService : 声明
 ```
@@ -396,21 +396,21 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts_Owner["Owner"] {
 N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_runtime_scope_human_decision_service_ts_Owner : 声明
 class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService["ScopeHumanDecisionService"] {
   +constructor()
-  +inspect()
-  +history()
-  +preview()
-  +decide()
+  +Inspect()
+  +History()
+  +Preview()
+  +Decide()
   -owner
   -store
   -goals
   -logs
   -ports
   -assertCurrent
-  -parse()
-  -current()
-  -scope()
-  -receipt()
-  -stateStamp()
+  -Parse()
+  -Current()
+  -Scope()
+  -Receipt()
+  -StateStamp()
 }
 N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService : 声明
 ```
@@ -423,11 +423,11 @@ class N_src_logic_tasks_runtime_scope_human_decision_service_ts["scope-human-dec
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService["ScopeHumanDecisionService"] {
-  -originalVerified()
-  -reconsider()
-  -collect()
-  -reading()
-  -unavailable()
+  -OriginalVerified()
+  -Reconsider()
+  -Collect()
+  -Reading()
+  -Unavailable()
 }
 N_src_logic_tasks_runtime_scope_human_decision_service_ts ..> N_src_logic_tasks_runtime_scope_human_decision_service_ts_ScopeHumanDecisionService : 声明
 ```
@@ -465,21 +465,21 @@ class N_src_logic_tasks_runtime_scope_recovery_service_ts_AcceptedRecovery["Acce
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_AcceptedRecovery : 声明
 class N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService["ScopeRecoveryService"] {
   +constructor()
-  +inspect()
-  +latestContext()
-  +priorRunIds()
-  +preflight()
-  +accept()
+  +Inspect()
+  +LatestContext()
+  +PriorRunIds()
+  +Preflight()
+  +Accept()
   -owner
   -store
   -logs
   -budgets
   -effects
-  -parse()
-  -identity()
-  -found()
-  -receipt()
-  -sameRequest()
+  -Parse()
+  -Identity()
+  -Found()
+  -Receipt()
+  -SameRequest()
 }
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService : 声明
 ```
@@ -492,8 +492,8 @@ class N_src_logic_tasks_runtime_scope_recovery_service_ts["scope-recovery-servic
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService["ScopeRecoveryService"] {
-  -workspace()
-  -report()
+  -Workspace()
+  -Report()
 }
 N_src_logic_tasks_runtime_scope_recovery_service_ts ..> N_src_logic_tasks_runtime_scope_recovery_service_ts_ScopeRecoveryService : 声明
 ```
@@ -531,21 +531,21 @@ class N_src_logic_tasks_runtime_scope_replan_service_ts_AcceptedReplan["Accepted
 N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_AcceptedReplan : 声明
 class N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService["ScopeReplanService"] {
   +constructor()
-  +inspect()
-  +preview()
-  +preflight()
-  +accept()
+  +Inspect()
+  +Preview()
+  +Preflight()
+  +Accept()
   -owner
   -store
   -goals
   -logs
   -budgets
   -effects
-  -parse()
-  -identity()
-  -found()
-  -receipt()
-  -sameRequest()
+  -Parse()
+  -Identity()
+  -Found()
+  -Receipt()
+  -SameRequest()
 }
 N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService : 声明
 ```
@@ -558,7 +558,7 @@ class N_src_logic_tasks_runtime_scope_replan_service_ts["scope-replan-service.ts
   <<module>>
 }
 class N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService["ScopeReplanService"] {
-  -proof()
+  -Proof()
 }
 N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_scope_replan_service_ts_ScopeReplanService : 声明
 ```
@@ -574,11 +574,11 @@ class N_src_logic_tasks_runtime_topic_interruption_service_ts["topic-interruptio
 }
 class N_src_logic_tasks_runtime_topic_interruption_service_ts_TopicInterruptionService["TopicInterruptionService"] {
   +constructor()
-  +prepare()
-  +park()
+  +Prepare()
+  +Park()
   -owner
   -store
-  -scope()
+  -Scope()
 }
 N_src_logic_tasks_runtime_topic_interruption_service_ts ..> N_src_logic_tasks_runtime_topic_interruption_service_ts_TopicInterruptionService : 声明
 ```
@@ -679,7 +679,7 @@ N_src_logic_tasks_runtime_scope_replan_service_ts ..> N_src_logic_tasks_runtime_
 
 ## 候选批准与最终目标审阅
 
-ScopeGoalService.reviewCandidate 由当前主运行调用，要求活动且已规划目标、无未核实插入、精确任务版本及未审阅候选。复用原运行、工具证据、岗位、知识与产物核实，在同一 DispatchStore 事务内追加 candidateReview；相同命令返回原回执，不重新审阅，不允许改判。磁盘 RunSummary 对尚未结算日志也标 interrupted，所以活性使用调用闭包与当前主身份，可靠事件用于排除已有终态，不能以磁盘 status=running 判断。
+ScopeGoalService.ReviewCandidate 由当前主运行调用，要求活动且已规划目标、无未核实插入、精确任务版本及未审阅候选。复用原运行、工具证据、岗位、知识与产物核实，在同一 DispatchStore 事务内追加 candidateReview；相同命令返回原回执，不重新审阅，不允许改判。磁盘 RunSummary 对尚未结算日志也标 interrupted，所以活性使用调用闭包与当前主身份，可靠事件用于排除已有终态，不能以磁盘 status=running 判断。
 
 accept 仅允许后继使用此结果；reject 的候选不能作为最终目标证据。最终 cbim_goal_review 及 human 决定仍独立。拒绝后应撤销相关未启动后继并新建返工链；不把 rejected/result_ready 当作已有 replace_dependency 所允许的失败来源。追加、替换和修订依赖的新边统一启用 reviewRequired。
 
@@ -692,7 +692,7 @@ OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封�
 
 ## 根运行插入回执
 
-ScopeActiveInputService.send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
+ScopeActiveInputService.Send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
 
 
 ## 递归执行记录核实

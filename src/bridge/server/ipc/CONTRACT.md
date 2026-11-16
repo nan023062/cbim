@@ -50,7 +50,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 
 ### 文件基线的独立只读复核
 
-`dispatch.artifactReport` 交当前工作区 `MemberExecutionManager.artifactReport`，必须明确 workspace/root/task/run。未指定 baselineId 只读取 canonical 日志中的已确认引用，不猜最新基线且不读业务文件；指定基线才取得短期业务读占用并有界核实。结果不包含原生会话路径、文件正文或未经核实的模型声明。
+`dispatch.artifactReport` 交当前工作区 `MemberExecutionManager.ArtifactReport`，必须明确 workspace/root/task/run。未指定 baselineId 只读取 canonical 日志中的已确认引用，不猜最新基线且不读业务文件；指定基线才取得短期业务读占用并有界核实。结果不包含原生会话路径、文件正文或未经核实的模型声明。
 
 该入口与执行回执分页分开，不写日志、不领模型名额、不确认候选或启动恢复。缺失、损坏、在途及前后基线变化都明确保留未知；匹配指纹不代表整个工作区未变或业务验收通过。
 
@@ -87,7 +87,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 该入口只读，在同一个已提交屏障读取任务图、周期摘要和选中详情。审批、任务开始/停止及信封确认保留各自命令入口；图读取不能触发它们。既有 `dispatch.graphSnapshot / dispatch.graphDelta` 保持兼容。
 ### 成员执行的只读核实
 
-`dispatch.executionReport` 路由到当前工作区 `MemberExecutionManager.report`，按主会话、任务与可选明确运行查询。省略 runId 只核实领取记录，不猜最新轮次。报告包含核实基线、完整性、受限工具回执和未验收候选；不调用启动、确认、恢复或改派。分页必须绑定同一基线，服务严格校验身份。
+`dispatch.executionReport` 路由到当前工作区 `MemberExecutionManager.Report`，按主会话、任务与可选明确运行查询。省略 runId 只核实领取记录，不猜最新轮次。报告包含核实基线、完整性、受限工具回执和未验收候选；不调用启动、确认、恢复或改派。分页必须绑定同一基线，服务严格校验身份。
 
 ### 队列插入绑定原主轮
 
@@ -104,7 +104,7 @@ Electron 接入仍核对本窗口与主 Frame；`humanDecide` 在可信闭包注
 `dispatch.task` 必须显式携带原 active `scopeId`，路由剥离该字段后交同一派发服务核验当前计划和 `ownerSelection`，不会根据界面或最近周期猜 scope。`dispatch.ownerInspect` 只读返回指定任务的原 revision/binding 及当前分组观察；不改绑定、不领取任务。`loop.start` 在模型选型前明确拒绝新的旧业务通道，普通 chat 续聊及历史查询保留。
 ### 原主调用命令报告
 
-`dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.commandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。
+`dispatch.commandReport({workspaceId,rootSessionId,runId,toolCallId})` 路由到已有工作区的 `WorkspaceDispatchService.CommandReport`。原工具名、input、scope、commandId 和 fingerprint 均由可信日志与 Store 推导，客户端不能补身份或结论；不调用 execute/commit/start/resume 来试探回执。查无记录仍是未知，不清原未确认工具。
 
 `dispatch.effectObserve`、`effectDispositionList`、`effectDispositionReceipt` 和 `effectRelations` 仅读已打开工作区；`effectDisposition` 才由本机显式提交入口注入 local_desktop actor。五入口共用同一服务，模型不装配新的处置工具；请求不收任意文件路径、scope 身份或自行声明的核实结果。loop.resume 对未确认调用拒绝裸 ID 解锁，直接 IPC 与 Runtime 门禁一致。
 

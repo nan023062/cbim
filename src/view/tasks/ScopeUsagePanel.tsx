@@ -41,7 +41,7 @@ export function ScopeUsageSummary({ report }: { report: ScopeUsageReport })
 }
 
 /** 读取入口只操作本控制器；保持之前报告时明确提示过期，不把错误渲染成零。 */
-export function ScopeUsageReadView({ state, onRead }: { state: ScopeUsageState; onRead(): void })
+export function ScopeUsageReadView({ state, OnRead: onRead }: { state: ScopeUsageState; OnRead(): void })
 {
   return <>
   <header><h3>本次目标用量</h3><button disabled={state.loading} onClick={onRead}>{state.loading ? '正在读取用量…' : state.report ? '刷新周期用量' : '读取周期用量'}</button></header>
@@ -56,6 +56,6 @@ export function ScopeUsagePanel({ identity }: { identity: ScopeUsageInput })
   const key = scopeUsageKey(identity),
     controller = useMemo(() => new ScopeUsageController(identity, input => window.cbim.call('dispatch.scopeUsage', input)), [key]);
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
-  useEffect(() => () => controller.cancel(), [controller]);
-  return <section className="scope-usage-panel" aria-label="目标周期用量" data-testid="scope-usage-panel" data-scope-id={identity.scopeId}><ScopeUsageReadView state={state} onRead={() => void controller.read()} /></section>;
+  useEffect(() => () => controller.Cancel(), [controller]);
+  return <section className="scope-usage-panel" aria-label="目标周期用量" data-testid="scope-usage-panel" data-scope-id={identity.scopeId}><ScopeUsageReadView state={state} OnRead={() => void controller.Read()} /></section>;
 }

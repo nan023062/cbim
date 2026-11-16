@@ -35,24 +35,24 @@ export interface KnowledgeJournalStatus
 /** 实现方只访问已初始化的私有账本，不持有另一个会回调知识存储的队列。 */
 export interface KnowledgeGovernanceAuthority
 {
-  request(intentId: string): Promise<ChangeRequest>;
+  Request(intentId: string): Promise<ChangeRequest>;
 
-  hasIntent(requestId: string): boolean;
+  HasIntent(requestId: string): boolean;
 
   /** 只比对私有意图和原日志；不能递归查询 journal 或改变账本。 */
-  verifyJournal(request: ChangeRequest, status: KnowledgeJournalStatus): void;
+  VerifyJournal(request: ChangeRequest, status: KnowledgeJournalStatus): void;
 
-  verify(current: Snapshot, preview: Preview, request: ChangeRequest, journal: (request: ChangeRequest) => Promise<KnowledgeJournalStatus | undefined>, intentId?: string): Promise<KnowledgeGovernanceBinding | undefined>;
+  Verify(current: Snapshot, preview: Preview, request: ChangeRequest, journal: (request: ChangeRequest) => Promise<KnowledgeJournalStatus | undefined>, intentId?: string): Promise<KnowledgeGovernanceBinding | undefined>;
 }
 
-/** 回调已经处于知识串行屏障内；不得再次调用 Workspace.commit/preview 或排队的治理入口。 */
+/** 回调已经处于知识串行屏障内；不得再次调用 Workspace.Commit/preview 或排队的治理入口。 */
 export interface KnowledgeGovernanceTransaction
 {
-  snapshot(): Promise<Snapshot>;
+  Snapshot(): Promise<Snapshot>;
 
-  preview(request: ChangeRequest): Promise<Preview>;
+  Preview(request: ChangeRequest): Promise<Preview>;
 
-  journal(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>;
+  Journal(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>;
 
-  apply(intentId: string): Promise<KnowledgeCommit>;
+  Apply(intentId: string): Promise<KnowledgeCommit>;
 }

@@ -21,20 +21,20 @@ import { memberPublicTask } from '../../runtime/monitoring/member-events';
 /** 平台端口只接受已登记运行与纯相对文件事实，不能注入模型返回的路径或哈希。 */
 export interface MemberCheckpointVerificationPorts
 {
-  inspect(run: DispatchRun): Promise<RunSummary>;
+  Inspect(run: DispatchRun): Promise<RunSummary>;
 
-  normalizePath(raw: string): string;
+  NormalizePath(raw: string): string;
 
-  checkFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
+  CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
 
-  nativeFingerprint(session: DispatchRun['session'], signal: AbortSignal): Promise<MemberCheckpointProof['native']>;
+  NativeFingerprint(session: DispatchRun['session'], signal: AbortSignal): Promise<MemberCheckpointProof['native']>;
 }
 
 /** 历史放弃只读取 canonical；当前 native/知识/模型/业务文件不再决定旧待办能否终止。 */
-export type MemberCheckpointHistoryPorts = Pick<MemberCheckpointVerificationPorts, 'inspect' | 'normalizePath'>;
+export type MemberCheckpointHistoryPorts = Pick<MemberCheckpointVerificationPorts, 'Inspect' | 'NormalizePath'>;
 
 /** 核整个原运行链的 canonical 及冻结证明；不读取今日文件/native，不签发恢复许可。 */
-export async function verifyMemberCheckpointHistory(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, assertCurrent: () => void, priorRuns: readonly DispatchRun[] = []): Promise<void>
+export async function verifyMemberCheckpointHistory(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, assertCurrent: () => void, priorRuns: readonly DispatchRun[] = []): Promise<void>
 {
   if (!run.checkpointProof || run.status !== 'completed')
     fail('MEMBER_CHECKPOINT_MISSING', '原运行没有已冻结的完成检查点证明');
@@ -53,11 +53,11 @@ export async function verifyMemberCheckpointInputs(owner: DispatchKnowledgeWorks
   await verifyChain(owner, task, run, ports, assertCurrent, expected, false, priorRuns, { owner, ports });
 }
 
-async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, assertCurrent: () => void, expected: MemberCheckpointProof | undefined, includeNative: boolean, priorRuns: readonly DispatchRun[], current?: { owner: DispatchKnowledgeWorkspace; ports: MemberCheckpointVerificationPorts }): Promise<MemberCheckpointProof>
+async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, assertCurrent: () => void, expected: MemberCheckpointProof | undefined, includeNative: boolean, priorRuns: readonly DispatchRun[], current?: { owner: DispatchKnowledgeWorkspace; ports: MemberCheckpointVerificationPorts }): Promise<MemberCheckpointProof>
 {
   const check = () =>
   {
-    owner.assert();
+    owner.Assert();
     assertCurrent()
   };
   check();
@@ -96,7 +96,7 @@ async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, 
     segments.push({ run: segment, verified });
     // 后段重新触及的路径使用其已核实新事实；没有再次触及的早期文件不能从恢复条件中消失。
     for (const file of verified.files)
-      filesByPath.set(ports.normalizePath(file.relativePath), file);
+      filesByPath.set(ports.NormalizePath(file.relativePath), file);
   }
   const signal = AbortSignal.timeout(15_000),
     expectedFiles = [...filesByPath.values()];
@@ -115,7 +115,7 @@ async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, 
       if (end === start)
         fail('MEMBER_CHECKPOINT_INVALID', '检查点链文件超过原有界基线');
       const expectedBatch = expectedFiles.slice(start, end),
-        files = await current.ports.checkFiles(expectedBatch, signal);
+        files = await current.ports.CheckFiles(expectedBatch, signal);
       check();
       signal.throwIfAborted();
       if (files.length !== expectedBatch.length || files.some((file, i) => file.state !== 'matches' || file.relativePath !== expectedBatch[i].relativePath || !isDeepStrictEqual(file.expected, { byteLength: expectedBatch[i].byteLength, sha256: expectedBatch[i].sha256 }) || !isDeepStrictEqual(file.observed, file.expected)))
@@ -123,13 +123,13 @@ async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, 
       start = end;
     }
   }
-  const native = includeNative ? await current!.ports.nativeFingerprint(run.session, signal) : expected!.native;
+  const native = includeNative ? await current!.ports.NativeFingerprint(run.session, signal) : expected!.native;
   check();
   if (includeNative && expected && !isDeepStrictEqual(native, expected.native))
     fail('MEMBER_CHECKPOINT_NATIVE_CHANGED', '原生上下文已偏离最新检查点，不能续执行');
   for (const segment of segments)
   {
-    const latest = await ports.inspect(segment.run);
+    const latest = await ports.Inspect(segment.run);
     check();
     if (latest.logIntegrity?.partialTail !== false || hash(json(latest.events)) !== segment.verified.logHash)
       fail('MEMBER_CHECKPOINT_CHANGED', '复核期间检查点链日志发生变化')
@@ -143,9 +143,9 @@ async function verifyChain(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, 
   return memberCheckpointProofSchema.parse({ checkpoint: latest.checkpoint, logHash: latest.logHash, native });
 }
 
-async function verifySegment(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, check: () => void, expected?: MemberCheckpointProof)
+async function verifySegment(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, task: TaskNode, run: DispatchRun, ports: MemberCheckpointHistoryPorts, check: () => void, expected?: MemberCheckpointProof)
 {
-  const summary = await ports.inspect(run);
+  const summary = await ports.Inspect(run);
   check();
   const bounds = summary.events.filter(event => event.type === 'session.bound'),
     first = summary.events[0];
@@ -153,12 +153,12 @@ async function verifySegment(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>
     fail('MEMBER_CHECKPOINT_INVALID', '检查点日志身份、终态或原生绑定未通过完整核实');
   if (summary.taskProgress?.goal !== task.goal || !isDeepStrictEqual(summary.taskProgress.acceptance, task.acceptance.map(item => item.text)))
     fail('MEMBER_CHECKPOINT_PROGRESS', '检查点进度改变了派发目标或验收要求');
-  const verified = verifyMemberCheckpoint(summary.events, run.binding, run.prepared.knowledgeRevision, ports.normalizePath);
+  const verified = verifyMemberCheckpoint(summary.events, run.binding, run.prepared.knowledgeRevision, ports.NormalizePath);
   if (!verified)
     fail('MEMBER_CHECKPOINT_MISSING', '本段没有已确认检查点请求');
   if (expected && (!isDeepStrictEqual(verified.checkpoint, expected.checkpoint) || verified.logHash !== expected.logHash))
     fail('MEMBER_CHECKPOINT_CHANGED', '检查点日志与冻结证明不一致');
-  const eligible = validateCheckpointEligibility(summary.events.filter(event => event.seq < verified.checkpoint.requestedSeq), run.binding, run.prepared.knowledgeRevision, ports.normalizePath, verified.checkpoint.input, verified.checkpoint.toolCallId);
+  const eligible = validateCheckpointEligibility(summary.events.filter(event => event.seq < verified.checkpoint.requestedSeq), run.binding, run.prepared.knowledgeRevision, ports.NormalizePath, verified.checkpoint.input, verified.checkpoint.toolCallId);
   const files = eligible.baseline.baseline.files.map(({ sourceToolCallIds: _ids, ...file }) => file);
   return { ...verified, files };
 }

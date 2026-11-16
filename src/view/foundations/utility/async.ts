@@ -9,19 +9,19 @@ export class AsyncGeneration
   private current = Symbol();
 
   /** 捕获当前代次，不使其他读取失效；适用于同一生命周期内的读取。 */
-  capture(): symbol
+  Capture(): symbol
   {
     return this.current;
   }
 
   /** 作废全部旧标记并返回新标记；由调用方决定在新请求、切换或销毁时调用。 */
-  advance(): symbol
+  Advance(): symbol
   {
     return this.current = Symbol();
   }
 
   /** 只判断标记是否属于本实例当前代次；成功、失败与清理分支分别在原位置检查。 */
-  isCurrent(token: symbol): boolean
+  IsCurrent(token: symbol): boolean
   {
     return token === this.current;
   }

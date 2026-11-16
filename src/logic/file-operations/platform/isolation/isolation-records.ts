@@ -53,7 +53,7 @@ export class FileIsolationRecords
   {
   }
 
-  private file(runId: string, operationId: string)
+  private File(runId: string, operationId: string)
   {
     safeId(runId);
     if (!/^[a-f0-9]{64}$/.test(operationId))
@@ -61,14 +61,14 @@ export class FileIsolationRecords
     return path.join(this.directory, runId, operationId + '.jsonl')
   }
 
-  private async regular(file: string)
+  private async Regular(file: string)
   {
     const stat = await fs.lstat(file);
     if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 256 * 1024)
       fail('ISOLATION_RECORD_INVALID', '隔离记录不是有界普通文件')
   }
 
-  private validate(changes: IsolationChange[])
+  private Validate(changes: IsolationChange[])
   {
     const first = changes[0];
     if (first?.kind !== 'prepared')
@@ -88,12 +88,12 @@ export class FileIsolationRecords
   }
 
   /** 只读原完整帧。ENOENT 只代表没有新协议记录，绝不等于旧调用未执行。 */
-  async read(runId: string, operationId: string): Promise<IsolationHead | undefined>
+  async Read(runId: string, operationId: string): Promise<IsolationHead | undefined>
   {
-    const file = this.file(runId, operationId);
+    const file = this.File(runId, operationId);
     try
     {
-      await this.regular(file)
+      await this.Regular(file)
     }
     catch (error)
     {
@@ -118,15 +118,15 @@ export class FileIsolationRecords
       changes.push(body.change);
       previous = checksum
     }
-    const record = this.validate(changes);
+    const record = this.Validate(changes);
     if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId)
       fail('ISOLATION_RECORD_ID', '隔离记录不属于原调用');
     return { record, changes, revision: changes.length, checksum: previous, phase: changes.at(-1)!.kind };
   }
 
-  async list(runId: string)
+  async List(runId: string)
   {
-    const directory = path.dirname(this.file(runId, '0'.repeat(64)));
+    const directory = path.dirname(this.File(runId, '0'.repeat(64)));
     let names: string[];
     try
     {
@@ -147,7 +147,7 @@ export class FileIsolationRecords
     for (const name of names.sort())
     {
       const operationId = name.slice(0, -6),
-        head = await this.read(runId, operationId);
+        head = await this.Read(runId, operationId);
       if (!head)
         fail('ISOLATION_RECORD_CHANGED', '读取期间隔离记录消失');
       results.push({ operationId, head })
@@ -156,23 +156,23 @@ export class FileIsolationRecords
   }
 
   /** 只追加合法阶段并等待实际 sync；写入未知封闭本实例，不能继续发出资源操作。 */
-  append(runId: string, operationId: string, change: IsolationChange, expectedRevision: number): Promise<IsolationHead>
+  Append(runId: string, operationId: string, change: IsolationChange, expectedRevision: number): Promise<IsolationHead>
   {
     const fixed = changeSchema.parse(structuredClone(change));
     const result = this.tail.then(async () =>
     {
       if (this.failure)
         throw this.failure;
-      const prior = await this.read(runId, operationId);
+      const prior = await this.Read(runId, operationId);
       if ((prior?.revision ?? 0) !== expectedRevision)
         fail('ISOLATION_RECORD_CONFLICT', '隔离记录版本已变化');
       const changes = [...prior?.changes ?? [], fixed];
-      const record = this.validate(changes);
+      const record = this.Validate(changes);
       if (record.origin.binding.runId !== runId || isolationOperationId(runId, record.origin.toolCallId) !== operationId)
         fail('ISOLATION_RECORD_ID', '隔离记录不属于原调用');
       if (changes.length > 32)
         fail('ISOLATION_RECORD_LIMIT', '隔离记录已达上限');
-      const file = this.file(runId, operationId);
+      const file = this.File(runId, operationId);
       await fs.mkdir(path.dirname(file), { recursive: true });
       const body = { sequence: changes.length, previous: prior?.checksum ?? '', at: new Date().toISOString(), change: fixed },
         checksum = hash(JSON.stringify(body));
@@ -204,7 +204,7 @@ export class FileIsolationRecords
     return result;
   }
 
-  async drain()
+  async Drain()
   {
     await this.tail
   }

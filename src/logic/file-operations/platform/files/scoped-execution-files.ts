@@ -44,7 +44,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
   }
 
   /** 返回完整锁定读取，供产物指纹/验证复用；调用者不得把 bytes 缓存为以后读取权限。 */
-  snapshot(relative: string, signal: AbortSignal)
+  Snapshot(relative: string, signal: AbortSignal)
   {
     this.assertCurrent();
     signal.throwIfAborted();
@@ -55,20 +55,20 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     this.unsettled.add(token);
     try
     {
-      const result = file.read(true);
+      const result = file.Read(true);
       this.assertCurrent();
       signal.throwIfAborted();
       return result
     }
     finally
     {
-      file.close();
+      file.Close();
       this.unsettled.delete(token)
     }
   }
 
   /** 枚举期间持目标和全部祖先目录，不允许删除/重命名替换；返回释放函数只关闭本次句柄。 */
-  lockDirectory(relative: string)
+  LockDirectory(relative: string)
   {
     this.assertCurrent();
     if (!executionScopeCovers(this.scope.read, relative, 'directory'))
@@ -78,19 +78,19 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     this.unsettled.add(token);
     return () =>
     {
-      directory.close();
+      directory.Close();
       this.unsettled.delete(token)
     }
   }
 
-  async read(relative: string, signal: AbortSignal)
+  async Read(relative: string, signal: AbortSignal)
   {
-    const value = this.snapshot(relative, signal),
+    const value = this.Snapshot(relative, signal),
       content = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(value.bytes);
     return { file: { path: relative, ...value.fact }, encoding: 'utf8' as const, content, acceptance: 'not_evaluated' as const }
   }
 
-  async node(raw: ScopedNodeInput, signal: AbortSignal, authorization?: ScopedExecutionAuthorization)
+  async Node(raw: ScopedNodeInput, signal: AbortSignal, authorization?: ScopedExecutionAuthorization)
   {
     if (this.unsettled.size)
       fail('EXECUTION_SCOPE_DRAIN_PENDING', '原隔离资源尚未确认收尾，不能创建新执行');
@@ -107,7 +107,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     let total = 0;
     const files = input.files.map(relative =>
     {
-      const value = this.snapshot(relative, signal);
+      const value = this.Snapshot(relative, signal);
       total += value.bytes.length;
       if (total > 8 * 1024 * 1024)
         fail('EXECUTION_SCOPE_LIMIT', '输入快照超过8MiB');
@@ -131,7 +131,7 @@ export class ScopedExecutionFiles implements ScopedExecutionPort
     return { executionId: value.executionId, isolation: value.isolation, status: value.status, exitCode: value.exitCode, stdio: value.stdio, runtime: value.runtime, inputs: value.inputs, outputs: value.outputs, allProcessesExited: value.allProcessesExited, cleanup: value.cleanup, acceptance: 'not_evaluated' as const };
   }
 
-  async drain()
+  async Drain()
   {
     for (const retry of this.cleanupRetries.values())
       await retry();

@@ -18,102 +18,102 @@ export function settingsIpcHandlers(app: ApplicationServices): IpcHandlers<keyof
     return app.enginePackages
   };
   return {
-    'engines.settings': () => app.enginePackages?.read() ?? { managed: false, revision: 0, items: [] },
+    'engines.settings': () => app.enginePackages?.Read() ?? { managed: false, revision: 0, items: [] },
     'engines.check': async () =>
     {
-      await packages().check();
-      return packages().read()
+      await packages().Check();
+      return packages().Read()
     },
     'engines.install': async args =>
     {
-      await packages().install(args.kind, { revision: args.revision, identity: args.identity });
-      return packages().read()
+      await packages().Install(args.kind, { revision: args.revision, identity: args.identity });
+      return packages().Read()
     },
     'engines.configure': async args =>
     {
-      await packages().setEnabled(args.kind, args.action === 'enable', args.action === 'remove', args.revision);
-      return packages().read()
+      await packages().SetEnabled(args.kind, args.action === 'enable', args.action === 'remove', args.revision);
+      return packages().Read()
     },
-    'web.settings': () => app.webSettings.read(),
-    'web.configure': args => app.webSettings.configure(args),
-    'agent.mainSettings': args => app.mainAgentSettings.read(args),
-    'agent.configureMain': args => app.mainAgentSettings.configure(args),
+    'web.settings': () => app.webSettings.Read(),
+    'web.configure': args => app.webSettings.Configure(args),
+    'agent.mainSettings': args => app.mainAgentSettings.Read(args),
+    'agent.configureMain': args => app.mainAgentSettings.Configure(args),
     'runtime.snapshot': async args =>
     {
-      return app.runtime.snapshot();
+      return app.runtime.Snapshot();
     },
     'runtime.read': async args =>
     {
-      return app.runtime.read(args?.cursor);
+      return app.runtime.Read(args?.cursor);
     },
     'admission.read': async args =>
     {
-      return app.admission.read(args?.cursor);
+      return app.admission.Read(args?.cursor);
     },
     'admission.settings': async args =>
     {
-      return app.admissionSettings.read();
+      return app.admissionSettings.Read();
     },
     'admission.configure': async args =>
     {
-      return app.admissionSettings.configure(args);
+      return app.admissionSettings.Configure(args);
     },
     'budget.settings': async args =>
     {
-      return app.budgetSettings.read();
+      return app.budgetSettings.Read();
     },
     'budget.configure': async args =>
     {
-      return app.budgetSettings.configure(args);
+      return app.budgetSettings.Configure(args);
     },
     'models.list': async args =>
     {
-      return app.models.list();
+      return app.models.List();
     },
     'github.feedback.status': async args =>
     {
-      return app.githubFeedback.auth.status();
+      return app.githubFeedback.auth.Status();
     },
     'github.feedback.begin': async args =>
     {
-      return app.githubFeedback.auth.begin(args);
+      return app.githubFeedback.auth.Begin(args);
     },
     'github.feedback.poll': async args =>
     {
-      return app.githubFeedback.auth.poll(args);
+      return app.githubFeedback.auth.Poll(args);
     },
     'github.feedback.cancel': async args =>
     {
-      return app.githubFeedback.auth.cancel();
+      return app.githubFeedback.auth.Cancel();
     },
     'github.feedback.disconnect': async args =>
     {
-      return app.githubFeedback.auth.disconnect();
+      return app.githubFeedback.auth.Disconnect();
     },
     'models.save': async args =>
     {
-      return app.models.save(args);
+      return app.models.Save(args);
     },
     'models.select': async args =>
     {
-      return app.models.select(args.id);
+      return app.models.Select(args.id);
     },
     'models.remove': async args =>
     {
-      return app.models.remove(args.id);
+      return app.models.Remove(args.id);
     },
     'models.test': async args =>
     {
-      return app.engineModels.test(args.id, args.modelId, args.engine);
+      return app.engineModels.Test(args.id, args.modelId, args.engine);
     },
-    'models.testConnection': args => args.kind === 'embedding' ? app.models.testEmbedding(args.id, args.modelId) : app.models.test(args.id, args.modelId, { supportedApis: [args.api], fallbackApi: args.api }),
+    'models.testConnection': args => args.kind === 'embedding' ? app.models.TestEmbedding(args.id, args.modelId) : app.models.Test(args.id, args.modelId, { supportedApis: [args.api], fallbackApi: args.api }),
     'models.discover': async args =>
     {
-      return app.models.discover(args);
+      return app.models.Discover(args);
     },
     'models.discoverDetails': async args =>
     {
-      return app.models.discoverDetails(args);
+      return app.models.DiscoverDetails(args);
     },
   };
 }

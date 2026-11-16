@@ -18,7 +18,7 @@ import type { CommandVerificationService } from './command-verification-service'
 
 export interface EffectSourcePorts
 {
-  inspectMember(run: BusinessRunSource): Promise<RunSummary>
+  InspectMember(run: BusinessRunSource): Promise<RunSummary>
 }
 
 export type EffectSourceRead =
@@ -63,7 +63,7 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
     run: DispatchRun | AgentBusinessRun | undefined;
   if (subject.kind === 'main_run')
   {
-    const checked = await commands.inspectSource({ workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, runId: subject.runId, toolCallId: subject.toolCallIds[0] }, state);
+    const checked = await commands.InspectSource({ workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, runId: subject.runId, toolCallId: subject.toolCallIds[0] }, state);
     source.logState = checked.source.state === 'legacy_unverified' ? 'incomplete' : checked.source.state === 'verified' ? 'verified' : checked.source.state;
     if (!checked.summary || checked.source.state !== 'verified')
       return finish();
@@ -77,7 +77,7 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
       return finish();
     try
     {
-      summary = await ports.inspectMember(recursive)
+      summary = await ports.InspectMember(recursive)
     }
     catch (error)
     {
@@ -105,7 +105,7 @@ export async function readEffectSource(state: DispatchState, input: EffectObserv
       return finish();
     try
     {
-      summary = await ports.inspectMember(run)
+      summary = await ports.InspectMember(run)
     }
     catch (error)
     {

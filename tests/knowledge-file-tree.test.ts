@@ -19,7 +19,7 @@ it('团队文件可预览编辑，坏 JSON 的原诊断可见；业务与团队�
 });
 it('名称在展开箭头前，行尾操作有独立可访问名且文件不获得目录动作',()=>{
  const snapshot={workspaceId:'workspace',instanceId:'instance',revision:'r',files:files.slice(0,4)} as Snapshot;
- const seen:string[]=[],html=renderToStaticMarkup(createElement(KnowledgeFileTree,{snapshot,root:'.cbim/team',label:'团队',onSelect:()=>{},actions:node=>{seen.push(node.path);return node.path.endsWith('/dev')?[{id:'edit-dev',label:'编辑 Agent',icon:'edit',onSelect:()=>{}}]:[]}}));
+ const seen:string[]=[],html=renderToStaticMarkup(createElement(KnowledgeFileTree,{snapshot,root:'.cbim/team',label:'团队',onSelect:()=>{},actions:node=>{seen.push(node.path);return node.path.endsWith('/dev')?[{id:'edit-dev',label:'编辑 Agent',icon:'edit',OnSelect:()=>{}}]:[]}}));
  const row=html.slice(html.indexOf('data-knowledge-path=".cbim/team/dev"'),html.indexOf('data-knowledge-path=".cbim/team/dev/skills"'));
  expect(row.indexOf('>dev</span>')).toBeLessThan(row.indexOf('aria-expanded='));expect(row.indexOf('aria-expanded=')).toBeLessThan(row.indexOf('knowledge-row-menu'));
  expect(row).toContain('aria-label="dev的操作"');expect(row).toContain('title="编辑 Agent"');expect(row).toContain('data-tree-action="edit-dev"');expect(row).not.toContain('>编辑 Agent<');expect(seen.every(value=>!value.endsWith('.json')&&!value.endsWith('.md'))).toBe(true);

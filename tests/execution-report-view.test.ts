@@ -22,8 +22,8 @@ const scope:ScopeSummary={scopeId:'cycle',status:'closed',outcome:'failed',creat
 
 it('挂载与订阅不读取，显式核实双击只读一次；切换节点后忽略迟到报告',async()=>{
   let finish!:(value:unknown)=>void;const read=vi.fn((_request:ExecutionReportInput)=>new Promise(resolve=>{finish=resolve})),controller=new ExecutionReportController(selection,read),changed=vi.fn();const stop=controller.subscribe(changed);
-  expect(read).not.toHaveBeenCalled();expect(controller.snapshot.report).toBeUndefined();const first=controller.inspect();await controller.inspect();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual({...identity,limit:50});
-  stop();controller.cancel();finish(report());await first;expect(controller.snapshot.report).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
+  expect(read).not.toHaveBeenCalled();expect(controller.snapshot.report).toBeUndefined();const first=controller.Inspect();await controller.Inspect();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual({...identity,limit:50});
+  stop();controller.Cancel();finish(report());await first;expect(controller.snapshot.report).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
   const otherRead=vi.fn(async()=>({...report(),identity:{...identity,taskId:'other'}})),other=new ExecutionReportController({...selection,taskId:'other'},otherRead);expect(otherRead).not.toHaveBeenCalled();
 });
 
@@ -38,15 +38,15 @@ it('工具页必须连续且同基线，分页重置替换旧结果，不拼接�
 });
 
 it('核实失败保留已确认报告，不把缺日志、取消或未知结果当作未执行',async()=>{
-  const read=vi.fn(async()=>report()),controller=new ExecutionReportController(selection,read);await controller.inspect();const prior=controller.snapshot.report;
-  read.mockRejectedValueOnce(Error('ENOENT: 读取中断'));await controller.inspect();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toContain('ENOENT');expect(read).toHaveBeenCalledTimes(2);
+  const read=vi.fn(async()=>report()),controller=new ExecutionReportController(selection,read);await controller.Inspect();const prior=controller.snapshot.report;
+  read.mockRejectedValueOnce(Error('ENOENT: 读取中断'));await controller.Inspect();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toContain('ENOENT');expect(read).toHaveBeenCalledTimes(2);
   for(const logState of ['missing','incomplete','invalid','identity_mismatch','unavailable'] as const){const next=report([],0);next.execution='unknown';next.log={state:logState};next.tools.available=false;const html=render(next);expect(html).toContain('执行结果未知');expect(html).toContain('这不表示没有执行任何操作');expect(html).not.toContain('尚未领取执行');expect(html).not.toContain('恢复执行</button>');}
   const cancelled=report();cancelled.basis.runStatus='cancelled';cancelled.log.summaryStatus='cancelled';expect(render(cancelled)).toContain('登记状态：已停止');expect(render(cancelled)).not.toContain('任务未执行');
 });
 
 it('报告身份、候选和回执必须属于所选轮次，坏响应不覆盖已有报告',async()=>{
-  const read=vi.fn(async()=>report()),controller=new ExecutionReportController(selection,read);await controller.inspect();const prior=controller.snapshot.report;
-  read.mockResolvedValueOnce({...report(),identity:{...identity,runId:'different'}});await controller.inspect();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toContain('执行轮次');
+  const read=vi.fn(async()=>report()),controller=new ExecutionReportController(selection,read);await controller.Inspect();const prior=controller.snapshot.report;
+  read.mockResolvedValueOnce({...report(),identity:{...identity,runId:'different'}});await controller.Inspect();expect(controller.snapshot.report).toBe(prior);expect(controller.snapshot.error).toContain('执行轮次');
   expect(()=>applyExecutionReport(undefined,{...report(),candidate:{resultId:'candidate',runId:'different',planRevision:1,acceptance:'not_evaluated'}},request(),selection)).toThrow('其他执行轮次');
   const bad=report();bad.tools.items[0].receipt!.workspaceId='other';expect(()=>applyExecutionReport(undefined,bad,request(),selection)).toThrow('回执');
   expect(()=>applyExecutionReport(undefined,report(),request(),{...selection,scopeId:'wrong'})).toThrow('不属于');

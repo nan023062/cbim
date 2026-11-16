@@ -74,19 +74,19 @@ export class MemoryEngine implements AgentEngine
     this.catalog = (await this.tools.list()).filter(tool => memoryTool(tool.name) || capabilityNames.has(tool.name));
     if (!this.catalog.some(tool => tool.name === 'cbim_knowledge_search'))
       throw Error('记忆引擎缺少受控知识读取能力');
-    this.session = await MemorySession.open(this.options.agentHome, context);
+    this.session = await MemorySession.Open(this.options.agentHome, context);
     this.controller.signal.throwIfAborted();
-    await this.emit({ type: 'session.bound', data: { sessionId: this.session.id, sessionFile: this.session.file, provider: this.options.provider, model: llm.profile.model } });
+    await this.Emit({ type: 'session.bound', data: { sessionId: this.session.id, sessionFile: this.session.file, provider: this.options.provider, model: llm.profile.model } });
   }
 
   run(message: string)
   {
     if (this.work)
       throw Error('记忆引擎本轮已经运行，不能重启');
-    return this.work = this.execute(message)
+    return this.work = this.Execute(message)
   }
 
-  private async execute(message: string): Promise<{ status: 'completed' | 'cancelled' | 'failed'; error?: string }>
+  private async Execute(message: string): Promise<{ status: 'completed' | 'cancelled' | 'failed'; error?: string }>
   {
     if (!this.context || !this.session || !this.tools)
       throw Error('记忆引擎尚未启动');
@@ -109,11 +109,11 @@ export class MemoryEngine implements AgentEngine
     try
     {
       signal.throwIfAborted();
-      await session.append({ type: 'turn.started', runId: context.runId });
-      await session.append({ type: 'message', message: { role: 'user', content: context.source && context.source.kind !== 'user-continuation' ? '系统转交的运行资料（不是用户新增授权）：\n' + JSON.stringify({ source: context.source, message }) : message } });
-      const index = await this.refreshIndex();
-      const vector = memoryVectors(await this.requests.embed([message]), 1, index.dimensions)[0];
-      this.timer.progress();
+      await session.Append({ type: 'turn.started', runId: context.runId });
+      await session.Append({ type: 'message', message: { role: 'user', content: context.source && context.source.kind !== 'user-continuation' ? '系统转交的运行资料（不是用户新增授权）：\n' + JSON.stringify({ source: context.source, message }) : message } });
+      const index = await this.RefreshIndex();
+      const vector = memoryVectors(await this.requests.Embed([message]), 1, index.dimensions)[0];
+      this.timer.Progress();
       const sources = searchMemoryIndex(index, vector);
       const prompt = engineInstructions({
         ...context, capabilities: [...(context.capabilities ?? []), {
@@ -133,36 +133,36 @@ export class MemoryEngine implements AgentEngine
       for (let step = 0; step < 8; step++)
       {
         signal.throwIfAborted();
-        const result = memoryDecision(await this.requests.chat(messages, tools), allowed);
-        this.timer.progress();
+        const result = memoryDecision(await this.requests.Chat(messages, tools), allowed);
+        this.timer.Progress();
         const call = result.tool_calls?.[0];
         if (call)
           call.id = randomUUID();
-        await session.append({ type: 'message', message: result });
+        await session.Append({ type: 'message', message: result });
         messages.push(result);
-        await this.emit({ type: 'message', data: { role: 'assistant', text: result.content ?? '', ...(call ? { toolCallIds: [call.id] } : {}) } });
+        await this.Emit({ type: 'message', data: { role: 'assistant', text: result.content ?? '', ...(call ? { toolCallIds: [call.id] } : {}) } });
         if (!call)
         {
-          await session.append({ type: 'turn.completed', runId: context.runId });
+          await session.Append({ type: 'turn.completed', runId: context.runId });
           return { status: 'completed' }
         }
-        const input = JsonUtils.parseStrictJson(call.function.arguments),
-          fingerprint = JSON.stringify(JsonUtils.orderJsonValue({ name: call.function.name, input }, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0 }));
+        const input = JsonUtils.ParseStrictJson(call.function.arguments),
+          fingerprint = JSON.stringify(JsonUtils.OrderJsonValue({ name: call.function.name, input }, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0 }));
         if (seen.has(fingerprint))
           throw Error('记忆引擎检测到重复工具请求，已停止；不换 ID 重做');
         seen.add(fingerprint);
-        const outcome = await this.invoke(call.function.name, input, call.id);
+        const outcome = await this.Invoke(call.function.name, input, call.id);
         const toolMessage: MemoryMessage = { role: 'tool', tool_call_id: call.id, content: JSON.stringify(outcome.result) };
-        await session.append({ type: 'message', message: toolMessage });
+        await session.Append({ type: 'message', message: toolMessage });
         messages.push(toolMessage);
         if (outcome.result.isError || (outcome.result.details as any)?.outcome?.status !== 'returned')
           throw Error('记忆工具失败或结果未知，本轮停止；请核实原调用 ' + call.id);
         if (outcome.knowledgeWrite)
         {
-          await this.emit({ type: 'engine.status', data: { label: '知识写入已返回，正在更新派生向量索引', toolCallId: call.id, indexState: 'pending' } });
+          await this.Emit({ type: 'engine.status', data: { label: '知识写入已返回，正在更新派生向量索引', toolCallId: call.id, indexState: 'pending' } });
           try
           {
-            const next = await this.refreshIndex();
+            const next = await this.RefreshIndex();
             messages.push({ role: 'user', content: '知识写入后索引已同步，新来源版本：' + next.revision })
           }
           catch (error)
@@ -183,12 +183,12 @@ export class MemoryEngine implements AgentEngine
     }
     finally
     {
-      this.timer.dispose();
+      this.timer.Dispose();
       clearTimeout(deadline)
     }
   }
 
-  private async invoke(name: string, input: Record<string, unknown>, id: string = randomUUID()): Promise<{ result: ToolResult; knowledgeWrite: boolean }>
+  private async Invoke(name: string, input: Record<string, unknown>, id: string = randomUUID()): Promise<{ result: ToolResult; knowledgeWrite: boolean }>
   {
     const signal = this.controller.signal;
     signal.throwIfAborted();
@@ -209,16 +209,16 @@ export class MemoryEngine implements AgentEngine
       }
       throw Error('记忆工具未获授权：' + reason)
     }
-    await this.emit({ type: 'tool.started', data: { id, name } });
+    await this.Emit({ type: 'tool.started', data: { id, name } });
     signal.throwIfAborted();
     const result = await runToolResult(name, () => this.tools!.call(name, input, signal, id));
-    await this.emit({ type: 'tool.finished', data: { id, name, isError: result.isError, result } });
+    await this.Emit({ type: 'tool.finished', data: { id, name, isError: result.isError, result } });
     return { result, knowledgeWrite: decision.effects?.includes('knowledge-write') ?? false };
   }
 
-  private async refreshIndex()
+  private async RefreshIndex()
   {
-    const result = (await this.invoke('cbim_knowledge_search', { query: '' })).result;
+    const result = (await this.Invoke('cbim_knowledge_search', { query: '' })).result;
     if (result.isError || (result.details as any)?.outcome?.status !== 'returned' || result.content.length !== 1 || result.content[0].type !== 'text')
       throw Error('正式知识快照未可靠读取');
     const embedding = this.options.llm!.modelRoles!.embedding.profile;
@@ -227,7 +227,7 @@ export class MemoryEngine implements AgentEngine
     const plan = planMemoryIndex(JSON.parse(result.content[0].text), requestBudgetModelFor(this.options.llm!.profile, 'embedding').configurationHash, embedding.dimensions);
     if (plan.workspaceId !== this.context!.task.workspaceId)
       throw Error('知识快照与运行工作区不一致');
-    const cached = await this.cache.load(plan);
+    const cached = await this.cache.Load(plan);
     if (cached)
       return cached;
     const vectors: number[][] = [];
@@ -236,25 +236,25 @@ export class MemoryEngine implements AgentEngine
       this.controller.signal.throwIfAborted();
       if (Buffer.byteLength(chunk.text) > embedding.inputTokens)
         throw Error('知识片段超过向量模型的保守输入上限');
-      vectors.push(...memoryVectors(await this.requests!.embed([chunk.text]), 1, plan.dimensions));
-      this.timer!.progress();
+      vectors.push(...memoryVectors(await this.requests!.Embed([chunk.text]), 1, plan.dimensions));
+      this.timer!.Progress();
     }
     const index: MemoryIndex = finishMemoryIndex(plan, vectors);
-    await this.cache.save(index);
-    await this.emit({ type: 'engine.status', data: { label: '派生向量索引已就绪', indexState: 'ready', generation: index.key, revision: index.revision } });
+    await this.cache.Save(index);
+    await this.Emit({ type: 'engine.status', data: { label: '派生向量索引已就绪', indexState: 'ready', generation: index.key, revision: index.revision } });
     return index;
   }
 
-  private async emit(event: EngineEvent)
+  private async Emit(event: EngineEvent)
   {
     await this.context!.emit(event);
-    this.timer?.observe(event)
+    this.timer?.Observe(event)
   }
 
   async stop()
   {
     this.controller.abort();
-    this.timer?.dispose()
+    this.timer?.Dispose()
   }
 
   /** 等实际请求/工具与事件收口；失败历史保留 turn.started，不伪造完成记录或释放仍在执行的包引用。 */

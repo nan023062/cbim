@@ -15,13 +15,13 @@ import { topicInterruptionRequestSchema, pendingTopicInterruption, type TopicInt
 
 export class TopicInterruptionService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert' | 'snapshot'>, private readonly store: DispatchStore)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Snapshot'>, private readonly store: DispatchStore)
   {
   }
 
-  private scope(state: DispatchState, request: TopicInterruptionRequest): DispatchScope
+  private Scope(state: DispatchState, request: TopicInterruptionRequest): DispatchScope
   {
-    this.owner.assert();
+    this.owner.Assert();
     const scope = state.scopes?.find(value => value.scopeId === request.scopeId && value.rootSessionId === request.rootSessionId && value.workspaceId === request.workspaceId);
     if (request.workspaceId !== this.owner.entry.id || !scope)
       fail('TOPIC_IDENTITY', '补充不属于指定办公室的话题');
@@ -29,10 +29,10 @@ export class TopicInterruptionService
   }
 
   /** 相同命令只查原记录；已完成话题不可重开，调用方应另建关联话题。 */
-  async prepare(raw: TopicInterruptionRequest): Promise<DispatchScope>
+  async Prepare(raw: TopicInterruptionRequest): Promise<DispatchScope>
   {
     const request = topicInterruptionRequestSchema.parse(raw);
-    const scope = this.scope(await this.store.read(), request),
+    const scope = this.Scope(await this.store.Read(), request),
       existing = scope.topicInterruptions?.find(value => value.request.commandId === request.commandId);
     if (existing)
     {
@@ -40,9 +40,9 @@ export class TopicInterruptionService
         fail('TOPIC_INPUT_CONFLICT', '同一补充标识已绑定其他正文、话题或配置');
       return scope
     }
-    await this.store.transact({ commandId: 'topic-interrupt-' + request.commandId, fingerprint: hash(json(request)) }, async state =>
+    await this.store.Transact({ commandId: 'topic-interrupt-' + request.commandId, fingerprint: hash(json(request)) }, async state =>
     {
-      const current = this.scope(state, request);
+      const current = this.Scope(state, request);
       if (current.status !== 'active' || pendingTopicInterruption(current))
         fail('TOPIC_NOT_ACTIVE', '话题已结束、正在暂停或已有补充，请刷新原话题');
       if (!current.goal || current.goal.blocked || scopeHasUnresolvedActiveInput(current))
@@ -59,16 +59,16 @@ export class TopicInterruptionService
       const next = { ...current, topicInterruptions: [...(current.topicInterruptions ?? []), { request, requestedAt: new Date().toISOString() }] };
       return { scopes: [next], receipt: true };
     });
-    return this.scope(await this.store.read(), request);
+    return this.Scope(await this.store.Read(), request);
   }
 
   /** summary 来自已停止主运行的 canonical；成员真实终态和图游标在提交时再次核对。 */
-  async park(request: TopicInterruptionRequest, summary: RunSummary): Promise<DispatchScope>
+  async Park(request: TopicInterruptionRequest, summary: RunSummary): Promise<DispatchScope>
   {
-    const knowledge = await this.owner.snapshot();
-    await this.store.transact({ commandId: 'topic-paused-' + request.commandId, fingerprint: hash(json({ request, runId: summary.runId })) }, async state =>
+    const knowledge = await this.owner.Snapshot();
+    await this.store.Transact({ commandId: 'topic-paused-' + request.commandId, fingerprint: hash(json({ request, runId: summary.runId })) }, async state =>
     {
-      const scope = this.scope(state, request),
+      const scope = this.Scope(state, request),
         intent = pendingTopicInterruption(scope);
       if (scope.status !== 'active' || !intent || !sameGoalValue(intent.request, request) || !scope.goal)
         fail('TOPIC_NOT_ACTIVE', '原补充已变化或话题已结束');
@@ -81,6 +81,6 @@ export class TopicInterruptionService
       const next: DispatchScope = { ...scope, status: 'waiting', wait: { waitId: request.commandId, interruptionId: request.commandId, reason: '用户补充已保存，全部参与者已退出，等待主 Agent 重新分析', createdAt: new Date().toISOString(), runId: summary.runId, goalRevision: scope.goal.revision, graphCursor: { streamId: graph.cursor.streamId, seq: graph.cursor.seq }, knowledgeRevision: knowledge.revision, mainRunIds: [...scope.runTracking!.mainRunIds] } };
       return { scopes: [next], receipt: true };
     });
-    return this.scope(await this.store.read(), request);
+    return this.Scope(await this.store.Read(), request);
   }
 }

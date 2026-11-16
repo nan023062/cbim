@@ -193,42 +193,42 @@ export class HumanDecisionController
     return !this.listeners.size && !this.pending.size && ![...this.previews.values()].some(value => value.loading)
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  record(scopeId: string, criterionId: string)
+  Record(scopeId: string, criterionId: string)
   {
     return this.value.records.find(value => value.scopeId === scopeId && value.criterionId === criterionId)
   }
 
-  previewState(target: HumanDecisionTarget)
+  PreviewState(target: HumanDecisionTarget)
   {
     return this.previews.get(identityKey(target.scopeId, target.criterionId))
   }
 
-  isPending(record?: HumanDecisionDraft)
+  IsPending(record?: HumanDecisionDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
 
-  locked(record?: HumanDecisionDraft)
+  Locked(record?: HumanDecisionDraft)
   {
-    return this.isPending(record) || !!record?.attempt && ['submitting', 'unknown'].includes(record.attempt.phase)
+    return this.IsPending(record) || !!record?.attempt && ['submitting', 'unknown'].includes(record.attempt.phase)
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  private belongs(target: HumanDecisionTarget)
+  private Belongs(target: HumanDecisionTarget)
   {
     return target.workspaceId === this.workspaceId && target.rootSessionId === this.rootSessionId
   }
 
-  private update(record: HumanDecisionDraft): boolean
+  private Update(record: HumanDecisionDraft): boolean
   {
     const records = [...this.value.records],
       index = records.findIndex(value => value.scopeId === record.scopeId && value.criterionId === record.criterionId);
@@ -245,64 +245,64 @@ export class HumanDecisionController
       if (new TextEncoder().encode(raw).length > 2 * 1024 * 1024)
         throw Error('本地记录超过 2 MiB 上限');
       this.ports.storage.setItem(this.storageKey, raw);
-      this.emit();
+      this.Emit();
       return true;
     }
     catch (error)
     {
       this.unavailable = true;
       this.value = { records, error: '本地保存失败；保留当前请求，不再发送：' + textError(error) };
-      this.emit();
+      this.Emit();
       return false
     }
   }
 
   /** 修改已成功记录的草稿表示准备新决定；原决定仍在后端历史中，不覆盖它。 */
-  edit(target: HumanDecisionTarget, change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>)
+  Edit(target: HumanDecisionTarget, change: Partial<Pick<HumanDecisionDraft, 'baselines' | 'manifests' | 'decision' | 'comment'>>)
   {
-    const record = this.record(target.scopeId, target.criterionId);
-    if (!this.available || !this.belongs(target) || this.locked(record))
+    const record = this.Record(target.scopeId, target.criterionId);
+    if (!this.available || !this.Belongs(target) || this.Locked(record))
       return;
-    this.update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: record?.decision, ...change, attempt: undefined });
+    this.Update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: record?.decision, ...change, attempt: undefined });
   }
 
   /** 明确清除旧候选选择才能核实返工成果；不改后端历史，也不能清除未知/在途请求。 */
-  resetBaselines(target: HumanDecisionTarget): boolean
+  ResetBaselines(target: HumanDecisionTarget): boolean
   {
-    const record = this.record(target.scopeId, target.criterionId);
-    if (!this.available || !this.belongs(target) || this.locked(record))
+    const record = this.Record(target.scopeId, target.criterionId);
+    if (!this.available || !this.Belongs(target) || this.Locked(record))
       return false;
     // 使正在回来的旧预览失效，避免新候选菜单再次被旧文件观察覆盖。
     this.previews.delete(identityKey(target.scopeId, target.criterionId));
-    return this.update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: [], ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: undefined });
+    return this.Update({ scopeId: target.scopeId, criterionId: target.criterionId, baselines: [], ...(record?.reconsidersDecisionId && record.attempt?.phase !== 'accepted' ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}), comment: record?.comment ?? '', decision: undefined });
   }
 
   /** 只有显式点击开始/退出对照；清空原选择和决定，未知请求保持冻结，不复制旧接受。 */
-  async reconsider(target: HumanDecisionTarget, decisionId?: string)
+  async Reconsider(target: HumanDecisionTarget, decisionId?: string)
   {
-    const record = this.record(target.scopeId, target.criterionId);
-    if (!this.available || !this.belongs(target) || this.locked(record))
+    const record = this.Record(target.scopeId, target.criterionId);
+    if (!this.available || !this.Belongs(target) || this.Locked(record))
       return;
     const input = humanDecisionPreviewInputSchema.parse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId: target.scopeId, criterionId: target.criterionId, baselines: [], ...(decisionId ? { reconsidersDecisionId: decisionId } : {}) });
     this.previews.delete(identityKey(target.scopeId, target.criterionId));
-    if (this.update({ scopeId: input.scopeId, criterionId: input.criterionId, baselines: [], ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}), comment: '' }))
-      await this.preview(target);
+    if (this.Update({ scopeId: input.scopeId, criterionId: input.criterionId, baselines: [], ...(input.reconsidersDecisionId ? { reconsidersDecisionId: input.reconsidersDecisionId } : {}), comment: '' }))
+      await this.Preview(target);
   }
 
-  currentPreview(target: HumanDecisionTarget): HumanDecisionPreview | undefined
+  CurrentPreview(target: HumanDecisionTarget): HumanDecisionPreview | undefined
   {
-    const state = this.previewState(target),
-      record = this.record(target.scopeId, target.criterionId);
+    const state = this.PreviewState(target),
+      record = this.Record(target.scopeId, target.criterionId);
     return state && !state.loading && !state.error && state.anchor === target.anchor && state.input.reconsidersDecisionId === record?.reconsidersDecisionId && equal(selected(state.input.baselines), selected(record?.baselines ?? [])) && equal(selected(state.input.manifests ?? []), selected(record?.manifests ?? [])) ? state.result : undefined;
   }
 
   /** 明确点击才读取文件；选择变化可显示旧菜单，但旧观察不得用于提交。 */
-  async preview(target: HumanDecisionTarget)
+  async Preview(target: HumanDecisionTarget)
   {
-    if (!this.available || !this.belongs(target))
+    if (!this.available || !this.Belongs(target))
       return;
-    const record = this.record(target.scopeId, target.criterionId);
-    if (this.locked(record))
+    const record = this.Record(target.scopeId, target.criterionId);
+    if (this.Locked(record))
       return;
     const key = identityKey(target.scopeId, target.criterionId),
       input = humanDecisionPreviewInputSchema.parse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId: target.scopeId, criterionId: target.criterionId, baselines: record?.baselines ?? [], ...(record?.manifests ? { manifests: record.manifests } : {}), ...(record?.reconsidersDecisionId ? { reconsidersDecisionId: record.reconsidersDecisionId } : {}) });
@@ -311,7 +311,7 @@ export class HumanDecisionController
       return;
     const state: HumanDecisionPreviewState = { anchor: target.anchor, input, loading: true, error: '' };
     this.previews.set(key, state);
-    this.emit();
+    this.Emit();
     try
     {
       const result = checkedHumanDecisionPreview(await this.ports.preview(structuredClone(input)), input);
@@ -325,15 +325,15 @@ export class HumanDecisionController
     }
     finally
     {
-      this.emit()
+      this.Emit()
     }
   }
 
-  async submit(target: HumanDecisionTarget)
+  async Submit(target: HumanDecisionTarget)
   {
-    const record = this.record(target.scopeId, target.criterionId),
-      preview = this.currentPreview(target);
-    if (!this.available || !this.belongs(target) || !record || this.locked(record) || record.attempt?.phase === 'accepted' || !preview?.basis || !record.decision || !preview.allowedDecisions.includes(record.decision) || record.reconsidersDecisionId && !preview.reconsideration?.canReconsider)
+    const record = this.Record(target.scopeId, target.criterionId),
+      preview = this.CurrentPreview(target);
+    if (!this.available || !this.Belongs(target) || !record || this.Locked(record) || record.attempt?.phase === 'accepted' || !preview?.basis || !record.decision || !preview.allowedDecisions.includes(record.decision) || record.reconsidersDecisionId && !preview.reconsideration?.canReconsider)
       return;
     let request: HumanDecisionRequest;
     try
@@ -343,26 +343,26 @@ export class HumanDecisionController
     catch (error)
     {
       this.value = { ...this.value, error: textError(error) };
-      this.emit();
+      this.Emit();
       return
     }
     const frozen = { ...record, comment: request.comment, attempt: { request, phase: 'submitting' as const, uncertain: false } };
-    if (this.update(frozen))
-      await this.send(frozen);
+    if (this.Update(frozen))
+      await this.Send(frozen);
   }
 
-  private async send(record: HumanDecisionDraft)
+  private async Send(record: HumanDecisionDraft)
   {
     const attempt = record.attempt!,
       request = attempt.request;
     if (this.pending.has(request.commandId))
       return;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const receipt = checkedHumanDecisionReceipt(await this.ports.submit(structuredClone(request)), request, attempt.receipt);
-      this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
+      this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
     }
     catch (error)
     {
@@ -375,57 +375,57 @@ export class HumanDecisionController
         if (preview)
           this.previews.set(key, { ...preview, error: '提交未受理，请重新核实当前依据。' })
       }
-      this.update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } });
+      this.Update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } });
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 未知通信结果只重发已保存命令，不使用现在选择的验收项、文件或意见。 */
-  async retry(scopeId: string, criterionId: string)
+  async Retry(scopeId: string, criterionId: string)
   {
-    const record = this.record(scopeId, criterionId);
-    if (!this.available || record?.attempt?.phase !== 'unknown' || this.isPending(record))
+    const record = this.Record(scopeId, criterionId);
+    if (!this.available || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
       return;
-    await this.send(record)
+    await this.Send(record)
   }
 
   /** 查不到回执不等于未提交，仍冻结；查询不会触发模型或新的人工决定。 */
-  async query(scopeId: string, criterionId: string)
+  async Query(scopeId: string, criterionId: string)
   {
-    const record = this.record(scopeId, criterionId),
+    const record = this.Record(scopeId, criterionId),
       attempt = record?.attempt;
-    if (!this.available || !record || !attempt || this.isPending(record))
+    if (!this.available || !record || !attempt || this.IsPending(record))
       return;
     const request = attempt.request;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, scopeId, commandId: request.commandId });
       if (raw !== undefined)
-        this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanDecisionReceipt(raw, request, attempt.receipt), error: undefined } });
+        this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedHumanDecisionReceipt(raw, request, attempt.receipt), error: undefined } });
       else if (attempt.phase !== 'accepted')
-        this.update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执，请继续查询或用原命令重试。' } });
+        this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执，请继续查询或用原命令重试。' } });
     }
     catch (error)
     {
-      this.update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
+      this.Update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 重开仅补查未知请求；不重做预览或自动提交。 */
-  async restore()
+  async Restore()
   {
-    await Promise.all(this.value.records.filter(value => value.attempt?.phase === 'unknown').map(value => this.query(value.scopeId, value.criterionId)))
+    await Promise.all(this.value.records.filter(value => value.attempt?.phase === 'unknown').map(value => this.Query(value.scopeId, value.criterionId)))
   }
 }
 
@@ -434,7 +434,7 @@ export class HumanDecisionPool
 {
   private values = new Map<string, HumanDecisionController>();
 
-  get(workspaceId: string, rootSessionId: string, ports: HumanDecisionPorts)
+  Get(workspaceId: string, rootSessionId: string, ports: HumanDecisionPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
       value = this.values.get(key) ?? new HumanDecisionController(workspaceId, rootSessionId, ports);

@@ -14,11 +14,11 @@ await fs.mkdir(root);await fs.mkdir('test-results',{recursive:true});
 let desktop:ElectronApplication|undefined,setup:Application|undefined,page:Page|undefined;
 const checks:string[]=[],errors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  const entry=await setup.dispatch('add',{path:root}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
-  await workspace.commit(request(await workspace.snapshot(),[{path:'.cbim/team/design/skills.json',text:JSON.stringify({skills:[]})}]));
-  const plan=await team.call('cbim_object_preview',{revision:(await workspace.snapshot()).revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team/design',slug:'designer',data:{name:'嵌套设计师',summary,capabilities:['交互设计']},body:'# 工作原则\n核对界面与项目约束。'}]});await team.call('cbim_object_commit',{planId:plan.planId},true);
-  await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  const entry=await setup.Dispatch('add',{path:root}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
+  await workspace.Commit(request(await workspace.Snapshot(),[{path:'.cbim/team/design/skills.json',text:JSON.stringify({skills:[]})}]));
+  const plan=await team.call('cbim_object_preview',{revision:(await workspace.Snapshot()).revision,operations:[{kind:'agent',action:'create',parentId:'.cbim/team/design',slug:'designer',data:{name:'嵌套设计师',summary,capabilities:['交互设计']},body:'# 工作原则\n核对界面与项目约束。'}]});await team.call('cbim_object_commit',{planId:plan.planId},true);
+  await setup.Shutdown();setup=undefined;
   const executable=await latestExecutable();assert.ok(path.resolve(executable).startsWith(path.resolve('build')+path.sep));
   desktop=await electron.launch({executablePath:executable,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
   assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('userData'))),path.resolve(user,'desktop'));
@@ -69,4 +69,4 @@ try{
   assert.equal((await call('snapshot',{id:entry.id})).revision,before.revision);assert.deepEqual(await call('loop.list',{id:entry.id}),runs);assert.deepEqual(errors,[]);checks.push('reload-keeps-project-tree-without-knowledge-or-execution-write');
   const report={executable,checks,pageErrors:errors,source:'real packaged Electron, IPC, isolated nested project definitions',modelRequests:0};await fs.writeFile('test-results/issue18-ui-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(error){const stem='test-results/issue18-ui-failure-'+Date.now();await fs.writeFile(stem+'.json',JSON.stringify({error:String(error),checks,errors,body:await page?.locator('body').innerText()},null,2));await page?.screenshot({path:stem+'.png'});throw error}
-finally{await desktop?.close();await setup?.shutdown();const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-issue18-'))throw Error('拒绝清理非本次测试目录');await fs.rm(target,{recursive:true,force:true})}
+finally{await desktop?.close();await setup?.Shutdown();const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-issue18-'))throw Error('拒绝清理非本次测试目录');await fs.rm(target,{recursive:true,force:true})}

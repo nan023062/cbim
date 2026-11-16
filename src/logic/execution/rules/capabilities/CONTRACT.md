@@ -6,4 +6,4 @@ Promise settled 仅代表调用返回。三种能力继续执行各自平台 dra
 
 ## 未核实受控写之后的同调用求助
 
-RunControlledFile.guard 在原写结果未知后允许 cbim_ask_user_question，沿既有 Agent 问答端口交给直接调用方；回答不清除 unverified 集合，也不授予新写入、命令或交付。原生只读与旧 cbim_task_help 保留原语义，最终仍记录 run.interrupted 及原 unverifiedControlledCalls。
+RunControlledFile.Guard 在原写结果未知后允许 cbim_ask_user_question，沿既有 Agent 问答端口交给直接调用方；回答不清除 unverified 集合，也不授予新写入、命令或交付。原生只读与旧 cbim_task_help 保留原语义，最终仍记录 run.interrupted 及原 unverifiedControlledCalls。

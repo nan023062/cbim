@@ -22,12 +22,12 @@ export class FeedbackTools
       fail('GITHUB_FEEDBACK_BINDING', '反馈工具与本轮工作区不一致');
   }
 
-  has(name: string)
+  Has(name: string)
   {
     return name === 'cbim_feedback_submit' || name === 'cbim_feedback_receipt'
   }
 
-  list()
+  List()
   {
     return [
       { name: 'cbim_feedback_submit', version: 1, effects: ['external-write'], description: '将用户愿意提供的 BUG／愿望直接创建 GitHub Issue。仅 kind 和 summary 必填，其余字段可省略或留空，缺项显示用户未提供，不强制追问。账号和目标已由设置授权；不读取整段会话或工程。成功后静默结束，未知结果只核实原提交。', inputSchema: zodToJsonSchema(feedbackInputSchema) as Record<string, unknown> },
@@ -35,9 +35,9 @@ export class FeedbackTools
     ]
   }
 
-  private parse(name: string, input: unknown)
+  private Parse(name: string, input: unknown)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('GITHUB_TOOL', '本轮没有该反馈工具');
     const parsed = (name === 'cbim_feedback_submit' ? feedbackInputSchema : feedbackReceiptInputSchema).safeParse(input);
     if (!parsed.success)
@@ -45,18 +45,18 @@ export class FeedbackTools
     return parsed.data;
   }
 
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    this.parse(name, input);
+    this.Parse(name, input);
     return { effects: [name === 'cbim_feedback_submit' ? 'external-write' : 'read'], native: false, contractVersion: 1, scope: this.scope }
   }
 
   /** 仅调用一次端口；协议异常不重放外部写。返回 submitted 才允许静默结束。 */
-  async call(name: string, input: unknown, signal: AbortSignal)
+  async Call(name: string, input: unknown, signal: AbortSignal)
   {
-    this.parse(name, input);
+    this.Parse(name, input);
     signal.throwIfAborted();
-    const value = name === 'cbim_feedback_submit' ? await this.port.submit(feedbackInputSchema.parse(input), signal) : await this.port.receipt(signal);
+    const value = name === 'cbim_feedback_submit' ? await this.port.Submit(feedbackInputSchema.parse(input), signal) : await this.port.Receipt(signal);
     return checkedJsonToolResult(name, value, feedbackResultSchema);
   }
 }

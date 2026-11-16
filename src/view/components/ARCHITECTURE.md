@@ -220,7 +220,7 @@ class N_src_view_components_TreeActions_tsx_TreeAction["TreeAction"] {
   +label
   +icon
   +disabled
-  +onSelect()
+  +OnSelect()
 }
 N_src_view_components_TreeActions_tsx ..> N_src_view_components_TreeActions_tsx_TreeAction : 声明
 ```

@@ -141,8 +141,8 @@ class N_src_view_governance_ModuleGovernancePanel_tsx_Props["Props"] {
   <<interface>>
   +identity
   +moduleId
-  +onClose()
-  +onApplied()
+  +OnClose()
+  +OnApplied()
 }
 N_src_view_governance_ModuleGovernancePanel_tsx ..> N_src_view_governance_ModuleGovernancePanel_tsx_Props : 声明
 ```

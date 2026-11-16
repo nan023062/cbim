@@ -29,14 +29,14 @@ class N_src_logic_execution_engines_transport_model_json_requests_ts["model-json
 }
 class N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests["ModelJsonRequests"] {
   +constructor()
-  +chat()
-  +embed()
+  +Chat()
+  +Embed()
   -budget
   -signal
   -blocked
   -pending
   -llm
-  -request()
+  -Request()
 }
 N_src_logic_execution_engines_transport_model_json_requests_ts ..> N_src_logic_execution_engines_transport_model_json_requests_ts_ModelJsonRequests : 声明
 ```
@@ -75,8 +75,8 @@ class N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBud
   +responseBytes$
   +frameBytes$
   +constructor()
-  +push()
-  +finish()
+  +Push()
+  +Finish()
   -api
   -decoder
   -pending
@@ -86,7 +86,7 @@ class N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBud
   -started
   -ended
   -finishSeen
-  -accept()
+  -Accept()
 }
 N_src_logic_execution_engines_transport_request_budget_usage_ts ..> N_src_logic_execution_engines_transport_request_budget_usage_ts_RequestBudgetUsageStream : 声明
 ```

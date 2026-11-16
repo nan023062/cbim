@@ -33,13 +33,13 @@ interface Props
 
   moduleId: string;
 
-  onClose(): void;
+  OnClose(): void;
 
-  onApplied?(): Promise<void>
+  OnApplied?(): Promise<void>
 }
 
 /** 打开时固定工作区实例和模块；查看历史不启动实施，卸载使所有迟到结果失效。 */
-export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }: Props)
+export function ModuleGovernancePanel({ identity, moduleId, OnClose: onClose, OnApplied: onApplied }: Props)
 {
   const target = useRef({ ...identity, moduleId }).current,
     alive = useRef(true),
@@ -122,7 +122,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
     alive.current = true;
     try
     {
-      setPending(store.read(target.workspaceId))
+      setPending(store.Read(target.workspaceId))
     }
     catch (cause)
     {
@@ -151,7 +151,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
       setNotice('原实施意图已保存，知识提交尚未确认；请继续查询原回执。');
       return
     }
-    store.remove(original);
+    store.Remove(original);
     setPending(undefined);
     setNotice(checked.action === 'apply' ? applicationLabels[checked.record.state] : checked.action === 'decide' ? '人工决定已记录，尚未实施；批准不会自动写入知识。' : '原治理命令已确认。');
     if (original.moduleId !== target.moduleId)
@@ -205,7 +205,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
       if (typeof fields.expectedBasis === 'string')
         expected.basis = fields.expectedBasis;
       const original: GovernancePending = { ...target, commandId, action, ...(Object.keys(expected).length ? { expected } : {}) };
-      store.save(original);
+      store.Save(original);
       setPending(original);
       // 只处理首次 RPC 明确预受理拒绝；接收回执/刷新发生错误时不能借相同错误码清除记录。
       let result: unknown;
@@ -217,7 +217,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
       {
         if (alive.current && isFirstGovernanceRejection(cause))
         {
-          store.remove(original);
+          store.Remove(original);
           setPending(undefined)
         }
         throw cause
@@ -249,7 +249,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
       checkedGovernanceUnaccepted(await window.cbim.call('governance.unaccepted', { workspaceId: original.workspaceId, instanceId: original.instanceId, commandId: original.commandId, action: original.action }), original);
       if (!alive.current)
         return;
-      store.remove(original);
+      store.Remove(original);
       setPending(undefined);
       setNotice('已核实原实例退役且命令未受理，待确认记录已解除。');
       await load()
@@ -306,7 +306,7 @@ export function ModuleGovernancePanel({ identity, moduleId, onClose, onApplied }
         {latest && <GovernanceDecisionFeedback decision={latest} />}
         {latest?.feedback && <button data-testid="governance-add-response" disabled={blocked || responseChoices.length >= 8 || responseChoices.some(item => item.decisionId === latest.decisionId)} onClick={() => setResponseChoices(values => values.length >= 8 || values.some(item => item.decisionId === latest.decisionId) ? values : [...values, { decisionId: latest.decisionId, proposalId: proposal.proposalId, comment: latest.comment }])}><Icon name="handoff" size={16} />将此意见加入新提案</button>}
         <GovernanceResponseDetails selected={selected!} />
-        <GovernanceDecisionForm key={proposal.proposalId} selected={selected!} disabled={blocked} onSubmit={fields => submit('decide', { proposalId: proposal.proposalId, expectedDecisionRevision: latest?.revision ?? 0, expectedBasis: proposal.basis, ...fields })} />
+        <GovernanceDecisionForm key={proposal.proposalId} selected={selected!} disabled={blocked} OnSubmit={fields => submit('decide', { proposalId: proposal.proposalId, expectedDecisionRevision: latest?.revision ?? 0, expectedBasis: proposal.basis, ...fields })} />
         <p>批准只针对以上依据，不自动实施。实施前还会重核当前知识与最新决定。</p><button className="solid-button" data-testid="governance-apply" disabled={blocked || latest?.decision !== 'approve' || !governanceResponsesCurrent(selected!) || !!selected?.applications.some(item => item.state === 'pending' || item.state === 'committed')} onClick={() => void submit('apply', { proposalId: proposal.proposalId, decisionId: latest!.decisionId, expectedBasis: proposal.basis })}><Icon name="confirm" size={16} />实施已批准的知识变更</button>
         <details><summary>决定记录（{selected!.decisions.length}）</summary>{selected!.decisions.map(item => <article key={item.decisionId}><b>{decisions[item.decision]} · 版本 {item.revision}</b><p>{item.comment || '未填写附加意见'}</p><GovernanceDecisionFeedback decision={item} />{item.revisitCondition && <p>复查条件：{item.revisitCondition}</p>}<small>本机明确提交 · {new Date(item.recordedAt).toLocaleString()}</small></article>)}</details>
         <div data-testid="governance-applications">{selected!.applications.map(item => <article key={item.intentId}><b>{applicationLabels[item.state]}</b><code>{item.requestId}</code>{item.state === 'committed' && <p>知识版本 {item.result.revision}；业务验证未执行。</p>}<button data-testid="governance-application-receipt" disabled={busy} onClick={() => void inspectApplication(item.intentId)}><Icon name="history" size={16} />回查原实施回执</button></article>)}</div>

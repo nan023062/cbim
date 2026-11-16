@@ -116,27 +116,27 @@ export function TeamView({ snapshot, workspace, refresh, dirty, tabId, onStarted
       item = model.nodes[target];
     if (ownSkill)
       return [
-        { id: 'skill-edit', label: '编辑 Skill', icon: 'edit', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id })) },
-        { id: 'skill-delete', label: '删除 Skill', icon: 'trash', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id, parentId: ownSkill.ownerId, mode: 'delete' })) },
-        { id: 'skill-publish', label: '发布 Skill 到人才市场', icon: 'upload', disabled: !canEdit, onSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'skill', objectId: ownSkill.id })) },
+        { id: 'skill-edit', label: '编辑 Skill', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id })) },
+        { id: 'skill-delete', label: '删除 Skill', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', id: ownSkill.id, parentId: ownSkill.ownerId, mode: 'delete' })) },
+        { id: 'skill-publish', label: '发布 Skill 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'skill', objectId: ownSkill.id })) },
       ];
     if (!item || item.kind === 'builtin')
       return [];
     const actions: KnowledgeTreeAction[] = [
-      { id: 'skill-new', label: '新增 Skill', icon: 'sparkles', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'skill', parentId: item.id })) },
-      { id: 'talent-import', label: '从人才市场下载', icon: 'download', disabled: !canEdit, onSelect: wrap(() => setTransfer({ mode: 'import', kind: item.kind === 'agent' ? 'skill' : undefined, targetParentId: item.id })) },
+      { id: 'skill-new', label: '新增 Skill', icon: 'sparkles', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'skill', parentId: item.id })) },
+      { id: 'talent-import', label: '从人才市场下载', icon: 'download', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'import', kind: item.kind === 'agent' ? 'skill' : undefined, targetParentId: item.id })) },
     ];
     if (item.kind === 'agent')
       actions.push(
-        { id: 'agent-edit', label: '编辑 Agent', icon: 'edit', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'agent', id: item.id })) },
-        { id: 'agent-delete', label: '删除 Agent', icon: 'trash', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'agent', id: item.id, parentId: item.parentId, mode: 'delete' })) },
-        { id: 'agent-publish', label: '发布 Agent 到人才市场', icon: 'upload', disabled: !canEdit, onSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'agent', objectId: item.id })) },
-        { id: 'agent-history', label: '执行历史', icon: 'clock', onSelect: wrap(() => setHistory({ workspaceId: workspace.id, agentId: item.id })) },
+        { id: 'agent-edit', label: '编辑 Agent', icon: 'edit', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id })) },
+        { id: 'agent-delete', label: '删除 Agent', icon: 'trash', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', id: item.id, parentId: item.parentId, mode: 'delete' })) },
+        { id: 'agent-publish', label: '发布 Agent 到人才市场', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'agent', objectId: item.id })) },
+        { id: 'agent-history', label: '执行历史', icon: 'clock', OnSelect: wrap(() => setHistory({ workspaceId: workspace.id, agentId: item.id })) },
       );
     else
-      actions.unshift({ id: 'agent-new', label: '新建 Agent', icon: 'plus', disabled: !canEdit, onSelect: wrap(() => setEditor({ kind: 'agent', parentId: item.id })) });
+      actions.unshift({ id: 'agent-new', label: '新建 Agent', icon: 'plus', disabled: !canEdit, OnSelect: wrap(() => setEditor({ kind: 'agent', parentId: item.id })) });
     if (item.kind === 'team')
-      actions.push({ id: 'team-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, onSelect: wrap(() => void launch.start()) }, { id: 'team-publish', label: '发布整个团队', icon: 'upload', disabled: !canEdit, onSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'team', objectId: TEAM_ROOT })) });
+      actions.push({ id: 'team-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) }, { id: 'team-publish', label: '发布整个团队', icon: 'upload', disabled: !canEdit, OnSelect: wrap(() => setTransfer({ mode: 'publish', kind: 'team', objectId: TEAM_ROOT })) });
     return actions;
   }
   async function reload()

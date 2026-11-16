@@ -16,12 +16,12 @@ import type { TaskNode } from '../../tasks/rules/graph-types';
 import { scopeUsageInputSchema, scopeUsageReportSchema, type ScopeUsageInput, type ScopeUsageReport, type ScopeUsageRun } from '../rules/scope-usage';
 import type { ScopeGoalPorts } from '../../tasks/runtime/scope-goal-service';
 
-type Owner = Pick<KnowledgeWorkspace, 'entry' | 'assert'>;
+type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 
 /** 查询端口仅读取 canonical 日志；递归身份由本服务沿可信父工具引用逐层核对。 */
-export type ScopeUsageLogs = Pick<ScopeGoalPorts, 'inspectMain' | 'inspectMember'> &
+export type ScopeUsageLogs = Pick<ScopeGoalPorts, 'InspectMain' | 'InspectMember'> &
 {
-  inspectAgent?(taskId: string, runId: string): Promise<RunSummary>
+  InspectAgent?(taskId: string, runId: string): Promise<RunSummary>
 };
 
 type Source =
@@ -49,11 +49,11 @@ function matches(value: unknown, expected: unknown)
 /** 共享可信日志端口，递归来源只从已核实父日志展开；查询独立于目标审阅，不批准目标或触发恢复。 */
 export class ScopeUsageService
 {
-  constructor(private readonly owner: Owner, private readonly store: Pick<DispatchStore, 'read'>, private readonly logs?: ScopeUsageLogs)
+  constructor(private readonly owner: Owner, private readonly store: Pick<DispatchStore, 'Read'>, private readonly logs?: ScopeUsageLogs)
   {
   }
 
-  private facts(state: DispatchState, input: ScopeUsageInput)
+  private Facts(state: DispatchState, input: ScopeUsageInput)
   {
     const scope = state.scopes?.find(value => value.scopeId === input.scopeId && value.rootSessionId === input.rootSessionId && value.workspaceId === input.workspaceId);
     const graph = state.graphs.find(value => value.identity.rootSessionId === input.rootSessionId && value.identity.workspaceId === input.workspaceId);
@@ -65,7 +65,7 @@ export class ScopeUsageService
     return { scope, root: graph?.root, tasks, runs, sessions, agentRuns };
   }
 
-  private sources(facts: ReturnType<ScopeUsageService['facts']>, input: ScopeUsageInput): Source[]
+  private Sources(facts: ReturnType<ScopeUsageService['Facts']>, input: ScopeUsageInput): Source[]
   {
     const output: Source[] = (facts.scope?.runTracking?.mainRunIds ?? []).map(runId => ({ kind: 'main', taskId: input.rootSessionId, runId }));
     for (const task of facts.tasks)
@@ -88,7 +88,7 @@ export class ScopeUsageService
     return output.filter((source, index) => output.findIndex(value => value.runId === source.runId) === index).map(source => ({ ...source, invalid: source.invalid || (counts.get(source.runId) ?? 0) > 1 }));
   }
 
-  private bound(summary: RunSummary, source: Source, facts: ReturnType<ScopeUsageService['facts']>, input: ScopeUsageInput)
+  private Bound(summary: RunSummary, source: Source, facts: ReturnType<ScopeUsageService['Facts']>, input: ScopeUsageInput)
   {
     if (summary.runId !== source.runId || summary.task.workspaceId !== input.workspaceId || summary.task.root !== this.owner.entry.path || summary.task.taskId !== source.taskId)
       return false;
@@ -113,19 +113,19 @@ export class ScopeUsageService
   }
 
   /** 使用调用方已持有的事务快照核实日志；不重入 store.read，也不把公开报告缓存当作启动许可。 */
-  async collect(state: DispatchState, raw: unknown)
+  async Collect(state: DispatchState, raw: unknown)
   {
     const parsed = scopeUsageInputSchema.safeParse(raw);
     if (!parsed.success)
       fail('SCOPE_USAGE_INPUT', '周期消耗查询身份无效');
     const input = parsed.data;
-    this.owner.assert();
+    this.owner.Assert();
     if (input.workspaceId !== this.owner.entry.id)
       fail('SCOPE_USAGE_IDENTITY', '周期消耗不属于当前工作区');
-    const facts = this.facts(state, input);
+    const facts = this.Facts(state, input);
     if (state.workspaceId !== input.workspaceId || !facts.scope || !facts.root)
       fail('SCOPE_USAGE_IDENTITY', '目标周期不属于当前主会话或缺少可信图根');
-    const sources = this.sources(facts, input),
+    const sources = this.Sources(facts, input),
       runs: ScopeUsageRun[] = [],
       logStamps: unknown[] = [];
     for (const source of sources)
@@ -143,8 +143,8 @@ export class ScopeUsageService
       else
         try
         {
-          const summary = source.agent ? await (this.logs.inspectAgent?.(source.taskId, source.runId) ?? Promise.reject(Error('Agent log reader unavailable'))) : source.kind === 'main' ? await this.logs.inspectMain(input.rootSessionId, source.runId) : await this.logs.inspectMember(structuredClone(source.run!));
-          if (!this.bound(summary, source, facts, input))
+          const summary = source.agent ? await (this.logs.InspectAgent?.(source.taskId, source.runId) ?? Promise.reject(Error('Agent log reader unavailable'))) : source.kind === 'main' ? await this.logs.InspectMain(input.rootSessionId, source.runId) : await this.logs.InspectMember(structuredClone(source.run!));
+          if (!this.Bound(summary, source, facts, input))
           {
             result.logState = 'identity_mismatch';
             result.usage.issues.push({ code: 'SCOPE_USAGE_IDENTITY', message: '日志身份、顺序或会话绑定不一致，未计入消耗。' })
@@ -200,12 +200,12 @@ export class ScopeUsageService
   }
 
   /** 查询无自动重试；不同步的来源与日志只降低完整性，不按错误结果估算零消耗。 */
-  async read(raw: unknown): Promise<ScopeUsageReport>
+  async Read(raw: unknown): Promise<ScopeUsageReport>
   {
-    const { input, facts, runs, logStamps } = await this.collect(await this.store.read(), raw);
-    const after = await this.store.read();
-    this.owner.assert();
-    const consistency = after.workspaceId === input.workspaceId && matches(facts, this.facts(after, input)) ? 'stable' : 'changed_during_read';
+    const { input, facts, runs, logStamps } = await this.Collect(await this.store.Read(), raw);
+    const after = await this.store.Read();
+    this.owner.Assert();
+    const consistency = after.workspaceId === input.workspaceId && matches(facts, this.Facts(after, input)) ? 'stable' : 'changed_during_read';
     const coverage = facts.scope!.runTracking ? 'tracked' : 'legacy';
     const issues = [...(coverage === 'legacy' ? [{ code: 'SCOPE_USAGE_LEGACY', message: '旧周期没有从创建起登记完整主运行清单；只展示可核实成员来源，不推断完整总数。' }] : []), ...(consistency === 'changed_during_read' ? [{ code: 'SCOPE_USAGE_CHANGED', message: '读取期间周期或运行归属发生变化，本次仅为部分观察，请重新读取。' }] : [])];
     return scopeUsageReportSchema.parse({ identity: input, checkedAt: new Date().toISOString(), basis: hash(json({ facts, logStamps, consistency })), consistency, coverage, scopeStatus: facts.scope!.status, scopeOutcome: facts.scope!.outcome, totals: summarizeScopeUsage(runs, coverage, consistency), runs, issues });

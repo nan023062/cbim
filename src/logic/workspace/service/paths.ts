@@ -15,7 +15,7 @@ export class Paths implements StoragePaths
   {
   }
 
-  async identity(input: string)
+  async Identity(input: string)
   {
     if (!input?.trim())
       fail('INVALID_ROOT', '请选择项目目录');
@@ -41,19 +41,19 @@ export class Paths implements StoragePaths
     return { id: hash(canonical), path: real };
   }
 
-  project(id: string)
+  Project(id: string)
   {
     if (!/^[a-f0-9]{64}$/.test(id))
       fail('IDENTITY', '无效项目标识');
     return path.join(this.userRoot, id)
   }
 
-  local(id: string, kind: 'memory' | 'task-records' | 'logs' | 'cache' | 'transactions')
+  Local(id: string, kind: 'memory' | 'task-records' | 'logs' | 'cache' | 'transactions')
   {
-    return path.join(this.project(id), kind)
+    return path.join(this.Project(id), kind)
   }
 
-  async knowledge(root: string, relative: string)
+  async Knowledge(root: string, relative: string)
   {
     if (!relative.startsWith('.cbim/') || relative.includes('\\') || relative.split('/').some(x => !x || x === '.' || x === '..') || /[:\x00]/.test(relative))
       fail('PATH', '知识路径必须在 .cbim/ 内');

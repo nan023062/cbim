@@ -319,7 +319,7 @@ class N_src_logic_execution_rules_usage_ts["usage.ts"] {
 
 正式周期的插入另携 `activeInput` 可信令牌，绑定 scope、原 run、队列项及实际发送快照哈希。Runtime 在发送前独立核对正文和附件 ID，只允许自身写入带令牌的 requested/accepted/failed 事件；引擎适配器不能伪造同类记录。成功返回真实 requestedSeq/acceptedSeq，供调度事务关联原生接收与目标输入版本。原生 queued 后的日志失败仍为未知，即使底层异常使用停止错误码，也不能改称尚未发送。
 
-`LoopRuntime.steer` 必须传入可信 `RunSteerControl {expectedRunId,signal}`，只接受仍活动的原 `chat/cbim:main`，不能把迟到消息改投新轮或成员。插入请求日志落盘之后、进入适配器之前复核停止；适配器在原生状态查询后继续复核。发送前停止明确拒绝，已确认 queued 后仍保存接受事实，不能用迟到取消推翻接收。
+`LoopRuntime.Steer` 必须传入可信 `RunSteerControl {expectedRunId,signal}`，只接受仍活动的原 `chat/cbim:main`，不能把迟到消息改投新轮或成员。插入请求日志落盘之后、进入适配器之前复核停止；适配器在原生状态查询后继续复核。发送前停止明确拒绝，已确认 queued 后仍保存接受事实，不能用迟到取消推翻接收。
 
 每轮单独跟踪在途插入，结束时先关闭引擎，再排空接受/失败日志，最后写本轮终态并释放租约。通信或接受日志失败保留未知，不重发。上层队列持久化和停止的归属由调度管理器处理；运行时不创建新的目标意图或恢复旧周期。
 
@@ -351,7 +351,7 @@ class N_src_logic_execution_rules_usage_ts["usage.ts"] {
 
 ### 成员启动期间的可信停止
 
-`LoopRuntime.startMember` 的可选第四参数只接受可信 `AbortSignal`。它复用主轮的启动停止边界，覆盖租约等待、日志初始化、原生引擎准备及模型调用前检查；不会因尚未登记 `active` 而让 `stop()` 落空。调度层在用户停止、服务关闭和工作区代际退役时同步触发信号。已经保存的领取/日志仍由原终态流程收尾，不删除历史或假装未执行；异常和未知操作继续保留 interrupted。
+`LoopRuntime.StartMember` 的可选第四参数只接受可信 `AbortSignal`。它复用主轮的启动停止边界，覆盖租约等待、日志初始化、原生引擎准备及模型调用前检查；不会因尚未登记 `active` 而让 `stop()` 落空。调度层在用户停止、服务关闭和工作区代际退役时同步触发信号。已经保存的领取/日志仍由原终态流程收尾，不删除历史或假装未执行；异常和未知操作继续保留 interrupted。
 
 ### 执行成员的一次性求助门闩
 
@@ -379,7 +379,7 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 ### 显式新主上下文
 
-`LoopRuntime.startFreshMain(task, message, control)` 只供可信调度入口使用，要求已经登记的 `chat / cbim:main` 绑定。保留逻辑任务与主实例，在取得租约后枚举既有运行目录，并合并 `knownRunIds()` 返回的可靠旧意图（包括尚无日志的意图）；上限 4096 个去重身份。新 runId 与 nativeSessionId 由运行时生成，`beforeRun` 在任何日志或引擎创建前原子保存新周期及上下文边界。
+`LoopRuntime.StartFreshMain(task, message, control)` 只供可信调度入口使用，要求已经登记的 `chat / cbim:main` 绑定。保留逻辑任务与主实例，在取得租约后枚举既有运行目录，并合并 `knownRunIds()` 返回的可靠旧意图（包括尚无日志的意图）；上限 4096 个去重身份。新 runId 与 nativeSessionId 由运行时生成，`beforeRun` 在任何日志或引擎创建前原子保存新周期及上下文边界。
 
 这个入口不读旧运行日志，不传旧 sessionFile、source 或任务进度，不调用 reserveTask 覆盖原目录。旧文件、未知回执与原周期保持原状。`run.started.freshMain` 保存新原生身份与排除集合，便于核对可靠意图；模型和公开 IPC 不能提交这些字段。停止覆盖意图、日志和引擎准备；成功接收意图也不意味着执行成功，重启不自动重放。
 
@@ -399,7 +399,7 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 `RunInputSource` 是判别联合：`MemberResultSource` 表示成员资料；`UserContinuationSource` 为 `{kind:'user-continuation',continuationId,scopeId,waitId,inputRevision}`，表示用户通过专门入口补充原目标，仍作为真实用户消息进入 Pi。`HumanDecisionsSource` 为 `{kind:'human_decisions',continuationId,scopeId,waitId,inputRevision,decisionRevision,decisionIds}`，只由独立显式继续入口产生；其正文是系统转交已保存意见的摘要，不伪装自由用户输入或新业务目标。公开聊天参数不能构造可信来源，日志恢复严格校验并复制标识集合。
 
-`LoopRuntime.start` 第五参 `RunStartControl` 由可信调度注入。取得租约并核实旧日志绑定后生成真实 runId，在新日志和引擎创建前等待 `beforeRun({task,runId})` 提交启动意图。真实 Pi 文件/身份仍在 `engine.start` 内复核，后置失败不能自动还原等待或重放意图。
+`LoopRuntime.Start` 第五参 `RunStartControl` 由可信调度注入。取得租约并核实旧日志绑定后生成真实 runId，在新日志和引擎创建前等待 `beforeRun({task,runId})` 提交启动意图。真实 Pi 文件/身份仍在 `engine.start` 内复核，后置失败不能自动还原等待或重放意图。
 
 `AbortSignal` 覆盖 beforeRun、日志初始化、引擎准备和模型发送窗口；执行管理器在 active 登记前也能取消在途启动。提交前中止不消费检查点，用户取消仍可另行关闭目标；提交后停止保留意图并关闭对应周期。启动回执不等于模型已经运行，最终事实继续由日志报告。跨派发日志与运行日志没有原子提交，不把缺日志意图补造为成功执行。
 
@@ -407,19 +407,19 @@ MemberToolCapabilities --> EngineCapability : 适配
 
 `RunInputSource` 的成员结果分支结构为 `{ kind:'member-results', continuationId, messageIds, taskIds }`。`continuationId` 标识同一主轮收到的一批回传；`messageIds` 为结果信封集合，可以为空以报告没有交付候选的失败或受阻任务；`taskIds` 为非空任务集合，两组 ID 不要求逐项对应。`checkedRunInputSource` 校验 ID、集合唯一性和额外字段，并复制输入，避免调用方在异步启动期间改写来源。
 
-`LoopRuntime.start(task, message, resume?, source?)` 只有在原 `chat` 运行安全完成且没有未决工具时才接收此来源。它仍核对完整原任务及会话文件、持有工作区租约、执行本轮权限检查；结果正文没有新增授权。`run.started` 保存来源，`RunSummary.source` 恢复来源，`EngineContext.source` 传入适配器。启动后停止或失败也保留尝试记录，不能把“曾回注”理解成“已业务验收”。普通用户续聊不带此字段。
+`LoopRuntime.Start(task, message, resume?, source?)` 只有在原 `chat` 运行安全完成且没有未决工具时才接收此来源。它仍核对完整原任务及会话文件、持有工作区租约、执行本轮权限检查；结果正文没有新增授权。`run.started` 保存来源，`RunSummary.source` 恢复来源，`EngineContext.source` 传入适配器。启动后停止或失败也保留尝试记录，不能把“曾回注”理解成“已业务验收”。普通用户续聊不带此字段。
 
-`RuntimeOptions.createEngine({task, runId})` 提供本轮可信身份，便于调度装配派发工具；模型不能指定该身份。自动链路如何在主轮释放租约后启动成员、如何按来源去重及确认信封，由调度协调器负责。大脑不会在读取日志或应用重启时自行重新执行。
+`RuntimeOptions.CreateEngine({task, runId})` 提供本轮可信身份，便于调度装配派发工具；模型不能指定该身份。自动链路如何在主轮释放租约后启动成员、如何按来源去重及确认信封，由调度协调器负责。大脑不会在读取日志或应用重启时自行重新执行。
 
 ### 当前成员执行入口
 
-`member-run.ts` 已实现 `MemberRunBinding` 和 `MemberRunLaunch`：调度先保存任务、成员和运行绑定，再调用 `LoopRuntime.startMember(task, message, launch)`。绑定包括 `workspaceId / teamId / agentId / agentInstanceId / agentSessionId / rootSessionId / taskId / runId / leaseEpoch / planRevision`；原生 `nativeSessionId / sessionFile?` 作为单独的后端启动参数传入，不进入公开任务图。业务任务必须指定成员及非空模块列表，运行日志写入完整绑定，读取时核对任务和轮次身份。
+`member-run.ts` 已实现 `MemberRunBinding` 和 `MemberRunLaunch`：调度先保存任务、成员和运行绑定，再调用 `LoopRuntime.StartMember(task, message, launch)`。绑定包括 `workspaceId / teamId / agentId / agentInstanceId / agentSessionId / rootSessionId / taskId / runId / leaseEpoch / planRevision`；原生 `nativeSessionId / sessionFile?` 作为单独的后端启动参数传入，不进入公开任务图。业务任务必须指定成员及非空模块列表，运行日志写入完整绑定，读取时核对任务和轮次身份。
 
 `startMember` 与普通 `start / resume` 共用租约、工具决策持久化、回执、计划工具和终态处理，使用调度预分配的 `runId`。成员新任务不能伪装为旧 `TaskSpec` 的恢复；现阶段拒绝重复业务任务及普通 `resume` 恢复成员日志，不自动重试。是否能复用同成员通道由调度核实：上轮必须安全完成且没有未决工具，并持有成员及通道执行槽；大脑不会根据角色名寻找最近的 Session。
 
 `EngineContext.nativeSessionId` 使首次启动可以使用成员通道的原生身份，后续任务通过该身份和已核实的 `sessionFile` 继续同一通道。Pi 同时验证文件属于该工作区受管理会话目录，并从真实子进程 `get_state` 核对 `sessionId`，不一致时在模型生成前中断。未提供该字段的普通对话保留原有以 `taskId` 新建会话的行为。
 
-`RuntimeOptions.onEngineReady` 是启动事务的可靠确认点：`engine.start` 完成后，在 `engine.run` 和本轮模型生成之前等待回调。Pi 会在 `start` 返回前等待 `session.bound` 落盘；其他引擎未报告文件时，回调中的 `sessionFile` 可以缺省。回调携带实际 `taskId / runId / sessionFile?`，调度可在此提交成员运行状态和原生会话绑定。回调失败会关闭引擎并记录 `interrupted`，不会发送本轮提示。`onEvent` 只观察已落盘事件，其异常被隔离，不能替代该可靠确认。
+`RuntimeOptions.OnEngineReady` 是启动事务的可靠确认点：`engine.start` 完成后，在 `engine.run` 和本轮模型生成之前等待回调。Pi 会在 `start` 返回前等待 `session.bound` 落盘；其他引擎未报告文件时，回调中的 `sessionFile` 可以缺省。回调携带实际 `taskId / runId / sessionFile?`，调度可在此提交成员运行状态和原生会话绑定。回调失败会关闭引擎并记录 `interrupted`，不会发送本轮提示。`onEvent` 只观察已落盘事件，其异常被隔离，不能替代该可靠确认。
 
 `start / startMember` 返回的是 `{ runId, done }` 句柄，不保证引擎已经准备成功；最终结果通过 `done` 获取。`stop(taskId)` 只请求停止当前活动运行，不存在活动运行时为空操作；停止请求返回不等于终态已经落盘，也不代表工具副作用已回滚。`close()` 禁止新启动，等待启动注册、停止和结束；成员跨任务的互斥与结果交接仍由调度持有。
 
@@ -622,7 +622,7 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 `assertMemberResume` 由后端注入，核实原日志、知识、全覆盖文件基线及私有原生指纹，覆盖 Runtime 与 Pi 准备窗口。原生配置完成、onEngineReady 返回后，`assertMemberResumeInputs` 在真正发 prompt 前再核原日志、知识和业务文件；原 native 指纹已在载入前后核实，此时允许本轮受控配置合法追加。端口没有公开路径参数，不签发任意恢复能力；每任务最多16个检查点，每段只消费一次；持久等待经明确清单和用户继续后可跨应用重启，运行时本身不自动唤醒。
 
-`RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
+`RunSummary.logIntegrity` 为可选的磁盘读取诊断，当前 `RunJournal.Read` 总会提供 `partialTail`。完整前缀仍可供展示；尾行未写完不解析、不截断，也不能据前缀的 settled 证明完整日志。`LoopRuntime` 在创建新引擎或调用启动意图前拒绝续接已知不完整的原日志，并释放预检租约；即使传入工具核实 ID 也不能跳过。内存摘要或旧端口未提供该字段时不补造磁盘诊断。读取本身不授权重放。
 
 ### 周期的保守计量
 
@@ -635,9 +635,9 @@ LoopRuntime ..> AgentEngine : 通过既有契约驱动
 
 `RuntimeOptions.workflowContracts` 只由正式成员冻结知识装配。存在约定而缺少成员绑定或 `describeTool` 时，启动前拒绝；无约定的旧运行保留原策略。`describeTool` 纯分类和参数解析只执行一次，不请求批准；同一描述传给原 `toolPolicy` 授权端，不为 Workflow 创建第二套权限分类。
 
-业务写入或命令先同步核对本轮原任务计划，再执行既有权限/审批；批准返回后，`TaskProgressTools.invalidate(reason, expectedPlanVersion)` 在同一串行状态操作中核对版本并清旧证据，变化则拒绝，不发放工具执行许可。知识写入不属于本片业务计划前置，但继续使旧证据失效；不能因拆分分类步骤保留过期证据。停止仍覆盖审批、持久化与实际返回放行之间的窗口。
+业务写入或命令先同步核对本轮原任务计划，再执行既有权限/审批；批准返回后，`TaskProgressTools.Invalidate(reason, expectedPlanVersion)` 在同一串行状态操作中核对版本并清旧证据，变化则拒绝，不发放工具执行许可。知识写入不属于本片业务计划前置，但继续使旧证据失效；不能因拆分分类步骤保留过期证据。停止仍覆盖审批、持久化与实际返回放行之间的窗口。
 
-有 Workflow 约定时，在途副作用期间不能准备交付：gate 先拒绝，真正 `TaskProgressTools.call` 的串行执行还通过同步 `assertDeliveryReady` 再核一次，防止 gate 与调用之间出现写入。任何与副作用窗口重叠的读取只保留真实日志回执，不进入可引用证据；即使写入先结束、读取后返回也不能证明新产物。必须在副作用真实结束后重新读取，写工具自身的成功回执仍可证明其实际调用。失败、取消和未确认结束不假设没有影响；未结束操作继续阻止交付。此并发约束仅用于声明约定的运行，不改变旧无约定工具的证据代次和采集门闩。
+有 Workflow 约定时，在途副作用期间不能准备交付：gate 先拒绝，真正 `TaskProgressTools.Call` 的串行执行还通过同步 `assertDeliveryReady` 再核一次，防止 gate 与调用之间出现写入。任何与副作用窗口重叠的读取只保留真实日志回执，不进入可引用证据；即使写入先结束、读取后返回也不能证明新产物。必须在副作用真实结束后重新读取，写工具自身的成功回执仍可证明其实际调用。失败、取消和未确认结束不假设没有影响；未结束操作继续阻止交付。此并发约束仅用于声明约定的运行，不改变旧无约定工具的证据代次和采集门闩。
 
 `run.started.workflowContracts` 保存冻结的模块、Workflow 身份、版本及条件。Runtime 的交付 proof 仅证明当前运行满足确定性程序条件；调度结算和目标审阅仍独立读取完整 canonical 重算。主调度的知识管理权限及禁止直接执行业务的边界不变。
 
@@ -678,11 +678,11 @@ RunArtifactTransition 在审批前预占原有效 before 清单；可靠 allowed
 
 ### CSV 实际能力与生命周期
 
-`ValidationFilePort.validateTable` 是可信 CSV 同字节读取端口；旧 JSON 单独端口仍可使用。声明 CSV 却缺 validateTable 时在模型启动及日志创建前拒绝，不能以 JSON 解释器或仅哈希读取代替。RunValidation 从唯一冻结要求选取正确端口，保存实际验证器；共用预占、停止信号、读取预算、知识和代次屏障。完整模式在 CSV 检查两侧重核原全集合，目录新增即使 CSV 未变也阻止出口；旧文件模式保持原边界。
+`ValidationFilePort.ValidateTable` 是可信 CSV 同字节读取端口；旧 JSON 单独端口仍可使用。声明 CSV 却缺 validateTable 时在模型启动及日志创建前拒绝，不能以 JSON 解释器或仅哈希读取代替。RunValidation 从唯一冻结要求选取正确端口，保存实际验证器；共用预占、停止信号、读取预算、知识和代次屏障。完整模式在 CSV 检查两侧重核原全集合，目录新增即使 CSV 未变也阻止出口；旧文件模式保持原边界。
 
 ### PNG 实际解码端口
 
-ValidationFilePort.validateImage须在具有PNG冻结要求的成员启动前实际存在；缺失时不创建模型或日志。RunValidation按原validator选择平台方法，在完整集合复核、停止、知识/进度代次与同一读取时限内取得真实解码判定。完整目录其它文件变化也拒绝，不能用有效PNG头或仅哈希实现冒充该端口。
+ValidationFilePort.ValidateImage须在具有PNG冻结要求的成员启动前实际存在；缺失时不创建模型或日志。RunValidation按原validator选择平台方法，在完整集合复核、停止、知识/进度代次与同一读取时限内取得真实解码判定。完整目录其它文件变化也拒绝，不能用有效PNG头或仅哈希实现冒充该端口。
 
 ## 冻结范围成员执行
 
@@ -728,6 +728,8 @@ Pi、Claude Code、Codex 共同消费 `disableNativeTools`，范围能力开启�
 
 engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapterOptions 和通用进程契约。包导出 engineAdapter；checkedEngineAdapter 在调用 create 前核对协议、身份及期望版本。正式加载还传入 R 静态声明，比较 E 编译声明中的模型协议、角色、依赖、原生目录与历史格式；缺失或不匹配时拒绝启动，不回退或自动重试。展示名称、角色标签和业务介绍不参与语义比较。工厂每次返回独立 AgentEngine，仍沿现有 start/run/steer/stop/close、EngineContext 工具授权和可靠 emit；协议不授予新权限、不注册支持清单。逐角色预算工厂只能选择已冻结角色，缺省 primary。
 
+版本 1 的 `create`、引擎生命周期、EngineContext、EngineToolsPort、运行包 retain 和请求预算端口使用已经发布的小写方法名。它们及对应实现是 PascalCase 的明确协议例外，保证应用更新后仍可加载已安装的原版本引擎；包协议、版本和已保存历史身份不随内部方法更名变化。LoopRuntime、应用服务和内部辅助方法仍使用 PascalCase，不将此例外扩大到整个 execution 目录。
+
 ### 通用包地址
 
 EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。
@@ -755,4 +757,4 @@ AgentBusinessRun.request 可选保存新业务原目标与验收要求；旧记�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

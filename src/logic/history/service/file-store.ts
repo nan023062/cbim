@@ -17,33 +17,33 @@ export class FileAgentHistoryStore implements AgentHistoryStore
   {
   }
 
-  private location(record: AgentHistoryRecord)
+  private Location(record: AgentHistoryRecord)
   {
     return { role: hash(record.view.agentId), session: hash(record.view.sessionId), file: hash(JSON.stringify([record.view.taskId, record.view.runId])) + '.json' };
   }
 
   /** 拒绝应用归档目录中的符号链接；外部字符串只参与 hash，不成为可注入路径片段。 */
-  private async safeDirectory(directory: string)
+  private async SafeDirectory(directory: string)
   {
     await fs.mkdir(directory, { recursive: true });
     if ((await fs.lstat(directory)).isSymbolicLink())
       throw Error('Agent 历史目录不能是符号链接')
   }
 
-  async put(raw: AgentHistoryRecord)
+  async Put(raw: AgentHistoryRecord)
   {
     const record = checkedAgentHistoryRecord(raw, this.workspaceId, this.root),
-      location = this.location(record);
+      location = this.Location(record);
     const role = path.join(this.directory, location.role),
       sessions = path.join(role, 'sessions'),
       session = path.join(sessions, location.session);
     for (const directory of [this.directory, role, sessions, session])
-      await this.safeDirectory(directory);
+      await this.SafeDirectory(directory);
     await atomic(path.join(session, location.file), JSON.stringify(record));
   }
 
   /** 启动读取轻量索引，不扫描正文；每个损坏/未知条目可见，其他可核验记录继续显示。 */
-  async load()
+  async Load()
   {
     const records: AgentHistoryRecord[] = [],
       diagnostics: string[] = [];
@@ -97,7 +97,7 @@ export class FileAgentHistoryStore implements AgentHistoryStore
             try
             {
               const record = checkedAgentHistoryRecord(JSON.parse(await fs.readFile(path.join(folder, session.name, file.name), 'utf8')), this.workspaceId, this.root),
-                expected = this.location(record);
+                expected = this.Location(record);
               if (expected.role !== role.name || expected.session !== session.name || expected.file !== file.name)
                 throw Error('index location mismatch');
               records.push(record);

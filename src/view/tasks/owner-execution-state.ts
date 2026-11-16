@@ -117,50 +117,50 @@ export class OwnerInspectionController
     return this.value
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  private publish(value: OwnerInspectionState)
+  private Publish(value: OwnerInspectionState)
   {
     this.value = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
   /** 仅同步观察对象，不自动读取；新节点/版本不会沿用旧报告或进行中的操作状态。 */
-  observe(task: TaskNode)
+  Observe(task: TaskNode)
   {
     const key = ownerInspectionKey(task);
     if (key === this.value.key)
       return;
-    this.serial.advance();
+    this.serial.Advance();
     this.inFlight = undefined;
     this.task = structuredClone(task);
-    this.publish({ key, loading: false })
+    this.Publish({ key, loading: false })
   }
 
   /** 同一版本双击合并；无轮询，网络失败保留同版本旧报告并明确显示过期读取错误。 */
-  inspect(): Promise<void>
+  Inspect(): Promise<void>
   {
     if (this.inFlight)
       return this.inFlight;
     const task = this.task,
       key = this.value.key,
-      serial = this.serial.advance();
-    this.publish({ ...this.value, loading: true, error: undefined });
+      serial = this.serial.Advance();
+    this.Publish({ ...this.value, loading: true, error: undefined });
     const work = Promise.resolve().then(() => this.read({ ...task.identity, taskId: task.taskId })).then(raw =>
     {
       const view = checkedOwnerInspection(raw, task);
-      if (this.serial.isCurrent(serial))
-        this.publish({ key, loading: false, view })
+      if (this.serial.IsCurrent(serial))
+        this.Publish({ key, loading: false, view })
     }).catch(cause =>
     {
-      if (this.serial.isCurrent(serial))
-        this.publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '负责人核实失败，请重试读取' })
+      if (this.serial.IsCurrent(serial))
+        this.Publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '负责人核实失败，请重试读取' })
     }).finally(() =>
     {
-      if (this.serial.isCurrent(serial))
+      if (this.serial.IsCurrent(serial))
         this.inFlight = undefined
     });
     this.inFlight = work;
@@ -168,10 +168,10 @@ export class OwnerInspectionController
   }
 
   /** 卸载只阻止本地迟到发布，不声称取消了服务端读取。 */
-  dispose()
+  Dispose()
   {
-    this.serial.advance();
+    this.serial.Advance();
     this.inFlight = undefined;
-    this.listeners.clear()
+    this.listeners.Clear()
   }
 }

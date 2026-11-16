@@ -13,26 +13,26 @@ import { fail } from '../../../core/errors';
 export function workspaceIpcHandlers(app: ApplicationServices): IpcHandlers<keyof WorkspaceIpcResponses>
 {
   return {
-    'source.list': async args => new ModuleSourceBrowser(app.workspace(args.workspaceId)).list(args),
-    'source.read': async args => new ModuleSourceBrowser(app.workspace(args.workspaceId)).read(args),
+    'source.list': async args => new ModuleSourceBrowser(app.Workspace(args.workspaceId)).List(args),
+    'source.read': async args => new ModuleSourceBrowser(app.Workspace(args.workspaceId)).Read(args),
     'list': async args =>
     {
-      return app.list();
+      return app.List();
     },
     'architecture.preview': async args =>
     {
-      return new ArchitectureService(app.workspace(args.workspaceId)).preview(args);
+      return new ArchitectureService(app.Workspace(args.workspaceId)).Preview(args);
     },
     'architecture.commit': async args =>
     {
-      return new ArchitectureService(app.workspace(args.workspaceId)).commit(args);
+      return new ArchitectureService(app.Workspace(args.workspaceId)).Commit(args);
     },
     'add': async args =>
     {
-      const entry = await app.catalog.add(args.path);
+      const entry = await app.catalog.Add(args.path);
       try
       {
-        await app.open(entry.id)
+        await app.Open(entry.id)
       }
       catch
       {
@@ -42,61 +42,61 @@ export function workspaceIpcHandlers(app: ApplicationServices): IpcHandlers<keyo
     },
     'open': async args =>
     {
-      return (await app.open(args.id)).view();
+      return (await app.Open(args.id)).View();
     },
     'rename': async args =>
     {
-      const entry = await app.catalog.rename(args.id, args.name);
+      const entry = await app.catalog.Rename(args.id, args.name);
       const ws = app.running.get(args.id);
       if (ws)
         ws.entry.name = entry.name;
-      app.runtime.rename(args.id, entry.name);
+      app.runtime.Rename(args.id, entry.name);
       return entry
     },
     'remove': async args =>
     {
-      return app.remove(args.id);
+      return app.Remove(args.id);
     },
     'relocate': async args =>
     {
-      const entry = await app.catalog.relocate(args.id, args.path, args.confirm === true);
+      const entry = await app.catalog.Relocate(args.id, args.path, args.confirm === true);
       if (entry.id !== args.id)
-        await app.stop(args.id);
-      await app.open(entry.id);
+        await app.Stop(args.id);
+      await app.Open(entry.id);
       return entry
     },
     'snapshot': async args =>
     {
-      return app.workspace(args.id).snapshot();
+      return app.Workspace(args.id).Snapshot();
     },
     'preview': async args =>
     {
-      return app.workspace(args.workspaceId).preview(args);
+      return app.Workspace(args.workspaceId).Preview(args);
     },
     'commit': async args =>
     {
-      return app.workspace(args.workspaceId).commit(args);
+      return app.Workspace(args.workspaceId).Commit(args);
     },
     'movePreview': async args =>
     {
-      const ws = app.workspace(args.id);
-      return ws.preview(await ws.planMove(await ws.read(), args.from, args.to))
+      const ws = app.Workspace(args.id);
+      return ws.Preview(await ws.PlanMove(await ws.Read(), args.from, args.to))
     },
     'task': async args =>
     {
       if (!['validate', 'reindex'].includes(args.name))
         fail('TOOL', '不支持的工具');
-      return app.workspace(args.id).startTask(args.name);
+      return app.Workspace(args.id).StartTask(args.name);
     },
     'cancelTask': async args =>
     {
-      return app.workspace(args.id).cancelTask(args.taskId);
+      return app.Workspace(args.id).CancelTask(args.taskId);
     },
     'local': async args =>
     {
       if (!['memory', 'task-records', 'logs'].includes(args.kind))
         fail('TYPE', '未知本地数据类型');
-      return app.workspace(args.id).localData(args.kind);
+      return app.Workspace(args.id).LocalData(args.kind);
     },
   };
 }

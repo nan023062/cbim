@@ -10,11 +10,11 @@ export type OriginalRecursiveMode='lost-registration'|'lost-result'|'before-call
 /** Lose only a real boundary response; source lookup must never replay the business operation. */
 export async function prepareRecursiveOriginal(app:Application,project:string,provider:Awaited<ReturnType<typeof mainToolContractProvider>>,mode:OriginalRecursiveMode){
  const seed=await seedMainToolContract(app,project,provider),id=seed.entry.id;let submissions=0,registrations=0;
- const bind=AgentCallScheduler.prototype.bind,startRun=AgentBusinessRuns.prototype.start;
- vi.spyOn(AgentBusinessRuns.prototype,'start').mockImplementation(async function(this:AgentBusinessRuns,...args:Parameters<typeof startRun>){
+ const bind=AgentCallScheduler.prototype.Bind,startRun=AgentBusinessRuns.prototype.Start;
+ vi.spyOn(AgentBusinessRuns.prototype,'Start').mockImplementation(async function(this:AgentBusinessRuns,...args:Parameters<typeof startRun>){
   const result=await startRun.apply(this,args);registrations++;if(mode==='lost-registration')throw Error('TEST_REGISTRATION_REPLY_LOST');return result;
  });
- vi.spyOn(AgentCallScheduler.prototype,'bind').mockImplementation(function(this:AgentCallScheduler,...args:Parameters<typeof bind>){
+ vi.spyOn(AgentCallScheduler.prototype,'Bind').mockImplementation(function(this:AgentCallScheduler,...args:Parameters<typeof bind>){
   const result=bind.apply(this,args),call=result.capability.tools.call.bind(result.capability.tools);
   result.capability.tools.call=async(...input:Parameters<typeof call>)=>{
    if(input[0]!=='cbim_agent_call')return call(...input);
@@ -25,10 +25,10 @@ export async function prepareRecursiveOriginal(app:Application,project:string,pr
  });
  try{
   provider.release();
-  const started=await app.dispatch('loop.chat',{id,message:data.goal,options:{permission:'read',turnTimeoutMs:60000}});
-  await vi.waitFor(async()=>{if(provider.errors.length)return;expect((await app.workspace(id).dispatchStore.read()).scopes?.[0]?.status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
+  const started=await app.Dispatch('loop.chat',{id,message:data.goal,options:{permission:'read',turnTimeoutMs:60000}});
+  await vi.waitFor(async()=>{if(provider.errors.length)return;expect((await app.Workspace(id).dispatchStore.Read()).scopes?.[0]?.status).toBe('closed');expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
   expect(provider.errors).toEqual([]);expect(submissions).toBe(1);expect(registrations).toBe(mode==='before-call'?0:1);
-  const state=await app.workspace(id).dispatchStore.read(),thread=await app.execution(id).thread(started.taskId);
+  const state=await app.Workspace(id).dispatchStore.Read(),thread=await app.Execution(id).Thread(started.taskId);
   expect(state.graphs[0].tasks).toEqual([]);expect(state.agentBusinessRuns??[]).toHaveLength(mode==='before-call'?0:1);
   expect(provider.member).toHaveLength(mode==='lost-result'?5:0);expect(provider.main).toHaveLength(3);
   return {seed,started,state,thread,submissions,registrations,identity:{workspaceId:id,rootSessionId:started.taskId}};

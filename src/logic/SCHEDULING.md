@@ -12,7 +12,7 @@ loop-engine 只在 coordinator 且 Main 提供 WebToolsPort 时注册两个网�
 
 ### 主会话反馈连接与本轮装配
 
-`ExecutionServices.feedbackTools` 由桌面为每次主运行捕获固定连接；`feedbackStatus` 单独提供只读本机连接检查，调度只依赖 Logic 领域契约 纯协议，不导入桌面认证实现。`loop-engine` 根据实际端口一次性成对装配 submit／receipt；独立 `FeedbackStatusTool` 在未连接时仍存在，执行成员不继承。没有桌面端口的主会话报告组件未装配，不因此获得外部写权限。
+`ExecutionServices.FeedbackTools` 由桌面为每次主运行捕获固定连接；`feedbackStatus` 单独提供只读本机连接检查，调度只依赖 Logic 领域契约 纯协议，不导入桌面认证实现。`loop-engine` 根据实际端口一次性成对装配 submit／receipt；独立 `FeedbackStatusTool` 在未连接时仍存在，执行成员不继承。没有桌面端口的主会话报告组件未装配，不因此获得外部写权限。
 
 普通对话新一轮及继续原会话都会重新创建运行并捕获当前连接；同一活动运行中途登录不替换原端口或权限，诊断明确要求新一轮。已连接只表示本机保存了连接，不承诺网络可达或提交成功；未知提交的原目标与防重屏障继续由反馈服务负责。诊断变化不进入派发、业务验收或更新子系统。
 
@@ -24,7 +24,7 @@ loop-engine 只在 coordinator 且 Main 提供 WebToolsPort 时注册两个网�
 
 ### 人工证据观察与来源提交的锁顺序
 
-`ScopeHumanDecisionService.decide` 与 `ScopeHumanContinuationService.accept` 先查询原命令，再在 DispatchStore 事务之外核实 canonical、业务文件与知识。`humanEvidenceStateStamp` 冻结原周期、图、运行、实例和会话；人工决定版本另行 CAS。最终以 Knowledge 快照 → DispatchStore 短事务顺序核实知识版本和证据状态，避免受控知识来源提交与人工验收发生逆序等待。任何新候选、主周期变化或新的人工意见都会拒绝过期观察；保存意见不消费等待，接续仍只消费一次。
+`ScopeHumanDecisionService.Decide` 与 `ScopeHumanContinuationService.Accept` 先查询原命令，再在 DispatchStore 事务之外核实 canonical、业务文件与知识。`humanEvidenceStateStamp` 冻结原周期、图、运行、实例和会话；人工决定版本另行 CAS。最终以 Knowledge 快照 → DispatchStore 短事务顺序核实知识版本和证据状态，避免受控知识来源提交与人工验收发生逆序等待。任何新候选、主周期变化或新的人工意见都会拒绝过期观察；保存意见不消费等待，接续仍只消费一次。
 
 文件和 canonical 是有界观察，不承诺跨外部进程的原子快照。知识写入可以在观察期间完成，但旧依据随后失效；失败不追加人工意见或主运行，原命令回执不重新观察或重放。
 
@@ -48,7 +48,7 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 ### 安全等待附件的运行准备与回执
 
-`WorkspaceExecutionManager.continueGoal` 先查询原命令回执，同原始 message、附件 ID 顺序和 options 的已受理请求直接返回，快照后来缺失也不重新准备或运行。新请求先核 waiting，再在本次 pending 停止信号下准备附件，使用同一模型配置预检视觉能力，随后取得全局/本地准入；`beforeRun` 才把可信清单和 signal 交给原预算/CAS 事务消费等待。原 input 保留用户正文及 ID，运行正文使用该次展开快照，canonical source 绑定清单哈希。
+`WorkspaceExecutionManager.ContinueGoal` 先查询原命令回执，同原始 message、附件 ID 顺序和 options 的已受理请求直接返回，快照后来缺失也不重新准备或运行。新请求先核 waiting，再在本次 pending 停止信号下准备附件，使用同一模型配置预检视觉能力，随后取得全局/本地准入；`beforeRun` 才把可信清单和 signal 交给原预算/CAS 事务消费等待。原 input 保留用户正文及 ID，运行正文使用该次展开快照，canonical source 绑定清单哈希。
 
 `ExecutionLaunchContext.preparedInputImages` 只属于本次用户接续，不进入可复用 options 或成员回注批次。准备、工厂和受理 await 后继续核查停止；已提交后的异常只查询原回执，不回滚等待、复制意图或重放附件。`GOAL_ATTACHMENT_*` 专码仅表示受理前附件/能力拒绝；通用取消、模型和通信错误不能一概当作未受理。
 
@@ -58,9 +58,9 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 `workflowSelections` 只用于执行角色分工。`cbim:main` 可保留 moduleIds 定位受控知识治理，但不能声明业务流程选择；严格输入、持久计划和公开输出均拒绝该组合，主知识回执不代替业务 Workflow 条件。
 
-`AutoCollaboration.tools` 为 Goal 三工具和 Dispatch 六工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，追加依赖使用独立命令域，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
+`AutoCollaboration.Tools` 为 Goal 三工具和 Dispatch 六工具绑定本轮 workspace/root/scope/run；`mainToolCommandId` 由实际桥调用 ID 计算原有命令键，追加依赖使用独立命令域，提交与回包核验共用此算法，不改写已持久化命令。公开输出只验证事实，不产生权限或新的执行能力。
 
-`ScopeGoalService.inspectWithGraph` 仅一次 `DispatchStore.read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。
+`ScopeGoalService.InspectWithGraph` 仅一次 `DispatchStore.Read()`，从相同权威快照选择本 scope 与本 root 图，避免两次读取之间的变更被拼成一致事实。Auto 只投影公开 scope：保留重规划/只读核实的约束与来源证明，去除私有 native/排除集合 context；空返回仍交工具业务 Schema 拒绝，不降级到另一读取。
 
 调用方先执行领域事务，再校验唯一序列化的公开 wire。回包损坏可以发生在可靠提交之后，因此 `TOOL_OUTPUT_INVALID` 不回滚、不重试，不抹掉已派发任务或原审阅；协调器批次关联仅读取形状可用的 taskId/任务 ID 数组，空值、缺字段和坏类型不补造或提前抛字段访问异常，原结果继续交唯一 wire 校验。关联不等于业务输出合格，主轮结束后仍须通过原启动和业务完成门禁。查询原记录与重开存储均不重放命令。
 
@@ -76,7 +76,7 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 ### 安全等待中的本机人工决定
 
-`WorkspaceDispatchService.humanDecisions` 提供 `ScopeHumanDecisionService.preview / decide / inspect / history`。只有当前 waiting 周期中含真实成员结果的 human 验收项可提交；`ScopeGoalService.validateHumanCandidates` 重读主审阅及整项成员候选，核对完整 canonical、原生通道登记、真实交付、角色/模块分工和当前知识。缺失、截断、矛盾或未决工具事实不能补签。只读文件报告的 matches 不是授权依据。
+`WorkspaceDispatchService.humanDecisions` 提供 `ScopeHumanDecisionService.Preview / decide / inspect / history`。只有当前 waiting 周期中含真实成员结果的 human 验收项可提交；`ScopeGoalService.ValidateHumanCandidates` 重读主审阅及整项成员候选，核对完整 canonical、原生通道登记、真实交付、角色/模块分工和当前知识。缺失、截断、矛盾或未决工具事实不能补签。只读文件报告的 matches 不是授权依据。
 
 预览不默认选择基线；明确选择后才取得短期业务读占用。所有候选的文件合并为一次有界读取（最多 16 个、单文件 8 MiB、总计 32 MiB），不逐候选重置上限。接受要求整项全部候选有同轮有效采集记录、成功回执和完全匹配的文件；拒绝/补证可没有选择或保留 changed/missing 观察，但不能借坏日志伪造候选。成功命令的影响范围不可枚举时保留限制，不与真实 unknown 工具结果混淆；决定不证明整个工作区或全部副作用已核实。
 
@@ -88,7 +88,7 @@ pending/unknown 阻止规划、派发、续执行预约、新成员领取、成�
 
 ### 按已保存人工决定显式继续
 
-`ScopeHumanContinuationService` 和 `WorkspaceExecutionManager.continueFromHumanDecisions` 使用独立 `loop.humanContinue / humanContinuation`，不接受自由正文、actor、proof 或文件哈希。请求必须列出本等待每个人工项跨 basis 的最新决定全集，并核对 goal/input/decision 版本；未记录的人工项不自动满足，旧 wait 接受不沿用。
+`ScopeHumanContinuationService` 和 `WorkspaceExecutionManager.ContinueFromHumanDecisions` 使用独立 `loop.humanContinue / humanContinuation`，不接受自由正文、actor、proof 或文件哈希。请求必须列出本等待每个人工项跨 basis 的最新决定全集，并核对 goal/input/decision 版本；未记录的人工项不自动满足，旧 wait 接受不沿用。
 
 预检不授予运行权。取得实际运行准入后，Runtime beforeRun 的同一派发事务再次核 canonical、知识、接受所选文件以及预算，保存 `kind:human_decisions` 意图、原业务主体与受理前任务全集，消费 wait、inputRevision 加一、清 review 并登记新主 run。原 input、旧 plan、人决定历史和候选不改；新 plan 必须覆盖最新输入。停止信号在核实和预算 await 后、提交前复核；事务成功后取消只封存这次意图，不还原等待或重放。
 
@@ -108,9 +108,9 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 同周期未启动依赖的单条替换
 
-`QueuedDependencyReplacementService` 由 `WorkspaceDispatchService.replaceQueuedDependency` 提供给当前主轮闭包。事务内先选择同 scope 的原前置、替代候选和目标节点的完整启用后继闭包，核对图/目标/节点/边版本及主运行归属清单；旧周期没有 `runTracking` 不补造身份。闭包中任一任务已领取或执行、已撤销、角色/模块不符合当前计划，整体拒绝。
+`QueuedDependencyReplacementService` 由 `WorkspaceDispatchService.ReplaceQueuedDependency` 提供给当前主轮闭包。事务内先选择同 scope 的原前置、替代候选和目标节点的完整启用后继闭包，核对图/目标/节点/边版本及主运行归属清单；旧周期没有 `runTracking` 不补造身份。闭包中任一任务已领取或执行、已撤销、角色/模块不符合当前计划，整体拒绝。
 
-来源须为安全求助或明确失败。`ScopeGoalService.validateDependencySource` 重读全部登记运行，核对完整 TaskSpec、成员绑定、连续日志、原生会话、终态及工具授权/回执；缺失、截断、未知结果不能算未执行。替代候选使用同一目标证据校验，再核对当前知识基线和来源模块覆盖。每个待办复用知识准备，提交前再次复核候选知识；读取期间停止或知识变化不提交半条边。知识与派发记录不是跨存储原子锁，也不证明外部产物没有变化。
+来源须为安全求助或明确失败。`ScopeGoalService.ValidateDependencySource` 重读全部登记运行，核对完整 TaskSpec、成员绑定、连续日志、原生会话、终态及工具授权/回执；缺失、截断、未知结果不能算未执行。替代候选使用同一目标证据校验，再核对当前知识基线和来源模块覆盖。每个待办复用知识准备，提交前再次复核候选知识；读取期间停止或知识变化不提交半条边。知识与派发记录不是跨存储原子锁，也不证明外部产物没有变化。
 
 成功事务只退役原边、新建固定候选的依赖边、更新目标节点与其成员等待视图，追加不可变 `dependencyReplacements`。目标任务 revision 增一，planRevision、实例/会话、派发信封、目标和验收不变；来源、替代任务、后继节点不被改写。审计和事件共用提交时间，同命令返回原回执而不重读证据或追加历史；冲突 payload 拒绝。
 
@@ -118,13 +118,13 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 新业务重规划的主执行接线
 
-`WorkspaceExecutionManager.replanExecution` 与只读核实入口分开，先按稳定命令查询原回执，未受理才预检指定核实周期的证据和显式权限。新业务目标不读取旧 TaskSpec 或复制旧工具参数。`startFreshMain.beforeRun` 经 `AutoCollaboration.acceptReplan` 在真实租约内重新核验并持久化意图，再建立新的 Cycle；同主实例和任务图根不变，新业务使用新原生上下文、执行实例和自己的目标审阅。
+`WorkspaceExecutionManager.ReplanExecution` 与只读核实入口分开，先按稳定命令查询原回执，未受理才预检指定核实周期的证据和显式权限。新业务目标不读取旧 TaskSpec 或复制旧工具参数。`startFreshMain.beforeRun` 经 `AutoCollaboration.AcceptReplan` 在真实租约内重新核验并持久化意图，再建立新的 Cycle；同主实例和任务图根不变，新业务使用新原生上下文、执行实例和自己的目标审阅。
 
 队列保持暂停；停止版本在串行排队前捕获，预检、工厂等待及意图提交都受停止屏障保护。已提交后的启动或返回失败保留原回执；仅本次真实 runId 的意图可被故障收束，不能因此关闭旧命令或重复启动。Team 主角色只调度和受控知识治理，Auto 可直接工作；旧核实周期的只读约束不因新业务获得 ask/execute 而变化。
 
 ### 新只读核实周期的主执行接线
 
-`WorkspaceExecutionManager.recoverExecution` 先查询稳定请求回执，未受理才重新核实来源并准备只读模型。`startFreshMain.beforeRun` 通过 `AutoCollaboration.acceptRecovery` 持久化新 scope，然后登记内存 Cycle；模型工具装配只能使用已登记的新周期。普通队列保持暂停，用户观察作为未核实陈述，不改写旧目标或未知工具回执。
+`WorkspaceExecutionManager.RecoverExecution` 先查询稳定请求回执，未受理才重新核实来源并准备只读模型。`startFreshMain.beforeRun` 通过 `AutoCollaboration.AcceptRecovery` 持久化新 scope，然后登记内存 Cycle；模型工具装配只能使用已登记的新周期。普通队列保持暂停，用户观察作为未核实陈述，不改写旧目标或未知工具回执。
 
 停止/关闭先取消尚未 active 的启动信号，等待恢复意图事务结束后收束新周期；提交后的异常只核对并关闭本次真实 runId，不误处理旧重复回执。新周期的主运行与成员启动均受 read 限制，成员回注和 waiting 补充不得提升权限。主 Agent 继续负责模块/团队匹配和目标审阅，实际只读核实由新执行实例承担。
 
@@ -157,7 +157,7 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 周期目标规划、审阅与结束门禁
 
-`ScopeGoalService(owner, store, ports?)` 与派发复用串行事务；`ScopeGoalPorts.inspectMember(run)` 和 `inspectMain(rootSessionId, runId)` 仅按可信绑定读取 canonical 日志。`inspect` 不读日志；`plan` 解析真实静态角色、有效维护模块、当前知识基线并保存责任映射；无日志端口时仍可规划，但 review / validateCompletion / validateWaiting 明确拒绝。主角色仅治理且 moduleIds=[] 时不要求业务知识通过结构校验，保留修复损坏知识的入口。
+`ScopeGoalService(owner, store, ports?)` 与派发复用串行事务；`ScopeGoalPorts.InspectMember(run)` 和 `inspectMain(rootSessionId, runId)` 仅按可信绑定读取 canonical 日志。`inspect` 不读日志；`plan` 解析真实静态角色、有效维护模块、当前知识基线并保存责任映射；无日志端口时仍可规划，但 review / validateCompletion / validateWaiting 明确拒绝。主角色仅治理且 moduleIds=[] 时不要求业务知识通过结构校验，保留修复损坏知识的入口。
 
 - `plan(identity, scopeId, runId, commandId, draft)` 和 `review(...)` 都接受 expectedRevision，幂等命令包含完整草案指纹。身份由主轮闭包注入，模型不能指定 scope、run 或存储路径。最多 64 次决策；不通过重规划删改既有人工作业验收项。
 - `validateDispatch(state, scope, task, knowledgeRevision)` 在派发事务中核实存在当前计划、没有阻塞/未清除的审阅、当前知识版本一致，角色与模块集合匹配责任分配。审阅后再派工必须显式 replan。旧无 goal 记录不补造计划。
@@ -171,11 +171,11 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 ### 安全持久等待检查点
 
-`WorkspaceDispatchService.parkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.validateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期成员运行均已结算，待办仅可按显式 memberPause 完整保留可靠检查点及未领取后继；同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
+`WorkspaceDispatchService.ParkScope(identity, scopeId, summary, mainRunIds)` 仅供可信协调器在主运行实际收尾并释放资源后调用。它在派发串行事务内调用 `ScopeGoalService.ValidateWaiting`：当前 awaiting_user 审阅属于同一主运行，主运行的传入摘要与 canonical 日志均为 completed 且无未决/未知工具；图游标、知识版本、副作用界限未变；本周期成员运行均已结算，待办仅可按显式 memberPause 完整保留可靠检查点及未领取后继；同主会话不存在 starting/running，包括旧无 scope 的运行。所有本周期成员运行再读 canonical 日志核验身份和工具终态；明确 failed/cancelled 可等待，interrupted 或未知副作用拒绝。已有证据仍按原审阅规则复核，不将等待或用户排队文字当成人工验收。
 
 成功后只在现有事务日志写 status=waiting 与 `DispatchScopeWait`，原目标和审阅不改写、graph cursor 不推进，也不新增存储。可信主轮清单立即复制，1–32 个唯一 runId 且包含当前主运行；用于保留已消耗预算，不自动恢复任何运行。等待幂等键包含周期和真实主 runId，同周期后续再等待创建独立检查点；事务后再次核实当前状态，旧成功回执不能掩盖已取消。waiting 占据该根唯一未关闭槽，拒绝新周期、计划、审阅、派工或成员启动；close(cancelled/failed/interrupted) 保留检查点并释放执行实例，close(completed) 拒绝。`recoverScopes` 只收束遗留 active；`waitingScopes` 内部只读枚举 waiting，无 IPC 自动恢复能力。
 
-`AutoCollaboration.initialize` 只重建 waiting 根占位并暂停相应用户队列，不读取/启动模型、不恢复成员租约。busy 同时覆盖正在调度和已安全等待的周期。停泊后移出活动循环；应用 shutdown 保留 waiting；用户 stop 与停泊提交竞争时，仍会在提交完成后查找并取消等待周期。queue enqueue 和普通 resume 在 waiting 时只保存为 paused；继续队列返回 GOAL_WAITING，不能把“同意”等排队文字解释为继续原目标或人工批准。显式补充走独立入口，不解冻 closed 或 goal.blocked。
+`AutoCollaboration.Initialize` 只重建 waiting 根占位并暂停相应用户队列，不读取/启动模型、不恢复成员租约。busy 同时覆盖正在调度和已安全等待的周期。停泊后移出活动循环；应用 shutdown 保留 waiting；用户 stop 与停泊提交竞争时，仍会在提交完成后查找并取消等待周期。queue enqueue 和普通 resume 在 waiting 时只保存为 paused；继续队列返回 GOAL_WAITING，不能把“同意”等排队文字解释为继续原目标或人工批准。显式补充走独立入口，不解冻 closed 或 goal.blocked。
 
 ### 显式补充的单次消费
 
@@ -191,13 +191,13 @@ human satisfied 只接受当前 input 已消费的 `human-decision` 引用，且
 
 一次用户任务对应一个持久化 `DispatchScope`，可以跨多个主模型轮次、多个成员执行和结果回传。`starting` 在模型工厂准备后、模型启动前调用 `openScope`；可信结果回注沿用原周期，不能新建周期。每个模型轮仍保留独立 batch，以准确记录本轮派发和回注来源。普通聊天在最新主轮正常结束且没有规划、派工或知识写入后关闭生命周期；正式工作必须由主 Agent 提交 complete 审阅申请，并在主运行结算后通过真实证据、版本和全周期状态复核，才允许以 completed 关闭。awaiting_user 则须通过独立安全检查后持久等待；其他不满足要求的情况继续分析、重规划或明确记录阻塞，不能把空回复或底层 run.completed 当作成功；首个主轮派发完成不关闭。失败、停止、启动失败和应用退出都会尝试收束活动周期：等待在途派发/启动完成，停止成员并等待真实结算，再调用 `closeScope` 释放执行实例；已安全 waiting 在应用退出时保留。历史任务和运行日志保留，关闭失败继续报告诊断并保留真实状态，不伪装为已释放。
 
-用户队列在周期关闭事务完成前保持 busy，成功关闭后才由 `collaborationReady` 开始下一条 pending 用户消息的新周期；已暂停项不自动恢复。用户停止和启动工厂等待之间用停止版本核验，防止异步返回覆盖较新的停止请求。重开时先 `MemberExecutionManager.initialize` 将遗留运行结算为 interrupted，再 `recoverScopes` 关闭遗留 active 周期、`AutoCollaboration.initialize` 保留安全 waiting 占位；不自动启动任何成员或投递历史结果。
+用户队列在周期关闭事务完成前保持 busy，成功关闭后才由 `collaborationReady` 开始下一条 pending 用户消息的新周期；已暂停项不自动恢复。用户停止和启动工厂等待之间用停止版本核验，防止异步返回覆盖较新的停止请求。重开时先 `MemberExecutionManager.Initialize` 将遗留运行结算为 interrupted，再 `recoverScopes` 关闭遗留 active 周期、`AutoCollaboration.Initialize` 保留安全 waiting 占位；不自动启动任何成员或投递历史结果。
 
 协调器保存主轮选择的公开 profileId/model/permission，不保存密钥或复制 allowAll。主轮安全完成、释放租约后才启动就绪成员；真实租约释放与可靠成员结算触发后续推进，不轮询磁盘。成员启动时重新解析该模型配置并冻结执行知识，同一成员串行，写冲突交给共享租约。未满足外部前置、启动失败或 blocked 如实回传，不伪造候选。
 
 结果先作为 `member-results` 可信来源登记到主会话运行日志，并经 Pi custom 消息送入原生上下文，然后才确认结果信封。来源登记或启动失败保留未处理信封；登记成功但确认失败不重复运行。待处理批次仅存在于当前进程，重启只恢复任务、信封和来源事实，不自动恢复协调执行。
 
-`WorkspaceExecutionManager.attachCollaboration` 由可信装配层调用一次，接收 `starting / startFailed / busy / settled / stop`，不通过公开 IPC 设置回调。`startFailed` 清理已打开的周期，结果回注遇到暂时租约冲突时保留原周期等待。`settled` 仅在运行收尾、工作区占用释放和 active 删除后同步通知协调器；回调登记下一步而不等待成员整轮执行。无法核实收尾时传入 undefined，不把失败当作主会话正常完成。
+`WorkspaceExecutionManager.AttachCollaboration` 由可信装配层调用一次，接收 `starting / startFailed / busy / settled / stop`，不通过公开 IPC 设置回调。`startFailed` 清理已打开的周期，结果回注遇到暂时租约冲突时保留原周期等待。`settled` 仅在运行收尾、工作区占用释放和 active 删除后同步通知协调器；回调登记下一步而不等待成员整轮执行。无法核实收尾时传入 undefined，不把失败当作主会话正常完成。
 
 `continueFromResults` 在会话串行边界中核验最新 chat 运行已 completed、无未决工具且原生会话存在，携带 `RunInputSource` 调用大脑续跑。来源包含稳定的 continuationId、结果 messageIds 和涉及的 taskIds，不允许通过用户 resume 参数注入。失败或 blocked 成员可以没有结果信封，但仍必须有任务集合和接续身份。相同 continuationId、同批来源及相同正文返回已经保存的运行回执；改变集合、正文或改用新标识重复消费 messageId 会拒绝。该去重从运行日志恢复，不靠内存标记；回执只代表可靠启动，候选和收件仍不等于验收。
 
@@ -433,11 +433,11 @@ MemberMailbox ..> DispatchGraphStore : 去重和投递事实
 
 ### 主会话目标的只读展示端口
 
-`WorkspaceDispatchService.sessionRead` 严格解析主会话身份、graph/scope 两条独立游标与选中详情 stamp，再调用存储的单屏障读取。服务不组合多次独立 read，也不为了展示创建图或周期。它返回生命周期和计划/审阅事实，由界面区分完成申请、等待成员、阻塞与最终结束；不以主模型的 completed 覆盖 scope 状态。原图 snapshot/delta 继续提供兼容读取。
+`WorkspaceDispatchService.SessionRead` 严格解析主会话身份、graph/scope 两条独立游标与选中详情 stamp，再调用存储的单屏障读取。服务不组合多次独立 read，也不为了展示创建图或周期。它返回生命周期和计划/审阅事实，由界面区分完成申请、等待成员、阻塞与最终结束；不以主模型的 completed 覆盖 scope 状态。原图 snapshot/delta 继续提供兼容读取。
 
 ### 成员异常的只读核实
 
-`MemberExecutionManager.report` 委托 `ExecutionReportService`，只调用派发存储 read 与指定 run 的 canonical inspect，不调用 initialize、模型准备、租约申请、结算、收件确认或日志修复。派发状态在日志读取前后各读一次；相关事实改变时整份结果标记为未知。日志与派发存储不是同一个原子事务，`stable` 只表示这两个派发屏障一致，不证明外部产物没有变化。
+`MemberExecutionManager.Report` 委托 `ExecutionReportService`，只调用派发存储 read 与指定 run 的 canonical inspect，不调用 initialize、模型准备、租约申请、结算、收件确认或日志修复。派发状态在日志读取前后各读一次；相关事实改变时整份结果标记为未知。日志与派发存储不是同一个原子事务，`stable` 只表示这两个派发屏障一致，不证明外部产物没有变化。
 
 `execution-report-facts.ts` 根据 proposed、allowed/denied、finished 及可信 receipt 核实工具链、身份和参数/结果摘要；Pi 的 started 可早于权限门禁，只是工具尝试，不作授权证据。重复授权/结束、缺失回执、未知结果与损坏字段保守记为未知；合法 denied 后的原生失败结束仍保持 denied。工具失败可能已有改动，成功仅为成功回执，均不等于验收通过。活动运行尚未收到终态时可以显示 in_flight；终态后的未决操作、截断日志或身份不符不能显示 settled。
 
@@ -458,7 +458,7 @@ MemberMailbox ..> DispatchGraphStore : 去重和投递事实
 
 `ScopeReplanService` 通过独立 `replans.preview / inspect / preflight / accept` 提供新业务周期。preview 只读、按显式点击核实；不足时返回安全 issues，不回显坏日志正文或路径。accept 在真实 runId 到达后于单一派发事务重查来源、完成证明、当前知识、模块覆盖和 source report 的联合 basis，并保存新 scope；事务内报告读取绑定候选状态，不重入存储。主会话不得有 active/waiting 周期或活动成员运行。
 
-`ScopeGoalService.validateCompletedInspection` 不把封存周期伪装成 active，也不要求释放成员后的当前图游标等于旧审阅游标。它重新验证当前 complete 审阅、全部任务和替代关系、真实交付候选/工具哈希及当前知识基线；逐一检查所有成员运行和从 review 沿 resumeFrom 追到 initialRunId 的完整主链。主链限 32 轮、无环、同主身份，同一 session.bound 原生身份/路径，初始 freshMain 必须匹配持久意图。未知回执、不完整日志、未决工具、活动租约、写入或命令授权均拒绝。
+`ScopeGoalService.ValidateCompletedInspection` 不把封存周期伪装成 active，也不要求释放成员后的当前图游标等于旧审阅游标。它重新验证当前 complete 审阅、全部任务和替代关系、真实交付候选/工具哈希及当前知识基线；逐一检查所有成员运行和从 review 沿 resumeFrom 追到 initialRunId 的完整主链。主链限 32 轮、无环、同主身份，同一 session.bound 原生身份/路径，初始 freshMain 必须匹配持久意图。未知回执、不完整日志、未决工具、活动租约、写入或命令授权均拒绝。
 
 canonical 日志和知识在核验末尾重读，派发预览前后也比较状态；变化使证明失效。它们不是跨存储原子锁，更不证明外部产物未经修改。原业务来源报告可以仍为 unknown，新核实证据不能抹掉这一事实。requiredModules 包括原业务计划和所选来源任务的模块并集，成功核实候选须完整覆盖。原业务 human 项进入不可变 proof，首个新计划即强制继承；旧来源无计划则拒绝。
 
@@ -476,7 +476,7 @@ canonical 日志和知识在核验末尾重读，派发预览前后也比较状�
 
 ### 主调度撤销未启动任务
 
-`WorkspaceDispatchService.cancelQueued` 委托 `QueuedTaskCancelService`。服务在派发存储事务内调用 Logic 领域契约的 `queuedCancellationSelection`，准确核对图游标、任务版本、原周期和 never-run/never-claimed 事实；不读取模型、不发送停止、不复制旧工具参数。只有显式提供完整的启用依赖后继集合才能提交，任何一项不满足则全部不变。成员实例仅从空闲/等待转 idle，租约和通道保留至原周期关闭。
+`WorkspaceDispatchService.CancelQueued` 委托 `QueuedTaskCancelService`。服务在派发存储事务内调用 Logic 领域契约的 `queuedCancellationSelection`，准确核对图游标、任务版本、原周期和 never-run/never-claimed 事实；不读取模型、不发送停止、不复制旧工具参数。只有显式提供完整的启用依赖后继集合才能提交，任何一项不满足则全部不变。成员实例仅从空闲/等待转 idle，租约和通道保留至原周期关闭。
 
 返回回执包含明确 cancelledTaskIds 与提交后 graphCursor；记录保存提交前基线与原节点版本。幂等同命令在当前状态检查前返回旧结果，变参拒绝；读取或重启不会重新撤销或启动工具。领取和撤销竞争由同一个 store.tail 串行屏障决定，已经登记 run 的任务不能换名为未启动撤销。
 
@@ -486,7 +486,7 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 ### 已受理协作的全局并发等待
 
-`ExecutionLaunchContext` 和 `ExecutionAdmissionWait` 是可信进程内端口，不进入用户 Options、公开 IPC 或模型 Schema。工作区装配把主/成员实际租约接入唯一全局准入服务；`WorkspaceExecutionLease.canAcquire` 仅判断实例串行与读写冲突，资格检查不占资源。主普通启动在准入成功后的 `beforeRun` 打开 scope；成员在同一领取事务内先取得资格再记录 run/claim。直接请求没有长期等待票，额度不足明确未受理。
+`ExecutionLaunchContext` 和 `ExecutionAdmissionWait` 是可信进程内端口，不进入用户 Options、公开 IPC 或模型 Schema。工作区装配把主/成员实际租约接入唯一全局准入服务；`WorkspaceExecutionLease.CanAcquire` 仅判断实例串行与读写冲突，资格检查不占资源。主普通启动在准入成功后的 `beforeRun` 打开 scope；成员在同一领取事务内先取得资格再记录 run/claim。直接请求没有长期等待票，额度不足明确未受理。
 
 成员拿到名额后仍须在知识准备、模型解析及提交前的每个异步边界核实批次/owner资格。已核实归属的待启动请求有独立停止标记，手动 stop 不必等待同一派发事务才能生效；跨 root 的停止不能设置标记。持久提交期间失效则保留已提交意图，以取消结算收尾，不创建大脑。执行前重查知识后的边界也复核资格，防止退役与准备交错后短暂启动模型。已登记 handle 持独立 AbortController，由 stop/close 及 owner 退役同步触发，传入 startMember 覆盖 Runtime.active 尚未注册的窗口；停止不是回滚，未知启动仍保留 interrupted。
 
@@ -498,7 +498,7 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 普通主轮在 Runtime 的 beforeRun 取得真实 runId 后，使用 `openScope(identity,scopeId,input,runId)` 原子创建周期与 `runTracking`。结果回注通过 `registerMainRun` 追加原周期；显式补充在消费 waiting 的事务内追加，新核实与业务重规划各在其受理事务登记独立首轮。追加只保存周期、不顺带改变图或目标。legacy 缺少清单时原样保留，不能从时间、TaskSpec 或已有文件猜测完整归属。已登记却无日志的运行仍保留为未核实意图；fresh 上下文排除集合包含这些清单。
 
-`ScopeUsageService.read` 只读取所选 scope 的最多 32 个主轮及有界成员来源。成员使用 task.scopeId/runIds 与 DispatchRun.binding，保留实例释放后的历史；主轮必须匹配登记实例及 conversation 通道。日志事件顺序、身份和 run.started 正文绑定必须与摘要一致。日志缺失、损坏、未知完整性、部分用量或未知价格分别报告，不能视为免费或零消耗。
+`ScopeUsageService.Read` 只读取所选 scope 的最多 32 个主轮及有界成员来源。成员使用 task.scopeId/runIds 与 DispatchRun.binding，保留实例释放后的历史；主轮必须匹配登记实例及 conversation 通道。日志事件顺序、身份和 run.started 正文绑定必须与摘要一致。日志缺失、损坏、未知完整性、部分用量或未知价格分别报告，不能视为免费或零消耗。
 
 服务复用 canonical 日志端口；每次显式查询前后读取派发基线，变化时整份报告标记 changed_during_read，不签发完整总数。它不扫描无关主会话、不初始化成员、不补写日志、不修复任务、不轮询或启动模型。两次派发屏障不能证明整个查询跨文件原子，活动日志可能继续增长；读取时间只代表本次观察。金额是已知价格下的估算，不是供应商账单。`collect(state, input)` 复用同一严格归属与计量算法但不读取派发存储，可由已经持有事务屏障的额度服务调用；公开报告不是启动许可。
 
@@ -510,7 +510,7 @@ AutoCollaboration 只在成功撤销回执后，从当前派发批次的待启�
 
 通过结算的每段保留 completed，但 task 为 checkpointed、无 candidate/help；新 checkpoint 信封回主调度。实例仍保留原身份，真实运行、工作区租约及全局名额在终态事务后释放。异常终态、停止、软件退出、已关闭 scope 和 released 实例不能变成可续执行检查点。
 
-`MemberResumeService.request` 在同 active scope、同计划和图 CAS 下复核原证明，幂等提交 `TaskNode.resumeRequest` 以及独立 pending assignment。工具回执只表示预约，既不创建新 run，也不消费旧 processed 信封。`AutoCollaboration` 将返回的 task 与未启动后继加入当前批次；当前主轮 settled 后才调用专用 `members.resume`，不会由读取或重启唤醒。
+`MemberResumeService.Request` 在同 active scope、同计划和图 CAS 下复核原证明，幂等提交 `TaskNode.resumeRequest` 以及独立 pending assignment。工具回执只表示预约，既不创建新 run，也不消费旧 processed 信封。`AutoCollaboration` 将返回的 task 与未启动后继加入当前批次；当前主轮 settled 后才调用专用 `members.resume`，不会由读取或重启唤醒。
 
 真正领取仍先核预算、准入和当前批次，等待不消费检查点。当前 goal 版本须仍等于预约版本，且无审阅、blocked 或待重规划；预约后主轮改计划也不能沿旧请求领取。取得占用后重查原知识、配置、权限、前置候选、文件和 native，再原子追加唯一新 run/resumeFrom、领取新信封并递增 leaseEpoch 一代。模型公开快照按实际 JSON 持久语义比较可选缺省项，不能借此改变任何已配置字段；运行使用原权限，原批准不继承。引擎准备前后继续核冻结证明，prompt 前最后复核业务文件、知识及 canonical，合法 native 配置追加不误判为旧指纹一致。续轮清空旧 TaskProgress 证据，候选仅认新 run。
 
@@ -539,15 +539,15 @@ JSON/CSV/PNG 要求另按实际工厂的 `availableValidators` 与文件端口�
 
 ### 安全等待附件的受理边界
 
-`ScopeContinuationService.accept(request, runId, trusted?)` 在首次等待前隔离原请求及可信清单；已受理命令先按原正文、附件顺序、等待版本和选项返回原记录，不要求附件仍在磁盘。新命令才核实清单并纳入原事务指纹，清单与等待消费、目标输入升级及主运行登记同时提交。预算读取之后和交付事务变更之前复核 owner 与 AbortSignal，停止不会顺带登记预算阻塞或消费等待。
+`ScopeContinuationService.Accept(request, runId, trusted?)` 在首次等待前隔离原请求及可信清单；已受理命令先按原正文、附件顺序、等待版本和选项返回原记录，不要求附件仍在磁盘。新命令才核实清单并纳入原事务指纹，清单与等待消费、目标输入升级及主运行登记同时提交。预算读取之后和交付事务变更之前复核 owner 与 AbortSignal，停止不会顺带登记预算阻塞或消费等待。
 
-`AutoCollaboration.acceptContinuation` 只在本次启动闭包透传清单和信号，不保存到 Cycle/Batch。受理后遇到错误依旧按本次真实 runId 核实并封存，不回滚意图或重新执行；旧回执不能被新失败请求误关闭。`GOAL_ATTACHMENT_*` 只报告尚未受理的附件问题，已经提交的异常仍保留原记录供查询。
+`AutoCollaboration.AcceptContinuation` 只在本次启动闭包透传清单和信号，不保存到 Cycle/Batch。受理后遇到错误依旧按本次真实 runId 核实并封存，不回滚意图或重新执行；旧回执不能被新失败请求误关闭。`GOAL_ATTACHMENT_*` 只报告尚未受理的附件问题，已经提交的异常仍保留原记录供查询。
 
 ### 结构化问答的证据边界
 
 `memberCandidate` 复用进度证据的真实身份、作用域、结果哈希与工具用途筛选，防止无 Workflow 的旧进度或合成记录仅凭 `succeeded` 形成候选。问答答案、取消及其他不可引用的维护记录不能被混入步骤证据；原始运行日志保持可读，不改写已有事实。
 
-`ScopeGoalService.receipt` 另行拒绝共享 `questionToolName`，同时覆盖当前候选、历史返工候选和人工决定预览的来源核验。普通问答不能变为业务完成证明或人工接受；真实人工决定仍走原本机提交及显式接续协议。一个运行曾经提问并不失效：只引用真实业务回执的候选和人工预览仍按原门禁核实。
+`ScopeGoalService.Receipt` 另行拒绝共享 `questionToolName`，同时覆盖当前候选、历史返工候选和人工决定预览的来源核验。普通问答不能变为业务完成证明或人工接受；真实人工决定仍走原本机提交及显式接续协议。一个运行曾经提问并不失效：只引用真实业务回执的候选和人工预览仍按原门禁核实。
 ### 队列插入的原轮次与停止屏障
 
 `insertQueued(taskId,queueId,expectedRunId)` 强制绑定用户选定的活动主轮，缺失/过期身份在领取前拒绝。领取、附件读取和 Runtime 入口前后核查原运行、工作区及停止代次；原消息使用当前主运行权限，不能用队列设置提权或改投成员。停止、协作暂停、协调器关闭及管理器关闭同步撤销插入；实际引擎停止不排在阻塞的插入串行事务之后。
@@ -558,11 +558,11 @@ queued 与接受日志确认后才移除队列项，迟到停止不撤销接受�
 
 ### 负责人控制面的主运行上下文
 
-`AutoCollaboration.mainToolContext` 在当前主批次已经登记后返回可信 workspace/root/scope/run、实时停止断言和操作跟踪端口。Main 在 Runtime.beforeRun 之后据此构造负责人四工具，不能从旧 launch 参数猜 scope。提交 Promise 在业务开始前加入 cycle.operations；关闭等待这些操作排空，不在 Store 回调中重入周期或存储锁。
+`AutoCollaboration.MainToolContext` 在当前主批次已经登记后返回可信 workspace/root/scope/run、实时停止断言和操作跟踪端口。Main 在 Runtime.beforeRun 之后据此构造负责人四工具，不能从旧 launch 参数猜 scope。提交 Promise 在业务开始前加入 cycle.operations；关闭等待这些操作排空，不在 Store 回调中重入周期或存储锁。
 
 纯负责人提交使用精确工具名、当前工作区 knowledge scope 和单一 knowledge-write 回执识别；Auto.settled 与 closeScope 均不因它单独产生业务 workRequested 或强造业务计划。已有派发、计划及其它知识写仍保留原验收要求，不能清除已有 workRequested。Runtime 进度失效、最后副作用和审阅后时序仍包含这次真实写入，因此已有业务审阅之后的负责人提交仍须重新审阅。
 
-`ScopeGoalService.receipt` 拒绝全部 `cbim_module_owner_*` 作为当前、历史及人工候选依据；真实日志继续可读。关系回执是控制面事实，不是业务产物或人工接受证明，不修改成员执行权或原任务绑定。
+`ScopeGoalService.Receipt` 拒绝全部 `cbim_module_owner_*` 作为当前、历史及人工候选依据；真实日志继续可读。关系回执是控制面事实，不是业务产物或人工接受证明，不修改成员执行权或原任务绑定。
 
 ### 岗位负责人正式执行
 
@@ -632,7 +632,7 @@ Auto 为原命令生成独立 auto-revise-dependencies 键，将操作纳入在�
 
 ### 已放弃检查点来源换边
 
-ScopeGoalService.validateDependencySource 对明确放弃的 cancelled 来源先使用 abandonedCheckpointSource 核原状态，再经 verifyMemberCheckpointHistory 两次只读 canonical 并比原冻结检查点/logHash。需要真实 normalizeValidationPath 端口；不读取今日旧 native 或更新旧文件基线，不签发恢复许可。QueuedDependencyReplacementService 沿原 Knowledge→模型→Store 顺序核当前后继岗位和新候选，任何停止、坏日志、知识或领取变化均不保存半条边。原任务、原运行和已处置预约不变；Auto 只重新跟踪原未启动闭包，完成仍须真实候选及 superseded 审阅。
+ScopeGoalService.ValidateDependencySource 对明确放弃的 cancelled 来源先使用 abandonedCheckpointSource 核原状态，再经 verifyMemberCheckpointHistory 两次只读 canonical 并比原冻结检查点/logHash。需要真实 normalizeValidationPath 端口；不读取今日旧 native 或更新旧文件基线，不签发恢复许可。QueuedDependencyReplacementService 沿原 Knowledge→模型→Store 顺序核当前后继岗位和新候选，任何停止、坏日志、知识或领取变化均不保存半条边。原任务、原运行和已处置预约不变；Auto 只重新跟踪原未启动闭包，完成仍须真实候选及 superseded 审阅。
 
 ## 成员持久等待与显式继续
 
@@ -686,7 +686,7 @@ MemberExecutionManager同时识别CONTROLLED_FILE_DRAIN_PENDING与EXECUTION_SCOP
 
 ### 一次性岗位执行缺口
 
-OwnerExecutionService.discover 独立核对每组模块/Workflow、岗位责任/来源、能力和模型，合并相同错误码。缺少岗位时返回桌面“团队架构 → 项目岗位 → 登记项目岗位”入口，能力/模型明确为尚无法核实；废弃的真人维护不列为门禁。只有无缺口并通过原 resolve 才返回 selection，读取后仍核知识和登记游标，不授予未来执行许可。
+OwnerExecutionService.Discover 独立核对每组模块/Workflow、岗位责任/来源、能力和模型，合并相同错误码。缺少岗位时返回桌面“团队架构 → 项目岗位 → 登记项目岗位”入口，能力/模型明确为尚无法核实；废弃的真人维护不列为门禁。只有无缺口并通过原 resolve 才返回 selection，读取后仍核知识和登记游标，不授予未来执行许可。
 
 ### 引擎选择与首轮绑定
 
@@ -694,14 +694,14 @@ createWorkspaceLoop 按冻结模型创建 PiEngine/ClaudeCodeEngine/CodexEngine�
 
 ### 主运行内人工证据读占用
 
-WorkspaceExecutionLease.acquireReadWithin 只由装配端为已核实主会话身份的内部核证调用；不是客户端可选的权限。人工接续 accept 在 beforeRun 已持有主执行占用时、目标审阅/完成核证时可派生独立读占用，父占用先释放仍由子读阻止其他写入。原主占用不存在则按普通读规则领取；其他运行的独占仍拒绝。桌面人工预览、决定、preflight 不使用派生入口，未知身份不能绕过占用。
+WorkspaceExecutionLease.AcquireReadWithin 只由装配端为已核实主会话身份的内部核证调用；不是客户端可选的权限。人工接续 accept 在 beforeRun 已持有主执行占用时、目标审阅/完成核证时可派生独立读占用，父占用先释放仍由子读阻止其他写入。原主占用不存在则按普通读规则领取；其他运行的独占仍拒绝。桌面人工预览、决定、preflight 不使用派生入口，未知身份不能绕过占用。
 
-业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.ObserveFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
 
 
 ### 请求预算服务的最小依赖
 
-ModelRequestBudgetService 仅接收 RequestBudgetStore 和 RequestBudgetAdmission。Main 的 member-dispatch 通过 requestBudgetStore 适配唯一 DispatchStore；服务只能读预算视图、追加请求预算变化和核实原主运行，独立测试不需要构造 Application 或声明无关领域字段。ScopeBudgetService.preflightRequest 同样只读该视图，其跨域运行准入仍使用原完整事务与明确协调者。预算耗尽、并发预留、停止、未知结果及重开判断不改写。
+ModelRequestBudgetService 仅接收 RequestBudgetStore 和 RequestBudgetAdmission。Main 的 member-dispatch 通过 requestBudgetStore 适配唯一 DispatchStore；服务只能读预算视图、追加请求预算变化和核实原主运行，独立测试不需要构造 Application 或声明无关领域字段。ScopeBudgetService.PreflightRequest 同样只读该视图，其跨域运行准入仍使用原完整事务与明确协调者。预算耗尽、并发预留、停止、未知结果及重开判断不改写。
 
 ## 全量 IPC 契约衔接
 

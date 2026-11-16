@@ -35,7 +35,7 @@ class N_src_logic_knowledge_service_knowledge_sources_ts["knowledge-sources.ts"]
 class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspace["KnowledgeSourceWorkspace"] {
   <<interface>>
   +sources
-  +withSourceSnapshot()
+  +WithSourceSnapshot()
 }
 N_src_logic_knowledge_service_knowledge_sources_ts ..> N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSourceWorkspace : 声明
 class N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -45,16 +45,16 @@ N_src_logic_knowledge_service_knowledge_sources_ts_external_KnowledgeWorkspace <
 class N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources["KnowledgeSources"] {
   +workspaceId
   +constructor()
-  +build()
-  +prepare()
-  +settle()
-  +verify()
-  +pending()
-  +transitions()
-  +assertAvailable()
-  +selection()
-  +capture()
-  +status()
+  +Build()
+  +Prepare()
+  +Settle()
+  +Verify()
+  +Pending()
+  +Transitions()
+  +AssertAvailable()
+  +Selection()
+  +Capture()
+  +Status()
   -store
 }
 N_src_logic_knowledge_service_knowledge_sources_ts ..> N_src_logic_knowledge_service_knowledge_sources_ts_KnowledgeSources : 声明

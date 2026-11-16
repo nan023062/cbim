@@ -53,8 +53,8 @@ class N_src_logic_knowledge_rules_read_models_team_ts["team.ts"] {
 }
 class N_src_logic_knowledge_rules_read_models_team_ts_Team["Team"] {
   +constructor()
-  +agents()
-  +agent()
+  +Agents()
+  +Agent()
   -snapshot
 }
 N_src_logic_knowledge_rules_read_models_team_ts ..> N_src_logic_knowledge_rules_read_models_team_ts_Team : 声明
@@ -71,8 +71,8 @@ class N_src_logic_knowledge_rules_read_models_workspace_ts["workspace.ts"] {
 }
 class N_src_logic_knowledge_rules_read_models_workspace_ts_BusinessWorkspace["BusinessWorkspace"] {
   +constructor()
-  +modules()
-  +module()
+  +Modules()
+  +Module()
   -snapshot
 }
 N_src_logic_knowledge_rules_read_models_workspace_ts ..> N_src_logic_knowledge_rules_read_models_workspace_ts_BusinessWorkspace : 声明

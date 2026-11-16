@@ -20,9 +20,9 @@ export interface SourceBrowserWorkspace
     path: string
   };
 
-  assert(identity: { workspaceId: string; instanceId: string }): void;
+  Assert(identity: { workspaceId: string; instanceId: string }): void;
 
-  read(): Promise<Snapshot>
+  Read(): Promise<Snapshot>
 }
 
 const textLimit = 256 * 1024;
@@ -51,11 +51,11 @@ export class ModuleSourceBrowser
   {
   }
 
-  private async binding(input: SourceTarget)
+  private async Binding(input: SourceTarget)
   {
-    this.workspace.assert(input);
-    const snapshot = await this.workspace.read();
-    this.check(snapshot, input);
+    this.workspace.Assert(input);
+    const snapshot = await this.workspace.Read();
+    this.Check(snapshot, input);
     if (!input.moduleId.startsWith('.cbim/workspace/') || segments(input.moduleId).length < 3)
       fail('SOURCE_MODULE', '请选择正式业务模块');
     let definition:
@@ -106,19 +106,19 @@ export class ModuleSourceBrowser
     return { target, relative, ignored, checkPath };
   }
 
-  private check(snapshot: Snapshot, input: SourceTarget)
+  private Check(snapshot: Snapshot, input: SourceTarget)
   {
-    this.workspace.assert(input);
+    this.workspace.Assert(input);
     if (snapshot.workspaceId !== input.workspaceId || snapshot.instanceId !== input.instanceId || snapshot.revision !== input.revision)
       fail('SOURCE_STALE', '模块绑定或工作区已变化，请刷新架构后重试');
   }
 
-  private async finish(input: SourceTarget)
+  private async Finish(input: SourceTarget)
   {
-    this.check(await this.workspace.read(), input)
+    this.Check(await this.workspace.Read(), input)
   }
 
-  private async guarded<T>(run: () => Promise<T>): Promise<T>
+  private async Guarded<T>(run: () => Promise<T>): Promise<T>
   {
     try
     {
@@ -137,12 +137,12 @@ export class ModuleSourceBrowser
   }
 
   /** 单次最多检查 2000 个目录项、返回 200 项；不递归预读，不枚举链接目标。 */
-  async list(raw: unknown): Promise<SourceDirectory>
+  async List(raw: unknown): Promise<SourceDirectory>
   {
     const input = sourceDirectoryInput.parse(raw);
-    return this.guarded(async () =>
+    return this.Guarded(async () =>
     {
-      const scope = await this.binding(input),
+      const scope = await this.Binding(input),
         before = await fs.stat(scope.target);
       if (!before.isDirectory())
         fail('SOURCE_KIND', '此路径不是目录');
@@ -189,19 +189,19 @@ export class ModuleSourceBrowser
       const after = await fs.stat(scope.target);
       if (!same(before, after) || before.mtimeMs !== after.mtimeMs)
         fail('SOURCE_CHANGED', '枚举期间目录已变化，请刷新目录');
-      await this.finish(input);
+      await this.Finish(input);
       entries.sort((a, b) => Number(b.kind === 'directory') - Number(a.kind === 'directory') || a.name.localeCompare(b.name));
       return { entries, ...(nextOffset === undefined ? {} : { nextOffset }) };
     })
   }
 
   /** 只预览普通 UTF-8 文本；大文件和二进制返回明确说明，绝不执行 HTML/脚本。 */
-  async read(raw: unknown): Promise<SourceFile>
+  async Read(raw: unknown): Promise<SourceFile>
   {
     const input = sourceFileInput.parse(raw);
-    return this.guarded(async () =>
+    return this.Guarded(async () =>
     {
-      const scope = await this.binding(input),
+      const scope = await this.Binding(input),
         before = await fs.lstat(scope.target);
       if (!before.isFile())
         fail('SOURCE_KIND', '此路径不是普通文件');
@@ -245,7 +245,7 @@ export class ModuleSourceBrowser
           final = await handle.stat();
         if (!same(before, after) || !same(opened, final) || opened.size !== final.size || opened.mtimeMs !== final.mtimeMs)
           fail('SOURCE_CHANGED', '读取期间文件已变化，请重新选择');
-        await this.finish(input);
+        await this.Finish(input);
         return result;
       }
       finally

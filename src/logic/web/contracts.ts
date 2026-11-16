@@ -33,7 +33,7 @@ export interface WebSettingsView
 /** 实例绑定主进程网络服务；取消后不交付迟到结果，不接受自定义请求头、代理或 API 地址。 */
 export interface WebToolsPort
 {
-  fetch(input: z.infer<typeof webFetchInput>, signal: AbortSignal): Promise<z.infer<typeof webFetchOutput>>;
+  Fetch(input: z.infer<typeof webFetchInput>, signal: AbortSignal): Promise<z.infer<typeof webFetchOutput>>;
 
-  search(input: z.infer<typeof webSearchInput>, signal: AbortSignal): Promise<z.infer<typeof webSearchOutput>>;
+  Search(input: z.infer<typeof webSearchInput>, signal: AbortSignal): Promise<z.infer<typeof webSearchOutput>>;
 }

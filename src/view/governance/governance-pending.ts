@@ -61,11 +61,11 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
     }
   };
   return {
-    read(workspaceId: string)
+    Read(workspaceId: string)
     {
       return load().records.find(v => v.workspaceId === workspaceId)
     },
-    save(raw: GovernancePending)
+    Save(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
         data = load(),
@@ -76,7 +76,7 @@ export function createGovernancePendingStore(storage: Pick<Storage, 'getItem' | 
         throw Error('治理命令已属于另一个工作区');
       write(old ? data.records : [...data.records, pending])
     },
-    remove(raw: GovernancePending)
+    Remove(raw: GovernancePending)
     {
       const pending = governancePendingSchema.parse(raw),
         data = load(),

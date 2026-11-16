@@ -63,7 +63,7 @@ N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_pr
 class N_src_logic_models_service_llm_profiles_ts_LockedModelConfiguration["LockedModelConfiguration"] {
   <<interface>>
   +profile
-  +resolve()
+  +Resolve()
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LockedModelConfiguration : 声明
 ```
@@ -83,24 +83,24 @@ N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_pr
 class N_src_logic_models_service_llm_profiles_ts_LockedModelOperations["LockedModelOperations"] {
   <<interface>>
   +profiles
-  +resolve()
+  +Resolve()
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LockedModelOperations : 声明
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   +constructor()
-  +list()
-  +save()
-  +select()
-  +remove()
-  +resolve()
-  +configuration()
-  +withConfigurations()
-  +withRuntimeConfiguration()
-  +withModelOperations()
-  +discover()
-  +discoverDetails()
-  +test()
-  +testEmbedding()
+  +List()
+  +Save()
+  +Select()
+  +Remove()
+  +Resolve()
+  +Configuration()
+  +WithConfigurations()
+  +WithRuntimeConfiguration()
+  +WithModelOperations()
+  +Discover()
+  +DiscoverDetails()
+  +Test()
+  +TestEmbedding()
   -filename
   -cipher
 }
@@ -116,13 +116,13 @@ class N_src_logic_models_service_llm_profiles_ts["llm-profiles.ts"] {
 }
 class N_src_logic_models_service_llm_profiles_ts_LlmProfiles["LlmProfiles"] {
   -queue
-  -read()
-  -view()
-  -change()
-  -decrypt()
-  -explicit()
-  -headers()
-  -request()
+  -Read()
+  -View()
+  -Change()
+  -Decrypt()
+  -Explicit()
+  -Headers()
+  -Request()
 }
 N_src_logic_models_service_llm_profiles_ts ..> N_src_logic_models_service_llm_profiles_ts_LlmProfiles : 声明
 ```

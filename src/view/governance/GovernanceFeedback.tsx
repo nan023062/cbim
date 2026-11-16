@@ -28,7 +28,7 @@ export function GovernanceResponseDetails({ selected }: { selected: GovernanceSe
 }
 
 /** 同一提案刷新保留草稿；勾选键随来源/决定变更失效，提交字段由纯校验器一次生成。 */
-export function GovernanceDecisionForm({ selected, disabled, onSubmit }: { selected: GovernanceSelected; disabled: boolean; onSubmit(fields: ReturnType<typeof governanceDecisionFields>): void | Promise<void> })
+export function GovernanceDecisionForm({ selected, disabled, OnSubmit: onSubmit }: { selected: GovernanceSelected; disabled: boolean; OnSubmit(fields: ReturnType<typeof governanceDecisionFields>): void | Promise<void> })
 {
   const [draft, setDraft] = useState(newGovernanceDecisionDraft),
     [reviewedKey, setReviewedKey] = useState<string>(),

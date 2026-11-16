@@ -12,7 +12,7 @@ const identity={workspaceId:'workspace',taskId:'task',runId:'run'},now='2026-11-
 const binding:MemberToolOutputBinding={...identity,teamId:'team',agentId:'agent',agentInstanceId:'instance',agentSessionId:'session',rootSessionId:'root',leaseEpoch:1,planRevision:1};
 const plan={expectedVersion:0,goal:'实现原目标',acceptance:['读取真实成果'],reason:'沿目标执行',steps:[{id:'build',title:'实现并读取',owner:'执行成员'}]};
 const receipt=(patch:Partial<ToolReceipt>={}):ToolReceipt=>({version:1,...identity,toolCallId:'read-result',toolName:'read',outcome:'succeeded',inputHash:hash,resultHash:hash,effects:['read'],scope:{kind:'workspace',workspaceId:identity.workspaceId},recordedAt:now,...patch});
-const inspect=async(tools:TaskProgressTools)=>JSON.parse((await tools.call('cbim_task_inspect',{})).content[0].text);
+const inspect=async(tools:TaskProgressTools)=>JSON.parse((await tools.Call('cbim_task_inspect',{})).content[0].text);
 const invalid=expect.objectContaining({code:'TOOL_OUTPUT_INVALID'});
 function fixture(){const saved:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async next=>{saved.push(structuredClone(next))},{identity});return {tools,saved}}
 const helpInput={kind:'missing_input' as const,reason:'缺少输入',question:'需要目标说明',attemptedToolCallIds:[]};
@@ -30,7 +30,7 @@ describe('member tool output leaf contracts',()=>{
       const original={workspaceId:prefix+'workspace',taskId:prefix+'task',runId:prefix+'run'};
       expect(progressToolIdentitySchema.safeParse(original).success).toBe(true);
       const tools=new TaskProgressTools(undefined,async()=>{},{identity:original});expect(await inspect(tools)).toEqual({plan:null,evidence:[]});
-      await tools.call('cbim_task_plan',plan);tools.record(receipt({...original,scope:{kind:'workspace',workspaceId:original.workspaceId}}),tools.generation);expect((await inspect(tools)).evidence).toHaveLength(1);
+      await tools.Call('cbim_task_plan',plan);tools.Record(receipt({...original,scope:{kind:'workspace',workspaceId:original.workspaceId}}),tools.generation);expect((await inspect(tools)).evidence).toHaveLength(1);
     }
     for(const key of ['workspaceId','taskId','runId'] as const){
       expect(progressToolIdentitySchema.safeParse({...identity,[key]:'a'.repeat(100)}).success).toBe(true);
@@ -75,12 +75,12 @@ describe('member tool output leaf contracts',()=>{
     for(const patch of [{knowledgeRevision:'changed'},{progressVersion:2}])expect(()=>checkedJsonToolResult('cbim_task_artifact_capture',{state:'captured',baseline:{...outputs.cbim_task_artifact_capture.baseline,...patch}},memberToolOutputSchema('cbim_task_artifact_capture',{binding,input:captureInput,toolCallId:'capture',knowledgeRevision:'knowledge'}))).toThrow(invalid);
   });
   it('strict plan state accepts original facts only, not added identities, completion or missing fields',async()=>{
-    const {tools}=fixture();expect(await inspect(tools)).toEqual({plan:null,evidence:[]});await tools.call('cbim_task_plan',plan);const current=tools.current()!;
+    const {tools}=fixture();expect(await inspect(tools)).toEqual({plan:null,evidence:[]});await tools.Call('cbim_task_plan',plan);const current=tools.Current()!;
     expect(taskProgressSchema.safeParse(current).success).toBe(true);
     for(const bad of [{...current,workspaceId:'workspace'},{...current,goal:undefined},{...current,state:'completed'},{...current,delivery:{summary:'fake',limitations:[]}},{...current,steps:[{...current.steps[0],state:'reported_done'}]}])expect(taskProgressSchema.safeParse(bad).success).toBe(false);
   });
   it('reconstructs the requested plan rather than trusting a mutated expected-result alias',async()=>{
-    const {tools}=fixture();await tools.call('cbim_task_plan',plan);const changed={...tools.current()!,goal:'替换原目标'};
+    const {tools}=fixture();await tools.Call('cbim_task_plan',plan);const changed={...tools.Current()!,goal:'替换原目标'};
     const schema=memberToolOutputSchema('cbim_task_plan',{binding:identity,input:plan,progress:{expected:changed,evidence:[]}});
     expect(()=>checkedJsonToolResult('cbim_task_plan',changed,schema)).toThrow(invalid);
   });
@@ -89,45 +89,45 @@ describe('member tool output leaf contracts',()=>{
 describe('progress saved output does not authorize retries',()=>{
   it.each(['cbim_task_plan','cbim_task_step','cbim_delivery_prepare'] as const)('%s keeps the actual saved revision after a corrupt return',async name=>{
     const {tools,saved}=fixture();let input:unknown=plan;
-    if(name!=='cbim_task_plan'){await tools.call('cbim_task_plan',plan);tools.record(receipt(),tools.generation);input={expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']}}
-    if(name==='cbim_delivery_prepare'){await tools.call('cbim_task_step',input);input={expectedVersion:2,summary:'真实候选',limitations:[]}}
+    if(name!=='cbim_task_plan'){await tools.Call('cbim_task_plan',plan);tools.Record(receipt(),tools.generation);input={expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']}}
+    if(name==='cbim_delivery_prepare'){await tools.Call('cbim_task_step',input);input={expectedVersion:2,summary:'真实候选',limitations:[]}}
     const target=tools as unknown as {persist(next:TaskProgress):Promise<TaskProgress>},persist=target.persist.bind(tools),before=saved.length;
     vi.spyOn(target,'persist').mockImplementationOnce(async next=>({...await persist(next),goal:'错误回包中替换的目标'}));
-    await expect(tools.call(name,input)).rejects.toThrow(invalid);expect(saved).toHaveLength(before+1);expect(tools.current()).toEqual(saved.at(-1));
-    expect((await inspect(tools)).plan).toEqual(saved.at(-1));await expect(tools.call(name,input)).rejects.toThrow('版本');expect(saved).toHaveLength(before+1);
+    await expect(tools.Call(name,input)).rejects.toThrow(invalid);expect(saved).toHaveLength(before+1);expect(tools.Current()).toEqual(saved.at(-1));
+    expect((await inspect(tools)).plan).toEqual(saved.at(-1));await expect(tools.Call(name,input)).rejects.toThrow('版本');expect(saved).toHaveLength(before+1);
   });
   it('freezes original input and memory state before a save callback mutates its argument',async()=>{
     const saved:TaskProgress[]=[];const tools=new TaskProgressTools(undefined,async next=>{saved.push(structuredClone(next));next.version=0;next.goal='changed-after-save'},{identity});
-    await expect(tools.call('cbim_task_plan',plan)).rejects.toThrow(invalid);
-    expect(tools.current()).toEqual(saved[0]);expect((await inspect(tools)).plan.version).toBe(1);await expect(tools.call('cbim_task_plan',plan)).rejects.toThrow('版本');expect(saved).toHaveLength(1);
+    await expect(tools.Call('cbim_task_plan',plan)).rejects.toThrow(invalid);
+    expect(tools.Current()).toEqual(saved[0]);expect((await inspect(tools)).plan.version).toBe(1);await expect(tools.Call('cbim_task_plan',plan)).rejects.toThrow('版本');expect(saved).toHaveLength(1);
   });
   it('serializes the original saved return exactly once and never hides serialization errors or secrets',async()=>{
     const {tools,saved}=fixture(),target=tools as unknown as {persist(next:TaskProgress):Promise<TaskProgress>},persist=target.persist.bind(tools);let serializations=0;
     vi.spyOn(target,'persist').mockImplementationOnce(async next=>{const committed=await persist(next);return {toJSON(){serializations++;return {...committed,secret:'private-output'}}} as unknown as TaskProgress});
-    const error=await tools.call('cbim_task_plan',plan).catch(error=>error);expect(error).toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(error.message).not.toContain('private-output');expect(serializations).toBe(1);expect(saved).toHaveLength(1);expect(tools.current()).toEqual(saved[0]);
+    const error=await tools.Call('cbim_task_plan',plan).catch(error=>error);expect(error).toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(error.message).not.toContain('private-output');expect(serializations).toBe(1);expect(saved).toHaveLength(1);expect(tools.Current()).toEqual(saved[0]);
     vi.spyOn(target,'persist').mockImplementationOnce(async next=>{await persist(next);return {toJSON(){throw Error('private-serialization')}} as unknown as TaskProgress});
-    const error2=await tools.call('cbim_task_plan',{...plan,expectedVersion:1}).catch(error=>error);expect(error2).toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(error2.message).not.toContain('private-serialization');expect(saved).toHaveLength(2);
+    const error2=await tools.Call('cbim_task_plan',{...plan,expectedVersion:1}).catch(error=>error);expect(error2).toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(error2.message).not.toContain('private-serialization');expect(saved).toHaveLength(2);
   });
   it('does not clone or pre-parse an artifact port result and checks only its one original wire',async()=>{
     let serializations=0;const artifacts={toJSON(){serializations++;return [{baselineId:'bad',unknown:'secret'}]}};
-    const tools=new TaskProgressTools(undefined,async()=>{},{identity,artifacts:()=>artifacts as any});
-    await expect(tools.call('cbim_task_inspect',{})).rejects.toThrow(invalid);expect(serializations).toBe(1);expect(tools.current()).toBeUndefined();
-    const good=new TaskProgressTools(undefined,async()=>{},{identity,artifacts:()=>({toJSON(){return []}} as any)});expect(await inspect(good)).toEqual({plan:null,evidence:[],artifacts:[]});
-    const missing=new TaskProgressTools(undefined,async()=>{},{identity,artifacts:()=>undefined as any});await expect(missing.call('cbim_task_inspect',{})).rejects.toThrow(invalid);
+    const tools=new TaskProgressTools(undefined,async()=>{},{identity,Artifacts:()=>artifacts as any});
+    await expect(tools.Call('cbim_task_inspect',{})).rejects.toThrow(invalid);expect(serializations).toBe(1);expect(tools.Current()).toBeUndefined();
+    const good=new TaskProgressTools(undefined,async()=>{},{identity,Artifacts:()=>({toJSON(){return []}} as any)});expect(await inspect(good)).toEqual({plan:null,evidence:[],artifacts:[]});
+    const missing=new TaskProgressTools(undefined,async()=>{},{identity,Artifacts:()=>undefined as any});await expect(missing.Call('cbim_task_inspect',{})).rejects.toThrow(invalid);
   });
   it('keeps cross-run/hashless/internal receipts out and isolates accepted receipt values from later mutation',async()=>{
-    const {tools}=fixture();await tools.call('cbim_task_plan',plan);
-    for(const bad of [receipt({runId:'old'}),receipt({scope:{kind:'knowledge',workspaceId:'other'}}),receipt({resultHash:undefined}),receipt({toolName:''})])tools.record(bad,tools.generation);
-    expect((await inspect(tools)).evidence).toEqual([]);await expect(tools.call('cbim_task_step',{expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']})).rejects.toThrow('证据');
-    const source=receipt();tools.record(source,tools.generation);source.runId='tampered';source.scope.workspaceId='other';expect((await inspect(tools)).evidence).toEqual([receipt()]);
+    const {tools}=fixture();await tools.Call('cbim_task_plan',plan);
+    for(const bad of [receipt({runId:'old'}),receipt({scope:{kind:'knowledge',workspaceId:'other'}}),receipt({resultHash:undefined}),receipt({toolName:''})])tools.Record(bad,tools.generation);
+    expect((await inspect(tools)).evidence).toEqual([]);await expect(tools.Call('cbim_task_step',{expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']})).rejects.toThrow('证据');
+    const source=receipt();tools.Record(source,tools.generation);source.runId='tampered';source.scope.workspaceId='other';expect((await inspect(tools)).evidence).toEqual([receipt()]);
   });
   it('preserves the persisted all-module Workflow proof while rejecting a return with an omitted condition',async()=>{
     const bindings:WorkflowContractBinding[]=['module-a','module-b'].map(moduleId=>({moduleId,workflowId:moduleId+'/workflow',workflowVersion:'body-hash',contract:{version:1,delivery:{requiredToolEvidence:[{id:'read-result',toolName:'read'}]}}}));
     const saved:TaskProgress[]=[],tools=new TaskProgressTools(undefined,async next=>{saved.push(structuredClone(next))},{identity,workflow:{bindings,identity,task:{goal:plan.goal,acceptance:plan.acceptance}}});
-    await tools.call('cbim_task_plan',plan);tools.record(receipt(),tools.generation);await tools.call('cbim_task_step',{expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']});
+    await tools.Call('cbim_task_plan',plan);tools.Record(receipt(),tools.generation);await tools.Call('cbim_task_step',{expectedVersion:1,id:'build',state:'reported_done',evidenceIds:['read-result']});
     const target=tools as unknown as {persist(next:TaskProgress):Promise<TaskProgress>},persist=target.persist.bind(tools);
     vi.spyOn(target,'persist').mockImplementationOnce(async next=>{const result=structuredClone(await persist(next));result.delivery!.workflow!.checks.pop();return result});
-    await expect(tools.call('cbim_delivery_prepare',{expectedVersion:2,summary:'两模块候选',limitations:[]})).rejects.toThrow(invalid);
-    expect(saved.at(-1)?.delivery?.workflow?.checks).toHaveLength(2);expect(tools.current()).toEqual(saved.at(-1));expect((await inspect(tools)).workflowContracts).toEqual(bindings);
+    await expect(tools.Call('cbim_delivery_prepare',{expectedVersion:2,summary:'两模块候选',limitations:[]})).rejects.toThrow(invalid);
+    expect(saved.at(-1)?.delivery?.workflow?.checks).toHaveLength(2);expect(tools.Current()).toEqual(saved.at(-1));expect((await inspect(tools)).workflowContracts).toEqual(bindings);
   });
 });

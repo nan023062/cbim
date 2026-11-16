@@ -35,9 +35,9 @@ export interface AgentHistoryRecord
 /** 持久化失败由上层记录诊断；已发生的运行事实不可因为索引写失败而回滚或重新执行。 */
 export interface AgentHistoryStore
 {
-  load(): Promise<{ records: AgentHistoryRecord[]; diagnostics: string[] }>;
+  Load(): Promise<{ records: AgentHistoryRecord[]; diagnostics: string[] }>;
 
-  put(record: AgentHistoryRecord): Promise<void>;
+  Put(record: AgentHistoryRecord): Promise<void>;
 }
 
 const id = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);

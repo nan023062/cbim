@@ -38,7 +38,7 @@ export class Builtins
   {
   }
 
-  private async document(entry: typeof entries[number])
+  private async Document(entry: typeof entries[number])
   {
     // Only application-owned manifest entries can select a file, never caller paths.
     const root = path.resolve(this.assetsRoot),
@@ -54,23 +54,23 @@ export class Builtins
   }
 
   /** 返回允许读取的全部内置资源及内容身份，不安装 Skill 或启动其流程。 */
-  async catalog()
+  async Catalog()
   {
     const items = await Promise.all(entries.map(async entry =>
     {
-      const { text, ...metadata } = await this.document(entry);
+      const { text, ...metadata } = await this.Document(entry);
       return metadata
     }));
     return { entryId: 'knowledge-governance', contract, revision: hash(JSON.stringify(items)), items };
   }
 
   /** 只读白名单正文；可核对原版本，不把读取成功解释成反馈提交或业务执行成功。 */
-  async read(id: string, expectedVersion?: string)
+  async Read(id: string, expectedVersion?: string)
   {
     const entry = entries.find(e => e.id === id);
     if (!entry)
       fail('BUILTIN_NOT_FOUND', '未知内置资料 ID，请先调用 cbim_builtin_catalog');
-    const result = await this.document(entry);
+    const result = await this.Document(entry);
     if (expectedVersion && expectedVersion !== result.version)
       fail('BUILTIN_VERSION_CHANGED', '内置资料版本已变化，请重新查询清单并核对');
     const prose = result.text.replace(/(`{3,}|~{3,})[^\n]*\n[\s\S]*?\1/g, '');

@@ -86,13 +86,13 @@ export function useHumanContinuation(workspaceId: string, rootSessionId: string 
     refreshRef = useRef(refresh);
   identityRef.current = identity;
   refreshRef.current = refresh;
-  const controller = useMemo(() => rootSessionId ? controllers.get(workspaceId, rootSessionId, { storage: { getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, submit: input => window.cbim.call('loop.humanContinue', input), lookup: input => window.cbim.call('loop.humanContinuation', input), uuid: () => crypto.randomUUID() }) : undefined, [workspaceId, rootSessionId]);
+  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, { storage: { getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, submit: input => window.cbim.call('loop.humanContinue', input), lookup: input => window.cbim.call('loop.humanContinuation', input), uuid: () => crypto.randomUUID() }) : undefined, [workspaceId, rootSessionId]);
   useEffect(() =>
   {
     if (!controller)
       return;
-    const unsubscribe = controller.subscribe(() => render(value => value + 1));
-    void controller.restore().then(() =>
+    const unsubscribe = controller.Subscribe(() => render(value => value + 1));
+    void controller.Restore().then(() =>
     {
       if (identityRef.current === identity)
         refreshRef.current()
@@ -103,7 +103,7 @@ export function useHumanContinuation(workspaceId: string, rootSessionId: string 
     records = controller?.snapshot.records ?? [],
     record = humanContinuationDraftForView(state, records, target),
     attempt = record?.attempt,
-    pending = controller?.isPending(record) ?? false,
+    pending = controller?.IsPending(record) ?? false,
     effectiveModel = continuationModel(model, state);
   const editable = !!target && !!controller?.available && !pending && (!attempt || attempt.phase === 'rejected'),
     frozen = attempt && attempt.phase !== 'rejected';
@@ -120,16 +120,16 @@ export function useHumanContinuation(workspaceId: string, rootSessionId: string 
     submit: async () =>
     {
       if (target && controller && editable && effectiveModel)
-        await after(() => controller.submit(target, effectiveModel.options))
+        await after(() => controller.Submit(target, effectiveModel.options))
     },
     query: async () =>
     {
       if (record && controller)
-        await after(() => controller.query(record.scopeId, record.waitId))
+        await after(() => controller.Query(record.scopeId, record.waitId))
     }, retry: async () =>
     {
       if (target && record && controller)
-        await after(() => controller.retry(record.scopeId, record.waitId))
+        await after(() => controller.Retry(record.scopeId, record.waitId))
     },
   };
 }

@@ -31,7 +31,7 @@ export class SessionGraphProjection
   }
 
   /** 在组合响应中先验证候选；fork 共用不可变快照，不复制整张图，成功后调用方才替换投影。 */
-  fork()
+  Fork()
   {
     const next = new SessionGraphProjection(this.identity);
     next.value = this.value;
@@ -39,7 +39,7 @@ export class SessionGraphProjection
   }
 
   /** 整个响应校验成功后才替换投影；中途批次失败保持旧值，noop 保留原对象引用。 */
-  apply(response: GraphDelta): GraphSnapshot
+  Apply(response: GraphDelta): GraphSnapshot
   {
     const cursor = response.cursor;
     if (cursor.workspaceId !== this.identity.workspaceId || cursor.rootSessionId !== this.identity.rootSessionId)

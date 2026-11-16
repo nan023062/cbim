@@ -11,7 +11,7 @@ const controllers = new ControlledFilePool();
 /** 稳定原命令跨页签/节点卸载保留；端口不接受任意路径、文件内容或私有证明。 */
 export function controlledFileController(workspaceId: string, rootSessionId: string)
 {
-  return controllers.get(workspaceId, rootSessionId, {
+  return controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: name => window.localStorage.getItem(name), setItem: (name, value) => window.localStorage.setItem(name, value) }, uuid: () => crypto.randomUUID(),
     report: input => window.cbim.call('dispatch.controlledFileReport', input), preview: input => window.cbim.call('dispatch.fileCompensationPreview', input),
     apply: input => window.cbim.call('dispatch.fileCompensate', input), receipt: input => window.cbim.call('dispatch.fileCompensationReceipt', input),
@@ -25,6 +25,6 @@ export function useControlledFiles(identity: ControlledFileReportInput, instance
   const snapshot = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot),
     key = controlledFileSelectionKey(identity),
     currentAnchor = JSON.stringify([instanceId ?? null, anchor]);
-  useLayoutEffect(() => controller.observeAnchor(identity, currentAnchor), [controller, key, currentAnchor]);
-  return { controller, snapshot, read: snapshot.reads[key], draft: controller.draft(identity), attempt: controller.attempt(identity), fresh: controller.fresh(identity, instanceId) && snapshot.reads[key]?.anchor === currentAnchor };
+  useLayoutEffect(() => controller.ObserveAnchor(identity, currentAnchor), [controller, key, currentAnchor]);
+  return { controller, snapshot, read: snapshot.reads[key], draft: controller.Draft(identity), attempt: controller.Attempt(identity), fresh: controller.Fresh(identity, instanceId) && snapshot.reads[key]?.anchor === currentAnchor };
 }

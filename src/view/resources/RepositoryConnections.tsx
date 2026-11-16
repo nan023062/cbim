@@ -113,7 +113,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
     setNotice('');
     try
     {
-      setPending(id ? store.read(id) : undefined);
+      setPending(id ? store.Read(id) : undefined);
       setStorageError(false)
     }
     catch (cause)
@@ -164,7 +164,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       setChecks({});
       try
       {
-        setPending(workspaceId ? store.read(workspaceId) : undefined);
+        setPending(workspaceId ? store.Read(workspaceId) : undefined);
         setStorageError(false)
       }
       catch (cause)
@@ -228,8 +228,8 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
   {
     await perform(async token =>
     {
-      const existed = store.read(request.input.workspaceId);
-      store.save(request);
+      const existed = store.Read(request.input.workspaceId);
+      store.Save(request);
       setChecks({});
       setPending(request);
       setNotice('');
@@ -242,7 +242,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       {
         if (!existed && isRepositoryConnectionPreflightRejection(request.action, cause))
         {
-          store.remove(request);
+          store.Remove(request);
           if (current(token))
           {
             setPending(undefined);
@@ -261,7 +261,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       checkedRepositoryConnectionCommit(receipt, request);
     else
       checkedRepositoryConnectionReceipt(receipt, request);
-    store.remove(request);
+    store.Remove(request);
     if (current(token))
     {
       setPending(undefined);
@@ -295,7 +295,7 @@ export function RepositoryConnections({ onSettings }: { onSettings: () => void }
       const proof = await window.cbim.call('resources.connection.unaccepted', { workspaceId: frozen.input.workspaceId, instanceId: frozen.input.instanceId, action: frozen.action, id: frozen.action === 'commit' ? frozen.input.planId : frozen.input.commandId });
       if (!checkedRepositoryConnectionUnaccepted(proof, frozen))
         throw Error('尚不能证明原请求未受理，请保留原请求并查询回执');
-      store.remove(frozen);
+      store.Remove(frozen);
       if (current(token))
       {
         setPending(undefined);

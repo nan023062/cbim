@@ -87,7 +87,7 @@ export class MemorySession
     this.messages = messages
   }
 
-  static async open(home: string, context: EngineContext)
+  static async Open(home: string, context: EngineContext)
   {
     const root = await directory(home, 'sessions'),
       id = safeId(context.nativeSessionId ?? randomUUID()),
@@ -156,7 +156,7 @@ export class MemorySession
   }
 
   /** 每条先同步到磁盘；失败不尝试重写。模型和工具只消费已经保存的消息。 */
-  async append(entry: { type: 'turn.started'; runId: string } | { type: 'turn.completed'; runId: string } | { type: 'message'; message: MemoryMessage })
+  async Append(entry: { type: 'turn.started'; runId: string } | { type: 'turn.completed'; runId: string } | { type: 'message'; message: MemoryMessage })
   {
     const value = JSON.stringify(entry) + '\n',
       size = Buffer.byteLength(value);
@@ -193,7 +193,7 @@ export class MemoryIndexCache
   {
   }
 
-  async load(plan: MemoryIndexPlan): Promise<MemoryIndex | undefined>
+  async Load(plan: MemoryIndexPlan): Promise<MemoryIndex | undefined>
   {
     const root = await directory(this.home, 'memory-index'),
       file = path.join(root, plan.key + '.json');
@@ -215,13 +215,13 @@ export class MemoryIndexCache
   }
 
   /** 完整临时文件同步后原子落盘；磁盘失败不影响正式知识。旧代保留，缓存清理留给后续显式管理。 */
-  async save(index: MemoryIndex)
+  async Save(index: MemoryIndex)
   {
     const root = await directory(this.home, 'memory-index'),
       value = JSON.stringify({ key: index.key, vectors: index.vectors });
     if (Buffer.byteLength(value) > 16 * 1024 * 1024)
       throw Error('记忆索引缓存超过 16 MiB');
-    if (await this.load(index))
+    if (await this.Load(index))
       return;
     await atomic(path.join(root, index.key + '.json'), value);
   }

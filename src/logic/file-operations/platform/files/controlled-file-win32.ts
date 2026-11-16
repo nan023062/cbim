@@ -56,16 +56,16 @@ export class Win32ControlledFile
     this.api.infoEx = dll.func('int __stdcall GetFileInformationByHandleEx(void *,uint32,void *,uint32)');
     try
     {
-      this.open(protectedRoots)
+      this.Open(protectedRoots)
     }
     catch (e)
     {
-      this.close();
+      this.Close();
       throw e
     }
   }
 
-  private bool(value: number)
+  private Bool(value: number)
   {
     if (!value)
     {
@@ -74,7 +74,7 @@ export class Win32ControlledFile
     }
   }
 
-  private openHandle(file: string, access: number, share: number, flags: number)
+  private OpenHandle(file: string, access: number, share: number, flags: number)
   {
     const h = this.api.open(file, access, share, null, 3, flags, null),
       n = this.api.last();
@@ -84,7 +84,7 @@ export class Win32ControlledFile
     return h
   }
 
-  private final(h: any)
+  private Final(h: any)
   {
     const b = Buffer.alloc(65536),
       n = this.api.final(h, b, 32768, 0);
@@ -93,14 +93,14 @@ export class Win32ControlledFile
     return b.subarray(0, n * 2).toString('utf16le')
   }
 
-  private info(h: any)
+  private Info(h: any)
   {
     const b = Buffer.alloc(52);
-    this.bool(this.api.info(h, b));
+    this.Bool(this.api.info(h, b));
     return { attributes: b.readUInt32LE(0), size: b.readUInt32LE(36) + b.readUInt32LE(32) * 2 ** 32, links: b.readUInt32LE(40), volumeId: b.readUInt32LE(28).toString(16), fileId: b.subarray(44, 52).toString('hex') }
   }
 
-  private target(relative: string, protectedRoots: readonly string[])
+  private Target(relative: string, protectedRoots: readonly string[])
   {
     const parts = relative.split('/');
     if (!relative || relative.length > 2048 || /[\\:<>"|?*\x00-\x1f\x7f]/.test(relative) || parts.some(p => !p || p === '.' || p === '..' || ['.cbim', '.git'].includes(p.toLowerCase()) || /[. ]$/.test(p) || /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p)))
@@ -111,7 +111,7 @@ export class Win32ControlledFile
     return file;
   }
 
-  private lockParents(file: string)
+  private LockParents(file: string)
   {
     const drive = path.parse(this.root).root;
     let current = drive;
@@ -120,14 +120,14 @@ export class Win32ControlledFile
       if (part)
         current = path.join(current, part);
       // 仅 READ_ATTRIBUTES 的元数据句柄不足以阻止空目录重命名；LIST_DIRECTORY 使共享删除约束实际生效。
-      const h = this.openHandle(current, 0x81, 3, 0x2000000 | 0x200000),
-        facts = this.info(h);
-      if (!(facts.attributes & 0x10) || facts.attributes & 0x400 || normal(this.final(h)) !== normal(current))
+      const h = this.OpenHandle(current, 0x81, 3, 0x2000000 | 0x200000),
+        facts = this.Info(h);
+      if (!(facts.attributes & 0x10) || facts.attributes & 0x400 || normal(this.Final(h)) !== normal(current))
         error('CONTROLLED_PATH');
     }
   }
 
-  private missing(file: string)
+  private Missing(file: string)
   {
     try
     {
@@ -142,11 +142,11 @@ export class Win32ControlledFile
     error('CONTROLLED_TARGET_EXISTS')
   }
 
-  private open(protectedRoots: readonly string[])
+  private Open(protectedRoots: readonly string[])
   {
     if (!/^[A-Za-z]:\\/.test(this.root) || normal(fs.realpathSync(this.root)) !== normal(path.resolve(this.root)))
       error('CONTROLLED_PATH');
-    const file = this.target(this.relativePath, protectedRoots),
+    const file = this.Target(this.relativePath, protectedRoots),
       drive = path.parse(this.root).root;
     if (this.api.drive(drive) !== 3 || this.namespaceChange && process.arch !== 'x64')
       error('CONTROLLED_PLATFORM_UNSUPPORTED');
@@ -154,37 +154,37 @@ export class Win32ControlledFile
     {
       if (!this.readOnly || this.namespaceChange)
         error('CONTROLLED_SESSION_USED');
-      this.lockParents(path.join(file, '_'));
+      this.LockParents(path.join(file, '_'));
       return
     }
     // 从卷根到目标父目录持不分享 DELETE 的目录句柄；每一级拒绝 reparse，核实际对象路径。
-    this.lockParents(file);
+    this.LockParents(file);
     if (this.namespaceChange?.kind === 'move')
     {
-      const target = this.target(this.namespaceChange.targetRelativePath, protectedRoots);
+      const target = this.Target(this.namespaceChange.targetRelativePath, protectedRoots);
       if (normal(file) === normal(target))
         error('CONTROLLED_PATH');
-      this.lockParents(target);
-      this.missing(target);
+      this.LockParents(target);
+      this.Missing(target);
     }
     // 受限读取只请求 GENERIC_READ 并仅分享 READ；拒绝同时写入/替换，不要求文件本身可写。
-    this.file = this.openHandle(file, this.readOnly ? 0x80000000 : this.namespaceChange ? 0x80010000 : 0xc0000000, this.readOnly ? 1 : 0, 0x200080);
+    this.file = this.OpenHandle(file, this.readOnly ? 0x80000000 : this.namespaceChange ? 0x80010000 : 0xc0000000, this.readOnly ? 1 : 0, 0x200080);
     const volume = Buffer.alloc(512);
-    this.bool(this.api.volume(this.file, null, 0, null, null, null, volume, 256));
+    this.Bool(this.api.volume(this.file, null, 0, null, null, null, volume, 256));
     if (volume.toString('utf16le').split('\0')[0] !== 'NTFS' || this.api.type(this.file) !== 1)
       error('CONTROLLED_PLATFORM_UNSUPPORTED');
-    this.original = this.checkedIdentity();
+    this.original = this.CheckedIdentity();
     if (this.namespaceChange)
-      this.defaultStreamOnly();
+      this.DefaultStreamOnly();
   }
 
-  private checkedIdentity(): ControlledFileIdentity
+  private CheckedIdentity(): ControlledFileIdentity
   {
     if (!this.file)
       error('CONTROLLED_SESSION_CLOSED');
-    const info = this.info(this.file);
+    const info = this.Info(this.file);
     // READONLY 属性仅限制写操作，读取仍拒绝目录、重解析与离线文件。
-    if (info.links !== 1 || info.attributes & ((this.readOnly ? 0 : 0x1) | 0x10 | 0x400 | 0x1000 | 0x40000 | 0x400000) || info.size > controlledPlatformBytes || normal(this.final(this.file)) !== normal(path.join(this.root, ...this.relativePath.split('/'))))
+    if (info.links !== 1 || info.attributes & ((this.readOnly ? 0 : 0x1) | 0x10 | 0x400 | 0x1000 | 0x40000 | 0x400000) || info.size > controlledPlatformBytes || normal(this.Final(this.file)) !== normal(path.join(this.root, ...this.relativePath.split('/'))))
       error('CONTROLLED_FILE_CHANGED');
     const value: ControlledFileIdentity = { kind: 'windows_file', volumeId: info.volumeId, fileId: info.fileId, links: 1 };
     if (this.original && JSON.stringify(this.original) !== JSON.stringify(value))
@@ -193,19 +193,19 @@ export class Win32ControlledFile
   }
 
   /** binary 只供只读快照使用；业务替换与命名空间操作继续严格 UTF-8。 */
-  read(binary = false)
+  Read(binary = false)
   {
     if (binary && !this.readOnly)
       error('CONTROLLED_SESSION_USED');
-    const identity = this.checkedIdentity(),
-      before = this.info(this.file);
-    this.bool(this.api.seek(this.file, 0, null, 0));
+    const identity = this.CheckedIdentity(),
+      before = this.Info(this.file);
+    this.Bool(this.api.seek(this.file, 0, null, 0));
     const bytes = Buffer.alloc(before.size),
       count = Buffer.alloc(4);
     let offset = 0;
     while (offset < bytes.length)
     {
-      this.bool(this.api.read(this.file, bytes.subarray(offset), Math.min(65536, bytes.length - offset), count, null));
+      this.Bool(this.api.read(this.file, bytes.subarray(offset), Math.min(65536, bytes.length - offset), count, null));
       const n = count.readUInt32LE();
       if (!n)
         error('CONTROLLED_FILE_CHANGED');
@@ -213,42 +213,42 @@ export class Win32ControlledFile
     }
     if (!binary)
       new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-    if (this.info(this.file).size !== before.size)
+    if (this.Info(this.file).size !== before.size)
       error('CONTROLLED_FILE_CHANGED');
-    this.checkedIdentity();
+    this.CheckedIdentity();
     return { identity, bytes, fact: { byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } satisfies ControlledContentFact };
   }
 
-  replace(bytes: Uint8Array)
+  Replace(bytes: Uint8Array)
   {
     if (this.readOnly || this.namespaceChange || this.applied || bytes.byteLength > controlledPlatformBytes)
       error('CONTROLLED_SESSION_USED');
     this.applied = true;
-    this.checkedIdentity();
+    this.CheckedIdentity();
     new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
-    this.bool(this.api.seek(this.file, 0, null, 0));
+    this.Bool(this.api.seek(this.file, 0, null, 0));
     const count = Buffer.alloc(4);
     this.writeIssued = true;
     // 即使空正文也进入实际修改阶段；SetEndOfFile 失败可能已发生前缀写，绝不回滚。
     if (bytes.byteLength)
     {
-      this.bool(this.api.write(this.file, bytes, bytes.byteLength, count, null));
+      this.Bool(this.api.write(this.file, bytes, bytes.byteLength, count, null));
       if (count.readUInt32LE() !== bytes.byteLength)
         error('CONTROLLED_PARTIAL_WRITE')
     }
-    this.bool(this.api.eof(this.file));
-    this.bool(this.api.flush(this.file));
-    const result = this.read();
+    this.Bool(this.api.eof(this.file));
+    this.Bool(this.api.flush(this.file));
+    const result = this.Read();
     if (!Buffer.from(bytes).equals(result.bytes))
       error('CONTROLLED_FILE_CHANGED');
     return result;
   }
 
   /** FileStreamInfo 仅允许一个默认数据流；枚举失败或过多返回同样拒绝，不跳过隐藏内容。 */
-  private defaultStreamOnly()
+  private DefaultStreamOnly()
   {
     const bytes = Buffer.alloc(65536);
-    this.bool(this.api.infoEx(this.file, 7, bytes, bytes.length));
+    this.Bool(this.api.infoEx(this.file, 7, bytes, bytes.length));
     const next = bytes.readUInt32LE(0),
       length = bytes.readUInt32LE(4);
     if (next !== 0 || length !== 14 || bytes.subarray(24, 24 + length).toString('utf16le') !== '::$DATA')
@@ -256,47 +256,47 @@ export class Win32ControlledFile
   }
 
   /** 使用打开时冻结的操作和同一文件句柄；源不存在或移动后同身份读回成功才报告平台事实。 */
-  transition()
+  Transition()
   {
     const transition = this.namespaceChange;
     if (this.readOnly || !transition || this.applied)
       return error('CONTROLLED_SESSION_USED');
     this.applied = true;
-    const before = this.read(),
+    const before = this.Read(),
       source = path.join(this.root, ...this.relativePath.split('/'));
-    this.defaultStreamOnly();
+    this.DefaultStreamOnly();
     if (transition.kind === 'delete')
     {
       this.writeIssued = true;
-      this.bool(this.api.setInfo(this.file, 4, Buffer.from([1]), 1));
+      this.Bool(this.api.setInfo(this.file, 4, Buffer.from([1]), 1));
       // 删除标记直到句柄关闭才生效；只释放源文件，父目录句柄仍保护原路径层级。
       const handle = this.file;
-      this.bool(this.api.close(handle));
+      this.Bool(this.api.close(handle));
       this.handles.splice(this.handles.indexOf(handle), 1);
       this.file = undefined;
-      this.missing(source);
+      this.Missing(source);
     }
     else
     {
       const target = path.join(this.root, ...transition.targetRelativePath.split('/'));
-      this.missing(target);
+      this.Missing(target);
       // Win64 FILE_RENAME_INFO：Flags@0、HANDLE@8、长度@16、UTF-16 名称@20；Flags=0 禁止覆盖。
       const name = Buffer.from(target, 'utf16le'),
         info = Buffer.alloc(Math.max(24, 20 + name.length + 2));
       info.writeUInt32LE(name.length, 16);
       name.copy(info, 20);
       this.writeIssued = true;
-      this.bool(this.api.setInfo(this.file, 3, info, info.length));
+      this.Bool(this.api.setInfo(this.file, 3, info, info.length));
       this.relativePath = transition.targetRelativePath;
-      const after = this.read();
+      const after = this.Read();
       if (JSON.stringify(after.identity) !== JSON.stringify(before.identity) || !after.bytes.equals(before.bytes))
         error('CONTROLLED_FILE_CHANGED');
-      this.missing(source);
+      this.Missing(source);
     }
     return { identity: before.identity, fact: before.fact, transition: structuredClone(transition), sourceMissing: true as const };
   }
 
-  close()
+  Close()
   {
     let failed = false;
     for (let i = this.handles.length - 1; i >= 0; i--)

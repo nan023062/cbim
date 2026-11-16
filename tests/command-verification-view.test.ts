@@ -17,30 +17,30 @@ it('挂载与订阅零查询，在途重复点击合并；卸载迟到回包不�
   let finish!:(value:unknown)=>void;
   const read=vi.fn((_input:unknown)=>new Promise(resolve=>{finish=resolve})),controller=new CommandVerificationController(selection,read),listener=vi.fn();
   const unsubscribe=controller.subscribe(listener);expect(read).not.toHaveBeenCalled();
-  const first=controller.inspect();await controller.inspect();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual(identity);
-  unsubscribe();controller.cancel();finish(report());await first;expect(controller.snapshot).toEqual({loading:false,error:''});
+  const first=controller.Inspect();await controller.Inspect();expect(read).toHaveBeenCalledTimes(1);expect(read.mock.calls[0][0]).toEqual(identity);
+  unsubscribe();controller.Cancel();finish(report());await first;expect(controller.snapshot).toEqual({loading:false,error:''});
   const other=new CommandVerificationController({...selection,toolCallId:'different'},read);expect(other.snapshot.report).toBeUndefined();expect(read).toHaveBeenCalledTimes(1);
 });
 
 it('刷新失败保留旧报告，不自动重读；后续只能显式核实',async()=>{
   const read=vi.fn(async()=>report()),controller=new CommandVerificationController(selection,read);
-  await controller.inspect();const previous=controller.snapshot.report;
-  read.mockRejectedValueOnce(Error('IO: 读取失败'));await controller.inspect();expect(controller.snapshot.report).toBe(previous);expect(controller.snapshot.error).toBe('IO: 读取失败');
+  await controller.Inspect();const previous=controller.snapshot.report;
+  read.mockRejectedValueOnce(Error('IO: 读取失败'));await controller.Inspect();expect(controller.snapshot.report).toBe(previous);expect(controller.snapshot.error).toBe('IO: 读取失败');
   await Promise.resolve();expect(read).toHaveBeenCalledTimes(2);
   const html=render(previous!,true,controller.snapshot.error);expect(html).toContain('保留上次报告');expect(html).toContain('原事务已保存');expect(html).not.toContain('重试操作</button>');
-  await controller.inspect();expect(read).toHaveBeenCalledTimes(3);expect(controller.snapshot.error).toBe('');
+  await controller.Inspect();expect(read).toHaveBeenCalledTimes(3);expect(controller.snapshot.error).toBe('');
 });
 
 it.each(['workspaceId','rootSessionId','runId','toolCallId'] as const)('拒绝跨 %s 回包并保留旧报告',async field=>{
-  const read=vi.fn(async()=>report()),controller=new CommandVerificationController(selection,read);await controller.inspect();const previous=controller.snapshot.report,bad=report();bad.identity[field]='different';
-  read.mockResolvedValueOnce(bad);await controller.inspect();expect(controller.snapshot.report).toBe(previous);expect(controller.snapshot.error).toContain('原命令');
+  const read=vi.fn(async()=>report()),controller=new CommandVerificationController(selection,read);await controller.Inspect();const previous=controller.snapshot.report,bad=report();bad.identity[field]='different';
+  read.mockResolvedValueOnce(bad);await controller.Inspect();expect(controller.snapshot.report).toBe(previous);expect(controller.snapshot.error).toContain('原命令');
 });
 
 it('拒绝错工具与含私有字段的回包；请求身份不受外部对象修改影响',async()=>{
   const bad=report();bad.source.toolName='cbim_goal_review';bad.command={state:'absent',commandId:'other'};
   expect(()=>applyCommandVerification(bad,selection)).toThrow('工具');
   expect(()=>applyCommandVerification({...report(),privatePrepared:{secret:'credential'}},selection)).toThrow();
-  const mutable={...selection},read=vi.fn(async()=>report()),controller=new CommandVerificationController(mutable,read);mutable.runId='different';await controller.inspect();expect(read).toHaveBeenCalledWith(identity);expect(controller.snapshot.error).toBe('');
+  const mutable={...selection},read=vi.fn(async()=>report()),controller=new CommandVerificationController(mutable,read);mutable.runId='different';await controller.Inspect();expect(read).toHaveBeenCalledWith(identity);expect(controller.snapshot.error).toBe('');
 });
 
 it('原工具失败和原事务已保存同时呈现，不改写原执行结果或验收',()=>{

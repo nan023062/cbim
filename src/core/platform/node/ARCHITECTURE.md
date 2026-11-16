@@ -85,4 +85,4 @@ locking.ts 提供 KernelLock，使用 Windows mutex 或 POSIX flock。保留 Glo
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.formatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.FormatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

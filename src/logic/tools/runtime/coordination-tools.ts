@@ -11,11 +11,11 @@ import type { RunToolDescriptor } from '../rules/policy/tool-policy';
 
 interface ReadPort
 {
-  list(): EngineToolSchema[];
+  List(): EngineToolSchema[];
 
-  describe(name: string, input: unknown): RunToolDescriptor;
+  Describe(name: string, input: unknown): RunToolDescriptor;
 
-  call(name: string, input: Record<string, unknown>, signal: AbortSignal, toolCallId?: string): Promise<unknown>;
+  Call(name: string, input: Record<string, unknown>, signal: AbortSignal, toolCallId?: string): Promise<unknown>;
 }
 
 const inspectRoutes = { state: 'cbim_goal_inspect', task: 'cbim_dispatch_inspect', owner: 'cbim_module_owner_inspect', member: 'cbim_member_inspect', governance: 'cbim_governance_get' };
@@ -51,17 +51,17 @@ export class CoordinationTools
   {
     const allowed = new Set([...Object.values(inspectRoutes), ...Object.values(receiptRoutes)]);
     for (const port of ports)
-      for (const tool of port.list())
+      for (const tool of port.List())
         if (allowed.has(tool.name))
           this.routes.set(tool.name, { port, tool });
   }
 
-  has(name: string)
+  Has(name: string)
   {
     return name === 'cbim_state_inspect' || name === 'cbim_receipt_inspect'
   }
 
-  list()
+  List()
   {
     return (['cbim_state_inspect', 'cbim_receipt_inspect'] as const).flatMap(name =>
     {
@@ -80,9 +80,9 @@ export class CoordinationTools
     })
   }
 
-  private resolve(name: string, raw: unknown)
+  private Resolve(name: string, raw: unknown)
   {
-    if (!this.has(name) || !raw || typeof raw !== 'object' || Array.isArray(raw))
+    if (!this.Has(name) || !raw || typeof raw !== 'object' || Array.isArray(raw))
       fail('COORDINATION_INPUT', '只读查询参数无效');
     const value = raw as Record<string, unknown>;
     if (Object.keys(value).some(key => !['target', 'input'].includes(key)) || typeof value.target !== 'string' || !value.input || typeof value.input !== 'object' || Array.isArray(value.input))
@@ -92,23 +92,23 @@ export class CoordinationTools
     const route = original ? this.routes.get(original) : undefined;
     if (!original || !route)
       fail('TOOL_NOT_FOUND', '本轮未装配该只读目标');
-    const descriptor = route.port.describe(original, value.input);
+    const descriptor = route.port.Describe(original, value.input);
     if (descriptor.native || descriptor.effects.some(effect => effect !== 'read'))
       fail('COORDINATION_READ_ONLY', '统一入口只能调用真实只读能力');
     return { original, route, input: value.input as Record<string, unknown> };
   }
 
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    this.resolve(name, input);
+    this.Resolve(name, input);
     return { effects: ['read'], native: false }
   }
 
-  async call(name: string, input: Record<string, unknown>, signal: AbortSignal, id?: string)
+  async Call(name: string, input: Record<string, unknown>, signal: AbortSignal, id?: string)
   {
     signal.throwIfAborted();
-    const route = this.resolve(name, input);
-    const result = validateToolResult(route.original, await route.route.port.call(route.original, route.input, signal, id)) as ToolResult;
+    const route = this.Resolve(name, input);
+    const result = validateToolResult(route.original, await route.route.port.Call(route.original, route.input, signal, id)) as ToolResult;
     signal.throwIfAborted();
     if (route.original !== 'cbim_goal_inspect')
       return result;

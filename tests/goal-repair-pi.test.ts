@@ -27,14 +27,14 @@ it('主 Agent 在原调用循环内读取失败、修复并重测，不创建旧
   });
   try{
     await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error('no port');
-    await app.models.save({profile:{name:'Repair fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'repair',models:[{id:'repair',name:'Repair',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const entry=await app.dispatch('add',{path:f.a});await fs.writeFile(path.join(f.a,'repair-target.txt'),'broken');
-    const started=await app.dispatch('loop.chat',{id:entry.id,message:'修复文件并实际检查',options:{permission:'execute',turnTimeoutMs:15000}}) as {taskId:string};
+    await app.models.Save({profile:{name:'Repair fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'repair',models:[{id:'repair',name:'Repair',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+    const entry=await app.Dispatch('add',{path:f.a});await fs.writeFile(path.join(f.a,'repair-target.txt'),'broken');
+    const started=await app.Dispatch('loop.chat',{id:entry.id,message:'修复文件并实际检查',options:{permission:'execute',turnTimeoutMs:15000}}) as {taskId:string};
     await vi.waitFor(async()=>{
-      expect(errors).toEqual([]);const state=await app.workspace(entry.id).dispatchStore.read();
-      expect(state.scopes?.[0]).toMatchObject({status:'closed',outcome:'completed'});expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);
+      expect(errors).toEqual([]);const state=await app.Workspace(entry.id).dispatchStore.Read();
+      expect(state.scopes?.[0]).toMatchObject({status:'closed',outcome:'completed'});expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0);
     },{timeout:30000,interval:50});
-    const history=await app.execution(entry.id).thread(started.taskId),state=await app.workspace(entry.id).dispatchStore.read();
+    const history=await app.Execution(entry.id).Thread(started.taskId),state=await app.Workspace(entry.id).dispatchStore.Read();
     expect(history).toHaveLength(1);expect(history[0].status).toBe('completed');
     expect(history[0].toolReceipts?.find(item=>item.toolCallId==='failed-test')).toMatchObject({outcome:'failed'});
     expect(history[0].toolReceipts?.find(item=>item.toolCallId==='passed-test')).toMatchObject({outcome:'succeeded'});
@@ -43,8 +43,8 @@ it('主 Agent 在原调用循环内读取失败、修复并重测，不创建旧
     expect(await fs.readFile(path.join(f.a,'repair-target.txt'),'utf8')).toBe('fixed');expect(requests).toHaveLength(4);
     const canonicalPath=path.join(f.user,entry.id,'loop-engine/tasks',started.taskId,history[0].runId,'events.jsonl');
     const canonical=await fs.readFile(canonicalPath),native=await fs.readFile(history[0].sessionFile!);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-    expect(await app.execution(entry.id).thread(started.taskId)).toEqual(history);expect(await app.workspace(entry.id).dispatchStore.read()).toEqual(state);
+    await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+    expect(await app.Execution(entry.id).Thread(started.taskId)).toEqual(history);expect(await app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);
     expect(await fs.readFile(canonicalPath)).toEqual(canonical);expect(await fs.readFile(history[0].sessionFile!)).toEqual(native);expect(requests).toHaveLength(4);
-  }finally{await app.shutdown();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
+  }finally{await app.Shutdown();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },60000);

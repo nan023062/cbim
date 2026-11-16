@@ -83,7 +83,7 @@ export interface PublicHttpBytes
 /** 测试端口只由可信装配提供，不属于 IPC 或模型参数。lookup 返回全部地址，request 必须遵守传入 lookup。 */
 export interface PublicHttpTransport
 {
-  lookup(host: string): Promise<Array<{ address: string; family: number }>>;
+  Lookup(host: string): Promise<Array<{ address: string; family: number }>>;
 
   request: typeof http.request;
 }
@@ -96,9 +96,9 @@ export class PublicHttp
   }
 
   /** 静态网页入口保留原 1 MiB 与严格 UTF-8 语义。 */
-  async read(raw: string, signal: AbortSignal, options: { headers?: Record<string, string> } = {}): Promise<PublicHttpResponse>
+  async Read(raw: string, signal: AbortSignal, options: { headers?: Record<string, string> } = {}): Promise<PublicHttpResponse>
   {
-    const response = await this.readBytes(raw, signal, options);
+    const response = await this.ReadBytes(raw, signal, options);
     try
     {
       return { ...response, body: new TextDecoder('utf-8', { fatal: true }).decode(response.body) };
@@ -110,7 +110,7 @@ export class PublicHttp
   }
 
   /** 可信调用者可设置请求头与至多 8 MiB 的资源上限；仅 GET，不自动读取宿主 Cookie 或登录态。 */
-  async readBytes(raw: string, signal: AbortSignal, options: { headers?: Record<string, string>; maxBytes?: number } = {}): Promise<PublicHttpBytes>
+  async ReadBytes(raw: string, signal: AbortSignal, options: { headers?: Record<string, string>; maxBytes?: number } = {}): Promise<PublicHttpBytes>
   {
     if (options.maxBytes !== undefined && (!Number.isSafeInteger(options.maxBytes) || options.maxBytes < 1))
       throw Error('WEB_SIZE: 资源字节上限必须为正整数');
@@ -130,7 +130,7 @@ export class PublicHttp
         deadline.addEventListener('abort', abort, { once: true });
         const pending = isIP(host)
           ? Promise.resolve([{ address: host, family: isIP(host) }])
-          : (this.transport?.lookup(host) ?? lookup(host, { all: true }));
+          : (this.transport?.Lookup(host) ?? lookup(host, { all: true }));
         void pending
           .then(resolve, () => reject(Error('WEB_DNS: 域名解析失败')))
           .finally(() => deadline.removeEventListener('abort', abort));

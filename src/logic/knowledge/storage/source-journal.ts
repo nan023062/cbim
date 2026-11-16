@@ -51,15 +51,15 @@ export function checkedSourceJournal(raw: unknown, before: Record<string, string
 /** 只在 Main 私有装配中实现；prepare 必须可靠保存后才允许写知识，settle 位于知识回滚 catch 之外。 */
 export interface KnowledgeSourceAuthority
 {
-  build(request: ChangeRequest, current: Snapshot, projected: Snapshot, before: Record<string, string | null>, after: Record<string, string | null>, plan?: PlannedKnowledgeCommit): Promise<KnowledgeSourceJournal>;
+  Build(request: ChangeRequest, current: Snapshot, projected: Snapshot, before: Record<string, string | null>, after: Record<string, string | null>, plan?: PlannedKnowledgeCommit): Promise<KnowledgeSourceJournal>;
 
-  prepare(source: KnowledgeSourceJournal): Promise<void>;
+  Prepare(source: KnowledgeSourceJournal): Promise<void>;
 
-  settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string): Promise<void>;
+  Settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string): Promise<void>;
 
-  verify(source: KnowledgeSourceJournal, requirePending: boolean): Promise<void>;
+  Verify(source: KnowledgeSourceJournal, requirePending: boolean): Promise<void>;
 
-  pending(): Promise<readonly KnowledgeSourceTransition[]>;
+  Pending(): Promise<readonly KnowledgeSourceTransition[]>;
 
-  transitions(): Promise<readonly KnowledgeSourceTransition[]>;
+  Transitions(): Promise<readonly KnowledgeSourceTransition[]>;
 }

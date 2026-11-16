@@ -59,20 +59,20 @@ class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
 }
 class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdateInstaller["DesktopUpdateInstaller"] {
   <<interface>>
-  +prepare()
-  +download()
-  +install()
-  +close()
+  +Prepare()
+  +Download()
+  +Install()
+  +Close()
 }
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts_DesktopUpdateInstaller : 声明
 class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] {
   +constructor()
-  +status()
-  +start()
-  +check()
-  +download()
-  +install()
-  +close()
+  +Status()
+  +Start()
+  +Check()
+  +Download()
+  +Install()
+  +Close()
   -latest
   -installer
   -beforeInstall
@@ -95,9 +95,9 @@ class N_src_logic_updates_service_desktop_updates_ts["desktop-updates.ts"] {
 }
 class N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates["DesktopUpdates"] {
   -initial
-  -run()
-  -downloadCandidate()
-  -installReady()
+  -Run()
+  -DownloadCandidate()
+  -InstallReady()
 }
 N_src_logic_updates_service_desktop_updates_ts ..> N_src_logic_updates_service_desktop_updates_ts_DesktopUpdates : 声明
 ```
@@ -115,9 +115,9 @@ class N_src_logic_updates_service_engine_artifacts_ts["engine-artifacts.ts"] {
 }
 class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArtifacts"] {
   +constructor()
-  +list()
-  +check()
-  +prepare()
+  +List()
+  +Check()
+  +Prepare()
   -stateFile
   -store
   -seed
@@ -149,10 +149,10 @@ class N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts["EngineArt
   -current
   -head
   -digest
-  -verifyHistory()
-  -add()
-  -init()
-  -summary()
+  -VerifyHistory()
+  -Add()
+  -Init()
+  -Summary()
 }
 N_src_logic_updates_service_engine_artifacts_ts ..> N_src_logic_updates_service_engine_artifacts_ts_EngineArtifacts : 声明
 class N_src_logic_updates_service_engine_artifacts_ts_external_EngineArtifactsPort["EngineArtifactsPort (外部契约)"] {
@@ -197,18 +197,18 @@ class N_src_logic_updates_service_managed_engines_ts["managed-engines.ts"] {
 }
 class N_src_logic_updates_service_managed_engines_ts_ManagedEngines["ManagedEngines"] {
   +constructor()
-  +status()
-  +preparations()
-  +used()
-  +resolveEngine()
+  +Status()
+  +Preparations()
+  +Used()
+  +ResolveEngine()
   -store
   -descriptors
   -signal
   -states
   -jobs
   -initialization
-  -initialize()
-  -prepare()
+  -Initialize()
+  -Prepare()
 }
 N_src_logic_updates_service_managed_engines_ts ..> N_src_logic_updates_service_managed_engines_ts_ManagedEngines : 声明
 ```
@@ -223,10 +223,10 @@ class N_src_logic_updates_service_nsis_updater_ts["nsis-updater.ts"] {
   <<module>>
 }
 class N_src_logic_updates_service_nsis_updater_ts_NsisUpdateInstaller["NsisUpdateInstaller"] {
-  +prepare()
-  +download()
-  +install()
-  +close()
+  +Prepare()
+  +Download()
+  +Install()
+  +Close()
   -updater
   -pending
   -error
@@ -318,9 +318,9 @@ class N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost["DesktopRun
   +codeVersion
   +resourceVersion
   +engineArtifacts
-  +stopPreparingEngines()
-  +updates()
-  +confirm()
+  +StopPreparingEngines()
+  +Updates()
+  +Confirm()
 }
 N_src_logic_updates_service_runtime_host_ts ..> N_src_logic_updates_service_runtime_host_ts_DesktopRuntimeHost : 声明
 ```
@@ -341,15 +341,15 @@ class N_src_logic_updates_service_runtime_journal_ts_RuntimeState["RuntimeState"
 N_src_logic_updates_service_runtime_journal_ts ..> N_src_logic_updates_service_runtime_journal_ts_RuntimeState : 声明
 class N_src_logic_updates_service_runtime_journal_ts_RuntimeJournal["RuntimeJournal"] {
   +constructor()
-  +read()
-  +authorize()
-  +accessData()
-  +confirm()
-  +rejectBeforeData()
-  +retryPending()
+  +Read()
+  +Authorize()
+  +AccessData()
+  +Confirm()
+  +RejectBeforeData()
+  +RetryPending()
   -directory
   -initial
-  -write()
+  -Write()
 }
 N_src_logic_updates_service_runtime_journal_ts ..> N_src_logic_updates_service_runtime_journal_ts_RuntimeJournal : 声明
 ```
@@ -436,15 +436,15 @@ class N_src_logic_updates_service_runtime_store_ts_RuntimeStore["RuntimeStore"] 
   +root
   +cold
   +constructor()
-  +packageRoot()
-  +manifestPath()
-  +saveManifest()
-  +readManifest()
-  +prepare()
+  +PackageRoot()
+  +ManifestPath()
+  +SaveManifest()
+  +ReadManifest()
+  +Prepare()
   -download
   -reuseRoots
   -preparing
-  -preparePackage()
+  -PreparePackage()
 }
 N_src_logic_updates_service_runtime_store_ts ..> N_src_logic_updates_service_runtime_store_ts_RuntimeStore : 声明
 ```
@@ -469,17 +469,17 @@ class N_src_logic_updates_service_runtime_updates_ts_Candidate["Candidate"] {
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_Candidate : 声明
 class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdateSources["RuntimeUpdateSources"] {
   <<interface>>
-  +cold()
-  +resources()
+  +Cold()
+  +Resources()
 }
 N_src_logic_updates_service_runtime_updates_ts ..> N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdateSources : 声明
 class N_src_logic_updates_service_runtime_updates_ts_RuntimeUpdates["RuntimeUpdates"] {
   +constructor()
-  +latest()
-  +prepare()
-  +download()
-  +install()
-  +close()
+  +Latest()
+  +Prepare()
+  +Download()
+  +Install()
+  +Close()
   -store
   -journal
   -current
@@ -694,7 +694,7 @@ ManagedEngines 从已验签的启动清单取得固定 E，目录状态只读本
 
 ## 有界响应体与基础库
 
-Release 列表（2 MiB / 20 秒）和小清单（16 MiB / 30 秒）组合 utility 通用入口的 ByteUtils.readBoundedBytes，保留既有上限与错误文案。utility 只拥有 reader 的取消/释放；更新模块仍决定公开地址、GET/跳转、无凭据传输、解析、签名及安装状态。正文未完整或停止时不交付部分 JSON，也不自动重发。
+Release 列表（2 MiB / 20 秒）和小清单（16 MiB / 30 秒）组合 utility 通用入口的 ByteUtils.ReadBoundedBytes，保留既有上限与错误文案。utility 只拥有 reader 的取消/释放；更新模块仍决定公开地址、GET/跳转、无凭据传输、解析、签名及安装状态。正文未完整或停止时不交付部分 JSON，也不自动重发。
 
 仅允许更新子系统依赖 utility 通用公开入口，不能由此进入 Node 专用入口、其他基础方案或 Main。大安装包继续流式写盘并累计摘要，不使用内存收集器。本次读取完成不代表签名、解压、安装或物理资源退出已完成。
 
@@ -742,9 +742,9 @@ engine-index 验证 Ed25519、平台、时效、单调发布序号、版本唯�
 
 冷壳签名身份轮换时，EngineArtifacts 仅对本机保存的历史 seeds/indexes 使用宿主显式固定的历史公钥；当前启动 seed 和远程 check 始终只接受当前公钥。历史验签仍执行完整平台、结构、依赖及版本冲突检查，失败不覆盖原文件。旧身份只证明 E 来源，不授权启动旧 R，也不改变已接纳索引序号。密钥名单不得从用户状态或网络推导。此兼容用于身份更换，不表示已撤销或泄露的身份仍应继续被信任。
 
-EngineArtifacts.prepare 通过可选第三参报告 0–100 的准备进度，包括本地文件校验；不将回调次数视为下载次数。EnginePackages 将其归到准确引擎/版本，应用更新图标忽略旧 enginePreparations 字段。旧冷宿主可忽略可选回调，资源层仍显示准备中而不编造百分比；缓存身份、验签、完整文件验证与跨 C 共享路径不变。
+EngineArtifacts.Prepare 通过可选第三参报告 0–100 的准备进度，包括本地文件校验；不将回调次数视为下载次数。EnginePackages 将其归到准确引擎/版本，应用更新图标忽略旧 enginePreparations 字段。旧冷宿主可忽略可选回调，资源层仍显示准备中而不编造百分比；缓存身份、验签、完整文件验证与跨 C 共享路径不变。
 
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `ByteUtils.readBoundedBytes`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `ByteUtils.ReadBoundedBytes`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

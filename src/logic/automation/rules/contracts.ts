@@ -72,21 +72,21 @@ export type AutomationSave = z.infer<typeof automationSaveSchema>;
 /** 唯一调度所有者串行使用；保存成功后才允许发出外部执行。 */
 export interface AutomationStorage
 {
-  read(): Promise<AutomationState>;
+  Read(): Promise<AutomationState>;
 
-  write(state: AutomationState): Promise<void>
+  Write(state: AutomationState): Promise<void>
 }
 
 /** bind 必须先于模型启动完成，用于持久记录真实主任务身份；未知结果不能自行重试。 */
 export interface AutomationRunner
 {
-  validate(definition: AutomationDefinition): Promise<void>;
+  Validate(definition: AutomationDefinition): Promise<void>;
 
-  start(run: AutomationRun, signal: AbortSignal, bind: (identity: { taskId: string; runId: string }) => Promise<void>): Promise<{ taskId: string; runId: string }>;
+  Start(run: AutomationRun, signal: AbortSignal, bind: (identity: { taskId: string; runId: string }) => Promise<void>): Promise<{ taskId: string; runId: string }>;
 
-  inspect(taskId: string): Promise<{ status: Exclude<AutomationRunStatus, 'starting' | 'skipped'>; message?: string }>;
+  Inspect(taskId: string): Promise<{ status: Exclude<AutomationRunStatus, 'starting' | 'skipped'>; message?: string }>;
 
-  stop(taskId: string): Promise<void>;
+  Stop(taskId: string): Promise<void>;
 }
 
 export interface AutomationCatalog

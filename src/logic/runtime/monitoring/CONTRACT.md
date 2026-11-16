@@ -19,7 +19,7 @@ GlobalRuntimeManager 由 Application 单例持有，管理所有接入工作区�
 
 - begin/ready/unavailable/detach/forget/rename 管理接入代际和可用性；旧 epoch 不污染新实例，关闭保留历史并清除活动观察。
 - restoreDispatch/dispatchCommitted 接收初始基线与新事务；增量只更新受影响对象，不读取磁盘。邮箱只计 pending，claimed/processed 事务使信封退出待消费负载。
-- 目标周期从同一 `DispatchObserver.loaded/committed` 白名单投影到 `WorkspaceIndex.scopes`。store 在可靠提交后按工作区串行同步通知；scope-only 提交独立推进全局游标，不借用图序号或 goalRevision。同一公开投影重放保持 noop，一次成员/任务/周期组合提交只增加一次全局版本；先核整批周期身份，失败不留下半批周期、成员或任务。
+- 目标周期从同一 `DispatchObserver.Loaded/committed` 白名单投影到 `WorkspaceIndex.scopes`。store 在可靠提交后按工作区串行同步通知；scope-only 提交独立推进全局游标，不借用图序号或 goalRevision。同一公开投影重放保持 noop，一次成员/任务/周期组合提交只增加一次全局版本；先核整批周期身份，失败不留下半批周期、成员或任务。
 - 周期覆盖保留持久插入顺序，不按时间推断最新；旧日志没有 scopes 时不造周期。关闭工作区只改变可用性和当前运行观察，不改写持久等待或关闭结果；重开由新的 epoch 恢复真实周期，旧代际回调被忽略。Loop 最近运行 completed 与目标 waiting 可以同时存在，界面必须分开展示。
 - restoreRun/runEvent 按 workspace/task/run/seq 去重；较新未结束的恢复记录不会把 live run 判成中断，有真实终态时收口。成员绑定从 run.started 或 RunSummary 明确读取并校验，摘要与起始记录冲突时拒绝发布。
 - 带 memberBinding 的轮次计入运行与累计消耗，业务任务只使用 dispatch 图节点；不会再合成第二个 source=loop 任务。普通主对话使用 conversationBinding 对应的实例和对话通道，同一轮次禁止同时携带两种绑定。摘要与起始会话绑定冲突时拒绝发布；同角色名的既有无绑定对话仍保持 role-only。

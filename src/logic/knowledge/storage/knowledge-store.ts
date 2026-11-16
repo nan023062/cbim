@@ -48,7 +48,7 @@ export interface KnowledgeStoreOwner
 
   readonly fault?: (step: number) => void;
 
-  assert(identity?: { workspaceId: string; instanceId: string }): void;
+  Assert(identity?: { workspaceId: string; instanceId: string }): void;
 }
 
 interface CommitResult
@@ -101,7 +101,7 @@ export class KnowledgeStore
   }
 
   /** 工作区持锁后只装配一次；必须在恢复和对外开放之前设置同一个 DispatchStore 协调器。 */
-  attachSources(sources: KnowledgeSourceAuthority)
+  AttachSources(sources: KnowledgeSourceAuthority)
   {
     if (this.sources && this.sources !== sources)
       fail('SOURCE_UNAVAILABLE', '来源协调器不可替换');
@@ -109,16 +109,16 @@ export class KnowledgeStore
   }
 
   /** 固定知识观察后允许一个短 Store 事务；回调不能重入本队列。 */
-  withSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
+  WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
   {
-    this.owner.assert();
-    return this.serial(async () =>
+    this.owner.Assert();
+    return this.Serial(async () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       this.activeOperations++;
       try
       {
-        return await operation(await this.snapshot())
+        return await operation(await this.Snapshot())
       }
       finally
       {
@@ -128,28 +128,28 @@ export class KnowledgeStore
   }
 
   /** 等待已经进入队列的事务结束；不会取消半完成提交。 */
-  async drain()
+  async Drain()
   {
     await this.queue
   }
 
   /** 只读核实原请求的已提交回执，允许查询旧实例请求；不执行提交、回滚或恢复。 */
-  async committedReceipt(request: ChangeRequest): Promise<CommitResult | undefined>
+  async CommittedReceipt(request: ChangeRequest): Promise<CommitResult | undefined>
   {
-    this.owner.assert();
-    return this.serial(async () =>
+    this.owner.Assert();
+    return this.Serial(async () =>
     {
-      this.owner.assert();
-      return (await this.journalStatus(request))?.result
+      this.owner.Assert();
+      return (await this.JournalStatus(request))?.result
     });
   }
 
   /** 同串行事务内部的只读查询；允许旧实例身份，但不执行恢复或写入。 */
-  private async journalStatus(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>
+  private async JournalStatus(request: ChangeRequest): Promise<KnowledgeJournalStatus | undefined>
   {
     if (request.workspaceId !== this.owner.entry.id || !/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
       fail('IDENTITY', '知识回执查询身份不匹配');
-    const file = path.join(this.owner.paths.local(this.owner.entry.id, 'transactions'), request.requestId + '.json');
+    const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json');
     let value: Journal;
     try
     {
@@ -178,9 +178,9 @@ export class KnowledgeStore
       const source = checkedSourceJournal(value.source, value.before, value.after, request);
       if (!this.sources)
         fail('SOURCE_UNAVAILABLE', '来源事务缺少协调器');
-      await this.sources.verify(source, value.state !== 'prepared' && value.state !== 'rolled_back')
+      await this.sources.Verify(source, value.state !== 'prepared' && value.state !== 'rolled_back')
     }
-    if (!value.source && this.sources && (await this.sources.transitions()).some(item => item.requestId === request.requestId))
+    if (!value.source && this.sources && (await this.sources.Transitions()).some(item => item.requestId === request.requestId))
       fail('SOURCE_JOURNAL_INVALID', '原来源事务的 journal 标记缺失，不能降级为旧知识回执');
     const status: KnowledgeJournalStatus = { state: value.state, before: structuredClone(value.before), after: structuredClone(value.after), ...(value.governance ? { governance: structuredClone(value.governance) } : {}) };
     if (value.state === 'committed')
@@ -190,26 +190,26 @@ export class KnowledgeStore
         fail('RECOVERY', '已提交知识事务缺少有效回执');
       status.result = structuredClone(result)
     }
-    this.governance?.verifyJournal(request, status);
+    this.governance?.VerifyJournal(request, status);
     return status;
   }
 
   /** 私有治理操作与所有知识提交共用一个队列；回调中的 apply 只解析已保存的真实意图。 */
-  governed<T>(operation: (transaction: KnowledgeGovernanceTransaction) => Promise<T>): Promise<T>
+  Governed<T>(operation: (transaction: KnowledgeGovernanceTransaction) => Promise<T>): Promise<T>
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       this.activeOperations++;
       try
       {
         return await operation({
-          snapshot: () => this.snapshot(), preview: request => this.draft(request), journal: request => this.journalStatus(request), apply: async intentId =>
+          Snapshot: () => this.Snapshot(), Preview: request => this.Draft(request), Journal: request => this.JournalStatus(request), Apply: async intentId =>
           {
             if (!this.governance)
               fail('GOVERNANCE_UNAVAILABLE', '治理存储尚未装配');
-            const request = await this.governance.request(intentId);
-            return this.commitInternal(request, intentId);
+            const request = await this.governance.Request(intentId);
+            return this.CommitInternal(request, intentId);
           }
         })
       }
@@ -221,17 +221,17 @@ export class KnowledgeStore
   }
 
   /** 仅证明原请求是否有任何事务记录；已回滚/未完成也算存在，不冒称从未受理。 */
-  async hasRecordedRequest(request: ChangeRequest): Promise<boolean>
+  async HasRecordedRequest(request: ChangeRequest): Promise<boolean>
   {
-    this.owner.assert();
+    this.owner.Assert();
     if (request.workspaceId !== this.owner.entry.id || !/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
       fail('IDENTITY', '知识回执查询身份不匹配');
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       try
       {
-        await fs.lstat(path.join(this.owner.paths.local(this.owner.entry.id, 'transactions'), request.requestId + '.json'));
+        await fs.lstat(path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json'));
         return true
       }
       catch (error: any)
@@ -243,12 +243,12 @@ export class KnowledgeStore
     })
   }
 
-  async initialize()
+  async Initialize()
   {
     const dir = path.join(this.owner.entry.path, '.cbim');
     if (await exists(dir))
     {
-      await this.owner.paths.knowledge(this.owner.entry.path, '.cbim/project.json');
+      await this.owner.paths.Knowledge(this.owner.entry.path, '.cbim/project.json');
       const manifest = path.join(dir, 'project.json');
       if (await exists(manifest))
       {
@@ -309,18 +309,18 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     }
   }
 
-  async read(): Promise<Snapshot>
+  async Read(): Promise<Snapshot>
   {
     const files = await readKnowledge(this.owner.paths, this.owner.entry.path);
     return { workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, revision: revision(files), files }
   }
 
   /** 读取当前正文并校验；返回结构错误不等于工作区不可用。 */
-  async snapshot()
+  async Snapshot()
   {
-    this.owner.assert();
-    const snapshot = await this.read();
-    snapshot.validation = await this.owner.rules.validate(this.owner.entry.path, snapshot.files);
+    this.owner.Assert();
+    const snapshot = await this.Read();
+    snapshot.validation = await this.owner.rules.Validate(this.owner.entry.path, snapshot.files);
     this.owner.knowledgeErrors = snapshot.validation.issues.filter(i => i.severity === 'error').length;
     for (const [p, text] of Object.entries(snapshot.validation.indexes))
     {
@@ -333,7 +333,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     return snapshot
   }
 
-  private serial<T>(operation: () => Promise<T>): Promise<T>
+  private Serial<T>(operation: () => Promise<T>): Promise<T>
   {
     const current = this.queue.then(operation);
     this.queue = current.catch(() =>
@@ -342,21 +342,21 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     return current
   }
 
-  private async draft(request: ChangeRequest): Promise<Preview>
+  private async Draft(request: ChangeRequest): Promise<Preview>
   {
     if (!plannedRequestSchema.safeParse(request).success)
       fail('REQUEST_INVALID', '知识请求只接受原身份、版本和文件变更；来源证明只能来自私有计划');
-    this.owner.assert(request);
+    this.owner.Assert(request);
     if (!/^[A-Za-z0-9_-]{8,100}$/.test(request.requestId))
       fail('REQUEST_ID', '请求标识须为 8–100 位字母、数字、下划线或横线');
-    const snapshot = await this.read();
+    const snapshot = await this.Read();
     if (snapshot.revision !== request.revision)
       fail('CONFLICT', '知识已被外部修改，请重新读取并合并');
     const map = new Map(snapshot.files.map(f => [f.path, f.text]));
     const seen = new Set<string>();
     for (const change of request.changes)
     {
-      await this.owner.paths.knowledge(this.owner.entry.path, change.path);
+      await this.owner.paths.Knowledge(this.owner.entry.path, change.path);
       if (!isKnowledge(change.path) || INDEXES.includes(change.path) || change.path === '.cbim/project.json')
         fail('TYPE', '该路径不是可编辑的正式知识类型，索引与版本由程序维护');
       if (seen.has(change.path.toLowerCase()))
@@ -367,7 +367,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       change.text === null ? map.delete(change.path) : map.set(change.path, change.text)
     }
     const projected = [...map].map(([p, text]) => ({ path: p, text, hash: hash(text) }));
-    const validation = await this.owner.rules.validate(this.owner.entry.path, projected);
+    const validation = await this.owner.rules.Validate(this.owner.entry.path, projected);
     const changes = [...request.changes];
     if (validation.structural)
       for (const [p, text] of Object.entries(validation.indexes))
@@ -379,22 +379,22 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   }
 
   /** 只生成差异和校验结果，不写正式知识；提交必须再次核对读取版本。 */
-  async preview(request: ChangeRequest)
+  async Preview(request: ChangeRequest)
   {
-    return this.serial(() => this.draft(request))
+    return this.Serial(() => this.Draft(request))
   }
 
   /** 按串行队列执行版本检查和带日志的写入；同请求内容幂等，失败时只回滚仍匹配本次写入的文件。 */
-  async commit(request: ChangeRequest)
+  async Commit(request: ChangeRequest)
   {
-    this.owner.assert(request);
-    return this.serial(async () =>
+    this.owner.Assert(request);
+    return this.Serial(async () =>
     {
-      this.owner.assert(request);
+      this.owner.Assert(request);
       this.activeOperations++;
       try
       {
-        return await this.commitInternal(request)
+        return await this.CommitInternal(request)
       }
       finally
       {
@@ -404,27 +404,27 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   }
 
   /** 原缓存只提供固定计划；旧计划仅能命中成功 journal，不自动升级旧意图。 */
-  async commitPlanned(reference: KnowledgePlanRef)
+  async CommitPlanned(reference: KnowledgePlanRef)
   {
     const loaded = await readKnowledgePlan(this.owner, reference);
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
-      this.owner.assert();
-      const file = path.join(this.owner.paths.local(this.owner.entry.id, 'transactions'), loaded.request.requestId + '.json');
+      this.owner.Assert();
+      const file = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), loaded.request.requestId + '.json');
       if (await exists(file))
       {
-        const status = await this.journalStatus(loaded.request);
+        const status = await this.JournalStatus(loaded.request);
         if (status?.state === 'committed' && status.result)
           return status.result;
         fail('RECOVERY', '原知识计划尚未核实，不允许重放')
       }
       if (!loaded.plan)
         fail('SOURCE_PLAN_INVALID', '旧计划缺少来源语义，请重新预览');
-      this.owner.assert(loaded.request);
+      this.owner.Assert(loaded.request);
       this.activeOperations++;
       try
       {
-        return await this.commitInternal(loaded.request, undefined, loaded.plan)
+        return await this.CommitInternal(loaded.request, undefined, loaded.plan)
       }
       finally
       {
@@ -434,26 +434,26 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   }
 
   /** 调用方已经持有 serial；开始后 close 必须 drain，不能把 closing 当成中途取消提交。 */
-  private async commitInternal(request: ChangeRequest, intentId?: string, plan?: PlannedKnowledgeCommit)
+  private async CommitInternal(request: ChangeRequest, intentId?: string, plan?: PlannedKnowledgeCommit)
   {
-    this.owner.assert(request);
-    const journalPath = path.join(this.owner.paths.local(this.owner.entry.id, 'transactions'), request.requestId + '.json');
+    this.owner.Assert(request);
+    const journalPath = path.join(this.owner.paths.Local(this.owner.entry.id, 'transactions'), request.requestId + '.json');
     if (await exists(journalPath))
     {
-      const old = await this.journalStatus(request);
+      const old = await this.JournalStatus(request);
       if (intentId && old?.governance?.intentId !== intentId)
         fail('GOVERNANCE_DATA', '原知识事务缺少匹配的治理来源');
       if (old?.state === 'committed' && old.result)
         return old.result;
       fail('RECOVERY', '此前请求未提交或已回滚，请重新读取后使用新请求标识')
     }
-    const preview = await this.draft(request);
+    const preview = await this.Draft(request);
     if (!preview.validation.structural)
       fail('VALIDATION', preview.validation.issues.filter(x => x.severity === 'error').map(x => `${x.path}: ${x.message}`).join('\n'));
-    const current = await this.read();
+    const current = await this.Read();
     if (current.revision !== request.revision)
       fail('CONFLICT', '校验期间知识已变化');
-    const governance = await this.governance?.verify(current, preview, request, value => this.journalStatus(value), intentId);
+    const governance = await this.governance?.Verify(current, preview, request, value => this.JournalStatus(value), intentId);
     // 新调用仍在入口检查 running。此事务已持有 serial，关闭正在等待它；这里只复核身份，不能因进入 closing 丢弃已受理提交。
     if (request.workspaceId !== this.owner.entry.id || request.instanceId !== this.owner.instanceId)
       fail('STALE_INSTANCE', '知识提交的工程或运行实例身份已变化');
@@ -469,7 +469,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     let source: KnowledgeSourceJournal | undefined;
     if (this.sources)
     {
-      current.validation = await this.owner.rules.validate(this.owner.entry.path, current.files);
+      current.validation = await this.owner.rules.Validate(this.owner.entry.path, current.files);
       const projected = new Map(current.files.map(f => [f.path, f]));
       for (const [name, text] of Object.entries(after))
         if (text === null)
@@ -477,7 +477,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         else
           projected.set(name, { path: name, text, hash: hash(text) });
       const files = [...projected.values()];
-      source = await this.sources.build(request, current, { workspaceId: request.workspaceId, instanceId: request.instanceId, revision: revision(files), files, validation: preview.validation }, before, after, plan);
+      source = await this.sources.Build(request, current, { workspaceId: request.workspaceId, instanceId: request.instanceId, revision: revision(files), files, validation: preview.validation }, before, after, plan);
     }
     const journal: Journal = { version: 1, workspaceId: this.owner.entry.id, requestId: request.requestId, fingerprint: preview.fingerprint, state: 'prepared', before, after, ...(governance ? { governance } : {}), ...(source ? { source } : {}) };
     if (Buffer.byteLength(json(journal)) > 16 * 1024 * 1024)
@@ -486,7 +486,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     {
       await atomic(journalPath, json(journal));
       if (source)
-        await this.sources!.prepare(source)
+        await this.sources!.Prepare(source)
     }
     catch (error)
     {
@@ -496,7 +496,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
         let protectedByStore = false;
         try
         {
-          await this.sources!.verify(source, true);
+          await this.sources!.Verify(source, true);
           protectedByStore = true
         }
         catch
@@ -518,17 +518,17 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       let n = 0;
       for (const [p, text] of Object.entries(after))
       {
-        const live = await this.read();
+        const live = await this.Read();
         if (live.revision !== revision([...expected.values()]))
           fail('CONFLICT', '提交期间检测到外部修改，正在安全回滚');
-        await this.write(p, text);
+        await this.Write(p, text);
         if (text === null)
           expected.delete(p);
         else
           expected.set(p, { path: p, text, hash: hash(text) });
         this.owner.fault?.(++n);
       }
-      const final = await this.read();
+      const final = await this.Read();
       if (final.revision !== revision([...expected.values()]))
         fail('CONFLICT', '提交末尾出现外部修改');
       const result = { state: 'committed', workspaceId: this.owner.entry.id, instanceId: this.owner.instanceId, requestId: request.requestId, revision: final.revision, changed: Object.keys(after) };
@@ -543,16 +543,16 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       // committed 写盘可能已接受但确认失败，不能据异常覆盖原成功或开始回滚。
       if (journal.state === 'committed')
         fail('SOURCE_UNKNOWN', '知识提交结果未确认，请保留原请求并重新打开核实');
-      await this.rollback(journal, journalPath);
+      await this.Rollback(journal, journalPath);
       if (source && (journal as Journal).state === 'rolled_back')
-        await this.sources!.settle(source, 'rolled_back', hash(json(journal)));
+        await this.sources!.Settle(source, 'rolled_back', hash(json(journal)));
       throw e;
     }
     // 原知识成功已固定；来源 final 或通知失败只保留待核实，绝不进入文件回滚。
     if (source)
       try
       {
-        await this.sources!.settle(source, 'committed', hash(json(journal)), journal.result!.revision)
+        await this.sources!.Settle(source, 'committed', hash(json(journal)), journal.result!.revision)
       }
       catch
       {
@@ -562,21 +562,21 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
     return journal.result!;
   }
 
-  private async write(relative: string, text: string | null)
+  private async Write(relative: string, text: string | null)
   {
-    const target = await this.owner.paths.knowledge(this.owner.entry.path, relative);
+    const target = await this.owner.paths.Knowledge(this.owner.entry.path, relative);
     if (text === null)
       await fs.rm(target, { force: true });
     else
       await atomic(target, text)
   }
 
-  private async rollback(journal: Journal, p: string)
+  private async Rollback(journal: Journal, p: string)
   {
     let blocked = false;
     for (const name of Object.keys(journal.after).reverse())
     {
-      const target = await this.owner.paths.knowledge(this.owner.entry.path, name);
+      const target = await this.owner.paths.Knowledge(this.owner.entry.path, name);
       const live = await exists(target) ? await fs.readFile(target, 'utf8') : null;
       if (live === journal.before[name])
         continue;
@@ -587,7 +587,7 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       }
       try
       {
-        await this.write(name, journal.before[name])
+        await this.Write(name, journal.before[name])
       }
       catch
       {
@@ -604,11 +604,11 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
   }
 
   /** 核实原 journal 后回滚获准但未完成的事务，或补来源结算；未获准 prepared 仅比对 before，冲突保留现场。 */
-  async recover()
+  async Recover()
   {
-    const dir = this.owner.paths.local(this.owner.entry.id, 'transactions');
+    const dir = this.owner.paths.Local(this.owner.entry.id, 'transactions');
     await fs.mkdir(dir, { recursive: true });
-    const sourceRecords = new Map((await this.sources?.transitions() ?? []).map(item => [item.requestId, item])),
+    const sourceRecords = new Map((await this.sources?.Transitions() ?? []).map(item => [item.requestId, item])),
       seen = new Set<string>();
     for (const file of await fs.readdir(dir))
     {
@@ -626,24 +626,24 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       {
         if (!journal.source || !this.sources || fileId !== journal.requestId)
           fail('SOURCE_JOURNAL_INVALID', '来源屏障缺少匹配的原知识日志');
-        await this.journalStatus(journal.source.request);
+        await this.JournalStatus(journal.source.request);
         seen.add(fileId);
       }
-      if (journal.governance || this.governance?.hasIntent(fileId))
+      if (journal.governance || this.governance?.HasIntent(fileId))
       {
         if (!this.governance)
           fail('GOVERNANCE_UNAVAILABLE', '治理日志缺少私有来源');
-        const request = await this.governance.request(fileId);
+        const request = await this.governance.Request(fileId);
         if (request.requestId !== journal.requestId)
           fail('GOVERNANCE_DATA', '治理事务文件名与原意图不一致');
-        await this.journalStatus(request)
+        await this.JournalStatus(request)
       }
       if (journal.source && journal.state === 'prepared' && !sourceRecords.has(fileId))
       {
         // 未建立来源 pending 就从未获准写正式知识。只能证明仍是 before 后结束，绝不把恰等于 after 的外部修改回滚。
         for (const [name, before] of Object.entries(journal.before))
         {
-          const target = await this.owner.paths.knowledge(this.owner.entry.path, name);
+          const target = await this.owner.paths.Knowledge(this.owner.entry.path, name);
           const live = await exists(target) ? await fs.readFile(target, 'utf8') : null;
           if (live !== before)
             fail('SOURCE_RECOVERY_REQUIRED', '来源准备尚未获准写入，当前文件与原 before 不同；保留现场等待人工核实')
@@ -653,23 +653,23 @@ skills/、workflows/ 及其资料目录不属于组织或模块节点。
       }
       else if (['prepared', 'committing', 'recovery_required'].includes(journal.state))
       {
-        await this.rollback(journal, p);
+        await this.Rollback(journal, p);
         if (journal.state === 'recovery_required')
           fail('RECOVERY', '未完成事务与外部修改冲突；请根据本地事务证据人工合并后重新打开');
       }
       if (journal.source && ['committed', 'rolled_back'].includes(journal.state))
-        await this.sources!.settle(journal.source, journal.state as 'committed' | 'rolled_back', hash(json(journal)), journal.result?.revision);
+        await this.sources!.Settle(journal.source, journal.state as 'committed' | 'rolled_back', hash(json(journal)), journal.result?.revision);
     }
     if ([...sourceRecords.keys()].some(id => !seen.has(id)))
       fail('SOURCE_JOURNAL_INVALID', '来源历史引用的原知识日志缺失，不能解除屏障');
   }
 
-  async planMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>
+  async PlanMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>
   {
-    this.owner.assert(snapshot);
-    await this.owner.paths.knowledge(this.owner.entry.path, from);
+    this.owner.Assert(snapshot);
+    await this.owner.paths.Knowledge(this.owner.entry.path, from);
     if (to)
-      await this.owner.paths.knowledge(this.owner.entry.path, to);
+      await this.owner.paths.Knowledge(this.owner.entry.path, to);
     const prefix = (p: string) => p === from || p.startsWith(from + '/');
     const moved = snapshot.files.filter(f => prefix(f.path));
     if (!moved.length)

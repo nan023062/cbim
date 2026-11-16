@@ -27,13 +27,13 @@ it('真实 Pi 统一责任快照和原回执可达，过期依据不给重试许
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{
   const seed=await seedWorkspaceMembers(f.app,f.temp,`http://127.0.0.1:${(server.address() as any).port}/v1`);moduleId=seed.team.input.moduleId;await commitWorkspaceMember(f.app,seed.entry.id,seed.register());
-  const before=await f.app.workspace(seed.entry.id).dispatchStore.read();
-  const started=await f.app.dispatch('loop.chat',{id:seed.entry.id,message:'核实责任与原回执；过期依据不能提交',options:{permission:'execute',turnTimeoutMs:30000}});
-  const inspect=()=>f.app.dispatch('loop.inspect',{id:seed.entry.id,taskId:started.taskId,runId:started.runId});
+  const before=await f.app.Workspace(seed.entry.id).dispatchStore.Read();
+  const started=await f.app.Dispatch('loop.chat',{id:seed.entry.id,message:'核实责任与原回执；过期依据不能提交',options:{permission:'execute',turnTimeoutMs:30000}});
+  const inspect=()=>f.app.Dispatch('loop.inspect',{id:seed.entry.id,taskId:started.taskId,runId:started.runId});
   await vi.waitFor(async()=>{if(errors.length)return;expect((await inspect()).status).not.toBe('running')},{timeout:30000,interval:50});
   const result=await inspect();expect(errors).toEqual([]);expect(result.status).toBe('failed');expect(requests).toHaveLength(7);
   expect(result.events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_receipt_inspect')).toHaveLength(1);
   expect(result.events.find(event=>event.type==='engine.status'&&event.data.state==='blocked')?.data).toMatchObject({tool:'cbim_module_owner_change_commit',consecutive:3});
-  const state=await f.app.workspace(seed.entry.id).dispatchStore.read();expect(state.ownershipChanges).toEqual(before.ownershipChanges);expect(state.scopes?.[0].goal?.plan).toBeUndefined();expect(state.graphs[0].tasks).toEqual([]);
- }finally{await f.app.shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
+  const state=await f.app.Workspace(seed.entry.id).dispatchStore.Read();expect(state.ownershipChanges).toEqual(before.ownershipChanges);expect(state.scopes?.[0].goal?.plan).toBeUndefined();expect(state.graphs[0].tasks).toEqual([]);
+ }finally{await f.app.Shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },45000);

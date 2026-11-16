@@ -4,7 +4,7 @@ import {DispatchTools} from '../src/logic/tools/runtime/dispatch-tools';
 import {claudeInputSchema} from '../src/logic/execution/engines/claude/tools';
 
 function cancellationCatalog(){
-  return new DispatchTools({binding:{workspaceId:'w',rootSessionId:'r',scopeId:'s',runId:'run'},dispatch:vi.fn(),inspect:vi.fn(),cancel:vi.fn(),previewCancel:vi.fn()}).list();
+  return new DispatchTools({binding:{workspaceId:'w',rootSessionId:'r',scopeId:'s',runId:'run'},Dispatch:vi.fn(),Inspect:vi.fn(),Cancel:vi.fn(),PreviewCancel:vi.fn()}).List();
 }
 
 test('Claude 真实撤销目录在顶层联合投影后仍能解析原分支引用',()=>{

@@ -15,7 +15,7 @@ export class AgentArtifactVerification
   }
 
   /** 仅复核当前仍有效的采集；历史采集失效且没有替代时拒绝，不使用当前字节补造新基线。 */
-  public static async verify(events: readonly ArtifactEvidenceEvent[], binding: ArtifactBaselineStaged['binding'], knowledgeRevision: string, normalizePath: (value: string) => string, checkFiles: (files: readonly ArtifactFileFact[], signal: AbortSignal) => Promise<ArtifactFileCheck[]>, signal: AbortSignal,): Promise<ArtifactFileFact[]>
+  public static async Verify(events: readonly ArtifactEvidenceEvent[], binding: ArtifactBaselineStaged['binding'], knowledgeRevision: string, normalizePath: (value: string) => string, checkFiles: (files: readonly ArtifactFileFact[], signal: AbortSignal) => Promise<ArtifactFileCheck[]>, signal: AbortSignal,): Promise<ArtifactFileFact[]>
   {
     signal.throwIfAborted();
     if (!events.some(event => event.type === 'artifact.baseline_captured' || event.type === 'tool.finished' && event.data.name === 'cbim_task_artifact_capture'))

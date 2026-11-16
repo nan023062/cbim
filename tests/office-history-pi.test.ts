@@ -20,17 +20,17 @@ it('主 Agent 在关联新话题中实际查询原办公室的旧用户输入，
  });
  try{
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error('no port');
-  const profiles=await f.app.models.save({profile:{name:'Office archive fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'office-test',models:[{id:'office-test',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await f.app.dispatch('add',{path:f.a}),options={profileId:profiles.selectedId!,model:'office-test',permission:'read' as const};
-  const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'OFFICE_ORIGINAL_USER_INPUT',options});
-  const store=f.app.workspace(entry.id).dispatchStore;
-  await vi.waitFor(async()=>{const scopes=(await store.read()).scopes??[];expect(scopes[0]?.status).toBe('closed');originalScope=scopes[0].scopeId},{timeout:15000});
-  const queued=await f.app.dispatch('loop.enqueue',{id:entry.id,taskId:first.taskId,message:'请读取关联原话题再回答新的要求',followupOf:originalScope,options});
-  await vi.waitFor(async()=>expect((await store.read()).scopes?.find(scope=>scope.scopeId===queued.id)?.status).toBe('closed'),{timeout:15000});
+  const profiles=await f.app.models.Save({profile:{name:'Office archive fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'office-test',models:[{id:'office-test',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await f.app.Dispatch('add',{path:f.a}),options={profileId:profiles.selectedId!,model:'office-test',permission:'read' as const};
+  const first=await f.app.Dispatch('loop.chat',{id:entry.id,message:'OFFICE_ORIGINAL_USER_INPUT',options});
+  const store=f.app.Workspace(entry.id).dispatchStore;
+  await vi.waitFor(async()=>{const scopes=(await store.Read()).scopes??[];expect(scopes[0]?.status).toBe('closed');originalScope=scopes[0].scopeId},{timeout:15000});
+  const queued=await f.app.Dispatch('loop.enqueue',{id:entry.id,taskId:first.taskId,message:'请读取关联原话题再回答新的要求',followupOf:originalScope,options});
+  await vi.waitFor(async()=>expect((await store.Read()).scopes?.find(scope=>scope.scopeId===queued.id)?.status).toBe('closed'),{timeout:15000});
   expect(errors).toEqual([]);expect(requests).toHaveLength(5);
   expect(requests[1].tools.some((tool:any)=>tool.function?.name==='cbim_office_history')).toBe(true);
   const toolResults=requests[4].messages.filter((message:any)=>message.role==='tool');expect(JSON.stringify(toolResults)).toContain('OFFICE_ORIGINAL_USER_INPUT');
-  const scopes=(await store.read()).scopes!;expect(scopes.find(scope=>scope.scopeId===queued.id)?.followupOf).toBe(originalScope);expect(scopes.find(scope=>scope.scopeId===originalScope)?.status).toBe('closed');
-  const runs=await f.app.execution(entry.id).thread(first.taskId);expect(runs).toHaveLength(2);expect(runs[1].events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_office_history').every(event=>!event.data.isError)).toBe(true);
+  const scopes=(await store.Read()).scopes!;expect(scopes.find(scope=>scope.scopeId===queued.id)?.followupOf).toBe(originalScope);expect(scopes.find(scope=>scope.scopeId===originalScope)?.status).toBe('closed');
+  const runs=await f.app.Execution(entry.id).Thread(first.taskId);expect(runs).toHaveLength(2);expect(runs[1].events.filter(event=>event.type==='tool.finished'&&event.data.name==='cbim_office_history').every(event=>!event.data.isError)).toBe(true);
  }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });

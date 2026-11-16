@@ -14,11 +14,11 @@ const workflowPath='.cbim/workspace/game/workflows/implement/workflow.md';
 
 it('真实对象CRUD保存并读取原Workflow条件，坏声明在保存预览前拒绝',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),{call}=internalKnowledge(workspace);
-    await workspace.commit(request(await workspace.snapshot(),moduleFiles()));
-    const snapshot=await workspace.snapshot(),operation={kind:'workflow',action:'create',parentId:'.cbim/workspace/game',slug:'implement',data:{name:'实现与验证'},body};
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),{call}=internalKnowledge(workspace);
+    await workspace.Commit(request(await workspace.Snapshot(),moduleFiles()));
+    const snapshot=await workspace.Snapshot(),operation={kind:'workflow',action:'create',parentId:'.cbim/workspace/game',slug:'implement',data:{name:'实现与验证'},body};
     await expect(call('cbim_object_preview',{revision:snapshot.revision,operations:[{...operation,body:bad}]})).rejects.toMatchObject({code:'WORKFLOW_CONTRACT_INVALID'});
-    expect((await workspace.snapshot()).revision).toBe(snapshot.revision);await expect(fs.access(path.join(f.a,workflowPath))).rejects.toThrow();
+    expect((await workspace.Snapshot()).revision).toBe(snapshot.revision);await expect(fs.access(path.join(f.a,workflowPath))).rejects.toThrow();
     const preview=await call('cbim_object_preview',{revision:snapshot.revision,operations:[operation]});expect(preview.validation.structural).toBe(true);
     const committed=await call('cbim_object_commit',{planId:preview.planId},true);expect(committed.revision).not.toBe(snapshot.revision);
     const detail=await call('cbim_module_get',{id:'.cbim/workspace/game'});expect(detail.workflows[0].content.text).toBe(body);expect(parseWorkflowContract(detail.workflows[0].content.text)?.beforeEffects?.requirePlan).toBe(true);
@@ -29,20 +29,20 @@ it('真实对象CRUD保存并读取原Workflow条件，坏声明在保存预览�
 
 it('原始知识preview/commit不能绕过条件校验，无条件旧正文仍能正式保存',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),files=moduleFiles(),definition=JSON.parse(files[0].text);
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),files=moduleFiles(),definition=JSON.parse(files[0].text);
     definition.workflows=[{name:'实现',reference:'workflows/implement/workflow.md'}];files[0].text=JSON.stringify(definition);files.push({path:workflowPath,text:body,hash:hash(body)});
-    await workspace.commit(request(await workspace.snapshot(),files));const before=await workspace.snapshot(),attempt=request(before,[{path:workflowPath,text:bad}]);
-    const preview=await workspace.preview(attempt);expect(preview.validation.structural).toBe(false);expect(preview.validation.issues).toContainEqual(expect.objectContaining({path:workflowPath,code:'workflow_contract',severity:'error'}));
-    await expect(workspace.commit(attempt)).rejects.toMatchObject({code:'VALIDATION'});expect(await fs.readFile(path.join(f.a,workflowPath),'utf8')).toBe(body);expect((await workspace.snapshot()).revision).toBe(before.revision);
-    const legacy='# 旧自然语言工作流\n由执行者选择合理的专业步骤。';await workspace.commit(request(await workspace.snapshot(),[{path:workflowPath,text:legacy}]));expect(parseWorkflowContract((await workspace.snapshot()).files.find(file=>file.path===workflowPath)!.text)).toBeUndefined();
+    await workspace.Commit(request(await workspace.Snapshot(),files));const before=await workspace.Snapshot(),attempt=request(before,[{path:workflowPath,text:bad}]);
+    const preview=await workspace.Preview(attempt);expect(preview.validation.structural).toBe(false);expect(preview.validation.issues).toContainEqual(expect.objectContaining({path:workflowPath,code:'workflow_contract',severity:'error'}));
+    await expect(workspace.Commit(attempt)).rejects.toMatchObject({code:'VALIDATION'});expect(await fs.readFile(path.join(f.a,workflowPath),'utf8')).toBe(body);expect((await workspace.Snapshot()).revision).toBe(before.revision);
+    const legacy='# 旧自然语言工作流\n由执行者选择合理的专业步骤。';await workspace.Commit(request(await workspace.Snapshot(),[{path:workflowPath,text:legacy}]));expect(parseWorkflowContract((await workspace.Snapshot()).files.find(file=>file.path===workflowPath)!.text)).toBeUndefined();
   }finally{await f.cleanup()}
 });
 
 it('完整业务模板原样携带条件，改指纹的坏声明仍不能导入或导出',async()=>{
   const f=await fixture();try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),files=moduleFiles(),definition=JSON.parse(files[0].text);
-    definition.workflows=[{name:'实现',reference:'workflows/implement/workflow.md'}];files[0].text=JSON.stringify(definition);files.push({path:workflowPath,text:body,hash:hash(body)});await workspace.commit(request(await workspace.snapshot(),files));
-    const snapshot=await workspace.snapshot(),selection={kind:'architecture' as const,name:'业务模板',summary:'完整业务'};
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),files=moduleFiles(),definition=JSON.parse(files[0].text);
+    definition.workflows=[{name:'实现',reference:'workflows/implement/workflow.md'}];files[0].text=JSON.stringify(definition);files.push({path:workflowPath,text:body,hash:hash(body)});await workspace.Commit(request(await workspace.Snapshot(),files));
+    const snapshot=await workspace.Snapshot(),selection={kind:'architecture' as const,name:'业务模板',summary:'完整业务'};
     const built=buildWorkspacePackage(snapshot,selection).package;expect(parseWorkspacePackage(JSON.stringify(built)).files.find(file=>file.path.endsWith('/workflow.md'))!.text).toBe(body);
     const empty={...snapshot,files:snapshot.files.filter(file=>!file.path.startsWith('.cbim/workspace/'))};
     const planned=planWorkspacePackage(empty,built,{mode:'add'});expect(planned.changes).toContainEqual({path:workflowPath,text:body});

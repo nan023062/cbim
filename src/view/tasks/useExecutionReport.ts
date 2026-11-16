@@ -12,8 +12,8 @@ export function useExecutionReport(identity: ExecutionReportSelection, task: Tas
   const key = executionReportKey(identity);
   const controller = useMemo(() => new ExecutionReportController(identity, request => window.cbim.call('dispatch.executionReport', request)), [key]);
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
-  useEffect(() => () => controller.cancel(), [controller]);
+  useEffect(() => () => controller.Cancel(), [controller]);
   const stale = executionReportStale(state.report, task, graphCursor, scope);
-  const invalidate = useCallback(() => controller.invalidate(), [controller]);
-  return { ...state, stale, invalidate, inspect: () => controller.inspect(), more: () => stale ? Promise.resolve() : controller.more() };
+  const invalidate = useCallback(() => controller.Invalidate(), [controller]);
+  return { ...state, stale, invalidate, inspect: () => controller.Inspect(), more: () => stale ? Promise.resolve() : controller.More() };
 }

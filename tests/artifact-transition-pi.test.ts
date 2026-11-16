@@ -15,7 +15,7 @@ it.each(['automatic','changed','human'] as const)('recursive Agent proves real u
     const seeded=await host.request('seed-transition',{providerUrl:provider.url});provider.bind(seeded.agentId,seeded.moduleId,seeded.selection);
     const entry=seeded.entry,records=()=>completeOutputRecords(host.user,entry.id);
     const start=await host.dispatch('loop.chat',{id:entry.id,message:d.goal,options:{permission:'execute',turnTimeoutMs:60000}});
-    const rootDir=path.join(host.user,entry.id,'loop-engine/tasks',start.taskId,start.runId),readRoot=()=>new FileRunStorage().read(rootDir);
+    const rootDir=path.join(host.user,entry.id,'loop-engine/tasks',start.taskId,start.runId),readRoot=()=>new FileRunStorage().Read(rootDir);
     const questions=()=>host.dispatch('loop.questions',{id:entry.id,taskId:start.taskId}) as Promise<PendingQuestion[]>;
     const until=async(check:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await check()},{timeout:90000,interval:50});expect(provider.errors).toEqual([])};
     await until(()=>expect(provider.state.readyForReview).toBe(true));
@@ -27,7 +27,7 @@ it.each(['automatic','changed','human'] as const)('recursive Agent proves real u
     const trace=await host.trace();expect(trace.filter(t=>t.kind==='transition-confirmed')).toHaveLength(2);
     expect(trace.filter(t=>t.kind==='transition-exited').map(t=>t.pid)).toEqual(trace.filter(t=>t.kind==='transition-opened').map(t=>t.pid));
     const ref=provider.state.call.agentCall,childDir=path.join(host.user,entry.id,'loop-engine/tasks',ref.taskId,ref.runId);
-    const child=await new FileRunStorage().read(childDir),childBytes=await fs.readFile(path.join(childDir,'events.jsonl'),'utf8');
+    const child=await new FileRunStorage().Read(childDir),childBytes=await fs.readFile(path.join(childDir,'events.jsonl'),'utf8');
     expect(child.status).toBe('completed');expect(child.events.filter(e=>e.type==='artifact.transition_applied')).toHaveLength(2);
     expect((await host.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:start.taskId}})).tasks).toHaveLength(0);
     if(mode==='changed')await fs.writeFile(source,'source returned after move');
@@ -80,7 +80,7 @@ it.each(['source','target'] as const)('rejects stale acceptance after the review
     await host.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:''}]});
     await until(async()=>expect((await completeOutputRecords(host.user,entry.id)).scopes[0].status).toBe('closed'));
     expect(provider.state.humanReview.error).toBeTruthy();expect(provider.state.humanReview.record).toBeUndefined();
-    const rootDir=path.join(host.user,entry.id,'loop-engine/tasks',start.taskId,start.runId),summary=await new FileRunStorage().read(rootDir);
+    const rootDir=path.join(host.user,entry.id,'loop-engine/tasks',start.taskId,start.runId),summary=await new FileRunStorage().Read(rootDir);
     expect(summary.events.filter(e=>e.data.humanDecision)).toEqual([]);
     expect(summary.events.find(e=>e.type==='tool.finished'&&e.data.id==='full-human')?.data.isError).toBe(true);
     expect(await questions()).toEqual([]);expect(provider.member).toHaveLength(13);

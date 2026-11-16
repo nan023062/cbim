@@ -95,38 +95,38 @@ export class ScopeUsageController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: ScopeUsageState)
+  private Publish(value: ScopeUsageState)
   {
     this.value = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.value = { ...this.value, loading: false }
   }
 
-  async read()
+  async Read()
   {
     if (this.value.loading)
       return;
-    const generation = this.generation.capture();
-    this.publish({ ...this.value, loading: true, error: '' });
+    const generation = this.generation.Capture();
+    this.Publish({ ...this.value, loading: true, error: '' });
     try
     {
       const raw = await this.request({ ...this.identity });
-      if (!this.generation.isCurrent(generation))
+      if (!this.generation.IsCurrent(generation))
         return;
-      this.publish({ report: checkedScopeUsage(raw, this.identity), loading: false, error: '' })
+      this.Publish({ report: checkedScopeUsage(raw, this.identity), loading: false, error: '' })
     }
     catch (error)
     {
-      if (this.generation.isCurrent(generation))
-        this.publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '周期用量读取失败，请重新读取' })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ ...this.value, loading: false, error: error instanceof Error ? error.message : '周期用量读取失败，请重新读取' })
     }
   }
 }

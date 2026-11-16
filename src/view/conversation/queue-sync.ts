@@ -11,7 +11,7 @@ export class QueueProjection
   items: QueuedMessage[] = [];
 
   /** 作用域由调用方按工作区/会话隔离；重启 epoch 改变时接收完整重置。 */
-  apply(delta: QueueDelta)
+  Apply(delta: QueueDelta)
   {
     if (delta.epoch === this.cursor?.epoch && delta.revision <= this.cursor.revision)
       return this.items;

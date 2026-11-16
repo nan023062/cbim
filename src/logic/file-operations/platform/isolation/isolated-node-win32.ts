@@ -91,16 +91,16 @@ export class Win32IsolatedNode
     try
     {
       const owner = [null];
-      this.check(this.api.tokenOpen(this.api.current(), 8, owner), 'OWNER_TOKEN');
+      this.Check(this.api.tokenOpen(this.api.current(), 8, owner), 'OWNER_TOKEN');
       const token = owner[0];
       try
       {
-        const data = this.token(token, 1);
-        this.ownerSid = this.stringSid(this.k.decode(data, 0, 'void *'))
+        const data = this.Token(token, 1);
+        this.ownerSid = this.StringSid(this.k.decode(data, 0, 'void *'))
       }
       finally
       {
-        this.check(this.api.close(token), 'OWNER_CLOSE')
+        this.Check(this.api.close(token), 'OWNER_CLOSE')
       }
       const sid = [null],
         hr = this.api.profileCreate(profileName, profileName, 'CBIM temporary isolated execution', null, 0, sid);
@@ -108,12 +108,12 @@ export class Win32IsolatedNode
         fault('PROFILE_CREATE', hr);
       this.sid = sid[0];
       this.profileCreated = true;
-      this.packageSid = this.stringSid(this.sid);
+      this.packageSid = this.StringSid(this.sid);
       const groups = [null],
         caps = [null],
         gc = Buffer.alloc(4),
         cc = Buffer.alloc(4);
-      this.check(this.api.derive('registryRead', groups, gc, caps, cc), 'CAPABILITY');
+      this.Check(this.api.derive('registryRead', groups, gc, caps, cc), 'CAPABILITY');
       for (const [array, count] of [[groups[0], gc.readUInt32LE()], [caps[0], cc.readUInt32LE()]] as const)
       {
         for (let i = 0; i < count; i++)
@@ -128,23 +128,23 @@ export class Win32IsolatedNode
     {
       try
       {
-        this.close()
+        this.Close()
       }
       catch (cleanup)
       {
-        throw Object.assign(cleanup as Error, { cleanupPending: true, retryCleanup: () => this.close() })
+        throw Object.assign(cleanup as Error, { cleanupPending: true, retryCleanup: () => this.Close() })
       }
       throw error
     }
   }
 
-  private check(value: unknown, stage: string)
+  private Check(value: unknown, stage: string)
   {
     if (!value)
       fault(stage, this.api.last())
   }
 
-  private keep(handle: any)
+  private Keep(handle: any)
   {
     if (!handle || this.k.address(handle) === 0xffffffffffffffffn)
       fault('HANDLE', this.api.last());
@@ -152,18 +152,18 @@ export class Win32IsolatedNode
     return handle
   }
 
-  private release(handle: any)
+  private Release(handle: any)
   {
     if (!handle)
       return;
-    this.check(this.api.close(handle), 'CLOSE');
+    this.Check(this.api.close(handle), 'CLOSE');
     this.handles.splice(this.handles.indexOf(handle), 1)
   }
 
-  private stringSid(sid: any)
+  private StringSid(sid: any)
   {
     const out = [null];
-    this.check(this.api.sidString(sid, out), 'SID');
+    this.Check(this.api.sidString(sid, out), 'SID');
     try
     {
       return this.k.decode(out[0], 'char16', -1) as string
@@ -174,27 +174,27 @@ export class Win32IsolatedNode
     }
   }
 
-  private token(handle: any, kind: number)
+  private Token(handle: any, kind: number)
   {
     const bytes = Buffer.alloc(4096),
       length = Buffer.alloc(4);
-    this.check(this.api.tokenInfo(handle, kind, bytes, bytes.length, length), 'TOKEN');
+    this.Check(this.api.tokenInfo(handle, kind, bytes, bytes.length, length), 'TOKEN');
     if (length.readUInt32LE() > bytes.length)
       fault('TOKEN');
     return bytes
   }
 
   /** 只在新建且未填充的自有目录上设置保护 DACL；创建文件随后继承各自读写范围。 */
-  grant(directory: string, access: 'traverse' | 'read' | 'write')
+  Grant(directory: string, access: 'traverse' | 'read' | 'write')
   {
     if (this.used)
       fault('ALREADY_STARTED');
     const acl = [`(A;OICI;FA;;;${this.ownerSid})`, '(A;OICI;FA;;;SY)', '(A;OICI;FA;;;BA)', `(A;${access === 'traverse' ? '' : 'OICI'};${access === 'write' ? '0x1301bf' : '0x1200a9'};;;${this.packageSid})`].join('');
     const sd = [null];
-    this.check(this.api.security('D:P' + acl, 1, sd, null), 'ACL');
+    this.Check(this.api.security('D:P' + acl, 1, sd, null), 'ACL');
     try
     {
-      this.check(this.api.setSecurity(directory, 0x80000004, sd[0]), 'ACL_SET')
+      this.Check(this.api.setSecurity(directory, 0x80000004, sd[0]), 'ACL_SET')
     }
     finally
     {
@@ -202,14 +202,14 @@ export class Win32IsolatedNode
     }
   }
 
-  private attribute(id: number, bytes: Buffer)
+  private Attribute(id: number, bytes: Buffer)
   {
     this.pins.push(bytes);
-    this.check(this.api.attribute(this.attributes, 0, id, bytes, bytes.length, null, null), 'ATTRIBUTE')
+    this.Check(this.api.attribute(this.attributes, 0, id, bytes, bytes.length, null, null), 'ATTRIBUTE')
   }
 
   /** 创建挂起的进程；Job 由创建属性一次绑定，任何核实失败均不执行用户脚本。 */
-  start(executable: string, args: string[], cwd: string, options: { timeoutMs: number; memoryMiB: number; processLimit: number }, suspendOnly = false): number
+  Start(executable: string, args: string[], cwd: string, options: { timeoutMs: number; memoryMiB: number; processLimit: number }, suspendOnly = false): number
   {
     if (this.used)
       fault('ALREADY_STARTED');
@@ -218,18 +218,18 @@ export class Win32IsolatedNode
       jobError = this.api.last();
     if (jobError === 183)
     {
-      this.check(this.api.close(job), 'CLOSE_EXISTING_JOB');
+      this.Check(this.api.close(job), 'CLOSE_EXISTING_JOB');
       fault('JOB_EXISTS')
     }
-    this.job = this.keep(job);
+    this.job = this.Keep(job);
     const limits = Buffer.alloc(144);
     limits.writeUInt32LE(0x2000 | 0x200 | 0x8 | 0x4, 16);
     limits.writeBigInt64LE(BigInt(options.timeoutMs) * 10000n, 8);
     limits.writeUInt32LE(options.processLimit, 40);
     limits.writeBigUInt64LE(BigInt(options.memoryMiB) * 1024n * 1024n, 120);
-    this.check(this.api.jobSet(this.job, 9, limits, limits.length), 'JOB_LIMIT');
+    this.Check(this.api.jobSet(this.job, 9, limits, limits.length), 'JOB_LIMIT');
     const actual = Buffer.alloc(144);
-    this.check(this.api.jobQuery(this.job, 9, actual, actual.length, null), 'JOB_QUERY');
+    this.Check(this.api.jobQuery(this.job, 9, actual, actual.length, null), 'JOB_QUERY');
     if (actual.readUInt32LE(16) !== limits.readUInt32LE(16) || actual.readUInt32LE(40) !== options.processLimit || actual.readBigUInt64LE(120) !== limits.readBigUInt64LE(120))
       fault('JOB_LIMIT');
     const size = Buffer.alloc(8);
@@ -238,7 +238,7 @@ export class Win32IsolatedNode
     if (n < 1 || n > 65536)
       fault('ATTRIBUTE_SIZE');
     this.attributes = Buffer.alloc(n);
-    this.check(this.api.init(this.attributes, 4, 0, size), 'ATTRIBUTE_INIT');
+    this.Check(this.api.init(this.attributes, 4, 0, size), 'ATTRIBUTE_INIT');
     const capability = Buffer.alloc(16);
     this.k.encode(capability, 0, 'void *', this.capability);
     capability.writeUInt32LE(4, 8);
@@ -247,25 +247,25 @@ export class Win32IsolatedNode
     this.k.encode(caps, 0, 'void *', this.sid);
     this.k.encode(caps, 8, 'void *', capability);
     caps.writeUInt32LE(1, 16);
-    this.attribute(0x20009, caps);
-    this.attribute(0x2000f, Buffer.from([1, 0, 0, 0]));
+    this.Attribute(0x20009, caps);
+    this.Attribute(0x2000f, Buffer.from([1, 0, 0, 0]));
     const jobs = Buffer.alloc(8);
     this.k.encode(jobs, 0, 'void *', this.job);
-    this.attribute(0x2000d, jobs);
+    this.Attribute(0x2000d, jobs);
     const sa = Buffer.alloc(24);
     sa.writeUInt32LE(24);
     sa.writeUInt32LE(1, 16);
     const read = [null],
       write = [null];
-    this.check(this.api.pipe(read, write, sa, 4096), 'PIPE');
-    this.pipe = this.keep(read[0]);
-    this.writePipe = this.keep(write[0]);
-    this.check(this.api.inherit(this.pipe, 1, 0), 'PIPE_INHERIT');
-    const input = this.keep(this.api.file('NUL', 0x80000000, 3, sa, 3, 0x80, null));
+    this.Check(this.api.pipe(read, write, sa, 4096), 'PIPE');
+    this.pipe = this.Keep(read[0]);
+    this.writePipe = this.Keep(write[0]);
+    this.Check(this.api.inherit(this.pipe, 1, 0), 'PIPE_INHERIT');
+    const input = this.Keep(this.api.file('NUL', 0x80000000, 3, sa, 3, 0x80, null));
     const inherited = Buffer.alloc(16);
     this.k.encode(inherited, 0, 'void *', this.writePipe);
     this.k.encode(inherited, 8, 'void *', input);
-    this.attribute(0x20002, inherited);
+    this.Attribute(0x20002, inherited);
     const startup = Buffer.alloc(112);
     startup.writeUInt32LE(112);
     startup.writeUInt32LE(0x100, 60);
@@ -282,40 +282,40 @@ export class Win32IsolatedNode
     if (command.length > 65534)
       fault('ARGUMENT_LIMIT');
     const info = Buffer.alloc(24);
-    this.check(this.api.create(executable, command, null, null, 1, 0x8000000 | 0x80000 | 0x400 | 0x4, env, cwd, startup, info), 'CREATE');
-    this.process = this.keep(this.k.decode(info, 0, 'void *'));
-    this.thread = this.keep(this.k.decode(info, 8, 'void *'));
-    this.release(this.writePipe);
+    this.Check(this.api.create(executable, command, null, null, 1, 0x8000000 | 0x80000 | 0x400 | 0x4, env, cwd, startup, info), 'CREATE');
+    this.process = this.Keep(this.k.decode(info, 0, 'void *'));
+    this.thread = this.Keep(this.k.decode(info, 8, 'void *'));
+    this.Release(this.writePipe);
     this.writePipe = null;
-    this.release(input);
+    this.Release(input);
     const token = [null];
-    this.check(this.api.tokenOpen(this.process, 8, token), 'PROCESS_TOKEN');
+    this.Check(this.api.tokenOpen(this.process, 8, token), 'PROCESS_TOKEN');
     try
     {
-      if (this.token(token[0], 29).readUInt32LE() !== 1)
+      if (this.Token(token[0], 29).readUInt32LE() !== 1)
         fault('NOT_APPCONTAINER');
-      const packageInfo = this.token(token[0], 31);
+      const packageInfo = this.Token(token[0], 31);
       if (!this.api.equalSid(this.k.decode(packageInfo, 0, 'void *'), this.sid))
         fault('PACKAGE_IDENTITY');
-      const capabilityInfo = this.token(token[0], 30);
+      const capabilityInfo = this.Token(token[0], 30);
       if (capabilityInfo.readUInt32LE() !== 1 || !this.api.equalSid(this.k.decode(capabilityInfo, 8, 'void *'), this.capability) || capabilityInfo.readUInt32LE(16) !== 4)
         fault('TOKEN_CAPABILITIES');
       const member = Buffer.alloc(4);
-      this.check(this.api.inJob(this.process, this.job, member), 'JOB_MEMBER');
+      this.Check(this.api.inJob(this.process, this.job, member), 'JOB_MEMBER');
       if (member.readUInt32LE() !== 1)
         fault('JOB_MEMBER');
     }
     finally
     {
-      this.check(this.api.close(token[0]), 'TOKEN_CLOSE')
+      this.Check(this.api.close(token[0]), 'TOKEN_CLOSE')
     }
     if (!suspendOnly)
-      this.resume();
+      this.Resume();
     return info.readUInt32LE(16);
   }
 
   /** 原进程仍挂起时先保存调用身份；只有该次可靠保存完成后才允许执行脚本。 */
-  resume()
+  Resume()
   {
     if (!this.thread || this.resumed)
       fault('RESUME_STATE');
@@ -325,7 +325,7 @@ export class Win32IsolatedNode
   }
 
   /** 只读取已在宿主管道中的字节；单次最多 4096，不等待用户进程生产数据。 */
-  read(): Buffer
+  Read(): Buffer
   {
     const available = Buffer.alloc(4);
     if (!this.api.peek(this.pipe, null, 0, null, available, null))
@@ -340,49 +340,49 @@ export class Win32IsolatedNode
       return Buffer.alloc(0);
     const bytes = Buffer.alloc(n),
       count = Buffer.alloc(4);
-    this.check(this.api.read(this.pipe, bytes, n, count, null), 'PIPE_READ');
+    this.Check(this.api.read(this.pipe, bytes, n, count, null), 'PIPE_READ');
     return bytes.subarray(0, count.readUInt32LE())
   }
 
   /** 主进程句柄已发信号与Job活动数分别核实；单凭exitCode（含259）不能判断存活，也不意味着后代全部结束。 */
-  state()
+  State()
   {
     if (!this.job)
       return { active: 0, exited: true, exitCode: 0, totalProcesses: 0, limitTerminations: 0, peakMemoryBytes: 0 };
     const accounting = Buffer.alloc(48),
       limits = Buffer.alloc(144);
-    this.check(this.api.jobQuery(this.job, 1, accounting, 48, null), 'JOB_ACCOUNTING');
-    this.check(this.api.jobQuery(this.job, 9, limits, 144, null), 'JOB_ACCOUNTING');
+    this.Check(this.api.jobQuery(this.job, 1, accounting, 48, null), 'JOB_ACCOUNTING');
+    this.Check(this.api.jobQuery(this.job, 9, limits, 144, null), 'JOB_ACCOUNTING');
     const result = this.process ? this.api.wait(this.process, 0) : 0;
     if (result !== 0 && result !== 258)
       fault('WAIT', this.api.last());
     const code = Buffer.alloc(4);
     if (this.process)
-      this.check(this.api.exitCode(this.process, code), 'EXIT_CODE');
+      this.Check(this.api.exitCode(this.process, code), 'EXIT_CODE');
     return { active: accounting.readUInt32LE(40), exited: result === 0, exitCode: code.readUInt32LE(), totalProcesses: accounting.readUInt32LE(36), limitTerminations: accounting.readUInt32LE(44), peakMemoryBytes: Number(limits.readBigUInt64LE(136)) }
   }
 
   /** 终止整个原 Job，包括主进程已退出而仍存活的后代；调用后仍须轮询 active=0。 */
-  terminate()
+  Terminate()
   {
     if (this.job)
-      this.check(this.api.jobTerminate(this.job, 1), 'TERMINATE')
+      this.Check(this.api.jobTerminate(this.job, 1), 'TERMINATE')
   }
 
   /** 无活动程序后释放所有句柄和临时 profile；中途失败保留剩余所有权供同实例再次 close。 */
-  close()
+  Close()
   {
     if (this.job)
     {
-      this.terminate();
+      this.Terminate();
       const data = Buffer.alloc(48);
-      this.check(this.api.jobQuery(this.job, 1, data, 48, null), 'CLOSE_JOB');
+      this.Check(this.api.jobQuery(this.job, 1, data, 48, null), 'CLOSE_JOB');
       if (data.readUInt32LE(40) !== 0)
         fault('DRAIN_PENDING')
     }
     for (const handle of [...this.handles].reverse())
     {
-      this.release(handle);
+      this.Release(handle);
       if (handle === this.job)
         this.job = null
     }

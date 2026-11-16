@@ -60,43 +60,43 @@ export class WebPageReader
       next: number
     }>();
 
-  constructor(private readonly client: Pick<PublicHttp, 'read'> = new PublicHttp(), private readonly timing: { now(): number; wait(ms: number, signal: AbortSignal): Promise<void>; interval: number; } = { now: () => Date.now(), wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, private readonly browser?: BrowserReader, private readonly userAgent = 'PublicWebReader/1.0')
+  constructor(private readonly client: Pick<PublicHttp, 'Read'> = new PublicHttp(), private readonly timing: { Now(): number; Wait(ms: number, signal: AbortSignal): Promise<void>; interval: number; } = { Now: () => Date.now(), Wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, private readonly browser?: BrowserReader, private readonly userAgent = 'PublicWebReader/1.0')
   {
   }
 
-  private remember<T>(map: Map<string, T>, key: string, value: T)
+  private Remember<T>(map: Map<string, T>, key: string, value: T)
   {
     if (map.size >= 1000 && !map.has(key))
       map.delete(map.keys().next().value!);
     map.set(key, value);
   }
 
-  private async pace(url: URL, signal: AbortSignal, crawlDelay = 0)
+  private async Pace(url: URL, signal: AbortSignal, crawlDelay = 0)
   {
     signal.throwIfAborted();
-    const now = this.timing.now(),
+    const now = this.timing.Now(),
       previous = this.domains.get(url.hostname),
       next = Math.max(now, previous?.next ?? 0, previous ? previous.last + crawlDelay : 0),
       wait = next - now;
     if (wait > 5000 || crawlDelay > 5000)
       throw Error('WEB_RATE_LIMIT: 域名抓取间隔或排队超过 5 秒，请稍后重试');
-    this.remember(this.domains, url.hostname, {
+    this.Remember(this.domains, url.hostname, {
       last: next,
       next: next + Math.max(this.timing.interval, crawlDelay),
     });
     if (wait > 0)
-      await this.timing.wait(wait, signal);
+      await this.timing.Wait(wait, signal);
     signal.throwIfAborted();
   }
 
-  private async allowed(url: URL, signal: AbortSignal)
+  private async Allowed(url: URL, signal: AbortSignal)
   {
     let entry = this.robots.get(url.origin);
-    if (!entry || entry.expires <= this.timing.now())
+    if (!entry || entry.expires <= this.timing.Now())
     {
       const robotsUrl = new URL('/robots.txt', url);
-      await this.pace(robotsUrl, signal);
-      const response = await this.client.read(robotsUrl.href, signal);
+      await this.Pace(robotsUrl, signal);
+      const response = await this.client.Read(robotsUrl.href, signal);
       // robots 重定向及不可用均不猜测允许；404/410 明确无规则。
       if (
         response.status !== 404 &&
@@ -105,10 +105,10 @@ export class WebPageReader
       )
         throw Error('WEB_ROBOTS: 无法确认来源 robots 规则，未读取正文');
       entry = {
-        expires: this.timing.now() + ttl,
+        expires: this.timing.Now() + ttl,
         rules: robotsParser(robotsUrl.href, [404, 410].includes(response.status) ? '' : response.body),
       };
-      this.remember(this.robots, url.origin, entry);
+      this.Remember(this.robots, url.origin, entry);
     }
     if (entry.rules.isAllowed(url.href, this.userAgent) === false)
       throw Error('WEB_ROBOTS: 来源 robots 禁止读取该页面');
@@ -116,12 +116,12 @@ export class WebPageReader
   }
 
   /** 每次捕获宿主 robots 策略，默认允许浏览器读取。策略分隔缓存；取消、公网和限流边界不变。 */
-  async fetch(raw: PageReadInput, signal: AbortSignal, options: { browserRobotsPolicy?: BrowserRobotsPolicy } = {})
+  async Fetch(raw: PageReadInput, signal: AbortSignal, options: { browserRobotsPolicy?: BrowserRobotsPolicy } = {})
   {
     const policy = browserRobotsPolicy.parse(options.browserRobotsPolicy ?? 'allow');
     try
     {
-      return await this.fetchStatic(raw, signal, policy);
+      return await this.FetchStatic(raw, signal, policy);
     }
     catch (error)
     {
@@ -137,25 +137,25 @@ export class WebPageReader
         initial = publicUrl(input.url);
       try
       {
-        const page = await this.browser.read(initial.href, signal, async (raw, active, document = true) =>
+        const page = await this.browser.Read(initial.href, signal, async (raw, active, document = true) =>
         {
           active.throwIfAborted();
           const url = publicUrl(raw),
-            crawlDelay = policy === 'respect' ? await this.allowed(url, active) : 0;
+            crawlDelay = policy === 'respect' ? await this.Allowed(url, active) : 0;
           if (document)
-            await this.pace(url, active, crawlDelay);
+            await this.Pace(url, active, crawlDelay);
         });
         signal.throwIfAborted();
         publicUrl(page.url);
         if (!page.markdown.trim())
           throw Error('WEB_CONTENT_EMPTY: 浏览器未取得可读正文，不能据此认定需要登录');
-        const capturedAt = new Date(this.timing.now()).toISOString();
+        const capturedAt = new Date(this.timing.Now()).toISOString();
         if (this.pages.size >= 30)
           this.pages.delete(this.pages.keys().next().value!);
         this.pages.set(`${policy}:${initial.href}`, {
           ...page,
           capturedAt,
-          expires: this.timing.now() + ttl,
+          expires: this.timing.Now() + ttl,
         });
         const content = truncateParagraphs(page.markdown, input.maxChars ?? 12000);
         return {
@@ -179,7 +179,7 @@ export class WebPageReader
   }
 
   /** 静态读取本身不启动浏览器；只有 fetch 的单一出口决定是否兜底，避免循环重试。 */
-  private async fetchStatic(raw: PageReadInput, signal: AbortSignal, policy: BrowserRobotsPolicy)
+  private async FetchStatic(raw: PageReadInput, signal: AbortSignal, policy: BrowserRobotsPolicy)
   {
     const input = pageReadInput.parse(raw),
       initial = publicUrl(input.url),
@@ -187,7 +187,7 @@ export class WebPageReader
       key = `${policy}:${initial.href}`;
     deadline.throwIfAborted();
     const cached = this.pages.get(key);
-    if (cached && cached.expires > this.timing.now())
+    if (cached && cached.expires > this.timing.Now())
     {
       const { url, title, markdown, capturedAt } = cached,
         content = truncateParagraphs(markdown, input.maxChars ?? 12000);
@@ -203,9 +203,9 @@ export class WebPageReader
     let url = initial;
     for (let hop = 0; hop <= 5; hop++)
     {
-      const crawlDelay = await this.allowed(url, deadline);
-      await this.pace(url, deadline, crawlDelay);
-      const response = await this.client.read(url.href, deadline);
+      const crawlDelay = await this.Allowed(url, deadline);
+      await this.Pace(url, deadline, crawlDelay);
+      const response = await this.client.Read(url.href, deadline);
       deadline.throwIfAborted();
       if ([301, 302, 303, 307, 308].includes(response.status))
       {
@@ -238,11 +238,11 @@ export class WebPageReader
       )
         throw Error('WEB_BROWSER_REQUIRED: 页面含嵌入内容或动态外壳，需要浏览器读取');
       const page = {
-        expires: this.timing.now() + ttl,
+        expires: this.timing.Now() + ttl,
         url: url.href,
         title: content.title,
         markdown: content.markdown,
-        capturedAt: new Date(this.timing.now()).toISOString(),
+        capturedAt: new Date(this.timing.Now()).toISOString(),
         truncated: false,
       };
       // 每项正文最多 1 MiB；最多缓存 30 项，避免持有大量第三方页面。

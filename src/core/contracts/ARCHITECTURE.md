@@ -27,9 +27,9 @@ class N_src_core_contracts_secrets_ts["secrets.ts"] {
 }
 class N_src_core_contracts_secrets_ts_SecretCipher["SecretCipher"] {
   <<interface>>
-  +available()
-  +encrypt()
-  +decrypt()
+  +Available()
+  +Encrypt()
+  +Decrypt()
 }
 N_src_core_contracts_secrets_ts ..> N_src_core_contracts_secrets_ts_SecretCipher : 声明
 ```

@@ -108,15 +108,15 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     }
     if (native)
     {
-      native.terminate();
+      native.Terminate();
       const deadline = performance.now() + 10000;
-      while (native.state().active !== 0)
+      while (native.State().active !== 0)
       {
         if (performance.now() > deadline)
           fail('DRAIN_PENDING');
         await pause()
       }
-      native.close();
+      native.Close();
       native = undefined
     }
     if (retainOwner)
@@ -129,7 +129,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     if (!notified)
     {
       if (prepared)
-        await options.lifecycle!.cleaned();
+        await options.lifecycle!.Cleaned();
       options.onSettled?.();
       notified = true
     }
@@ -142,7 +142,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     const inspector = options.lifecycle ? new Win32IsolationRecovery(koffiPath) : undefined;
     if (options.lifecycle)
     {
-      await options.lifecycle.prepared({ executionId, profileName, jobName: 'Local\\' + profileName, root, rootIdentity: inspector!.directoryIdentity(root), nonce, host: inspector!.processIdentity() }, hash(Buffer.from(JSON.stringify(raw))));
+      await options.lifecycle.Prepared({ executionId, profileName, jobName: 'Local\\' + profileName, root, rootIdentity: inspector!.DirectoryIdentity(root), nonce, host: inspector!.ProcessIdentity() }, hash(Buffer.from(JSON.stringify(raw))));
       prepared = true
     }
     try
@@ -161,11 +161,11 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
       retryNativeCleanup = failure.retryCleanup;
       throw error
     }
-    native.grant(root, 'traverse');
+    native.Grant(root, 'traverse');
     for (const [directory, access] of [[runtime, 'read'], [input, 'read'], [output, 'write']] as const)
     {
       await fs.mkdir(directory);
-      native.grant(directory, access)
+      native.Grant(directory, access)
     }
     const source = await fs.realpath(options.executable ?? process.execPath),
       executable = path.join(runtime, 'executor.exe');
@@ -213,12 +213,12 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     // 只对当前 Electron 执行器跳过重复初始化，继续使用 start 显式继承的只读输入与输出管道；不放宽 ACL 或 capability。
     const runtimeArgs = process.versions.electron && source === await fs.realpath(process.execPath) ? ['--no-stdio-init'] : [];
     signal.throwIfAborted();
-    const pid = native.start(executable, [...runtimeArgs, '--preserve-symlinks', '--preserve-symlinks-main', path.join(input, ...request.entry.split('/')), ...request.args], output, request, !!options.lifecycle);
+    const pid = native.Start(executable, [...runtimeArgs, '--preserve-symlinks', '--preserve-symlinks-main', path.join(input, ...request.entry.split('/')), ...request.args], output, request, !!options.lifecycle);
     if (options.lifecycle)
     {
-      await options.lifecycle.started(inspector!.processIdentity(pid));
+      await options.lifecycle.Started(inspector!.ProcessIdentity(pid));
       signal.throwIfAborted();
-      native.resume()
+      native.Resume()
     }
     let status: IsolatedNodeResult['status'] = 'exited',
       terminating = false;
@@ -230,7 +230,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     {
       if (!terminating)
       {
-        native!.terminate();
+        native!.Terminate();
         terminating = true;
         drainDeadline = performance.now() + 10000
       }
@@ -242,7 +242,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     signal.addEventListener('abort', abort, { once: true });
     if (signal.aborted)
       abort();
-    let state: ReturnType<Win32IsolatedNode['state']>;
+    let state: ReturnType<Win32IsolatedNode['State']>;
     try
     {
       options.onStarted?.({ pid, root, profileName });
@@ -252,7 +252,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           terminate();
         for (let i = 0; i < 16; i++)
         {
-          const bytes = native.read();
+          const bytes = native.Read();
           if (!bytes.length)
             break;
           if (received + bytes.length > 65536)
@@ -265,7 +265,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
           chunks.push(bytes);
           received += bytes.length
         }
-        state = native.state();
+        state = native.State();
         if (status === 'exited' && state.limitTerminations > 0)
         {
           status = 'resource_limit';
@@ -293,7 +293,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
     // 主进程退出时管道可能仍有尾部字节；在全部后代退出后排空同一管道。
     for (; ;)
     {
-      const bytes = native.read();
+      const bytes = native.Read();
       if (!bytes.length)
         break;
       if (received + bytes.length > 65536)
@@ -356,7 +356,7 @@ export async function runIsolatedNode(raw: IsolatedNodeRequest, signal: AbortSig
         }
       }
     if (prepared)
-      await options.lifecycle!.settled();
+      await options.lifecycle!.Settled();
     await cleanup();
     if (signal.aborted)
     {

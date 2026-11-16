@@ -1133,6 +1133,18 @@
         "integration": []
       }
     },
+    "tooling/method-names": {
+      "roots": [
+        "scripts/check-method-names.mjs"
+      ],
+      "tests": {
+        "unit": [
+          "tests/method-names.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
     "tooling/config": {
       "roots": [
         "scripts/desktop-signing/config.cjs"

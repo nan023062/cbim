@@ -60,7 +60,7 @@ export interface RepositoryToolsPort
 {
   readonly targets: readonly RepositoryToolTarget[];
 
-  list(input: RepositoryListInput, signal: AbortSignal): Promise<RepositoryListOutput>;
+  List(input: RepositoryListInput, signal: AbortSignal): Promise<RepositoryListOutput>;
 
-  get(input: RepositoryGetInput, signal: AbortSignal): Promise<RepositoryGetOutput>;
+  Get(input: RepositoryGetInput, signal: AbortSignal): Promise<RepositoryGetOutput>;
 }

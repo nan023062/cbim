@@ -24,14 +24,14 @@ const provider=await scopeContinuationProvider({holdContinuation:true}),pageErro
 const draft='主输入框保留的下一任务草稿，不作为本次目标补充';
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  await setup.models.save({profile:{name:'Local continuation UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const profileId=(await setup.models.list()).selectedId!,entry=await setup.dispatch('add',{path:project}),workspace=setup.workspace(entry.id),team=await seedTeam(workspace);
-  const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  await setup.models.Save({profile:{name:'Local continuation UI',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'continue-fixture',models:[{id:'continue-fixture',name:'Continue fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const profileId=(await setup.models.List()).selectedId!,entry=await setup.Dispatch('add',{path:project}),workspace=setup.Workspace(entry.id),team=await seedTeam(workspace);
+  const knowledge=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'continue-ui-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'continue-ui-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  await workspace.Commit(request(knowledge,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
   const owner=await registerExplicitFixtureOwner(setup,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId,modelId:'continue-fixture'});
-  provider.bind(team.input.agentId,team.input.moduleId,owner.selection);await setup.shutdown();setup=undefined;
+  provider.bind(team.input.agentId,team.input.moduleId,owner.selection);await setup.Shutdown();setup=undefined;
   const scopes=async()=>{
     const raw=await fs.readFile(path.join(user,entry.id,'dispatch','dispatch.jsonl'),'utf8'),found=new Map<string,DispatchScope>();
     for(const line of raw.slice(0,raw.lastIndexOf('\n')).split('\n').filter(Boolean)){const {body}=JSON.parse(line);assert.equal(body.workspaceId,entry.id);for(const scope of body.mutation.scopes??[])found.set(scope.scopeId,scope)}return [...found.values()];
@@ -116,6 +116,6 @@ try{
   const workspaceState=desktop?await desktop.firstWindow().then(page=>page.evaluate(()=>(window as any).cbim.call('list'))).catch(error=>String(error)):undefined;
   await fs.writeFile(`test-results/${artifact}-ui-failure.json`,JSON.stringify({packagedExe:exe,temp,error:String(error),workspaceState,mainRequests:provider.mainRequests.length,memberRequests:provider.memberRequests.length,pageErrors,transportErrors:provider.errors},null,2));throw error;
 }finally{
-  provider.releaseContinuation();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.shutdown();await provider.close();
+  provider.releaseContinuation();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.Shutdown();await provider.close();
   if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-scope-continuation-ui-'));await fs.rm(target,{recursive:true,force:true})}
 }

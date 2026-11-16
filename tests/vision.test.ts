@@ -20,14 +20,14 @@ it('image capability is explicit, discoverable, and backward compatible',()=>{
 });
 it('image snapshots preserve bytes, isolate workspaces, limit size, and survive queue reload',async()=>{
  const f=await fixture();try{
-  const a=await f.app.dispatch('add',{path:f.a}),b=await f.app.dispatch('add',{path:f.b});const inputs=new ChatInputs(f.app.workspace(a.id));
-  const file=path.join(f.a,'picture.bin');await fs.writeFile(file,Buffer.from(png,'base64'));const item=await inputs.path('file',file);await fs.writeFile(file,'changed');
-  expect(await inputs.images([item.id])).toEqual([{type:'image',mimeType:'image/png',data:png}]);
-  expect(await inputs.message('look',[item.id])).not.toContain(png);
-  await expect(new ChatInputs(f.app.workspace(b.id)).images([item.id])).rejects.toThrow();
-  await expect(inputs.images(['../invalid'])).rejects.toThrow();
-  const big=Buffer.alloc(5*1024*1024+1);Buffer.from(png,'base64').copy(big);await fs.writeFile(file,big);await expect(inputs.path('file',file)).rejects.toThrow('5 MiB');
-  const qfile=path.join(f.a,'queue.json'),queue=new MessageQueue(qfile);await queue.add('conversation','look',{provider:'p',model:'m',attachmentIds:[item.id]});const restored=new MessageQueue(qfile);await restored.load();expect(restored.list('conversation')[0].options.attachmentIds).toEqual([item.id]);
+  const a=await f.app.Dispatch('add',{path:f.a}),b=await f.app.Dispatch('add',{path:f.b});const inputs=new ChatInputs(f.app.Workspace(a.id));
+  const file=path.join(f.a,'picture.bin');await fs.writeFile(file,Buffer.from(png,'base64'));const item=await inputs.Path('file',file);await fs.writeFile(file,'changed');
+  expect(await inputs.Images([item.id])).toEqual([{type:'image',mimeType:'image/png',data:png}]);
+  expect(await inputs.Message('look',[item.id])).not.toContain(png);
+  await expect(new ChatInputs(f.app.Workspace(b.id)).Images([item.id])).rejects.toThrow();
+  await expect(inputs.Images(['../invalid'])).rejects.toThrow();
+  const big=Buffer.alloc(5*1024*1024+1);Buffer.from(png,'base64').copy(big);await fs.writeFile(file,big);await expect(inputs.Path('file',file)).rejects.toThrow('5 MiB');
+  const qfile=path.join(f.a,'queue.json'),queue=new MessageQueue(qfile);await queue.Add('conversation','look',{provider:'p',model:'m',attachmentIds:[item.id]});const restored=new MessageQueue(qfile);await restored.Load();expect(restored.List('conversation')[0].options.attachmentIds).toEqual([item.id]);
  }finally{await f.cleanup()}
 });
 it('real Pi sends attachment image bytes to the provider, preserves them on resume, and rejects text-only models',async()=>{
@@ -39,18 +39,18 @@ it('real Pi sends attachment image bytes to the provider, preserves them on resu
   res.end('data: '+JSON.stringify(data)+'\n\ndata: [DONE]\n\n');
  });await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
  try{
-  const entry=await f.app.dispatch('add',{path:f.a});const inputs=new ChatInputs(f.app.workspace(entry.id));const file=path.join(f.a,'pixel.png');await fs.writeFile(file,Buffer.from(png,'base64'));const attachment=await inputs.path('file',file);
+  const entry=await f.app.Dispatch('add',{path:f.a});const inputs=new ChatInputs(f.app.Workspace(entry.id));const file=path.join(f.a,'pixel.png');await fs.writeFile(file,Buffer.from(png,'base64'));const attachment=await inputs.Path('file',file);
   const models=['vision','plain'].map(id=>({id,name:id,enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,vision:id==='vision'}));
-  const saved=await f.app.models.save({profile:{name:'local vision test',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',models,defaultModel:'vision'}});
+  const saved=await f.app.models.Save({profile:{name:'local vision test',api:'openai-completions',baseUrl:`http://127.0.0.1:${(server.address() as any).port}/v1`,auth:'none',models,defaultModel:'vision'}});
   const options={profileId:saved.selectedId,model:'vision',permission:'read'};
-  await expect(f.app.dispatch('loop.chat',{id:entry.id,message:'look',attachments:[attachment.id],options:{...options,model:'plain'}})).rejects.toThrow('图片输入');expect(requests).toHaveLength(0);
+  await expect(f.app.Dispatch('loop.chat',{id:entry.id,message:'look',attachments:[attachment.id],options:{...options,model:'plain'}})).rejects.toThrow('图片输入');expect(requests).toHaveLength(0);
   // A completed model run can still be closing its dispatch scope; queued receipts point to the old run, not the upcoming one.
-  const wait=async(receipt:{taskId:string;runId:string;queued?:boolean})=>{let result:RunSummary|undefined;await vi.waitFor(async()=>{const history=await f.app.execution(entry.id).thread(receipt.taskId);result=history.at(-1);expect(result).toBeDefined();if(receipt.queued)expect(result!.runId).not.toBe(receipt.runId);else expect(result!.runId).toBe(receipt.runId);expect(result!.status).not.toBe('running');expect((f.app.execution(entry.id) as any).active.has(receipt.taskId)).toBe(false)},{timeout:20000,interval:20});return result!};
-  const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'look',attachments:[attachment.id],options});const result=await wait(first);expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
+  const wait=async(receipt:{taskId:string;runId:string;queued?:boolean})=>{let result:RunSummary|undefined;await vi.waitFor(async()=>{const history=await f.app.Execution(entry.id).Thread(receipt.taskId);result=history.at(-1);expect(result).toBeDefined();if(receipt.queued)expect(result!.runId).not.toBe(receipt.runId);else expect(result!.runId).toBe(receipt.runId);expect(result!.status).not.toBe('running');expect((f.app.Execution(entry.id) as any).active.has(receipt.taskId)).toBe(false)},{timeout:20000,interval:20});return result!};
+  const first=await f.app.Dispatch('loop.chat',{id:entry.id,message:'look',attachments:[attachment.id],options});const result=await wait(first);expect(result.status,JSON.stringify(result.events.at(-1))).toBe('completed');
   const images=(body:any)=>body.messages.flatMap((m:any)=>Array.isArray(m.content)?m.content.filter((c:any)=>c.type==='image_url'):[]);
   expect(images(requests[0]),JSON.stringify(requests[0].messages.filter((m:any)=>m.role==='user'))).toEqual([expect.objectContaining({image_url:expect.objectContaining({url:'data:image/png;base64,'+png})})]);
-  const config=JSON.parse(await fs.readFile(path.join(f.app.paths.project(entry.id),'loop-engine','tasks',first.taskId,first.runId,'provider','models.json'),'utf8'));expect(Object.values<any>(config.providers)[0].models[0].input).toEqual(['text','image']);
+  const config=JSON.parse(await fs.readFile(path.join(f.app.paths.Project(entry.id),'loop-engine','tasks',first.taskId,first.runId,'provider','models.json'),'utf8'));expect(Object.values<any>(config.providers)[0].models[0].input).toEqual(['text','image']);
   expect(JSON.stringify(result.events)).not.toContain(png);
-  const second=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'summarize',options});const resumed=await wait(second);expect(resumed.status,JSON.stringify(resumed.events.at(-1))).toBe('completed');expect(resumed.runId).not.toBe(first.runId);expect(requests).toHaveLength(2);expect(images(requests[1])).toHaveLength(1);
+  const second=await f.app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'summarize',options});const resumed=await wait(second);expect(resumed.status,JSON.stringify(resumed.events.at(-1))).toBe('completed');expect(resumed.runId).not.toBe(first.runId);expect(requests).toHaveLength(2);expect(images(requests[1])).toHaveLength(1);
  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.cleanup()}
 },60000);

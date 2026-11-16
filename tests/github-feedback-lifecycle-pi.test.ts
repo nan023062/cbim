@@ -11,10 +11,10 @@ import {transcript} from '../src/view/execution-view/transcript';
 import type {RunSummary} from '../src/logic/execution/rules/types';
 
 it.each(['bug','wish'] as const)('refreshes both feedback tools after login when resuming an empty-project conversation (%s)',async kind=>{
-  const f=await fixture();await f.app.shutdown();
-  const cipher={available:()=>true,encrypt:(value:string)=>Buffer.from(value).toString('base64'),decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
-  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.init();
-  const entry=await app.dispatch('add',{path:f.a}),workspace=app.workspace(entry.id),before=await workspace.snapshot();
+  const f=await fixture();await f.app.Shutdown();
+  const cipher={Available:()=>true,Encrypt:(value:string)=>Buffer.from(value).toString('base64'),Decrypt:(value:string)=>Buffer.from(value,'base64').toString()};
+  const app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'),cipher);await app.Init();
+  const entry=await app.Dispatch('add',{path:f.a}),workspace=app.Workspace(entry.id),before=await workspace.Snapshot();
   const input=kind==='bug'?{kind,summary:'Lifecycle bug',steps:'User supplied step',actual:'User supplied error',expected:'Open normally',environment:'Windows fixture'}:{kind,summary:'Lifecycle wish',scenario:'User supplied scenario',problem:'User supplied problem',expected:'User supplied feature',example:'User supplied example'};
   const token='gho_lifecycle_fixture_token',issues:unknown[]=[],requests:any[]=[],errors:string[]=[];
   let phase:'unconnected'|'pending'|'connected'|'disconnected'='unconnected',step=0;
@@ -55,28 +55,28 @@ it.each(['bug','wish'] as const)('refreshes both feedback tools after login when
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   try{
     const address=server.address();assert.ok(address&&typeof address!=='string');
-    await app.models.save({profile:{name:'Feedback lifecycle',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-lifecycle',models:[{id:'feedback-lifecycle',name:'Feedback lifecycle',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+    await app.models.Save({profile:{name:'Feedback lifecycle',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'feedback-lifecycle',models:[{id:'feedback-lifecycle',name:'Feedback lifecycle',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
     const options={permission:'ask',turnTimeoutMs:60000};
     const wait=async(run:{taskId:string;runId:string})=>{let summary!:RunSummary;await vi.waitFor(async()=>{
-      expect(errors).toEqual([]);summary=await app.dispatch('loop.inspect',{id:entry.id,taskId:run.taskId,runId:run.runId});expect(summary.status).toBe('completed');
-      expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);
+      expect(errors).toEqual([]);summary=await app.Dispatch('loop.inspect',{id:entry.id,taskId:run.taskId,runId:run.runId});expect(summary.status).toBe('completed');
+      expect(app.runtime.Snapshot().pressure.activeRuns).toBe(0);
     },{timeout:30000,interval:50});return summary};
-    const first=await app.dispatch('loop.chat',{id:entry.id,message:'I want to submit feedback but have not connected GitHub yet.',options});await wait(first);
-    const auth=await app.dispatch('github.feedback.begin',{clientId:'fixture_client',owner:'owner',repo:'repo',visibility:'public',autoSubmit:true});
+    const first=await app.Dispatch('loop.chat',{id:entry.id,message:'I want to submit feedback but have not connected GitHub yet.',options});await wait(first);
+    const auth=await app.Dispatch('github.feedback.begin',{clientId:'fixture_client',owner:'owner',repo:'repo',visibility:'public',autoSubmit:true});
     phase='pending';step=0;
-    const pending=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Check the local authorization status before the settings page receives the token.',options});await wait(pending);
-    expect(issues).toHaveLength(0);expect((await app.dispatch('github.feedback.status')).connected).toBeUndefined();
-    await vi.waitFor(async()=>expect((await app.dispatch('github.feedback.poll',{flowId:required(auth.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
+    const pending=await app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Check the local authorization status before the settings page receives the token.',options});await wait(pending);
+    expect(issues).toHaveLength(0);expect((await app.Dispatch('github.feedback.status')).connected).toBeUndefined();
+    await vi.waitFor(async()=>expect((await app.Dispatch('github.feedback.poll',{flowId:required(auth.flow).id})).connected?.login).toBe('tester'),{timeout:4000,interval:100});
     phase='connected';step=0;
-    const second=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:pending.runId,message:'GitHub is now connected; submit this feedback: '+JSON.stringify(input),options});
+    const second=await app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:pending.runId,message:'GitHub is now connected; submit this feedback: '+JSON.stringify(input),options});
     const submitted=await wait(second);
     expect(issues).toHaveLength(1);expect(submitted.toolReceipts?.filter(r=>r.toolName.startsWith('cbim_feedback_')).map(r=>r.outcome)).toEqual(['succeeded','succeeded','succeeded']);
     const manifest=submitted.events.find(event=>event.type==='engine.status'&&event.data.metric==='tool-catalog'&&event.data.stage==='active');
     expect(manifest?.data.missing).toEqual([]);expect(manifest?.data.active).toEqual(expect.arrayContaining(['cbim_feedback_status','cbim_feedback_submit','cbim_feedback_receipt']));
     expect(transcript(submitted).some(item=>item.kind==='assistant'&&item.text==='Feedback submitted once; the original receipt is available.')).toBe(true);
-    await app.dispatch('github.feedback.disconnect');phase='disconnected';step=0;
-    const third=await app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:second.runId,message:'Check feedback availability after disconnecting.',options});await wait(third);
-    expect(issues).toHaveLength(1);expect((await workspace.snapshot()).files).toEqual(before.files);
-    expect((await app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:first.taskId}})).tasks).toEqual([]);
-  }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.shutdown();await f.cleanup()}
+    await app.Dispatch('github.feedback.disconnect');phase='disconnected';step=0;
+    const third=await app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:second.runId,message:'Check feedback availability after disconnecting.',options});await wait(third);
+    expect(issues).toHaveLength(1);expect((await workspace.Snapshot()).files).toEqual(before.files);
+    expect((await app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:first.taskId}})).tasks).toEqual([]);
+  }finally{vi.restoreAllMocks();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await app.Shutdown();await f.cleanup()}
 },90000);

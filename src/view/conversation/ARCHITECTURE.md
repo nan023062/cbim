@@ -125,12 +125,12 @@ class N_src_view_conversation_channel_draft_ts_ChannelDraftStore["ChannelDraftSt
   +constructor()
   +writable
   +snapshot
-  +subscribe()
-  +edit()
-  +clearIfUnchanged()
-  +beginImport()
-  +cancelImport()
-  +finishImport()
+  +Subscribe()
+  +Edit()
+  +ClearIfUnchanged()
+  +BeginImport()
+  +CancelImport()
+  +FinishImport()
   -storage
   -value
   -listeners
@@ -291,11 +291,11 @@ class N_src_view_conversation_conversation_stop_ts_StopToken["StopToken"] {
 }
 N_src_view_conversation_conversation_stop_ts ..> N_src_view_conversation_conversation_stop_ts_StopToken : 声明
 class N_src_view_conversation_conversation_stop_ts_ConversationStopGate["ConversationStopGate"] {
-  +observe()
-  +begin()
-  +pending()
-  +isCurrent()
-  +finish()
+  +Observe()
+  +Begin()
+  +Pending()
+  +IsCurrent()
+  +Finish()
   -requests
   -target
   -generation
@@ -572,7 +572,7 @@ class N_src_view_conversation_queue_sync_ts["queue-sync.ts"] {
 class N_src_view_conversation_queue_sync_ts_QueueProjection["QueueProjection"] {
   +cursor
   +items
-  +apply()
+  +Apply()
 }
 N_src_view_conversation_queue_sync_ts ..> N_src_view_conversation_queue_sync_ts_QueueProjection : 声明
 ```
@@ -677,19 +677,19 @@ class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionContr
   +target
   +constructor()
   +snapshot
-  +subscribe()
-  +restore()
-  +submit()
-  +query()
-  +retry()
+  +Subscribe()
+  +Restore()
+  +Submit()
+  +Query()
+  +Retry()
   -ports
   -value
   -records
   -listeners
   -inFlight
   -blocked
-  -publish()
-  -validate()
+  -Publish()
+  -Validate()
 }
 N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController : 声明
 ```
@@ -702,9 +702,9 @@ class N_src_view_conversation_topic_interruption_state_ts["topic-interruption-st
   <<module>>
 }
 class N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController["TopicInterruptionController"] {
-  -run()
-  -accept()
-  -lookup()
+  -Run()
+  -Accept()
+  -Lookup()
 }
 N_src_view_conversation_topic_interruption_state_ts ..> N_src_view_conversation_topic_interruption_state_ts_TopicInterruptionController : 声明
 ```
@@ -1337,7 +1337,7 @@ MemberConversation 为只读工作审阅，按逻辑会话、频道、任务、�
 - ConversationTopics 展示主聊天与频道入口，用户消息的“打开为频道”使用原 scope 归属，不复制任务。ConversationChannel 只渲染该 scope 的原主运行；未分类旧记录不猜测频道或重放输入。
 - ChannelPane 是中央子窗，与右侧 ExtensionArea 无关。已访问频道和主聊天保持挂载；每位成员只观察自己选中轮次。ReadingPane 保存各自的滚动位置和跟随末尾状态；隐藏不因 0 高度改写阅读位置。窄窗口改为上下双窗，无横向溢出。
 - ChannelDraftStore 按 workspace/root/scope 分键保存文本、有界附件元数据和版本；useChannelDraft 绑定可见代次，迟到文件选择不能写进切换后的频道。存储损坏不覆盖，受理/转交冻结请求后只清除提交时版本。主草稿仍属于原 Shell 页签。
-- ChannelComposer 只路由显式发送：active 使用 TopicInterruptionController 冻结原正文、模型、权限及有序 attachmentIds；waiting 使用唯一 ScopeContinuationController.submitInput；closed 创建关联后续任务。原请求持久化失败不发送；未知回执只沿原命令查询/显式重试。隐藏/切换不取消已受理任务或自动重试。
+- ChannelComposer 只路由显式发送：active 使用 TopicInterruptionController 冻结原正文、模型、权限及有序 attachmentIds；waiting 使用唯一 ScopeContinuationController.SubmitInput；closed 创建关联后续任务。原请求持久化失败不发送；未知回执只沿原命令查询/显式重试。隐藏/切换不取消已受理任务或自动重试。
 - 普通主聊天发送继续排队新任务。分屏不新增并行主运行，不改变全员退出、准入、人工验收和停止语义。公开工具/思考说明在工作审阅，缺少记录不补造。
 
 ## 0.1.21 主线整合

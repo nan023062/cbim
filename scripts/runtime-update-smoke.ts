@@ -46,19 +46,19 @@ async function main(){
   try{
     await fs.writeFile(path.join(user,'preserved.txt'),'existing user data');await launch();
     const before=await page!.evaluate(()=>window.cbim.call('desktop.updates.status'));assert.equal(before.currentResourceVersion,1);assert.equal(before.enabled,true);
-    const prepared=await page!.evaluate(()=>window.cbim.call('desktop.updates.check'));assert.equal(prepared.phase,'ready');assert.equal(prepared.release?.resourceVersion,2);assert.equal(journal.read().pending,undefined);
+    const prepared=await page!.evaluate(()=>window.cbim.call('desktop.updates.check'));assert.equal(prepared.phase,'ready');assert.equal(prepared.release?.resourceVersion,2);assert.equal(journal.Read().pending,undefined);
     assert.equal((await fs.readdir(path.join(cache,'packages'))).length,1,'window startup must not prepare engines');
-    await desktop!.close();desktop=undefined;assert.equal(journal.read().pending,undefined,'ordinary exit cannot activate a download');
+    await desktop!.close();desktop=undefined;assert.equal(journal.Read().pending,undefined,'ordinary exit cannot activate a download');
     await launch();await page!.evaluate(()=>window.cbim.call('desktop.updates.check'));
     const button=page!.getByRole('button',{name:'版本与更新',exact:true});await button.waitFor();
     // controller 用轮询取得真实 ready 快照；等待属性，不在尚未就绪时强行派发点击。
     await page!.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');
     await button.hover();await page!.screenshot({path:'test-results/runtime-ready.png'});
     const closed=desktop!.waitForEvent('close');await button.click();await closed;desktop=undefined;
-    assert.equal(journal.read().pending?.stage,'authorized');assert.equal(JSON.parse(await fs.readFile(relaunchReceipt,'utf8')).profile,path.join(user,'desktop'));
+    assert.equal(journal.Read().pending?.stage,'authorized');assert.equal(JSON.parse(await fs.readFile(relaunchReceipt,'utf8')).profile,path.join(user,'desktop'));
     await launch();
     const after=await page!.evaluate(()=>window.cbim.call('desktop.updates.status'));assert.equal(after.currentResourceVersion,2);
-    assert.equal(journal.read().pending,undefined);assert.equal(journal.read().highestResource,2);assert.equal(await fs.readFile(path.join(user,'preserved.txt'),'utf8'),'existing user data');
+    assert.equal(journal.Read().pending,undefined);assert.equal(journal.Read().highestResource,2);assert.equal(await fs.readFile(path.join(user,'preserved.txt'),'utf8'),'existing user data');
     await page!.getByRole('button',{name:'版本与更新',exact:true}).hover();await page!.screenshot({path:'test-results/runtime-r2.png'});assert.deepEqual(errors,[]);
     await fs.writeFile('test-results/runtime-update-smoke.json',JSON.stringify({passed:true,root,checks:['real signed R1 boot','no engine download before UI','background R preparation','ordinary exit leaves R1 active','sidebar explicit apply','drain before relaunch','same profile','real R2 main/preload/renderer boot','confirmation journal','user data retained'],resourceBytes:nextResource.bytes,windowReadyMs:timings,pageErrors:errors,limitations:'isolated Electron host with fixture network/install identity; no NSIS install, real update service, or model execution'},null,2));
     console.log(JSON.stringify({passed:true,resourceBytes:nextResource.bytes,windowReadyMs:timings,pageErrors:errors}));

@@ -96,16 +96,16 @@ it('当前核实拒绝跨身份、旧任务版本、换原绑定、模块缺失�
 it('核实按点击执行，重复点击合并；任务切换/版本变化隔离迟到结果',async()=>{
   const a=task(),b=task();b.taskId='task-two';let calls=0;let release!:(value:unknown)=>void;
   const controller=new OwnerInspectionController(a,()=>{calls++;return new Promise(resolve=>{release=resolve})});
-  expect(calls).toBe(0);const first=controller.inspect(),second=controller.inspect();expect(first).toBe(second);await Promise.resolve();expect(calls).toBe(1);
-  controller.observe(b);release(inspected(a));await first;expect(controller.snapshot.view).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
-  const third=controller.inspect();await Promise.resolve();expect(calls).toBe(2);controller.observe({...b,revision:2});release(inspected(b));await third;expect(controller.snapshot.view).toBeUndefined();expect(controller.snapshot.error).toBeUndefined();controller.dispose();
+  expect(calls).toBe(0);const first=controller.Inspect(),second=controller.Inspect();expect(first).toBe(second);await Promise.resolve();expect(calls).toBe(1);
+  controller.Observe(b);release(inspected(a));await first;expect(controller.snapshot.view).toBeUndefined();expect(controller.snapshot.loading).toBe(false);
+  const third=controller.Inspect();await Promise.resolve();expect(calls).toBe(2);controller.Observe({...b,revision:2});release(inspected(b));await third;expect(controller.snapshot.view).toBeUndefined();expect(controller.snapshot.error).toBeUndefined();controller.Dispose();
 });
 
 it('同版本读取失败保留旧观察并显示错误；卸载不发布迟到结果',async()=>{
   const value=task();let calls=0;
   const controller=new OwnerInspectionController(value,async()=>{if(++calls===1)return inspected(value);throw Error('通信中断，请重试读取')});
-  await controller.inspect();const prior=controller.snapshot.view;await controller.inspect();expect(controller.snapshot.view).toBe(prior);expect(controller.snapshot.error).toContain('通信中断');
-  let release!:(value:unknown)=>void,notifications=0;const late=new OwnerInspectionController(value,()=>new Promise(resolve=>{release=resolve}));late.subscribe(()=>notifications++);const pending=late.inspect();await Promise.resolve();late.dispose();const count=notifications;release(inspected(value));await pending;expect(notifications).toBe(count);controller.dispose();
+  await controller.Inspect();const prior=controller.snapshot.view;await controller.Inspect();expect(controller.snapshot.view).toBe(prior);expect(controller.snapshot.error).toContain('通信中断');
+  let release!:(value:unknown)=>void,notifications=0;const late=new OwnerInspectionController(value,()=>new Promise(resolve=>{release=resolve}));late.Subscribe(()=>notifications++);const pending=late.Inspect();await Promise.resolve();late.Dispose();const count=notifications;release(inspected(value));await pending;expect(notifications).toBe(count);controller.Dispose();
 });
 
 it('核实表单初次只显示读取入口，没有假当前结论或自动重派动作',()=>{

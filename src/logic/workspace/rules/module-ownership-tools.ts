@@ -67,11 +67,11 @@ export interface ModuleOwnerRunBinding
 /** 领域方法只执行一次；运行关闭与 Store 生命周期由 Main 实现核实。 */
 export interface ModuleOwnershipToolsPort
 {
-  inspect(input: ModuleOwnerInspectInput, signal: AbortSignal): Promise<unknown>;
+  Inspect(input: ModuleOwnerInspectInput, signal: AbortSignal): Promise<unknown>;
 
-  preview(input: ModuleOwnerPreviewInput, signal: AbortSignal): Promise<unknown>;
+  Preview(input: ModuleOwnerPreviewInput, signal: AbortSignal): Promise<unknown>;
 
-  commit(input: ModuleOwnerCommitInput, toolCallId: string, signal: AbortSignal): Promise<unknown>;
+  Commit(input: ModuleOwnerCommitInput, toolCallId: string, signal: AbortSignal): Promise<unknown>;
 
-  receipt(input: ModuleOwnerReceiptInput, signal: AbortSignal): Promise<unknown>;
+  Receipt(input: ModuleOwnerReceiptInput, signal: AbortSignal): Promise<unknown>;
 }

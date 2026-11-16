@@ -89,23 +89,23 @@ async function provider(mode:string){
     close:async()=>{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }
 async function setup(f:Awaited<ReturnType<typeof fixture>>,p:Awaited<ReturnType<typeof provider>>){
-  await f.app.models.save({profile:{name:'Agent return fixture',api:'openai-completions',baseUrl:p.url,auth:'none',defaultModel:'return-fixture',models:[{id:'return-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
-  const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json';
+  await f.app.models.Save({profile:{name:'Agent return fixture',api:'openai-completions',baseUrl:p.url,auth:'none',defaultModel:'return-fixture',models:[{id:'return-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),team=await seedTeam(workspace);
+  const snapshot=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json';
   const definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'agent-return-owner',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'review',source:'local_user',confirmedAt:'2026-11-06T00:00:00.000Z'}};
-  await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})},{path:modulePath,text:JSON.stringify(definition)}]));
-  const owner=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'return-fixture'});
+  await workspace.Commit(request(snapshot,[{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'Owner',team:'.cbim/team'}]})},{path:modulePath,text:JSON.stringify(definition)}]));
+  const owner=await registerExplicitFixtureOwner(f.app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:(await f.app.models.List()).selectedId!,modelId:'return-fixture'});
   p.bind(owner.selection.memberId,team.input.moduleId);
   await fs.writeFile(path.join(f.a,'collaboration-input.txt'),fact);
   return entry;
 }
 async function childRun(user:string,id:string,started:{taskId:string;runId:string}){
   const base=path.join(user,id,'loop-engine','tasks'),storage=new FileRunStorage();
-  const root=await storage.read(path.join(base,started.taskId,started.runId));
+  const root=await storage.Read(path.join(base,started.taskId,started.runId));
   const ref=root.events.find(event=>event.type==='tool.updated'&&event.data.agentCall)?.data.agentCall as {taskId:string;runId:string;callerTaskId:string;callerRunId:string};
   expect(ref).toMatchObject({callerTaskId:started.taskId,callerRunId:started.runId,toolCallId:'agent-call'});
-  return {root,ref,child:await storage.read(path.join(base,ref.taskId,ref.runId))};
+  return {root,ref,child:await storage.Read(path.join(base,ref.taskId,ref.runId))};
 }
 async function until(p:Awaited<ReturnType<typeof provider>>,check:()=>Promise<void>|void){
   await vi.waitFor(async()=>{expect(p.errors).toEqual([]);await check()},{timeout:30000,interval:40});
@@ -130,7 +130,7 @@ it.each(['normal','repair','restart','restart-corrupt','restart-pending','restar
     const entry=await setup(f,p);let started!:{taskId:string;runId:string};
     const restarting=mode.startsWith('restart');
     if(restarting){
-      await f.app.shutdown();const marker=path.join(f.temp,'ready.json');
+      await f.app.Shutdown();const marker=path.join(f.temp,'ready.json');
       processChild=spawn(process.execPath,['--import','tsx','tests/automatic-return-crash-host.ts',f.user,entry.id,mainGoal,marker,mode],{windowsHide:true,stdio:['ignore','ignore','pipe']});
       let stderr='';processChild.stderr!.on('data',chunk=>{stderr+=chunk});
       const exited=new Promise(resolve=>processChild!.once('exit',resolve));
@@ -147,24 +147,24 @@ it.each(['normal','repair','restart','restart-corrupt','restart-pending','restar
       if(mode==='restart-corrupt')await fs.appendFile(path.join(f.user,entry.id,'loop-engine','tasks',started.taskId,started.runId,'events.jsonl'),'{');
       const counts=[p.main.length,p.member.length],stat=await fs.stat(path.join(f.a,'collaboration-output.txt'));
       f.app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));
-      await f.app.init({restore:false});
+      await f.app.Init({restore:false});
       if(mode==='restart-model'){
-        const {id,hasKey,...profile}=(await f.app.models.list()).profiles[0];
-        await f.app.models.save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:4096}))}});
+        const {id,hasKey,...profile}=(await f.app.models.List()).profiles[0];
+        await f.app.models.Save({id,profile:{...profile,models:profile.models.map(model=>({...model,maxTokens:4096}))}});
       }
-      await f.app.open(entry.id);
+      await f.app.Open(entry.id);
       const restored=await childRun(f.user,entry.id,started);
       expect(restored.root.status).toBe(mode==='restart-stopped'?'cancelled':'interrupted');
       expect(restored.child.status).toBe(mode==='restart-pending'?'interrupted':'completed');
       expect([p.main.length,p.member.length]).toEqual(counts);
       const bytes=await jsonValidationLogBytes(f.user,entry.id);
-      await f.app.open(entry.id,true);
+      await f.app.Open(entry.id,true);
       expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
       expect([p.main.length,p.member.length]).toEqual(counts);
       expect((await fs.stat(path.join(f.a,'collaboration-output.txt'))).mtimeMs).toBe(stat.mtimeMs);
     }else{
-      started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:60000}});
-      await until(p,async()=>{const history=await f.app.execution(entry.id).thread(started.taskId);expect(history).toHaveLength(1);expect(history[0].status).toBe('completed')});
+      started=await f.app.Dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:60000}});
+      await until(p,async()=>{const history=await f.app.Execution(entry.id).Thread(started.taskId);expect(history).toHaveLength(1);expect(history[0].status).toBe('completed')});
       const {root,child}=await childRun(f.user,entry.id,started);
       expect(child.status).toBe('completed');
       expect(child.taskProgress?.delivery).toMatchObject({summary:candidate});expect(child.taskProgress?.steps[0]).toMatchObject({evidence:['member-read'],state:'reported_done'});expect(child.events.find(event=>event.type==='tool.finished'&&event.data.id==='member-read')?.data.receipt).toMatchObject({outcome:'succeeded'});
@@ -174,68 +174,68 @@ it.each(['normal','repair','restart','restart-corrupt','restart-pending','restar
       expect(p.member.every(body=>!body.tools?.some(tool=>tool.function.name==='write'))).toBe(true);
       await expect(fs.readFile(path.join(f.a,'collaboration-forbidden.txt'))).rejects.toMatchObject({code:'ENOENT'});
       const counts=[p.main.length,p.member.length],bytes=await jsonValidationLogBytes(f.user,entry.id);
-      await f.app.dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
-      await f.app.open(entry.id,true);
+      await f.app.Dispatch('loop.stop',{id:entry.id,taskId:started.taskId});
+      await f.app.Open(entry.id,true);
       expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);
       expect([p.main.length,p.member.length]).toEqual(counts);
     }
-    expect((await f.app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+    expect((await f.app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
     expect(await fs.readFile(path.join(f.a,'collaboration-input.txt'),'utf8')).toBe(fact);
-    expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
-  }finally{await crash(processChild);await f.app.shutdown();await f.cleanup();await p.close()}
+    expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
+  }finally{await crash(processChild);await f.app.Shutdown();await f.cleanup();await p.close()}
 },90000);
 
 it.each(['deliver','stop'] as const)('keeps approval identity and queued user input separate from Agent results (%s)',async outcome=>{
   const f=await fixture(),p=await provider(outcome);
   try{
-    const entry=await setup(f,p),started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'ask',turnTimeoutMs:60000}});
-    const input={id:entry.id,taskId:started.taskId},thread=()=>f.app.execution(entry.id).thread(started.taskId);
+    const entry=await setup(f,p),started=await f.app.Dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'ask',turnTimeoutMs:60000}});
+    const input={id:entry.id,taskId:started.taskId},thread=()=>f.app.Execution(entry.id).Thread(started.taskId);
     let approvals:ChatApproval[]=[];
-    await until(p,async()=>{approvals=await f.app.dispatch('loop.approvals',input);expect(approvals).toHaveLength(1)});
+    await until(p,async()=>{approvals=await f.app.Dispatch('loop.approvals',input);expect(approvals).toHaveLength(1)});
     const mainApproval=approvals[0];expect(mainApproval.name).toBe('write');
-    await f.app.dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:false});
-    await until(p,async()=>{approvals=await f.app.dispatch('loop.approvals',input);expect(approvals).toHaveLength(1);expect(approvals[0].id).not.toBe(mainApproval.id)});
+    await f.app.Dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:false});
+    await until(p,async()=>{approvals=await f.app.Dispatch('loop.approvals',input);expect(approvals).toHaveLength(1);expect(approvals[0].id).not.toBe(mainApproval.id)});
     const childApproval=approvals[0],running=await childRun(f.user,entry.id,started);
     expect(childApproval.name).toBe('write');expect((await thread())[0].status).toBe('running');expect(running.child.events.some(event=>['run.settled','run.interrupted'].includes(event.type))).toBe(false);
-    await expect(f.app.dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
+    await expect(f.app.Dispatch('loop.approve',{...input,approvalId:mainApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
     await expect(fs.readFile(path.join(f.a,'ask-main-note.txt'))).rejects.toMatchObject({code:'ENOENT'});
     await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'))).rejects.toMatchObject({code:'ENOENT'});
-    const queued=await f.app.dispatch('loop.resume',{...input,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:60000}});
+    const queued=await f.app.Dispatch('loop.resume',{...input,runId:started.runId,message:queuedMessage,options:{permission:'execute',turnTimeoutMs:60000}});
     expect(queued).toMatchObject({taskId:started.taskId,runId:started.runId,queued:true});
-    expect(await f.app.dispatch('loop.queue',input)).toEqual([expect.objectContaining({id:queued.queueId,message:queuedMessage,status:'pending'})]);
-    expect(await f.app.dispatch('loop.approvals',input)).toEqual([childApproval]);expect(p.main).toHaveLength(2);
+    expect(await f.app.Dispatch('loop.queue',input)).toEqual([expect.objectContaining({id:queued.queueId,message:queuedMessage,status:'pending'})]);
+    expect(await f.app.Dispatch('loop.approvals',input)).toEqual([childApproval]);expect(p.main).toHaveLength(2);
     if(outcome==='stop'){
       const counts=[p.main.length,p.member.length];
-      await f.app.dispatch('loop.stop',input);
-      await until(p,()=>expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+      await f.app.Dispatch('loop.stop',input);
+      await until(p,()=>expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0));
       const stopped=await childRun(f.user,entry.id,started);
       expect(stopped.root.status).toBe('cancelled');expect(stopped.child.status).toBe('cancelled');
-      await expect(f.app.dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
-      expect(await f.app.dispatch('loop.queue',input)).toEqual([expect.objectContaining({message:queuedMessage,status:'paused'})]);
+      await expect(f.app.Dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true})).rejects.toMatchObject({code:'APPROVAL_EXPIRED'});
+      expect(await f.app.Dispatch('loop.queue',input)).toEqual([expect.objectContaining({message:queuedMessage,status:'paused'})]);
       await expect(fs.readFile(path.join(f.a,'ask-member-output.txt'))).rejects.toMatchObject({code:'ENOENT'});
-      await f.app.open(entry.id,true);expect(await thread()).toHaveLength(1);
+      await f.app.Open(entry.id,true);expect(await thread()).toHaveLength(1);
       expect([p.main.length,p.member.length]).toEqual(counts);
     }else{
-      await f.app.dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true});
+      await f.app.Dispatch('loop.approve',{...input,approvalId:childApproval.id,allow:true});
       await until(p,async()=>{const runs=await thread();expect(runs).toHaveLength(2);expect(runs.every(run=>run.status==='completed')).toBe(true)});
       let runs=await thread();expect(new Set(runs.map(run=>run.sessionFile)).size).toBe(1);
       expect(JSON.stringify(runs[0].events.filter(event=>event.type==='message'))).toContain('Root received '+fact);
       expect(runs[1].events[0].data.message).toBe(queuedMessage);
       expect(await fs.readFile(path.join(f.a,'ask-member-output.txt'),'utf8')).toBe(fact);
-      expect(await f.app.dispatch('loop.queue',input)).toEqual([]);
+      expect(await f.app.Dispatch('loop.queue',input)).toEqual([]);
       expect(p.main).toHaveLength(5);expect(p.member).toHaveLength(7);
       expect(JSON.stringify(p.main[2].messages)).not.toContain(queuedMessage);
-      const followup=await f.app.dispatch('loop.resume',{...input,runId:runs[1].runId,message:followupMessage,options:{permission:'read',turnTimeoutMs:60000}});
+      const followup=await f.app.Dispatch('loop.resume',{...input,runId:runs[1].runId,message:followupMessage,options:{permission:'read',turnTimeoutMs:60000}});
       await until(p,async()=>{runs=await thread();expect(runs).toHaveLength(3);expect(runs.every(run=>run.status==='completed')).toBe(true)});
       expect(runs[2].runId).toBe(followup.runId);expect(runs[2].events[0].data.message).toBe(followupMessage);
       expect(runs.every(run=>run.task.goal===mainGoal)).toBe(true);
       expect(new Set(runs.map(run=>run.sessionFile)).size).toBe(1);
       expect(p.main).toHaveLength(6);expect(p.member).toHaveLength(7);
       const bytes=await jsonValidationLogBytes(f.user,entry.id);
-      await f.app.open(entry.id,true);
+      await f.app.Open(entry.id,true);
       expect(await jsonValidationLogBytes(f.user,entry.id)).toEqual(bytes);expect(p.main).toHaveLength(6);
     }
-    expect((await f.app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
-    expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
+    expect((await f.app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:started.taskId}})).tasks).toEqual([]);
+    expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0);expect(p.errors).toEqual([]);
   }finally{await f.cleanup();await p.close()}
 },90000);

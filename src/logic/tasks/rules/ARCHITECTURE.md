@@ -1441,8 +1441,8 @@ class N_src_logic_tasks_rules_member_checkpoint_tools_ts["member-checkpoint-tool
 }
 class N_src_logic_tasks_rules_member_checkpoint_tools_ts_MemberCheckpointTools["MemberCheckpointTools"] {
   +constructor()
-  +list()
-  +call()
+  +List()
+  +Call()
   -binding
   -ports
   -knowledgeRevision
@@ -1585,10 +1585,10 @@ class N_src_logic_tasks_rules_member_help_tools_ts["member-help-tools.ts"] {
 }
 class N_src_logic_tasks_rules_member_help_tools_ts_MemberHelpTools["MemberHelpTools"] {
   +constructor()
-  +list()
-  +guard()
-  +denied()
-  +call()
+  +List()
+  +Guard()
+  +Denied()
+  +Call()
   -binding
   -ports
   -reserved
@@ -4470,19 +4470,19 @@ N_src_logic_tasks_rules_workspace_member_invariants_ts ..> N_src_logic_tasks_rul
 
 ### 重启后自动接收已完成的成员结果
 
-主轮结算后、成员启动前，`AutomaticReturnService.record` 在原派发日志追加 `automaticReturns`，冻结主 run、精确成员集合、日志/模型指纹及原公开运行选项。`automatic-return.ts` 负责严格结构与只追加不变量；缺省旧记录不补造恢复资格，不保存密钥、临时批准或附件字节。最多 32 个批次，与主轮上限一致。
+主轮结算后、成员启动前，`AutomaticReturnService.Record` 在原派发日志追加 `automaticReturns`，冻结主 run、精确成员集合、日志/模型指纹及原公开运行选项。`automatic-return.ts` 负责严格结构与只追加不变量；缺省旧记录不补造恢复资格，不保存密钥、临时批准或附件字节。最多 32 个批次，与主轮上限一致。
 
-启动时，`WorkspaceDispatchService.recoverScopes` 只保留通过 `AutomaticReturnService.inspect` 的活动周期；`AutoCollaboration.initialize` 重建原批次，真正回传前再次核实。必须全部成员已交付、无活动运行、原完整主/成员日志可核实、模型配置及当前声明的知识/文件验证仍有效，且精确结果信封尚未消费。恢复只运行新的主接收轮，不启动历史成员；等待目标仍需用户显式继续，正常退出或用户停止不自动复活。
+启动时，`WorkspaceDispatchService.RecoverScopes` 只保留通过 `AutomaticReturnService.Inspect` 的活动周期；`AutoCollaboration.Initialize` 重建原批次，真正回传前再次核实。必须全部成员已交付、无活动运行、原完整主/成员日志可核实、模型配置及当前声明的知识/文件验证仍有效，且精确结果信封尚未消费。恢复只运行新的主接收轮，不启动历史成员；等待目标仍需用户显式继续，正常退出或用户停止不自动复活。
 
 回传沿用原 continuationId、权限、预算及累计主轮，启动意图先登记，实际启动后才确认信封。若崩溃发生在意图登记后，即使缺少启动日志，也不再次发送；未知、损坏、过期、模型变化及旧未登记批次中断封存，保留理由和原成果。此范围不覆盖执行中恢复、网络重试或任意命令重放；文件有效性只覆盖原交付声明的验证范围。
 
-恢复策略留在调度服务，Logic 领域规则 只负责不可变协议，执行管理器继续拥有去重、停止与原生会话。后续扩展可恢复场景应改 `AutomaticReturnService.inspect` 并增加真实崩溃用例，不能放宽 Store、权限或未知事实约束。返工策略与恢复策略分别变化，复用同一可信日志核验和启动入口；变化频率尚无统计证据。
+恢复策略留在调度服务，Logic 领域规则 只负责不可变协议，执行管理器继续拥有去重、停止与原生会话。后续扩展可恢复场景应改 `AutomaticReturnService.Inspect` 并增加真实崩溃用例，不能放宽 Store、权限或未知事实约束。返工策略与恢复策略分别变化，复用同一可信日志核验和启动入口；变化频率尚无统计证据。
 
 ### 最终验收的有界自动返工
 
 最终关闭遇到明确可修复的 `GOAL_*` 拒绝时，协调器先重读完整主链及成员 canonical 日志，排除未知、未授权和未结算操作，再以 `goal-repair` 系统来源启动原周期的新主轮。原用户输入、权限及人工验收项不变；新运行继续使用原预算与 32 主轮上限。最多三次返工，相同错误且任务成果没有变化最多两次；只增加目标版本不算进展。容量等待不重复扣次数，停止阻断迟到启动。旧日志不修改，反馈正文与来源保存在新运行日志中。
 
-`goal-repair.ts` 负责失败分类、指纹和反馈；`ScopeGoalService.repairContext` 负责可信核实；`WorkspaceExecutionManager` 负责来源去重、原生会话与停止屏障；各引擎及公开投影保持系统来源。缺失日志、未知副作用、权限问题、明确人工等待和预算耗尽不进入自动返工。此机制不保证模型一定修好问题。
+`goal-repair.ts` 负责失败分类、指纹和反馈；`ScopeGoalService.RepairContext` 负责可信核实；`WorkspaceExecutionManager` 负责来源去重、原生会话与停止屏障；各引擎及公开投影保持系统来源。缺失日志、未知副作用、权限问题、明确人工等待和预算耗尽不进入自动返工。此机制不保证模型一定修好问题。
 
 对执行成功但业务不合格或当前文件变化的旧候选，`superseded.rejectedCandidate` 须精确引用原 `runId/resultId/planRevision`，并核实原历史交付。新任务须在同周期后创建、覆盖原模块并通过当前证据核验；旧候选及日志保留。该字段是业务拒绝，不能与人工决定混用，更不能代替人工接受。
 
@@ -4514,7 +4514,7 @@ Store 自己标记新事务协议并按历史前缀选择校验，控制面与�
 
 `PreparedDispatchModule.workflowContract` 保存与同份 `workflowText` 解析完全一致的程序约定；专属流程仍按正文 SHA-256 固定版本，整体快照仍复核稳定指纹。没有声明不补规则，不继承父模块；`preparedWorkflowContracts` 提取所有绑定，保留每个模块及其 Workflow 身份，不能合并成无来源的全局要求。声明结构由 workspace 层的 `workflow-contract.ts` 校验。
 
-`WorkflowProgressContext` 由可信运行时注入冻结绑定、原始 TaskSpec 目标/验收项和工作区/任务/运行身份。`TaskProgressTools.beforeEffects()` 对声明了 `beforeEffects.requirePlan` 的运行检查本轮已保存且与原要求一致的计划；它返回审批前版本，`invalidate(reason, expectedPlanVersion)` 在串行持久化队列中再核对，审批期间版本变化则拒绝，不能沿旧批准执行。知识写、业务写及命令仍使旧回执代次失效；计划门禁只覆盖业务写/命令，不新增任何操作权限。新运行不能把旧计划当成本轮计划。
+`WorkflowProgressContext` 由可信运行时注入冻结绑定、原始 TaskSpec 目标/验收项和工作区/任务/运行身份。`TaskProgressTools.BeforeEffects()` 对声明了 `beforeEffects.requirePlan` 的运行检查本轮已保存且与原要求一致的计划；它返回审批前版本，`invalidate(reason, expectedPlanVersion)` 在串行持久化队列中再核对，审批期间版本变化则拒绝，不能沿旧批准执行。知识写、业务写及命令仍使旧回执代次失效；计划门禁只覆盖业务写/命令，不新增任何操作权限。新运行不能把旧计划当成本轮计划。
 
 含约定的运行还注入同步 `assertDeliveryReady` 端口，工具门禁及实际交付的串行持久化入口均检查在途副作用。读取与副作用执行窗口重叠时，真实回执仍保存，但不进入可引用证据；必须在窗口结束后新读取。该端口不负责停止工具或回滚，也不改变旧无约定运行的计划版本与采集代次。
 
@@ -4556,7 +4556,7 @@ Store 自己标记新事务协议并按历史前缀选择校验，控制面与�
 
 `applyScopeBatch` 校验连续性并原子归并，未变化的摘要保留引用；重复批次证明最多保留 256 批，不能无条件接受旧序号。`readScopeDelta` 返回 reset/delta/noop，缺省、换流、超前或超出保留窗口时返回当前摘要快照，串会话游标拒绝。`readScopeDetail` 默认选择未关闭周期（active 或 waiting），否则最后创建的周期；显式 ID 不属于本会话时拒绝。stamp 相同时返回 noop，不复制完整目标；详情按公开字段白名单返回原始输入、计划、审阅、阻塞及完整等待检查点。
 
-`dispatchSessionReadInput` 严格校验 `{identity, graphCursor?, scopeCursor?, selectedScopeId?, detailStamp?, limit?}`。`DispatchStore.sessionRead` 在同一已提交屏障返回 `{graph, scopes, detail}`。limit 为每条流完整批次上限，范围 1–500；分页 delta 可能尚未追到存储头部，选中 detail 已反映屏障的最新版本，消费者不能把 detail.stamp 与本页末尾 cursor 当成同一位置。完整同步前须继续请求后续页。
+`dispatchSessionReadInput` 严格校验 `{identity, graphCursor?, scopeCursor?, selectedScopeId?, detailStamp?, limit?}`。`DispatchStore.SessionRead` 在同一已提交屏障返回 `{graph, scopes, detail}`。limit 为每条流完整批次上限，范围 1–500；分页 delta 可能尚未追到存储头部，选中 detail 已反映屏障的最新版本，消费者不能把 detail.stamp 与本页末尾 cursor 当成同一位置。完整同步前须继续请求后续页。
 
 ### 成员运行的公开事件流
 
@@ -4904,7 +4904,7 @@ Token 使用安全整数严格比较；估算金额比较只容忍同量级约�
 
 采集中其它工具放行或停止使基线无法核实；采集后的写入、命令、知识修改或新计划把引用标为 invalidated，历史字节保留。命令、未知结果、失败/未终结写入及未覆盖写入保持影响未知；无关调用的授权范围或工作区身份缺失、损坏也不能按无副作用处理。选定基线的影响核实只能使用该份文件集合，不能借其它基线洗白遗漏范围。任何指纹都只证明采集时所列文件字节，不追认此前测试针对这些字节，不证明整个工作区未变。
 
-`TaskProgressTools.current()` 返回计划副本供可信运行时检查，`inspect` 的可选只读 artifacts 端口返回基线引用。采集名称归 `cbim_task_`，保持既有业务 evidence 排除规则，不能用哈希工具自证步骤完成或业务验收。
+`TaskProgressTools.Current()` 返回计划副本供可信运行时检查，`inspect` 的可选只读 artifacts 端口返回基线引用。采集名称归 `cbim_task_`，保持既有业务 evidence 排除规则，不能用哈希工具自证步骤完成或业务验收。
 
 独立 `artifactReportInputSchema` 固定 workspace/root/task/run，省略 baselineId 只列引用，不选择最新或读取业务文件；明确选择后才有界复核。报告返回独立 basis、一致性、日志状态及逐文件 matches/changed/missing/unverifiable，不修改既有执行报告分页或恢复证明。旧日志不补造基线，读取不修改任务或原记录，也不启动模型、批准人工验收或恢复旧成员。
 
@@ -4948,12 +4948,12 @@ accept 必须覆盖此人工项当前审阅的全部真实成员候选，为每�
 
 ### 外部仓库读取不作为文件与交付证明
 
-执行记录共用 `toolScopeSchema`，因此主运行 canonical 和历史保留真实 repository 目标及操作，不将合法外部 read 误报为日志损坏。`TaskProgressTools.record` 排除 repository 范围及 cbim_repository_ 名称；Workflow 交付核实同样拒绝此类引用，不能借本地工具名称或外部资料充当本轮业务文件证据。
+执行记录共用 `toolScopeSchema`，因此主运行 canonical 和历史保留真实 repository 目标及操作，不将合法外部 read 误报为日志损坏。`TaskProgressTools.Record` 排除 repository 范围及 cbim_repository_ 名称；Workflow 交付核实同样拒绝此类引用，不能借本地工具名称或外部资料充当本轮业务文件证据。
 
 `artifactSources` 仍仅接受 workspace 范围的 read/write/edit 或 cbim_scoped_read 单文件调用；基线采集自身也必须属于 workspace。同轮出现外部仓库读取时，基线核实保留 `ARTIFACT_EXTERNAL_SOURCE` 范围限制：所列文件指纹不能证明外部资料或整个运行的闭合状态。成员检查点明确拒绝 repository 来源，即使本地文件全部 matches 也不扩大恢复白名单。这些限制不把成功的外部 read 回执伪称为工具结果未知，只限制它能够证明的业务事实。
 ### 治理记录与业务证据
 
-`TaskProgressTools.record` 与 `evaluateWorkflowDelivery` 排除全部 `cbim_governance_*` 回执。真实观察、精确提案或其成功回包仅证明治理记录已保存，不能替代业务文件、模块交付或人工验收。既有产物采集仍只接受真实 read/write/edit 或 cbim_scoped_read 单文件调用；可恢复成员检查点的窄工具白名单不含治理工具，不能凭知识作用域或同文件 hash 放宽恢复。运行报告仍可展示实际工具事实，排除证据不删除日志。
+`TaskProgressTools.Record` 与 `evaluateWorkflowDelivery` 排除全部 `cbim_governance_*` 回执。真实观察、精确提案或其成功回包仅证明治理记录已保存，不能替代业务文件、模块交付或人工验收。既有产物采集仍只接受真实 read/write/edit 或 cbim_scoped_read 单文件调用；可恢复成员检查点的窄工具白名单不含治理工具，不能凭知识作用域或同文件 hash 放宽恢复。运行报告仍可展示实际工具事实，排除证据不删除日志。
 
 ### 主调度八项工具的公开业务输出
 
@@ -5033,7 +5033,7 @@ Progress 保存前独立冻结验证记录，原 wire 证明必须能由这些�
 
 `workspace-member-invariants.ts` 在真实提交和重放中只允许每次追加一条岗位审计，核对工作区、独立游标 CAS、原岗位版本/指纹、明确输入、状态迁移、完整快照哈希、本机提交 actor、命令指纹及派生回执。不能直接 upsert 岗位头或游标，不能夹带执行实例、会话、图、消息、运行或周期字段，即使是空集合也拒绝。岗位原审计保留，当前头只由完整合法前缀派生；新登记不改变知识、图或运行事实。
 
-`DispatchStore.commandReceipt` 是必需的内部只读端口，返回原命令的 fingerprint 与 receipt 深拷贝，等待同一提交屏障但不运行 prepare 或新增事务。新岗位命令固定 `workspace-member-` 命名空间；相同 ID 异参拒绝，原回执查询和同请求重送不能读取新来源后覆盖旧采纳或重建身份。容量错误拒绝写入，未知存储结果保留原命令供重新打开后核实。
+`DispatchStore.CommandReceipt` 是必需的内部只读端口，返回原命令的 fingerprint 与 receipt 深拷贝，等待同一提交屏障但不运行 prepare 或新增事务。新岗位命令固定 `workspace-member-` 命名空间；相同 ID 异参拒绝，原回执查询和同请求重送不能读取新来源后覆盖旧采纳或重建身份。容量错误拒绝写入，未知存储结果保留原命令供重新打开后核实。
 
 ### 模块岗位责任与执行数据隔离
 
@@ -5065,7 +5065,7 @@ Store 继续用同一串行提交、原命令回执和原协议裁决，不增�
 
 `command-verification.ts` 定义八项主写命令的有界公开报告，原工具 outcome、Store committed/absent/不可核实与业务 `not_evaluated` 分开。请求只含 workspace/root/run/toolCall，原 scope 和命令依据由后端推导；报告不传 Prepared、原参数正文、私有恢复上下文或原完整事务，不清 unknown、不作为业务证据、不授予重试或恢复。`cbim_dispatch_command_report` 只读且无写命令，沿 dispatch 前缀排除业务完成证据。
 
-`DispatchStore.commandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
+`DispatchStore.CommandEvidence` 是内部只读端口，保留原 fingerprint/receipt 并提供原提交序号、校验值、执行协议及图的真实前态根版本/游标；这些内部值必须先严格核原输入与绑定再公开投影。原 `commandReceipt` 形状不变。命令算法与原 parsed 指纹由 Scheduler 的唯一适配器维护；工具协议版本与 Store 执行协议不是一回事。
 
 `command-verification-output.ts` 仅供后端：原回执先按既有主输出 Schema 核输入/身份/版本，并拒绝解析产生的 trim/默认化，再生成八支紧凑摘要。任务列表最多 20 项，明确 total/truncated，完整原集合不能先裁剪再核；公开报告最多 20 条 issue、128 KiB wire，业务验收固定 not_evaluated。Bridge 仅导 `command-verification.ts` 叶子，不能把后端回执读取或原私有上下文导入浏览器。
 
@@ -5302,12 +5302,12 @@ TaskNode.candidateReview 是主运行追加的一次决定，绑定 task/result/
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.OrderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 
 ### 图结构算法边界
 
-graph-rules 的 acyclic 委托后端 GraphUtils.isDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。
+graph-rules 的 acyclic 委托后端 GraphUtils.IsDirectedAcyclic。validateGraph 仍先校验节点身份、端点、父派发、启用关系与等待子任务，再构造两个有向图；两类循环保持原 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 及提示，不把结构无环当作业务准入。
 
 ## 指定话题补充与排空
 
@@ -5343,4 +5343,4 @@ graph-rules 的 acyclic 委托后端 GraphUtils.isDirectedAcyclic。validateGrap
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `GraphUtils.isDirectedAcyclic`、`JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `GraphUtils.IsDirectedAcyclic`、`JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

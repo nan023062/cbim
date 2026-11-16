@@ -38,7 +38,7 @@ class N_src_core_web_browser_reader_ts_BrowserPage["BrowserPage"] {
 N_src_core_web_browser_reader_ts ..> N_src_core_web_browser_reader_ts_BrowserPage : 声明
 class N_src_core_web_browser_reader_ts_BrowserReader["BrowserReader"] {
   <<interface>>
-  +read()
+  +Read()
 }
 N_src_core_web_browser_reader_ts ..> N_src_core_web_browser_reader_ts_BrowserReader : 声明
 ```

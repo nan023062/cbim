@@ -31,11 +31,11 @@ export const removeSchema = z.object({ repositoryId: z.string().uuid(), revision
 /** 本地和 HTTP 仓库共用接口；save/remove 校验身份及版本并返回更新后的完整快照。 */
 export interface RepositoryStore
 {
-  read(): Promise<ResourceLibrarySnapshot>;
+  Read(): Promise<ResourceLibrarySnapshot>;
 
-  save(args: unknown): Promise<ResourceLibrarySnapshot>;
+  Save(args: unknown): Promise<ResourceLibrarySnapshot>;
 
-  remove(args: unknown): Promise<ResourceLibrarySnapshot>
+  Remove(args: unknown): Promise<ResourceLibrarySnapshot>
 }
 
 export class LocalRepository implements RepositoryStore
@@ -49,7 +49,7 @@ export class LocalRepository implements RepositoryStore
     return path.join(this.root, 'cbim-resources.json')
   }
 
-  private async lock()
+  private async Lock()
   {
     const key = hash(process.platform === 'win32' ? this.root.replaceAll('\\', '/').toLowerCase() : this.root);
     for (let n = 0; n < 100; n++)
@@ -68,7 +68,7 @@ export class LocalRepository implements RepositoryStore
     return fail('BUSY', '仓库正由其他请求更新，请稍后重试')
   }
 
-  private async checkFile()
+  private async CheckFile()
   {
     try
     {
@@ -82,12 +82,12 @@ export class LocalRepository implements RepositoryStore
     }
   }
 
-  async initialize()
+  async Initialize()
   {
-    const lock = await this.lock();
+    const lock = await this.Lock();
     try
     {
-      await this.checkFile();
+      await this.CheckFile();
       try
       {
         await fs.access(this.file)
@@ -96,19 +96,19 @@ export class LocalRepository implements RepositoryStore
       {
         if (e.code !== 'ENOENT')
           throw e;
-        await atomic(this.file, JsonUtils.formatJson({ version: 1, repositoryId: randomUUID(), items: [] }))
+        await atomic(this.file, JsonUtils.FormatJson({ version: 1, repositoryId: randomUUID(), items: [] }))
       }
-      return await this.read()
+      return await this.Read()
     }
     finally
     {
-      lock.close()
+      lock.Close()
     }
   }
 
-  async read(): Promise<ResourceLibrarySnapshot>
+  async Read(): Promise<ResourceLibrarySnapshot>
   {
-    await this.checkFile();
+    await this.CheckFile();
     let text: string;
     try
     {
@@ -136,10 +136,10 @@ export class LocalRepository implements RepositoryStore
     }
   }
 
-  async save(args: unknown)
+  async Save(args: unknown)
   {
     const r = saveSchema.parse(args);
-    return this.update(r, data =>
+    return this.Update(r, data =>
     {
       const index = r.id ? data.items.findIndex(i => i.id === r.id) : -1;
       if (r.id && index < 0)
@@ -152,10 +152,10 @@ export class LocalRepository implements RepositoryStore
     })
   }
 
-  async remove(args: unknown)
+  async Remove(args: unknown)
   {
     const r = removeSchema.parse(args);
-    return this.update(r, data =>
+    return this.Update(r, data =>
     {
       if (!data.items.some(i => i.id === r.id))
         fail('NOT_FOUND', '资源已被删除，请刷新');
@@ -163,18 +163,18 @@ export class LocalRepository implements RepositoryStore
     })
   }
 
-  private async update(request: { repositoryId: string; revision: string }, edit: (data: ResourceLibrarySnapshot) => void)
+  private async Update(request: { repositoryId: string; revision: string }, edit: (data: ResourceLibrarySnapshot) => void)
   {
-    const lock = await this.lock();
+    const lock = await this.Lock();
     try
     {
-      const current = await this.read();
+      const current = await this.Read();
       if (current.repositoryId !== request.repositoryId)
         fail('IDENTITY', '仓库身份已变化，请重新连接');
       if (current.revision !== request.revision)
         fail('CONFLICT', '仓库已被修改，请刷新后重新编辑');
       edit(current);
-      const text = JsonUtils.formatJson(diskSchema.parse({ version: 1, repositoryId: current.repositoryId, items: current.items }));
+      const text = JsonUtils.FormatJson(diskSchema.parse({ version: 1, repositoryId: current.repositoryId, items: current.items }));
       if (Buffer.byteLength(text) > MAX_BYTES)
         fail('SIZE', '资源仓库超过 8 MiB 限制');
       await atomic(this.file, text);
@@ -182,7 +182,7 @@ export class LocalRepository implements RepositoryStore
     }
     finally
     {
-      lock.close()
+      lock.Close()
     }
   }
 }

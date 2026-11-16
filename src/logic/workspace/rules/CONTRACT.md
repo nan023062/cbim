@@ -8,7 +8,7 @@ source-browser.ts 定义模块/来源/工作区版本目标及 sourceDirectoryIn
 
 ### 始终存在的项目根范围
 
-`project-root.ts` 提供只读内置 `cbim:project`；`BusinessWorkspace.modules()` 返回独立 projectRoot（children 为真实根模块），保留原 modules/roots/index 语义。即使搜索无匹配或已有子模块，根仍可查询。`module()` 返回 builtin 定义、内联说明及空 Workflow，不伪造文件、维护关系、版本或正式责任。这里只描述范围，不修改知识和派发资格。
+`project-root.ts` 提供只读内置 `cbim:project`；`BusinessWorkspace.Modules()` 返回独立 projectRoot（children 为真实根模块），保留原 modules/roots/index 语义。即使搜索无匹配或已有子模块，根仍可查询。`module()` 返回 builtin 定义、内联说明及空 Workflow，不伪造文件、维护关系、版本或正式责任。这里只描述范围，不修改知识和派发资格。
 
 ### Workflow 的可选程序条件
 
@@ -104,7 +104,7 @@ moduleOwnerInspect 的 moduleIds 分支可接收 matches：当前知识 revision
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.OrderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 ## Workflow 启动能力规则
 
@@ -113,4 +113,4 @@ assertWorkflowCapabilities 是旧成员启动和递归 Loop 装配共用的纯�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

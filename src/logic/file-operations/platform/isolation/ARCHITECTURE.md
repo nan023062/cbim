@@ -77,13 +77,13 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win3
   +ownerSid
   +packageSid
   +constructor()
-  +grant()
-  +start()
-  +resume()
-  +read()
-  +state()
-  +terminate()
-  +close()
+  +Grant()
+  +Start()
+  +Resume()
+  +Read()
+  +State()
+  +Terminate()
+  +Close()
   -k
   -api
   -sid
@@ -112,9 +112,9 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win3
   -used
   -resumed
   -pins
-  -check()
-  -keep()
-  -release()
+  -Check()
+  -Keep()
+  -Release()
 }
 N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode : 声明
 ```
@@ -127,9 +127,9 @@ class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts["iso
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode["Win32IsolatedNode"] {
-  -stringSid()
-  -token()
-  -attribute()
+  -StringSid()
+  -Token()
+  -Attribute()
 }
 N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolated_node_win32_ts_Win32IsolatedNode : 声明
 ```
@@ -205,10 +205,10 @@ class N_src_logic_file_operations_platform_isolation_isolation_record_ts_Isolati
 N_src_logic_file_operations_platform_isolation_isolation_record_ts ..> N_src_logic_file_operations_platform_isolation_isolation_record_ts_IsolationRecord : 声明
 class N_src_logic_file_operations_platform_isolation_isolation_record_ts_IsolationLifecycle["IsolationLifecycle"] {
   <<interface>>
-  +prepared()
-  +started()
-  +settled()
-  +cleaned()
+  +Prepared()
+  +Started()
+  +Settled()
+  +Cleaned()
 }
 N_src_logic_file_operations_platform_isolation_isolation_record_ts ..> N_src_logic_file_operations_platform_isolation_isolation_record_ts_IsolationLifecycle : 声明
 ```
@@ -247,15 +247,15 @@ N_src_logic_file_operations_platform_isolation_isolation_records_ts ..> N_src_lo
 class N_src_logic_file_operations_platform_isolation_isolation_records_ts_FileIsolationRecords["FileIsolationRecords"] {
   +directory
   +constructor()
-  +read()
-  +list()
-  +append()
-  +drain()
+  +Read()
+  +List()
+  +Append()
+  +Drain()
   -tail
   -failure
-  -file()
-  -regular()
-  -validate()
+  -File()
+  -Regular()
+  -Validate()
 }
 N_src_logic_file_operations_platform_isolation_isolation_records_ts ..> N_src_logic_file_operations_platform_isolation_isolation_records_ts_FileIsolationRecords : 声明
 class N_src_logic_file_operations_platform_isolation_isolation_records_ts_MemoryEntry["MemoryEntry"] {
@@ -279,21 +279,21 @@ class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts
 }
 class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
   +constructor()
-  +processIdentity()
-  +host()
-  +job()
-  +directoryIdentity()
-  +lockTree()
-  +deleteProfile()
+  +ProcessIdentity()
+  +Host()
+  +Job()
+  +DirectoryIdentity()
+  +LockTree()
+  +DeleteProfile()
   -k
   -api
-  -check()
-  -close()
-  -processHandle()
-  -processFacts()
-  -final()
-  -information()
-  -open()
+  -Check()
+  -Close()
+  -ProcessHandle()
+  -ProcessFacts()
+  -Final()
+  -Information()
+  -Open()
 }
 N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明
 ```
@@ -306,8 +306,8 @@ class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts
   <<module>>
 }
 class N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery["Win32IsolationRecovery"] {
-  -parents()
-  -rootPath()
+  -Parents()
+  -RootPath()
 }
 N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts ..> N_src_logic_file_operations_platform_isolation_isolation_recovery_win32_ts_Win32IsolationRecovery : 声明
 ```

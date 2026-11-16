@@ -55,18 +55,18 @@ class UtilityControlledFiles implements ControlledFileTransport
   {
   }
 
-  async withExclusiveExisting<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledFile) => Promise<T>): Promise<T>
+  async WithExclusiveExisting<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledFile) => Promise<T>): Promise<T>
   {
-    return this.withSession(root, relativePath, protectedRoots, signal, use);
+    return this.WithSession(root, relativePath, protectedRoots, signal, use);
   }
 
-  async withExclusiveTransition<T>(root: string, relativePath: string, transition: ControlledNamespaceChange, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledTransition) => Promise<T>): Promise<T>
+  async WithExclusiveTransition<T>(root: string, relativePath: string, transition: ControlledNamespaceChange, protectedRoots: readonly string[], signal: AbortSignal, use: (file: ExclusiveControlledTransition) => Promise<T>): Promise<T>
   {
-    return this.withSession(root, relativePath, protectedRoots, signal, use, structuredClone(transition));
+    return this.WithSession(root, relativePath, protectedRoots, signal, use, structuredClone(transition));
   }
 
   /** 两种端口共享真实进程退出屏障；副作用种类在 open 时固定，不能在同一会话换用另一操作。 */
-  private async withSession<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: UtilityFileSession) => Promise<T>, transition?: ControlledNamespaceChange): Promise<T>
+  private async WithSession<T>(root: string, relativePath: string, protectedRoots: readonly string[], signal: AbortSignal, use: (file: UtilityFileSession) => Promise<T>, transition?: ControlledNamespaceChange): Promise<T>
   {
     signal.throwIfAborted();
     if (this.closing || process.platform !== 'win32')
@@ -81,28 +81,28 @@ class UtilityControlledFiles implements ControlledFileTransport
     session.exited.then(() => this.sessions.delete(session));
     try
     {
-      await session.open({ kind: 'open', root, relativePath, protectedRoots: [...protectedRoots], koffiPath: this.koffiPath, ...(transition ? { transition } : {}) });
+      await session.Open({ kind: 'open', root, relativePath, protectedRoots: [...protectedRoots], koffiPath: this.koffiPath, ...(transition ? { transition } : {}) });
       signal.throwIfAborted();
       return await use(session)
     }
     finally
     {
-      await session.close()
+      await session.Close()
     }
   }
 
-  async drain(root: string)
+  async Drain(root: string)
   {
     const sessions = [...this.sessions].filter(([, value]) => value === root).map(([session]) => session);
-    const results = await Promise.allSettled(sessions.map(session => session.close()));
+    const results = await Promise.allSettled(sessions.map(session => session.Close()));
     if (results.some(r => r.status === 'rejected') || sessions.some(session => this.sessions.has(session)))
       fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
   }
 
-  async close()
+  async Close()
   {
     this.closing = true;
-    const results = await Promise.allSettled([...this.sessions.keys()].map(session => session.close()));
+    const results = await Promise.allSettled([...this.sessions.keys()].map(session => session.Close()));
     if (results.some(r => r.status === 'rejected') || this.sessions.size)
       fail('CONTROLLED_FILE_DRAIN_PENDING', '文件进程尚未确认退出，保留工作区占用')
   }
@@ -158,7 +158,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
         current = this.pending;
       if (!parsed.success || !current || parsed.data.token !== this.token || parsed.data.seq !== current.seq)
       {
-        this.reject(new Fault('CONTROLLED_PROTOCOL', '受控文件返回无法核实'));
+        this.Reject(new Fault('CONTROLLED_PROTOCOL', '受控文件返回无法核实'));
         child.kill();
         return
       }
@@ -174,7 +174,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     {
       this.dead = true;
       this.signal.removeEventListener('abort', this.abort);
-      this.reject(new Fault('CONTROLLED_PROCESS_EXIT', '文件进程已退出，结果须按原记录核实'));
+      this.Reject(new Fault('CONTROLLED_PROCESS_EXIT', '文件进程已退出，结果须按原记录核实'));
       this.resolveExit()
     });
     signal.addEventListener('abort', this.abort, { once: true });
@@ -187,7 +187,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     return this.issued
   }
 
-  private reject(error: unknown)
+  private Reject(error: unknown)
   {
     if (this.pending)
     {
@@ -197,7 +197,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     }
   }
 
-  private request(request: Request): Promise<ControlledChildReply>
+  private Request(request: Request): Promise<ControlledChildReply>
   {
     if (this.dead || this.pending)
       throw new Fault('CONTROLLED_SESSION', '文件会话已关闭或仍有操作未结束');
@@ -206,7 +206,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     {
       const timer = setTimeout(() =>
       {
-        this.reject(new Fault('CONTROLLED_TIMEOUT', '文件操作未确认，原请求不会自动重发'));
+        this.Reject(new Fault('CONTROLLED_TIMEOUT', '文件操作未确认，原请求不会自动重发'));
         this.child.kill()
       }, 30_000);
       this.pending = { seq, resolve, reject, timer };
@@ -216,37 +216,37 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
       }
       catch (e)
       {
-        this.reject(e);
+        this.Reject(e);
         this.child.kill()
       }
     });
   }
 
-  async open(request: Extract<Request, { kind: 'open' }>)
+  async Open(request: Extract<Request, { kind: 'open' }>)
   {
-    const reply = await this.request(request);
+    const reply = await this.Request(request);
     if (reply.kind !== 'opened')
       fail('CONTROLLED_PROTOCOL', '文件打开回包不匹配');
     this.before = reply
   }
 
-  async readBefore()
+  async ReadBefore()
   {
     if (!this.before || this.dead)
       fail('CONTROLLED_SESSION', '文件会话不可用');
     return { identity: structuredClone(this.before.identity), fact: structuredClone(this.before.fact), bytes: Buffer.from(this.before.bytes, 'base64') }
   }
 
-  async recheckIdentity()
+  async RecheckIdentity()
   {
     this.signal.throwIfAborted();
-    const reply = await this.request({ kind: 'recheck' });
+    const reply = await this.Request({ kind: 'recheck' });
     if (reply.kind !== 'checked')
       fail('CONTROLLED_PROTOCOL', '文件核实回包不匹配');
     return { identity: reply.identity, fact: reply.fact }
   }
 
-  async replaceAndFlush(value: Uint8Array)
+  async ReplaceAndFlush(value: Uint8Array)
   {
     this.signal.throwIfAborted();
     if (this.issued)
@@ -255,25 +255,25 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
     if (bytes.length > controlledPlatformBytes)
       fail('CONTROLLED_LIMIT', '文件内容超过上限');
     this.issued = true;
-    const reply = await this.request({ kind: 'apply', bytes: bytes.toString('base64'), expected: { byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
+    const reply = await this.Request({ kind: 'apply', bytes: bytes.toString('base64'), expected: { byteLength: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') } });
     if (reply.kind !== 'applied')
       fail('CONTROLLED_PROTOCOL', '文件写入回包不匹配');
     return { identity: reply.identity, fact: reply.fact };
   }
 
-  async transitionAndVerify()
+  async TransitionAndVerify()
   {
     this.signal.throwIfAborted();
     if (this.issued)
       fail('CONTROLLED_SESSION_USED', '本次文件操作已经发送，不能重做');
     this.issued = true;
-    const reply = await this.request({ kind: 'transition' });
+    const reply = await this.Request({ kind: 'transition' });
     if (reply.kind !== 'transitioned')
       fail('CONTROLLED_PROTOCOL', '文件删除/移动回包不匹配');
     return { identity: reply.identity, fact: reply.fact, transition: reply.transition, sourceMissing: reply.sourceMissing };
   }
 
-  close(): Promise<void>
+  Close(): Promise<void>
   {
     if (this.closing)
       return this.closing;
@@ -286,7 +286,7 @@ class UtilityFileSession implements ExclusiveControlledFile, ExclusiveControlled
         else
           try
           {
-            await this.request({ kind: 'close' })
+            await this.Request({ kind: 'close' })
           }
           catch
           {

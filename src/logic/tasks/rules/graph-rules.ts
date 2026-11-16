@@ -160,7 +160,7 @@ function sameMember(left: AgentRef, right: AgentRef)
 
 function acyclic(nodes: string[], edges: [string, string][], code: string)
 {
-  if (!GraphUtils.isDirectedAcyclic(nodes, edges))
+  if (!GraphUtils.IsDirectedAcyclic(nodes, edges))
     fail(code, code === 'GRAPH_WAIT_CYCLE' ? '任务等待关系形成互等' : '任务派发与依赖形成循环');
 }
 

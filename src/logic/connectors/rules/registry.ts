@@ -13,23 +13,23 @@ export class ConnectorRegistry
   {
   }
 
-  list(query = '')
+  List(query = '')
   {
     const q = query.toLowerCase();
     return this.entries.filter(c => !q || `${c.id} ${c.name} ${c.summary}`.toLowerCase().includes(q))
   }
 
-  get(id: string)
+  Get(id: string)
   {
     return this.entries.find(c => c.id === id)
   }
 
-  ids()
+  Ids()
   {
     return new Set(this.entries.map(c => c.id.toLowerCase()))
   }
 
-  duplicates()
+  Duplicates()
   {
     const ids = new Set<string>(),
       providers = new Set<string>(),

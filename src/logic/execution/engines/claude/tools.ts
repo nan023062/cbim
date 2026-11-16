@@ -155,10 +155,10 @@ export async function claudeTools(context: EngineContext, port: EngineToolsPort,
   return {
     native, expected: [...native, ...catalog.map(tool => prefix + tool.name)], config: { type: 'sdk', name: 'cbim', instance: server } as McpSdkServerConfigWithInstance,
     hooks: { PreToolUse: [{ hooks: [before], onFailure: 'block' as const }], PostToolUse: [{ hooks: [after], onFailure: 'block' as const }], PostToolUseFailure: [{ hooks: [after], onFailure: 'block' as const }] },
-    stop()
+    Stop()
     {
       controller.abort()
-    }, async close()
+    }, async Close()
     {
       controller.abort();
       grants.clear();

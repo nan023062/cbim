@@ -17,9 +17,9 @@ import type { OwnerExecutionService, OwnerExecutionContext } from '../../dispatc
 /** 同一平台的只读能力；acquireRead 不等待执行，不修改文件，释放函数必须在失败路径调用。 */
 export interface MemberPausePorts extends MemberCheckpointVerificationPorts
 {
-  acquireRead(): () => void;
+  AcquireRead(): () => void;
 
-  assertCurrent(): void
+  AssertCurrent(): void
 }
 
 export class MemberPauseService
@@ -28,14 +28,14 @@ export class MemberPauseService
   {
   }
 
-  private available()
+  private Available()
   {
     if (!this.ports)
       fail('GOAL_MEMBER_PAUSE_UNAVAILABLE', '当前工作区未装配成员持久等待核实能力');
     return this.ports
   }
 
-  private scope(state: DispatchState, request: GoalContinuationRequest)
+  private Scope(state: DispatchState, request: GoalContinuationRequest)
   {
     const scope = state.scopes?.find(s => s.workspaceId === request.workspaceId && s.rootSessionId === request.rootSessionId && s.scopeId === request.scopeId);
     if (state.workspaceId !== this.owner.entry.id || request.workspaceId !== this.owner.entry.id || scope?.status !== 'waiting' || !scope.wait?.memberPause || scope.wait.waitId !== request.waitId || scope.goal?.revision !== request.expectedGoalRevision || (scope.goal.inputRevision ?? 1) !== request.expectedInputRevision)
@@ -44,34 +44,34 @@ export class MemberPauseService
   }
 
   /** 审阅/停泊事务内只核历史日志；不反向取得锁、不重新生成原 proof。 */
-  async verifyWaiting(state: DispatchState, scope: DispatchScope, pause: MemberPause): Promise<void>
+  async VerifyWaiting(state: DispatchState, scope: DispatchScope, pause: MemberPause): Promise<void>
   {
-    const ports = this.available(),
+    const ports = this.Available(),
       selected = memberPauseSelection(state, scope, pause);
     for (const { task, run } of selected.checkpoints)
-      await verifyMemberCheckpointHistory(this.owner, task, run, ports, () => ports.assertCurrent(), state.runs);
+      await verifyMemberCheckpointHistory(this.owner, task, run, ports, () => ports.AssertCurrent(), state.runs);
   }
 
   /** 预检取得短读占用；可信 beforeRun 已持主运行占用，不能再次领取与自身写租约冲突的读锁。该标记不是工具输入。 */
-  async withContext<T>(request: GoalContinuationRequest, alive: () => void, use: (context: OwnerExecutionContext) => Promise<T>, mainLeaseHeld = false): Promise<T>
+  async WithContext<T>(request: GoalContinuationRequest, alive: () => void, use: (context: OwnerExecutionContext) => Promise<T>, mainLeaseHeld = false): Promise<T>
   {
-    const ports = this.available(),
+    const ports = this.Available(),
       assert = () =>
       {
-        this.owner.assert();
-        ports.assertCurrent();
+        this.owner.Assert();
+        ports.AssertCurrent();
         alive()
       };
     assert();
     const release = mainLeaseHeld ? () =>
     {
-    } : ports.acquireRead();
+    } : ports.AcquireRead();
     try
     {
-      return await this.owners.withContext(state =>
+      return await this.owners.WithContext(state =>
       {
-        const scope = this.scope(state, request);
-        return this.owners.selections(memberPauseSelection(state, scope, scope.wait!.memberPause!).tasks)
+        const scope = this.Scope(state, request);
+        return this.owners.Selections(memberPauseSelection(state, scope, scope.wait!.memberPause!).tasks)
       }, use, assert)
     }
     finally
@@ -81,15 +81,15 @@ export class MemberPauseService
   }
 
   /** 在已持有外层快照的最终状态中核验；不升级成员权限、不刷新旧 native 或文件指纹。 */
-  async validateCurrent(state: DispatchState, request: GoalContinuationRequest, context: OwnerExecutionContext, alive: () => void): Promise<void>
+  async ValidateCurrent(state: DispatchState, request: GoalContinuationRequest, context: OwnerExecutionContext, alive: () => void): Promise<void>
   {
-    const ports = this.available(),
-      scope = this.scope(state, request),
+    const ports = this.Available(),
+      scope = this.Scope(state, request),
       selected = memberPauseSelection(state, scope, scope.wait!.memberPause!),
       assert = () =>
       {
-        this.owner.assert();
-        ports.assertCurrent();
+        this.owner.Assert();
+        ports.AssertCurrent();
         alive()
       };
     assert();
@@ -98,7 +98,7 @@ export class MemberPauseService
       fail('GOAL_KNOWLEDGE_CHANGED', '等待期间知识发生变化，原成员不能沿旧计划继续');
     for (const task of selected.tasks)
     {
-      await this.owners.verifyTask(state, context, task);
+      await this.owners.VerifyTask(state, context, task);
       assert()
     }
     for (const { task, run } of selected.checkpoints)
@@ -106,17 +106,17 @@ export class MemberPauseService
       await verifyMemberCheckpointProof(this.owner, task, run, ports, assert, run.checkpointProof, state.runs);
       assert()
     }
-    await this.owners.recheck(context.snapshot, assert);
+    await this.owners.Recheck(context.snapshot, assert);
   }
 
   /** 用户明确继续才调用；失败保留原等待，成功也不消费或启动。最终受理事务再次核实同一清单。 */
-  async preflight(request: GoalContinuationRequest, alive: () => void = () => { }): Promise<void>
+  async Preflight(request: GoalContinuationRequest, alive: () => void = () => { }): Promise<void>
   {
-    await this.withContext(request, alive, async context =>
+    await this.WithContext(request, alive, async context =>
     {
-      await this.validateCurrent(await this.store.read(), request, context, alive);
-      const latest = await this.store.read(),
-        scope = this.scope(latest, request);
+      await this.ValidateCurrent(await this.store.Read(), request, context, alive);
+      const latest = await this.store.Read(),
+        scope = this.Scope(latest, request);
       memberPauseSelection(latest, scope, scope.wait!.memberPause!);
       alive();
     });

@@ -33,7 +33,7 @@ async function fixture(kind:'internal'|'read'|'write'|'bash',allow:boolean|'thro
   try{
     await engine.start({task:{taskId:randomUUID(),workspaceId:'test',root:cwd,mode:'chat',agentId:'cbim:main',goal:'tools',moduleIds:[],acceptance:[]},directory:path.join(root,'run'),runId:randomUUID(),emit:async event=>{events.push(event)},beforeTool:async call=>{calls.push(call);if(allow==='throw')throw Error('gate storage failure');return {allow,reason:allow?undefined:'CBIM test denial'}}});
     const result=await engine.run('Use the tool once.').catch(error=>{if(settlement!=='fail')throw error;return {status:'failed' as const,error:String(error)}});
-    return {result,calls,events,invocations,id,input,requests,callsBeforeSettlement,budget:budget?await budget.service.report(budget.query):undefined,written:await fs.access(path.join(cwd,'denied.txt')).then(()=>true,()=>false)};
+    return {result,calls,events,invocations,id,input,requests,callsBeforeSettlement,budget:budget?await budget.service.Report(budget.query):undefined,written:await fs.access(path.join(cwd,'denied.txt')).then(()=>true,()=>false)};
   }finally{await engine.close();await budget?.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));if(path.dirname(root)!==path.resolve(os.tmpdir())||!path.basename(root).startsWith('cbim-cc-tools-'))throw Error('unexpected cleanup');await fs.rm(root,{recursive:true,force:true,maxRetries:8,retryDelay:150})}
 }
 test('real Claude internal tool receives its original ID only after CBIM authorization',async()=>{

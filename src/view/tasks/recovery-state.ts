@@ -198,18 +198,18 @@ export class ExecutionRecoveryController
     return this.listeners.size === 0 && this.pending.size === 0
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
   /** 归档成功先使该来源各视图的旧报告失效，再通知重绘；挂载期间错过的变更也会补查。 */
-  subscribeSource(source: RecoverySource, listener: () => void, onPrepared: () => void, observedHistoryCount = this.record(source)?.history?.length ?? 0)
+  SubscribeSource(source: RecoverySource, listener: () => void, onPrepared: () => void, observedHistoryCount = this.Record(source)?.history?.length ?? 0)
   {
     let count = observedHistoryCount;
     const changed = () =>
     {
-      const next = this.record(source)?.history?.length ?? 0;
+      const next = this.Record(source)?.history?.length ?? 0;
       if (next !== count)
       {
         count = next;
@@ -217,28 +217,28 @@ export class ExecutionRecoveryController
       }
       listener()
     };
-    const unsubscribe = this.subscribe(changed);
+    const unsubscribe = this.Subscribe(changed);
     changed();
     return unsubscribe;
   }
 
-  record(source: RecoverySource)
+  Record(source: RecoverySource)
   {
     const key = recoverySourceKey(source);
     return this.value.records.find(item => recoverySourceKey(item.source) === key)
   }
 
-  isPending(record?: RecoveryDraft)
+  IsPending(record?: RecoveryDraft)
   {
     return !!record?.attempt && this.pending.has(record.attempt.request.commandId)
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  private update(record: RecoveryDraft): boolean
+  private Update(record: RecoveryDraft): boolean
   {
     const key = recoverySourceKey(record.source),
       index = this.value.records.findIndex(item => recoverySourceKey(item.source) === key),
@@ -261,32 +261,32 @@ export class ExecutionRecoveryController
     catch (error)
     {
       this.value = { ...this.value, error: '核实请求未能保存：' + textError(error) };
-      this.emit();
+      this.Emit();
       return false
     }
     // 只有保存成功才能发布新草稿/解除 accepted 锁；提交后的存储失败仍保留原 command 供查询。
     this.value = { records, error: '' };
-    this.emit();
+    this.Emit();
     return true;
   }
 
   /** 编辑只影响当前来源的未提交草稿；报告 basis 不写入草稿 key。 */
-  edit(source: RecoverySource, fields: { observation: string; message: string })
+  Edit(source: RecoverySource, fields: { observation: string; message: string })
   {
     if (this.unavailable || fields.observation.length > 64000 || fields.message.length > 64000)
       return;
-    const old = this.record(source);
+    const old = this.Record(source);
     if (old?.attempt && old.attempt.phase !== 'rejected')
       return;
-    this.update({ source: sourceIdentity(source), ...fields, history: old?.history ?? [], attempt: old?.attempt });
+    this.Update({ source: sourceIdentity(source), ...fields, history: old?.history ?? [], attempt: old?.attempt });
   }
 
   /** 仅首次明确点击构造命令；保存失败不调用后端，双击不能绕过冻结状态。 */
-  async submit(target: RecoveryTarget, options: RecoveryRequest['options'])
+  async Submit(target: RecoveryTarget, options: RecoveryRequest['options'])
   {
     if (this.unavailable || target.workspaceId !== this.workspaceId || target.rootSessionId !== this.rootSessionId)
       return;
-    const record = this.record(target.source);
+    const record = this.Record(target.source);
     if (!record || record.attempt && record.attempt.phase !== 'rejected')
       return;
     let request: RecoveryRequest;
@@ -299,28 +299,28 @@ export class ExecutionRecoveryController
     catch (error)
     {
       this.value = { ...this.value, error: '核实目标或模型配置无效：' + textError(error) };
-      this.emit();
+      this.Emit();
       return
     }
     const next = { ...record, attempt: { request, phase: 'submitting' as const, uncertain: false } };
-    if (!this.update(next))
+    if (!this.Update(next))
       return;
-    await this.send(next);
+    await this.Send(next);
   }
 
   /**
        * 明确准备下一次核实：重新查询旧受理命令，确认 closed 后完整归档，再保存无命令的新草稿。
        * 查询缺失、冲突、在途或本地保存失败均不解锁；不生成 UUID、不发启动请求，也不改旧周期。
        */
-  async prepareAgain(source: RecoverySource, expectedCommandId: string): Promise<boolean>
+  async PrepareAgain(source: RecoverySource, expectedCommandId: string): Promise<boolean>
   {
-    const record = this.record(source),
+    const record = this.Record(source),
       attempt = record?.attempt;
-    if (this.unavailable || !record || attempt?.phase !== 'accepted' || attempt.receipt?.scopeStatus !== 'closed' || attempt.request.commandId !== expectedCommandId || this.isPending(record))
+    if (this.unavailable || !record || attempt?.phase !== 'accepted' || attempt.receipt?.scopeStatus !== 'closed' || attempt.request.commandId !== expectedCommandId || this.IsPending(record))
       return false;
     const request = attempt.request;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId });
@@ -329,92 +329,92 @@ export class ExecutionRecoveryController
       const receipt = checkedRecoveryReceipt(raw, request, attempt.receipt);
       if (receipt.scopeStatus !== 'closed')
         throw Error('旧核实周期尚未关闭，不能准备新草稿');
-      if (this.record(source)?.attempt?.request.commandId !== expectedCommandId)
+      if (this.Record(source)?.attempt?.request.commandId !== expectedCommandId)
         throw Error('当前核实请求已变化，保留原记录');
-      return this.update({ ...record, attempt: undefined, history: [...(record.history ?? []), { ...attempt, phase: 'accepted', receipt }] });
+      return this.Update({ ...record, attempt: undefined, history: [...(record.history ?? []), { ...attempt, phase: 'accepted', receipt }] });
     }
     catch (error)
     {
       this.value = { ...this.value, error: '未能准备再次核实：' + textError(error) };
-      this.emit();
+      this.Emit();
       return false
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
-  private async send(record: RecoveryDraft)
+  private async Send(record: RecoveryDraft)
   {
     const attempt = record.attempt!,
       request = attempt.request;
     if (this.pending.has(request.commandId))
       return;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const receipt = checkedRecoveryReceipt(await this.ports.submit(structuredClone(request)), request, attempt.receipt);
-      this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
+      this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt, error: undefined } })
     }
     catch (error)
     {
       const rejected = !attempt.uncertain && recoveryRejected(error);
-      this.update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
+      this.Update({ ...record, attempt: { ...attempt, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 同命令重试不重新读取模型或报告。当前图已改变也须由后端先查询该命令，不能换 ID 重建。 */
-  async retry(source: RecoverySource)
+  async Retry(source: RecoverySource)
   {
-    const record = this.record(source);
-    if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.isPending(record))
+    const record = this.Record(source);
+    if (this.unavailable || record?.attempt?.phase !== 'unknown' || this.IsPending(record))
       return;
     const next = { ...record, attempt: { ...record.attempt, uncertain: true } };
-    if (this.update(next))
-      await this.send(next)
+    if (this.Update(next))
+      await this.Send(next)
   }
 
   /** 没有查询到回执仍是未知；已有受理事实不能被一次查询失败降为未受理。 */
-  async query(source: RecoverySource)
+  async Query(source: RecoverySource)
   {
-    const record = this.record(source),
+    const record = this.Record(source),
       attempt = record?.attempt;
-    if (this.unavailable || !record || !attempt || this.isPending(record))
+    if (this.unavailable || !record || !attempt || this.IsPending(record))
       return;
     const request = attempt.request;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: request.workspaceId, rootSessionId: request.rootSessionId, commandId: request.commandId });
       if (raw !== undefined)
-        this.update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedRecoveryReceipt(raw, request, attempt.receipt), error: undefined } });
+        this.Update({ ...record, attempt: { ...attempt, phase: 'accepted', receipt: checkedRecoveryReceipt(raw, request, attempt.receipt), error: undefined } });
       else if (attempt.phase !== 'accepted')
-        this.update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；只能查询或使用原请求重试。' } });
+        this.Update({ ...record, attempt: { ...attempt, phase: 'unknown', uncertain: true, error: '尚未查到回执；只能查询或使用原请求重试。' } });
     }
     catch (error)
     {
-      this.update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
+      this.Update({ ...record, attempt: { ...attempt, phase: attempt.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询结果未确认：' + textError(error) } })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 重开只查询未确认命令，不发送模型任务或重新运行旧工具。 */
-  async restore()
+  async Restore()
   {
-    await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.query(item.source)))
+    await Promise.all(this.value.records.filter(item => item.attempt?.phase === 'unknown').map(item => this.Query(item.source)))
   }
 }
 
@@ -427,7 +427,7 @@ export class ExecutionRecoveryPool
   {
   }
 
-  get(workspaceId: string, rootSessionId: string, ports: RecoveryPorts)
+  Get(workspaceId: string, rootSessionId: string, ports: RecoveryPorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
       controller = this.controllers.get(key) ?? new ExecutionRecoveryController(workspaceId, rootSessionId, ports);

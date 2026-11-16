@@ -20,36 +20,36 @@ import { memberPublicTask } from '../../runtime/monitoring/member-events';
 /** 可信平台能力；文件查询不领模型名额，临时读占用仅阻止本应用的业务写入竞争。 */
 export interface ArtifactReportPorts
 {
-  inspect(run: DispatchRun): Promise<RunSummary>;
+  Inspect(run: DispatchRun): Promise<RunSummary>;
 
   /** 固定新协议日志入口；缺省保持不可用，不回退旧派工路径。 */
-  inspectAgent?(run: AgentBusinessRun): Promise<RunSummary>;
+  InspectAgent?(run: AgentBusinessRun): Promise<RunSummary>;
 
-  normalizePath(raw: string): string;
+  NormalizePath(raw: string): string;
 
-  checkFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
+  CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
 
-  acquireRead(): () => void;
+  AcquireRead(): () => void;
 }
 
 export class ArtifactReportService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert' | 'read'>, private readonly store: Pick<DispatchStore, 'read'>, private readonly ports: ArtifactReportPorts)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, private readonly store: Pick<DispatchStore, 'Read'>, private readonly ports: ArtifactReportPorts)
   {
   }
 
   /** baselineId 缺省只列举日志引用；存在时才读所选文件，失败保留未知而不改变任务或日志。 */
-  async read(raw: unknown): Promise<ArtifactReport>
+  async Read(raw: unknown): Promise<ArtifactReport>
   {
     const parsed = artifactReportInputSchema.safeParse(raw);
     if (!parsed.success)
       fail('ARTIFACT_INPUT_INVALID', '文件基线核实参数无效');
     const input = parsed.data;
-    this.owner.assert();
+    this.owner.Assert();
     if (input.workspaceId !== this.owner.entry.id)
       fail('GRAPH_IDENTITY_MISMATCH', '文件基线不属于当前工作区');
-    const before = await this.store.read(),
-      facts = this.facts(before, input.rootSessionId, input.taskId, input.runId),
+    const before = await this.store.Read(),
+      facts = this.Facts(before, input.rootSessionId, input.taskId, input.runId),
       { task, run, recursive } = facts;
     const report: ArtifactReport = { identity: { workspaceId: input.workspaceId, rootSessionId: input.rootSessionId, taskId: input.taskId, runId: input.runId }, checkedAt: new Date().toISOString(), basis: '0'.repeat(64), consistency: 'stable', log: { state: 'unavailable' }, coverage: 'selected_files_only', impact: 'unknown', baselines: [], issues: [] };
     const issue = (code: string, message: string) =>
@@ -74,7 +74,7 @@ export class ArtifactReportService
     {
       try
       {
-        summary = await this.inspect(run)
+        summary = await this.Inspect(run)
       }
       catch (error)
       {
@@ -112,7 +112,7 @@ export class ArtifactReportService
           else
           {
             report.log.state = 'verified';
-            const verified = verifyArtifactBaselines(summary.events, binding, run.prepared.knowledgeRevision, this.ports.normalizePath, input.baselineId);
+            const verified = verifyArtifactBaselines(summary.events, binding, run.prepared.knowledgeRevision, this.ports.NormalizePath, input.baselineId);
             report.baselines = verified.refs;
             report.impact = verified.impact;
             for (const item of verified.issues)
@@ -148,18 +148,18 @@ export class ArtifactReportService
                 }
                 else
                 {
-                  const current = await this.owner.read();
+                  const current = await this.owner.Read();
                   if (current.revision !== record.baseline.knowledgeRevision)
                     issue('ARTIFACT_KNOWLEDGE_CHANGED', '当前知识版本与采集时不同；文件相同不代表任务基线仍有效');
                   const verification: NonNullable<ArtifactReport['verification']> = { baselineId: input.baselineId, state: 'matches', files: [] };
                   let release: (() => void) | undefined;
                   try
                   {
-                    release = this.ports.acquireRead();
+                    release = this.ports.AcquireRead();
                     const signal = AbortSignal.timeout(15_000);
                     const expected = record.baseline.files.map(({ sourceToolCallIds: _ids, ...file }) => file);
-                    verification.files = (await this.ports.checkFiles(expected, signal)).map(value => artifactFileCheckSchema.parse(value));
-                    if (verification.files.length !== expected.length || verification.files.some((file, index) => this.ports.normalizePath(file.relativePath) !== this.ports.normalizePath(expected[index].relativePath) || file.expected.byteLength !== expected[index].byteLength || file.expected.sha256 !== expected[index].sha256))
+                    verification.files = (await this.ports.CheckFiles(expected, signal)).map(value => artifactFileCheckSchema.parse(value));
+                    if (verification.files.length !== expected.length || verification.files.some((file, index) => this.ports.NormalizePath(file.relativePath) !== this.ports.NormalizePath(expected[index].relativePath) || file.expected.byteLength !== expected[index].byteLength || file.expected.sha256 !== expected[index].sha256))
                       throw Error('文件端口返回值不匹配');
                     if (verification.files.some(file => file.state === 'matches' && (!file.observed || file.observed.byteLength !== file.expected.byteLength || file.observed.sha256 !== file.expected.sha256) || file.state === 'changed' && (!file.observed || file.observed.byteLength === file.expected.byteLength && file.observed.sha256 === file.expected.sha256)))
                       throw Error('文件端口比较结论不一致');
@@ -175,7 +175,7 @@ export class ArtifactReportService
                     release?.()
                   }
                   report.verification = verification;
-                  const latest = await this.owner.read();
+                  const latest = await this.owner.Read();
                   if (latest.revision !== current.revision)
                   {
                     report.consistency = 'changed_during_read';
@@ -197,9 +197,9 @@ export class ArtifactReportService
         }
       }
     }
-    const after = await this.store.read();
-    this.owner.assert();
-    if (this.stamp(facts) !== this.stamp(this.facts(after, input.rootSessionId, input.taskId, input.runId)))
+    const after = await this.store.Read();
+    this.owner.Assert();
+    if (this.Stamp(facts) !== this.Stamp(this.Facts(after, input.rootSessionId, input.taskId, input.runId)))
     {
       report.consistency = 'changed_during_read';
       report.impact = 'unknown';
@@ -211,7 +211,7 @@ export class ArtifactReportService
     {
       try
       {
-        const afterLog = await this.inspect(run);
+        const afterLog = await this.Inspect(run);
         if (afterLog.logIntegrity?.partialTail !== false || hash(json(afterLog.events)) !== logStamp)
           throw Error('日志在文件读取期间变化')
       }
@@ -224,22 +224,22 @@ export class ArtifactReportService
         issue('ARTIFACT_LOG_CHANGED', '文件复核期间运行日志发生变化或无法再核实，本次观察无效')
       }
     }
-    report.basis = hash(json({ state: this.stamp(facts), log: logStamp ?? report.log, baselines: report.baselines, verification: report.verification, issues: report.issues, consistency: report.consistency }));
+    report.basis = hash(json({ state: this.Stamp(facts), log: logStamp ?? report.log, baselines: report.baselines, verification: report.verification, issues: report.issues, consistency: report.consistency }));
     return artifactReportSchema.parse(report);
   }
 
-  private inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
+  private Inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
   {
     if ('protocol' in run)
     {
-      if (!this.ports.inspectAgent)
+      if (!this.ports.InspectAgent)
         fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归运行只读日志入口');
-      return this.ports.inspectAgent(run)
+      return this.ports.InspectAgent(run)
     }
-    return this.ports.inspect(run);
+    return this.ports.Inspect(run);
   }
 
-  private facts(state: DispatchState, root: string, taskId: string, runId: string)
+  private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
       task = graph?.tasks.find(t => t.taskId === taskId),
@@ -251,7 +251,7 @@ export class ArtifactReportService
     return { graph, task, run, scope, recursive };
   }
 
-  private stamp(facts: ReturnType<ArtifactReportService['facts']>)
+  private Stamp(facts: ReturnType<ArtifactReportService['Facts']>)
   {
     return hash(json({ graph: facts.graph.cursor, task: facts.task, run: facts.run, scope: facts.scope }))
   }

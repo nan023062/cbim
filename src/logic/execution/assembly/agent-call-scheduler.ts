@@ -20,16 +20,16 @@ import { jsonToolResult, type ToolResult } from '../../tools/rules/results';
 export interface AgentSchedulerPorts
 {
   /** 仅展示现有 execution 准入服务的快照，不在协调器中另建额度。 */
-  capacity?(): { current: number; limit: number };
+  Capacity?(): { current: number; limit: number };
 
   /** 只读已登记能力目录；目录可见不自动授予执行权限。 */
-  list?(): Promise<unknown>;
+  List?(): Promise<unknown>;
 
   /** 仅根调用装配真实用户问题队列；子 Agent 不得直接使用人工评审入口。 */
-  requestReview?(input: QuestionInput, signal: AbortSignal): Promise<unknown>;
+  RequestReview?(input: QuestionInput, signal: AbortSignal): Promise<unknown>;
 
   /** 必须取得真实子执行名额，冻结目标定义/权限/模型，失败不得开始运行。 */
-  prepare(input: { agentId: string; message: string; business?: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; parent: AgentCallContext; signal: AbortSignal; reference: (taskId: string, runId: string) => AgentCallReference; requestQuestion(input: unknown, signal: AbortSignal): Promise<unknown> }): Promise<{ agent: Agent; task: TaskSpec; runtime: Pick<LoopRuntime, 'start' | 'close'> & Partial<Pick<LoopRuntime, 'startMember'>>; launch?: MemberRunLaunch; verify?(summary: RunSummary, signal: AbortSignal): Promise<unknown>; beforeRun?(runId: string): Promise<void>; release(): void | Promise<void> }>;
+  Prepare(input: { agentId: string; message: string; business?: { moduleIds: string[]; acceptance: string[]; workflowSelections?: { moduleId: string; workflowId: string }[] }; parent: AgentCallContext; signal: AbortSignal; reference: (taskId: string, runId: string) => AgentCallReference; RequestQuestion(input: unknown, signal: AbortSignal): Promise<unknown> }): Promise<{ agent: Agent; task: TaskSpec; runtime: Pick<LoopRuntime, 'Start' | 'Close'> & Partial<Pick<LoopRuntime, 'StartMember'>>; launch?: MemberRunLaunch; Verify?(summary: RunSummary, signal: AbortSignal): Promise<unknown>; BeforeRun?(runId: string): Promise<void>; Release(): void | Promise<void> }>;
 }
 
 const callInput = z.object({ agentId: z.string().min(1).max(512), message: z.string().trim().min(1).max(100000), business: z.object({ moduleIds: z.array(z.string().min(1)).min(1).max(50), acceptance: z.array(z.string().min(1)).max(100), workflowSelections: z.array(z.object({ moduleId: z.string().min(1), workflowId: z.string().min(1) }).strict()).max(50).optional() }).strict().optional() }).strict();
@@ -61,7 +61,7 @@ export class AgentCallScheduler
     }>();
 
   /** 退出未确认仍保留真实占用；后续只重试排空，不重放工作。 */
-  private readonly stranded = new Map<string, Awaited<ReturnType<AgentSchedulerPorts['prepare']>>>();
+  private readonly stranded = new Map<string, Awaited<ReturnType<AgentSchedulerPorts['Prepare']>>>();
 
   private readonly replyHistory = new Map<string, AgentCallExchange>();
 
@@ -94,16 +94,16 @@ export class AgentCallScheduler
   }
 
   /** 每个循环取得自己的工具绑定；停止只取消该调用者的直属调用，AbortSignal 继续向后代传播。 */
-  bind(context: AgentToolContext, depth = 0): AgentToolsBinding
+  Bind(context: AgentToolContext, depth = 0): AgentToolsBinding
   {
     let pending = 0;
     const prefix = context.runId + ':';
     return {
-      guardEffects: (effects) => this.humanBlocked.has(context.runId) && (!effects?.length || effects.some(effect => !['read', 'preview'].includes(effect))) ? 'AGENT_HUMAN_DECISION_REQUIRED: 意见不授权返工或修改，请等待新的用户执行指令' : undefined, allowsWhileWaiting: (name) =>
+      GuardEffects: (effects) => this.humanBlocked.has(context.runId) && (!effects?.length || effects.some(effect => !['read', 'preview'].includes(effect))) ? 'AGENT_HUMAN_DECISION_REQUIRED: 意见不授权返工或修改，请等待新的用户执行指令' : undefined, AllowsWhileWaiting: (name) =>
       {
         const active = [...this.activeCalls].filter(([key]) => key.startsWith(prefix));
-        return active.length > 0 && active.every(([, call]) => call.exchange.waiting()) && [agentReplyToolName, agentListToolName, 'cbim_ask_user_question'].includes(name)
-      }, active: () => pending > 0 || [...this.stranded.keys()].some(key => key.startsWith(prefix)), stop: async () =>
+        return active.length > 0 && active.every(([, call]) => call.exchange.Waiting()) && [agentReplyToolName, agentListToolName, 'cbim_ask_user_question'].includes(name)
+      }, Active: () => pending > 0 || [...this.stranded.keys()].some(key => key.startsWith(prefix)), Stop: async () =>
       {
         for (const [key, controller] of this.reviewControllers)
           if (key.startsWith(prefix))
@@ -113,10 +113,10 @@ export class AgentCallScheduler
         for (const item of active)
           item.controller.abort();
         await Promise.allSettled(active.map(item => item.done));
-        await this.drain(prefix)
+        await this.Drain(prefix)
       }, capability: {
         id: 'agent-call', instructions: ['明确业务模块的调用须提供 business.moduleIds 与 acceptance；宿主冻结该模块 Workflow。业务返回的 verification 只证明当时证据与文件一致，不替代人工验收；交付前用 cbim_agent_result_check 按原 callId 复核当前字节，失败不能报告完成。', '调用其他 Agent 与普通工具相同；结果和提问只返回直接调用方。仅可调用本轮实际配置能力。深度、并发或预算错误不是成功，不重复相同调用或绕过权限。'], tools: {
-          list: async () => [...(depth === 0 && this.ports.requestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.list ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
+          list: async () => [...(depth === 0 && this.ports.RequestReview ? [{ name: 'cbim_agent_result_review', description: '请用户评价本次子 Agent 交付。保存意见后再明确选择是否继续；文件变化不能接受，意见不授权自动返工。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }] : []), { name: 'cbim_agent_result_check', description: '按当前调用者原 callId 重新核验子 Agent 的交付证据及实际文件；不重启执行，不代替用户验收。', inputSchema: { type: 'object', properties: { callId: { type: 'string' } }, required: ['callId'], additionalProperties: false } }, { name: agentReplyToolName, description: '回答原 Agent 调用返回的求助，等待原子运行继续；不创建新任务。result 必须对应原问题。', inputSchema: zodToJsonSchema(replyInput) as Record<string, unknown> }, ...(this.ports.List ? [{ name: agentListToolName, description: '读取已登记可调用 Agent 的真实 ID、名称、模型与可用性。', inputSchema: { type: 'object', properties: {}, additionalProperties: false } }] : []), { name: agentCallToolName, description: '调用一个已配置 Agent，等待其真实执行结果；执行 Agent 也可使用此工具。', inputSchema: zodToJsonSchema(callInput) as Record<string, unknown> }],
           call: async (name, args, signal, id) =>
           {
             if (name === 'cbim_agent_result_review')
@@ -124,7 +124,7 @@ export class AgentCallScheduler
               const parsed = z.object({ callId: z.string().min(1) }).strict().safeParse(args);
               if (!parsed.success || !id)
                 return errorResult('AGENT_REVIEW_INPUT', '需要原 callId');
-              if (depth !== 0 || !this.ports.requestReview)
+              if (depth !== 0 || !this.ports.RequestReview)
                 return errorResult('AGENT_REVIEW_UNAVAILABLE', '只有主 Agent 可以请求真实用户评价');
               const key = prefix + id,
                 existing = this.reviews.get(key);
@@ -132,7 +132,7 @@ export class AgentCallScheduler
                 return existing.callId === parsed.data.callId ? existing.result : errorResult('AGENT_REVIEW_CONFLICT', '同一评审调用不能更换交付对象');
               const controller = new AbortController();
               this.reviewControllers.set(key, controller);
-              const result = this.review(context, parsed.data.callId, id, AbortSignal.any([signal, controller.signal])).finally(() => this.reviewControllers.delete(key));
+              const result = this.Review(context, parsed.data.callId, id, AbortSignal.any([signal, controller.signal])).finally(() => this.reviewControllers.delete(key));
               this.reviews.set(key, { callId: parsed.data.callId, result });
               return result;
             }
@@ -146,7 +146,7 @@ export class AgentCallScheduler
                 signal.throwIfAborted();
                 if (this.closed)
                   throw Error('调用已关闭');
-                context.assertExclusive(id);
+                context.AssertExclusive(id);
                 const check = this.checks.get(prefix + parsed.data.callId);
                 if (!check)
                   return errorResult('AGENT_RESULT_UNAVAILABLE', '本调用者没有可核验的已完成业务调用');
@@ -169,7 +169,7 @@ export class AgentCallScheduler
                 return errorResult('AGENT_REPLY_INPUT', '答复必须包含原 callId、questionId 和严格答案');
               try
               {
-                context.assertExclusive(id);
+                context.AssertExclusive(id);
                 const entry = this.activeCalls.get(prefix + parsed.data.callId);
                 const cache = this.replyHistory.get(prefix + parsed.data.callId);
                 const exchange = entry?.exchange ?? cache;
@@ -179,7 +179,7 @@ export class AgentCallScheduler
                 signal.addEventListener('abort', abort, { once: true });
                 try
                 {
-                  return await exchange.reply(parsed.data.questionId, parsed.data.result)
+                  return await exchange.Reply(parsed.data.questionId, parsed.data.result)
                 }
                 finally
                 {
@@ -194,12 +194,12 @@ export class AgentCallScheduler
                   }).code ?? 'AGENT_REPLY_FAILED', error instanceof Error ? error.message : String(error))
               }
             }
-            if (name === agentListToolName && this.ports.list)
+            if (name === agentListToolName && this.ports.List)
             {
               if (Object.keys(args).length)
                 return errorResult('AGENT_LIST_INPUT', 'Agent 目录不接受身份或权限参数');
               signal.throwIfAborted();
-              return jsonToolResult(agentListToolName, await this.ports.list())
+              return jsonToolResult(agentListToolName, await this.ports.List())
             }
             if (name !== agentCallToolName || !id)
               return errorResult('AGENT_CALL_IDENTITY', '缺少已授权工具调用身份');
@@ -219,7 +219,7 @@ export class AgentCallScheduler
               return errorResult('AGENT_DEPTH_LIMIT', '递归深度超过限制', { limit: this.limits.maxDepth, current: depth, requested: depth + 1, unit: 'depth', started: false });
             try
             {
-              context.assertExclusive(id)
+              context.AssertExclusive(id)
             }
             catch (error)
             {
@@ -235,7 +235,7 @@ export class AgentCallScheduler
             {
               if (!reference)
                 throw Error('子运行身份尚未登记');
-              await context.emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } });
+              await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: phase, questionId, ...(questions ? { questions } : {}), ...(answer ? { answer } : {}) } });
               return jsonToolResult(agentCallToolName, { status: 'waiting', callId: id, questionId, questions, agentCall: reference, nextStep: '用 cbim_agent_reply 回答原问题，继续此调用；不要重新调用 Agent' });
             });
             // 原循环关闭后先撤销活动占用，再交回父引擎，避免父收尾看到已结束的子调用。
@@ -245,29 +245,29 @@ export class AgentCallScheduler
               pending--;
               this.activeCalls.delete(key)
             };
-            const done = this.execute(context, depth, id, parsed.data, controller.signal, exchange, ref =>
+            const done = this.Execute(context, depth, id, parsed.data, controller.signal, exchange, ref =>
             {
               reference = ref
             }).then(async result =>
             {
               if (exchange.yielded && reference)
-                await context.emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: result.isError ? 'failed' : 'completed', result, isError: result.isError === true } });
+                await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, agentCallState: result.isError ? 'failed' : 'completed', result, isError: result.isError === true } });
               return result;
             }).then(result =>
             {
               clearActive();
-              exchange.finish(result);
+              exchange.Finish(result);
               return result
             }, error =>
             {
               clearActive();
-              exchange.fail(error);
+              exchange.Fail(error);
               throw error
             });
             void done.catch(() =>
             {
             });
-            const result = exchange.wait();
+            const result = exchange.Wait();
             this.attempts.set(key, { input, result });
             this.replyHistory.set(key, exchange);
             this.activeCalls.set(key, { controller, done, exchange });
@@ -278,36 +278,36 @@ export class AgentCallScheduler
     };
   }
 
-  private async execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
+  private async Execute(context: AgentToolContext, depth: number, id: string, input: z.infer<typeof callInput>, signal: AbortSignal, exchange: AgentCallExchange, onReference: (ref: AgentCallReference) => void): Promise<ToolResult>
   {
-    let prepared: Awaited<ReturnType<AgentSchedulerPorts['prepare']>> | undefined,
+    let prepared: Awaited<ReturnType<AgentSchedulerPorts['Prepare']>> | undefined,
       reference: AgentCallReference | undefined;
     const ref = (taskId: string, runId: string): AgentCallReference => ({ version: 1, workspaceId: context.task.workspaceId, callerTaskId: context.task.taskId, callerRunId: context.runId, toolCallId: id, taskId, runId });
     try
     {
       signal.throwIfAborted();
-      prepared = await this.ports.prepare({ ...input, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, requestQuestion: (input, questionSignal) => exchange.ask(input, AbortSignal.any([signal, questionSignal])) });
+      prepared = await this.ports.Prepare({ ...input, parent: { task: context.task, runId: context.runId, depth }, signal, reference: ref, RequestQuestion: (input, questionSignal) => exchange.Ask(input, AbortSignal.any([signal, questionSignal])) });
       signal.throwIfAborted();
       const control = {
-        signal, beforeRun: async ({ runId }: { runId: string }) =>
+        signal, BeforeRun: async ({ runId }: { runId: string }) =>
         {
           reference = ref(prepared!.agent.conversation.taskId, runId);
           onReference(reference);
-          await context.emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.capacity() } } });
-          await prepared!.beforeRun?.(runId)
+          await context.Emit({ type: 'tool.updated', data: { id, name: agentCallToolName, agentCall: reference, limits: { depth: depth + 1, maxDepth: this.limits.maxDepth, ...this.Capacity() } } });
+          await prepared!.BeforeRun?.(runId)
         }
       };
-      const run = prepared.launch ? await prepared.runtime.startMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.start(prepared.task, input.message, undefined, undefined, control);
+      const run = prepared.launch ? await prepared.runtime.StartMember!(prepared.task, input.message, prepared.launch, control) : await prepared.runtime.Start(prepared.task, input.message, undefined, undefined, control);
       const summary = await run.done;
       let verification: unknown;
-      if (prepared.verify && summary.status === 'completed' && !summary.unresolvedTools.length)
+      if (prepared.Verify && summary.status === 'completed' && !summary.unresolvedTools.length)
       {
-        const verify = prepared.verify;
+        const verify = prepared.Verify;
         this.checks.set(context.runId + ':' + id, signal => verify(summary, signal));
         verification = await verify(summary, signal);
         this.reviewProofs.set(context.runId + ':' + id, structuredClone(verification))
       }
-      const output = { agentCall: reference, status: summary.status, summary: this.message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
+      const output = { agentCall: reference, status: summary.status, summary: this.Message(summary), ...(verification ? { verification } : {}), unresolvedTools: summary.unresolvedTools };
       return { ...jsonToolResult(agentCallToolName, output), ...(summary.status !== 'completed' || summary.unresolvedTools.length ? { isError: true } : {}) };
     }
     catch (error)
@@ -326,8 +326,8 @@ export class AgentCallScheduler
       {
         try
         {
-          await prepared.runtime.close();
-          await prepared.release()
+          await prepared.runtime.Close();
+          await prepared.Release()
         }
         catch (error)
         {
@@ -339,7 +339,7 @@ export class AgentCallScheduler
   }
 
   /** 人工评价是原工具的两阶段等待：意见先可靠记入日志，用户明确继续才返回模型；不派发子任务。 */
-  private async review(context: AgentToolContext, callId: string, id: string, signal: AbortSignal): Promise<ToolResult>
+  private async Review(context: AgentToolContext, callId: string, id: string, signal: AbortSignal): Promise<ToolResult>
   {
     const key = context.runId + ':' + callId,
       check = this.checks.get(key),
@@ -347,7 +347,7 @@ export class AgentCallScheduler
     try
     {
       signal.throwIfAborted();
-      context.assertExclusive(id);
+      context.AssertExclusive(id);
       if (this.closed || !check || !original)
         return errorResult('AGENT_REVIEW_UNAVAILABLE', '没有本调用者原始已验证交付');
       let current: unknown,
@@ -370,7 +370,7 @@ export class AgentCallScheduler
       const allowedDecisions = verified ? ['accept', 'reject', 'request_evidence'] : ['reject', 'request_evidence'];
       const labels: Record<string, string> = { accept: '接受此成果', reject: '不接受此成果', request_evidence: '要求补充证据' };
       const question: QuestionInput = { questions: [{ question: verified ? '如何评价此调用的成果？文件当前复核通过，仍需你的业务判断。' : '此调用的文件已变化或无法复核，不能接受旧证据。请记录你的意见。', options: allowedDecisions.map(decision => ({ label: labels[decision] })) }] };
-      const answer = questionResultForInput(question).parse(await this.ports.requestReview!(question, signal));
+      const answer = questionResultForInput(question).parse(await this.ports.RequestReview!(question, signal));
       signal.throwIfAborted();
       if ('cancelled' in answer)
         return jsonToolResult('cbim_agent_result_review', { cancelled: true });
@@ -381,13 +381,13 @@ export class AgentCallScheduler
       if (decision === 'accept')
         current = await check(signal);
       signal.throwIfAborted();
-      context.assertExclusive(id);
+      context.AssertExclusive(id);
       const record = { version: 1, callerTaskId: context.task.taskId, callerRunId: context.runId, callId, reviewToolCallId: id, original, current, allowedDecisions, decision, answer: answer.answers[0], recordedAt: new Date().toISOString() };
-      await context.emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', humanDecision: record, phase: 'decision_saved' } });
+      await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', humanDecision: record, phase: 'decision_saved' } });
       if (decision !== 'accept')
         this.humanBlocked.add(context.runId);
       const continuation: QuestionInput = { questions: [{ question: '意见已保存。是否让主 Agent 继续处理这条意见？继续不授权自动返工或重放原调用。', options: [{ label: '继续处理意见' }, { label: '只保存意见' }] }] };
-      const next = questionResultForInput(continuation).parse(await this.ports.requestReview!(continuation, signal));
+      const next = questionResultForInput(continuation).parse(await this.ports.RequestReview!(continuation, signal));
       signal.throwIfAborted();
       const continued = !('cancelled' in next) && next.answers[0].answer === '继续处理意见';
       // 保存意见与交回模型之间可能隔很久；继续不能消费已经过期的接受。
@@ -403,13 +403,13 @@ export class AgentCallScheduler
         {
           this.humanBlocked.add(context.runId);
           if (!signal.aborted)
-            await context.emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued: false, reason: 'verification_failed' } });
+            await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued: false, reason: 'verification_failed' } });
           throw error;
         }
       }
       if (!continued)
         this.humanBlocked.add(context.runId);
-      await context.emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued } });
+      await context.Emit({ type: 'tool.updated', data: { id, name: 'cbim_agent_result_review', phase: 'decision_released', continued } });
       return jsonToolResult('cbim_agent_result_review', { record, continued, executionAuthorized: false });
     }
     catch (error)
@@ -421,31 +421,31 @@ export class AgentCallScheduler
     }
   }
 
-  private capacity()
+  private Capacity()
   {
-    const usage = this.ports.capacity?.();
+    const usage = this.ports.Capacity?.();
     return usage ? { concurrent: usage.current, maxConcurrent: usage.limit } : {}
   }
 
-  private message(run: RunSummary): string
+  private Message(run: RunSummary): string
   {
     const messages = run.events.filter(event => event.type === 'message').map(event => typeof event.data.text === 'string' ? event.data.text : typeof event.data.content === 'string' ? event.data.content : '').filter(Boolean);
     return messages.join('\n\n').slice(-100000) || '执行已结束，详细过程见调用记录；没有可提取的公开文字回复。';
   }
 
-  private async drain(prefix = '')
+  private async Drain(prefix = '')
   {
     for (const [key, value] of this.stranded)
     {
       if (!key.startsWith(prefix))
         continue;
-      await value.runtime.close();
-      await value.release();
+      await value.runtime.Close();
+      await value.Release();
       this.stranded.delete(key)
     }
   }
 
-  async close()
+  async Close()
   {
     this.closed = true;
     for (const controller of this.reviewControllers.values())
@@ -455,6 +455,6 @@ export class AgentCallScheduler
     for (const item of active)
       item.controller.abort();
     await Promise.allSettled(active.map(item => item.done));
-    await this.drain()
+    await this.Drain()
   }
 }

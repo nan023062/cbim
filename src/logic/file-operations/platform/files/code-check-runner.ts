@@ -24,7 +24,7 @@ export class CodeCheckRunner implements CodeCheckPort
     this.manifests = new OutputManifestFiles(this.root, assertCurrent)
   }
 
-  private async directory(relative: string, signal: AbortSignal)
+  private async Directory(relative: string, signal: AbortSignal)
   {
     this.assertCurrent();
     signal.throwIfAborted();
@@ -42,9 +42,9 @@ export class CodeCheckRunner implements CodeCheckPort
     return current;
   }
 
-  async run(checks: readonly FrozenCodeCheck[], scopes: Parameters<CodeCheckPort['run']>[1], signal: AbortSignal)
+  async Run(checks: readonly FrozenCodeCheck[], scopes: Parameters<CodeCheckPort['Run']>[1], signal: AbortSignal)
   {
-    const snapshot = await this.manifests.capture(scopes, signal);
+    const snapshot = await this.manifests.Capture(scopes, signal);
     if (snapshot.roots.some(root => root.state === 'missing') || !snapshot.entries.some(entry => entry.kind === 'file'))
       fail('CODE_CHECK_INPUT', '代码检查范围必须存在并包含实际文件');
     const commands: CodeCommandResult[] = [];
@@ -52,17 +52,17 @@ export class CodeCheckRunner implements CodeCheckPort
     {
       this.assertCurrent();
       signal.throwIfAborted();
-      commands.push(await this.command(check, await this.directory(check.requirement.cwd, signal), signal));
+      commands.push(await this.Command(check, await this.Directory(check.requirement.cwd, signal), signal));
     }
     this.assertCurrent();
     signal.throwIfAborted();
-    const current = await this.manifests.check(snapshot, signal);
+    const current = await this.manifests.Check(snapshot, signal);
     signal.throwIfAborted();
     this.assertCurrent();
     return codeCheckExecutionSchema.parse({ snapshot, commands, sourceChanged: current.state !== 'matches' || current.observedHash !== outputManifestHash(snapshot) });
   }
 
-  private command(check: FrozenCodeCheck, cwd: string, signal: AbortSignal): Promise<CodeCommandResult>
+  private Command(check: FrozenCodeCheck, cwd: string, signal: AbortSignal): Promise<CodeCommandResult>
   {
     const rule = check.requirement,
       program = rule.program === 'node' ? process.execPath : rule.program,

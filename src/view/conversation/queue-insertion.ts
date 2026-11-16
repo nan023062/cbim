@@ -31,13 +31,13 @@ export function insertQueuedMessage(target: QueueInsertTarget, queueId: string, 
 }
 
 /** 真实入队成功即确认草稿已保存；后续插入失败保留该事实，不再入队、不移除原消息。 */
-export async function enqueueConversationMessage<T extends QueuedReceipt>(ports: { enqueue(): Promise<T>; accepted(receipt: T): void; insert: InsertPort }, target?: QueueInsertTarget): Promise<T>
+export async function enqueueConversationMessage<T extends QueuedReceipt>(ports: { Enqueue(): Promise<T>; Accepted(receipt: T): void; insert: InsertPort }, target?: QueueInsertTarget): Promise<T>
 {
   const fixed = target ? { ...target } : undefined;
-  const receipt = await ports.enqueue();
+  const receipt = await ports.Enqueue();
   if (fixed && (receipt.taskId !== fixed.taskId || typeof receipt.id !== 'string' || !receipt.id))
     throw Error('入队回执归属未确认，请先核实原消息队列，不要重复发送。');
-  ports.accepted(receipt);
+  ports.Accepted(receipt);
   if (fixed)
     await insertQueuedMessage(fixed, receipt.id, ports.insert);
   return receipt;

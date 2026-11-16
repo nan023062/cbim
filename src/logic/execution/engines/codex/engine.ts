@@ -117,30 +117,30 @@ export class CodexEngine implements AgentEngine
   {
   }
 
-  private redact(text: string)
+  private Redact(text: string)
   {
     const key = this.options.llm?.apiKey;
-    return StringUtils.redactLiteral(text, key)
+    return StringUtils.RedactLiteral(text, key)
   }
 
-  private fail(error: Error)
+  private Fail(error: Error)
   {
-    this.fatal ??= Error(this.redact(error.message));
-    this.tools?.stop();
+    this.fatal ??= Error(this.Redact(error.message));
+    this.tools?.Stop();
     if (!this.stopped)
       this.done?.reject(this.fatal)
   }
 
-  private async emit(event: EngineEvent)
+  private async Emit(event: EngineEvent)
   {
-    this.inactivity?.observe(event);
+    this.inactivity?.Observe(event);
     try
     {
-      await this.context!.emit(JSON.parse(this.redact(JSON.stringify(event))))
+      await this.context!.emit(JSON.parse(this.Redact(JSON.stringify(event))))
     }
     catch (error)
     {
-      this.fail(error instanceof Error ? error : Error(String(error)));
+      this.Fail(error instanceof Error ? error : Error(String(error)));
       throw error
     }
   }
@@ -155,16 +155,16 @@ export class CodexEngine implements AgentEngine
     await context.assertMemberResume?.();
     const port = await runtimeEngineTools(context, this.options.knowledge),
       native = await managedNativeTools(context.task.root, this.options.nativeToolsRuntime);
-    this.tools = await codexTools({ ...context, emit: event => this.emit(event) }, port, native, !!this.options.allowNativeExecution, async () =>
+    this.tools = await codexTools({ ...context, emit: event => this.Emit(event) }, port, native, !!this.options.allowNativeExecution, async () =>
     {
-      await this.proxy!.assertSettled();
+      await this.proxy!.AssertSettled();
       if (this.fatal)
         throw this.fatal
     });
     this.proxy = await openCodexModelProxy(llm, this.tools.registered, this.tools.catalog, await this.options.requestBudget?.(), async () =>
     {
       const names = this.tools!.catalog.map(tool => tool.name);
-      await this.emit({ type: 'engine.status', data: { metric: 'tool-catalog', stage: 'active', expected: names, active: names, missing: [] } });
+      await this.Emit({ type: 'engine.status', data: { metric: 'tool-catalog', stage: 'active', expected: names, active: names, missing: [] } });
     });
     const config: Record<string, any> = {
       model: llm.profile.model, model_provider: 'cbim', model_providers: { cbim: { name: 'CBIM', base_url: this.proxy.url, env_key: 'CBIM_CODEX_API_KEY', wire_api: 'responses', request_max_retries: 0, stream_max_retries: 0, supports_websockets: false } },
@@ -173,23 +173,23 @@ export class CodexEngine implements AgentEngine
       'memories.generate_memories': false, 'memories.use_memories': false, 'analytics.enabled': false, model_context_window: llm.profile.workingContextWindow ?? llm.profile.contextWindow,
       model_auto_compact_token_limit: Math.floor((llm.profile.workingContextWindow ?? llm.profile.contextWindow) * (llm.profile.compactionPercent ?? 80) / 100)
     };
-    this.rpc = new CodexRpc((method, params) => this.notification(method, params), async (method, params) =>
+    this.rpc = new CodexRpc((method, params) => this.Notification(method, params), async (method, params) =>
     {
       if (method !== 'item/tool/call')
         throw Error('Codex 请求了未经注册的宿主能力：' + method);
       await this.startingTurn;
       if (params.threadId !== this.threadId || params.turnId !== this.turnId || params.namespace)
         throw Error('Codex 工具请求不属于当前线程/轮次');
-      return this.tools!.call(params);
-    }, error => this.fail(error));
-    this.rpc.start(await codexBinary(this.options.runtime), this.options.agentHome, codexEnvironment(this.options.agentHome, this.proxy.token), Object.entries(config).flatMap(([key, value]) => ['-c', key + '=' + toml(value)]));
-    await this.rpc.request('initialize', { clientInfo: { name: 'cbim', version: '1.0.0' }, capabilities: { experimentalApi: true } });
-    this.rpc.send({ method: 'initialized', params: {} });
+      return this.tools!.Call(params);
+    }, error => this.Fail(error));
+    this.rpc.Start(await codexBinary(this.options.runtime), this.options.agentHome, codexEnvironment(this.options.agentHome, this.proxy.token), Object.entries(config).flatMap(([key, value]) => ['-c', key + '=' + toml(value)]));
+    await this.rpc.Request('initialize', { clientInfo: { name: 'cbim', version: '1.0.0' }, capabilities: { experimentalApi: true } });
+    this.rpc.Send({ method: 'initialized', params: {} });
     // 参考宿主托管模式：逐页读取本版本真实功能表，关闭额外执行入口，不按已知少数工具猜测整个能力集合。
     let cursor: string | undefined;
     for (let page = 0; page < 8; page++)
     {
-      const result = await this.rpc.request('experimentalFeature/list', { limit: 100, ...(cursor ? { cursor } : {}) });
+      const result = await this.rpc.Request('experimentalFeature/list', { limit: 100, ...(cursor ? { cursor } : {}) });
       if (!Array.isArray(result.data))
         throw Error('Codex 没有返回可核实的功能目录');
       for (const feature of result.data)
@@ -213,31 +213,31 @@ export class CodexEngine implements AgentEngine
         throw Error('Codex 原生工具目录已变化，请新建对话');
       // thread/resume 会追加 thread_settings_applied；完整旧证明必须在真实恢复动作前复核，之后只核实际身份/格式。
       await context.assertMemberResume?.();
-      response = await this.rpc.request('thread/resume', { ...params, threadId: context.nativeSessionId, path: context.sessionFile, excludeTurns: true });
+      response = await this.rpc.Request('thread/resume', { ...params, threadId: context.nativeSessionId, path: context.sessionFile, excludeTurns: true });
       if (response.thread?.id !== context.nativeSessionId || codexPath(response.thread?.path ?? '') !== codexPath(context.sessionFile))
         throw Error('Codex 未恢复指定原生会话');
     }
     else
-      response = await this.rpc.request('thread/start', { ...params, historyMode: 'legacy', ephemeral: false, environments: [], dynamicTools: this.tools.registered });
+      response = await this.rpc.Request('thread/start', { ...params, historyMode: 'legacy', ephemeral: false, environments: [], dynamicTools: this.tools.registered });
     if (response.model !== llm.profile.model || response.modelProvider !== 'cbim' || codexPath(response.cwd ?? '') !== path.resolve(context.task.root) || !response.thread?.id || response.thread.ephemeral)
       throw Error('Codex 线程回执与冻结配置不一致');
     this.threadId = response.thread.id;
     this.sessionFile = response.thread.path ? codexPath(response.thread.path) : undefined;
     if (this.sessionFile && await fs.access(this.sessionFile).then(() => true, () => false))
-      await this.bind();
+      await this.Bind();
     else
-      await this.emit({ type: 'session.bound', data: { sessionId: this.threadId, provider: 'cbim-' + llm.profile.id, model: llm.profile.model } });
-    await this.emit({ type: 'engine.status', data: { label: 'Codex 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.catalog.map(t => t.name) } });
+      await this.Emit({ type: 'session.bound', data: { sessionId: this.threadId, provider: 'cbim-' + llm.profile.id, model: llm.profile.model } });
+    await this.Emit({ type: 'engine.status', data: { label: 'Codex 已就绪', metric: 'tool-catalog', stage: 'prepared', expected: this.tools.catalog.map(t => t.name) } });
   }
 
-  private async bind()
+  private async Bind()
   {
     if (this.sessionBound)
       return;
     if (!this.sessionFile)
       throw Error('Codex 未提供实际原生文件');
     await readCodexSession(this.options.agentHome, this.sessionFile, this.threadId, this.context!.task.root);
-    await this.emit({ type: 'session.bound', data: { sessionId: this.threadId, sessionFile: this.sessionFile, provider: 'cbim-' + this.options.llm!.profile.id, model: this.options.llm!.profile.model } });
+    await this.Emit({ type: 'session.bound', data: { sessionId: this.threadId, sessionFile: this.sessionFile, provider: 'cbim-' + this.options.llm!.profile.id, model: this.options.llm!.profile.model } });
     this.sessionBound = true;
   }
 
@@ -258,38 +258,38 @@ export class CodexEngine implements AgentEngine
       {
         this.done = { resolve, reject }
       });
-    this.inactivity = new RunInactivityTimer(this.options.turnTimeoutMs, 'Codex', error => this.fail(error));
+    this.inactivity = new RunInactivityTimer(this.options.turnTimeoutMs, 'Codex', error => this.Fail(error));
     const internal = ['member-results', 'human_decisions', 'goal-repair'].includes(this.context.source?.kind ?? ''),
       profile = this.options.llm!.profile;
     const effort = profile.reasoning && profile.thinkingLevel !== 'off' ? (profile.thinkingLevel ?? 'medium') : 'none';
-    this.startingTurn = this.rpc.request('turn/start', { threadId: this.threadId, input: [{ type: 'text', text: internal ? 'CBIM 系统转交资料（不是用户新授权）：\n' + message : message, text_elements: [] }, ...(!internal ? this.options.images ?? [] : []).map(image => ({ type: 'image', url: 'data:' + image.mimeType + ';base64,' + image.data }))], model: profile.model, effort, summary: 'none', environments: [] }).then(value =>
+    this.startingTurn = this.rpc.Request('turn/start', { threadId: this.threadId, input: [{ type: 'text', text: internal ? 'CBIM 系统转交资料（不是用户新授权）：\n' + message : message, text_elements: [] }, ...(!internal ? this.options.images ?? [] : []).map(image => ({ type: 'image', url: 'data:' + image.mimeType + ';base64,' + image.data }))], model: profile.model, effort, summary: 'none', environments: [] }).then(value =>
     {
       if (!value.turn?.id)
         throw Error('Codex 没有确认本轮身份');
       this.turnId = value.turn.id;
       return value
     });
-    void this.startingTurn.catch(error => this.fail(error));
+    void this.startingTurn.catch(error => this.Fail(error));
     try
     {
       const settled = await result,
-        tokens = this.proxy!.usage();
+        tokens = this.proxy!.Usage();
       if (settled.status === 'completed' && tokens)
       {
         const pricing = profile.pricing,
           weighted = pricing ? Object.entries(tokens).reduce((sum, [key, value]) => sum + value * pricing[key as keyof typeof pricing], 0) : undefined;
         const cost = weighted === undefined ? undefined : weighted > 0 ? Math.max(Number.MIN_VALUE, weighted / 1000000) : 0;
-        await this.emit({ type: 'engine.status', data: { label: '本轮用量已汇总', metric: 'run-usage', tokens, ...(cost !== undefined && Number.isFinite(cost) ? { cost, pricingKnown: true } : { pricingKnown: false }) } });
+        await this.Emit({ type: 'engine.status', data: { label: '本轮用量已汇总', metric: 'run-usage', tokens, ...(cost !== undefined && Number.isFinite(cost) ? { cost, pricingKnown: true } : { pricingKnown: false }) } });
       }
       return settled;
     }
     finally
     {
-      this.inactivity?.dispose()
+      this.inactivity?.Dispose()
     }
   }
 
-  private async notification(method: string, params: any)
+  private async Notification(method: string, params: any)
   {
     if (params?.threadId !== this.threadId)
       return;
@@ -299,34 +299,34 @@ export class CodexEngine implements AgentEngine
     if (params.turnId && params.turnId !== this.turnId)
       return;
     if (['item/agentMessage/delta', 'item/reasoning/textDelta', 'item/reasoning/summaryTextDelta', 'item/commandExecution/outputDelta'].includes(method) && typeof params.delta === 'string' && params.delta.length)
-      this.inactivity?.progress();
+      this.inactivity?.Progress();
     if (method === 'item/agentMessage/delta')
-      await this.emit({ type: 'message.delta', data: { text: params.delta } });
+      await this.Emit({ type: 'message.delta', data: { text: params.delta } });
     if (method === 'item/completed' && params.item?.type === 'agentMessage')
-      await this.emit({ type: 'message', data: { role: 'assistant', text: params.item.text } });
+      await this.Emit({ type: 'message', data: { role: 'assistant', text: params.item.text } });
     if (method === 'turn/completed')
     {
       await this.startingTurn;
       if (params.turn?.id !== this.turnId)
         throw Error('Codex 终态不属于本轮');
-      await this.proxy!.assertSettled();
-      await this.bind();
+      await this.proxy!.AssertSettled();
+      await this.Bind();
       const turn = params.turn,
         error = this.proxy?.error() ?? (turn.status === 'failed' ? turn.error?.message ?? 'Codex 执行失败' : undefined);
-      this.done?.resolve(this.stopped || turn.status === 'interrupted' ? { status: 'cancelled' } : turn.status === 'completed' && !error ? { status: 'completed' } : { status: 'failed', error: this.redact(error ?? 'Codex 返回未知终态') });
+      this.done?.resolve(this.stopped || turn.status === 'interrupted' ? { status: 'cancelled' } : turn.status === 'completed' && !error ? { status: 'completed' } : { status: 'failed', error: this.Redact(error ?? 'Codex 返回未知终态') });
     }
   }
 
   async stop()
   {
     this.stopped = true;
-    this.inactivity?.dispose();
-    this.tools?.stop();
-    await this.proxy?.close();
+    this.inactivity?.Dispose();
+    this.tools?.Stop();
+    await this.proxy?.Close();
     if (this.turnId)
       try
       {
-        await this.rpc?.request('turn/interrupt', { threadId: this.threadId, turnId: this.turnId }, 3000)
+        await this.rpc?.Request('turn/interrupt', { threadId: this.threadId, turnId: this.turnId }, 3000)
       }
       catch
       {
@@ -343,21 +343,21 @@ export class CodexEngine implements AgentEngine
   {
     return this.closing ??= (async () =>
     {
-      this.inactivity?.dispose();
-      this.tools?.stop();
+      this.inactivity?.Dispose();
+      this.tools?.Stop();
       try
       {
-        await this.proxy?.close()
+        await this.proxy?.Close()
       }
       finally
       {
         try
         {
-          await this.rpc?.close()
+          await this.rpc?.Close()
         }
         finally
         {
-          await this.tools?.close()
+          await this.tools?.Close()
         }
       }
       if (!this.threadId || !this.sessionFile || this.sessionBound)
@@ -369,7 +369,7 @@ export class CodexEngine implements AgentEngine
         throw error
       });
       if (exists)
-        await this.bind();
+        await this.Bind();
     })();
   }
 }

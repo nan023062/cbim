@@ -39,14 +39,14 @@ class N_src_logic_web_service_web_service_ts["web-service.ts"] {
 }
 class N_src_logic_web_service_web_service_ts_WebService["WebService"] {
   +constructor()
-  +fetch()
-  +search()
+  +Fetch()
+  +Search()
   -settings
   -client
   -timing
   -pages
   -nextSearchAt
-  -pace()
+  -Pace()
 }
 N_src_logic_web_service_web_service_ts ..> N_src_logic_web_service_web_service_ts_WebService : 声明
 class N_src_logic_web_service_web_service_ts_external_WebToolsPort["WebToolsPort (外部契约)"] {
@@ -66,10 +66,10 @@ class N_src_logic_web_service_web_settings_ts["web-settings.ts"] {
 }
 class N_src_logic_web_service_web_settings_ts_WebSettings["WebSettings"] {
   +constructor()
-  +init()
-  +read()
-  +configure()
-  +resolve()
+  +Init()
+  +Read()
+  +Configure()
+  +Resolve()
   -filename
   -cipher
   -state

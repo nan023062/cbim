@@ -29,13 +29,13 @@ class N_src_logic_automation_runtime_scheduler_ts["scheduler.ts"] {
 }
 class N_src_logic_automation_runtime_scheduler_ts_AutomationScheduler["AutomationScheduler"] {
   +constructor()
-  +initialize()
-  +list()
-  +save()
-  +runNow()
-  +tick()
-  +change()
-  +close()
+  +Initialize()
+  +List()
+  +Save()
+  +RunNow()
+  +Tick()
+  +Change()
+  +Close()
   -store
   -runner
   -now
@@ -56,14 +56,14 @@ class N_src_logic_automation_runtime_scheduler_ts["scheduler.ts"] {
   <<module>>
 }
 class N_src_logic_automation_runtime_scheduler_ts_AutomationScheduler["AutomationScheduler"] {
-  -serial()
-  -assert()
-  -stamp()
-  -watch()
-  -job()
-  -claim()
-  -updateRun()
-  -launch()
+  -Serial()
+  -Assert()
+  -Stamp()
+  -Watch()
+  -Job()
+  -Claim()
+  -UpdateRun()
+  -Launch()
 }
 N_src_logic_automation_runtime_scheduler_ts ..> N_src_logic_automation_runtime_scheduler_ts_AutomationScheduler : 声明
 ```

@@ -141,7 +141,7 @@ export interface Snapshot
 /** 领域查询唯一所需能力；不暴露提交、维护任务、路径或实例生命周期。 */
 export interface KnowledgeSnapshotReader
 {
-  snapshot(): Promise<Snapshot>
+  Snapshot(): Promise<Snapshot>
 }
 
 /** 提交完成的持久化回执；结构校验通过不等于业务验收通过。 */

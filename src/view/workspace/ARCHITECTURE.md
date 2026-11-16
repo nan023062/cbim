@@ -165,12 +165,12 @@ class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["Mo
   +snapshot
   +blocked
   +canRelease
-  +subscribe()
-  +isPending()
-  +submit()
-  +retry()
-  +query()
-  +restore()
+  +Subscribe()
+  +IsPending()
+  +Submit()
+  +Retry()
+  +Query()
+  +Restore()
   -ports
   -records
   -value
@@ -190,9 +190,9 @@ class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands["Mo
   -pending
   -unavailable
   -corrupt
-  -emit()
-  -save()
-  -send()
+  -Emit()
+  -Save()
+  -Send()
 }
 N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommands : 声明
 ```
@@ -203,7 +203,7 @@ class N_src_view_workspace_module_ownership_state_ts["module-ownership-state.ts"
   <<module>>
 }
 class N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool["ModuleOwnershipCommandPool"] {
-  +get()
+  +Get()
   -values
 }
 N_src_view_workspace_module_ownership_state_ts ..> N_src_view_workspace_module_ownership_state_ts_ModuleOwnershipCommandPool : 声明

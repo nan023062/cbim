@@ -19,26 +19,26 @@ async function main()
   let stop: (() => void) | undefined;
   try
   {
-    await application.init();
-    const entry = await application.catalog.add(values.root);
-    await application.open(entry.id);
-    const manager = application.execution(entry.id);
-    manager.subscribe(event => process.stdout.write(JSON.stringify(event) + '\n'));
+    await application.Init();
+    const entry = await application.catalog.Add(values.root);
+    await application.Open(entry.id);
+    const manager = application.Execution(entry.id);
+    manager.Subscribe(event => process.stdout.write(JSON.stringify(event) + '\n'));
     const options = { provider: values.provider, model: values.model, allowNativeExecution: values['allow-execution'] ?? false };
     const run = values.task && values.resume
-      ? await manager.resume(values.task, values.resume, values.message || '', options, values['reconciled-tool'])
-      : await manager.start({ goal: values.goal!, moduleId: values.module!, agentId: values.agent!, workflowId: values.workflow!, responsiblePerson: values.person, acceptance: values.acceptance || [] }, options);
+      ? await manager.Resume(values.task, values.resume, values.message || '', options, values['reconciled-tool'])
+      : await manager.Start({ goal: values.goal!, moduleId: values.module!, agentId: values.agent!, workflowId: values.workflow!, responsiblePerson: values.person, acceptance: values.acceptance || [] }, options);
     stop = () =>
     {
-      void manager.stop(run.taskId)
+      void manager.Stop(run.taskId)
     };
     process.on('SIGINT', stop);
     process.on('SIGTERM', stop);
-    let result = await manager.inspect(run.taskId, run.runId);
+    let result = await manager.Inspect(run.taskId, run.runId);
     while (result.status === 'running')
     {
       await new Promise(resolve => setTimeout(resolve, 100));
-      result = await manager.inspect(run.taskId, run.runId)
+      result = await manager.Inspect(run.taskId, run.runId)
     }
     process.stdout.write(JSON.stringify({ taskId: run.taskId, runId: run.runId, status: result.status, acceptance: result.acceptance }) + '\n');
     if (result.status !== 'completed')
@@ -51,7 +51,7 @@ async function main()
       process.off('SIGINT', stop);
       process.off('SIGTERM', stop)
     }
-    await application.shutdown()
+    await application.Shutdown()
   }
 }
 

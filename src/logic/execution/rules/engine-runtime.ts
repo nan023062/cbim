@@ -7,7 +7,7 @@ export interface EngineRuntimePackage
   /** 本轮已固定的依赖制品，不根据默认活动版本另行解析。 */
   dependencies?: Readonly<Record<string, EngineRuntimePackage>>;
 
-  /** 创建实例时保留引用，close 真正完成后释放；调用幂等，不代表停止请求已经排空。 */
+  /** 已发布包使用固定 retain 入口保留引用，close 真正完成后释放；调用幂等，不代表停止请求已经排空。 */
   retain?(): () => void;
 
   root: string;
@@ -31,5 +31,5 @@ export interface EngineRuntimePackage
 /** 主进程私有端口；调用可等待首次准备，失败不启动引擎；绝不由模型或公开运行参数提供路径。 */
 export interface EngineRuntimeResolver
 {
-  resolveEngine(kind: string): Promise<EngineRuntimePackage>;
+  ResolveEngine(kind: string): Promise<EngineRuntimePackage>;
 }

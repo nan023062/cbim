@@ -24,7 +24,7 @@ export class RunJournal
   }
 
   /** 创建新轮次日志；已有 events.jsonl 时失败，不覆盖历史或把旧日志当作新轮次续写。 */
-  async init()
+  async Init()
   {
     await fs.mkdir(this.directory, { recursive: true });
     const file = await fs.open(path.join(this.directory, 'events.jsonl'), 'wx', 0o600);
@@ -32,7 +32,7 @@ export class RunJournal
   }
 
   /** 顺序追加并 fsync 后返回；一旦写失败，此日志队列后续写入继续失败以阻止无证据执行。 */
-  append(event: EngineEvent): Promise<StoredEvent>
+  Append(event: EngineEvent): Promise<StoredEvent>
   {
     const write = this.tail.then(async () =>
     {
@@ -59,13 +59,13 @@ export class RunJournal
   }
 
   /** 等待截至调用时已排队的写入；日志曾写失败时继续拒绝，不能作为已可靠结算的证明。 */
-  async flush()
+  async Flush()
   {
     await this.tail
   }
 
   /** 只解析完整行并验证身份及顺序；未完整尾行通过 logIntegrity 报告，已放行无结果为 interrupted。IO 错误保留系统码，坏记录使用 RUN_LOG_INVALID。 */
-  static async read(directory: string): Promise<RunSummary>
+  static async Read(directory: string): Promise<RunSummary>
   {
     const text = await fs.readFile(path.join(directory, 'events.jsonl'), 'utf8');
     if (text.length === 0)

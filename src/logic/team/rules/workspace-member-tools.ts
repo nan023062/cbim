@@ -61,5 +61,5 @@ export interface MemberToolBinding
 /** 本轮真实调用 ID 在门禁后独立传递；业务参数不能指定它。 */
 export interface WorkspaceMemberToolsPort
 {
-  call(name: MemberToolName, input: unknown, signal: AbortSignal, toolCallId?: string): Promise<unknown>
+  Call(name: MemberToolName, input: unknown, signal: AbortSignal, toolCallId?: string): Promise<unknown>
 }

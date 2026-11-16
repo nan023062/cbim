@@ -21,17 +21,17 @@ it.each(['auto','team'] as const)('主 Agent 在原会话执行并核实真实�
   }catch(error){errors.push(error);res.writeHead(500);res.end('fixture failed')}});
   try{
     await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
-    await f.app.models.save({profile:{name:'Direct goal',api:'openai-completions',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',auth:'none',defaultModel:'direct',models:[{id:'direct',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false}]}});
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),before=await workspace.snapshot();
-    const run=await f.app.dispatch('loop.chat',{id:entry.id,message:'没有团队时自己实现并验证文件',options:{permission:'execute',collaborationMode:mode,turnTimeoutMs:30000}});
-    await vi.waitFor(async()=>expect((await f.app.execution(entry.id).inspect(run.taskId,run.runId)).status).toBe('completed'),{timeout:30000,interval:40});
-    const state=await workspace.dispatchStore.read(),summary=await f.app.execution(entry.id).inspect(run.taskId,run.runId);
+    await f.app.models.Save({profile:{name:'Direct goal',api:'openai-completions',baseUrl:'http://127.0.0.1:'+(server.address() as any).port+'/v1',auth:'none',defaultModel:'direct',models:[{id:'direct',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false}]}});
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),before=await workspace.Snapshot();
+    const run=await f.app.Dispatch('loop.chat',{id:entry.id,message:'没有团队时自己实现并验证文件',options:{permission:'execute',collaborationMode:mode,turnTimeoutMs:30000}});
+    await vi.waitFor(async()=>expect((await f.app.Execution(entry.id).Inspect(run.taskId,run.runId)).status).toBe('completed'),{timeout:30000,interval:40});
+    const state=await workspace.dispatchStore.Read(),summary=await f.app.Execution(entry.id).Inspect(run.taskId,run.runId);
     expect(summary.status).toBe('completed');expect(summary.toolReceipts?.every(receipt=>receipt.outcome==='succeeded')).toBe(true);expect(summary.toolReceipts).toHaveLength(2);
     expect(summary.conversationBinding).toMatchObject({workspaceId:entry.id,rootSessionId:run.taskId,agentId:'cbim:main'});
     expect(summary.events.some(event=>event.type==='tool.finished'&&event.data.id==='direct-read'&&JSON.stringify(event.data).includes('MAIN_EXECUTION_FACT'))).toBe(true);
     for(const request of requests){const names=request.tools.map((tool:any)=>tool.function.name);expect(names).toContain('cbim_agent_call');expect(names).not.toContain('cbim_goal_review');expect(names).not.toContain('cbim_dispatch_task');}
     expect(await fs.readFile(path.join(f.a,'main-result.txt'),'utf8')).toBe('MAIN_EXECUTION_FACT');expect(state.graphs[0].tasks).toEqual([]);expect(state.members).toHaveLength(1);expect(state.members[0].agentId).toBe('cbim:main');
-    expect(state.workspaceMembers??[]).toEqual([]);expect(state.moduleOwnerships??[]).toEqual([]);expect((await workspace.snapshot()).files).toEqual(before.files);expect(requests).toHaveLength(3);expect(errors).toEqual([]);
-    await f.app.open(entry.id,true);expect(requests).toHaveLength(3);expect(await f.app.execution(entry.id).thread(run.taskId)).toHaveLength(1);
+    expect(state.workspaceMembers??[]).toEqual([]);expect(state.moduleOwnerships??[]).toEqual([]);expect((await workspace.Snapshot()).files).toEqual(before.files);expect(requests).toHaveLength(3);expect(errors).toEqual([]);
+    await f.app.Open(entry.id,true);expect(requests).toHaveLength(3);expect(await f.app.Execution(entry.id).Thread(run.taskId)).toHaveLength(1);
   }finally{await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },45000);

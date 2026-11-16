@@ -14,11 +14,11 @@ export {dependencyRuns as checkpointRuns} from './queued-dependency-replacement-
 
 /** Isolated fixture: the A marker is deliberately absent until the actual member's native write. */
 export async function seedMemberCheckpoint(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
-  const models=await app.models.save({profile:{name:'Member checkpoint fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Member checkpoint fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
-  const snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
+  const models=await app.models.Save({profile:{name:'Member checkpoint fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Member checkpoint fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),team=await seedTeam(workspace);
+  const snapshot=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'checkpoint-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'checkpoint-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
-  await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  await workspace.Commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
   const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:models.profiles.find(profile=>profile.name==='Member checkpoint fixture')!.id,modelId:data.model});provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
   for(let i=1;i<data.files.length;i++)await fs.writeFile(path.join(project,data.files[i]),data.facts[i]);return {entry,team};
 }

@@ -66,12 +66,12 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
   });
   try{
     await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();if(!address||typeof address==='string')throw Error('Provider did not bind');
-    await f.app.models.save({profile:{name:'Goal review fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'goal-fixture',models:[{id:'goal-fixture',name:'Goal fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);moduleId=team.input.moduleId;agentId=team.input.agentId;
-    const snapshot=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
+    await f.app.models.Save({profile:{name:'Goal review fixture',api:'openai-completions',baseUrl:`http://127.0.0.1:${address.port}/v1`,auth:'none',defaultModel:'goal-fixture',models:[{id:'goal-fixture',name:'Goal fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),team=await seedTeam(workspace);moduleId=team.input.moduleId;agentId=team.input.agentId;
+    const snapshot=await workspace.Snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'goal-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'goal-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
-    await workspace.commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'goal-fixture'})).selection;
+    await workspace.Commit(request(snapshot,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId,moduleIds:[moduleId],profileId:(await f.app.models.List()).selectedId!,modelId:'goal-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'review-input.txt'),fact);
     const scopes=async()=>{
       // Never open a recovering store over an active writer; only read complete committed records.
@@ -81,24 +81,24 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
       }
       return {records,current:[...new Map(records.map(scope=>[scope.scopeId,scope])).values()]};
     };
-    const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:20000}}) as {taskId:string;runId:string};
-    const identity={workspaceId:entry.id,rootSessionId:started.taskId},graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
+    const started=await f.app.Dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:20000}}) as {taskId:string;runId:string};
+    const identity={workspaceId:entry.id,rootSessionId:started.taskId},graph=()=>f.app.Dispatch('dispatch.graphSnapshot',{identity}) as Promise<GraphSnapshot>;
     await vi.waitFor(()=>{expect(errors).toEqual([]);expect(mainRequests).toHaveLength(1);expect(memberRequests).toHaveLength(2)},{timeout:20000,interval:30});
     release();
     await vi.waitFor(async()=>{
       expect(errors).toEqual([]);const current=(await scopes()).current;
-      expect(current).toHaveLength(1);expect(current[0].status).toBe('closed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
+      expect(current).toHaveLength(1);expect(current[0].status).toBe('closed');expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0);
     },{timeout:45000,interval:50});
-    const {current}=await scopes(),snapshotGraph=await graph(),first=current[0],thread=await f.app.execution(entry.id).thread(started.taskId);
+    const {current}=await scopes(),snapshotGraph=await graph(),first=current[0],thread=await f.app.Execution(entry.id).Thread(started.taskId);
     expect(first.outcome).toBe('completed');expect(first.goal?.input).toEqual({message:mainGoal,attachmentIds:[]});
     expect(first.goal?.plan).toBeUndefined();expect(first.goal?.review).toBeUndefined();expect(snapshotGraph.tasks).toEqual([]);
     expect(thread).toHaveLength(1);expect(thread[0].runId).toBe(started.runId);
-    const state=await workspace.dispatchStore.read(),runs=state.agentBusinessRuns!;
+    const state=await workspace.dispatchStore.Read(),runs=state.agentBusinessRuns!;
     expect(runs).toHaveLength(mode==='replan'?2:1);expect(state.runs??[]).toEqual([]);
     const summaries=[];
     for(const [index,run] of runs.entries()){
       expect(run.status).toBe('closed');expect(run.parent).toMatchObject({callerRunId:started.runId,toolCallId:index?'goal-call-second':'goal-call-first'});
-      const summary=await new FileRunStorage().read(path.join(f.user,entry.id,'loop-engine/tasks',run.binding.taskId,run.binding.runId));summaries.push(summary);
+      const summary=await new FileRunStorage().Read(path.join(f.user,entry.id,'loop-engine/tasks',run.binding.taskId,run.binding.runId));summaries.push(summary);
       expect(summary.events.filter(e=>e.type==='run.started')).toHaveLength(1);
       if(mode==='failed-member'){expect(summary.status).not.toBe('completed');expect(summary.taskProgress?.delivery).toBeUndefined()}
       else{expect(summary.status).toBe('completed');expect(summary.toolReceipts?.find(r=>r.toolCallId==='goal-member-'+index+'-read')?.outcome).toBe('succeeded');expect(summary.taskProgress?.delivery?.summary).toContain(fact)}
@@ -110,8 +110,8 @@ it.each(['missing-review','failed-member','forged-evidence','replan'] as const)(
     expect(memberRequests).toHaveLength(mode==='failed-member'?2:mode==='replan'?10:5);
     const files=[...thread,...summaries].flatMap(r=>[path.join(f.user,entry.id,'loop-engine/tasks',r.task.taskId,r.runId,'events.jsonl'),r.sessionFile!]);
     const bytes=await Promise.all(files.map(file=>fs.readFile(file))),requestCount=mainRequests.length+memberRequests.length;
-    await f.app.open(entry.id,true);
-    expect((await scopes()).current).toEqual(current);expect(await f.app.workspace(entry.id).dispatchStore.read()).toEqual(state);expect(await graph()).toEqual(snapshotGraph);
+    await f.app.Open(entry.id,true);
+    expect((await scopes()).current).toEqual(current);expect(await f.app.Workspace(entry.id).dispatchStore.Read()).toEqual(state);expect(await graph()).toEqual(snapshotGraph);
     expect(await Promise.all(files.map(file=>fs.readFile(file)))).toEqual(bytes);expect(mainRequests.length+memberRequests.length).toBe(requestCount);expect(errors).toEqual([]);
   }finally{release();await f.cleanup();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}
 },120000);

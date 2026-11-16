@@ -73,7 +73,7 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
 {
   const initial = verifyRuntimeManifest(readJson(bundledManifest), cold, { installed: true });
   const journal = new RuntimeJournal(stateDirectory, { digest: initial.digest, resourceVersion: initial.manifest.resourceVersion });
-  const state = journal.read();
+  const state = journal.Read();
   if (state.pending?.stage === 'data-access')
     throw Error('RESOURCE_RECOVERY_REQUIRED：上次更新已访问用户数据但未确认启动，请从恢复窗口重试原候选。');
   function resolve(digest: string)
@@ -95,7 +95,7 @@ export function selectBootResources(cold: ColdRuntime, cacheRoot: string, bundle
   {
     if (!state.pending || state.pending.dataAccessed)
       throw error;
-    journal.rejectBeforeData(state.pending.digest);
+    journal.RejectBeforeData(state.pending.digest);
     selected = resolve(state.confirmed);
     pending = false;
   }

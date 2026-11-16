@@ -61,7 +61,7 @@ export interface InputImage
   mimeType: string
 }
 
-/** 运行时注入适配器的能力；适配器不得绕过 beforeTool 直接放行工具。 */
+/** 运行时注入适配器的能力；方法名属于已发布引擎包 protocol=1，适配器不得绕过 beforeTool 直接放行工具。 */
 export interface EngineContext
 {
   task: TaskSpec;
@@ -102,7 +102,7 @@ export interface EngineContext
   beforeTool(call: ToolCall): Promise<ToolDecision>;
 }
 
-/** 引擎生命周期；close 必须释放进程/桥并排空事件，run 终态不表示业务验收通过。 */
+/** 已发布引擎包 protocol=1 的固定生命周期；close 必须释放进程/桥并排空事件，run 终态不表示业务验收通过。 */
 export interface AgentEngine
 {
   readonly kind: string;

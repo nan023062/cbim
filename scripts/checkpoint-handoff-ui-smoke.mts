@@ -21,7 +21,7 @@ const provider=await checkpointHandoffProvider(reserved?'reserved':'complete'),p
 let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keepTemp=false,report:Record<string,unknown>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();const seeded=await seedCheckpointHandoff(setup,project,provider.urls);provider.bind(seeded.team.input.agentId,seeded.moduleId);await setup.models.select(seeded.mainOptions.profileId);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();const seeded=await seedCheckpointHandoff(setup,project,provider.urls);provider.bind(seeded.team.input.agentId,seeded.moduleId);await setup.models.Select(seeded.mainOptions.profileId);await setup.Shutdown();setup=undefined;
   const id=seeded.entry.id,records=()=>checkpointHandoffRecords(user,id);
   const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));page.on('requestfailed',request=>transportErrors.push(request.url()+': '+request.failure()?.errorText))};
   const call=<T=any,>(action:string,args:unknown={}):Promise<T>=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
@@ -70,7 +70,7 @@ try{
 }catch(error){
   keepTemp=true;await fs.mkdir('test-results',{recursive:true});const dom=desktop?await desktop.firstWindow().then(p=>p.locator('body').innerText()).catch(()=>undefined):undefined;if(desktop)await desktop.firstWindow().then(p=>p.screenshot({path:`test-results/${artifact}-failure.png`})).catch(()=>{});await fs.writeFile(`test-results/${artifact}-ui-failure.json`,JSON.stringify({packagedExe:exe,temp,mode,error:String(error),dom,state:provider.state,sequence:provider.sequence,pageErrors,transportErrors,providerErrors:provider.errors},null,2));throw error;
 }finally{
-  provider.releaseHandoff();provider.releaseAfterAbandon();if(desktop)await desktop.close();cleanup.desktopClosed=true;if(setup)await setup.shutdown();await provider.close();cleanup.providerClosed=true;
+  provider.releaseHandoff();provider.releaseAfterAbandon();if(desktop)await desktop.close();cleanup.desktopClosed=true;if(setup)await setup.Shutdown();await provider.close();cleanup.providerClosed=true;
   if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-checkpoint-handoff-ui-'));assert.equal((await fs.lstat(target)).isSymbolicLink(),false);await fs.rm(target,{recursive:true,force:true});cleanup.tempRemoved=true}
   if(report){await fs.writeFile(`test-results/${artifact}-ui-smoke.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report))}
 }

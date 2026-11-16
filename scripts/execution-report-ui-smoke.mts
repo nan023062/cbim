@@ -17,8 +17,8 @@ const project=path.join(temp,'project'),user=path.join(temp,'user');await fs.mkd
 const provider=await executionReportProvider({success,hold:true}),pageErrors:string[]=[];
 let desktop:ElectronApplication|undefined,setup:Application|undefined,keepTemp=false,diagnosticQuery:Record<string,unknown>|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  const {entry}=await seedExecutionReport(setup,project,provider);await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  const {entry}=await seedExecutionReport(setup,project,provider);await setup.Shutdown();setup=undefined;
   const waitUntil=async(check:()=>Promise<boolean>,label:string)=>{const deadline=Date.now()+30000;while(Date.now()<deadline){if(await check())return;await new Promise(resolve=>setTimeout(resolve,50))}throw Error('等待验收超时：'+label)};
   desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
   let page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
@@ -88,6 +88,6 @@ try{
   const clicks=desktop?await desktop.firstWindow().then(page=>page.evaluate(()=>(window as any).__reportClicks)).catch(()=>undefined):undefined;
   await fs.writeFile(`test-results/${artifact}-ui-failure.json`,JSON.stringify({packagedExe:exe,temp,error:String(error),reportState,directReport,clicks,mainRequests:provider.mainRequests.length,memberRequests:provider.memberRequests.length,pageErrors,transportErrors:provider.errors},null,2));throw error;
 }finally{
-  provider.release();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.shutdown();await provider.close();
+  provider.release();if(desktop)await desktop.close().catch(()=>{});if(setup)await setup.Shutdown();await provider.close();
   if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-execution-report-ui-'));await fs.rm(target,{recursive:true,force:true})}
 }

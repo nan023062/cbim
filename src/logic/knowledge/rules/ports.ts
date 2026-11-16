@@ -12,7 +12,7 @@ export type { KnowledgeCommit } from './types';
 /** 可信知识串行域；调用方须在其内再取得模型与派发锁，不得从派发事务反向进入。 */
 export interface SourceSnapshotReader
 {
-  withSourceSnapshot<T>(use: (snapshot: Snapshot) => Promise<T>): Promise<T>
+  WithSourceSnapshot<T>(use: (snapshot: Snapshot) => Promise<T>): Promise<T>
 }
 
 /** 实现方负责实例状态、路径边界、并发控制、版本检查、事务恢复和物理写入。 */
@@ -42,26 +42,26 @@ export interface KnowledgeWorkspace
 
   state: string;
 
-  assert(identity?: { workspaceId: string; instanceId: string }): void;
+  Assert(identity?: { workspaceId: string; instanceId: string }): void;
 
-  read(): Promise<Snapshot>;
+  Read(): Promise<Snapshot>;
 
-  snapshot(): Promise<Snapshot>;
+  Snapshot(): Promise<Snapshot>;
 
-  preview(request: ChangeRequest): Promise<Preview>;
+  Preview(request: ChangeRequest): Promise<Preview>;
 
-  commit(request: ChangeRequest): Promise<KnowledgeCommit>;
+  Commit(request: ChangeRequest): Promise<KnowledgeCommit>;
 
   /** 只读核原完整请求的成功 journal；缓存回执不能替代权威成功证明。 */
-  committedReceipt(request: ChangeRequest): Promise<KnowledgeCommit | undefined>;
+  CommittedReceipt(request: ChangeRequest): Promise<KnowledgeCommit | undefined>;
 
   /** 内部计划提交只接固定类型与标识；实现重新读取完整私有计划，不能接调用者自报替换意图。 */
-  commitPlanned(reference: import('./planned-commit').KnowledgePlanRef): Promise<KnowledgeCommit>;
+  CommitPlanned(reference: import('./planned-commit').KnowledgePlanRef): Promise<KnowledgeCommit>;
 
-  planMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>;
+  PlanMove(snapshot: Snapshot, from: string, to: string | null): Promise<ChangeRequest>;
 
-  startTask(name: 'validate' | 'reindex'): TaskView;
+  StartTask(name: 'validate' | 'reindex'): TaskView;
 
   /** 仅接受本实例的维护任务 ID；未运行或未知任务须抛错，返回当前真实状态而非承诺已停止。终态重复请求保持原结果。 */
-  cancelTask(id: string): TaskView;
+  CancelTask(id: string): TaskView;
 }

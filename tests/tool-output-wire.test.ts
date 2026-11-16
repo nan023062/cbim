@@ -34,6 +34,6 @@ it('不可序列化值和校验异常不泄露正文/动态键，错误明确不
 });
 it('已发生的execute遇输出校验失败也只执行一次，不猜测成功或自动重试',async()=>{
   let committed=0;const execute=vi.fn(()=>{committed++;return {state:'committed',unexpected:'bad output'}}),registry=new ToolRegistry<boolean>();
-  registry.register({name:'cbim_commit',version:1,effects:['knowledge-write'],inputSchema:{},outputSchema:z.object({state:z.literal('committed')}).strict(),cancellation:{mode:'preflight_only',description:'不回滚'},recovery:{mode:'same_request',description:'核对原请求'},execute});
-  const resolved=registry.resolve('cbim_commit',{});await expect(registry.invokeResolved(resolved.tool,resolved.args,true)).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(committed).toBe(1);expect(execute).toHaveBeenCalledTimes(1);
+  registry.Register({name:'cbim_commit',version:1,effects:['knowledge-write'],inputSchema:{},outputSchema:z.object({state:z.literal('committed')}).strict(),cancellation:{mode:'preflight_only',description:'不回滚'},recovery:{mode:'same_request',description:'核对原请求'},execute});
+  const resolved=registry.Resolve('cbim_commit',{});await expect(registry.InvokeResolved(resolved.tool,resolved.args,true)).rejects.toMatchObject({code:'TOOL_OUTPUT_INVALID'});expect(committed).toBe(1);expect(execute).toHaveBeenCalledTimes(1);
 });

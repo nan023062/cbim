@@ -64,10 +64,10 @@ class N_src_logic_execution_engines_memory_engine_ts["engine.ts"] {
 }
 class N_src_logic_execution_engines_memory_engine_ts_MemoryEngine["MemoryEngine"] {
   -cache
-  -execute()
-  -invoke()
-  -refreshIndex()
-  -emit()
+  -Execute()
+  -Invoke()
+  -RefreshIndex()
+  -Emit()
 }
 N_src_logic_execution_engines_memory_engine_ts ..> N_src_logic_execution_engines_memory_engine_ts_MemoryEngine : 声明
 class N_src_logic_execution_engines_memory_engine_ts_external_AgentEngine["AgentEngine (外部契约)"] {
@@ -124,8 +124,8 @@ class N_src_logic_execution_engines_memory_storage_ts_MemorySession["MemorySessi
   +id
   +file
   +messages
-  +open()$
-  +append()
+  +Open()$
+  +Append()
   -root
   -bytes
   -constructor()
@@ -133,8 +133,8 @@ class N_src_logic_execution_engines_memory_storage_ts_MemorySession["MemorySessi
 N_src_logic_execution_engines_memory_storage_ts ..> N_src_logic_execution_engines_memory_storage_ts_MemorySession : 声明
 class N_src_logic_execution_engines_memory_storage_ts_MemoryIndexCache["MemoryIndexCache"] {
   +constructor()
-  +load()
-  +save()
+  +Load()
+  +Save()
   -home
 }
 N_src_logic_execution_engines_memory_storage_ts ..> N_src_logic_execution_engines_memory_storage_ts_MemoryIndexCache : 声明
@@ -198,4 +198,4 @@ N_src_logic_execution_engines_memory_storage_ts ..> N_src_logic_execution_engine
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`、`JsonUtils.parseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`、`JsonUtils.ParseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

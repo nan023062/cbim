@@ -42,7 +42,7 @@ class N_src_logic_team_service_workspace_members_ts["workspace-members.ts"] {
 }
 class N_src_logic_team_service_workspace_members_ts_WorkspaceMemberModels["WorkspaceMemberModels"] {
   <<interface>>
-  +configuration()
+  +Configuration()
 }
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_WorkspaceMemberModels : 声明
 class N_src_logic_team_service_workspace_members_ts_PreparedMember["PreparedMember"] {
@@ -54,21 +54,21 @@ class N_src_logic_team_service_workspace_members_ts_PreparedMember["PreparedMemb
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_PreparedMember : 声明
 class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
   +constructor()
-  +list()
-  +get()
-  +preview()
-  +receipt()
-  +mainReceipt()
-  +commit()
+  +List()
+  +Get()
+  +Preview()
+  +Receipt()
+  +MainReceipt()
+  +Commit()
   -owner
   -store
   -models
   -isCurrent
-  -assert()
-  -identity()
-  -sameWorkspace()
-  -cursor()
-  -member()
+  -Assert()
+  -Identity()
+  -SameWorkspace()
+  -Cursor()
+  -Member()
 }
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_WorkspaceMembers : 声明
 ```
@@ -81,15 +81,15 @@ class N_src_logic_team_service_workspace_members_ts["workspace-members.ts"] {
   <<module>>
 }
 class N_src_logic_team_service_workspace_members_ts_WorkspaceMembers["WorkspaceMembers"] {
-  -checkedReceipt()
-  -capability()
-  -policy()
-  -prepare()
-  -verifySources()
-  -selectedCapability()
-  -builtinStatus()
-  -selectedPolicy()
-  -diff()
+  -CheckedReceipt()
+  -Capability()
+  -Policy()
+  -Prepare()
+  -VerifySources()
+  -SelectedCapability()
+  -BuiltinStatus()
+  -SelectedPolicy()
+  -Diff()
 }
 N_src_logic_team_service_workspace_members_ts ..> N_src_logic_team_service_workspace_members_ts_WorkspaceMembers : 声明
 ```

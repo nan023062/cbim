@@ -26,20 +26,20 @@ class N_src_logic_budget_settings_budget_settings_ts["budget-settings.ts"] {
 }
 class N_src_logic_budget_settings_budget_settings_ts_BudgetSettingsStorage["BudgetSettingsStorage"] {
   <<interface>>
-  +read()
-  +write()
+  +Read()
+  +Write()
 }
 N_src_logic_budget_settings_budget_settings_ts ..> N_src_logic_budget_settings_budget_settings_ts_BudgetSettingsStorage : 声明
 class N_src_logic_budget_settings_budget_settings_ts_BudgetSettings["BudgetSettings"] {
   +constructor()
-  +init()
-  +read()
-  +configure()
+  +Init()
+  +Read()
+  +Configure()
   -filename
   -storage
   -policy
   -queue
-  -serial()
+  -Serial()
 }
 N_src_logic_budget_settings_budget_settings_ts ..> N_src_logic_budget_settings_budget_settings_ts_BudgetSettings : 声明
 ```

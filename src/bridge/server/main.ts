@@ -51,7 +51,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
   {
     if (windowLoaded && rendererResponded && !confirmed)
     {
-      runtime?.confirm();
+      runtime?.Confirm();
       confirmed = true
     }
   };
@@ -98,14 +98,14 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
     }
     const beforeInstall = async () =>
     {
-      runtime?.stopPreparingEngines();
-      terminals.closeAll();
-      await application.shutdown();
+      runtime?.StopPreparingEngines();
+      terminals.CloseAll();
+      await application.Shutdown();
       quitting = true
     };
-    updates = runtime ? runtime.updates(beforeInstall, installed) : new DesktopUpdates(app.getVersion(), typeof release.notes === 'string' ? release.notes : '', installed, latestDesktopRelease, new NsisUpdateInstaller(), beforeInstall);
+    updates = runtime ? runtime.Updates(beforeInstall, installed) : new DesktopUpdates(app.getVersion(), typeof release.notes === 'string' ? release.notes : '', installed, latestDesktopRelease, new NsisUpdateInstaller(), beforeInstall);
     application = new Application(new Paths(userRoot, app.isPackaged ? path.dirname(app.getPath('exe')) : install, runtime ? [runtime.cacheRoot] : []), path.join(resources, 'assets'), systemSecretCipher, { controlledFiles: createControlledFileTransport(), engineArtifacts: runtime?.engineArtifacts, webBrowser: new ElectronBrowserReader() });
-    await application.init({ restore: false });
+    await application.Init({ restore: false });
     window = new BrowserWindow({ width: 1320, height: 860, minWidth: 760, minHeight: 520, title: 'CBIM', icon: path.join(install, app.isPackaged ? 'branding' : 'assets/branding', 'cbim.png'), webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
     // 后台网页窗口不应延迟主窗口退出；统一走 before-quit 的取消与排空，失败时仍保留主窗口。
     window.on('close', event =>
@@ -129,18 +129,18 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
     {
       if (event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame)
         throw Error('UNAUTHORIZED');
-      if (updates?.status().phase === 'installing')
+      if (updates?.Status().phase === 'installing')
         return { ok: false, error: { code: 'UPDATING', message: '正在关闭任务并安装更新，请稍后重新打开。' } };
       try
       {
         if (!request || !Array.isArray(request.paths) || !request.paths.length || request.paths.length > 12 || request.paths.some(p => typeof p !== 'string'))
           throw Error('无效文件列表');
-        const inputs = new ChatInputs(application.workspace(request.id));
+        const inputs = new ChatInputs(application.Workspace(request.id));
         const items = [];
         for (const file of request.paths)
         {
           const stat = await fs.stat(file);
-          items.push(await inputs.path(stat.isDirectory() ? 'folder' : 'file', file))
+          items.push(await inputs.Path(stat.isDirectory() ? 'folder' : 'file', file))
         }
         return { ok: true, value: items };
       }
@@ -161,7 +161,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           if (action !== 'desktop.updates.status' && action !== 'desktop.updates.check' && action !== 'desktop.updates.download' && action !== 'desktop.updates.install')
             throw Error('未知更新操作');
           parseIpcRequest(action, args);
-          const value = action === 'desktop.updates.status' ? updates!.status() : action === 'desktop.updates.check' ? await updates!.check() : action === 'desktop.updates.download' ? await updates!.download() : action === 'desktop.updates.install' ? await updates!.install() : (() =>
+          const value = action === 'desktop.updates.status' ? updates!.Status() : action === 'desktop.updates.check' ? await updates!.Check() : action === 'desktop.updates.download' ? await updates!.Download() : action === 'desktop.updates.install' ? await updates!.Install() : (() =>
           {
             throw Error('未知更新操作')
           })();
@@ -171,7 +171,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
         {
           return { ok: false, error: { code: 'DESKTOP_UPDATE', message: '更新操作未能完成，请检查当前状态后重试。' } }
         }
-      if (updates?.status().phase === 'installing')
+      if (updates?.Status().phase === 'installing')
         return { ok: false, error: { code: 'UPDATING', message: '正在关闭任务并安装更新，请稍后重新打开。' } };
 
       // 对话菜单复用 Application 的唯一引擎安装账本；冷壳仅提供验签制品，不维护第二份安装状态。
@@ -184,13 +184,13 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           {
             if (!packages)
               throw Error('当前宿主不支持引擎安装');
-            const state = await packages.read(),
+            const state = await packages.Read(),
               item = state.items.find(item => item.kind === request.engine);
             if (!item?.candidate)
               throw Error('没有可安装的兼容版本');
-            await packages.install(request.engine, { revision: state.revision, identity: item.candidate.identity });
+            await packages.Install(request.engine, { revision: state.revision, identity: item.candidate.identity });
           }
-          const state = await packages?.read();
+          const state = await packages?.Read();
           const value = state ? state.items.map(item => ({ engine: item.kind, state: item.preparing ? 'preparing' as const : item.error ? 'failed' as const : !item.active ? 'install' as const : !item.enabled ? 'failed' as const : item.candidate?.identity !== item.active.identity ? 'update' as const : 'ready' as const, version: item.candidate?.version, installedVersion: item.active?.version, progress: item.preparation?.progress, error: item.error ?? (!item.enabled ? '引擎已停用，可重新安装启用' : undefined) })) : (['pi', 'claude-code', 'codex', 'memory'] as const).map(engine => ({ engine, state: runtime ? 'unavailable' as const : 'bundled' as const }));
           return action === 'desktop.engines.status' ? ipcSuccess(action, value) : ipcSuccess(action, value.find(item => item.engine === request!.engine)!);
         }
@@ -204,22 +204,22 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           if (action === 'terminal.close')
           {
             const request = parseIpcRequest(action, args);
-            terminals.close(request.id + ':' + request.tabId);
+            terminals.Close(request.id + ':' + request.tabId);
             return ipcSuccess(action, undefined)
           }
           if (action === 'terminal.start')
           {
             const request = parseIpcRequest(action, args),
-              ws = application.workspace(request.id);
-            ws.assert();
-            return ipcSuccess(action, terminals.start(request.id + ':' + request.tabId, ws.entry.path, request.command))
+              ws = application.Workspace(request.id);
+            ws.Assert();
+            return ipcSuccess(action, terminals.Start(request.id + ':' + request.tabId, ws.entry.path, request.command))
           }
           if (action === 'terminal.read')
           {
             const request = parseIpcRequest(action, args),
-              ws = application.workspace(request.id);
-            ws.assert();
-            return ipcSuccess(action, terminals.read(request.id + ':' + request.tabId))
+              ws = application.Workspace(request.id);
+            ws.Assert();
+            return ipcSuccess(action, terminals.Read(request.id + ':' + request.tabId))
           }
           throw Error('未知终端操作');
         }
@@ -243,7 +243,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
         {
           // 只有用户点击才打开链接；业务产物必须属于当前工作区且不是可执行程序。
           const request = parseIpcRequest(action, args);
-          const owner = application.workspace(request.id);
+          const owner = application.Workspace(request.id);
           if (typeof request.target !== 'string')
             throw Error('无效链接');
           if (/^https?:\/\//i.test(request.target))
@@ -280,14 +280,14 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
             throw Error('未知附件类型');
           if (request.importId !== undefined)
           {
-            const value = await application.chatMaterials.pick(request, async () =>
+            const value = await application.chatMaterials.Pick(request, async () =>
             {
               const result = await dialog.showOpenDialog(window, { properties: request.kind === 'folder' ? ['openDirectory'] : ['openFile', 'multiSelections'] });
               return result.canceled ? [] : result.filePaths
             });
             return ipcSuccess(action, value)
           }
-          const inputs = new ChatInputs(application.workspace(request.id));
+          const inputs = new ChatInputs(application.Workspace(request.id));
           const result = await dialog.showOpenDialog(window, { properties: request.kind === 'folder' ? ['openDirectory'] : ['openFile', 'multiSelections'] });
           // 在导入第一份快照前拒绝超量选择，不能静默裁剪用户明确选中的资料。
           if (!result.canceled && result.filePaths.length > 12)
@@ -295,7 +295,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           const items = [];
           if (!result.canceled)
             for (const file of result.filePaths)
-              items.push(await inputs.path(request.kind, file));
+              items.push(await inputs.Path(request.kind, file));
           return ipcSuccess(action, items);
         }
         catch (e: any)
@@ -310,7 +310,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           const result = await dialog.showOpenDialog(window, { properties: ['openDirectory'] });
           return ipcSuccess(action, result.canceled ? null : result.filePaths[0])
         }
-        const value = await application.dispatch(action, args);
+        const value = await application.Dispatch(action, args);
         if (action === 'list')
         {
           rendererResponded = true;
@@ -329,26 +329,26 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
       await window.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
     windowLoaded = true;
     confirmStartup();
-    updates.start();
-    void application.restore().catch(error =>
+    updates.Start();
+    void application.Restore().catch(error =>
     {
       dialog.showErrorBox('工作区恢复失败', String(error) + '\n程序窗口已打开，可在工作区中重试。')
     });
     // 仅隔离数据目录下的显式打包测试可写入样本；正常启动走运行授权策略。
     if (process.env.CBIM_SMOKE_ROOT && userRoot)
     {
-      const entry = await application.catalog.add(process.env.CBIM_SMOKE_ROOT),
-        ws = await application.open(entry.id),
-        snap = await ws.snapshot();
+      const entry = await application.catalog.Add(process.env.CBIM_SMOKE_ROOT),
+        ws = await application.Open(entry.id),
+        snap = await ws.Snapshot();
       const tools = knowledgeTools(ws),
         identity = { workspaceId: entry.id, instanceId: ws.instanceId };
       const invoke = async (name: string, args: Record<string, unknown> = {}, write = false) =>
       {
-        const result = await tools.callFromRun(name, name === 'cbim_workspace_identity' ? {} : { ...identity, ...args }, write);
+        const result = await tools.CallFromRun(name, name === 'cbim_workspace_identity' ? {} : { ...identity, ...args }, write);
         return JSON.parse(result.content[0].text);
       };
       const current = await invoke('cbim_workspace_identity');
-      if (current.workspaceId !== entry.id || current.instanceId !== ws.instanceId || !tools.list().some(t => t.name === 'cbim_knowledge_snapshot'))
+      if (current.workspaceId !== entry.id || current.instanceId !== ws.instanceId || !tools.List().some(t => t.name === 'cbim_knowledge_snapshot'))
         throw Error('Packaged internal knowledge verification failed');
       for (const tool of ['cbim_skill_knowledge_query', 'cbim_skill_business_execution', 'cbim_skill_knowledge_governance', 'cbim_skill_architecture_governance', 'cbim_skill_create_agent_skill', 'cbim_skill_create_workflow', 'cbim_skill_core_check'])
         await invoke(tool);
@@ -365,7 +365,7 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
           throw Error('Packaged builtin read failed: ' + item.id)
       }
       await fs.writeFile(path.join(userRoot, 'smoke-result.json'), json({ packaged: app.isPackaged, workspaceId: entry.id, files: snap.files.length, internalKnowledge: true, builtins: true, objectCrud: true, workspaceState: ws.state, structural: snap.validation?.structural }));
-      await application.shutdown();
+      await application.Shutdown();
       app.quit();
     }
   }).catch(e =>
@@ -380,10 +380,10 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
     {
       event.preventDefault();
       quitting = true;
-      updates?.close();
-      runtime?.stopPreparingEngines();
-      terminals.closeAll();
-      void application.shutdown().then(() => app.quit()).catch(e =>
+      updates?.Close();
+      runtime?.StopPreparingEngines();
+      terminals.CloseAll();
+      void application.Shutdown().then(() => app.quit()).catch(e =>
       {
         quitting = false;
         dialog.showErrorBox('工作区关闭失败', e.message + '\n请保留运行窗口并重试。')
@@ -391,5 +391,5 @@ export function startDesktop(runtime?: DesktopRuntimeHost)
     }
   });
   app.on('window-all-closed', () => app.quit());
-  app.on('will-quit', () => updates?.close());
+  app.on('will-quit', () => updates?.Close());
 }

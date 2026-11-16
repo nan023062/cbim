@@ -38,7 +38,7 @@ export const githubRequest: GitHubRequest = async (endpoint, options) =>
   try
   {
     const response = await fetch(url, { method: options.method, redirect: 'error', signal, headers: { Accept: 'application/json', 'User-Agent': 'CBIM-feedback', ...(url.hostname === 'api.github.com' ? { 'X-GitHub-Api-Version': '2026-03-10' } : {}), ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) }, ...(options.body ? { body: JSON.stringify(options.body) } : {}) });
-    const bytes = await ByteUtils.readBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal });
+    const bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal });
     let data: unknown;
     try
     {

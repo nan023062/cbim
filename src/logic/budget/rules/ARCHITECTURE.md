@@ -87,8 +87,8 @@ class N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetMuta
 N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetMutation : 声明
 class N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetStore["RequestBudgetStore"] {
   <<interface>>
-  +readBudget()
-  +transactBudget()
+  +ReadBudget()
+  +TransactBudget()
 }
 N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetStore : 声明
 ```
@@ -100,8 +100,8 @@ class N_src_logic_budget_rules_model_request_budget_storage_ts["model-request-bu
 }
 class N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetAdmission["RequestBudgetAdmission"] {
   <<interface>>
-  +isMainLive()
-  +preflightRequest()
+  +IsMainLive()
+  +PreflightRequest()
 }
 N_src_logic_budget_rules_model_request_budget_storage_ts ..> N_src_logic_budget_rules_model_request_budget_storage_ts_RequestBudgetAdmission : 声明
 ```
@@ -473,4 +473,4 @@ model-request-configuration.ts 从原执行快照投影预算模型；primary �
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

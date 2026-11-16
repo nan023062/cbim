@@ -12,35 +12,35 @@ import { ChatInputs } from '../../../logic/materials/service/chat-inputs';
 export function chatIpcHandlers(app: ApplicationServices): IpcHandlers<keyof ChatIpcResponses>
 {
   return {
-    'chat.paths': args => new ChatInputs(app.workspace(args.id)).pastedPaths(args.paths),
-    'chat.image': args => new ChatInputs(app.workspace(args.id)).clipboardImage(args),
+    'chat.paths': args => new ChatInputs(app.Workspace(args.id)).PastedPaths(args.paths),
+    'chat.image': args => new ChatInputs(app.Workspace(args.id)).ClipboardImage(args),
     'chat.attach': async args =>
     {
-      return new ChatInputs(app.workspace(args.id)).add(args.attachment);
+      return new ChatInputs(app.Workspace(args.id)).Add(args.attachment);
     },
     'chat.materialTargets': async args =>
     {
-      return app.chatMaterials.targets(args);
+      return app.chatMaterials.Targets(args);
     },
     'chat.materialList': async args =>
     {
-      return app.chatMaterials.list(args);
+      return app.chatMaterials.List(args);
     },
     'chat.import': async args =>
     {
-      return app.chatMaterials.import(args);
+      return app.chatMaterials.Import(args);
     },
     'chat.importCancel': async args =>
     {
-      return app.chatMaterials.cancel(args);
+      return app.chatMaterials.Cancel(args);
     },
     'chat.connectors': async args =>
     {
-      return new ChatInputs(app.workspace(args.id)).connectors();
+      return new ChatInputs(app.Workspace(args.id)).Connectors();
     },
     'chat.preview': async args =>
     {
-      return new ChatInputs(app.workspace(args.id)).preview(args.attachmentId);
+      return new ChatInputs(app.Workspace(args.id)).Preview(args.attachmentId);
     },
   };
 }

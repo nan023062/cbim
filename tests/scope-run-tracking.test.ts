@@ -65,12 +65,12 @@ it('完整清单中的计划和审阅不能借用未登记主轮',()=>{
 it('真实存储提交与重放保护主轮清单，追加不推进任务图，关闭后仍完整保留',async()=>{
   const f=await fixture();let store:FileDispatchStore|undefined,reader:FileDispatchStore|undefined;
   try{
-    const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),directory=path.join(f.user,'tracked-scopes');store=new FileDispatchStore(directory,entry.id);
-    const dispatch=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'tracked-root'};await dispatch.openGraph({...identity,commandId:'root'});
-    const first={...scope(),...identity,createdAt:new Date().toISOString()};await store.transact({commandId:'first',fingerprint:'first'},async()=>({scopes:[first],receipt:true}));const graph=(await store.snapshot(identity)).cursor;
-    const next=appendScopeMainRun(first,'second');await store.transact({commandId:'second',fingerprint:'second'},async()=>({scopes:[next],receipt:true}));expect((await store.snapshot(identity)).cursor).toEqual(graph);
-    await expect(store.transact({commandId:'rewrite',fingerprint:'rewrite'},async()=>({scopes:[first],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
-    await dispatch.closeScope(identity,first.scopeId,'cancelled');const expected=await store.read();await store.close();store=undefined;
-    reader=new FileDispatchStore(directory,entry.id);expect(await reader.read()).toEqual(expected);expect((await reader.read()).scopes![0].runTracking?.mainRunIds).toEqual(['first-scope','second']);
-  }finally{await reader?.close();await store?.close();await f.cleanup()}
+    const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),directory=path.join(f.user,'tracked-scopes');store=new FileDispatchStore(directory,entry.id);
+    const dispatch=new WorkspaceDispatchService(workspace,store),identity={workspaceId:entry.id,rootSessionId:'tracked-root'};await dispatch.OpenGraph({...identity,commandId:'root'});
+    const first={...scope(),...identity,createdAt:new Date().toISOString()};await store.Transact({commandId:'first',fingerprint:'first'},async()=>({scopes:[first],receipt:true}));const graph=(await store.Snapshot(identity)).cursor;
+    const next=appendScopeMainRun(first,'second');await store.Transact({commandId:'second',fingerprint:'second'},async()=>({scopes:[next],receipt:true}));expect((await store.Snapshot(identity)).cursor).toEqual(graph);
+    await expect(store.Transact({commandId:'rewrite',fingerprint:'rewrite'},async()=>({scopes:[first],receipt:true}))).rejects.toMatchObject({code:'GRAPH_INPUT_INVALID'});
+    await dispatch.CloseScope(identity,first.scopeId,'cancelled');const expected=await store.Read();await store.Close();store=undefined;
+    reader=new FileDispatchStore(directory,entry.id);expect(await reader.Read()).toEqual(expected);expect((await reader.Read()).scopes![0].runTracking?.mainRunIds).toEqual(['first-scope','second']);
+  }finally{await reader?.Close();await store?.Close();await f.cleanup()}
 });

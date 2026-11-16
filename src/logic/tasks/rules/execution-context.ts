@@ -126,7 +126,7 @@ const shape = z.object({
 
 /** 为序列化字段排序，数组顺序仍有业务含义；调用者须先保证输入为可序列化快照。 */
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
+const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
 
 /** 创建或复核指纹；仅排除根 fingerprint，不排除正文中的同名知识字段。 */
 export function dispatchKnowledgeFingerprint(value: Omit<PreparedDispatchKnowledge, 'fingerprint'> | PreparedDispatchKnowledge): string

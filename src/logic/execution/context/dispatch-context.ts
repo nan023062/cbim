@@ -49,7 +49,7 @@ export async function resolveDispatchAgent(snapshot: Snapshot, agentId: string):
     fail('AGENT_RETIRED', '内置默认执行 Agent 已退役；未指定自定义 Agent 的模块由主 Agent 在当前会话执行');
   if (!Object.hasOwn(snapshot.validation!.skills ?? {}, agentId))
     fail('AGENT_MISSING', '成员角色不存在或不是有效团队叶子');
-  const agent = await new Team(snapshot).agent(agentId);
+  const agent = await new Team(snapshot).Agent(agentId);
   if (!agent.skillSelectionValid)
     fail('KNOWLEDGE_INVALID', '成员 Skill 继承存在冲突');
   return {
@@ -74,7 +74,7 @@ export async function resolveDispatchModules(snapshot: Snapshot, moduleIds: stri
   {
     if (!Object.hasOwn(snapshot.validation!.tree.nodes, moduleId))
       fail('MODULE_MISSING', `模块不存在：${moduleId}`);
-    const module = await workspace.module(moduleId);
+    const module = await workspace.Module(moduleId);
     const selected = workflowSelections?.find(item => item.moduleId === moduleId);
     const workflow = selected ? module.workflows.find((item: { id: string }) => item.id === selected.workflowId) : module.workflows[0];
     if (selected && !workflow)

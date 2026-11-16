@@ -7,7 +7,7 @@
 import { JsonUtils } from '../../../core/utility';
 
 /** 策略属于前端比较契约，不改变后端其他调用方的字典序或字段保留规则。 */
-const orderedJson = (value: unknown) => JsonUtils.orderJsonValue(value, { compareKeys: (left, right) => left.localeCompare(right), omitUndefinedProperties: true });
+const orderedJson = (value: unknown) => JsonUtils.OrderJsonValue(value, { compareKeys: (left, right) => left.localeCompare(right), omitUndefinedProperties: true });
 
 /**
  * 比较对象键排序后的 JSON 文本，不修改输入；数组次序保留，对象 undefined 属性省略。

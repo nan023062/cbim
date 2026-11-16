@@ -23,7 +23,7 @@ export interface EngineProcess
   env?: Record<string, string | undefined>
 }
 
-/** 每次工厂调用获得独立实例；配置已冻结，端口不能绕过 EngineContext 的权限与持久化顺序。 */
+/** 每次工厂调用获得独立实例；配置已冻结，端口不能绕过 EngineContext 的权限与持久化顺序。requestBudget 是已发布 protocol=1 的固定入口。 */
 export interface EngineAdapterOptions
 {
   runtime?: EngineRuntimePackage;
@@ -55,7 +55,7 @@ export interface EngineAdapterOptions
   requestBudget?(role?: string): Promise<RequestBudgetPort | undefined>;
 }
 
-/** 发布包导出唯一 engineAdapter；版本由开发者随适配器维护，不从 SDK 的版本推断。 */
+/** 发布包导出唯一 engineAdapter；create 名称属于 protocol=1。版本由适配器维护，不从 SDK 版本推断。 */
 export interface EngineAdapter
 {
   readonly protocol: typeof engineAdapterProtocol;
@@ -97,5 +97,5 @@ export function checkedEngineAdapter(value: unknown, expected: { id: string; ver
 function descriptorContract(value: EngineDescriptor)
 {
   const policy = { id: value.id, storageDirectory: value.storageDirectory, nativeHistoryFormat: value.nativeHistoryFormat, supportedApis: value.supportedApis, fallbackApi: value.fallbackApi, packageDependencies: value.packageDependencies ?? [], additionalModelRoles: (value.additionalModelRoles ?? []).map(({ label: _label, ...role }) => role) };
-  return JSON.stringify(JsonUtils.orderJsonValue(policy, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true }));
+  return JSON.stringify(JsonUtils.OrderJsonValue(policy, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true }));
 }

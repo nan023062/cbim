@@ -16,7 +16,7 @@ import { isHumanContinuation } from '../rules/scope-continuation-record';
 import { scopeActiveInputLimits, scopeActiveInputPayloadSchema, scopeActiveInputSendReceiptSchema, scopeHasUnresolvedActiveInput, type ScopeActiveInput, type ScopeActiveInputPayload, type ScopeActiveInputToken, type ScopeActiveInputSendReceipt } from '../rules/scope-active-input';
 import { scopedActiveInputHash } from '../rules/scope-active-input-rules';
 
-type Owner = Pick<KnowledgeWorkspace, 'entry' | 'assert'>;
+type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 
 function check(value: unknown, code: string, message: string): asserts value
 {
@@ -37,10 +37,10 @@ export interface PreparedActiveInput
 export class ScopeActiveInputService
 {
   /** 发送沿原持久意图完成结算；原生回执不明保留 unknown，已接受后停止不得反悔。新旧运行共用此边界。 */
-  async send(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, input: ScopeActiveInputPayload, signal: AbortSignal, send: (token: ScopeActiveInputToken) => Promise<ScopeActiveInputSendReceipt | undefined>): Promise<void>
+  async Send(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, input: ScopeActiveInputPayload, signal: AbortSignal, send: (token: ScopeActiveInputToken) => Promise<ScopeActiveInputSendReceipt | undefined>): Promise<void>
   {
     const fixed = structuredClone(input),
-      prepared = await this.prepare(identity, scopeId, runId, queueId, fixed, signal);
+      prepared = await this.Prepare(identity, scopeId, runId, queueId, fixed, signal);
     if (!prepared.fresh)
     {
       if (prepared.record.status === 'accepted')
@@ -60,7 +60,7 @@ export class ScopeActiveInputService
         })?.code ?? '');
       try
       {
-        await this.resolve(identity, prepared.token, { status: rejected ? 'rejected' : 'unknown', reason: rejected ? '原生发送前已停止或原运行失效' : '原生发送或接受日志未能确认，不能自动重发' })
+        await this.Resolve(identity, prepared.token, { status: rejected ? 'rejected' : 'unknown', reason: rejected ? '原生发送前已停止或原运行失效' : '原生发送或接受日志未能确认，不能自动重发' })
       }
       catch
       {
@@ -72,7 +72,7 @@ export class ScopeActiveInputService
       fail('QUEUE_INSERT_UNKNOWN', '原生接收缺少可信日志依据，原尝试保留待核实');
     try
     {
-      await this.resolve(identity, prepared.token, { status: 'accepted', input: fixed, receipt })
+      await this.Resolve(identity, prepared.token, { status: 'accepted', input: fixed, receipt })
     }
     catch
     {
@@ -84,9 +84,9 @@ export class ScopeActiveInputService
   {
   }
 
-  private scope(state: DispatchState, identity: GraphIdentity, scopeId: string)
+  private Scope(state: DispatchState, identity: GraphIdentity, scopeId: string)
   {
-    this.owner.assert();
+    this.owner.Assert();
     check(state.workspaceId === identity.workspaceId && identity.workspaceId === this.owner.entry.id, 'GOAL_ACTIVE_INPUT_IDENTITY', '补充不属于当前工作区');
     const scope = state.scopes?.find(item => item.scopeId === scopeId && item.workspaceId === identity.workspaceId && item.rootSessionId === identity.rootSessionId);
     check(scope, 'GOAL_ACTIVE_INPUT_IDENTITY', '补充不属于当前主会话周期');
@@ -94,18 +94,18 @@ export class ScopeActiveInputService
   }
 
   /** 按原 run/queue 查询所有周期，不读取附件、发送消息或推测失败记录可重试。 */
-  async inspect(identity: GraphIdentity, runId: string, queueId: string): Promise<ScopeActiveInput | undefined>
+  async Inspect(identity: GraphIdentity, runId: string, queueId: string): Promise<ScopeActiveInput | undefined>
   {
-    this.owner.assert();
+    this.owner.Assert();
     check(identity.workspaceId === this.owner.entry.id, 'GOAL_ACTIVE_INPUT_IDENTITY', '补充不属于当前工作区');
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       records = state.scopes?.filter(scope => scope.workspaceId === identity.workspaceId && scope.rootSessionId === identity.rootSessionId).flatMap(scope => (scope.activeInputs ?? []).filter(item => item.runId === runId && item.queueId === queueId)) ?? [];
     check(records.length <= 1, 'GOAL_ACTIVE_INPUT_IDENTITY', '原插入身份存在冲突');
     return records[0];
   }
 
   /** 事务返回前不得发送；pending 不修改目标，只预留版本/正文并阻止旧计划继续推进。 */
-  async prepare(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, raw: ScopeActiveInputPayload, signal: AbortSignal): Promise<PreparedActiveInput>
+  async Prepare(identity: GraphIdentity, scopeId: string, runId: string, queueId: string, raw: ScopeActiveInputPayload, signal: AbortSignal): Promise<PreparedActiveInput>
   {
     const parsed = scopeActiveInputPayloadSchema.safeParse(raw);
     check(parsed.success, 'GOAL_ACTIVE_INPUT_INVALID', '输入快照为空、超限或附件身份无效');
@@ -117,7 +117,7 @@ export class ScopeActiveInputService
     const inputHash = scopedActiveInputHash(input),
       insertionId = hash(json({ scopeId, runId, queueId })),
       token = { scopeId, insertionId, queueId, runId, inputHash };
-    const observed = this.scope(await this.store.read(), identity, scopeId),
+    const observed = this.Scope(await this.store.Read(), identity, scopeId),
       prior = observed.activeInputs?.find(item => item.queueId === queueId && item.runId === runId);
     if (prior)
     {
@@ -128,14 +128,14 @@ export class ScopeActiveInputService
       messageCharacters = input.message.length;
     const alive = () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       if (signal.aborted)
         fail('QUEUE_INSERT_STOPPED', '当前运行已停止插入，原消息仍保留在队列')
     };
     let fresh = false;
-    const record = await this.store.transact<ScopeActiveInput>({ commandId: 'active-input-prepare-' + insertionId, fingerprint: hash(json({ identity, token, input })) }, async state =>
+    const record = await this.store.Transact<ScopeActiveInput>({ commandId: 'active-input-prepare-' + insertionId, fingerprint: hash(json({ identity, token, input })) }, async state =>
     {
-      const scope = this.scope(state, identity, scopeId),
+      const scope = this.Scope(state, identity, scopeId),
         existing = scope.activeInputs?.find(item => item.insertionId === insertionId);
       if (existing)
       {
@@ -160,15 +160,15 @@ export class ScopeActiveInputService
   }
 
   /** ACK 后取消不能撤销接收；只改变原 pending，重复结果返回同一事实，失败不自动重发。 */
-  async resolve(identity: GraphIdentity, token: ScopeActiveInputToken, outcome: { status: 'accepted'; input: ScopeActiveInputPayload; receipt: ScopeActiveInputSendReceipt } | { status: 'rejected' | 'unknown'; reason: string }): Promise<ScopeActiveInput>
+  async Resolve(identity: GraphIdentity, token: ScopeActiveInputToken, outcome: { status: 'accepted'; input: ScopeActiveInputPayload; receipt: ScopeActiveInputSendReceipt } | { status: 'rejected' | 'unknown'; reason: string }): Promise<ScopeActiveInput>
   {
     const fixed = structuredClone({ token, outcome });
     token = fixed.token;
     outcome = fixed.outcome;
     identity = structuredClone(identity);
-    return this.store.transact({ commandId: 'active-input-resolve-' + token.insertionId, fingerprint: hash(json(fixed)) }, async state =>
+    return this.store.Transact({ commandId: 'active-input-resolve-' + token.insertionId, fingerprint: hash(json(fixed)) }, async state =>
     {
-      const scope = this.scope(state, identity, token.scopeId),
+      const scope = this.Scope(state, identity, token.scopeId),
         record = scope.activeInputs?.find(item => item.insertionId === token.insertionId);
       check(record && record.queueId === token.queueId && record.runId === token.runId && record.inputHash === token.inputHash, 'GOAL_ACTIVE_INPUT_IDENTITY', '补充结果缺少原准备记录');
       check(scope.status === 'active', 'GOAL_ACTIVE_INPUT_CLOSED', '原周期已封存，不能补造接收结果');

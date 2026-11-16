@@ -38,22 +38,22 @@ it.each(['execute','read'] as const)('真实 Pi 主工具 %s 注册、采纳、�
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{
   seeded=await seedWorkspaceMembers(app,f.temp,`http://127.0.0.1:${(server.address() as any).port}/v1`);
-  const workspace=app.workspace(seeded.entry.id),snapshot=await workspace.snapshot(),file=snapshot.files.find(f=>f.path===seeded.team.input.agentId+'/agent.json')!;
-  await workspace.commit(request(snapshot,[{path:file.path,text:JSON.stringify({...JSON.parse(file.text),runtime:{engine:'pi',profileId:seeded.profileId,modelId:seeded.modelId}})}]));
-  const started=await app.dispatch('loop.chat',{id:seeded.entry.id,message:'通过岗位工具登记并修订团队能力',options:{permission,turnTimeoutMs:60000}});
-  await vi.waitFor(async()=>{expect((await app.dispatch('loop.inspect',{id:seeded.entry.id,taskId:started.taskId,runId:started.runId})).status).not.toBe('running')},{timeout:60000,interval:50});
+  const workspace=app.Workspace(seeded.entry.id),snapshot=await workspace.Snapshot(),file=snapshot.files.find(f=>f.path===seeded.team.input.agentId+'/agent.json')!;
+  await workspace.Commit(request(snapshot,[{path:file.path,text:JSON.stringify({...JSON.parse(file.text),runtime:{engine:'pi',profileId:seeded.profileId,modelId:seeded.modelId}})}]));
+  const started=await app.Dispatch('loop.chat',{id:seeded.entry.id,message:'通过岗位工具登记并修订团队能力',options:{permission,turnTimeoutMs:60000}});
+  await vi.waitFor(async()=>{expect((await app.Dispatch('loop.inspect',{id:seeded.entry.id,taskId:started.taskId,runId:started.runId})).status).not.toBe('running')},{timeout:60000,interval:50});
   expect(errors).toEqual([]);
-  expect((await app.dispatch('loop.inspect',{id:seeded.entry.id,taskId:started.taskId,runId:started.runId})).status).toBe('completed');
-  const list=await app.workspaceMembers(seeded.entry.id).list({workspaceId:seeded.entry.id,instanceId:workspace.instanceId});
+  expect((await app.Dispatch('loop.inspect',{id:seeded.entry.id,taskId:started.taskId,runId:started.runId})).status).toBe('completed');
+  const list=await app.WorkspaceMembers(seeded.entry.id).List({workspaceId:seeded.entry.id,instanceId:workspace.instanceId});
   expect(list.total).toBe(permission==='execute'?1:0);
   if(permission==='execute'){
    expect(list.items[0]).toMatchObject({memberId,revision:4,state:'suspended',name:'由主工具修订的岗位'});
-   const receipt=await app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,started.taskId);
-   await expect(app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,'other')).rejects.toMatchObject({code:'MEMBER_ACTOR'});
-   const count=requests.length;await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
-   expect(await app.workspaceMembers(seeded.entry.id).mainReceipt(seeded.entry.id,commandId,started.taskId)).toEqual(receipt);expect(requests).toHaveLength(count);
+   const receipt=await app.WorkspaceMembers(seeded.entry.id).MainReceipt(seeded.entry.id,commandId,started.taskId);
+   await expect(app.WorkspaceMembers(seeded.entry.id).MainReceipt(seeded.entry.id,commandId,'other')).rejects.toMatchObject({code:'MEMBER_ACTOR'});
+   const count=requests.length;await app.Shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.Init();
+   expect(await app.WorkspaceMembers(seeded.entry.id).MainReceipt(seeded.entry.id,commandId,started.taskId)).toEqual(receipt);expect(requests).toHaveLength(count);
   }
- }finally{await app.shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
+ }finally{await app.Shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },90000);
 
 it('主工具拒绝模型选型、模型采纳及伪造 actor 字段',()=>{

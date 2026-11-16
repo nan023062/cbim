@@ -18,7 +18,7 @@ export class TerminalSessions
       exitCode: number | null
     }>();
 
-  start(key: string, cwd: string, command: string)
+  Start(key: string, cwd: string, command: string)
   {
     if (typeof command !== 'string' || !command.trim() || command.length > 16000)
       throw Error('请输入有效命令');
@@ -56,16 +56,16 @@ export class TerminalSessions
       entry.exitCode = code;
       entry.running = false
     });
-    return this.read(key);
+    return this.Read(key);
   }
 
-  read(key: string)
+  Read(key: string)
   {
     const entry = this.entries.get(key);
     return entry ? { output: entry.output, running: entry.running, exitCode: entry.exitCode } : { output: '', running: false, exitCode: null }
   }
 
-  close(key: string)
+  Close(key: string)
   {
     const e = this.entries.get(key);
     if (e?.process && e.running)
@@ -78,9 +78,9 @@ export class TerminalSessions
     this.entries.delete(key)
   }
 
-  closeAll()
+  CloseAll()
   {
     for (const key of this.entries.keys())
-      this.close(key)
+      this.Close(key)
   }
 }

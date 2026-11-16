@@ -26,7 +26,7 @@ export function ChannelComposer({ identity, summary, scope, continuation, option
     {
       try
       {
-        draft.store.edit({ text: original.text, attachments: original.attachments })
+        draft.store.Edit({ text: original.text, attachments: original.attachments })
       }
       catch (e)
       {

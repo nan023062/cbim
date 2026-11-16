@@ -21,9 +21,9 @@ type Candidate =
 
 interface RuntimeUpdateSources
 {
-  cold(signal: AbortSignal): Promise<DesktopRelease | undefined>;
+  Cold(signal: AbortSignal): Promise<DesktopRelease | undefined>;
 
-  resources(tag: string, name: string, signal: AbortSignal): Promise<unknown>;
+  Resources(tag: string, name: string, signal: AbortSignal): Promise<unknown>;
 }
 
 /** 包管理只依赖窄的重启回调；不认识窗口、任务或任何业务数据存储。 */
@@ -39,19 +39,19 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
 
   private controller = new AbortController();
 
-  constructor(private readonly store: RuntimeStore, private readonly journal: RuntimeJournal, private readonly current: RuntimeManifest, private readonly installer: DesktopUpdateInstaller, private readonly restart: () => void, private readonly sources: RuntimeUpdateSources = { cold: latestDesktopRelease, resources: downloadRuntimeManifest }, private readonly usedEngines: () => readonly string[] = () => [])
+  constructor(private readonly store: RuntimeStore, private readonly journal: RuntimeJournal, private readonly current: RuntimeManifest, private readonly installer: DesktopUpdateInstaller, private readonly restart: () => void, private readonly sources: RuntimeUpdateSources = { Cold: latestDesktopRelease, Resources: downloadRuntimeManifest }, private readonly usedEngines: () => readonly string[] = () => [])
   {
   }
 
   /** 优先当前 C 可用的 R；更高 C 仅在没有兼容资源更新时提示，不强迫所有用户先换基础包。 */
-  async latest(signal: AbortSignal): Promise<DesktopRelease | undefined>
+  async Latest(signal: AbortSignal): Promise<DesktopRelease | undefined>
   {
-    const coldJob = this.sources.cold(signal).then(value => ({ value }), error => ({ error }));
+    const coldJob = this.sources.Cold(signal).then(value => ({ value }), error => ({ error }));
     let candidate: Candidate | undefined,
       resourceError: unknown;
     try
     {
-      const raw = await this.sources.resources(`runtime-c${this.current.codeVersion}`, 'latest.json', signal);
+      const raw = await this.sources.Resources(`runtime-c${this.current.codeVersion}`, 'latest.json', signal);
       candidate = verifyRuntimeManifest(raw, this.store.cold);
     }
     catch (error: any)
@@ -60,7 +60,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
         resourceError = error;
     }
     const cold = await coldJob,
-      highest = this.journal.read().highestResource;
+      highest = this.journal.Read().highestResource;
     if (candidate && candidate.manifest.resourceVersion > Math.max(this.current.resourceVersion, highest))
     {
       this.candidate = candidate;
@@ -76,7 +76,7 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     return undefined;
   }
 
-  async prepare(release: DesktopRelease)
+  async Prepare(release: DesktopRelease)
   {
     this.controller.signal.throwIfAborted();
     this.selected = release;
@@ -84,23 +84,23 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     this.ready = false;
     if (release.delivery !== 'resources')
     {
-      await this.installer.prepare(release);
+      await this.installer.Prepare(release);
       return;
     }
     const candidate = this.candidate;
     if (!candidate || candidate.manifest.codeVersion !== release.version || candidate.manifest.resourceVersion !== release.resourceVersion || candidate.manifest.resource.tag !== release.tag)
       throw Error('资源候选已变化');
-    await this.store.saveManifest(candidate.envelope);
+    await this.store.SaveManifest(candidate.envelope);
     this.prepared = candidate;
   }
 
-  async download(progress: (percent: number) => void)
+  async Download(progress: (percent: number) => void)
   {
     if (!this.selected)
       throw Error('更新尚未准备');
     if (this.selected.delivery !== 'resources')
     {
-      await this.installer.download(progress);
+      await this.installer.Download(progress);
       this.ready = true;
       return;
     }
@@ -112,34 +112,34 @@ export class RuntimeUpdates implements DesktopUpdateInstaller
     let completed = 0;
     for (const pkg of packages)
     {
-      await this.store.prepare(pkg, this.controller.signal, value => progress((completed + pkg.bytes * value / 100) / total * 100));
+      await this.store.Prepare(pkg, this.controller.signal, value => progress((completed + pkg.bytes * value / 100) / total * 100));
       completed += pkg.bytes;
     }
     this.ready = true;
   }
 
-  async install()
+  async Install()
   {
     this.controller.signal.throwIfAborted();
     if (!this.ready)
       throw Error('更新尚未准备完成');
     if (this.selected?.delivery !== 'resources')
     {
-      await this.installer.install();
+      await this.installer.Install();
       return;
     }
     const candidate = this.prepared;
     if (!candidate)
       throw Error('资源尚未准备');
     // 点击到退出之间可能有磁盘变化；持久授权前复核候选目录，不触碰活动版本。
-    await this.store.prepare(candidate.manifest.resource, this.controller.signal);
-    this.journal.authorize({ digest: candidate.digest, resourceVersion: candidate.manifest.resourceVersion });
+    await this.store.Prepare(candidate.manifest.resource, this.controller.signal);
+    this.journal.Authorize({ digest: candidate.digest, resourceVersion: candidate.manifest.resourceVersion });
     this.restart();
   }
 
-  close()
+  Close()
   {
     this.controller.abort();
-    this.installer.close()
+    this.installer.Close()
   }
 }

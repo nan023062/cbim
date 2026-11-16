@@ -27,12 +27,12 @@ import { validateTaskWorkflowSelections } from '../../tasks/rules/workflow-selec
 const standardIds = ['business-execution', 'common-rules'];
 
 /** 只读执行知识准备所需能力；依赖修订复用它，不需要工作区写入或任务控制接口。 */
-export type DispatchKnowledgeWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'assert' | 'snapshot' | 'read' | 'rules'>;
+export type DispatchKnowledgeWorkspace = Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Snapshot' | 'Read' | 'rules'>;
 
 /** 比较规范化 JSON，知识定义的对象字段排列不改变业务绑定，数组顺序保持原义。 */
 function canonical(value: unknown): string
 {
-  const order = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
+  const order = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: false });
   return JSON.stringify(order(value));
 }
 
@@ -56,10 +56,10 @@ function body(value: { available: boolean; text?: unknown }, subject: string): s
  */
 export async function prepareDispatchExecutionContext(workspace: DispatchKnowledgeWorkspace, task: TaskNode, fixedSnapshot?: Snapshot, member?: WorkspaceMember): Promise<PreparedDispatchKnowledge>
 {
-  workspace.assert();
+  workspace.Assert();
   if (task.identity.workspaceId !== workspace.entry.id)
     fail('GRAPH_IDENTITY_MISMATCH', '成员任务不属于当前工作区');
-  const snapshot = fixedSnapshot ?? await workspace.snapshot();
+  const snapshot = fixedSnapshot ?? await workspace.Snapshot();
   if (snapshot.workspaceId !== workspace.entry.id)
     fail('GRAPH_IDENTITY_MISMATCH', '知识快照不属于当前工作区');
   if (!task.modules.length || task.modules.some(module => module.knowledgeRevision !== snapshot.revision))
@@ -75,7 +75,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
   const builtin = new Builtins(workspace.rules.assetsRoot);
   const standards = await Promise.all(standardIds.map(async id =>
   {
-    const doc = await builtin.read(id);
+    const doc = await builtin.Read(id);
     return { id, version: doc.version, text: doc.text }
   }));
   const business = new BusinessWorkspace(snapshot);
@@ -83,7 +83,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
   {
     if (task.fallbackBinding?.reason === 'no_modules')
       return { binding, definition: { id: binding.moduleId, name: binding.name, implicit: true }, overview: '自动模式临时以当前项目为范围，未创建正式业务模块或维护确认。遵守当前工作区边界、权限及用户验收要求。', workflowText: standards.find(s => s.id === 'business-execution')!.text };
-    const module = await business.module(binding.moduleId),
+    const module = await business.Module(binding.moduleId),
       overview = body(module.overview, '模块');
     let workflowText: string;
     if (binding.workflow.kind === 'module')
@@ -115,7 +115,7 @@ export async function prepareDispatchExecutionContext(workspace: DispatchKnowled
 /** 恢复只复核既有快照，绝不静默替换正文；软件内置规范更新也会阻止旧基线继续运行。 */
 export async function recheckDispatchExecutionContext(workspace: DispatchKnowledgeWorkspace, prepared: PreparedDispatchKnowledge): Promise<void>
 {
-  workspace.assert();
+  workspace.Assert();
   validatePreparedDispatchKnowledge(prepared);
   if (prepared.agent.agentId === mainAgentId)
     fail('AGENT_ROLE_INVALID', '主 Agent 在原会话执行，不能恢复为独立成员');
@@ -126,7 +126,7 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
     fail('GRAPH_IDENTITY_MISMATCH', '冻结执行知识不属于当前工作区');
   const check = async () =>
   {
-    const current = await workspace.read();
+    const current = await workspace.Read();
     if (current.workspaceId !== prepared.workspaceId || current.revision !== prepared.knowledgeRevision)
       fail('KNOWLEDGE_CHANGED', '执行知识版本已经变化，请核实后重新准备任务')
   };
@@ -134,7 +134,7 @@ export async function recheckDispatchExecutionContext(workspace: DispatchKnowled
   const builtin = new Builtins(workspace.rules.assetsRoot);
   for (const standard of prepared.standards)
   {
-    const current = await builtin.read(standard.id);
+    const current = await builtin.Read(standard.id);
     if (current.version !== standard.version)
       fail('KNOWLEDGE_CHANGED', '内置执行规范已经变化，请核实后重新准备任务')
   }

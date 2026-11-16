@@ -43,12 +43,12 @@ export class RepeatedToolFailures
       inputHash: string
     };
 
-  proposed(call: ToolCall)
+  Proposed(call: ToolCall)
   {
     this.pending.push({ id: call.id, name: call.name, key: hash(JSON.stringify({ name: call.name, input: canonical(call.input) })) })
   }
 
-  settled(id: string, failed: boolean)
+  Settled(id: string, failed: boolean)
   {
     const item = this.pending.find(call => call.id === id);
     if (!item || item.failed !== undefined || this.blocked)

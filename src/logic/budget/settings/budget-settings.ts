@@ -15,12 +15,12 @@ const stored = z.object({ version: z.literal(1), policy: scopeBudgetPolicySchema
 /** 测试可注入读写故障；路径由主进程装配，桌面请求不能指定文件或替换存储。 */
 export interface BudgetSettingsStorage
 {
-  read(filename: string): Promise<string>;
+  Read(filename: string): Promise<string>;
 
-  write(filename: string, value: string): Promise<void>
+  Write(filename: string, value: string): Promise<void>
 }
 
-const disk: BudgetSettingsStorage = { read: filename => fs.readFile(filename, 'utf8'), write: atomic };
+const disk: BudgetSettingsStorage = { Read: filename => fs.readFile(filename, 'utf8'), Write: atomic };
 
 /** 应用只装配一份；read 返回副本，不允许调用方修改已保存策略或已有目标的冻结副本。 */
 export class BudgetSettings
@@ -34,21 +34,21 @@ export class BudgetSettings
   {
   }
 
-  private serial<T>(work: () => Promise<T>): Promise<T>
+  private Serial<T>(work: () => Promise<T>): Promise<T>
   {
-    return this.queue.run(work)
+    return this.queue.Run(work)
   }
 
   /** 在工作区装配前恢复；仅缺文件使用关闭默认值，损坏文件不会悄悄禁用用户限额。 */
-  init(): Promise<void>
+  Init(): Promise<void>
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
       if (this.policy)
         return;
       try
       {
-        this.policy = stored.parse(JSON.parse(await this.storage.read(this.filename))).policy
+        this.policy = stored.parse(JSON.parse(await this.storage.Read(this.filename))).policy
       }
       catch (error)
       {
@@ -63,7 +63,7 @@ export class BudgetSettings
   }
 
   /** 只读取已可靠保存的策略；调度器按新周期冻结，不以配置更新复活旧目标。 */
-  read(): ScopeBudgetPolicy
+  Read(): ScopeBudgetPolicy
   {
     if (!this.policy)
       fail('BUDGET_NOT_READY', '目标软限额设置尚未就绪');
@@ -71,14 +71,14 @@ export class BudgetSettings
   }
 
   /** revision 是界面读取的版本；相同内容幂等，写失败/冲突不更新内存或已有周期。 */
-  configure(raw: unknown): Promise<ScopeBudgetPolicy>
+  Configure(raw: unknown): Promise<ScopeBudgetPolicy>
   {
-    return this.serial(async () =>
+    return this.Serial(async () =>
     {
       const parsed = scopeBudgetPolicySchema.safeParse(raw);
       if (!parsed.success)
         fail('BUDGET_SETTINGS_INPUT', '软限额配置无效：启用时须填写正整数 Token 或正数美元额度');
-      const current = this.read(),
+      const current = this.Read(),
         input = parsed.data;
       if (input.revision !== current.revision)
         fail('BUDGET_SETTINGS_CONFLICT', '目标软限额设置已在其它窗口更新，请刷新后再保存');
@@ -89,14 +89,14 @@ export class BudgetSettings
       const next = { ...input, revision: current.revision + 1 };
       try
       {
-        await this.storage.write(this.filename, JSON.stringify({ version: 1, policy: next }, null, 2))
+        await this.storage.Write(this.filename, JSON.stringify({ version: 1, policy: next }, null, 2))
       }
       catch
       {
         fail('BUDGET_SETTINGS_WRITE', '目标软限额保存失败，原设置仍有效，请检查目录权限后重试')
       }
       this.policy = structuredClone(next);
-      return this.read();
+      return this.Read();
     })
   }
 }

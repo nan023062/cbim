@@ -46,8 +46,8 @@ class N_src_logic_tools_rules_policy_tool_policy_ts_RunPolicyContext["RunPolicyC
   <<interface>>
   +workspaceId
   +permission
-  +guard()
-  +approve()
+  +Guard()
+  +Approve()
   +feedbackGrant
 }
 N_src_logic_tools_rules_policy_tool_policy_ts ..> N_src_logic_tools_rules_policy_tool_policy_ts_RunPolicyContext : 声明

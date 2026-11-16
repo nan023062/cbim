@@ -57,12 +57,12 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
   const storage = new FileRunStorage();
   return new WorkspaceExecutionManager(workspace, storage, async (options, task, launch) =>
   {
-    const llm = options.profileId ? await models.resolve(options.profileId, options.model, options.engine, options.modelRoles) : undefined;
+    const llm = options.profileId ? await models.Resolve(options.profileId, options.model, options.engine, options.modelRoles) : undefined;
     if (llm && (options.provider !== 'cbim-' + llm.profile.id || options.model !== llm.profile.model))
       throw Error('模型配置已变化，请重新启动任务');
     launch.signal.throwIfAborted();
-    await requestBudgets?.preflight(task.taskId, launch.scopeId, llm);
-    const images = launch.preparedInputImages === undefined ? await new ChatInputs(workspace).images(options.attachmentIds) : launch.preparedInputImages.map(image => ({ ...image }));
+    await requestBudgets?.Preflight(task.taskId, launch.scopeId, llm);
+    const images = launch.preparedInputImages === undefined ? await new ChatInputs(workspace).Images(options.attachmentIds) : launch.preparedInputImages.map(image => ({ ...image }));
     launch.signal.throwIfAborted();
     if (images.length && (!llm || !llm.profile.vision))
     {
@@ -71,11 +71,11 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
       if (llm)
         throw Error('当前模型未启用图片输入，请在设置中确认视觉能力，或切换支持图片的模型');
     }
-    const conversationBinding = task.mode === 'chat' ? await dispatch?.conversationBinding(task) : undefined;
-    const repositoryTools = task.mode === 'chat' ? await repositories?.prepareTools({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId }) : undefined;
-    const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative'] = async call =>
+    const conversationBinding = task.mode === 'chat' ? await dispatch?.ConversationBinding(task) : undefined;
+    const repositoryTools = task.mode === 'chat' ? await repositories?.PrepareTools({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId }) : undefined;
+    const authorizeNative: import('../../execution/assembly/loop-engine').ExecutionServices['AuthorizeNative'] = async call =>
     {
-      workspace.assert();
+      workspace.Assert();
       const mapped = call.name === 'find' ? 'Glob' : call.name;
       const reason = guard({ name: mapped, input: call.input }, workspace.entry.path);
       return { allow: !reason, reason };
@@ -83,57 +83,57 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
     const agentCalls = launch.executionModel === 'agent-tools-v1' ? createAgentCallAssembly({
       models, workspace, task, options: { ...options, engineRuntimes }, llm, storage, members: ownerships?.members, admission, dispatch, requestBudgets, authorizeNative, businessServices,
       // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
-      artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.isCurrent() ?? false),
+      artifactTransitions: () => createArtifactTransitionPort(workspace, controlledTransport, () => admission?.IsCurrent() ?? false),
     }) : undefined;
     return createWorkspaceLoop(workspace.paths, workspace, { ...options, llm, images, engineRuntimes }, {
       storage,
       ...agentCalls,
-      requestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.forRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
+      RequestBudget: agentCalls ? agentCalls.requestBudget : requestBudgets ? ({ task, runId }, role) => requestBudgets.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId, kind: 'main' }, llm, role) : undefined,
       conversationBinding,
       repositoryTools,
       // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
       webTools: task.mode === 'chat' && web ? {
-        fetch: async (input, signal) =>
+        Fetch: async (input, signal) =>
         {
-          workspace.assert();
-          const value = await web.fetch(input, signal);
-          workspace.assert();
+          workspace.Assert();
+          const value = await web.Fetch(input, signal);
+          workspace.Assert();
           return value
-        }, search: async (input, signal) =>
+        }, Search: async (input, signal) =>
         {
-          workspace.assert();
-          const value = await web.search(input, signal);
-          workspace.assert();
+          workspace.Assert();
+          const value = await web.Search(input, signal);
+          workspace.Assert();
           return value
         }
       } : undefined,
-      feedbackTools: task.mode === 'chat' && feedback ? () => feedback.prepare({ workspaceId: workspace.entry.id, rootSessionId: task.taskId }, () => workspace.assert()) : undefined,
-      feedbackStatus: task.mode === 'chat' && feedback ? scope =>
+      FeedbackTools: task.mode === 'chat' && feedback ? () => feedback.Prepare({ workspaceId: workspace.entry.id, rootSessionId: task.taskId }, () => workspace.Assert()) : undefined,
+      FeedbackStatus: task.mode === 'chat' && feedback ? scope =>
       {
-        workspace.assert();
-        return feedback.auth.checkConnection(scope)
+        workspace.Assert();
+        return feedback.auth.CheckConnection(scope)
       } : undefined,
-      governanceTools: conversationBinding ? ({ task, runId }) => mainGovernanceTools(workspace, task, runId, conversationBinding) : undefined,
-      ownershipTools: conversationBinding && ownerships ? ({ task, runId }) =>
+      GovernanceTools: conversationBinding ? ({ task, runId }) => mainGovernanceTools(workspace, task, runId, conversationBinding) : undefined,
+      OwnershipTools: conversationBinding && ownerships ? ({ task, runId }) =>
       {
-        const context = agentCalls ? agentCalls.mainToolContext(task, runId) : collaboration?.()?.mainToolContext(task, runId);
+        const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId);
         return context ? { port: mainModuleOwnershipTools(workspace, ownerships.service, ownerships.members, task, runId, conversationBinding, context, dispatch?.owners), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined
       } : undefined,
-      memberTools: conversationBinding && ownerships ? ({ task, runId }) =>
+      MemberTools: conversationBinding && ownerships ? ({ task, runId }) =>
       {
-        const context = agentCalls ? agentCalls.mainToolContext(task, runId) : collaboration?.()?.mainToolContext(task, runId);
+        const context = agentCalls ? agentCalls.MainToolContext(task, runId) : collaboration?.()?.MainToolContext(task, runId);
         return context ? { port: mainWorkspaceMemberTools(workspace, ownerships.members, task, runId, conversationBinding, context), binding: { ...context.binding, instanceId: workspace.instanceId, agentInstanceId: conversationBinding.agentInstanceId, agentSessionId: conversationBinding.agentSessionId } } : undefined
       } : undefined,
-      dispatchTools: ({ task, runId }) => collaboration?.()?.tools(task, runId, options),
-      acquireLease: async task =>
+      DispatchTools: ({ task, runId }) => collaboration?.()?.Tools(task, runId, options),
+      AcquireLease: async task =>
       {
-        workspace.assert();
+        workspace.Assert();
         if (task.workspaceId !== workspace.entry.id || task.root !== workspace.entry.path)
           throw Error('任务与工作区身份不匹配');
         // 两种协作模式的主轮都能执行；ask/execute 同样独占，等待审批期间也不能放行冲突运行。
         const workspacePermission = options.permission ?? (options.allowNativeExecution ? 'execute' : 'read');
         const release = acquireExecutionLease(lease, 'conversation:' + task.taskId, { workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: task.taskId, scopeId: launch.scopeId, requestId: admissionRequestId('main', launch.requestId), agentInstanceId: conversationBinding?.agentInstanceId, source: launch.wait ? 'main-result' : 'direct', workspacePermission }, admission, launch.wait);
-        const directory = path.join(workspace.paths.project(workspace.entry.id), 'loop-engine');
+        const directory = path.join(workspace.paths.Project(workspace.entry.id), 'loop-engine');
         try
         {
           const lock = new KernelLock(directory, hash(workspace.entry.id + ':' + task.taskId), 'loop');
@@ -141,7 +141,7 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
           {
             try
             {
-              lock.close()
+              lock.Close()
             }
             finally
             {
@@ -155,7 +155,7 @@ export function createExecutionManager(workspace: Workspace, models: EngineModel
           throw error
         }
       },
-      authorizeNative,
+      AuthorizeNative: authorizeNative,
     });
-  }, ids => new ChatInputs(workspace).images(ids), (input, signal) => new ChatInputs(workspace).prepareContinuation(input.message, input.attachmentIds, signal));
+  }, ids => new ChatInputs(workspace).Images(ids), (input, signal) => new ChatInputs(workspace).PrepareContinuation(input.message, input.attachmentIds, signal));
 }

@@ -41,24 +41,24 @@ type ReadLog = VerifiedMainCallSource;
 /** 端口只读已有 canonical；不能为了查询创建运行管理器或打开工作区。 */
 export interface CommandVerificationPorts
 {
-  inspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
+  InspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
 }
 
 export class CommandVerificationService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, private readonly store: Pick<DispatchStore, 'read' | 'commandEvidence'>, private readonly ports?: CommandVerificationPorts)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: Pick<DispatchStore, 'Read' | 'CommandEvidence'>, private readonly ports?: CommandVerificationPorts)
   {
   }
 
   /** 后端影响观察复用同一主身份/授权核验；返回含私有日志，禁止直接作为 IPC 或模型输出。 */
-  inspectSource(input: CommandVerificationInput, state: DispatchState): Promise<VerifiedMainCallSource>
+  InspectSource(input: CommandVerificationInput, state: DispatchState): Promise<VerifiedMainCallSource>
   {
-    this.owner.assert();
-    return this.log(input, state)
+    this.owner.Assert();
+    return this.Log(input, state)
   }
 
   /** 原 run/call 必须明确；取消只结束本次读取，不修改任何原事实。 */
-  async read(raw: unknown, signal?: AbortSignal): Promise<CommandVerificationReport>
+  async Read(raw: unknown, signal?: AbortSignal): Promise<CommandVerificationReport>
   {
     const parsed = commandVerificationInputSchema.safeParse(raw);
     if (!parsed.success)
@@ -67,16 +67,16 @@ export class CommandVerificationService
     const alive = () =>
     {
       signal?.throwIfAborted();
-      this.owner.assert();
+      this.owner.Assert();
       if (input.workspaceId !== this.owner.entry.id)
         fail('COMMAND_REPORT_IDENTITY', '原命令查询不属于当前工作区')
     };
     alive();
-    const before = await this.state();
+    const before = await this.State();
     alive();
-    const first = await this.log(input, before);
+    const first = await this.Log(input, before);
     alive();
-    const scope = this.scope(before, input);
+    const scope = this.Scope(before, input);
     let command: CommandRecord = { state: 'unverifiable', reason: 'source_unverified' },
       evidence: DispatchCommandEvidence | undefined,
       commandId: string | undefined,
@@ -99,7 +99,7 @@ export class CommandVerificationService
           commandId = restored.commandId;
           try
           {
-            evidence = await this.store.commandEvidence(commandId)
+            evidence = await this.store.CommandEvidence(commandId)
           }
           catch
           {
@@ -162,7 +162,7 @@ export class CommandVerificationService
     {
       try
       {
-        afterEvidence = await this.store.commandEvidence(commandId)
+        afterEvidence = await this.store.CommandEvidence(commandId)
       }
       catch
       {
@@ -171,11 +171,11 @@ export class CommandVerificationService
     }
     alive();
     // 反向闭合观察区间：Store前态→日志→命令→命令→日志→Store后态，不能在最后日志IO前提前宣布Store稳定。
-    const last = await this.log(input, before);
+    const last = await this.Log(input, before);
     alive();
-    const after = await this.state();
+    const after = await this.State();
     alive();
-    const changed = first.stamp !== last.stamp || this.stamp(before, input) !== this.stamp(after, input) || commandId !== undefined && !queryFailed && !isDeepStrictEqual(evidence, afterEvidence);
+    const changed = first.stamp !== last.stamp || this.Stamp(before, input) !== this.Stamp(after, input) || commandId !== undefined && !queryFailed && !isDeepStrictEqual(evidence, afterEvidence);
     if (changed)
       command = { state: 'unverifiable', reason: 'changed_during_read' };
     else if (queryFailed || !before || !after)
@@ -188,14 +188,14 @@ export class CommandVerificationService
     if (command.state === 'unverifiable' && !changed)
       issues.push({ code: 'COMMAND_UNVERIFIABLE', severity: 'warning', message: '现有资料不足以核实原命令；保留原未知状态，不自动重放。' });
     const scopeView = scope ? { scopeId: scope.scopeId, status: scope.status, ...(scope.goal ? { goalRevision: scope.goal.revision, inputRevision: goalInputRevision(scope.goal), ...(scope.goal.plan ? { planRevision: scope.goal.plan.revision } : {}) } : {}), ...(scope.outcome ? { outcome: scope.outcome } : {}) } : undefined;
-    return commandVerificationReportSchema.parse({ version: 1, identity: input, checkedAt: new Date().toISOString(), basis: { key: hash(json({ input, log: first.stamp, state: this.stamp(before, input), command, changed })), adapterVersion: 1, ...(first.logPrefixHash ? { logPrefixHash: first.logPrefixHash, throughSeq: first.throughSeq } : {}) }, consistency: changed ? 'changed_during_read' : 'stable', source: first.source, command, ...(scopeView ? { scope: scopeView } : {}), issues, readOnly: true, acceptance: 'not_evaluated' });
+    return commandVerificationReportSchema.parse({ version: 1, identity: input, checkedAt: new Date().toISOString(), basis: { key: hash(json({ input, log: first.stamp, state: this.Stamp(before, input), command, changed })), adapterVersion: 1, ...(first.logPrefixHash ? { logPrefixHash: first.logPrefixHash, throughSeq: first.throughSeq } : {}) }, consistency: changed ? 'changed_during_read' : 'stable', source: first.source, command, ...(scopeView ? { scope: scopeView } : {}), issues, readOnly: true, acceptance: 'not_evaluated' });
   }
 
-  private async state(): Promise<DispatchState | undefined>
+  private async State(): Promise<DispatchState | undefined>
   {
     try
     {
-      return await this.store.read()
+      return await this.store.Read()
     }
     catch
     {
@@ -203,28 +203,28 @@ export class CommandVerificationService
     }
   }
 
-  private scope(state: DispatchState | undefined, input: CommandVerificationInput): DispatchScope | undefined
+  private Scope(state: DispatchState | undefined, input: CommandVerificationInput): DispatchScope | undefined
   {
     const scopes = state?.scopes?.filter(scope => scope.workspaceId === input.workspaceId && scope.rootSessionId === input.rootSessionId && scope.runTracking?.mainRunIds.includes(input.runId));
     return scopes?.length === 1 ? scopes[0] : undefined;
   }
 
   /** 只冻结本根会话的相关事实；其他工作区/主会话的无关提交不使本报告过期。 */
-  private stamp(state: DispatchState | undefined, input: CommandVerificationInput)
+  private Stamp(state: DispatchState | undefined, input: CommandVerificationInput)
   {
     const graph = state?.graphs.find(graph => graph.identity.rootSessionId === input.rootSessionId && graph.identity.workspaceId === input.workspaceId),
       root = graph?.root.agent;
-    return hash(json({ available: !!state, scope: this.scope(state, input), root, graphCursor: graph?.cursor, member: state?.members.find(member => member.agentInstanceId === root?.agentInstanceId), sessions: state?.sessions.filter(session => session.agentInstanceId === root?.agentInstanceId && session.rootSessionId === input.rootSessionId), assignments: state?.outbox.filter(message => message.kind === 'assignment' && message.identity.workspaceId === input.workspaceId && message.identity.rootSessionId === input.rootSessionId) }));
+    return hash(json({ available: !!state, scope: this.Scope(state, input), root, graphCursor: graph?.cursor, member: state?.members.find(member => member.agentInstanceId === root?.agentInstanceId), sessions: state?.sessions.filter(session => session.agentInstanceId === root?.agentInstanceId && session.rootSessionId === input.rootSessionId), assignments: state?.outbox.filter(message => message.kind === 'assignment' && message.identity.workspaceId === input.workspaceId && message.identity.rootSessionId === input.rootSessionId) }));
   }
 
-  private async log(input: CommandVerificationInput, state: DispatchState | undefined): Promise<ReadLog>
+  private async Log(input: CommandVerificationInput, state: DispatchState | undefined): Promise<ReadLog>
   {
     if (!this.ports)
       return { source: { state: 'unavailable' }, stamp: 'unavailable' };
     let summary: RunSummary;
     try
     {
-      summary = await this.ports.inspectMain(input.rootSessionId, input.runId)
+      summary = await this.ports.InspectMain(input.rootSessionId, input.runId)
     }
     catch (error)
     {

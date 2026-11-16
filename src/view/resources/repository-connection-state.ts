@@ -38,12 +38,12 @@ const same = (a: RepositoryConnectionPending, b: RepositoryConnectionPending) =>
 /** 存储方法同步且不执行网络操作；调用方必须在 save 成功后才发送写请求。 */
 export interface RepositoryConnectionPendingStore
 {
-  read(workspaceId: string): RepositoryConnectionPending | undefined;
+  Read(workspaceId: string): RepositoryConnectionPending | undefined;
 
-  save(pending: RepositoryConnectionPending): void;
+  Save(pending: RepositoryConnectionPending): void;
 
   /** 只删除逐字段一致的原请求；不允许迟到回执清除后来保存的命令。 */
-  remove(pending: RepositoryConnectionPending): void;
+  Remove(pending: RepositoryConnectionPending): void;
 }
 
 /** 不缓存 localStorage：不同组件重新进入时仍读取同一原请求；坏数据保留，不空表降级覆盖。 */
@@ -100,11 +100,11 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
     }
   };
   return {
-    read(workspaceId)
+    Read(workspaceId)
     {
       return load().records.find(record => record.input.workspaceId === workspaceId)
     },
-    save(raw)
+    Save(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
         state = load(),
@@ -116,7 +116,7 @@ export function createRepositoryConnectionPendingStore(storage: PendingStorage):
       // 即使已有同一请求也重新保存一次，确保存储不可写时不会以“已有记录”为由发起重试。
       write(old ? state.records : [...state.records, pending]);
     },
-    remove(raw)
+    Remove(raw)
     {
       const pending = repositoryConnectionPendingSchema.parse(raw),
         state = load(),

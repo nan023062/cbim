@@ -22,10 +22,10 @@ interface KnowledgeEffectOwner
 
   paths: StoragePaths;
 
-  assert(): void;
+  Assert(): void;
 
   /** 只借用同一知识队列的 journal 读取，不获取 apply 或 preview 能力。 */
-  governed<T>(operation: (transaction: Pick<KnowledgeGovernanceTransaction, 'journal'>) => Promise<T>): Promise<T>;
+  Governed<T>(operation: (transaction: Pick<KnowledgeGovernanceTransaction, 'Journal'>) => Promise<T>): Promise<T>;
 }
 
 /** 原实例只参与比对，允许重开后读取原阶段；停止或关闭中断查询，不自动推进任何持久状态。 */
@@ -35,12 +35,12 @@ export async function observeKnowledgeTransaction(owner: KnowledgeEffectOwner, r
     alive = () =>
     {
       signal?.throwIfAborted();
-      owner.assert()
+      owner.Assert()
     };
   alive();
   if (identity.workspaceId !== owner.entry.id)
     fail('EFFECT_IDENTITY', '原知识请求不属于当前工作区');
-  return owner.governed(async transaction =>
+  return owner.Governed(async transaction =>
   {
     alive();
     let request: ChangeRequest;
@@ -66,7 +66,7 @@ export async function observeKnowledgeTransaction(owner: KnowledgeEffectOwner, r
     let observation: KnowledgeTransactionObservation;
     try
     {
-      const status = await transaction.journal(request);
+      const status = await transaction.Journal(request);
       observation = knowledgeTransactionObservationSchema.parse(status ? { identity, state: status.state, requestHash, evidenceHash: hash(json(status)), ...(status.state === 'committed' ? { revision: status.result?.revision, changedCount: status.result?.changed.length } : {}) } : { identity, state: 'absent', requestHash });
     }
     catch

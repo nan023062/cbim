@@ -251,37 +251,37 @@ export interface DispatchMutation<T = unknown>
  */
 export interface DispatchObserver
 {
-  loaded(state: DispatchState): void;
+  Loaded(state: DispatchState): void;
 
-  committed(mutation: DispatchMutation): void;
+  Committed(mutation: DispatchMutation): void;
 
-  failed(error: Error): void;
+  Failed(error: Error): void;
 }
 
 /** 实现必须串行提交且先可靠落盘再返回，不允许失败后发布半次 mutation。 */
 export interface DispatchStore
 {
   /** 内部管理/测试用快照；不得把全工作区成员通道和邮箱经图 IPC 返回。 */
-  read(): Promise<DispatchState>;
+  Read(): Promise<DispatchState>;
 
   /** 只查已提交原命令；共享提交屏障，返回隔离副本，不调用 prepare 或重新执行操作。 */
-  commandReceipt(commandId: string): Promise<{ fingerprint: string; receipt: unknown } | undefined>;
+  CommandReceipt(commandId: string): Promise<{ fingerprint: string; receipt: unknown } | undefined>;
 
   /** 只读原命令及窄提交前态；缺失不代表未执行，不能借此调用事务或恢复原操作。 */
-  commandEvidence(commandId: string): Promise<DispatchCommandEvidence | undefined>;
+  CommandEvidence(commandId: string): Promise<DispatchCommandEvidence | undefined>;
 
   /** 相同键和摘要直接返回原回执，不重复执行 prepare；冲突不能覆盖原记录。 */
-  transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>;
+  Transact<T>(command: DispatchCommand, prepare: (state: DispatchState) => Promise<DispatchMutation<T>>): Promise<T>;
 
   /** 读取指定主会话的已提交图；尚未建图应报 GRAPH_NOT_FOUND，不自动创建节点。 */
-  snapshot(identity: GraphIdentity): Promise<GraphSnapshot>;
+  Snapshot(identity: GraphIdentity): Promise<GraphSnapshot>;
 
   /** 按完整事务批次分页，limit 为批次数；身份不匹配拒绝，流变化或保留前缀不足返回 reset。 */
-  delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>;
+  Delta(identity: GraphIdentity, cursor?: GraphCursor, limit?: number): Promise<GraphDelta>;
 
   /** 在同一已提交屏障读取图、独立周期摘要增量及选中详情；只读不会创建周期或推进任何序号。 */
-  sessionRead(input: DispatchSessionReadInput): Promise<DispatchSessionRead>;
+  SessionRead(input: DispatchSessionReadInput): Promise<DispatchSessionRead>;
 
   /** 停止接收新操作，等待已排队提交结束后释放资源。 */
-  close(): Promise<void>;
+  Close(): Promise<void>;
 }

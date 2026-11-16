@@ -56,12 +56,12 @@ export class MemberEventStreams
   }
 
   /** 在新执行开始前登记，允许其尚未创建日志时返回空前缀；历史日志损坏不能走该例外。 */
-  begin(run: DispatchRun, task: TaskSpec)
+  Begin(run: DispatchRun, task: TaskSpec)
   {
-    this.stream(run, task).live = true
+    this.Stream(run, task).live = true
   }
 
-  private stream(run: DispatchRun, task: TaskSpec)
+  private Stream(run: DispatchRun, task: TaskSpec)
   {
     let stream = this.streams.get(run.binding.runId);
     if (!stream)
@@ -73,12 +73,12 @@ export class MemberEventStreams
   }
 
   /** 输入必须是日志成功落盘后的原事件；失败只污染查询流，不能改变真实执行或全局监控。 */
-  append(run: DispatchRun, task: TaskSpec, event: StoredEvent)
+  Append(run: DispatchRun, task: TaskSpec, event: StoredEvent)
   {
-    const stream = this.stream(run, task);
+    const stream = this.Stream(run, task);
     try
     {
-      this.accept(stream, event)
+      this.Accept(stream, event)
     }
     catch (error)
     {
@@ -86,7 +86,7 @@ export class MemberEventStreams
     }
   }
 
-  private accept(stream: Stream, event: StoredEvent)
+  private Accept(stream: Stream, event: StoredEvent)
   {
     const binding = stream.run.binding;
     if (event.version !== 1 || event.workspaceId !== binding.workspaceId || event.taskId !== binding.taskId || event.runId !== binding.runId || !Number.isSafeInteger(event.seq) || event.seq < 1)
@@ -114,7 +114,7 @@ export class MemberEventStreams
     }
   }
 
-  private async restore(stream: Stream, observed: DispatchRun)
+  private async Restore(stream: Stream, observed: DispatchRun)
   {
     const initiallyEmpty = stream.ordered.length === 0 && stream.pending.size === 0;
     try
@@ -124,7 +124,7 @@ export class MemberEventStreams
       if (summary.runId !== binding.runId || summary.task.workspaceId !== binding.workspaceId || summary.task.taskId !== binding.taskId || summary.task.agentId !== binding.agentId || summary.task.root !== stream.task.root || !summary.memberBinding || Object.entries(binding).some(([key, value]) => summary.memberBinding![key as keyof typeof binding] !== value))
         fail('MEMBER_EVENT_STREAM_INVALID', '成员运行记录不属于请求身份');
       for (const event of summary.events)
-        this.accept(stream, event);
+        this.Accept(stream, event);
       if (stream.pending.size)
         fail('MEMBER_EVENT_STREAM_INVALID', '成员事件序号不连续，不能跳过缺失记录');
     }
@@ -143,12 +143,12 @@ export class MemberEventStreams
        * 每个 run 首次成功恢复后只读内存；失败仅释放本次 load 供重试，已记录的流损坏不会被清除。
        * limit 按事件条数分页；缺省或超前游标重置到序号 0，返回副本，调用方不得跨 run 复用游标。
        */
-  async read(run: DispatchRun, task: TaskSpec, cursor: MemberEventCursor | undefined, limit: number): Promise<MemberEventsRead>
+  async Read(run: DispatchRun, task: TaskSpec, cursor: MemberEventCursor | undefined, limit: number): Promise<MemberEventsRead>
   {
-    const stream = this.stream(run, task);
+    const stream = this.Stream(run, task);
     if (stream.failure)
       throw stream.failure;
-    const loading = stream.load ??= this.restore(stream, structuredClone(run));
+    const loading = stream.load ??= this.Restore(stream, structuredClone(run));
     try
     {
       await loading
@@ -172,7 +172,7 @@ export class MemberEventStreams
   }
 
   /** 工作区退役后释放公开投影；权威日志仍由存储保留。 */
-  clear()
+  Clear()
   {
     this.streams.clear()
   }

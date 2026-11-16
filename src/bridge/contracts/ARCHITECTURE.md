@@ -1155,7 +1155,7 @@ class N_src_bridge_contracts_workspace_ts["workspace.ts"] {
 class N_src_bridge_contracts_workspace_ts_Bridge["Bridge"] {
   <<interface>>
   +call
-  +importFiles()
+  +ImportFiles()
 }
 N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_workspace_ts_Bridge : 声明
 ```

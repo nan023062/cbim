@@ -10,7 +10,7 @@ import {internalKnowledge} from './knowledge-tool-fixture';
 
 it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的字段一致',async()=>{
   const f=await fixture();try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),{call,identity}=internalKnowledge(w),snapshot=await w.snapshot();
+    const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id),{call,identity}=internalKnowledge(w),snapshot=await w.Snapshot();
     const described=await call('cbim_knowledge_tool_describe',{name:'cbim_object_preview'});
     expect(described.tool.version).toBe(2);
     const schemaText=JSON.stringify(described.tool.inputSchema);
@@ -31,13 +31,13 @@ it('实际发现的对象 Schema 按 kind 限制字段，和运行时接受的�
         if(kind==='module')expect(JSON.parse(preview.changes.find((c:any)=>c.path.endsWith('/module.json')).text).name).toBe('chess');
       }
     }
-    expect((await w.snapshot()).revision).toBe(snapshot.revision);
+    expect((await w.Snapshot()).revision).toBe(snapshot.revision);
   }finally{await f.cleanup()}
 });
 
 it('同一真实预览按序创建父、子及其 Workflow，完整校验后一次提交',async()=>{
  const f=await fixture();try{
-  const entry=await f.app.dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.workspace(entry.id)),snapshot=await call('cbim_knowledge_snapshot');
+  const entry=await f.app.Dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.Workspace(entry.id)),snapshot=await call('cbim_knowledge_snapshot');
   const parent='.cbim/workspace/game',child=parent+'/child';
   const preview=await call('cbim_object_preview',{revision:snapshot.revision,operations:[
    {kind:'module',action:'create',parentId:'.cbim/workspace',slug:'game',data:{summary},body:moduleFiles('game')[1].text},
@@ -55,7 +55,7 @@ it('同一真实预览按序创建父、子及其 Workflow，完整校验后一�
 it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本模块 Workflow，重复提交幂等',async()=>{
   const f=await fixture();
   try{
-    const e=await f.app.dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.workspace(e.id));
+    const e=await f.app.Dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.Workspace(e.id));
     const mutate=async(operations:any[])=>{const s=await call('cbim_knowledge_snapshot');const p=await call('cbim_object_preview',{revision:s.revision,operations});expect(p.validation.issues.filter((i:any)=>i.severity==='error')).toEqual([]);const r=await call('cbim_object_commit',{planId:p.planId},true);expect((await call('cbim_object_commit',{planId:p.planId},true)).revision).toBe(r.revision);return p.objects};
     const [agent]=await mutate([{kind:'agent',action:'create',parentId:(await call('cbim_agent_registry')).teamRootId,slug:'developer',data:{name:'开发者',summary,capabilities:['开发']},body:'# 工作原则\n验证实际成果。'}]);
     const [shared,own]=await mutate([{kind:'skill',action:'create',parentId:'.cbim/team',slug:'review',data:{name:'review',purpose:'检查'},body:'# Review'},{kind:'skill',action:'create',parentId:agent,slug:'coding',data:{name:'coding',purpose:'开发'},body:'# Coding'}]);
@@ -77,7 +77,7 @@ it('内部知识服务真实对象 CRUD、父子模块、Skill 继承与仅本�
 it('刷新接口仅更新派生索引，错误保留问题与原索引，查询注册表不偷偷写入',async()=>{
   const f=await fixture();
   try{
-    const e=await f.app.dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.workspace(e.id));
+    const e=await f.app.Dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.Workspace(e.id));
     const index=path.join(f.a,'.cbim/workspace/registry.json'),before=await fs.readFile(index,'utf8');
     for(const file of moduleFiles('game')){await fs.mkdir(path.dirname(path.join(f.a,file.path)),{recursive:true});await fs.writeFile(path.join(f.a,file.path),file.text)}
     expect((await call('cbim_module_registry')).modules).toHaveLength(1);expect(await fs.readFile(index,'utf8')).toBe(before);
@@ -88,7 +88,7 @@ it('刷新接口仅更新派生索引，错误保留问题与原索引，查询�
 
 it('对象事务拒绝越界、旧版本和未授权提交，校验失败不落盘',async()=>{
   const f=await fixture();try{
-    const e=await f.app.dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.workspace(e.id));
+    const e=await f.app.Dispatch('add',{path:f.a}),{call}=internalKnowledge(f.app.Workspace(e.id));
     const s=await call('cbim_knowledge_snapshot');
     const op={kind:'agent',action:'create',parentId:'.cbim/team',slug:'dev',data:{name:'Dev',summary,capabilities:['开发']},body:'# Principles'};
     await expect(call('cbim_object_preview',{revision:s.revision,operations:[{...op,slug:'../escape'}]})).rejects.toMatchObject({code:'OBJECT_ID'});

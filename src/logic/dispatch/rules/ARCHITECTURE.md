@@ -171,21 +171,21 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMutation["DispatchM
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMutation : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchObserver["DispatchObserver"] {
   <<interface>>
-  +loaded()
-  +committed()
-  +failed()
+  +Loaded()
+  +Committed()
+  +Failed()
 }
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchObserver : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore["DispatchStore"] {
   <<interface>>
-  +read()
-  +commandReceipt()
-  +commandEvidence()
-  +transact()
-  +snapshot()
-  +delta()
-  +sessionRead()
-  +close()
+  +Read()
+  +CommandReceipt()
+  +CommandEvidence()
+  +Transact()
+  +Snapshot()
+  +Delta()
+  +SessionRead()
+  +Close()
 }
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore : 声明
 ```

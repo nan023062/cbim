@@ -9,21 +9,21 @@ import type { TaskSpec } from '../../tasks/rules/types';
 /** append 返回前记录必须可靠保存；失败后不得继续放行依赖该证据的工具。 */
 export interface ExecutionJournal
 {
-  init(): Promise<void>;
+  Init(): Promise<void>;
 
-  append(event: EngineEvent): Promise<StoredEvent>;
+  Append(event: EngineEvent): Promise<StoredEvent>;
 
-  flush(): Promise<void>;
+  Flush(): Promise<void>;
 }
 
 /** 目录参数由可信装配方生成；实现需保留重复任务拒绝和日志完整性检查。 */
 export interface RunStorage
 {
-  reserveTask(directory: string, taskId: string): Promise<void>;
+  ReserveTask(directory: string, taskId: string): Promise<void>;
 
-  createJournal(directory: string, task: TaskSpec, runId: string): ExecutionJournal;
+  CreateJournal(directory: string, task: TaskSpec, runId: string): ExecutionJournal;
 
-  read(directory: string): Promise<RunSummary>;
+  Read(directory: string): Promise<RunSummary>;
 
-  list(directory: string): Promise<string[]>;
+  List(directory: string): Promise<string[]>;
 }

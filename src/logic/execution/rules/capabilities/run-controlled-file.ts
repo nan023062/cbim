@@ -19,12 +19,12 @@ export interface ControlledFileRunPort
 {
   readonly scopeId: string;
 
-  write(input: ControlledFileWriteInput, authorization: { toolCallId: string; inputHash: string; allowedSeq: number }, signal: AbortSignal, assertCurrent: () => void): Promise<ControlledFileWriteApplied>;
+  Write(input: ControlledFileWriteInput, authorization: { toolCallId: string; inputHash: string; allowedSeq: number }, signal: AbortSignal, assertCurrent: () => void): Promise<ControlledFileWriteApplied>;
 
   /** 只核实原账本和进程退出；查无、unknown、applied 或读取失败均不能证明未写，绝不重试原操作。 */
-  confirmNotApplied?(authorization: { toolCallId: string; inputHash: string; allowedSeq: number }): Promise<boolean>;
+  ConfirmNotApplied?(authorization: { toolCallId: string; inputHash: string; allowedSeq: number }): Promise<boolean>;
 
-  drain(): Promise<void>;
+  Drain(): Promise<void>;
 }
 
 export class RunControlledFile
@@ -68,7 +68,7 @@ export class RunControlledFile
   }
 
   /** 在审批 await 之前预占；执行与工具终态都完成后才释放，伪早到 finished 不能解除实际 IO 占位。 */
-  guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
+  Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.reserved)
       return '受控文件操作尚未结束，请先等待原操作核实';
@@ -88,13 +88,13 @@ export class RunControlledFile
   }
 
   /** 只能由 Runtime 自身 beforeTool 的可靠 append 返回值调用；观察事件没有签发权。 */
-  authorize(id: string, seq: number)
+  Authorize(id: string, seq: number)
   {
     if (this.reserved?.id === id && !this.controller.signal.aborted)
       this.reserved.allowedSeq = seq
   }
 
-  observed(type: string, id: unknown, isError = false)
+  Observed(type: string, id: unknown, isError = false)
   {
     const current = this.reserved;
     if (!current || current.id !== id)
@@ -111,11 +111,11 @@ export class RunControlledFile
       current.failedEvent ||= isError;
       if (current.allowedSeq && !current.safeNoWrite)
         this.unverified.add(current.id);
-      this.release()
+      this.Release()
     }
   }
 
-  private release()
+  private Release()
   {
     const current = this.reserved;
     if (!current?.finished || !current.settled)
@@ -133,24 +133,24 @@ export class RunControlledFile
   }
 
   /** 供交付端口和运行结算复核，不将原 failed 回执改写为 unknown 或成功。 */
-  assertVerified()
+  AssertVerified()
   {
     if (this.unverified.size)
       fail('CONTROLLED_FILE_REVIEW_REQUIRED', '原受控写结果待核实，本轮不能提交交付或安全交接')
   }
 
-  stop()
+  Stop()
   {
     this.controller.abort(Error('运行已停止'))
   }
 
   /** 端口任何排空错误都表示物理退出未确认；统一稳定代码，外层不能按普通工具失败释放租约。 */
-  async drain()
+  async Drain()
   {
-    await this.pending.drain();
+    await this.pending.Drain();
     try
     {
-      await this.port.drain()
+      await this.port.Drain()
     }
     catch
     {
@@ -158,12 +158,12 @@ export class RunControlledFile
     }
   }
 
-  async list()
+  async List()
   {
     return [{ name: controlledFileWriteToolName, version: 1, effects: ['business-write'] as const, description: '仅替换一个已存在的 UTF-8 普通文件，expectedBefore 必须来自实际读取。先可靠保存 before，再由独占句柄写入；只有 applied 是可靠成功，未知不得重试。此工具不自动回滚，也不替代实际 read、产物基线与验收。', inputSchema: zodToJsonSchema(controlledFileWriteInputSchema), outputSchema: zodToJsonSchema(controlledFileWriteOutputSchema), cancellation: { mode: 'preflight_only' as const, description: '停止阻止尚未开始的写入；发出内容写后可能部分写入，只有原记录可确认结果。' }, recovery: { mode: 'inspect_before_retry' as const, description: '桌面查询原任务/运行/调用的受控记录；原调用不重放，补偿须另行显式提交。' } }]
   }
 
-  async call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
+  async Call(name: string, raw: unknown, id?: string, signal?: AbortSignal)
   {
     if (name !== controlledFileWriteToolName || !id)
       fail('CONTROLLED_FILE_CALL', '受控写入缺少真实调用身份');
@@ -188,8 +188,8 @@ export class RunControlledFile
     {
       check();
       dispatched = true;
-      operation = this.port.write(input, authorization, activeSignal, check);
-      this.pending.track(operation);
+      operation = this.port.Write(input, authorization, activeSignal, check);
+      this.pending.Track(operation);
       const result = await operation;
       const output = checkedJsonToolResult(name, { state: 'applied', operation: result }, controlledFileWriteOutputSchema.superRefine((value, ctx) =>
       {
@@ -208,7 +208,7 @@ export class RunControlledFile
       else
         try
         {
-          reservation.safeNoWrite = await this.port.confirmNotApplied?.(authorization) === true
+          reservation.safeNoWrite = await this.port.ConfirmNotApplied?.(authorization) === true
         }
         catch
         {
@@ -221,7 +221,7 @@ export class RunControlledFile
     finally
     {
       reservation.settled = true;
-      this.release()
+      this.Release()
     }
   }
 }

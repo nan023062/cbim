@@ -26,13 +26,13 @@ it('可靠等待和正在退出区分，不借迟到 running 显示仍在作业'
  const paused={...scope,status:'waiting' as const};expect(officeScene(graph,[officeSession()],[paused],true).actors.every(actor=>!actor.working)).toBe(true);
 });
 it('只播放可见期间新增的真实派发和回传，重复快照/旧版本/换办公室均不重放',()=>{
- const tracker=new OfficeEventTracker(),graph=officeGraph([officeTask('old')]);expect(tracker.observe(graph)).toEqual([]);
- graph.cursor.seq++;graph.tasks.push(officeTask('new'));expect(tracker.observe(graph)).toMatchObject([{kind:'assignment',taskId:'new'}]);expect(tracker.observe(graph)).toEqual([]);
+ const tracker=new OfficeEventTracker(),graph=officeGraph([officeTask('old')]);expect(tracker.Observe(graph)).toEqual([]);
+ graph.cursor.seq++;graph.tasks.push(officeTask('new'));expect(tracker.Observe(graph)).toMatchObject([{kind:'assignment',taskId:'new'}]);expect(tracker.Observe(graph)).toEqual([]);
  graph.cursor.seq++;graph.tasks[1].result={resultId:'candidate',runId:'run',planRevision:1,summary:'候选',evidenceRefs:[],limitations:[],acceptance:'not_evaluated'};
- expect(tracker.observe(graph)).toMatchObject([{kind:'feedback',id:'result:candidate',scopeId:'topic'}]);
- expect(tracker.observe({...graph,cursor:{...graph.cursor,seq:1}})).toEqual([]);
- graph.cursor.seq++;graph.tasks.push(officeTask('hidden'));expect(tracker.observe(graph,false)).toEqual([]);expect(tracker.observe(graph,true)).toEqual([]);
- expect(tracker.observe({...graph,identity:{...graph.identity,rootSessionId:'another'},cursor:{...graph.cursor,rootSessionId:'another',seq:100}})).toEqual([]);
+ expect(tracker.Observe(graph)).toMatchObject([{kind:'feedback',id:'result:candidate',scopeId:'topic'}]);
+ expect(tracker.Observe({...graph,cursor:{...graph.cursor,seq:1}})).toEqual([]);
+ graph.cursor.seq++;graph.tasks.push(officeTask('hidden'));expect(tracker.Observe(graph,false)).toEqual([]);expect(tracker.Observe(graph,true)).toEqual([]);
+ expect(tracker.Observe({...graph,identity:{...graph.identity,rootSessionId:'another'},cursor:{...graph.cursor,rootSessionId:'another',seq:100}})).toEqual([]);
 });
 it('模块原 ID 与主工位/休息区同名时仍有独立工位',()=>{
  const task=officeTask('same-name');task.modules=[{moduleId:'main',name:'业务主模块',knowledgeRevision:'k',maintenanceBindingId:'m',maintainerPersonIds:['p'],workflow:{kind:'general',id:'general',version:'1',reason:'test'}}];

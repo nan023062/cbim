@@ -22,9 +22,9 @@ it('真实主 Pi 可见网页工具，内网和未配置搜索在实际服务拒
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{
   const seed=await seedWorkspaceMembers(f.app,f.temp,`http://127.0.0.1:${(server.address() as any).port}/v1`);
-  const started=await f.app.dispatch('loop.chat',{id:seed.entry.id,message:'核实网页工具边界',options:{permission:'read',turnTimeoutMs:30000}});
-  const inspect=()=>f.app.dispatch('loop.inspect',{id:seed.entry.id,taskId:started.taskId,runId:started.runId});
+  const started=await f.app.Dispatch('loop.chat',{id:seed.entry.id,message:'核实网页工具边界',options:{permission:'read',turnTimeoutMs:30000}});
+  const inspect=()=>f.app.Dispatch('loop.inspect',{id:seed.entry.id,taskId:started.taskId,runId:started.runId});
   await vi.waitFor(async()=>expect((await inspect()).status).not.toBe('running'),{timeout:30000,interval:50});
   expect(errors).toEqual([]);expect(requests).toHaveLength(3);expect((await inspect()).events.filter(event=>event.type==='tool.finished'&&String(event.data.name).startsWith('cbim_web_'))).toHaveLength(2);
- }finally{await f.app.shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
+ }finally{await f.app.Shutdown();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}
 },45000);

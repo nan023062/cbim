@@ -24,7 +24,7 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
   const current = (signal: AbortSignal) =>
   {
     signal.throwIfAborted();
-    workspace.assert(identity)
+    workspace.Assert(identity)
   };
   const source = (action: 'observe' | 'propose', toolCallId: string, sourceRun = run) => moduleGovernanceMainOriginSchema.parse({ kind: 'main_agent', rootSessionId: main.rootSessionId, agentInstanceId: main.agentInstanceId, agentSessionId: main.agentSessionId, runId: sourceRun, toolCallId, toolName: `cbim_governance_${action}` });
   const write = async (action: 'observe' | 'propose', raw: unknown, toolCallId: string, signal: AbortSignal) =>
@@ -36,8 +36,8 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
       current(signal);
       // 在任何展开或合并前严格检查原始模型输入，防止 strip 后伪造 actor/命令身份被忽略。
       const result = action === 'observe'
-        ? await workspace.governance.observeFromMain({ ...governanceObserveInputSchema.parse(raw), ...identity, commandId }, origin, signal)
-        : await workspace.governance.proposeFromMain({ ...governanceProposeInputSchema.parse(raw), ...identity, commandId }, origin, signal);
+        ? await workspace.governance.ObserveFromMain({ ...governanceObserveInputSchema.parse(raw), ...identity, commandId }, origin, signal)
+        : await workspace.governance.ProposeFromMain({ ...governanceProposeInputSchema.parse(raw), ...identity, commandId }, origin, signal);
       current(signal);
       if ('status' in result)
         return result;
@@ -53,22 +53,22 @@ export function mainGovernanceTools(workspace: Workspace, task: TaskSpec, runId:
     }
   };
   return {
-    get: async (raw, signal) =>
+    Get: async (raw, signal) =>
     {
       current(signal);
       const input = governanceGetInputSchema.parse(raw),
-        { view } = await workspace.governance.readForMain({ ...input, ...identity }, signal);
+        { view } = await workspace.governance.ReadForMain({ ...input, ...identity }, signal);
       current(signal);
       return projectGovernanceGet(view, publicIdentity)
     },
-    observe: (input, toolCallId, signal) => write('observe', input, toolCallId, signal),
-    propose: (input, toolCallId, signal) => write('propose', input, toolCallId, signal),
-    receipt: async (raw, signal) =>
+    Observe: (input, toolCallId, signal) => write('observe', input, toolCallId, signal),
+    Propose: (input, toolCallId, signal) => write('propose', input, toolCallId, signal),
+    Receipt: async (raw, signal) =>
     {
       current(signal);
       const input = governanceReceiptInputSchema.parse(raw),
         commandId = 'commandId' in input ? input.commandId : moduleGovernanceMainCommandId(identity.workspaceId, source(input.action, input.toolCallId, input.runId ?? run));
-      const value = await workspace.governance.lookup({ workspaceId: identity.workspaceId, commandId });
+      const value = await workspace.governance.Lookup({ workspaceId: identity.workspaceId, commandId });
       current(signal);
       return projectGovernanceReceipt(value, publicIdentity, commandId);
     },

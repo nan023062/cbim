@@ -69,14 +69,14 @@ export interface GoalToolsPort
   /** 可信周期模式，不能由工具输入或返回值决定。 */
   readonly collaborationMode?: 'auto' | 'team';
 
-  inspect(): Promise<unknown>;
+  Inspect(): Promise<unknown>;
 
   /** 只读生成待保留完整清单；不提交审阅或停泊。 */
-  previewPause?(): Promise<unknown>;
+  PreviewPause?(): Promise<unknown>;
 
-  plan(input: z.infer<typeof goalPlanInputSchema>, invocation: GoalToolInvocation): Promise<unknown>;
+  Plan(input: z.infer<typeof goalPlanInputSchema>, invocation: GoalToolInvocation): Promise<unknown>;
 
-  review(input: z.infer<typeof goalReviewInputSchema>, invocation: GoalToolInvocation): Promise<unknown>;
+  Review(input: z.infer<typeof goalReviewInputSchema>, invocation: GoalToolInvocation): Promise<unknown>;
 }
 
 /** 仅在主调度装配真实目标服务时注册；成员执行 Loop 不获得规划整轮用户目标的入口。 */
@@ -90,67 +90,67 @@ export class GoalTools
   }
 
   /** 工具表只公布已绑定端口，不包含未来人工确认或完成按钮的占位。 */
-  list()
+  List()
   {
     return Object.entries(definitions).map(([name, definition]) =>
     {
-      const d = this.definition(name as GoalToolName);
-      return ({ name, description: d.description, effects: d.effects, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...mainToolContract(name as GoalToolName), ...(name === 'cbim_goal_review' && this.port.previewPause ? { version: 2, outputSchema: { anyOf: [mainToolContract('cbim_goal_review').outputSchema, zodToJsonSchema(coordinationPreviewSchema)] } } : {}) })
+      const d = this.Definition(name as GoalToolName);
+      return ({ name, description: d.description, effects: d.effects, inputSchema: zodToJsonSchema(d.schema) as Record<string, unknown>, ...mainToolContract(name as GoalToolName), ...(name === 'cbim_goal_review' && this.port.PreviewPause ? { version: 2, outputSchema: { anyOf: [mainToolContract('cbim_goal_review').outputSchema, zodToJsonSchema(coordinationPreviewSchema)] } } : {}) })
     })
   }
 
   /** 精确匹配已实现名称，不按 cbim_goal_ 前缀放行未知操作。 */
-  has(name: string): name is GoalToolName
+  Has(name: string): name is GoalToolName
   {
     return Object.hasOwn(definitions, name)
   }
 
-  private definition(name: GoalToolName)
+  private Definition(name: GoalToolName)
   {
     const definition = definitions[name];
-    return name === 'cbim_goal_review' && !this.port.previewPause ? { ...definition, schema: reviewInput } : definition
+    return name === 'cbim_goal_review' && !this.port.PreviewPause ? { ...definition, schema: reviewInput } : definition
   }
 
-  private parse(name: string, input: unknown)
+  private Parse(name: string, input: unknown)
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('TOOL_NOT_FOUND', '当前运行没有此目标规划工具');
-    const definition = this.definition(name),
+    const definition = this.Definition(name),
       parsed = definition.schema.safeParse(input);
     if (!parsed.success)
       fail('GOAL_TOOL_INPUT_INVALID', '目标工具参数无效：' + parsed.error.issues.map(issue => issue.path.join('.') + ': ' + issue.message).join('；'));
     const preview = name === 'cbim_goal_review' && pausePreviewInput.safeParse(input).success;
-    if (preview && !this.port.previewPause)
+    if (preview && !this.port.PreviewPause)
       fail('TOOL_NOT_FOUND', '当前运行未提供等待清单预览');
     return { name, args: parsed.data, effects: preview ? ['preview'] as const : definition.effects };
   }
 
   /** 规划和审阅仅维护调度记录；不能因此放行主 Agent 的业务写入或签发人工批准。 */
-  describe(name: string, input: unknown)
+  Describe(name: string, input: unknown)
   {
-    const parsed = this.parse(name, input);
+    const parsed = this.Parse(name, input);
     return { effects: parsed.effects, native: false }
   }
 
   /** gate 放行后调用；服务保持真实结果，complete 的完成门禁仍在可信主运行结算阶段。 */
-  async call(name: string, input: unknown, signal: AbortSignal, toolCallId?: string)
+  async Call(name: string, input: unknown, signal: AbortSignal, toolCallId?: string)
   {
     signal.throwIfAborted();
-    const parsed = this.parse(name, input);
+    const parsed = this.Parse(name, input);
     if (typeof toolCallId !== 'string' || !toolCallId.trim() || toolCallId.length > 512)
       fail('GOAL_CALL_ID_REQUIRED', '目标工具缺少可信调用标识');
     if (parsed.name === 'cbim_goal_review' && pausePreviewInput.safeParse(parsed.args).success)
     {
-      const value = await this.port.previewPause!();
+      const value = await this.port.PreviewPause!();
       signal.throwIfAborted();
       return checkedClosurePreview(parsed.name, value, this.binding);
     }
     const invocation = { toolCallId, signal };
     try
     {
-      const value = parsed.name === 'cbim_goal_inspect' ? await this.port.inspect() : parsed.name === 'cbim_goal_plan'
-        ? await this.port.plan(parsed.args as z.infer<typeof goalPlanInputSchema>, invocation)
-        : await this.port.review(parsed.args as z.infer<typeof goalReviewInputSchema>, invocation);
+      const value = parsed.name === 'cbim_goal_inspect' ? await this.port.Inspect() : parsed.name === 'cbim_goal_plan'
+        ? await this.port.Plan(parsed.args as z.infer<typeof goalPlanInputSchema>, invocation)
+        : await this.port.Review(parsed.args as z.infer<typeof goalReviewInputSchema>, invocation);
       return checkedMainToolResult(parsed.name, value, this.binding, parsed.args, toolCallId);
     }
     catch (error)

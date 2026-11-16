@@ -43,15 +43,15 @@ export interface RequestBudgetMutation<T>
 /** 命令身份与幂等摘要由调用方按原请求产生；同一键重放须返回原回执而不再次执行 prepare。 */
 export interface RequestBudgetStore
 {
-  readBudget(): Promise<RequestBudgetState>;
+  ReadBudget(): Promise<RequestBudgetState>;
 
-  transactBudget<T>(command: { commandId: string; fingerprint: string }, prepare: (state: RequestBudgetState) => Promise<RequestBudgetMutation<T>>): Promise<T>;
+  TransactBudget<T>(command: { commandId: string; fingerprint: string }, prepare: (state: RequestBudgetState) => Promise<RequestBudgetMutation<T>>): Promise<T>;
 }
 
 /** 只核实可信主运行占位与请求额度，不授予启动、改写周期或补造历史的能力。 */
 export interface RequestBudgetAdmission
 {
-  isMainLive(runId: string): boolean;
+  IsMainLive(runId: string): boolean;
 
-  preflightRequest(state: RequestBudgetState, scope: RequestBudgetScope, model: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>): void;
+  PreflightRequest(state: RequestBudgetState, scope: RequestBudgetScope, model: Pick<GenerationBudgetModel, 'contextWindow' | 'maxTokens' | 'pricing'>): void;
 }

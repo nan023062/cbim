@@ -29,7 +29,7 @@ export class NativeSessionFiles
   }
 
   /** sessionFile/nativeSessionId 仅来自可信运行记录；调用前必须关闭其原生进程，信号覆盖读取全过程。 */
-  async read(session: { nativeSessionId: string; sessionFile?: string }, signal: AbortSignal): Promise<NativeSessionFingerprint>
+  async Read(session: { nativeSessionId: string; sessionFile?: string }, signal: AbortSignal): Promise<NativeSessionFingerprint>
   {
     this.assert();
     signal.throwIfAborted();

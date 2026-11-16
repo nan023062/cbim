@@ -18,7 +18,7 @@ export class SubscriptionSet
        * 注册不立即通知。返回的退订按函数身份删除，不做引用计数；重复注册任一退订会移除该函数。
        * 保留原 Set 行为：旧退订再次调用，也会移除后来重新注册的同一函数。
        */
-  subscribe(listener: () => void): () => void
+  Subscribe(listener: () => void): () => void
   {
     this.listeners.add(listener);
     return () =>
@@ -32,14 +32,14 @@ export class SubscriptionSet
        * 异常原样向调用者抛出并中断本轮；不等待异步回调。支持嵌套通知，不添加去抖或调度。
        * 回调反复删除后重加自身可能使遍历无法结束，消费者须避免此类循环。
        */
-  notify(): void
+  Notify(): void
   {
     for (const listener of this.listeners)
       listener();
   }
 
   /** 清空监听器但不通知、不封闭集合；不取消请求、计时器或其他业务资源。 */
-  clear(): void
+  Clear(): void
   {
     this.listeners.clear()
   }

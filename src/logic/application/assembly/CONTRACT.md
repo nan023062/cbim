@@ -18,13 +18,13 @@
 
 ### 逐角色预算工厂传播
 
-主/成员装配把统一适配器请求的 role 传给同一工作区 ModelRequestBudgetService.forRun；省略 role 沿 primary。角色身份、配置与价格只能从原冻结模型快照取得，不从工具请求读取。
+主/成员装配把统一适配器请求的 role 传给同一工作区 ModelRequestBudgetService.ForRun；省略 role 沿 primary。角色身份、配置与价格只能从原冻结模型快照取得，不从工具请求读取。
 
 递归模型捕获使用 EngineModelProfiles，包括岗位冻结的 modelRoles；根与子预算均按 role 缓存独立计价端口，继续共享根账本。子发送门禁作为 forRun 第四参，与第三参角色选型分离。
 
 ## Agent 业务验证迁移
 
-`cbim_agent_call.business` 显式给出模块、验收项及可选 Workflow。agent-business 在原岗位、来源和模型快照下冻结知识，再注入既有采集、JSON/CSV/PNG、清单和代码检查端口。普通调用保持 chat；业务调用使用 LoopRuntime.startMember 的可信身份入口，保留 agent-tools-v1 与父工具引用，不创建派发图任务、消息队列或 Team UI。
+`cbim_agent_call.business` 显式给出模块、验收项及可选 Workflow。agent-business 在原岗位、来源和模型快照下冻结知识，再注入既有采集、JSON/CSV/PNG、清单和代码检查端口。普通调用保持 chat；业务调用使用 LoopRuntime.StartMember 的可信身份入口，保留 agent-tools-v1 与父工具引用，不创建派发图任务、消息队列或 Team UI。
 
 TaskNode/DispatchRun 在本装配中仅是既有知识冻结及 canonical 验证器所需的私有输入投影，不写入 DispatchStore，不代表旧派发已发生。真实副作用与结算事实来自 LoopRuntime 的原始日志。再次核验读取同一 taskId/runId 的 canonical 和当前文件；不重启模型、不修改旧证据、不声明人工验收。原知识变化拒绝核验。冻结的 executionScope 通过既有 ScopedExecutionFiles 装配读取、写入范围和隔离生命周期；缺少可信平台服务时明确拒绝启动，不降级到普通命令。
 
@@ -37,7 +37,7 @@ agent-calls 仅把本根对话已捕获的 requestQuestion 注入 requestReview�
 
 ## 根运行插入回执
 
-根运行按本轮输入打开目标周期，队列启动保留 queueId 与 followupOf。插入消息复用 ScopeActiveInputService.send，收尾等待在途插入；完成核证返回 GOAL_* 错误时保留阻塞原因并以 failed 封存，错误仍返回对话，不把模型退出认定为业务成功。
+根运行按本轮输入打开目标周期，队列启动保留 queueId 与 followupOf。插入消息复用 ScopeActiveInputService.Send，收尾等待在途插入；完成核证返回 GOAL_* 错误时保留阻塞原因并以 failed 封存，错误仍返回对话，不把模型退出认定为业务成功。
 
 
 ### 统一主会话归档

@@ -38,7 +38,7 @@ class N_src_core_platform_electron_web_reader_ts["web-reader.ts"] {
 }
 class N_src_core_platform_electron_web_reader_ts_ElectronBrowserReader["ElectronBrowserReader"] {
   +constructor()
-  +read()
+  +Read()
   -transport
   -prefix
   -busy

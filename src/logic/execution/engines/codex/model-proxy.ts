@@ -22,7 +22,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
     const response = await fetch(gate.url + '/ready', { method: 'POST', headers: { authorization: 'Bearer ' + gate.token } });
     if (!response.ok)
       throw Error('Codex 请求预算准备失败');
-    gate.assertReady()
+    gate.AssertReady()
   }
   const token = randomBytes(32).toString('hex'),
     known = new Set(registered.map(tool => tool.name)),
@@ -88,14 +88,14 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
         if (!upstream.ok || !upstream.body || !upstream.headers.get('content-type')?.startsWith('text/event-stream'))
         {
           await upstream.body?.cancel();
-          throw Error(gate?.error() ?? 'Codex 供应商没有返回可靠流式响应')
+          throw Error(gate?.Error() ?? 'Codex 供应商没有返回可靠流式响应')
         }
         response.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store' });
         const parser = new RequestBudgetUsageStream('openai-responses');
         for await (const chunk of upstream.body)
         {
           abort.signal.throwIfAborted();
-          for (const frame of parser.push(chunk))
+          for (const frame of parser.Push(chunk))
             if (!response.write(frame))
               await new Promise<void>((resolve, reject) =>
               {
@@ -114,7 +114,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
               })
         }
         // 按本轮实际 HTTP 响应求和，避免把恢复线程的历史累计用量再次记账。
-        const result = parser.finish();
+        const result = parser.Finish();
         for (const key of ['input', 'output', 'cacheRead', 'cacheWrite'] as const)
         {
           totals[key] += result.usage[key];
@@ -126,7 +126,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
       }
       catch (error)
       {
-        failure ??= gate?.error() ?? (error instanceof Error ? error.message : 'Codex 模型传输失败');
+        failure ??= gate?.Error() ?? (error instanceof Error ? error.message : 'Codex 模型传输失败');
         abort.abort();
         if (response.headersSent)
           response.destroy();
@@ -149,20 +149,20 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
     server.listen(0, '127.0.0.1', resolve)
   });
   return {
-    url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port, token, error: () => failure ?? gate?.error(),
-    usage()
+    url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port, token, error: () => failure ?? gate?.Error(),
+    Usage()
     {
       return !closing && !failure && completed ? { ...totals } : undefined
     },
-    async assertSettled()
+    async AssertSettled()
     {
       while (active.size)
         await Promise.all([...active.keys()]);
-      await gate?.assertSettled();
+      await gate?.AssertSettled();
       if (closing || failure)
         throw Error(failure ?? 'Codex 请求已停止')
     },
-    close()
+    Close()
     {
       return closePromise ??= (async () =>
       {
@@ -172,7 +172,7 @@ export async function openCodexModelProxy(llm: ResolvedLlm, registered: CodexToo
         server.closeAllConnections();
         await new Promise<void>(resolve => server.close(() => resolve()));
         await Promise.allSettled([...active.keys()]);
-        await gate?.close()
+        await gate?.Close()
       })()
     },
   };

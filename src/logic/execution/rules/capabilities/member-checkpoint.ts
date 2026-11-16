@@ -34,14 +34,14 @@ export class RunMemberCheckpoint
 
   private controller = new AbortController();
 
-  constructor(private readonly binding: MemberRunBinding, private readonly port: ArtifactCapturePort, private readonly context: { current(): TaskProgress | undefined; assertReady(id: string): void; save(value: MemberCheckpointStaged): Promise<void> })
+  constructor(private readonly binding: MemberRunBinding, private readonly port: ArtifactCapturePort, private readonly context: { Current(): TaskProgress | undefined; AssertReady(id: string): void; Save(value: MemberCheckpointStaged): Promise<void> })
   {
     this.binding = Object.freeze(structuredClone(binding));
-    this.tools = new MemberCheckpointTools(this.binding, { knowledgeRevision: port.knowledgeRevision, stage: (input, id) => this.stage(input, id) });
+    this.tools = new MemberCheckpointTools(this.binding, { knowledgeRevision: port.knowledgeRevision, Stage: (input, id) => this.Stage(input, id) });
   }
 
   /** 策略或审批 await 之前预占；失败参数可修正，开始保存后永久封住本轮，直到安全结算。 */
-  guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
+  Guard(name: string, id: string, input: unknown, active: readonly string[]): string | undefined
   {
     if (this.staged || this.reserved)
       return '成员检查点正在交接，请结束本轮；不能再调用工具';
@@ -57,7 +57,7 @@ export class RunMemberCheckpoint
     this.reserved = { id, input: parsed.data, consumed: false };
   }
 
-  observed(event: StoredEvent)
+  Observed(event: StoredEvent)
   {
     if (event.type === 'run.started' || event.type.startsWith('tool.') || event.type === 'task.updated' || event.type === 'artifact.baseline_captured' || event.type === 'task.checkpoint_requested' || event.type === 'run.stop_requested')
       this.events.push(event);
@@ -65,12 +65,12 @@ export class RunMemberCheckpoint
       this.reserved = undefined;
   }
 
-  stop()
+  Stop()
   {
     this.controller.abort(Error('成员运行已停止'))
   }
 
-  private async stage(input: MemberCheckpointInput, id: string): Promise<MemberCheckpointStaged>
+  private async Stage(input: MemberCheckpointInput, id: string): Promise<MemberCheckpointStaged>
   {
     if (!this.reserved || this.reserved.id !== id || this.reserved.consumed || !isDeepStrictEqual(this.reserved.input, input))
       fail('MEMBER_CHECKPOINT_CALL', '检查点必须来自本轮授权的一次性调用');
@@ -78,25 +78,25 @@ export class RunMemberCheckpoint
     const check = () =>
     {
       this.controller.signal.throwIfAborted();
-      this.context.assertReady(id);
-      if (this.context.current()?.version !== input.expectedTaskProgressVersion)
+      this.context.AssertReady(id);
+      if (this.context.Current()?.version !== input.expectedTaskProgressVersion)
         fail('MEMBER_CHECKPOINT_PROGRESS', '任务进度已变化，请重新核实')
     };
     check();
-    await this.port.assertCurrentKnowledge();
+    await this.port.AssertCurrentKnowledge();
     check();
-    const eligible = validateCheckpointEligibility(this.events, this.binding, this.port.knowledgeRevision, this.port.normalizePath, input, id);
+    const eligible = validateCheckpointEligibility(this.events, this.binding, this.port.knowledgeRevision, this.port.NormalizePath, input, id);
     const expected = eligible.baseline.baseline.files,
-      files = await this.port.captureFiles(expected.map(file => file.relativePath), this.controller.signal);
+      files = await this.port.CaptureFiles(expected.map(file => file.relativePath), this.controller.signal);
     check();
-    if (files.length !== expected.length || files.some((file, index) => this.port.normalizePath(file.relativePath) !== this.port.normalizePath(expected[index].relativePath) || file.sha256 !== expected[index].sha256 || file.byteLength !== expected[index].byteLength))
+    if (files.length !== expected.length || files.some((file, index) => this.port.NormalizePath(file.relativePath) !== this.port.NormalizePath(expected[index].relativePath) || file.sha256 !== expected[index].sha256 || file.byteLength !== expected[index].byteLength))
       fail('MEMBER_CHECKPOINT_ARTIFACT_CHANGED', '文件已偏离所选基线，不能建立检查点');
-    await this.port.assertCurrentKnowledge();
+    await this.port.AssertCurrentKnowledge();
     check();
-    validateCheckpointEligibility(this.events, this.binding, this.port.knowledgeRevision, this.port.normalizePath, input, id);
+    validateCheckpointEligibility(this.events, this.binding, this.port.knowledgeRevision, this.port.NormalizePath, input, id);
     const value = memberCheckpointStagedSchema.parse({ version: 1, checkpointId: randomUUID(), toolCallId: id, binding: this.binding, input, knowledgeRevision: this.port.knowledgeRevision, requestedAt: new Date().toISOString(), lastEffectSeq: eligible.lastEffectSeq });
     this.staged = true;
-    await this.context.save(value);
+    await this.context.Save(value);
     check();
     return value;
   }

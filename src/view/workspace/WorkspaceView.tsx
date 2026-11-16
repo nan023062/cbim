@@ -125,21 +125,21 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
     };
     if (target === '.cbim/workspace')
       return [
-        { id: 'business-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, onSelect: wrap(() => void launch.start()) },
-        { id: 'module-new', label: '新建工程模块', icon: 'plus', onSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
-        { id: 'ownerships', label: '负责人记录', icon: 'clock', onSelect: wrap(() => setOwnership({})) },
-        { id: 'architecture-publish', label: '发布架构', icon: 'upload', disabled: !tree?.roots.length, onSelect: wrap(() => setTransfer('publish')) },
-        { id: 'architecture-import', label: '使用模板', icon: 'download', onSelect: wrap(() => setTransfer('import')) },
+        { id: 'business-govern', label: launch.label, icon: 'sparkles', disabled: launch.disabled, OnSelect: wrap(() => void launch.start()) },
+        { id: 'module-new', label: '新建工程模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
+        { id: 'ownerships', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({})) },
+        { id: 'architecture-publish', label: '发布架构', icon: 'upload', disabled: !tree?.roots.length, OnSelect: wrap(() => setTransfer('publish')) },
+        { id: 'architecture-import', label: '使用模板', icon: 'download', OnSelect: wrap(() => setTransfer('import')) },
       ];
     if (!tree?.nodes[target])
       return [];
     return [
-      { id: 'module-child', label: '新建子模块', icon: 'plus', onSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
-      { id: 'module-edit', label: '编辑模块', icon: 'edit', onSelect: wrap(() => setEditor({ kind: 'module', id: target })) },
-      { id: 'module-delete', label: '删除模块', icon: 'trash', onSelect: wrap(() => setEditor({ kind: 'module', id: target, mode: 'delete' })) },
-      { id: 'module-governance', label: '知识治理记录', icon: 'knowledge', onSelect: wrap(() => setGovernance(target)) },
-      { id: 'module-ownership', label: '负责人记录', icon: 'clock', onSelect: wrap(() => setOwnership({ moduleId: target })) },
-      { id: 'workflow-new', label: '新建 Workflow', icon: 'flow', onSelect: wrap(() => setEditor({ kind: 'workflow', parentId: target })) },
+      { id: 'module-child', label: '新建子模块', icon: 'plus', OnSelect: wrap(() => setEditor({ kind: 'module', parentId: target })) },
+      { id: 'module-edit', label: '编辑模块', icon: 'edit', OnSelect: wrap(() => setEditor({ kind: 'module', id: target })) },
+      { id: 'module-delete', label: '删除模块', icon: 'trash', OnSelect: wrap(() => setEditor({ kind: 'module', id: target, mode: 'delete' })) },
+      { id: 'module-governance', label: '知识治理记录', icon: 'knowledge', OnSelect: wrap(() => setGovernance(target)) },
+      { id: 'module-ownership', label: '负责人记录', icon: 'clock', OnSelect: wrap(() => setOwnership({ moduleId: target })) },
+      { id: 'workflow-new', label: '新建 Workflow', icon: 'flow', OnSelect: wrap(() => setEditor({ kind: 'workflow', parentId: target })) },
     ];
   }
   const definition = (() =>
@@ -180,6 +180,6 @@ export function BusinessArchitecture({ workspace, tabId, dirty, snapshot, refres
   </div>}
   {current && editor && <ArchitectureEditor key={JSON.stringify(editor)} workspaceId={id} snapshot={current} {...editor} onClose={() => setEditor(undefined)} onSaved={objects => void saved(objects)} />}
   {current && transfer && <WorkspaceResourceTransfer workspaceId={id} snapshot={current} mode={transfer} kind="architecture" category="templates" onClose={() => setTransfer(undefined)} onApplied={() => void saved([])} />}
-  {current && governance && <ModuleGovernancePanel key={current.instanceId + governance} identity={{ workspaceId: id, instanceId: current.instanceId }} moduleId={governance} onClose={() => setGovernance(undefined)} onApplied={refresh} />}
+  {current && governance && <ModuleGovernancePanel key={current.instanceId + governance} identity={{ workspaceId: id, instanceId: current.instanceId }} moduleId={governance} OnClose={() => setGovernance(undefined)} OnApplied={refresh} />}
  </div>;
 }

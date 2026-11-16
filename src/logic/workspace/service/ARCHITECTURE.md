@@ -33,8 +33,8 @@ class N_src_logic_workspace_service_architecture_service_ts["architecture-servic
 }
 class N_src_logic_workspace_service_architecture_service_ts_ArchitectureService["ArchitectureService"] {
   +constructor()
-  +preview()
-  +commit()
+  +Preview()
+  +Commit()
   -workspace
   -objects
 }
@@ -54,13 +54,13 @@ class N_src_logic_workspace_service_catalog_ts_Catalog["Catalog"] {
   +paths
   +warning
   +constructor()
-  +init()
-  +read()
-  +update()
-  +add()
-  +rename()
-  +remove()
-  +relocate()
+  +Init()
+  +Read()
+  +Update()
+  +Add()
+  +Rename()
+  +Remove()
+  +Relocate()
 }
 N_src_logic_workspace_service_catalog_ts ..> N_src_logic_workspace_service_catalog_ts_Catalog : 声明
 ```
@@ -97,21 +97,21 @@ class N_src_logic_workspace_service_module_ownerships_ts_Knowledge["Knowledge"] 
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_Knowledge : 声明
 class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
   +constructor()
-  +list()
-  +byMember()
-  +inspectModules()
-  +get()
-  +preview()
-  +receipt()
-  +commit()
+  +List()
+  +ByMember()
+  +InspectModules()
+  +Get()
+  +Preview()
+  +Receipt()
+  +Commit()
   -owner
   -store
   -isCurrent
-  -identity()
-  -assert()
-  -workspace()
-  -cursor()
-  -basis()
+  -Identity()
+  -Assert()
+  -Workspace()
+  -Cursor()
+  -Basis()
 }
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships : 声明
 ```
@@ -124,14 +124,14 @@ class N_src_logic_workspace_service_module_ownerships_ts["module-ownerships.ts"]
   <<module>>
 }
 class N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships["ModuleOwnerships"] {
-  -knowledge()
-  -observed()
-  -view()
-  -page()
-  -verifyKnowledge()
-  -verifyRead()
-  -prepare()
-  -checkedReceipt()
+  -Knowledge()
+  -Observed()
+  -View()
+  -Page()
+  -VerifyKnowledge()
+  -VerifyRead()
+  -Prepare()
+  -CheckedReceipt()
 }
 N_src_logic_workspace_service_module_ownerships_ts ..> N_src_logic_workspace_service_module_ownerships_ts_ModuleOwnerships : 声明
 ```
@@ -150,10 +150,10 @@ class N_src_logic_workspace_service_paths_ts_Paths["Paths"] {
   +installRoot
   +protectedRoots
   +constructor()
-  +identity()
-  +project()
-  +local()
-  +knowledge()
+  +Identity()
+  +Project()
+  +Local()
+  +Knowledge()
 }
 N_src_logic_workspace_service_paths_ts ..> N_src_logic_workspace_service_paths_ts_Paths : 声明
 class N_src_logic_workspace_service_paths_ts_external_StoragePaths["StoragePaths (外部契约)"] {
@@ -174,19 +174,19 @@ class N_src_logic_workspace_service_source_browser_ts["source-browser.ts"] {
 class N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace["SourceBrowserWorkspace"] {
   <<interface>>
   +entry
-  +assert()
-  +read()
+  +Assert()
+  +Read()
 }
 N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_service_source_browser_ts_SourceBrowserWorkspace : 声明
 class N_src_logic_workspace_service_source_browser_ts_ModuleSourceBrowser["ModuleSourceBrowser"] {
   +constructor()
-  +list()
-  +read()
+  +List()
+  +Read()
   -workspace
-  -binding()
-  -check()
-  -finish()
-  -guarded()
+  -Binding()
+  -Check()
+  -Finish()
+  -Guarded()
 }
 N_src_logic_workspace_service_source_browser_ts ..> N_src_logic_workspace_service_source_browser_ts_ModuleSourceBrowser : 声明
 ```
@@ -218,7 +218,7 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   +tasks
   +sources
   +constructor()
-  +view()
+  +View()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
 class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -235,22 +235,22 @@ class N_src_logic_workspace_service_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
-  +assert()
-  +attachDispatchStore()
+  +Assert()
+  +AttachDispatchStore()
   +dispatchStore
-  +open()
-  +read()
-  +snapshot()
-  +preview()
-  +commit()
-  +commitPlanned()
-  +withSourceSnapshot()
-  +governed()
-  +committedReceipt()
-  +hasRecordedRequest()
-  +planMove()
-  +startTask()
-  +cancelTask()
+  +Open()
+  +Read()
+  +Snapshot()
+  +Preview()
+  +Commit()
+  +CommitPlanned()
+  +WithSourceSnapshot()
+  +Governed()
+  +CommittedReceipt()
+  +HasRecordedRequest()
+  +PlanMove()
+  +StartTask()
+  +CancelTask()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
 class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -267,9 +267,9 @@ class N_src_logic_workspace_service_workspace_ts["workspace.ts"] {
   <<module>>
 }
 class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
-  +localData()
-  +prepareClose()
-  +close()
+  +LocalData()
+  +PrepareClose()
+  +Close()
   -controllers
   -lock
   -watcher
@@ -277,7 +277,7 @@ class N_src_logic_workspace_service_workspace_ts_Workspace["Workspace"] {
   -knowledge
   -closePreparation
   -sharedDispatch
-  -log()
+  -Log()
 }
 N_src_logic_workspace_service_workspace_ts ..> N_src_logic_workspace_service_workspace_ts_Workspace : 声明
 class N_src_logic_workspace_service_workspace_ts_external_KnowledgeWorkspace["KnowledgeWorkspace (外部契约)"] {
@@ -409,9 +409,9 @@ Workspace *-- KernelLock : 打开时持有，关闭时释放
 
 `Workspace` 在持工程锁并核本地路径身份后加载同一 Store，先恢复来源握手再发布运行服务。能力或模块来源采纳使用 Knowledge→Store 单向锁序；新捕获和消费者审计在同一 Store 事务，预览不分配来源代次。旧岗位/责任不自动补引用，改名、状态、模型采纳及解除不采纳新能力/模块来源。
 
-`WorkspaceMembers.get` 每次核当前来源并在返回前比较来源游标。责任列表依据额外绑定 `sourceCursor`，即使知识字节恢复相同也不能混用旧页；详情、预览最后复核岗位/责任/来源变化。`adopt_source` 保留原 bindingId 与负责人，要求当前负责人 active、精确原关系及当前预览，只提升关系版本与来源引用，不自动派发。原命令回执先于新实例、来源和状态判断。
+`WorkspaceMembers.Get` 每次核当前来源并在返回前比较来源游标。责任列表依据额外绑定 `sourceCursor`，即使知识字节恢复相同也不能混用旧页；详情、预览最后复核岗位/责任/来源变化。`adopt_source` 保留原 bindingId 与负责人，要求当前负责人 active、精确原关系及当前预览，只提升关系版本与来源引用，不自动派发。原命令回执先于新实例、来源和状态判断。
 
-主运行的 `mainModuleOwnershipTools` 对 moduleIds 查询同时调用 `OwnerExecutionService.discover`，两份读取的知识、岗位、责任和来源游标必须一致才返回。只读分组提供可提交的选择或具体缺口；实际计划/派发重新核实，发现结果不充当执行许可。岗位查询不返回解密凭据，原任务对照不覆盖历史绑定。
+主运行的 `mainModuleOwnershipTools` 对 moduleIds 查询同时调用 `OwnerExecutionService.Discover`，两份读取的知识、岗位、责任和来源游标必须一致才返回。只读分组提供可提交的选择或具体缺口；实际计划/派发重新核实，发现结果不充当执行许可。岗位查询不返回解密凭据，原任务对照不覆盖历史绑定。
 
 ## 受控文件与显式补偿
 
@@ -434,7 +434,7 @@ knowledge-effect-reader.ts 在已打开工作区复用 governed 串行队列的 
 
 ## R07-B2 原删除与移动证明
 
-artifact-transitions 将冻结定义适配为同一 production ControlledFileTransport.withExclusiveTransition；每个真实读取/操作前复核原工作区实例和当前运行，用户根与安装根仍受保护。平台身份及原字节回执严格对照固定操作，withExclusive 返回前必须确认 utility 已退出；不复制正文、不自建任务存储、不自动补偿。
+artifact-transitions 将冻结定义适配为同一 production ControlledFileTransport.WithExclusiveTransition；每个真实读取/操作前复核原工作区实例和当前运行，用户根与安装根仍受保护。平台身份及原字节回执严格对照固定操作，withExclusive 返回前必须确认 utility 已退出；不复制正文、不自建任务存储、不自动补偿。
 
 ## 原隔离执行核实与清理
 
@@ -449,7 +449,7 @@ ModuleOwnerships 复用 Logic 领域规则 责任预期诊断，区分无需重�
 
 ### 实例变化的恢复指引
 
-Workspace.assert 保留 STALE_INSTANCE 协议，分别指出工程选错与运行实例变化。后者返回当前 instanceId 并要求 cbim_workspace_identity 后重新读取/预览；未知写入须先核原回执，不自动跨实例重放或改绑。运行状态和身份仍先于知识读写检查。
+Workspace.Assert 保留 STALE_INSTANCE 协议，分别指出工程选错与运行实例变化。后者返回当前 instanceId 并要求 cbim_workspace_identity 后重新读取/预览；未知写入须先核原回执，不自动跨实例重放或改绑。运行状态和身份仍先于知识读写检查。
 
 ### 岗位独立引擎
 

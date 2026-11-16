@@ -12,8 +12,8 @@ it.each([
   const engine=new PiEngine({process:{command:'unused',args:[]},agentHome:'unused',provider:'unused',model:'unused',prompt:'unused',knowledge:{list:async()=>[],call:async()=>({content:[]})}}) as any;
   engine.context={emit:async(event:EngineEvent)=>{events.push(event)}};engine.stopped=stopped;
   engine.settlement={resolve:(result:unknown)=>{outcome=result}};
-  await engine.consume({type:'message_end',message:{role:'assistant',content:[],stopReason:'error',errorMessage:error}});
-  await engine.consume({type:'agent_settled',aborted:stopped});
+  await engine.Consume({type:'message_end',message:{role:'assistant',content:[],stopReason:'error',errorMessage:error}});
+  await engine.Consume({type:'agent_settled',aborted:stopped});
   expect(outcome).toMatchObject({status});expect(events[0].data.stopReason).toBe(stopReason);
   if(status==='failed')expect(outcome).toMatchObject({error});
 });

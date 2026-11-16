@@ -30,13 +30,13 @@ it('正式成员按同轮基线保存真实通过记录，步骤增版后仍可�
     await done(c);const candidate=await invoke(c,'cbim_delivery_prepare','delivery',{expectedVersion:2,summary:'JSON 结构满足冻结要求',limitations:[]});expect(candidate.delivery.workflow.validationChecks).toHaveLength(1);
   });try{
     const summary=await (await f.start()).done;expect(summary.status).toBe('completed');expect(f.validateFile).toHaveBeenCalledTimes(1);expect(f.checkValidationFiles).toHaveBeenCalledTimes(1);
-    const records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.normalizePath);expect(records).toHaveLength(1);expect(records[0].receipt).toMatchObject({outcome:'succeeded',effects:['read']});expect(records[0].checkedSeq).toBeLessThan(records[0].finishedSeq);
+    const records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.NormalizePath);expect(records).toHaveLength(1);expect(records[0].receipt).toMatchObject({outcome:'succeeded',effects:['read']});expect(records[0].checkedSeq).toBeLessThan(records[0].finishedSeq);
   }finally{await f.cleanup()}
 });
 
 it('结构拒绝是可追溯的 succeeded 验证事实，但步骤引用不能把 rejected 变成 Workflow 通过',async()=>{
   const f=await fixture(async c=>{const input=await prepare(c);expect((await invoke(c,'cbim_validation_run','validation',input)).validation.outcome).toBe('rejected');await done(c);await failed(c,'cbim_delivery_prepare','delivery',{expectedVersion:2,summary:'不能交付',limitations:[]},'WORKFLOW_VALIDATION_REQUIRED')});
-  try{await fs.writeFile(path.join(f.directory,'File.txt'),'{"count":"bad"}');const summary=await (await f.start()).done;expect(summary.taskProgress?.delivery).toBeUndefined();expect(summary.taskProgress?.version).toBe(2);const records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.normalizePath);expect(records[0]).toMatchObject({result:{outcome:'rejected'},receipt:{outcome:'succeeded'}})}finally{await f.cleanup()}
+  try{await fs.writeFile(path.join(f.directory,'File.txt'),'{"count":"bad"}');const summary=await (await f.start()).done;expect(summary.taskProgress?.delivery).toBeUndefined();expect(summary.taskProgress?.version).toBe(2);const records=verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.NormalizePath);expect(records[0]).toMatchObject({result:{outcome:'rejected'},receipt:{outcome:'succeeded'}})}finally{await f.cleanup()}
 });
 
 it('验证实际读取期间封住并发工具，停止会中止端口且不产生通过事件',async()=>{
@@ -46,14 +46,14 @@ it('验证实际读取期间封住并发工具，停止会中止端口且不产�
     for(const name of ['read','write','cbim_task_artifact_capture','cbim_task_help'])expect((await c.beforeTool({name,id:'concurrent-'+name,input:{}})).allow).toBe(false);
     expect((await work)?.message).toContain('停止');await c.emit({type:'tool.finished',data:{name:'cbim_validation_run',id:'validation',isError:true,result:{content:[{type:'text',text:'stopped'}]}}});
   });f.validateFile.mockImplementation(async(_file,_schema,signal)=>{entered.resolve();await release.promise;signalAborted=signal.aborted;signal.throwIfAborted();throw Error('missing abort')});
-  try{const run=await f.start();await entered.promise;await f.runtime.stop(f.task.taskId);release.resolve();const summary=await run.done;expect(summary.status).toBe('cancelled');expect(signalAborted).toBe(true);expect(summary.events.some(event=>event.type==='validation.checked')).toBe(false)}finally{release.resolve();await f.cleanup()}
+  try{const run=await f.start();await entered.promise;await f.runtime.Stop(f.task.taskId);release.resolve();const summary=await run.done;expect(summary.status).toBe('cancelled');expect(signalAborted).toBe(true);expect(summary.events.some(event=>event.type==='validation.checked')).toBe(false)}finally{release.resolve();await f.cleanup()}
 });
 
 it('交付复核持独立短锁，异步读取期间写入不能越过，结束后释放且不改验证事实',async()=>{
   const entered=deferred(),release=deferred();const f=await fixture(async c=>{
     await invoke(c,'cbim_validation_run','validation',await prepare(c));await done(c);const args={expectedVersion:2,summary:'结构满足',limitations:[]};expect((await c.beforeTool({name:'cbim_delivery_prepare',id:'delivery',input:args})).allow).toBe(true);
     const work=runtimeToolGroup(c,'task-progress')!.call('cbim_delivery_prepare',args);await entered.promise;expect((await c.beforeTool({name:'write',id:'racing-write',input:{path:'File.txt',content:'bad'}})).allow).toBe(false);release.resolve();const result=await work;await c.emit({type:'tool.finished',data:{name:'cbim_delivery_prepare',id:'delivery',result}});await invoke(c,'read','after-delivery',{path:'File.txt'});
-  });f.checkValidationFiles.mockImplementation(async(files,signal)=>{entered.resolve();await release.promise;return f.filePort.checkFiles(files,signal)});
+  });f.checkValidationFiles.mockImplementation(async(files,signal)=>{entered.resolve();await release.promise;return f.filePort.CheckFiles(files,signal)});
   try{expect((await (await f.start()).done).taskProgress?.state).toBe('awaiting_review')}finally{release.resolve();await f.cleanup()}
 });
 
@@ -69,12 +69,12 @@ it('验证已落盘后坏回包不产生可信记录，不自动重试并由真�
     const input=await prepare(c),port=RunValidation.prototype as unknown as {run(input:ValidationInput,id:string):Promise<ValidationResult>},run=port.run;
     const changed=vi.spyOn(port,'run').mockImplementationOnce(async function(this:typeof port,input,id){return {...await run.call(this,input,id),binding:{...artifactBinding,agentSessionId:'wrong'}}});
     await failed(c,'cbim_validation_run','validation',input,'TOOL_OUTPUT_INVALID');expect(changed).toHaveBeenCalledTimes(1);await invoke(c,'read','after-failure',{path:'File.txt'});
-  });try{const summary=await (await f.start()).done;expect(summary.events.filter(event=>event.type==='validation.checked')).toHaveLength(1);expect(verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.normalizePath)).toEqual([]);expect(f.validateFile).toHaveBeenCalledTimes(1)}finally{await f.cleanup()}
+  });try{const summary=await (await f.start()).done;expect(summary.events.filter(event=>event.type==='validation.checked')).toHaveLength(1);expect(verifyValidationRecords(summary.events,artifactBinding,'knowledge-one',bindings,f.port.NormalizePath)).toEqual([]);expect(f.validateFile).toHaveBeenCalledTimes(1)}finally{await f.cleanup()}
 });
 
 it('无冻结要求或普通主运行不注册验证，缺端口声明拒绝启动，模型不能直接写验证事件',async()=>{
   const absent=await artifactRuntimeFixture(async c=>{expect(runtimeToolGroup(c,'validation')).toBeUndefined();expect((await c.beforeTool({name:'cbim_validation_run',id:'forged',input:{}})).allow).toBe(false);await expect(c.emit({type:'validation.checked',data:{validation:{outcome:'passed'}}})).rejects.toThrow('可信端口')});
-  try{await (await absent.runtime.start({...absent.task,mode:'chat',agentId:'cbim:main'})).done;expect(absent.validateFile).not.toHaveBeenCalled()}finally{await absent.cleanup()}
+  try{await (await absent.runtime.Start({...absent.task,mode:'chat',agentId:'cbim:main'})).done;expect(absent.validateFile).not.toHaveBeenCalled()}finally{await absent.cleanup()}
   const missing=await fixture(async()=>{throw Error('should not run')},{validationPort:false});try{await expect(missing.start()).rejects.toMatchObject({code:'VALIDATION_UNAVAILABLE'});expect(missing.validateFile).not.toHaveBeenCalled()}finally{await missing.cleanup()}
 });
 

@@ -18,9 +18,9 @@ export const artifactTransitionToolName = 'cbim_artifact_transition';
 /** 引擎只发现已装配的工具并透传原调用身份；接口不引用运行实现，也不给保存阶段或签发许可的能力。 */
 export interface ArtifactTransitionToolPort
 {
-  list(): Promise<Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>>;
+  List(): Promise<Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>>;
 
-  call(name: string, input: unknown, toolCallId?: string, signal?: AbortSignal): Promise<{ content: { type: 'text'; text: string }[] }>;
+  Call(name: string, input: unknown, toolCallId?: string, signal?: AbortSignal): Promise<{ content: { type: 'text'; text: string }[] }>;
 }
 
 export const artifactTransitionInputSchema = z.object({ moduleId: logical, operationIndex: z.number().int().min(0).max(artifactScopeLimits.transitions - 1), beforeManifestId: id, expectedTaskProgressVersion: seq }).strict();

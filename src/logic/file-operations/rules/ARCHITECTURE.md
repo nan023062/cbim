@@ -62,8 +62,8 @@ class N_src_logic_file_operations_rules_artifact_transition_ts["artifact-transit
 }
 class N_src_logic_file_operations_rules_artifact_transition_ts_ArtifactTransitionToolPort["ArtifactTransitionToolPort"] {
   <<interface>>
-  +list()
-  +call()
+  +List()
+  +Call()
 }
 N_src_logic_file_operations_rules_artifact_transition_ts ..> N_src_logic_file_operations_rules_artifact_transition_ts_ArtifactTransitionToolPort : 声明
 class N_src_logic_file_operations_rules_artifact_transition_ts_ArtifactTransitionInput["ArtifactTransitionInput"] {

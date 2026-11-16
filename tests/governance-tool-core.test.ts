@@ -118,13 +118,13 @@ describe('治理作用域和业务证据边界',()=>{
   it('四个真实注册工具严格分类为knowledge，read/ask不冒用正式知识写审批',async()=>{
     const approve=vi.fn(async()=>({allow:true})),guard=vi.fn(async()=>({allow:true}));
     for(const [name,effect] of Object.entries(governanceToolEffects))for(const permission of ['read','ask','execute'] as const){
-      const result=await authorizeRunTool({id:'call',name,input:{}},{native:false,effects:[effect],scope:{kind:'knowledge',workspaceId}},{workspaceId,permission,guard,approve});
+      const result=await authorizeRunTool({id:'call',name,input:{}},{native:false,effects:[effect],scope:{kind:'knowledge',workspaceId}},{workspaceId,permission,Guard: guard,Approve: approve});
       expect(result).toMatchObject({allow:true,effects:[effect],scope:{kind:'knowledge',workspaceId}});
     }
     expect(approve).not.toHaveBeenCalled();expect(guard).not.toHaveBeenCalled();
   });
   it('缺作用域、伪原生、多效果、跨workspace与未注册治理名均拒绝，不放宽普通工具',async()=>{
-    const call={id:'c',name:'cbim_governance_propose',input:{}},context={workspaceId,permission:'execute' as const,guard:async()=>({allow:true})};
+    const call={id:'c',name:'cbim_governance_propose',input:{}},context={workspaceId,permission:'execute' as const,Guard:async()=>({allow:true})};
     const good:RunToolDescriptor={native:false,effects:['preview'],scope:{kind:'knowledge',workspaceId}};
     const bad:RunToolDescriptor[]=[{...good,scope:undefined},{...good,native:true},{...good,effects:['preview','knowledge-write']},{...good,effects:['read']},{...good,scope:{kind:'knowledge',workspaceId:'other'}},{...good,scope:{kind:'workspace',workspaceId}}];
     for(const descriptor of bad)expect((await authorizeRunTool(call,descriptor,context)).allow).toBe(false);
@@ -134,10 +134,10 @@ describe('治理作用域和业务证据边界',()=>{
   it('治理成功回执不能成为步骤或Workflow交付证据，真实文件读取仍可用',async()=>{
     const p=new TaskProgressTools(undefined,async()=>{},{identity:{workspaceId,taskId:'task',runId:'run'}});const receipt=(name:string):ToolReceipt=>({version:1,toolCallId:name,toolName:name,workspaceId,taskId:'task',runId:'run',outcome:'succeeded',inputHash:hash('{}'),resultHash:hash('{}'),effects:['read'],scope:{kind:'knowledge',workspaceId},recordedAt:now});
     for(const name of [...Object.keys(governanceToolEffects),'cbim_governance_future']){
-      p.record(receipt(name),p.generation);expect(()=>evaluateWorkflowDelivery([], [receipt(name)],{workspaceId,taskId:'task',runId:'run'})).toThrow();
+      p.Record(receipt(name),p.generation);expect(()=>evaluateWorkflowDelivery([], [receipt(name)],{workspaceId,taskId:'task',runId:'run'})).toThrow();
     }
-    expect(JSON.parse((await p.call('cbim_task_inspect',{})).content[0].text).evidence).toEqual([]);
-    p.record({...receipt('read'),scope:{kind:'workspace',workspaceId}},p.generation);expect(JSON.parse((await p.call('cbim_task_inspect',{})).content[0].text).evidence).toHaveLength(1);
+    expect(JSON.parse((await p.Call('cbim_task_inspect',{})).content[0].text).evidence).toEqual([]);
+    p.Record({...receipt('read'),scope:{kind:'workspace',workspaceId}},p.generation);expect(JSON.parse((await p.Call('cbim_task_inspect',{})).content[0].text).evidence).toHaveLength(1);
   });
   it('有真实成功回执的治理读取也不能伪装成单文件产物采集来源',()=>{
     const binding={workspaceId,teamId:'team',agentId:'agent',agentInstanceId:'instance',agentSessionId:'session',rootSessionId,taskId:'task',runId:'run',leaseEpoch:1,planRevision:1},events:ArtifactEvidenceEvent[]=[];

@@ -21,7 +21,7 @@ const contextSchema = z.object({ workspaceId: id, rootSessionId: id, scopeId: id
 /** 只依赖当前工作区有效性与派发存储；不读取模型密钥、知识正文或运行工具。 */
 export class QueuedTaskCancelService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert'>, private readonly store: DispatchStore)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert'>, private readonly store: DispatchStore)
   {
   }
 
@@ -29,7 +29,7 @@ export class QueuedTaskCancelService
        * scope/run/command 来自主运行闭包；模型仅提供 targets、图游标及原因。同命令返回原回执，变参拒绝；校验失败不取消任何节点。
        * 实例仅转 idle，生命周期仍 active；旧审阅因图游标变化失效，业务完成仍需真实后续候选替代。
        */
-  async cancel(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: CancelQueuedTasksInput): Promise<CancelQueuedTasksReceipt>
+  async Cancel(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: CancelQueuedTasksInput): Promise<CancelQueuedTasksReceipt>
   {
     const parsed = cancelQueuedTasksInputSchema.safeParse(raw),
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
@@ -37,13 +37,13 @@ export class QueuedTaskCancelService
       fail('CANCEL_INPUT_INVALID', '撤销参数或主调度运行身份无效');
     const input = parsed.data,
       fixed = context.data;
-    this.owner.assert();
+    this.owner.Assert();
     if (fixed.workspaceId !== this.owner.entry.id)
       fail('GRAPH_IDENTITY_MISMATCH', '撤销目标不属于当前工作区');
     const command = contextualMainCommand('dispatch.cancelQueued', fixed, input);
-    return this.store.transact(command, async state =>
+    return this.store.Transact(command, async state =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       const selected = queuedCancellationSelection(state, fixed, fixed.scopeId, input),
         { graph, tasks, assignments, members } = selected;
       const now = new Date().toISOString(),

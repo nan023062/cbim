@@ -26,26 +26,26 @@ import { completeOutputProof, assertCompleteOutputCurrent, assertCompleteOutputB
 /** 固定工作区文件端口；只读占用不领取模型名额，关闭/退役检查覆盖异步读取。 */
 export interface HumanDecisionPorts
 {
-  normalizePath(raw: string): string;
+  NormalizePath(raw: string): string;
 
-  checkFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
+  CheckFiles(files: readonly ArtifactFileFact[], signal: AbortSignal): Promise<ArtifactFileCheck[]>;
 
-  checkManifest?(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
+  CheckManifest?(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
 
-  acquireRead(): () => void;
+  AcquireRead(): () => void;
 
   /** 可信主运行内核证：复用指定主会话的占用；桌面预览及预检必须仍走独立 acquireRead。 */
-  acquireMainRead?(rootSessionId: string): () => void;
+  AcquireMainRead?(rootSessionId: string): () => void;
 
-  assertCurrent?(): void;
+  AssertCurrent?(): void;
 }
 
 /** 只接已登记的运行身份；平台自行解析 canonical 路径，模型或客户端不能指定日志文件。 */
 export interface HumanEvidenceLogs
 {
-  inspectMember(run: DispatchRun): Promise<RunSummary>;
+  InspectMember(run: DispatchRun): Promise<RunSummary>;
 
-  inspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
+  InspectMain(rootSessionId: string, runId: string): Promise<RunSummary>
 }
 
 /** 注入目标服务的完整历史候选校验；当前文件在本模块合并复核，不用简化摘要绕过真实回执。 */
@@ -77,23 +77,23 @@ export function assertHumanSubject(scope: DispatchScope, continuation: ScopeHuma
  * validateCandidate 只验证历史完整任务/原生绑定/交付证据；本模块复核全部当前 必验文件，不能只选未变的基线绕过。
  * withinMainRun 只能由已核实主运行身份的内部调用方提供，不从客户端请求或模型参数读取。
  */
-export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, 'entry' | 'assert' | 'read'>, state: DispatchState, scope: DispatchScope, records: readonly HumanDecisionRecord[], logs: HumanEvidenceLogs | undefined, ports: HumanDecisionPorts | undefined, validateCandidate: HumanCandidateValidator, withinMainRun = false): Promise<void>
+export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, state: DispatchState, scope: DispatchScope, records: readonly HumanDecisionRecord[], logs: HumanEvidenceLogs | undefined, ports: HumanDecisionPorts | undefined, validateCandidate: HumanCandidateValidator, withinMainRun = false): Promise<void>
 {
   if (!records.length)
     return;
   check(logs && ports, 'HUMAN_CONTINUATION_UNAVAILABLE', '尚未接入人工接受所需的可信日志及文件核实');
   const current = () =>
   {
-    owner.assert();
-    ports.assertCurrent?.()
+    owner.Assert();
+    ports.AssertCurrent?.()
   },
     graph = state.graphs.find(item => item.identity.workspaceId === scope.workspaceId && item.identity.rootSessionId === scope.rootSessionId);
   check(graph, 'HUMAN_CONTINUATION_IDENTITY', '人工接受缺少对应主会话图');
   current();
-  const release = withinMainRun && ports.acquireMainRead ? ports.acquireMainRead(scope.rootSessionId) : ports.acquireRead();
+  const release = withinMainRun && ports.AcquireMainRead ? ports.AcquireMainRead(scope.rootSessionId) : ports.AcquireRead();
   try
   {
-    const knowledge = await owner.read();
+    const knowledge = await owner.Read();
     current();
     const observed = new Map<string,
       {
@@ -110,7 +110,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
       check(record.decision === 'accept' && record.proof.identity.workspaceId === scope.workspaceId && record.proof.identity.rootSessionId === scope.rootSessionId && record.proof.identity.scopeId === scope.scopeId && record.proof.source.knowledgeRevision === knowledge.revision, 'HUMAN_CONTINUATION_STALE', '接受的身份或知识基线已变化，请重新核实');
       if (!mains.has(record.proof.source.reviewRunId))
       {
-        const main = await logs.inspectMain(scope.rootSessionId, record.proof.source.reviewRunId);
+        const main = await logs.InspectMain(scope.rootSessionId, record.proof.source.reviewRunId);
         current();
         mains.set(record.proof.source.reviewRunId, main)
       }
@@ -128,7 +128,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
           current();
           const run = state.runs?.find(item => item.binding.taskId === task.taskId && item.binding.runId === candidate.runId);
           check(run, 'HUMAN_CONTINUATION_STALE', '接受的运行登记已经变化');
-          const evidence = memberWorkflowEvidence(task, run, summary, owner.entry.path, ports.normalizePath);
+          const evidence = memberWorkflowEvidence(task, run, summary, owner.entry.path, ports.NormalizePath);
           log = { run, summary, manifest: evidence.manifest };
           observed.set(candidate.runId, log);
           if (!evidence.manifest)
@@ -146,7 +146,7 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
           continue;
         }
         check(!candidate.selectedManifest && selected && !selected.invalidated && selected.files.length && selected.files.every(file => file.state === 'matches'), 'HUMAN_CONTINUATION_STALE', '接受的选定文件基线已经变化');
-        const artifacts = verifyArtifactBaselines(log.summary.events, log.run.binding, knowledge.revision, ports.normalizePath, selected.baselineId),
+        const artifacts = verifyArtifactBaselines(log.summary.events, log.run.binding, knowledge.revision, ports.NormalizePath, selected.baselineId),
           baseline = artifacts.records.find(item => item.baseline.baselineId === selected.baselineId),
           ref = artifacts.refs.find(item => item.baselineId === selected.baselineId);
         check(baseline && ref && !ref.invalidated && baseline.capturedSeq === selected.capturedSeq && baseline.finishedSeq === selected.finishedSeq && baseline.baseline.captureToolCallId === selected.captureToolCallId && baseline.baseline.knowledgeRevision === selected.knowledgeRevision && baseline.baseline.progressVersion === selected.progressVersion && baseline.baseline.files.length === selected.files.length, 'HUMAN_CONTINUATION_STALE', '接受的采集事件、成功回执或基线版本不再有效');
@@ -165,14 +165,14 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
     assertCompleteOutputBudget(manifests, [...files.values()]);
     const expected = [...files.values()].sort((a, b) => a.relativePath < b.relativePath ? -1 : 1),
       signal = AbortSignal.timeout(15000),
-      checked = expected.length ? await ports.checkFiles(expected, signal) : [];
+      checked = expected.length ? await ports.CheckFiles(expected, signal) : [];
     current();
     signal.throwIfAborted();
     check(checked.length === expected.length && checked.every((file, index) => artifactFileCheckSchema.safeParse(file).success && file.relativePath === expected[index].relativePath && file.state === 'matches' && sameGoalValue(file.expected, { byteLength: expected[index].byteLength, sha256: expected[index].sha256 }) && sameGoalValue(file.observed, file.expected)), 'HUMAN_CONTINUATION_STALE', '接受依据的文件已经变化、缺失或无法核实');
     for (const manifest of manifests)
     {
-      check(ports.checkManifest, 'HUMAN_CONTINUATION_UNAVAILABLE', '完整接受缺少真实全集合复核端口');
-      const checked = await ports.checkManifest(manifest.manifest.snapshot, signal);
+      check(ports.CheckManifest, 'HUMAN_CONTINUATION_UNAVAILABLE', '完整接受缺少真实全集合复核端口');
+      const checked = await ports.CheckManifest(manifest.manifest.snapshot, signal);
       current();
       signal.throwIfAborted();
       try
@@ -186,17 +186,17 @@ export async function validateHumanAcceptances(owner: Pick<KnowledgeWorkspace, '
     }
     for (const { run, summary } of observed.values())
     {
-      const again = await logs.inspectMember(run);
+      const again = await logs.InspectMember(run);
       current();
       check(sameGoalValue(summary, again), 'HUMAN_CONTINUATION_STALE', '人工接受复核期间成员日志变化')
     }
     for (const [runId, summary] of mains)
     {
-      const again = await logs.inspectMain(scope.rootSessionId, runId);
+      const again = await logs.InspectMain(scope.rootSessionId, runId);
       current();
       check(sameGoalValue(summary, again), 'HUMAN_CONTINUATION_STALE', '人工接受复核期间主审阅日志变化')
     }
-    check((await owner.read()).revision === knowledge.revision, 'HUMAN_CONTINUATION_STALE', '人工接受复核期间知识变化');
+    check((await owner.Read()).revision === knowledge.revision, 'HUMAN_CONTINUATION_STALE', '人工接受复核期间知识变化');
     current();
   }
   finally

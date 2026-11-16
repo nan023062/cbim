@@ -65,52 +65,52 @@ export class BudgetSettingsController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: Partial<BudgetSettingsState>)
+  private Publish(value: Partial<BudgetSettingsState>)
   {
     this.state = { ...this.state, ...value };
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  edit(value: Partial<BudgetSettingsDraft>)
+  Edit(value: Partial<BudgetSettingsDraft>)
   {
     if (!this.state.busy)
-      this.publish({ ...value, error: '', notice: '' })
+      this.Publish({ ...value, error: '', notice: '' })
   }
 
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.state = { ...this.state, busy: false }
   }
 
-  async load()
+  async Load()
   {
     if (this.state.busy)
       return;
-    const ticket = this.generation.advance();
-    this.publish({ busy: true, error: '', notice: '' });
+    const ticket = this.generation.Advance();
+    this.Publish({ busy: true, error: '', notice: '' });
     try
     {
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.settings'));
-      if (this.generation.isCurrent(ticket))
-        this.publish({ policy, ...fields(policy) })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ policy, ...fields(policy) })
     }
     catch (error)
     {
-      if (this.generation.isCurrent(ticket))
-        this.publish({ error: error instanceof Error ? error.message : String(error) })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ error: error instanceof Error ? error.message : String(error) })
     }
     finally
     {
-      if (this.generation.isCurrent(ticket))
-        this.publish({ busy: false })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ busy: false })
     }
   }
 
-  async save()
+  async Save()
   {
     if (this.state.busy || !this.state.policy)
       return;
@@ -121,26 +121,26 @@ export class BudgetSettingsController
     }
     catch (error)
     {
-      this.publish({ error: error instanceof Error ? error.message : String(error) });
+      this.Publish({ error: error instanceof Error ? error.message : String(error) });
       return
     }
-    const ticket = this.generation.advance();
-    this.publish({ busy: true, error: '', notice: '' });
+    const ticket = this.generation.Advance();
+    this.Publish({ busy: true, error: '', notice: '' });
     try
     {
       const policy = scopeBudgetPolicySchema.parse(await this.call('budget.configure', input));
-      if (this.generation.isCurrent(ticket))
-        this.publish({ policy, ...fields(policy), notice: '已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。' })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ policy, ...fields(policy), notice: '已保存，仅对之后创建的新目标生效。当前目标继续使用原来的额度。' })
     }
     catch (error)
     {
-      if (this.generation.isCurrent(ticket))
-        this.publish({ error: (error instanceof Error ? error.message : String(error)) + '；草稿已保留。若保存结果未知，请刷新设置核实后再提交。' })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ error: (error instanceof Error ? error.message : String(error)) + '；草稿已保留。若保存结果未知，请刷新设置核实后再提交。' })
     }
     finally
     {
-      if (this.generation.isCurrent(ticket))
-        this.publish({ busy: false })
+      if (this.generation.IsCurrent(ticket))
+        this.Publish({ busy: false })
     }
   }
 }

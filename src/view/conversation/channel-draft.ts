@@ -73,13 +73,13 @@ export class ChannelDraftStore
     return this.value
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
   /** 读取/写入共用 512 Ki 字符记录上限，先持久化后发布；主聊天和原补充命令不在此键内。 */
-  edit(patch: Partial<Pick<ChannelDraft, 'text' | 'attachments'>>)
+  Edit(patch: Partial<Pick<ChannelDraft, 'text' | 'attachments'>>)
   {
     if (this.blocked)
       throw Error('原频道草稿无法读取，请先核实本机记录');
@@ -103,33 +103,33 @@ export class ChannelDraftStore
     }
     finally
     {
-      this.listeners.notify()
+      this.listeners.Notify()
     }
   }
 
   /** 接收成功只清除提交时那一版；迟到回执不清空用户后来输入的内容。 */
-  clearIfUnchanged(revision: number)
+  ClearIfUnchanged(revision: number)
   {
     if (this.value.revision === revision)
-      this.edit({ text: '', attachments: [] })
+      this.Edit({ text: '', attachments: [] })
   }
 
-  beginImport()
+  BeginImport()
   {
     return ++this.generation
   }
 
-  cancelImport()
+  CancelImport()
   {
     this.generation++
   }
 
   /** 关闭/隐藏、换频道或新选择都会使旧 token 失效，绝不将附件附到当前选中频道。 */
-  finishImport(token: number, items: unknown)
+  FinishImport(token: number, items: unknown)
   {
     if (token !== this.generation)
       return false;
-    this.edit({ attachments: appendContinuationAttachments(this.value.attachments, items) });
+    this.Edit({ attachments: appendContinuationAttachments(this.value.attachments, items) });
     return true
   }
 }

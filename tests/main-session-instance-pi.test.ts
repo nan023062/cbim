@@ -36,15 +36,15 @@ async function provider(respond:(request:ProviderRequest)=>ProviderResponse){
 }
 
 async function configure(f:Awaited<ReturnType<typeof fixture>>,baseUrl:string){
-  await f.app.models.save({profile:{name:'Main instance fixture',api:'openai-completions',baseUrl,auth:'none',defaultModel:'main-instance-fixture',models:[{id:'main-instance-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+  await f.app.models.Save({profile:{name:'Main instance fixture',api:'openai-completions',baseUrl,auth:'none',defaultModel:'main-instance-fixture',models:[{id:'main-instance-fixture',name:'Fixture',enabled:true,contextWindow:65536,maxTokens:1024,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
 }
 
 async function completedThread(f:Awaited<ReturnType<typeof fixture>>,workspaceId:string,taskId:string,count:number){
   let history:RunSummary[]=[];
   await vi.waitFor(async()=>{
-    history=await f.app.execution(workspaceId).thread(taskId);
+    history=await f.app.Execution(workspaceId).Thread(taskId);
     expect(history).toHaveLength(count);expect(history.every(run=>run.status==='completed')).toBe(true);
-    expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
+    expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0);
   },{timeout:30000,interval:50});
   return history;
 }
@@ -52,18 +52,18 @@ async function completedThread(f:Awaited<ReturnType<typeof fixture>>,workspaceId
 it('registers one real main instance per conversation root, keeps empty chats task-free, and preserves each identity across resume and reopen',async()=>{
   const f=await fixture(),local=await provider(()=>({text:'普通对话已完成，没有创建业务任务。'}));
   try{
-    await configure(f,local.url);const entry=await f.app.dispatch('add',{path:f.a});
+    await configure(f,local.url);const entry=await f.app.Dispatch('add',{path:f.a});
     const options={permission:'read',turnTimeoutMs:15000};
-    const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'MAIN_FIRST_SESSION: 你好，只做普通交流',options}) as {taskId:string;runId:string};
+    const first=await f.app.Dispatch('loop.chat',{id:entry.id,message:'MAIN_FIRST_SESSION: 你好，只做普通交流',options}) as {taskId:string;runId:string};
     const firstHistory=await completedThread(f,entry.id,first.taskId,1);
-    const graph=(rootSessionId:string)=>f.app.dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId}}) as Promise<GraphSnapshot>;
+    const graph=(rootSessionId:string)=>f.app.Dispatch('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId}}) as Promise<GraphSnapshot>;
     const firstGraph=await graph(first.taskId),mainBinding=firstHistory[0].conversationBinding!;
     expect(mainBinding).toMatchObject({workspaceId:entry.id,rootSessionId:first.taskId,agentId:'cbim:main',agentInstanceId:firstGraph.root.agent.agentInstanceId});
     expect(firstGraph.tasks).toEqual([]);expect(firstGraph.edges).toEqual([]);
     expect(firstGraph.agents).toHaveLength(1);
     expect(firstGraph.root.agent.agentSessionId).not.toBe(mainBinding.agentSessionId);
 
-    const second=await f.app.dispatch('loop.chat',{id:entry.id,message:'MAIN_SECOND_SESSION: 另一个独立会话',options}) as {taskId:string;runId:string};
+    const second=await f.app.Dispatch('loop.chat',{id:entry.id,message:'MAIN_SECOND_SESSION: 另一个独立会话',options}) as {taskId:string;runId:string};
     const secondHistory=await completedThread(f,entry.id,second.taskId,1),secondGraph=await graph(second.taskId);
     expect(secondHistory[0].conversationBinding).toMatchObject({rootSessionId:second.taskId,agentInstanceId:secondGraph.root.agent.agentInstanceId});
     expect(secondGraph.root.agent.agentInstanceId).not.toBe(firstGraph.root.agent.agentInstanceId);
@@ -71,25 +71,25 @@ it('registers one real main instance per conversation root, keeps empty chats ta
     expect(secondGraph.tasks).toEqual([]);
     expect(JSON.stringify(local.requests[1].messages)).not.toContain('MAIN_FIRST_SESSION');
 
-    const resumed=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'FIRST_RESUME: 请继续这个会话',options}) as {runId:string};
+    const resumed=await f.app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'FIRST_RESUME: 请继续这个会话',options}) as {runId:string};
     const resumedHistory=await completedThread(f,entry.id,first.taskId,2);
     expect(resumedHistory[1].conversationBinding).toEqual(mainBinding);expect(resumedHistory[1].sessionFile).toBe(firstHistory[0].sessionFile);
-    const requestCount=local.requests.length;await f.app.open(entry.id,true);
+    const requestCount=local.requests.length;await f.app.Open(entry.id,true);
     expect(local.requests).toHaveLength(requestCount);
     expect((await graph(first.taskId)).root.agent).toEqual(firstGraph.root.agent);
     expect((await graph(second.taskId)).root.agent).toEqual(secondGraph.root.agent);
-    await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:resumed.runId,message:'FIRST_REOPEN: 重开后继续',options});
+    await f.app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:resumed.runId,message:'FIRST_REOPEN: 重开后继续',options});
     const reopenedHistory=await completedThread(f,entry.id,first.taskId,3);
     expect(reopenedHistory.every(run=>JSON.stringify(run.conversationBinding)===JSON.stringify(mainBinding))).toBe(true);
     expect(new Set(reopenedHistory.map(run=>run.sessionFile)).size).toBe(1);
     expect((await graph(first.taskId)).tasks).toEqual([]);
-    const snapshot=f.app.runtime.snapshot();
+    const snapshot=f.app.runtime.Snapshot();
     expect(snapshot.complete).toBe(true);expect(snapshot.members.filter(member=>member.agentId==='cbim:main')).toHaveLength(2);
     expect(snapshot.tasks.filter(task=>task.source==='dispatch')).toHaveLength(0);
     expect(snapshot.tasks.filter(task=>task.source==='loop')).toHaveLength(2);
     expect(snapshot.runs).toHaveLength(4);expect(snapshot.usage).toMatchObject({runCount:4,total:440,reportedRuns:4,unreportedRuns:0,cost:0});
-    const stableUsage=snapshot.usage;await f.app.open(entry.id,true);
-    expect(f.app.runtime.snapshot().usage).toEqual(stableUsage);expect(local.requests).toHaveLength(4);expect(local.errors).toEqual([]);
+    const stableUsage=snapshot.usage;await f.app.Open(entry.id,true);
+    expect(f.app.runtime.Snapshot().usage).toEqual(stableUsage);expect(local.requests).toHaveLength(4);expect(local.errors).toEqual([]);
   }finally{await f.cleanup();await local.close()}
 },90000);
 
@@ -116,30 +116,30 @@ it('executes an explicitly registered custom executor in a separate scoped insta
     return {text:candidate+'；尚未人工验收。'};
   });
   try{
-    await configure(f,local.url);const entry=await f.app.dispatch('add',{path:f.a}),workspace=f.app.workspace(entry.id),team=await seedTeam(workspace);
+    await configure(f,local.url);const entry=await f.app.Dispatch('add',{path:f.a}),workspace=f.app.Workspace(entry.id),team=await seedTeam(workspace);
     moduleId=team.input.moduleId;
-    const closeScope=vi.spyOn(f.app.memberDispatch(entry.id),'closeScope');
-    const knowledge=await workspace.snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
+    const closeScope=vi.spyOn(f.app.MemberDispatch(entry.id),'CloseScope');
+    const knowledge=await workspace.Snapshot(),modulePath=moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);
     definition.maintenance={bindingId:'executor-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'executor-review',source:'local_user',confirmedAt:'2026-11-07T00:00:00.000Z'}};
-    await workspace.commit(request(knowledge,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
-    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:(await f.app.models.list()).selectedId!,modelId:'main-instance-fixture'})).selection;
+    await workspace.Commit(request(knowledge,[{path:'.cbim/team/people.json',text:json({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})},{path:modulePath,text:json(definition)}]));
+    ownerSelection=(await registerExplicitFixtureOwner(f.app,entry.id,{agentId:'.cbim/team/dev',moduleIds:[moduleId],profileId:(await f.app.models.List()).selectedId!,modelId:'main-instance-fixture'})).selection;
     await fs.writeFile(path.join(f.a,'executor-input.txt'),fact);
-    const started=await f.app.dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
+    const started=await f.app.Dispatch('loop.chat',{id:entry.id,message:mainGoal,options:{permission:'read',turnTimeoutMs:15000}}) as {taskId:string;runId:string};
     const history=await completedThread(f,entry.id,started.taskId,1),identity={workspaceId:entry.id,rootSessionId:started.taskId};
     await vi.waitFor(()=>expect(closeScope).toHaveBeenCalledTimes(1),{timeout:5000,interval:20});
-    const closed=await closeScope.mock.results[0].value,graph=await f.app.dispatch('dispatch.graphSnapshot',{identity}) as GraphSnapshot;
-    const registered=(await workspace.dispatchStore.read()).agentBusinessRuns!;expect(registered).toHaveLength(1);
+    const closed=await closeScope.mock.results[0].value,graph=await f.app.Dispatch('dispatch.graphSnapshot',{identity}) as GraphSnapshot;
+    const registered=(await workspace.dispatchStore.Read()).agentBusinessRuns!;expect(registered).toHaveLength(1);
     const run=registered[0],b=run.binding,binding=history[0].conversationBinding!;
     expect(graph.tasks).toEqual([]);expect(run).toMatchObject({status:'closed',permission:'read',scopeId:closed.scopeId,parent:{callerTaskId:started.taskId,callerRunId:started.runId,toolCallId:'dispatch-executor'},binding:{agentId:'.cbim/team/dev',rootSessionId:started.taskId}});
     expect(closed).toMatchObject({...identity,status:'closed',outcome:'completed'});expect(closed.goal?.review).toBeUndefined();
     const count=local.requests.length;
-    await expect(f.app.dispatch('dispatch.executionStart',{...identity,taskId:b.taskId,commandId:'cannot-revive-recursive-executor',expectedRevision:1,options:{permission:'read'}})).rejects.toThrow();
+    await expect(f.app.Dispatch('dispatch.executionStart',{...identity,taskId:b.taskId,commandId:'cannot-revive-recursive-executor',expectedRevision:1,options:{permission:'read'}})).rejects.toThrow();
     expect(local.requests).toHaveLength(count);
     expect(binding.agentInstanceId).toBe(graph.root.agent.agentInstanceId);expect(b.agentInstanceId).not.toBe(binding.agentInstanceId);expect(b.agentSessionId).not.toBe(binding.agentSessionId);
     const ref=history[0].events.find(e=>e.type==='tool.updated'&&e.data.id==='dispatch-executor'&&e.data.limits)?.data.agentCall;
     expect(ref).toMatchObject({workspaceId:entry.id,callerTaskId:started.taskId,callerRunId:started.runId,toolCallId:'dispatch-executor',taskId:b.taskId,runId:b.runId});
     expect(JSON.stringify(history[0].events.filter(e=>e.type==='message'))).toContain('主会话收到执行成员结果：'+fact);
-    const memberRun=await new FileRunStorage().read(path.join(f.user,entry.id,'loop-engine','tasks',b.taskId,b.runId));
+    const memberRun=await new FileRunStorage().Read(path.join(f.user,entry.id,'loop-engine','tasks',b.taskId,b.runId));
     expect(memberRun.conversationBinding).toBeUndefined();expect(memberRun.memberBinding).toEqual(b);expect(memberRun.events[0].data.agentCall).toEqual(ref);
     expect(memberRun.sessionFile).not.toBe(history[0].sessionFile);
     expect(memberRun.events.find(e=>e.type==='session.bound')?.data.sessionId).not.toBe(history[0].events.find(e=>e.type==='session.bound')?.data.sessionId);
@@ -150,21 +150,21 @@ it('executes an explicitly registered custom executor in a separate scoped insta
     expect(JSON.stringify(taskRequests[0].messages)).not.toContain(mainPrivate);expect(JSON.stringify(taskRequests[2].messages)).toContain(fact);
     expect(JSON.stringify(mainRequests[1].messages)).toContain(mainPrivate);expect(JSON.stringify(mainRequests[1].messages)).toContain(candidate);
     expect(taskRequests.every(body=>body.tools?.every(tool=>!tool.function.name.startsWith('cbim_dispatch_')))).toBe(true);
-    expect(await f.app.dispatch('dispatch.messages',{...identity,agentSessionId:graph.root.agent.agentSessionId})).toEqual([]);
-    const runtime=f.app.runtime.snapshot();expect(runtime.complete,JSON.stringify(runtime.workspaces)).toBe(true);
+    expect(await f.app.Dispatch('dispatch.messages',{...identity,agentSessionId:graph.root.agent.agentSessionId})).toEqual([]);
+    const runtime=f.app.runtime.Snapshot();expect(runtime.complete,JSON.stringify(runtime.workspaces)).toBe(true);
     expect(runtime.runs).toHaveLength(2);expect(runtime.tasks.filter(task=>task.source==='dispatch')).toHaveLength(0);
     expect(runtime.usage).toMatchObject({runCount:2,total:770,reportedRuns:2,unreportedRuns:0,cost:0});
     expect(runtime.runs.filter(r=>r.conversationBinding?.agentInstanceId===binding.agentInstanceId)).toHaveLength(1);
     expect(runtime.runs.filter(r=>r.memberBinding?.agentInstanceId===b.agentInstanceId)).toHaveLength(1);
-    const usage=await f.app.dispatch('dispatch.scopeUsage',{...identity,scopeId:closed.scopeId});
+    const usage=await f.app.Dispatch('dispatch.scopeUsage',{...identity,scopeId:closed.scopeId});
     expect(usage.totals).toMatchObject({registeredRuns:2,tokensComplete:true,tokens:{total:770}});
     const childHistory={workspaceId:entry.id,agentId:b.agentId,sessionId:b.agentSessionId,taskId:b.taskId,runId:b.runId};
-    expect((await f.app.dispatch('agentHistory.runs',{workspaceId:entry.id,agentId:b.agentId,sessionId:b.agentSessionId})).items).toHaveLength(1);
-    const archived=await f.app.dispatch('agentHistory.events',childHistory);expect(archived.mode).toBe('reset');
-    const before=local.requests.length;await f.app.open(entry.id,true);
-    expect(f.app.runtime.snapshot().complete).toBe(true);expect(f.app.runtime.snapshot().usage).toEqual(runtime.usage);expect((await f.app.workspace(entry.id).dispatchStore.read()).agentBusinessRuns).toEqual(registered);
-    expect(await f.app.dispatch('agentHistory.events',childHistory)).toEqual(archived);
-    expect((await f.app.execution(entry.id).thread(started.taskId)).map(r=>r.conversationBinding)).toEqual([binding]);
+    expect((await f.app.Dispatch('agentHistory.runs',{workspaceId:entry.id,agentId:b.agentId,sessionId:b.agentSessionId})).items).toHaveLength(1);
+    const archived=await f.app.Dispatch('agentHistory.events',childHistory);expect(archived.mode).toBe('reset');
+    const before=local.requests.length;await f.app.Open(entry.id,true);
+    expect(f.app.runtime.Snapshot().complete).toBe(true);expect(f.app.runtime.Snapshot().usage).toEqual(runtime.usage);expect((await f.app.Workspace(entry.id).dispatchStore.Read()).agentBusinessRuns).toEqual(registered);
+    expect(await f.app.Dispatch('agentHistory.events',childHistory)).toEqual(archived);
+    expect((await f.app.Execution(entry.id).Thread(started.taskId)).map(r=>r.conversationBinding)).toEqual([binding]);
     expect(local.requests).toHaveLength(before);expect(local.errors).toEqual([]);
   }finally{await f.cleanup();await local.close()}
 },90000);
@@ -172,10 +172,10 @@ it('executes an explicitly registered custom executor in a separate scoped insta
 it.each(['foreign-file','missing-native-id'] as const)('rejects unsafe main conversation native recovery before any model call (%s)',async(corruption)=>{
   const f=await fixture(),local=await provider(()=>({text:'原会话事实，不能被其他主会话读取。'}));
   try{
-    await configure(f,local.url);const entry=await f.app.dispatch('add',{path:f.a}),options={permission:'read',turnTimeoutMs:15000};
-    const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'FIRST_NATIVE_OWNER',options}) as {taskId:string;runId:string};
+    await configure(f,local.url);const entry=await f.app.Dispatch('add',{path:f.a}),options={permission:'read',turnTimeoutMs:15000};
+    const first=await f.app.Dispatch('loop.chat',{id:entry.id,message:'FIRST_NATIVE_OWNER',options}) as {taskId:string;runId:string};
     const [firstSummary]=await completedThread(f,entry.id,first.taskId,1);
-    const second=await f.app.dispatch('loop.chat',{id:entry.id,message:'SECOND_NATIVE_PRIVATE_HISTORY',options}) as {taskId:string;runId:string};
+    const second=await f.app.Dispatch('loop.chat',{id:entry.id,message:'SECOND_NATIVE_PRIVATE_HISTORY',options}) as {taskId:string;runId:string};
     const [secondSummary]=await completedThread(f,entry.id,second.taskId,1);
     const expectedNative=firstSummary.events.find(event=>event.type==='session.bound')!.data.sessionId;
     expect(expectedNative).toBeTruthy();expect(expectedNative).not.toBe(secondSummary.events.find(event=>event.type==='session.bound')!.data.sessionId);
@@ -187,11 +187,11 @@ it.each(['foreign-file','missing-native-id'] as const)('rejects unsafe main conv
     // Simulate an incorrect recovery file or legacy missing identity; keep the trusted instance binding intact.
     const corrupted=records.map(record=>JSON.stringify(record)).join('\n')+'\n';await fs.writeFile(logFile,corrupted);
     const nativeBefore=await fs.readFile(secondSummary.sessionFile!,'utf8'),count=local.requests.length;
-    const resumed=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'THIS_MESSAGE_MUST_NOT_REACH_THE_MODEL',options}) as {runId:string};
+    const resumed=await f.app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'THIS_MESSAGE_MUST_NOT_REACH_THE_MODEL',options}) as {runId:string};
     let interrupted:RunSummary|undefined;
     await vi.waitFor(async()=>{
-      interrupted=await f.app.execution(entry.id).inspect(first.taskId,resumed.runId);
-      expect(interrupted.status).toBe('interrupted');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0);
+      interrupted=await f.app.Execution(entry.id).Inspect(first.taskId,resumed.runId);
+      expect(interrupted.status).toBe('interrupted');expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0);
     },{timeout:15000,interval:30});
     expect(interrupted!.conversationBinding).toEqual(firstSummary.conversationBinding);
     expect(interrupted!.events.some(event=>event.type==='session.bound')).toBe(false);

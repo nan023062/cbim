@@ -22,9 +22,9 @@ let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page
 let report:Record<string,unknown>|undefined;
 try{
   await fs.mkdir('test-results',{recursive:true});
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
   const seeded=await seedWorkspaceMembers(setup,temp,probe.url),id=seeded.entry.id,moduleId=seeded.team.input.moduleId;
-  await setup.shutdown();setup=undefined;
+  await setup.Shutdown();setup=undefined;
   const launch=async()=>{
     desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
     page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));
@@ -140,7 +140,7 @@ try{
   if(page)await page.screenshot({path:`test-results/${artifact}-failure.png`}).catch(()=>{});
   await fs.writeFile(`test-results/${artifact}-failure.json`,JSON.stringify({error:String(error),temp,exe,mode,dom,pageErrors},null,2));throw error;
 }finally{
-  if(desktop)await desktop.close();if(setup)await setup.shutdown();await probe.close();
+  if(desktop)await desktop.close();if(setup)await setup.Shutdown();await probe.close();
   if(!keepTemp){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-owner-registration-'));assert.equal((await fs.lstat(target)).isSymbolicLink(),false);await fs.rm(target,{recursive:true,force:true,maxRetries:6,retryDelay:200})}
   if(report){await fs.writeFile(`test-results/${artifact}-ui-smoke.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report))}
 }

@@ -47,13 +47,13 @@ class N_src_logic_team_runtime_checkpoint_abandonment_service_ts["checkpoint-aba
 }
 class N_src_logic_team_runtime_checkpoint_abandonment_service_ts_CheckpointAbandonmentService["CheckpointAbandonmentService"] {
   +constructor()
-  +receipt()
-  +abandon()
+  +Receipt()
+  +Abandon()
   -owner
   -store
   -ports
-  -request()
-  -lookup()
+  -Request()
+  -Lookup()
 }
 N_src_logic_team_runtime_checkpoint_abandonment_service_ts ..> N_src_logic_team_runtime_checkpoint_abandonment_service_ts_CheckpointAbandonmentService : 声明
 ```
@@ -79,10 +79,10 @@ class N_src_logic_team_runtime_member_checkpoint_verifier_ts["member-checkpoint-
 }
 class N_src_logic_team_runtime_member_checkpoint_verifier_ts_MemberCheckpointVerificationPorts["MemberCheckpointVerificationPorts"] {
   <<interface>>
-  +inspect()
-  +normalizePath()
-  +checkFiles()
-  +nativeFingerprint()
+  +Inspect()
+  +NormalizePath()
+  +CheckFiles()
+  +NativeFingerprint()
 }
 N_src_logic_team_runtime_member_checkpoint_verifier_ts ..> N_src_logic_team_runtime_member_checkpoint_verifier_ts_MemberCheckpointVerificationPorts : 声明
 class N_src_logic_team_runtime_member_checkpoint_verifier_ts_MemberCheckpointHistoryPorts["MemberCheckpointHistoryPorts"] {
@@ -106,17 +106,17 @@ class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionPorts["MemberExecutionPorts"] {
   <<interface>>
   +owners
-  +withEngineConfiguration()
+  +WithEngineConfiguration()
   +artifacts
   +manifests
   +checkpoints
   +budgets
-  +isCurrent()
+  +IsCurrent()
   +signal
-  +acquire()
-  +prepare()
-  +inspect()
-  +inspectAgent()
+  +Acquire()
+  +Prepare()
+  +Inspect()
+  +InspectAgent()
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionPorts : 声明
 class N_src_logic_team_runtime_member_execution_ts_PreparedEngine["PreparedEngine"] {
@@ -129,7 +129,7 @@ class N_src_logic_team_runtime_member_execution_ts_Handle["Handle"] {
   +binding
   +runtime
   +stopping
-  +isCurrent()
+  +IsCurrent()
   +controller
   +done
   +finishDrain
@@ -137,21 +137,21 @@ class N_src_logic_team_runtime_member_execution_ts_Handle["Handle"] {
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_Handle : 声明
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
   +constructor()
-  +report()
-  +artifactReport()
-  +manifestReport()
-  +requestResume()
-  +subscribe()
-  +initialize()
-  +start()
-  +resume()
-  +stop()
-  +waitForSettlement()
-  +inspect()
-  +events()
-  +messages()
-  +acknowledge()
-  +pendingApprovals()
+  +Report()
+  +ArtifactReport()
+  +ManifestReport()
+  +RequestResume()
+  +Subscribe()
+  +Initialize()
+  +Start()
+  +Resume()
+  +Stop()
+  +WaitForSettlement()
+  +Inspect()
+  +Events()
+  +Messages()
+  +Acknowledge()
+  +PendingApprovals()
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager : 声明
 ```
@@ -164,10 +164,10 @@ class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
-  +answerApproval()
-  +pendingQuestions()
-  +answerQuestion()
-  +close()
+  +AnswerApproval()
+  +PendingQuestions()
+  +AnswerQuestion()
+  +Close()
   -owner
   -store
   -ports
@@ -192,18 +192,18 @@ class N_src_logic_team_runtime_member_execution_ts["member-execution.ts"] {
   <<module>>
 }
 class N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager["MemberExecutionManager"] {
-  -checkpointPorts()
-  -check()
-  -parse()
-  -command()
-  -emit()
-  -startInternal()
-  -execute()
-  -ready()
-  -currentRun()
-  -settle()
-  -assertRecipient()
-  -interaction()
+  -CheckpointPorts()
+  -Check()
+  -Parse()
+  -Command()
+  -Emit()
+  -StartInternal()
+  -Execute()
+  -Ready()
+  -CurrentRun()
+  -Settle()
+  -AssertRecipient()
+  -Interaction()
 }
 N_src_logic_team_runtime_member_execution_ts ..> N_src_logic_team_runtime_member_execution_ts_MemberExecutionManager : 声明
 ```
@@ -232,8 +232,8 @@ class N_src_logic_team_runtime_member_pause_service_ts["member-pause-service.ts"
 }
 class N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts["MemberPausePorts"] {
   <<interface>>
-  +acquireRead()
-  +assertCurrent()
+  +AcquireRead()
+  +AssertCurrent()
 }
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts : 声明
 class N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts["MemberCheckpointVerificationPorts (外部契约)"] {
@@ -242,16 +242,16 @@ class N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpoint
 N_src_logic_team_runtime_member_pause_service_ts_external_MemberCheckpointVerificationPorts <|-- N_src_logic_team_runtime_member_pause_service_ts_MemberPausePorts
 class N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService["MemberPauseService"] {
   +constructor()
-  +verifyWaiting()
-  +withContext()
-  +validateCurrent()
-  +preflight()
+  +VerifyWaiting()
+  +WithContext()
+  +ValidateCurrent()
+  +Preflight()
   -owner
   -store
   -owners
   -ports
-  -available()
-  -scope()
+  -Available()
+  -Scope()
 }
 N_src_logic_team_runtime_member_pause_service_ts ..> N_src_logic_team_runtime_member_pause_service_ts_MemberPauseService : 声明
 ```
@@ -267,7 +267,7 @@ class N_src_logic_team_runtime_member_resume_service_ts["member-resume-service.t
 }
 class N_src_logic_team_runtime_member_resume_service_ts_MemberResumeService["MemberResumeService"] {
   +constructor()
-  +request()
+  +Request()
   -owner
   -store
   -ports
@@ -314,9 +314,9 @@ class N_src_logic_team_runtime_member_workflow_ts["member-workflow.ts"] {
 }
 class N_src_logic_team_runtime_member_workflow_ts_WorkflowFileVerification["WorkflowFileVerification"] {
   <<interface>>
-  +normalizePath()
-  +checkFiles()
-  +checkManifest()
+  +NormalizePath()
+  +CheckFiles()
+  +CheckManifest()
   +signal
 }
 N_src_logic_team_runtime_member_workflow_ts ..> N_src_logic_team_runtime_member_workflow_ts_WorkflowFileVerification : 声明
@@ -430,7 +430,7 @@ MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登�
 
 ## 递归执行记录核实
 
-MemberExecutionManager.report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
+MemberExecutionManager.Report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
 
 
 ### 递归工具迁移收口

@@ -8,7 +8,7 @@ portable-package 的递归对象排序组合 utility.orderJsonValue，继续使�
 
 读取模块依赖纯快照 [types.ts](types.ts)、共享 Core 的错误／JSON／序列化能力及内置项目根定义，不依赖知识写入端口、查询编排、Application、存储或引擎 SDK。读取只消费给定快照，不主动修改它、不重新读取磁盘；快照有效性与版本仍由调用方负责，接口不承诺把调用者持有的对象自动冻结。
 
-`knowledge-queries.ts` 的 `KnowledgeQueries` 只依赖 `KnowledgeSnapshotReader.snapshot`，经公开入口装配领域读取；调用方显式转发读取能力，不传完整工作区。同目录的 `KnowledgeRefresh` 独立接收 assert、snapshot、committedReceipt、commit 四项端口，保留原请求解析、版本、幂等和当前快照语义。知识工具仍先检查写权限；查询不能提交或调用刷新。`KnowledgeCommit` 数据契约归 types，ports 保留同类型重导出兼容。
+`knowledge-queries.ts` 的 `KnowledgeQueries` 只依赖 `KnowledgeSnapshotReader.Snapshot`，经公开入口装配领域读取；调用方显式转发读取能力，不传完整工作区。同目录的 `KnowledgeRefresh` 独立接收 assert、snapshot、committedReceipt、commit 四项端口，保留原请求解析、版本、幂等和当前快照语义。知识工具仍先检查写权限；查询不能提交或调用刷新。`KnowledgeCommit` 数据契约归 types，ports 保留同类型重导出兼容。
 
 [逻辑规则](../../../../scripts/architecture-boundaries.mjs) 声明知识相关边界：纯基础、知识数据、项目根定义、知识读取模型、只读查询、事务刷新及测试数据；[检查器](../../../../scripts/check-dependencies.mjs) 同时检查允许方向、私有入口与允许的外部库，包含类型、重导出、别名和字面量动态导入。新实现或依赖必须先核实职责再登记，不能将整个 core 放入豁免。其他源码仍受既有物理层和全文件无环检查，不能把已登记的试点边界视为全仓逻辑治理已经结束。
 
@@ -22,7 +22,7 @@ portable-package 的递归对象排序组合 utility.orderJsonValue，继续使�
 
 内置标准 `shared-skills-workflows` 从随应用打包的 `assets/runtime/shared-skills-workflows.md` 读取，Agent 与 Module 规范通过相对链接解析到同一白名单 ID。迁移只改变资源位置，资料 ID 与只读边界保持；正文版本仍按实际内容计算，目录版本包含来源路径。`docs/` 中的四份概念设计不参与内置资料加载。
 
-`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `assets/runtime/`，通过只读别名及 `Builtins.read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
+`builtinSkills` 发布 `bug-feedback` 与 `feature-wish`，正文来自应用打包资源 `assets/runtime/`，通过只读别名及 `Builtins.Read` 返回内容哈希和解析引用。两套正文只要求一句简述，参考格式的其余内容均自愿，缺项不追问；读取正文不产生 Issue，实际提交由桌面已授权的独立 `FeedbackTools` 执行，不创建业务任务或修改知识。
 
 ```mermaid
 classDiagram
@@ -51,13 +51,13 @@ Preview 的实际 changes 可以包含请求之外的派生索引；空正文、
 
 ### 对象治理与历史兼容
 
-`ObjectCrud.preview(revision, operations)` 从同一个知识快照规划 Agent、Module、Skill、Workflow 的增删改，维护所属清单、模块父子关系及受控正文。`ObjectOperation` 不接受自定义知识路径或模块 `maintenance`，创建必须提供正文，原内部工具 schema 与逐次写授权保持不变。
+`ObjectCrud.Preview(revision, operations)` 从同一个知识快照规划 Agent、Module、Skill、Workflow 的增删改，维护所属清单、模块父子关系及受控正文。`ObjectOperation` 不接受自定义知识路径或模块 `maintenance`，创建必须提供正文，原内部工具 schema 与逐次写授权保持不变。
 
 桌面与工具使用相同对象操作，不接受 peopleUpserts 或真人维护确认。旧 people.json 不解析、不重建；authors 仅校验字符串数组与唯一性，不做人员或组关联。新模块不要求 maintenance，原历史对象保留。预览只存计划，正式知识到 commit(planId) 才由串行事务提交；岗位与负责人仍通过各自受控服务配置。
 
 模块删除含子模块/方法时必须显式 `cascade`；有非知识资源则拒绝删除。提交只删除计划中的知识文件，后续目录清理仅处理空目录，不删除业务源码。旧实例、旧知识版本、结构校验失败或计划被改动均不能提交；同计划成功提交保持原幂等回执。
 
-Workflow 可在原 `workflow.md` 中声明一个严格的 `cbim-workflow` JSON 块；具体协议由纯 [workflow-contract.ts](../../workspace/rules/workflow-contract.ts) 定义。对象创建/更新在预览前解析新正文；完整 `Rules.validate` 也校验所有业务 Workflow，错误以 `workflow_contract` 结构问题阻止知识提交，因此原始文件 preview/commit 不能绕过对象入口。未声明的旧自然语言正文不被补造条件。条件保存不启动执行或授予工具权限。
+Workflow 可在原 `workflow.md` 中声明一个严格的 `cbim-workflow` JSON 块；具体协议由纯 [workflow-contract.ts](../../workspace/rules/workflow-contract.ts) 定义。对象创建/更新在预览前解析新正文；完整 `Rules.Validate` 也校验所有业务 Workflow，错误以 `workflow_contract` 结构问题阻止知识提交，因此原始文件 preview/commit 不能绕过对象入口。未声明的旧自然语言正文不被补造条件。条件保存不启动执行或授予工具权限。
 
 `Rules` 仅在 Ajv 入口使用 `structuredClone` 兼容副本，以支持严格 JSON 解析器产生的无原型对象及真实多 Workflow 清单。唯一性校验仍生效，重复项、未知字段和危险 own key 不裁剪；第三方比较器无法处理的畸形结构返回 Schema 诊断并阻止提交。原解析对象与 JSON 重复字段规则不变，也不通过 JSON 再编码把无效数值变成其它事实。
 
@@ -71,7 +71,7 @@ Workflow 可在原 `workflow.md` 中声明一个严格的 `cbim-workflow` JSON �
 
 导出清除人员、作者、连接器、模块维护确认和源码定位绑定；不携带账号、连接器配置、会话、动态成员实例或任务图。每个工作区各有一张静态团队图和静态业务图；多个主会话各自的调度图不属于包。目标项目的旧 people.json 保持原样，但不再校验其组引用；岗位及模块负责人须通过目标工作区服务明确配置，导入能力不产生任何执行授权。
 
-能力新增要求显式父节点和未占用 slug；完整 Team 可显式整体替换。完整业务架构可用于空目标，非空目标必须显式 `replace`。替换差异不修改索引、项目版本、人员目录或业务源码；派生索引由知识事务维护。引用或目标结构冲突以 `KnowledgeWorkspace.preview/commit` 的实际完整校验为准，不静默改名或修复目标。
+能力新增要求显式父节点和未占用 slug；完整 Team 可显式整体替换。完整业务架构可用于空目标，非空目标必须显式 `replace`。替换差异不修改索引、项目版本、人员目录或业务源码；派生索引由知识事务维护。引用或目标结构冲突以 `KnowledgeWorkspace.Preview/commit` 的实际完整校验为准，不静默改名或修复目标。
 
 ### 私有提交计划与来源意图
 
@@ -86,7 +86,7 @@ knowledge-write-input.ts 让真实知识工具与后端历史观察复用同一�
 
 ### 刷新原事务与契约版本
 
-knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeRefresh.refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
+knowledgeRefreshInputSchema 要求 workspace/instance、revision 和 requestId，knowledgeRefreshRequest 固定顺序构造空 changes。KnowledgeRefresh.Refresh 先查精确原成功 journal，再按原版本校验/提交；重复不再写，但返回校验来自当前快照。原 v1 不从今日状态推断请求。originalKnowledgeWrite 仅在可信 contractVersion=2 时适配 refresh，查询不初始化或推进事务。
 
 ### 对象输入与模块正文诊断
 
@@ -115,4 +115,4 @@ Rules 以显式 assetsRoot 加载 business、capability、connector 的 Schema�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

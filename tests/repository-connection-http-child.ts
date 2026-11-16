@@ -8,9 +8,9 @@ async function main(){
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
   const client=new RemoteRepository('http://127.0.0.1:'+(server.address() as import('node:net').AddressInfo).port,'PRIVATE_TOKEN');
   try{
-    const controller=new AbortController(),first=client.read(controller.signal);await arrived;controller.abort();
+    const controller=new AbortController(),first=client.Read(controller.signal);await arrived;controller.abort();
     let cancellation:string|undefined;try{await first}catch(error:any){cancellation=error.code}
-    const started=Date.now();let failure:Error&{code?:string}|undefined;try{await client.read()}catch(error:any){failure=error}
+    const started=Date.now();let failure:Error&{code?:string}|undefined;try{await client.Read()}catch(error:any){failure=error}
     process.stdout.write(JSON.stringify({cancellation,code:failure?.code,elapsedMs:Date.now()-started,calls,leaked:failure?.message.includes('PRIVATE_TOKEN')??false}));
   }finally{const closed=new Promise<void>(resolve=>server.close(()=>resolve()));server.closeAllConnections();await closed}
 }

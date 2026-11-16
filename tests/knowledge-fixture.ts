@@ -29,11 +29,11 @@ export async function knowledgeFixture(){
   };
   try{
     const rules=new Rules(path.resolve('assets'));
-    await rules.init();
+    await rules.Init();
     const base=[file('.cbim/connectors/registry.json',{connectors:[]}),file('.cbim/team/skills.json',{skills:[]})];
     const snapshot=async(files:KnowledgeFile[]=base):Promise<Snapshot>=>({
       workspaceId:'workspace',instanceId:'instance',revision:revision(files),files,
-      validation:await rules.validate(root,files),
+      validation:await rules.Validate(root,files),
     });
     return {root,rules,base,snapshot,cleanup};
   }catch(error){await cleanup();throw error}

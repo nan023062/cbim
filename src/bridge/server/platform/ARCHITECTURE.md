@@ -52,15 +52,15 @@ class N_src_bridge_server_platform_controlled_file_transport_ts_Request["Request
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_Request : 声明
 class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityControlledFiles["UtilityControlledFiles"] {
   +constructor()
-  +withExclusiveExisting()
-  +withExclusiveTransition()
-  +drain()
-  +close()
+  +WithExclusiveExisting()
+  +WithExclusiveTransition()
+  +Drain()
+  +Close()
   -entryPath
   -koffiPath
   -sessions
   -closing
-  -withSession()
+  -WithSession()
 }
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_UtilityControlledFiles : 声明
 class N_src_bridge_server_platform_controlled_file_transport_ts_external_ControlledFileTransport["ControlledFileTransport (外部契约)"] {
@@ -71,12 +71,12 @@ class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSessi
   +exited
   +constructor()
   +writeIssued
-  +open()
-  +readBefore()
-  +recheckIdentity()
-  +replaceAndFlush()
-  +transitionAndVerify()
-  +close()
+  +Open()
+  +ReadBefore()
+  +RecheckIdentity()
+  +ReplaceAndFlush()
+  +TransitionAndVerify()
+  +Close()
   -child
   -signal
   -token
@@ -108,8 +108,8 @@ class N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSessi
   -issued
   -resolveExit
   -abort
-  -reject()
-  -request()
+  -Reject()
+  -Request()
 }
 N_src_bridge_server_platform_controlled_file_transport_ts ..> N_src_bridge_server_platform_controlled_file_transport_ts_UtilityFileSession : 声明
 class N_src_bridge_server_platform_controlled_file_transport_ts_external_ExclusiveControlledFile["ExclusiveControlledFile (外部契约)"] {

@@ -35,8 +35,8 @@ export async function registerFixtureOwner(app:Application,workspaceId:string,in
     adaptation:input.adaptation,runtimePolicy:{profileId:input.profileId,modelId:input.modelId,...(input.engine?{engine:input.engine}:{})},
     reason:'测试中明确登记岗位及运行配置，不从静态 Agent 或主模型推测岗位。',
   });
-  const identity={workspaceId,instanceId:app.workspace(workspaceId).instanceId};
-  const detail=workspaceMemberDetailSchema.parse(await app.dispatch('workspace.members.get',{...identity,memberId:registration.receipt.memberId}));
+  const identity={workspaceId,instanceId:app.Workspace(workspaceId).instanceId};
+  const detail=workspaceMemberDetailSchema.parse(await app.Dispatch('workspace.members.get',{...identity,memberId:registration.receipt.memberId}));
   assert.equal(detail.sourceStatus?.status,'current');assert.ok(detail.member.adoption.sourceRef);
   const ownerships=[];
   for(const moduleId of input.moduleIds){
@@ -49,14 +49,14 @@ export async function registerFixtureOwner(app:Application,workspaceId:string,in
 
 /** Three explicit profiles have distinct localhost routes as well as model IDs; request receipts prove actual configuration selection. */
 export async function seedOwnerExecution(app:Application,project:string,urls:{main:string;a:string;b:string}){
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
-  const preview=await team.call('cbim_object_preview',{revision:(await workspace.snapshot()).revision,operations:[
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),team=await seedTeam(workspace);
+  const preview=await team.call('cbim_object_preview',{revision:(await workspace.Snapshot()).revision,operations:[
     {kind:'module',action:'create',parentId:'.cbim/workspace',slug:'owner_b',data:{summary},body:moduleFiles('owner_b')[1].text},
     {kind:'module',action:'create',parentId:'.cbim/workspace',slug:'owner_a_extra',data:{summary},body:moduleFiles('owner_a_extra')[1].text},
   ]});
   assert.equal(preview.validation.structural,true);await team.call('cbim_object_commit',{planId:preview.planId},true);
   const modules=[team.input.moduleId,'.cbim/workspace/owner_b'] as const,extraModule='.cbim/workspace/owner_a_extra';
-  const snapshot=await workspace.snapshot(),changes=[];
+  const snapshot=await workspace.Snapshot(),changes=[];
   for(const [index,moduleId] of [...modules,extraModule].entries()){
     const file=snapshot.files.find(item=>item.path===moduleId+'/module.json');assert.ok(file);const definition=JSON.parse(file.text);
     definition.maintenance={bindingId:'owner-execution-maintainer-'+index,maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'owner-execution-confirmation-'+index,source:'local_user',confirmedAt:new Date().toISOString()}};
@@ -66,11 +66,11 @@ export async function seedOwnerExecution(app:Application,project:string,urls:{ma
   for(const [skill,marker] of [[team.shared,ownerExecutionData.sharedSkill],[team.own,ownerExecutionData.ownSkill]]){
     const file=snapshot.files.find(item=>item.path===skill+'/SKILL.md');assert.ok(file);changes.push({path:file.path,text:file.text+'\n\n'+marker+'\n'});
   }
-  await workspace.commit(request(snapshot,changes));
+  await workspace.Commit(request(snapshot,changes));
   const profiles=[];
   for(const [index,[baseUrl,modelId]] of [[urls.main,ownerExecutionData.mainModel],[urls.a,ownerExecutionData.models[0]],[urls.b,ownerExecutionData.models[1]]].entries()){
     const definition:LlmDefinition={name:'Owner execution explicit '+index,api:'openai-completions',baseUrl,auth:'none',defaultModel:modelId,models:[{id:modelId,name:'Owner execution '+index,enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,vision:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]};
-    const result=await app.models.save({profile:definition}),saved=result.profiles.find(item=>item.name===definition.name);assert.ok(saved);profiles.push({id:saved.id,modelId,definition});
+    const result=await app.models.Save({profile:definition}),saved=result.profiles.find(item=>item.name===definition.name);assert.ok(saved);profiles.push({id:saved.id,modelId,definition});
   }
   const positions=[];
   for(const index of [0,1])positions.push(await registerFixtureOwner(app,entry.id,{

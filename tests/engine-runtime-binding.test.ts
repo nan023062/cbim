@@ -29,7 +29,7 @@ it('保留包和依赖引用直到真实 close 完成，未知关闭不能提前
   const f=await runtimeFixture();try{
     const release=vi.fn(),runtime={root:f.root,entry:'engine',version:'1.0.0',identity:digest('engine'),retain:()=>release};
     const close=vi.fn(async()=>{}).mockRejectedValueOnce(Error('进程未排空'));
-    const engine:AgentEngine={kind:'pi',start:vi.fn(async()=>{}),run:vi.fn(async()=>({status:'completed' as const})),stop:vi.fn(async()=>{}),close};
+    const engine:AgentEngine={kind:'pi',start:vi.fn(async()=>{}),run:vi.fn(async()=>({status:'completed' as const})),stop:vi.fn(async()=>{}),close: close};
     const wrapped=pinRuntimeEngine(engine,f.root,runtime);await wrapped.stop();expect(release).not.toHaveBeenCalled();
     await expect(wrapped.close()).rejects.toThrow(/排空/);expect(release).not.toHaveBeenCalled();await wrapped.close();expect(release).toHaveBeenCalledOnce();
   }finally{await f.cleanup()}

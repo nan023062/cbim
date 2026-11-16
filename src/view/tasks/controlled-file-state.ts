@@ -201,7 +201,7 @@ export class ControlledFileController
         const identity = controlledFileReportInputSchema.parse(raw.identity),
           request = fileCompensationInputSchema.parse(raw.request),
           source = controlledFileOperationSummarySchema.parse(raw.source);
-        if (!this.owns(identity) || !this.owns(request) || !ownsSource(source, identity) || source.operationId !== request.operationId || source.phase !== 'applied' || ids.has(request.commandId) || !['sending', 'unknown', 'settled', 'rejected'].includes(raw.state))
+        if (!this.Owns(identity) || !this.Owns(request) || !ownsSource(source, identity) || source.operationId !== request.operationId || source.phase !== 'applied' || ids.has(request.commandId) || !['sending', 'unknown', 'settled', 'rejected'].includes(raw.state))
           throw Error('本机补偿请求身份无效');
         ids.add(request.commandId);
         const receipt = raw.receipt !== undefined ? checkedFileCompensationReceipt(raw.receipt, request, source) : undefined;
@@ -216,7 +216,7 @@ export class ControlledFileController
         const identity = controlledFileReportInputSchema.parse(raw.identity),
           key = controlledFileSelectionKey(identity),
           length = typeof raw.reason === 'string' ? controlledFileUtf8Bytes(raw.reason) : undefined;
-        if (!this.owns(identity) || keys.has(key) || length === undefined || length > controlledFileLimits.reasonBytes)
+        if (!this.Owns(identity) || keys.has(key) || length === undefined || length > controlledFileLimits.reasonBytes)
           throw Error('本机补偿草稿无效');
         keys.add(key);
         const attempt = raw.commandId !== undefined ? attempts.find(v => v.request.commandId === raw.commandId) : undefined;
@@ -233,7 +233,7 @@ export class ControlledFileController
     }
   }
 
-  private owns(v: { workspaceId: string; rootSessionId: string })
+  private Owns(v: { workspaceId: string; rootSessionId: string })
   {
     return v.workspaceId === this.workspaceId && v.rootSessionId === this.rootSessionId
   }
@@ -255,55 +255,55 @@ export class ControlledFileController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(next: ControlledFileState)
+  private Publish(next: ControlledFileState)
   {
     this.value = next;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  read(identity: ControlledFileReportInput)
+  Read(identity: ControlledFileReportInput)
   {
     return this.value.reads[controlledFileSelectionKey(identity)]
   }
 
-  draft(identity: ControlledFileReportInput)
+  Draft(identity: ControlledFileReportInput)
   {
     return this.value.drafts.find(v => sameIdentity(v.identity, identity))
   }
 
-  attempt(identity: ControlledFileReportInput)
+  Attempt(identity: ControlledFileReportInput)
   {
-    return this.value.attempts.find(v => v.request.commandId === this.draft(identity)?.commandId)
+    return this.value.attempts.find(v => v.request.commandId === this.Draft(identity)?.commandId)
   }
 
-  isPending(commandId?: string)
+  IsPending(commandId?: string)
   {
     return !!commandId && this.pending.has(commandId)
   }
 
-  private setRead(identity: ControlledFileReportInput, patch: Partial<ControlledFileRead>)
+  private SetRead(identity: ControlledFileReportInput, patch: Partial<ControlledFileRead>)
   {
     const key = controlledFileSelectionKey(identity),
-      previous = this.read(identity) ?? { loading: false, error: '' };
-    this.publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
+      previous = this.Read(identity) ?? { loading: false, error: '' };
+    this.Publish({ ...this.value, reads: { ...this.value.reads, [key]: { ...previous, ...patch } } })
   }
 
-  observeAnchor(identity: ControlledFileReportInput, anchor: string)
+  ObserveAnchor(identity: ControlledFileReportInput, anchor: string)
   {
-    if (this.owns(identity))
+    if (this.Owns(identity))
       this.anchors.set(controlledFileSelectionKey(identity), anchor)
   }
 
-  fresh(identity: ControlledFileReportInput, instanceId?: string)
+  Fresh(identity: ControlledFileReportInput, instanceId?: string)
   {
-    const r = this.read(identity);
+    const r = this.Read(identity);
     return !!instanceId && !!r?.preview?.eligible && !r.error && !r.loading && r.preview.identity.instanceId === instanceId && r.anchor === this.anchors.get(controlledFileSelectionKey(identity))
   }
 
-  private persist(drafts: readonly ControlledFileDraft[], attempts: readonly FileCompensationAttempt[]): boolean
+  private Persist(drafts: readonly ControlledFileDraft[], attempts: readonly FileCompensationAttempt[]): boolean
   {
     try
     {
@@ -317,92 +317,92 @@ export class ControlledFileController
     }
     catch (error)
     {
-      this.publish({ ...this.value, error: '补偿请求未能保存：' + errorText(error) });
+      this.Publish({ ...this.value, error: '补偿请求未能保存：' + errorText(error) });
       return false
     }
-    this.publish({ ...this.value, drafts, attempts, error: '' });
+    this.Publish({ ...this.value, drafts, attempts, error: '' });
     return true;
   }
 
-  edit(identity: ControlledFileReportInput, reason: string)
+  Edit(identity: ControlledFileReportInput, reason: string)
   {
     const length = controlledFileUtf8Bytes(reason),
-      attempt = this.attempt(identity);
-    if (!this.owns(identity) || !this.available || this.draft(identity)?.commandId && attempt?.state !== 'rejected' || length === undefined || length > controlledFileLimits.reasonBytes)
+      attempt = this.Attempt(identity);
+    if (!this.Owns(identity) || !this.available || this.Draft(identity)?.commandId && attempt?.state !== 'rejected' || length === undefined || length > controlledFileLimits.reasonBytes)
       return;
     const parsed = controlledFileReportInputSchema.safeParse(identity);
     if (!parsed.success)
       return;
-    this.persist([...this.value.drafts.filter(v => !sameIdentity(v.identity, identity)), { identity: parsed.data, reason }], this.value.attempts);
+    this.Persist([...this.value.drafts.filter(v => !sameIdentity(v.identity, identity)), { identity: parsed.data, reason }], this.value.attempts);
   }
 
   /** 明确未写的已结算补偿才可准备另一个请求；成功、未知和在途不能换 ID 重发。 */
-  prepare(identity: ControlledFileReportInput)
+  Prepare(identity: ControlledFileReportInput)
   {
-    const draft = this.draft(identity),
-      attempt = this.attempt(identity);
-    if (!draft || attempt?.receipt?.phase !== 'not_applied' || this.isPending(attempt.request.commandId))
+    const draft = this.Draft(identity),
+      attempt = this.Attempt(identity);
+    if (!draft || attempt?.receipt?.phase !== 'not_applied' || this.IsPending(attempt.request.commandId))
       return;
-    this.persist(this.value.drafts.map(v => v === draft ? { identity: v.identity, reason: v.reason } : v), this.value.attempts);
-    this.setRead(identity, { preview: undefined, anchor: undefined })
+    this.Persist(this.value.drafts.map(v => v === draft ? { identity: v.identity, reason: v.reason } : v), this.value.attempts);
+    this.SetRead(identity, { preview: undefined, anchor: undefined })
   }
 
-  async inspect(identity: ControlledFileReportInput)
+  async Inspect(identity: ControlledFileReportInput)
   {
-    if (!this.owns(identity) || this.read(identity)?.loading)
+    if (!this.Owns(identity) || this.Read(identity)?.loading)
       return;
-    this.setRead(identity, { loading: true, error: '', anchor: undefined });
+    this.SetRead(identity, { loading: true, error: '', anchor: undefined });
     try
     {
-      const report = checkedControlledFileReport(await this.ports.report(structuredClone(identity)), identity, this.read(identity)?.report);
-      this.setRead(identity, { report, loading: false, preview: undefined })
+      const report = checkedControlledFileReport(await this.ports.report(structuredClone(identity)), identity, this.Read(identity)?.report);
+      this.SetRead(identity, { report, loading: false, preview: undefined })
     }
     catch (error)
     {
-      this.setRead(identity, { loading: false, error: '原操作核实失败：' + errorText(error) })
+      this.SetRead(identity, { loading: false, error: '原操作核实失败：' + errorText(error) })
     }
   }
 
   /** 预览才读取当前文件；不保存补偿意图或持有句柄等待用户决定。 */
-  async preview(identity: ControlledFileReportInput, instanceId: string)
+  async Preview(identity: ControlledFileReportInput, instanceId: string)
   {
-    const read = this.read(identity),
+    const read = this.Read(identity),
       operation = read?.report?.ledger.state === 'recorded' ? read.report.ledger.operation : undefined;
-    if (!this.owns(identity) || read?.loading || operation?.phase !== 'applied' || this.isPending(this.draft(identity)?.commandId))
+    if (!this.Owns(identity) || read?.loading || operation?.phase !== 'applied' || this.IsPending(this.Draft(identity)?.commandId))
       return;
     const parsed = fileCompensationPreviewInputSchema.safeParse({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, instanceId, operationId: operation.operationId });
     if (!parsed.success)
     {
-      this.setRead(identity, { error: '当前工作区实例无效，请重新打开工作区后核实', anchor: undefined });
+      this.SetRead(identity, { error: '当前工作区实例无效，请重新打开工作区后核实', anchor: undefined });
       return
     }
     const input = parsed.data,
       anchor = this.anchors.get(controlledFileSelectionKey(identity));
-    this.setRead(identity, { loading: true, error: '', anchor: undefined });
+    this.SetRead(identity, { loading: true, error: '', anchor: undefined });
     try
     {
       const preview = fileCompensationPreviewSchema.parse(bounded(await this.ports.preview(structuredClone(input))));
       if (!same(preview.identity, input) || !same(preview.source, operation) || !ownsSource(preview.source, identity))
         throw Error('补偿预览不属于原操作或当前工作区实例');
-      this.setRead(identity, { preview, anchor, loading: false });
+      this.SetRead(identity, { preview, anchor, loading: false });
     }
     catch (error)
     {
-      this.setRead(identity, { loading: false, error: '补偿预览失败：' + errorText(error) })
+      this.SetRead(identity, { loading: false, error: '补偿预览失败：' + errorText(error) })
     }
   }
 
-  private saveAttempt(attempt: FileCompensationAttempt)
+  private SaveAttempt(attempt: FileCompensationAttempt)
   {
-    return this.persist(this.value.drafts, this.value.attempts.some(v => v.request.commandId === attempt.request.commandId) ? this.value.attempts.map(v => v.request.commandId === attempt.request.commandId ? attempt : v) : [...this.value.attempts, attempt])
+    return this.Persist(this.value.drafts, this.value.attempts.some(v => v.request.commandId === attempt.request.commandId) ? this.value.attempts.map(v => v.request.commandId === attempt.request.commandId ? attempt : v) : [...this.value.attempts, attempt])
   }
 
   /** 保存原命令后只发一次。仅首次提交的两个明确事务前拒绝码允许修改草稿；未知后的查询失败不能解除原命令锁。 */
-  async submit(identity: ControlledFileReportInput, instanceId: string)
+  async Submit(identity: ControlledFileReportInput, instanceId: string)
   {
-    const draft = this.draft(identity),
-      preview = this.read(identity)?.preview;
-    if (!draft || draft.commandId && this.attempt(identity)?.state !== 'rejected' || !preview?.eligible || !this.fresh(identity, instanceId) || !this.available)
+    const draft = this.Draft(identity),
+      preview = this.Read(identity)?.preview;
+    if (!draft || draft.commandId && this.Attempt(identity)?.state !== 'rejected' || !preview?.eligible || !this.Fresh(identity, instanceId) || !this.available)
       return;
     let request: FileCompensationInput;
     try
@@ -413,68 +413,68 @@ export class ControlledFileController
     }
     catch (error)
     {
-      this.publish({ ...this.value, error: errorText(error) });
+      this.Publish({ ...this.value, error: errorText(error) });
       return
     }
     const attempt: FileCompensationAttempt = { identity: structuredClone(identity), request, source: structuredClone(preview.source), state: 'sending' };
-    if (!this.persist(this.value.drafts.map(v => v === draft ? { ...v, commandId: request.commandId } : v), [...this.value.attempts, attempt]))
+    if (!this.Persist(this.value.drafts.map(v => v === draft ? { ...v, commandId: request.commandId } : v), [...this.value.attempts, attempt]))
       return;
     this.pending.add(request.commandId);
-    this.setRead(identity, { anchor: undefined });
+    this.SetRead(identity, { anchor: undefined });
     try
     {
       const receipt = checkedFileCompensationReceipt(await this.ports.apply(structuredClone(request)), request, attempt.source);
-      this.saveAttempt({ ...attempt, receipt, state: ['applied', 'not_applied'].includes(receipt.phase) ? 'settled' : 'unknown' })
+      this.SaveAttempt({ ...attempt, receipt, state: ['applied', 'not_applied'].includes(receipt.phase) ? 'settled' : 'unknown' })
     }
     catch (error)
     {
       const rejected = knownPreAcceptRejection(error);
-      this.saveAttempt({ ...attempt, state: rejected ? 'rejected' : 'unknown', error: (rejected ? '请求在写入前被拒绝，请重新预览后提交：' : '补偿结果尚未确认，请查询原命令：') + errorText(error) })
+      this.SaveAttempt({ ...attempt, state: rejected ? 'rejected' : 'unknown', error: (rejected ? '请求在写入前被拒绝，请重新预览后提交：' : '补偿结果尚未确认，请查询原命令：') + errorText(error) })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.publish({ ...this.value })
+      this.Publish({ ...this.value })
     }
   }
 
   /** 查询原本机命令或后端历史；阶段只前进，查询失败既不把未知升级拒绝，也不抹去此前明确拒绝。 */
-  async query(identity: ControlledFileReportInput, commandId: string)
+  async Query(identity: ControlledFileReportInput, commandId: string)
   {
     const previous = this.value.attempts.find(v => v.request.commandId === commandId),
-      ledger = this.read(identity)?.report?.ledger;
+      ledger = this.Read(identity)?.report?.ledger;
     const source = previous?.source ?? (ledger?.state === 'recorded' && ledger.compensations.some(v => v.commandId === commandId) ? ledger.operation : undefined);
-    if (!this.owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.identity, identity) || !source || source.phase !== 'applied')
+    if (!this.Owns(identity) || this.pending.has(commandId) || previous && !sameIdentity(previous.identity, identity) || !source || source.phase !== 'applied')
       return;
     this.pending.add(commandId);
-    this.publish({ ...this.value });
+    this.Publish({ ...this.value });
     try
     {
       const raw = await this.ports.receipt({ workspaceId: this.workspaceId, rootSessionId: this.rootSessionId, commandId });
       if (raw === undefined)
         throw Error('尚未查到原补偿回执，保留未知状态');
       const parsed = fileCompensationReceiptSchema.parse(bounded(raw));
-      if (!this.owns(parsed) || parsed.commandId !== commandId || parsed.operationId !== source.operationId)
+      if (!this.Owns(parsed) || parsed.commandId !== commandId || parsed.operationId !== source.operationId)
         throw Error('回执不属于所选原命令');
       const receipt = checkedFileCompensationReceipt(parsed, previous?.request ?? parsed.request, source, previous?.receipt);
       const summary = ledger?.state === 'recorded' ? ledger.compensations.find(v => v.commandId === commandId) : undefined;
       const { compensationId, revision, phase, preparedAt, updatedAt, issue } = receipt;
       if (summary && !summaryAdvances(summary, { compensationId, commandId, revision, phase, preparedAt, updatedAt, ...(issue ? { issue } : {}) }))
         throw Error('补偿回执与已观察历史冲突，保留原记录');
-      this.saveAttempt({ identity: structuredClone(identity), request: receipt.request, source, receipt, state: ['applied', 'not_applied'].includes(receipt.phase) ? 'settled' : 'unknown' });
-      this.setRead(identity, { error: '', anchor: undefined });
+      this.SaveAttempt({ identity: structuredClone(identity), request: receipt.request, source, receipt, state: ['applied', 'not_applied'].includes(receipt.phase) ? 'settled' : 'unknown' });
+      this.SetRead(identity, { error: '', anchor: undefined });
     }
     catch (error)
     {
       const message = '原补偿查询未确认：' + errorText(error);
       if (previous)
-        this.saveAttempt({ ...previous, state: previous.state === 'rejected' ? 'rejected' : previous.receipt && ['applied', 'not_applied'].includes(previous.receipt.phase) ? 'settled' : 'unknown', error: message });
-      this.setRead(identity, { error: message })
+        this.SaveAttempt({ ...previous, state: previous.state === 'rejected' ? 'rejected' : previous.receipt && ['applied', 'not_applied'].includes(previous.receipt.phase) ? 'settled' : 'unknown', error: message });
+      this.SetRead(identity, { error: message })
     }
     finally
     {
       this.pending.delete(commandId);
-      this.publish({ ...this.value })
+      this.Publish({ ...this.value })
     }
   }
 }
@@ -488,7 +488,7 @@ export class ControlledFilePool
   {
   }
 
-  get(workspaceId: string, rootSessionId: string, ports: ControlledFilePorts)
+  Get(workspaceId: string, rootSessionId: string, ports: ControlledFilePorts)
   {
     const key = JSON.stringify([workspaceId, rootSessionId]),
       value = this.values.get(key) ?? new ControlledFileController(workspaceId, rootSessionId, ports);

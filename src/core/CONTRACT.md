@@ -10,7 +10,7 @@ Core 是四层架构的基础公共层，不含业务规则、通信操作、页
 
 当前公开能力包括 [utility](utility/CONTRACT.md)、errors.ts 的 Fault/fail、json.ts 的严格解析适配、[纯网页契约与算法](web/CONTRACT.md)、contracts/secrets.ts 的加密端口、[Node 实现](platform/node/CONTRACT.md) 及 [Electron 适配](platform/electron/CONTRACT.md)。utility 仅使用语言/Web Streams 原语及 jsonc-parser；platform/node/digest.ts 仅使用 node:crypto。它们都不依赖 logic、bridge、view 或旧 backend/frontend，包含类型引用。跨模块仅使用已登记公开入口；新 Core 模块必须登记职责、入口及第三方依赖，否则检查失败。
 
-前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core JsonUtils.orderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
+前端 equalJson 是第一条双端复用路径：控制器 → 前端比较适配 → Core JsonUtils.OrderJsonValue；后端历史指纹适配也调用同一算法。比较器、字段选择、错误映射和业务接受条件仍由消费者拥有。共享实现不要求不同策略产生相同字节。
 
 旧领域规则已迁入 Logic；identity 与 StoragePaths 归各自业务端口。json.ts 提供严格 JSON 解析的 Fault 适配，platform/node/serialization.ts 保留 hash/json 的既有字节语义。旧 errors 转发已移除，所有消费者使用同一 Core Fault 构造器。服务、调度、桥接和视图均已按四层归属迁移。
 
@@ -24,4 +24,4 @@ Node 原生锁位于 platform/node/locking.ts，保留旧锁身份与释放行�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.parseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.ParseStrictJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

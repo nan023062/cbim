@@ -16,13 +16,13 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-request-budget-ui-')),pr
 const simple=mode==='complete'?undefined:await modelRequestBudgetProvider('openai-completions',mode==='block'?'two-requests':'unknown'),shared=mode==='complete'?await scopeBudgetProvider('complete'):undefined;
 let setup:Application|undefined,desktop:ElectronApplication|undefined,keep=false;const pageErrors:string[]=[];
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();let entry:{id:string};
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();let entry:{id:string};
   if(shared)entry=(await seedScopeBudget(setup,project,shared,'complete')).entry;
   else{
-    await setup.models.save({profile:{name:'Request budget UI',api:'openai-completions',baseUrl:simple!.url,auth:'none',defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Request budget UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]}});
-    entry=await setup.dispatch('add',{path:project});
+    await setup.models.Save({profile:{name:'Request budget UI',api:'openai-completions',baseUrl:simple!.url,auth:'none',defaultModel:'request-budget-model',models:[{id:'request-budget-model',name:'Request budget UI',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:1,output:2,cacheRead:0.5,cacheWrite:1.5}}]}});
+    entry=await setup.Dispatch('add',{path:project});
   }
-  await setup.shutdown();setup=undefined;
+  await setup.Shutdown();setup=undefined;
   const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+45000;while(Date.now()<end){if(await check())return;await new Promise(r=>setTimeout(r,40))}throw Error('验收超时：'+label)};
   const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});const page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',error=>pageErrors.push(error.message));return page};
   let page=await launch();const active=()=>page.locator('.workspace-panel:not([hidden])'),goal=()=>active().getByTestId('conversation-goal-summary'),call=(action:string,args:unknown={})=>page.evaluate(({action,args})=>(window as any).cbim.call(action,args),{action,args});
@@ -39,7 +39,7 @@ try{
   else{assert.equal(scope.outcome,'failed');assert.equal(simple!.requests.length,1);assert.equal(report.unknown,1);assert.equal(report.reservedTokens,69632);assert.ok((await goal().getByTestId('request-budget-panel').innerText()).includes('未知 1 次'))}
   await goal().getByTestId('request-budget-panel').scrollIntoViewIfNeeded();await page.screenshot({path:`test-results/${name}-settled.png`});const requests=shared?{main:shared.main.length,member:shared.member.length}:{main:simple!.requests.length,member:0};
   // Use the actual app path layout via Paths; do not assume a user-directory format in assertions.
-  const storedJournal=path.join(new Paths(user,path.resolve('.')).project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(storedJournal);
+  const storedJournal=path.join(new Paths(user,path.resolve('.')).Project(entry.id),'dispatch','dispatch.jsonl'),bytes=await fs.readFile(storedJournal);
   await settings();await page.getByRole('textbox',{name:'Token 软限额',exact:true}).fill('500000');await page.getByRole('button',{name:'保存软限额',exact:true}).click();await until(async()=>(await call('budget.settings')).limits.tokens===500000,'只修改未来目标设置');assert.deepEqual((await budgetScopes(user,entry.id))[0],scope);
   await desktop!.close();desktop=undefined;page=await launch();await select(true);await goal().getByTestId('request-budget-panel').getByRole('button',{name:'刷新请求账本',exact:true}).click();await goal().getByTestId('request-budget-counts').waitFor();assert.deepEqual(await call('dispatch.requestBudget',query),report);assert.deepEqual((await budgetScopes(user,entry.id))[0],scope);assert.deepEqual(await call('dispatch.graphSnapshot',{identity:{workspaceId:entry.id,rootSessionId:scope.rootSessionId}}),graph);assert.deepEqual(await fs.readFile(storedJournal),bytes);
   assert.deepEqual(shared?{main:shared.main.length,member:shared.member.length}:{main:simple!.requests.length,member:0},requests);await rendered();await goal().getByTestId('request-budget-panel').scrollIntoViewIfNeeded();await page.screenshot({path:`test-results/${name}-restored.png`});
@@ -47,4 +47,4 @@ try{
   if(shared)assert.equal(await fs.readFile(path.join(project,scopeBudgetFixture.file),'utf8'),scopeBudgetFixture.fact);
   const receipt={packagedExe:exe,mode,realPi:true,onlineProvider:false,settingsByRealClick:true,policy,report,requests,readAndRestartWithoutReplay:true,futureSettingsDoNotChangeOldScope:true,scopeOutcome:scope.outcome,pageErrors};await fs.writeFile(`test-results/${name}-ui-smoke.json`,JSON.stringify(receipt,null,2));console.log(JSON.stringify(receipt));
 }catch(error){keep=true;await fs.mkdir('test-results',{recursive:true});const page=desktop?await desktop.firstWindow().catch(()=>undefined):undefined;await page?.screenshot({path:`test-results/${name}-failure.png`}).catch(()=>{});await fs.writeFile(`test-results/${name}-ui-failure.json`,JSON.stringify({packagedExe:exe,mode,temp,error:String(error),pageErrors,dom:await page?.locator('body').innerText().catch(()=>undefined),requests:shared?.sequence??simple?.requests.map(r=>({path:r.path,compaction:r.compaction})),providerErrors:shared?.errors??simple?.errors},null,2));throw error}
-finally{shared?.releaseAll();await desktop?.close().catch(()=>{});await setup?.shutdown();await shared?.close();await simple?.close();if(!keep){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-request-budget-ui-'));await fs.rm(target,{recursive:true,force:true})}}
+finally{shared?.releaseAll();await desktop?.close().catch(()=>{});await setup?.Shutdown();await shared?.close();await simple?.close();if(!keep){const target=path.resolve(temp);assert.equal(path.dirname(target),path.resolve(os.tmpdir()));assert.ok(path.basename(target).startsWith('cbim-request-budget-ui-'));await fs.rm(target,{recursive:true,force:true})}}

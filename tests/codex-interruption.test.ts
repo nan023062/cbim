@@ -36,15 +36,15 @@ test.each(['incomplete','hold'] as const)('真实应用 %s：登记早于日志�
   try{
     const file=path.join(f.a,'sample.txt');await fs.writeFile(file,'read once');
     if('path' in provider.input)provider.input.path=file;
-    const settings=await f.app.models.save({profile:{name:'Interrupted provider',api:'openai-responses',auth:'none',baseUrl:provider.llm.profile.baseUrl,defaultModel:'codex-test-model',models:[{id:'codex-test-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]}});
-    const entry=await f.app.dispatch('add',{path:f.a}),options={engine:'codex',profileId:settings.selectedId!,model:'codex-test-model',permission:'read',turnTimeoutMs:20000};
-    const first=await f.app.dispatch('loop.chat',{id:entry.id,message:'Read the sample, then respond',options});
-    const read=(runId:string)=>f.app.dispatch('loop.inspect',{id:entry.id,taskId:first.taskId,runId});
+    const settings=await f.app.models.Save({profile:{name:'Interrupted provider',api:'openai-responses',auth:'none',baseUrl:provider.llm.profile.baseUrl,defaultModel:'codex-test-model',models:[{id:'codex-test-model',name:'Test',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}]}});
+    const entry=await f.app.Dispatch('add',{path:f.a}),options={engine:'codex',profileId:settings.selectedId!,model:'codex-test-model',permission:'read',turnTimeoutMs:20000};
+    const first=await f.app.Dispatch('loop.chat',{id:entry.id,message:'Read the sample, then respond',options});
+    const read=(runId:string)=>f.app.Dispatch('loop.inspect',{id:entry.id,taskId:first.taskId,runId});
     if(afterTool==='hold'){
       await vi.waitFor(()=>expect(provider.requests).toHaveLength(2),{timeout:options.turnTimeoutMs});
-      await f.app.dispatch('loop.stop',{id:entry.id,taskId:first.taskId});
+      await f.app.Dispatch('loop.stop',{id:entry.id,taskId:first.taskId});
     }
-    await vi.waitFor(async()=>{expect((await read(first.runId)).status).toBe(afterTool==='hold'?'cancelled':'interrupted');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000});
+    await vi.waitFor(async()=>{expect((await read(first.runId)).status).toBe(afterTool==='hold'?'cancelled':'interrupted');expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0)},{timeout:30000});
     const failed=await read(first.runId),before=JSON.stringify(failed.events);
     expect(failed.sessionFile).toBeTruthy();expect(failed.unresolvedTools).toEqual([]);
     expect(failed.events.filter(event=>event.type==='tool.finished')).toHaveLength(1);
@@ -52,13 +52,13 @@ test.each(['incomplete','hold'] as const)('真实应用 %s：登记早于日志�
     expect(failed.events.at(-1)).toMatchObject(afterTool==='hold'?{type:'run.settled',data:{status:'cancelled'}}:{type:'run.interrupted',data:{error:expect.stringContaining('max_output_tokens')}});
     const binding=failed.events.findIndex(event=>event.type==='session.bound'&&event.data.sessionFile);
     expect(binding).toBeGreaterThan(0);expect(binding).toBeLessThan(failed.events.length-1);
-    const retry=await f.app.dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Continue now',options});
-    await vi.waitFor(async()=>{expect((await read(retry.runId)).status).toBe('completed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000});
+    const retry=await f.app.Dispatch('loop.resume',{id:entry.id,taskId:first.taskId,runId:first.runId,message:'Continue now',options});
+    await vi.waitFor(async()=>{expect((await read(retry.runId)).status).toBe('completed');expect(f.app.runtime.Snapshot().pressure.activeRuns).toBe(0)},{timeout:30000});
     const done=await read(retry.runId);
     expect(done.sessionFile).toBe(failed.sessionFile);expect(done.conversationBinding).toEqual(failed.conversationBinding);
     expect(done.events.filter(event=>event.type==='tool.finished')).toHaveLength(0);
     expect(JSON.stringify((await read(first.runId)).events)).toBe(before);
-    expect(await f.app.dispatch('loop.threadView',{id:entry.id,taskId:first.taskId})).toMatchObject({resumeRunId:retry.runId,issues:[]});
+    expect(await f.app.Dispatch('loop.threadView',{id:entry.id,taskId:first.taskId})).toMatchObject({resumeRunId:retry.runId,issues:[]});
     expect(provider.requests).toHaveLength(3);expect(provider.errors).toEqual([]);
   }finally{await f.cleanup();await provider.cleanup()}
 },65000);

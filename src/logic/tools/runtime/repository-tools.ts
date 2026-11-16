@@ -27,13 +27,13 @@ export class RepositoryTools
     this.targets = new Map(targets.map(target => [target.connectorId, Object.freeze(target)]));
   }
 
-  has(name: string)
+  Has(name: string)
   {
     return name === listName || name === getName
   }
 
   /** 只公开有界目标提示；全部来源须已经在本轮目标表中，资料不能要求调用其它工具或改变权限。 */
-  list()
+  List()
   {
     if (!this.targets.size)
       return [];
@@ -46,7 +46,7 @@ export class RepositoryTools
     ];
   }
 
-  private parse<T>(schema: z.ZodType<T>, input: unknown)
+  private Parse<T>(schema: z.ZodType<T>, input: unknown)
   {
     const parsed = schema.safeParse(input);
     if (!parsed.success)
@@ -54,7 +54,7 @@ export class RepositoryTools
     return parsed.data
   }
 
-  private target(id: string)
+  private Target(id: string)
   {
     const target = this.targets.get(id);
     if (!target)
@@ -62,38 +62,38 @@ export class RepositoryTools
     return target
   }
 
-  private scope(target: RepositoryToolTarget, operation: 'list' | 'get')
+  private Scope(target: RepositoryToolTarget, operation: 'list' | 'get')
   {
     const { workspaceId, connectorId, repositoryId, connectionId } = target;
     return { kind: 'repository' as const, workspaceId, connectorId, repositoryId, connectionId, operation }
   }
 
   /** 只做严格参数检查和可信范围分类，不读网络；实际调用仍由捕获闭包复验当前授权。 */
-  describe(name: string, input: unknown): RunToolDescriptor
+  Describe(name: string, input: unknown): RunToolDescriptor
   {
-    if (!this.has(name))
+    if (!this.Has(name))
       fail('REPOSITORY_TOOL_UNKNOWN', '当前运行没有该仓库工具');
-    const args = name === listName ? this.parse(repositoryListInputSchema, input) : this.parse(repositoryGetInputSchema, input);
-    return { effects: ['read'], native: false, scope: this.scope(this.target(args.connectorId), name === listName ? 'list' : 'get') };
+    const args = name === listName ? this.Parse(repositoryListInputSchema, input) : this.Parse(repositoryGetInputSchema, input);
+    return { effects: ['read'], native: false, scope: this.Scope(this.Target(args.connectorId), name === listName ? 'list' : 'get') };
   }
 
   /** gate 放行后只执行一次读取；取消不交付迟到结果，输出协议失败不触发重读。 */
-  async call(name: string, input: unknown, signal: AbortSignal)
+  async Call(name: string, input: unknown, signal: AbortSignal)
   {
     signal.throwIfAborted();
     if (name === listName)
     {
-      const args = this.parse(repositoryListInputSchema, input),
-        scope = this.scope(this.target(args.connectorId), 'list'),
-        value = await this.port.list(args, signal);
+      const args = this.Parse(repositoryListInputSchema, input),
+        scope = this.Scope(this.Target(args.connectorId), 'list'),
+        value = await this.port.List(args, signal);
       signal.throwIfAborted();
       return checkedJsonToolResult(name, value, repositoryListOutputSchema.refine(output => isDeepStrictEqual(output.scope, scope) && output.offset === (args.offset ?? 0) && output.items.length <= (args.limit ?? 20) && (args.expectedRevision === undefined || output.revision === args.expectedRevision)));
     }
     if (name === getName)
     {
-      const args = this.parse(repositoryGetInputSchema, input),
-        scope = this.scope(this.target(args.connectorId), 'get'),
-        value = await this.port.get(args, signal);
+      const args = this.Parse(repositoryGetInputSchema, input),
+        scope = this.Scope(this.Target(args.connectorId), 'get'),
+        value = await this.port.Get(args, signal);
       signal.throwIfAborted();
       return checkedJsonToolResult(name, value, repositoryGetOutputSchema.refine(output => isDeepStrictEqual(output.scope, scope) && output.revision === args.expectedRevision && output.resource.id === args.resourceId && output.content.offset === (args.offset ?? 0) && Array.from(output.content.text).length <= (args.limit ?? 4096)));
     }

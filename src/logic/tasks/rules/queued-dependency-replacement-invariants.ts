@@ -14,7 +14,7 @@ import { dependencyReplacementSchema, type DependencyReplacement } from './queue
 import { queuedDependencyReplacementSelection } from './queued-dependency-replacement-rules';
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
+const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: true });
 
 const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.stringify(ordered(b));
 

@@ -26,7 +26,7 @@ export interface KnowledgeSourceRegistry
 /** 固定 JSON 对象键序、保持数组次序；不对客户端内容作默认补值或转换。 */
 export function knowledgeSourceCanonical(value: unknown): string
 {
-  const order = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
+  const order = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true });
   return JSON.stringify(order(value));
 }
 

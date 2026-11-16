@@ -22,7 +22,7 @@ async function assertHistoryContract(call:IpcCaller,port:AgentHistoryQueryPort){
   // @ts-expect-error 请求字段不能放宽成字符串
   await call('agentHistory.sessions',{workspaceId:'workspace',agentId:'cbim:main',limit:'30'});
   // @ts-expect-error 服务实现也须遵守该操作的响应
-  port.roles=async()=>({items:[],diagnostics:[]});
+  port.Roles=async()=>({items:[],diagnostics:[]});
 }
 void assertHistoryContract;
 

@@ -47,7 +47,7 @@ it('可信分类中的知识写入仍清除旧计划证据，但不借用业务�
 
 it('带约定却没有分类端口或不是正式成员，拒绝启动；旧无约定保持兼容',async()=>{
   const work=vi.fn(async()=>{}),f=await artifactRuntimeFixture(work,{workflowContracts:bindings});try{await expect(f.start()).rejects.toMatchObject({code:'WORKFLOW_GATE_UNAVAILABLE'});expect(work).not.toHaveBeenCalled()}finally{await f.cleanup()}
-  const main=await artifactRuntimeFixture(work,{workflowContracts:bindings,describeTool:describe});try{await expect(main.runtime.start({...main.task,mode:'chat',agentId:'cbim:main'})).rejects.toMatchObject({code:'WORKFLOW_GATE_UNAVAILABLE'});expect(work).not.toHaveBeenCalled()}finally{await main.cleanup()}
+  const main=await artifactRuntimeFixture(work,{workflowContracts:bindings,describeTool:describe});try{await expect(main.runtime.Start({...main.task,mode:'chat',agentId:'cbim:main'})).rejects.toMatchObject({code:'WORKFLOW_GATE_UNAVAILABLE'});expect(work).not.toHaveBeenCalled()}finally{await main.cleanup()}
   const old=await artifactRuntimeFixture(work);try{expect((await (await old.start()).done).status).toBe('completed');expect(work).toHaveBeenCalledTimes(1)}finally{await old.cleanup()}
 });
 

@@ -17,7 +17,7 @@ export async function readKnowledgePlan(owner: { entry: { id: string }; paths: S
 {
   if (!z.string().uuid().safeParse(ref.planId).success || !['object_plan', 'package_plan'].includes(ref.kind))
     fail('SOURCE_PLAN_INVALID', '知识计划标识无效');
-  const file = path.join(owner.paths.local(owner.entry.id, 'cache'), ref.kind === 'object_plan' ? 'object-plans' : 'resource-imports', ref.planId + '.json');
+  const file = path.join(owner.paths.Local(owner.entry.id, 'cache'), ref.kind === 'object_plan' ? 'object-plans' : 'resource-imports', ref.planId + '.json');
   let raw: Record<string, unknown>;
   try
   {

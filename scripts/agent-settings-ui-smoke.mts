@@ -12,9 +12,9 @@ const f=await fixture(),root=process.cwd(),out=path.resolve('test-results/agent-
 const actions:string[]=[],errors:string[]=[],checks:string[]=[];
 const model={id:'shared',name:'Enabled model',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false};
 const base={name:'Chat',api:'openai-completions',baseUrl:'http://127.0.0.1:9',auth:'none',defaultModel:'shared',models:[model,{...model,id:'disabled',name:'Disabled model',enabled:false}]};
-await f.app.models.save({profile:base});
-const entry=await f.app.dispatch('add',{path:f.a});await seedTeam(f.app.workspace(entry.id));
-const workspace=(await f.app.list()).entries.find(w=>w.id===entry.id)!;
+await f.app.models.Save({profile:base});
+const entry=await f.app.Dispatch('add',{path:f.a});await seedTeam(f.app.Workspace(entry.id));
+const workspace=(await f.app.List()).entries.find(w=>w.id===entry.id)!;
 const html='<div id="root"></div><script type="module" src="./fixture.mjs"></script>';
 await fs.writeFile(path.join(out,'index.html'),html);
 await fs.writeFile(path.join(out,'fixture.mjs'),String.raw`
@@ -30,7 +30,7 @@ view==='team'&&React.createElement(TeamView,{workspace,snapshot,refresh}),view==
 createRoot(document.getElementById('root')).render(React.createElement(App));
 `);
 const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},logLevel:'error',server:{host:'127.0.0.1',port:0},plugins:[{name:'real-app-ipc',configureServer(server){server.middlewares.use('/__engine_ipc',async(req,res)=>{
-  try{let raw='';for await(const chunk of req)raw+=chunk;const {action,args}=JSON.parse(raw);actions.push(action);if(['loop.chat','loop.resume','loop.enqueue'].includes(action))throw Error('此配置验收不授权启动模型');const value=action==='desktop.engines.status'?['pi','claude-code','codex'].map(engine=>({engine,state:'bundled'})):await f.app.dispatch(action,args);res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:true,value}))}
+  try{let raw='';for await(const chunk of req)raw+=chunk;const {action,args}=JSON.parse(raw);actions.push(action);if(['loop.chat','loop.resume','loop.enqueue'].includes(action))throw Error('此配置验收不授权启动模型');const value=action==='desktop.engines.status'?['pi','claude-code','codex'].map(engine=>({engine,state:'bundled'})):await f.app.Dispatch(action,args);res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:true,value}))}
   catch(error){res.setHeader('content-type','application/json');res.end(JSON.stringify({ok:false,message:String(error)}))}
 })}}]});
 let browser;try{
@@ -45,14 +45,14 @@ let browser;try{
   await first.getByRole('textbox',{name:'对话草稿',exact:true}).fill('保留主 Agent 配置测试草稿');assert.equal(await first.getByRole('button',{name:'发送消息',exact:true}).isEnabled(),false);
   checks.push('legacy-profile-all-three-engines','no-compatible-model-blocks-send');
   await pick('Loop 引擎','Pi');
-  const anthropic=await f.app.models.save({profile:{...base,name:'Anthropic',api:'anthropic-messages'}}),anthropicId=anthropic.profiles.find(p=>p.name==='Anthropic')!.id;
-  const responses=await f.app.models.save({profile:{...base,name:'Responses',api:'openai-responses'}}),responsesId=responses.profiles.find(p=>p.name==='Responses')!.id;
+  const anthropic=await f.app.models.Save({profile:{...base,name:'Anthropic',api:'anthropic-messages'}}),anthropicId=anthropic.profiles.find(p=>p.name==='Anthropic')!.id;
+  const responses=await f.app.models.Save({profile:{...base,name:'Responses',api:'openai-responses'}}),responsesId=responses.profiles.find(p=>p.name==='Responses')!.id;
   await page.getByRole('button',{name:'b',exact:true}).click();await page.getByRole('button',{name:'a',exact:true}).click();
   await pick('Loop 引擎','Claude Code');await expectEngine(first,'Claude Code');
   await first.getByRole('combobox',{name:'对话模型',exact:true}).click();const list=page.getByRole('listbox',{name:'对话模型选项',exact:true});assert.match(await list.innerText(),/Anthropic/);assert.doesNotMatch(await list.innerText(),/Responses|Disabled model/);await page.keyboard.press('Escape');
-  const identity={workspaceId:entry.id,instanceId:f.app.workspace(entry.id).instanceId};
-  assert.deepEqual((await f.app.dispatch('agent.mainSettings',identity)).selection,{engine:'claude-code',profileId:anthropicId,modelId:'shared'});
-  await pick('Loop 引擎','Pi');await expectEngine(first,'Pi');assert.equal((await f.app.dispatch('agent.mainSettings',identity)).selection.profileId,anthropicId);
+  const identity={workspaceId:entry.id,instanceId:f.app.Workspace(entry.id).instanceId};
+  assert.deepEqual((await f.app.Dispatch('agent.mainSettings',identity)).selection,{engine:'claude-code',profileId:anthropicId,modelId:'shared'});
+  await pick('Loop 引擎','Pi');await expectEngine(first,'Pi');assert.equal((await f.app.Dispatch('agent.mainSettings',identity)).selection.profileId,anthropicId);
   await pick('Loop 引擎','Claude Code');await expectEngine(first,'Claude Code');
   await page.getByRole('button',{name:'b',exact:true}).click();await expectEngine(second,'Claude Code');checks.push('shared-model-pi-and-claude','main-agent-shared-across-conversations');
   await page.getByRole('button',{name:'team',exact:true}).click();await page.getByTestId('team-main-agent-settings').click();const dialog=page.getByRole('dialog',{name:'主 Agent 配置',exact:true});
@@ -60,12 +60,12 @@ let browser;try{
   assert.equal(await dialog.getByRole('combobox',{name:'Agent 模型',exact:true}).inputValue(),JSON.stringify([anthropicId,'shared']));
   await dialog.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('codex');await dialog.getByRole('combobox',{name:'Agent 模型',exact:true}).selectOption(JSON.stringify([responsesId,'shared']));await dialog.getByRole('button',{name:'保存主 Agent 配置',exact:true}).click();await dialog.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'a',exact:true}).click();await expectEngine(first,'Codex');assert.equal(await first.getByRole('textbox',{name:'对话草稿',exact:true}).inputValue(),'保留主 Agent 配置测试草稿');checks.push('composer-to-agent-and-agent-to-composer','draft-preserved');
-  assert.equal((await f.app.chatOptions(entry.id,{},[])).engine,'codex');
+  assert.equal((await f.app.ChatOptions(entry.id,{},[])).engine,'codex');
   await page.screenshot({path:path.join(out,'main-agent-shared.png')});
   await page.getByRole('button',{name:'models',exact:true}).click();await page.getByRole('button',{name:'编辑',exact:true}).first().click();assert.equal(await page.getByRole('button',{name:'Loop 引擎',exact:true}).count(),0);assert.equal(await page.getByRole('combobox',{name:'接口协议',exact:true}).isEnabled(),true);checks.push('provider-has-no-engine-setting');
   await page.reload();await expectEngine(first,'Codex');checks.push('shared-setting-survives-reload');
-  const current=await f.app.dispatch('agent.mainSettings',identity);await f.app.dispatch('agent.configureMain',{...current,selection:null});
-  for(const profile of (await f.app.models.list()).profiles)await f.app.models.remove(profile.id);
+  const current=await f.app.Dispatch('agent.mainSettings',identity);await f.app.Dispatch('agent.configureMain',{...current,selection:null});
+  for(const profile of (await f.app.models.List()).profiles)await f.app.models.Remove(profile.id);
   await page.reload();await page.getByRole('button',{name:'team',exact:true}).click();await page.getByTestId('team-main-agent-settings').click();
   const empty=page.getByRole('dialog',{name:'主 Agent 配置',exact:true});
   await empty.getByRole('combobox',{name:'Agent Loop 引擎',exact:true}).selectOption('claude-code');

@@ -22,7 +22,7 @@ import { scopeActiveInputLimits } from '../rules/scope-active-input';
 import type { MemberPauseService } from '../../team/runtime/member-pause-service';
 import type { OwnerExecutionContext } from '../../dispatch/runtime/owner-execution-service';
 
-type Owner = Pick<KnowledgeWorkspace, 'entry' | 'assert'>;
+type Owner = Pick<KnowledgeWorkspace, 'entry' | 'Assert'>;
 
 function check(condition: unknown, code: string, message: string): asserts condition
 {
@@ -46,7 +46,7 @@ export class ScopeContinuationService
   {
   }
 
-  private parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
+  private Parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S>
   {
     const parsed = schema.safeParse(input);
     if (!parsed.success)
@@ -54,9 +54,9 @@ export class ScopeContinuationService
     return parsed.data
   }
 
-  private scope(state: DispatchState, input: ScopeContinuationLookup): DispatchScope
+  private Scope(state: DispatchState, input: ScopeContinuationLookup): DispatchScope
   {
-    this.owner.assert();
+    this.owner.Assert();
     check(this.owner.entry.id === input.workspaceId && state.workspaceId === input.workspaceId, 'GOAL_IDENTITY', '目标不属于当前工作区');
     const scope = state.scopes?.find(scope => scope.scopeId === input.scopeId && scope.rootSessionId === input.rootSessionId && scope.workspaceId === input.workspaceId);
     check(scope, 'GOAL_IDENTITY', '目标周期不属于当前主会话');
@@ -64,10 +64,10 @@ export class ScopeContinuationService
   }
 
   /** 只查现有日志事实，不核实模型或原生会话，不产生启动授权；active/closed 也保留原接收记录。 */
-  async inspect(raw: ScopeContinuationLookup): Promise<GoalContinuationReceipt | undefined>
+  async Inspect(raw: ScopeContinuationLookup): Promise<GoalContinuationReceipt | undefined>
   {
-    const input = this.parse(scopeContinuationLookupSchema, raw),
-      scope = this.scope(await this.store.read(), input),
+    const input = this.Parse(scopeContinuationLookupSchema, raw),
+      scope = this.Scope(await this.store.Read(), input),
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
     return continuation && !isHumanContinuation(continuation) ? { workspaceId: scope.workspaceId, rootSessionId: scope.rootSessionId, scopeId: scope.scopeId, scopeStatus: scope.status, continuation } : undefined;
   }
@@ -76,11 +76,11 @@ export class ScopeContinuationService
        * 仅可信 beforeRun 调用，runId 已由运行时分配。指纹不含随机 runId，相同命令永远返回第一次接收记录；变更请求则冲突。
        * waiting→active、补充输入版本及旧检查点归档在同一事务提交；未提交不消费，提交后错误由调用方关闭并保留历史，不自动重试。
        */
-  async accept(raw: GoalContinuationRequest, trustedRunId: string, trusted: TrustedContinuationInput = {}): Promise<AcceptedScopeContinuation>
+  async Accept(raw: GoalContinuationRequest, trustedRunId: string, trusted: TrustedContinuationInput = {}): Promise<AcceptedScopeContinuation>
   {
-    const input = this.parse(goalContinuationRequestSchema, raw),
+    const input = this.Parse(goalContinuationRequestSchema, raw),
       runId = safeId(trustedRunId);
-    this.owner.assert();
+    this.owner.Assert();
     check(input.workspaceId === this.owner.entry.id, 'GOAL_IDENTITY', '目标不属于当前工作区');
     // 在第一个 await 前隔离可信快照；已受理重查不需要快照仍存在，也不验证后来提供的快照。
     const signal = trusted.signal;
@@ -102,13 +102,13 @@ export class ScopeContinuationService
       check(!isHumanContinuation(existing) && existing.wait.waitId === input.waitId && existing.wait.goalRevision === input.expectedGoalRevision && existing.inputRevision === input.expectedInputRevision + 1 && sameGoalValue(existing.input, input.input) && sameGoalValue(existing.options, input.options), 'COMMAND_ID_CONFLICT', '原命令已受理，不能更换补充正文、附件、等待版本或运行选项');
       return { scope, continuation: existing, fresh: false };
     };
-    const observed = this.scope(await this.store.read(), input),
+    const observed = this.Scope(await this.store.Read(), input),
       prior = replay(observed);
     if (prior)
       return prior;
     const alive = () =>
     {
-      this.owner.assert();
+      this.owner.Assert();
       signal?.throwIfAborted()
     };
     alive();
@@ -116,10 +116,10 @@ export class ScopeContinuationService
       fail('GOAL_ATTACHMENT_MANIFEST', '附件快照清单无法复制，尚未受理补充');
     assertContinuationAttachmentManifest(input.input, attachmentManifest);
     let fresh = false;
-    const save = (context?: OwnerExecutionContext) => this.store.transact<GoalContinuationReceipt | ScopeBudgetRejected>({ commandId: 'scope-continue-' + input.commandId, fingerprint: hash(json({ operation: 'scope.continue', input, ...(attachmentManifest === undefined ? {} : { attachmentManifest }) })) }, async state =>
+    const save = (context?: OwnerExecutionContext) => this.store.Transact<GoalContinuationReceipt | ScopeBudgetRejected>({ commandId: 'scope-continue-' + input.commandId, fingerprint: hash(json({ operation: 'scope.continue', input, ...(attachmentManifest === undefined ? {} : { attachmentManifest }) })) }, async state =>
     {
       alive();
-      const scope = this.scope(state, input),
+      const scope = this.Scope(state, input),
         goal = scope.goal,
         wait = scope.wait;
       check(scope.status === 'waiting' && wait, 'GOAL_NOT_WAITING', '目标不处于安全等待，不能继续或重复消费等待');
@@ -141,10 +141,10 @@ export class ScopeContinuationService
       if (wait.memberPause)
       {
         check(context && this.memberPauses, 'GOAL_MEMBER_PAUSE_UNAVAILABLE', '原成员等待必须重新核实后继续');
-        await this.memberPauses.validateCurrent(state, input, context, alive);
+        await this.memberPauses.ValidateCurrent(state, input, context, alive);
         alive()
       }
-      const admitted = await this.budgets?.admit(state, scope, { kind: 'main', taskId: scope.rootSessionId, runId });
+      const admitted = await this.budgets?.Admit(state, scope, { kind: 'main', taskId: scope.rootSessionId, runId });
       // 额度读取可能等待磁盘；停止后的拒绝结果也不能顺带修改原安全等待。
       alive();
       if (admitted?.rejected)
@@ -165,19 +165,19 @@ export class ScopeContinuationService
     // accept 仅在运行时取得主租约后的 beforeRun 调用；预检仍独立取得短读锁，两处均重核原等待基线。
     try
     {
-      receipt = observed.wait?.memberPause ? await this.memberPauses!.withContext(input, alive, context => save(context), true) : await save()
+      receipt = observed.wait?.memberPause ? await this.memberPauses!.WithContext(input, alive, context => save(context), true) : await save()
     }
     catch (error)
     {
       // 同命令并发可能在取得外层锁前已消费等待；只返回其不可变原事实，不重做核实、换 run 或伪造 fresh。
-      const saved = replay(this.scope(await this.store.read(), input));
+      const saved = replay(this.Scope(await this.store.Read(), input));
       if (saved)
         return saved;
       throw error;
     }
     if ('budgetRejected' in receipt)
       rejectBudget(receipt);
-    const scope = this.scope(await this.store.read(), input),
+    const scope = this.Scope(await this.store.Read(), input),
       continuation = scope.continuations?.find(item => item.continuationId === input.commandId);
     check(continuation && !isHumanContinuation(continuation) && continuation.runId === receipt.continuation.runId, 'GOAL_CONTINUATION_UNAVAILABLE', '已提交补充记录与当前周期不一致，不能启动');
     return { scope, continuation, fresh };

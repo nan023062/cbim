@@ -17,13 +17,13 @@ export type ObjectPlan = ObjectPlanV2 |
 
 export interface ObjectStorage
 {
-  assertAbsent(id: string): Promise<void>;
+  AssertAbsent(id: string): Promise<void>;
 
-  assertKnowledgeOnly(id: string, files: KnowledgeFile[]): Promise<void>;
+  AssertKnowledgeOnly(id: string, files: KnowledgeFile[]): Promise<void>;
 
-  savePlan(id: string, plan: ObjectPlan): Promise<void>;
+  SavePlan(id: string, plan: ObjectPlan): Promise<void>;
 
-  readPlan(id: string): Promise<ObjectPlan>;
+  ReadPlan(id: string): Promise<ObjectPlan>;
 
-  pruneEmpty(id: string): Promise<void>;
+  PruneEmpty(id: string): Promise<void>;
 }

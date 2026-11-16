@@ -11,9 +11,9 @@ import { publicAddress, publicUrl } from './public-http';
 /** 仅可信宿主/测试装配可替换解析和 TCP 连接；页面、IPC 与模型不能传入此对象。 */
 export interface BrowserProxyTransport
 {
-  lookup(host: string): Promise<Array<{ address: string; family: number }>>;
+  Lookup(host: string): Promise<Array<{ address: string; family: number }>>;
 
-  connect(address: string, port: number): Socket;
+  Connect(address: string, port: number): Socket;
 }
 
 /** 一个读取任务一个出口；累计传输上限包括 TLS 密文，不能当作单个解压资源大小。 */
@@ -62,7 +62,7 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
       host = url.hostname.replace(/^\[|\]$/g, '');
     const addresses = isIP(host)
       ? [{ address: host, family: isIP(host) }]
-      : await (transport?.lookup(host) ?? lookup(host, { all: true }));
+      : await (transport?.Lookup(host) ?? lookup(host, { all: true }));
     signal.throwIfAborted();
     if (closed)
       throw Error('WEB_ABORTED: 浏览器代理已关闭');
@@ -77,7 +77,7 @@ export async function openBrowserProxy(signal: AbortSignal, onFailure: (error: E
     };
   };
   const dial = (address: string, port: number) =>
-    track(transport?.connect(address, port) ?? connect({ host: address, port }));
+    track(transport?.Connect(address, port) ?? connect({ host: address, port }));
   server.on('connection', (socket) => track(socket));
   server.on('clientError', (_error, socket) => socket.destroy());
   server.on('connect', (request, client, head) =>

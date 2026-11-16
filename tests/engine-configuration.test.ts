@@ -22,59 +22,59 @@ test('引擎选型沿用模型配置短锁，捕获后修改不能漂移；回�
   const f=await fixture();let release!:()=>void,entered!:()=>void;
   const gate=new Promise<void>(resolve=>{release=resolve}),ready=new Promise<void>(resolve=>{entered=resolve});
   try{
-    const saved=await f.profiles.save({profile:base}),id=saved.selectedId!;
+    const saved=await f.profiles.Save({profile:base}),id=saved.selectedId!;
     let escaped!:LockedEngineModelConfiguration,updated=false;
-    const selected=f.models.withRuntimeConfiguration({profileId:id,modelId:'test',engine:'claude-code'},async locked=>{
+    const selected=f.models.WithRuntimeConfiguration({profileId:id,modelId:'test',engine:'claude-code'},async locked=>{
       escaped=locked;entered();await gate;
       expect(updated).toBe(false);expect(locked.profile).toMatchObject({name:base.name,engine:'claude-code'});
-      const first=locked.resolve();expect(locked.resolve()).toBe(first);return first;
+      const first=locked.Resolve();expect(locked.Resolve()).toBe(first);return first;
     });
     await ready;
-    const update=f.profiles.save({id,profile:{...base,name:'New provider name'}}).then(()=>{updated=true});
+    const update=f.profiles.Save({id,profile:{...base,name:'New provider name'}}).then(()=>{updated=true});
     await new Promise<void>(resolve=>setImmediate(resolve));expect(updated).toBe(false);release();
     const resolved=await selected;await update;
     expect(resolved.profile.name).toBe(base.name);expect(updated).toBe(true);
-    expect(()=>escaped.resolve()).toThrow(/已结束/);
-    expect((await f.models.configuration(id,'test','claude-code')).name).toBe('New provider name');
+    expect(()=>escaped.Resolve()).toThrow(/已结束/);
+    expect((await f.models.Configuration(id,'test','claude-code')).name).toBe('New provider name');
   }finally{release?.();await f.cleanup()}
 });
 
 test('接口不兼容和回调中止都不会自动重试，原模型队列仍可继续使用',async()=>{
   const f=await fixture();try{
-    const saved=await f.profiles.save({profile:base}),ref={profileId:saved.selectedId!,modelId:'test'};let calls=0;
-    await expect(f.models.withRuntimeConfiguration({...ref,engine:'codex'},async()=>{calls++;})).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+    const saved=await f.profiles.Save({profile:base}),ref={profileId:saved.selectedId!,modelId:'test'};let calls=0;
+    await expect(f.models.WithRuntimeConfiguration({...ref,engine:'codex'},async()=>{calls++;})).rejects.toMatchObject({code:'LLM_ENGINE_API'});
     expect(calls).toBe(0);
     const stopped=Object.assign(Error('stopped'),{code:'COLLABORATION_STOPPED'});
-    await expect(f.models.withRuntimeConfiguration({...ref,engine:'claude-code'},async()=>{calls++;throw stopped})).rejects.toBe(stopped);
+    await expect(f.models.WithRuntimeConfiguration({...ref,engine:'claude-code'},async()=>{calls++;throw stopped})).rejects.toBe(stopped);
     expect(calls).toBe(1);
-    await f.profiles.save({id:ref.profileId,profile:{...base,name:'Still usable'}});
-    expect((await f.models.configuration(ref.profileId,ref.modelId)).name).toBe('Still usable');
+    await f.profiles.Save({id:ref.profileId,profile:{...base,name:'Still usable'}});
+    expect((await f.models.Configuration(ref.profileId,ref.modelId)).name).toBe('Still usable');
   }finally{await f.cleanup()}
 });
 
 test('同一供应商模型可分别解析 Pi 和 Claude；旧 Pi 快照不补字段，选择引擎不改模型文件',async()=>{
   const f=await fixture();try{
-    const saved=await f.profiles.save({profile:base}),id=saved.selectedId!,bytes=await fs.readFile(f.filename,'utf8');
-    const legacy=await f.models.configuration(id,'test'),pi=await f.models.configuration(id,'test','pi'),claude=await f.models.configuration(id,'test','claude-code');
+    const saved=await f.profiles.Save({profile:base}),id=saved.selectedId!,bytes=await fs.readFile(f.filename,'utf8');
+    const legacy=await f.models.Configuration(id,'test'),pi=await f.models.Configuration(id,'test','pi'),claude=await f.models.Configuration(id,'test','claude-code');
     expect(Object.hasOwn(legacy,'engine')).toBe(false);expect(workspaceMemberModelSnapshotSchema.parse(legacy)).toEqual(legacy);
     expect(pi).toEqual({...legacy,engine:'pi'});expect(claude).toEqual({...legacy,engine:'claude-code'});
     expect(new Set([legacy,pi,claude].map(workspaceMemberModelHash)).size).toBe(3);
     expect(await fs.readFile(f.filename,'utf8')).toBe(bytes);
-    expect((await f.models.resolve(id,'test','claude-code')).profile).toEqual(claude);
-    await expect(f.models.resolve(id,'test','codex')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
-    await f.models.withConfigurations([{profileId:id,modelId:'test',engine:'pi'},{profileId:id,modelId:'test',engine:'claude-code'}],async profiles=>{expect(profiles).toEqual([pi,claude])});
-    await f.models.withRuntimeConfiguration({profileId:id,modelId:'test',engine:'claude-code'},async locked=>{expect(locked.profile).toEqual(claude);expect(locked.resolve().profile).toEqual(claude)});
+    expect((await f.models.Resolve(id,'test','claude-code')).profile).toEqual(claude);
+    await expect(f.models.Resolve(id,'test','codex')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+    await f.models.WithConfigurations([{profileId:id,modelId:'test',engine:'pi'},{profileId:id,modelId:'test',engine:'claude-code'}],async profiles=>{expect(profiles).toEqual([pi,claude])});
+    await f.models.WithRuntimeConfiguration({profileId:id,modelId:'test',engine:'claude-code'},async locked=>{expect(locked.profile).toEqual(claude);expect(locked.Resolve().profile).toEqual(claude)});
   }finally{await f.cleanup()}
 });
 
 test('旧供应商 engine 可读但不决定新执行；显式读取历史原生选型保持快照字节',async()=>{
   const f=await fixture();try{
-    const saved=await f.profiles.save({profile:{...base,engine:'claude-code'}}),id=saved.selectedId!;
-    const old=await f.models.configuration(id,'test','claude-code');
-    await f.profiles.save({id,profile:base});
-    expect(await f.models.configuration(id,'test','claude-code')).toEqual(old);
-    expect((await f.models.configuration(id,'test','pi')).engine).toBe('pi');
-    expect((await f.models.configuration(id,'test')).engine).toBeUndefined();
+    const saved=await f.profiles.Save({profile:{...base,engine:'claude-code'}}),id=saved.selectedId!;
+    const old=await f.models.Configuration(id,'test','claude-code');
+    await f.profiles.Save({id,profile:base});
+    expect(await f.models.Configuration(id,'test','claude-code')).toEqual(old);
+    expect((await f.models.Configuration(id,'test','pi')).engine).toBe('pi');
+    expect((await f.models.Configuration(id,'test')).engine).toBeUndefined();
     expect(definition.safeParse({...base,engine:'codex'}).success).toBe(true);
     expect(workspaceMemberModelSnapshotSchema.safeParse({...old,api:'openai-responses'}).success).toBe(false);
   }finally{await f.cleanup()}
@@ -117,36 +117,36 @@ test('Claude 模型选择诊断区分空目录、协议不匹配和已禁用；�
   expect(render([{...compatible,api:'openai-completions'}])).toContain('仅有 OpenAI Chat/Responses 地址时不能直接切换协议');
   expect(render([{...compatible,models:base.models.map(m=>({...m,enabled:false}))}])).toContain('添加或启用模型');
   const f=await fixture();try{
-    const modelId='vendor/qwen-custom-2026',saved=await f.profiles.save({profile:{...base,defaultModel:modelId,models:[{...base.models[0],id:modelId,name:modelId}]}});
+    const modelId='vendor/qwen-custom-2026',saved=await f.profiles.Save({profile:{...base,defaultModel:modelId,models:[{...base.models[0],id:modelId,name:modelId}]}});
     expect(render(saved.profiles)).toContain(modelId);
-    expect((await f.models.resolve(saved.selectedId,modelId,'claude-code')).profile.model).toBe(modelId);
+    expect((await f.models.Resolve(saved.selectedId,modelId,'claude-code')).profile.model).toBe(modelId);
   }finally{await f.cleanup()}
 });
 
 test('同一 Responses 模型可供 Pi 与 Codex 使用；禁用模型不进入任何新执行',async()=>{
   const f=await fixture();try{
-    const saved=await f.profiles.save({profile:{...base,api:'openai-responses'}}),id=saved.selectedId!;
-    for(const engine of ['pi','codex'] as const){const snapshot=await f.models.configuration(id,'test',engine);expect(snapshot.engine).toBe(engine);expect(workspaceMemberModelSnapshotSchema.parse(snapshot)).toEqual(snapshot)}
-    await expect(f.models.configuration(id,'test','claude-code')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
-    await f.profiles.save({id,profile:{...base,api:'openai-responses',defaultModel:'other',models:[{...base.models[0],enabled:false},{...base.models[0],id:'other'}]}});
-    await expect(f.models.configuration(id,'test','codex')).rejects.toMatchObject({code:'LLM_MODEL'});
+    const saved=await f.profiles.Save({profile:{...base,api:'openai-responses'}}),id=saved.selectedId!;
+    for(const engine of ['pi','codex'] as const){const snapshot=await f.models.Configuration(id,'test',engine);expect(snapshot.engine).toBe(engine);expect(workspaceMemberModelSnapshotSchema.parse(snapshot)).toEqual(snapshot)}
+    await expect(f.models.Configuration(id,'test','claude-code')).rejects.toMatchObject({code:'LLM_ENGINE_API'});
+    await f.profiles.Save({id,profile:{...base,api:'openai-responses',defaultModel:'other',models:[{...base.models[0],enabled:false},{...base.models[0],id:'other'}]}});
+    await expect(f.models.Configuration(id,'test','codex')).rejects.toMatchObject({code:'LLM_MODEL'});
   }finally{await f.cleanup()}
 });
 
 
 test('V2 角色块跨 Agent 和队列保留，公开预览修改不能污染执行快照；未声明角色在回调前拒绝',async()=>{
   const f=await fixture();try{
-    const saved=await f.profiles.save({profile:base}),profileId=saved.selectedId!,modelRoles={version:2 as const,roles:{}};
+    const saved=await f.profiles.Save({profile:base}),profileId=saved.selectedId!,modelRoles={version:2 as const,roles:{}};
     const reference={engine:'pi' as const,profileId,modelId:'test',modelRoles};
-    const legacy=await f.models.configuration(profileId,'test','pi'),v2=await f.models.configuration(profileId,'test','pi',modelRoles);
+    const legacy=await f.models.Configuration(profileId,'test','pi'),v2=await f.models.Configuration(profileId,'test','pi',modelRoles);
     expect(legacy).not.toHaveProperty('modelRoles');expect(v2).toEqual({...legacy,modelRoles});
     expect(workspaceMemberModelSnapshotSchema.parse(v2)).toEqual(v2);
     expect(workspaceMemberModelHash(v2)).not.toBe(workspaceMemberModelHash(legacy));
     expect(objectOperation.parse({kind:'agent',action:'update',id:'.cbim/team/test',data:{runtime:reference}}).data).toEqual({runtime:reference});
     expect(queuedMessageSchema.parse({id:randomUUID(),taskId:randomUUID(),message:'test',status:'pending',options:{engine:'pi',modelRoles,provider:'cbim-'+profileId,profileId,model:'test'}}).options.modelRoles).toEqual(modelRoles);
-    await f.models.withRuntimeConfiguration(reference,async locked=>{locked.profile.name='tampered';expect(locked.resolve().profile).toEqual(v2);expect(locked.resolve().modelRoles).toEqual({})});
+    await f.models.WithRuntimeConfiguration(reference,async locked=>{locked.profile.name='tampered';expect(locked.Resolve().profile).toEqual(v2);expect(locked.Resolve().modelRoles).toEqual({})});
     let called=false;
-    await expect(f.models.withRuntimeConfiguration({...reference,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profileId,modelId:'vec'}}}},async()=>{called=true})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
+    await expect(f.models.WithRuntimeConfiguration({...reference,modelRoles:{version:2,roles:{embedding:{kind:'embedding',profileId,modelId:'vec'}}}},async()=>{called=true})).rejects.toMatchObject({code:'LLM_MODEL_ROLE'});
     expect(called).toBe(false);
   }finally{await f.cleanup()}
 });

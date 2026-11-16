@@ -13,46 +13,46 @@ const resultsSchema = z.object({ web: z.object({ results: z.array(z.object({ tit
 /** 应用级配置适配；页面缓存属于 WebPageReader，搜索节流只针对固定 Brave API。 */
 export class WebService implements WebToolsPort
 {
-  private readonly pages: Pick<WebPageReader, 'fetch'>;
+  private readonly pages: Pick<WebPageReader, 'Fetch'>;
 
   private nextSearchAt = 0;
 
-  constructor(private readonly settings: Pick<WebSettings, 'resolve'> & Partial<Pick<WebSettings, 'read'>>, private readonly client: Pick<PublicHttp, 'read'> = new PublicHttp(undefined, 'CBIMBot/0.1'), private readonly timing: { now(): number; wait(ms: number, signal: AbortSignal): Promise<void>; interval: number } = { now: () => Date.now(), wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, browser?: BrowserReader, /** 可替换读取端口；缺省组合真实 Core 读取器，缓存及浏览器资源仍由读取器拥有。 */ pageReader?: Pick<WebPageReader, 'fetch'>,)
+  constructor(private readonly settings: Pick<WebSettings, 'Resolve'> & Partial<Pick<WebSettings, 'Read'>>, private readonly client: Pick<PublicHttp, 'Read'> = new PublicHttp(undefined, 'CBIMBot/0.1'), private readonly timing: { Now(): number; Wait(ms: number, signal: AbortSignal): Promise<void>; interval: number } = { Now: () => Date.now(), Wait: (ms, signal) => delay(ms, undefined, { signal }), interval: 1000 }, browser?: BrowserReader, /** 可替换读取端口；缺省组合真实 Core 读取器，缓存及浏览器资源仍由读取器拥有。 */ pageReader?: Pick<WebPageReader, 'Fetch'>,)
   {
     this.pages = pageReader ?? new WebPageReader(client, timing, browser, 'CBIMBot/0.1');
   }
 
   /** 每次读取捕获已保存策略；基础类库按策略分隔缓存，搜索开关不影响正文读取。 */
-  async fetch(raw: Parameters<WebToolsPort['fetch']>[0], signal: AbortSignal)
+  async Fetch(raw: Parameters<WebToolsPort['Fetch']>[0], signal: AbortSignal)
   {
-    const browserRobotsPolicy = this.settings.read?.().browserRobotsPolicy ?? 'allow';
-    const page = await this.pages.fetch(webFetchInput.parse(raw), signal, { browserRobotsPolicy });
+    const browserRobotsPolicy = this.settings.Read?.().browserRobotsPolicy ?? 'allow';
+    const page = await this.pages.Fetch(webFetchInput.parse(raw), signal, { browserRobotsPolicy });
     return { ...page, untrusted: true as const };
   }
 
-  private async pace(_url: URL, signal: AbortSignal)
+  private async Pace(_url: URL, signal: AbortSignal)
   {
     signal.throwIfAborted();
-    const now = this.timing.now(),
+    const now = this.timing.Now(),
       next = Math.max(now, this.nextSearchAt);
     if (next - now > 5000)
       throw Error('WEB_RATE_LIMIT: 搜索排队超过 5 秒，请稍后重试');
     this.nextSearchAt = next + this.timing.interval;
     if (next > now)
-      await this.timing.wait(next - now, signal);
+      await this.timing.Wait(next - now, signal);
     signal.throwIfAborted();
   }
 
   /** Brave 是固定查询 API，不执行 robots 抓取；凭据不会进入错误或结果，不跟随 API 跳转。 */
-  async search(raw: Parameters<WebToolsPort['search']>[0], signal: AbortSignal)
+  async Search(raw: Parameters<WebToolsPort['Search']>[0], signal: AbortSignal)
   {
     const input = webSearchInput.parse(raw),
-      key = this.settings.resolve(),
+      key = this.settings.Resolve(),
       url = new URL('https://api.search.brave.com/res/v1/web/search');
     url.searchParams.set('q', input.query);
     url.searchParams.set('count', String(input.count ?? 5));
-    await this.pace(url, signal);
-    const response = await this.client.read(url.href, signal, { headers: { 'X-Subscription-Token': key, 'Accept': 'application/json' } });
+    await this.Pace(url, signal);
+    const response = await this.client.Read(url.href, signal, { headers: { 'X-Subscription-Token': key, 'Accept': 'application/json' } });
     signal.throwIfAborted();
     if ([401, 403].includes(response.status))
       throw Error('WEB_SEARCH_AUTH: Brave 搜索认证失败，请在设置中核实密钥与订阅权限');

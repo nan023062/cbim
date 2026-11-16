@@ -30,9 +30,9 @@ class N_src_logic_execution_admission_admission_wait_ts["admission-wait.ts"] {
 class N_src_logic_execution_admission_admission_wait_ts_ExecutionAdmissionWait["ExecutionAdmissionWait"] {
   <<interface>>
   +scopeId
-  +isCurrent()
-  +onReady()
-  +registerWithdraw()
+  +IsCurrent()
+  +OnReady()
+  +RegisterWithdraw()
 }
 N_src_logic_execution_admission_admission_wait_ts ..> N_src_logic_execution_admission_admission_wait_ts_ExecutionAdmissionWait : 声明
 class N_src_logic_execution_admission_admission_wait_ts_ExecutionLaunchContext["ExecutionLaunchContext"] {
@@ -58,10 +58,10 @@ class N_src_logic_execution_admission_run_admission_ts["run-admission.ts"] {
 }
 class N_src_logic_execution_admission_run_admission_ts_LocalAdmissionPort["LocalAdmissionPort"] {
   <<interface>>
-  +canAcquire()
-  +acquire()
-  +isCurrent()
-  +onReady()
+  +CanAcquire()
+  +Acquire()
+  +IsCurrent()
+  +OnReady()
 }
 N_src_logic_execution_admission_run_admission_ts ..> N_src_logic_execution_admission_run_admission_ts_LocalAdmissionPort : 声明
 class N_src_logic_execution_admission_run_admission_ts_AdmissionAttempt["AdmissionAttempt"] {
@@ -92,15 +92,15 @@ class N_src_logic_execution_admission_run_admission_ts["run-admission.ts"] {
   <<module>>
 }
 class N_src_logic_execution_admission_run_admission_ts_GlobalRunAdmission["GlobalRunAdmission"] {
-  +observeChange()
-  +attempt()
-  +withdraw()
-  +retireOwner()
-  +wake()
-  +restorePolicy()
-  +configure()
-  +snapshot()
-  +read()
+  +ObserveChange()
+  +Attempt()
+  +Withdraw()
+  +RetireOwner()
+  +Wake()
+  +RestorePolicy()
+  +Configure()
+  +Snapshot()
+  +Read()
   -streamId
   -revision
   -policy
@@ -127,13 +127,13 @@ class N_src_logic_execution_admission_run_admission_ts_GlobalRunAdmission["Globa
   -listeners
   -changeScheduled
   -wakeScheduled
-  -changed()
-  -current()
-  -local()
-  -prune()
-  -evaluate()
-  -updateReasons()
-  -waitOrDeny()
+  -Changed()
+  -Current()
+  -Local()
+  -Prune()
+  -Evaluate()
+  -UpdateReasons()
+  -WaitOrDeny()
 }
 N_src_logic_execution_admission_run_admission_ts ..> N_src_logic_execution_admission_run_admission_ts_GlobalRunAdmission : 声明
 ```
@@ -148,13 +148,13 @@ class N_src_logic_execution_admission_workspace_lease_ts["workspace-lease.ts"] {
   <<module>>
 }
 class N_src_logic_execution_admission_workspace_lease_ts_WorkspaceExecutionLease["WorkspaceExecutionLease"] {
-  +observeRelease()
-  +canAcquire()
-  +acquire()
-  +acquireReadWithin()
+  +ObserveRelease()
+  +CanAcquire()
+  +Acquire()
+  +AcquireReadWithin()
   -listeners
   -leases
-  -hold()
+  -Hold()
 }
 N_src_logic_execution_admission_workspace_lease_ts ..> N_src_logic_execution_admission_workspace_lease_ts_WorkspaceExecutionLease : 声明
 ```

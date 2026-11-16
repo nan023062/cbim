@@ -46,11 +46,11 @@ export interface PreparedEngineArtifact
 export interface EngineArtifactsPort
 {
   /** 离线列出已验签候选；未知身份不接受 prepare。 */
-  list(): Promise<{ current: EngineArtifact[]; available: EngineArtifact[] }>;
+  List(): Promise<{ current: EngineArtifact[]; available: EngineArtifact[] }>;
 
   /** 仅发现，不下载 E 或切换本机活动版本；失败保留上次可信索引。 */
-  check(): Promise<void>;
+  Check(): Promise<void>;
 
   /** 进度包含缓存校验和下载准备，不代表已激活；旧冷宿主可忽略可选回调。 */
-  prepare(kind: string, identity: string, onProgress?: (progress: number) => void): Promise<PreparedEngineArtifact>;
+  Prepare(kind: string, identity: string, onProgress?: (progress: number) => void): Promise<PreparedEngineArtifact>;
 }

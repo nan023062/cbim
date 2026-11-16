@@ -28,7 +28,7 @@ export const releaseRequest: ReleaseRequest = async (endpoint, options) =>
   let bytes: Uint8Array;
   try
   {
-    bytes = await ByteUtils.readBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal })
+    bytes = await ByteUtils.ReadBoundedBytes(response.body, { maxBytes: 2 * 1024 * 1024, signal })
   }
   catch (error)
   {

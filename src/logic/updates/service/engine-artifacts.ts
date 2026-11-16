@@ -36,7 +36,7 @@ export class EngineArtifacts implements EngineArtifactsPort
   {
   }
 
-  private verifyHistory<T>(verify: (publicKey: string) => T): T
+  private VerifyHistory<T>(verify: (publicKey: string) => T): T
   {
     try
     {
@@ -58,7 +58,7 @@ export class EngineArtifacts implements EngineArtifactsPort
     }
   }
 
-  private add(packages: readonly EnginePackage[], target: Map<string, EnginePackage>)
+  private Add(packages: readonly EnginePackage[], target: Map<string, EnginePackage>)
   {
     for (const pkg of packages)
     {
@@ -71,7 +71,7 @@ export class EngineArtifacts implements EngineArtifactsPort
     }
   }
 
-  private async init()
+  private async Init()
   {
     if (this.initialized)
       return;
@@ -108,8 +108,8 @@ export class EngineArtifacts implements EngineArtifactsPort
     {
       // 旧 C/R 只证明历史 E 来源；平台和允许的历史身份仍由当前冷壳限定，绝不启动旧资源。
       const metadata = JSON.parse(envelope.payload);
-      const checked = this.verifyHistory(publicKey => verifyRuntimeManifest(envelope, { ...this.store.cold, publicKey, codeVersion: metadata.codeVersion, coldFingerprint: metadata.coldFingerprint }, { installed: true }));
-      this.add(checked.manifest.engines, available);
+      const checked = this.VerifyHistory(publicKey => verifyRuntimeManifest(envelope, { ...this.store.cold, publicKey, codeVersion: metadata.codeVersion, coldFingerprint: metadata.coldFingerprint }, { installed: true }));
+      this.Add(checked.manifest.engines, available);
       if (envelope.payload === this.seed.payload)
         for (const pkg of checked.manifest.engines)
           if (pkg.adapter)
@@ -119,10 +119,10 @@ export class EngineArtifacts implements EngineArtifactsPort
       digest = '';
     for (const envelope of raw.indexes)
     {
-      const checked = this.verifyHistory(publicKey => verifyEngineIndex(envelope, { ...this.store.cold, publicKey }, true));
+      const checked = this.VerifyHistory(publicKey => verifyEngineIndex(envelope, { ...this.store.cold, publicKey }, true));
       if (checked.index.sequence <= head)
         throw Error('本机引擎索引序号无效');
-      this.add(checked.index.releases, available);
+      this.Add(checked.index.releases, available);
       for (const ref of checked.index.current)
         current.set(ref.kind, ref.identity);
       head = checked.index.sequence;
@@ -139,25 +139,25 @@ export class EngineArtifacts implements EngineArtifactsPort
     this.initialized = true;
   }
 
-  private summary(pkg: EnginePackage): EngineArtifact
+  private Summary(pkg: EnginePackage): EngineArtifact
   {
     return { kind: pkg.kind, identity: pkg.package.sha256, version: pkg.adapter!.version, nativeVersion: pkg.version, protocol: pkg.adapter!.protocol, dependencies: structuredClone(pkg.dependencies ?? []) }
   }
 
-  list()
+  List()
   {
-    return this.queue.run(async () =>
+    return this.queue.Run(async () =>
     {
-      await this.init();
-      return { current: [...this.current].map(([kind, id]) => this.summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.summary(pkg)) }
+      await this.Init();
+      return { current: [...this.current].map(([kind, id]) => this.Summary(this.available.get(kind + ':' + id)!)), available: [...this.available.values()].map(pkg => this.Summary(pkg)) }
     })
   }
 
-  check()
+  Check()
   {
-    return this.queue.run(async () =>
+    return this.queue.Run(async () =>
     {
-      await this.init();
+      await this.Init();
       const checked = verifyEngineIndex(await this.fetchIndex(), this.store.cold);
       if (checked.index.sequence < this.head || checked.index.sequence === this.head && checked.digest !== this.digest)
         throw Error('引擎索引回退或同序号冲突');
@@ -166,7 +166,7 @@ export class EngineArtifacts implements EngineArtifactsPort
       if (this.envelopes.length >= 128)
         throw Error('引擎索引保留数量达到上限，需要维护后再更新');
       const available = new Map(this.available);
-      this.add(checked.index.releases, available);
+      this.Add(checked.index.releases, available);
       const envelopes = [...this.envelopes, checked.envelope];
       await atomic(this.stateFile, JSON.stringify({ schema: 1, seeds: this.seeds, indexes: envelopes }));
       this.available = available;
@@ -179,11 +179,11 @@ export class EngineArtifacts implements EngineArtifactsPort
   }
 
   /** 只准备已验签的准确版本；并发下载交给 RuntimeStore，失败不会删除已安装包；回调含本地校验，不能据此宣称发生网络下载。 */
-  async prepare(kind: string, identity: string, onProgress?: (progress: number) => void)
+  async Prepare(kind: string, identity: string, onProgress?: (progress: number) => void)
   {
-    const pkg = await this.queue.run(async () =>
+    const pkg = await this.queue.Run(async () =>
     {
-      await this.init();
+      await this.Init();
       const found = this.available.get(kind + ':' + identity);
       if (!found?.adapter)
         throw Error('没有此身份的受信引擎制品');
@@ -193,7 +193,7 @@ export class EngineArtifacts implements EngineArtifactsPort
     onProgress?.(0);
     try
     {
-      const root = await this.store.prepare(pkg.package, this.signal, value =>
+      const root = await this.store.Prepare(pkg.package, this.signal, value =>
       {
         this.progress(kind, pkg.adapter!.version, value);
         onProgress?.(value)

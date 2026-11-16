@@ -313,12 +313,12 @@ class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["Workspa
   +snapshot
   +blocked
   +canRelease
-  +subscribe()
-  +isPending()
-  +submit()
-  +retry()
-  +query()
-  +restore()
+  +Subscribe()
+  +IsPending()
+  +Submit()
+  +Retry()
+  +Query()
+  +Restore()
   -ports
   -records
   -value
@@ -338,9 +338,9 @@ class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands["Workspa
   -pending
   -unavailable
   -corrupt
-  -emit()
-  -save()
-  -send()
+  -Emit()
+  -Save()
+  -Send()
 }
 N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommands : 声明
 ```
@@ -351,7 +351,7 @@ class N_src_view_team_workspace_member_state_ts["workspace-member-state.ts"] {
   <<module>>
 }
 class N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommandPool["WorkspaceMemberCommandPool"] {
-  +get()
+  +Get()
   -values
 }
 N_src_view_team_workspace_member_state_ts ..> N_src_view_team_workspace_member_state_ts_WorkspaceMemberCommandPool : 声明

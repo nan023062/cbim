@@ -8,8 +8,8 @@ import {automationDefinitionSchema,type AutomationDefinition,type AutomationRunn
 const definition:AutomationDefinition={name:'定时核实',enabled:true,executor:{kind:'main'},moduleIds:[],workflowSelections:[],skillIds:[],prompt:'只读核实项目状态',permission:'read',schedule:{kind:'interval',minutes:5}};
 function fixture(){
  let state:AutomationState={version:1,workspaceId:'workspace',jobs:[],runs:[]},now=Date.parse('2026-11-11T00:00:00Z');
- const store={read:async()=>structuredClone(state),write:vi.fn(async(value:AutomationState)=>{state=structuredClone(value)})};
- const runner:AutomationRunner={validate:vi.fn(async()=>{}),start:vi.fn(async(run,_signal,bind)=>{expect(state.runs.find(r=>r.id===run.id)?.status).toBe('starting');const identity={taskId:randomUUID(),runId:randomUUID()};await bind(identity);expect(state.runs.find(r=>r.id===run.id)).toMatchObject(identity);return identity}),inspect:vi.fn(async()=>({status:'running' as const})),stop:vi.fn(async()=>{})};
+ const store={Read:async()=>structuredClone(state),Write:vi.fn(async(value:AutomationState)=>{state=structuredClone(value)})};
+ const runner:AutomationRunner={Validate:vi.fn(async()=>{}),Start:vi.fn(async(run,_signal,bind)=>{expect(state.runs.find(r=>r.id===run.id)?.status).toBe('starting');const identity={taskId:randomUUID(),runId:randomUUID()};await bind(identity);expect(state.runs.find(r=>r.id===run.id)).toMatchObject(identity);return identity}),Inspect:vi.fn(async()=>({status:'running' as const})),Stop:vi.fn(async()=>{})};
  const scheduler=new AutomationScheduler(store,runner,()=>now,3600000);
  return {store,runner,scheduler,get state(){return state},advance:(ms:number)=>now+=ms};
 }
@@ -28,45 +28,45 @@ it('严格拒绝外部工作区、未知字段、跨模块 Workflow 和无模块
 });
 it('固定新定义 ID 与版本保存，冻结运行；启动意图及真实身份先于外部执行，禁止重叠',async()=>{
  const f=fixture();try{
-  const id=randomUUID(),job=await f.scheduler.save(id,0,definition);expect(job.id).toBe(id);
-  await expect(f.scheduler.save(id,0,definition)).rejects.toMatchObject({code:'AUTOMATION_STALE'});
-  const run=await f.scheduler.runNow(id,job.revision);
+  const id=randomUUID(),job=await f.scheduler.Save(id,0,definition);expect(job.id).toBe(id);
+  await expect(f.scheduler.Save(id,0,definition)).rejects.toMatchObject({code:'AUTOMATION_STALE'});
+  const run=await f.scheduler.RunNow(id,job.revision);
   await vi.waitFor(()=>expect(f.state.runs[0].status).toBe('running'));
-  await expect(f.scheduler.runNow(id,job.revision)).rejects.toMatchObject({code:'AUTOMATION_RUNNING'});
-  await f.scheduler.save(id,job.revision,{...definition,prompt:'新的未来任务'});
+  await expect(f.scheduler.RunNow(id,job.revision)).rejects.toMatchObject({code:'AUTOMATION_RUNNING'});
+  await f.scheduler.Save(id,job.revision,{...definition,prompt:'新的未来任务'});
   expect(f.state.runs[0].definition.prompt).toBe(definition.prompt);expect(run.definitionRevision).toBe(1);
-  f.advance(10*60000);await f.scheduler.tick();expect(f.runner.start).toHaveBeenCalledTimes(1);
-  vi.mocked(f.runner.inspect).mockResolvedValue({status:'completed'});await f.scheduler.tick();expect(f.state.runs[0].finishedAt).toBeDefined();
-  f.advance(5*60000);await f.scheduler.tick();await vi.waitFor(()=>expect(f.runner.start).toHaveBeenCalledTimes(2));
- }finally{await f.scheduler.close()}
+  f.advance(10*60000);await f.scheduler.Tick();expect(f.runner.Start).toHaveBeenCalledTimes(1);
+  vi.mocked(f.runner.Inspect).mockResolvedValue({status:'completed'});await f.scheduler.Tick();expect(f.state.runs[0].finishedAt).toBeDefined();
+  f.advance(5*60000);await f.scheduler.Tick();await vi.waitFor(()=>expect(f.runner.Start).toHaveBeenCalledTimes(2));
+ }finally{await f.scheduler.Close()}
 });
 it('启动后未知结果不重放；暂停停止原任务，删除保留历史',async()=>{
  const f=fixture();try{
-  vi.mocked(f.runner.start).mockImplementation(async(_run,_signal,bind)=>{await bind({taskId:'original-task',runId:'original-run'});throw Error('启动回包丢失')});
-  vi.mocked(f.runner.inspect).mockResolvedValue({status:'unknown',message:'原结果仍待核实'});
-  const job=await f.scheduler.save(undefined,0,definition);await f.scheduler.runNow(job.id,1);
-  await vi.waitFor(()=>expect(f.state.runs[0].status).toBe('unknown'));f.advance(10*60000);await f.scheduler.tick();expect(f.runner.start).toHaveBeenCalledTimes(1);
-  await f.scheduler.change(job.id,1,'pause');expect(f.runner.stop).toHaveBeenCalledWith('original-task');expect(f.state.runs[0].status).toBe('cancelled');
-  await f.scheduler.change(job.id,2,'remove');expect(f.state.jobs).toEqual([]);expect(f.state.runs).toHaveLength(1);
- }finally{await f.scheduler.close()}
+  vi.mocked(f.runner.Start).mockImplementation(async(_run,_signal,bind)=>{await bind({taskId:'original-task',runId:'original-run'});throw Error('启动回包丢失')});
+  vi.mocked(f.runner.Inspect).mockResolvedValue({status:'unknown',message:'原结果仍待核实'});
+  const job=await f.scheduler.Save(undefined,0,definition);await f.scheduler.RunNow(job.id,1);
+  await vi.waitFor(()=>expect(f.state.runs[0].status).toBe('unknown'));f.advance(10*60000);await f.scheduler.Tick();expect(f.runner.Start).toHaveBeenCalledTimes(1);
+  await f.scheduler.Change(job.id,1,'pause');expect(f.runner.Stop).toHaveBeenCalledWith('original-task');expect(f.state.runs[0].status).toBe('cancelled');
+  await f.scheduler.Change(job.id,2,'remove');expect(f.state.jobs).toEqual([]);expect(f.state.runs).toHaveLength(1);
+ }finally{await f.scheduler.Close()}
 });
 it('准备中暂停立即传递取消，不持串行锁等待 bind，不会再启动模型',async()=>{
  const f=fixture();let entered=false;try{
-  vi.mocked(f.runner.start).mockImplementation(async(_run,signal,bind)=>{entered=true;await new Promise<void>((resolve,reject)=>{signal.addEventListener('abort',()=>reject(signal.reason),{once:true})});await bind({taskId:'must-not-bind',runId:'run'});return {taskId:'must-not-bind',runId:'run'}});
-  const job=await f.scheduler.save(undefined,0,definition);await f.scheduler.runNow(job.id,1);await vi.waitFor(()=>expect(entered).toBe(true));
-  await f.scheduler.change(job.id,1,'pause');expect(f.state.runs[0]).toMatchObject({status:'cancelled'});expect(f.state.runs[0].taskId).toBeUndefined();expect(f.runner.stop).not.toHaveBeenCalled();
- }finally{await f.scheduler.close()}
+  vi.mocked(f.runner.Start).mockImplementation(async(_run,signal,bind)=>{entered=true;await new Promise<void>((resolve,reject)=>{signal.addEventListener('abort',()=>reject(signal.reason),{once:true})});await bind({taskId:'must-not-bind',runId:'run'});return {taskId:'must-not-bind',runId:'run'}});
+  const job=await f.scheduler.Save(undefined,0,definition);await f.scheduler.RunNow(job.id,1);await vi.waitFor(()=>expect(entered).toBe(true));
+  await f.scheduler.Change(job.id,1,'pause');expect(f.state.runs[0]).toMatchObject({status:'cancelled'});expect(f.state.runs[0].taskId).toBeUndefined();expect(f.runner.Stop).not.toHaveBeenCalled();
+ }finally{await f.scheduler.Close()}
 });
 it('重开跳过过去的计划，无身份启动标中断，有身份只观察原任务',async()=>{
  const f=fixture();try{
-  const job=await f.scheduler.save(undefined,0,definition);
-  await f.store.write({...f.state,runs:[{id:randomUUID(),automationId:job.id,definitionRevision:1,definition,trigger:'schedule',startedAt:job.createdAt,status:'starting'},{id:randomUUID(),automationId:job.id,definitionRevision:1,definition,trigger:'manual',startedAt:job.createdAt,status:'unknown',taskId:'saved-task',runId:'saved-run'}]});
-  f.advance(20*60000);await f.scheduler.initialize();expect(f.state.runs[0].status).toBe('interrupted');expect(f.runner.start).not.toHaveBeenCalled();expect(f.state.jobs[0].nextRunAt).toBe('2026-11-11T00:25:00.000Z');
-  await f.scheduler.tick();expect(f.runner.inspect).toHaveBeenCalledWith('saved-task');expect(f.runner.start).not.toHaveBeenCalled();
- }finally{await f.scheduler.close()}
+  const job=await f.scheduler.Save(undefined,0,definition);
+  await f.store.Write({...f.state,runs:[{id:randomUUID(),automationId:job.id,definitionRevision:1,definition,trigger:'schedule',startedAt:job.createdAt,status:'starting'},{id:randomUUID(),automationId:job.id,definitionRevision:1,definition,trigger:'manual',startedAt:job.createdAt,status:'unknown',taskId:'saved-task',runId:'saved-run'}]});
+  f.advance(20*60000);await f.scheduler.Initialize();expect(f.state.runs[0].status).toBe('interrupted');expect(f.runner.Start).not.toHaveBeenCalled();expect(f.state.jobs[0].nextRunAt).toBe('2026-11-11T00:25:00.000Z');
+  await f.scheduler.Tick();expect(f.runner.Inspect).toHaveBeenCalledWith('saved-task');expect(f.runner.Start).not.toHaveBeenCalled();
+ }finally{await f.scheduler.Close()}
 });
 it('意图持久化失败时不产生外部执行',async()=>{
- const f=fixture();try{const job=await f.scheduler.save(undefined,0,definition);f.store.write.mockRejectedValueOnce(Error('disk full'));await expect(f.scheduler.runNow(job.id,1)).rejects.toThrow('disk full');expect(f.runner.start).not.toHaveBeenCalled();expect(f.state.runs).toEqual([])}finally{await f.scheduler.close()}
+ const f=fixture();try{const job=await f.scheduler.Save(undefined,0,definition);f.store.Write.mockRejectedValueOnce(Error('disk full'));await expect(f.scheduler.RunNow(job.id,1)).rejects.toThrow('disk full');expect(f.runner.Start).not.toHaveBeenCalled();expect(f.state.runs).toEqual([])}finally{await f.scheduler.Close()}
 });
 
 // 已迁移自动化协议不能绕过强类型请求；只在 typecheck 检查，不触发执行。

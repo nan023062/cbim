@@ -17,11 +17,11 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-persistent-effect-ui-'))
 const pageErrors:string[]=[],transportErrors:string[]=[],screenshots:string[]=[];let setup:Application|undefined,desktop:ElectronApplication|undefined,page!:Page,keep=false,report:Record<string,unknown>|undefined,source:Awaited<ReturnType<typeof preparePersistentEffect>>|undefined;
 const cleanup={desktopClosed:false,providerClosed:false,tempRemoved:false};
 try{
- setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();source=await preparePersistentEffect(setup,user,project,temp,mode);
+ setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();source=await preparePersistentEffect(setup,user,project,temp,mode);
  const {id,started,selection,callId,provider}=source,identity={workspaceId:id,rootSessionId:started.taskId},name=path.basename(source.seeded.entry.path),expectedRequests=provider.requests.length;
  const dispatchFile=path.join(user,id,'dispatch','dispatch.jsonl'),originalDispatch=await fs.readFile(dispatchFile),archive='test-results/'+artifact+'-ui-original';await fs.mkdir(archive,{recursive:true});
  await fs.writeFile(path.join(archive,'dispatch.jsonl'),originalDispatch);await fs.writeFile(path.join(archive,'module-ledger.json'),source.ledgerBytes);await fs.writeFile(path.join(archive,'native.jsonl'),source.native);await fs.writeFile(path.join(archive,'canonical-native-logs.json'),JSON.stringify(source.canonical,null,2));
- await setup.shutdown();setup=undefined;
+ await setup.Shutdown();setup=undefined;
  const until=async(check:()=>Promise<boolean>,label:string)=>{const end=Date.now()+60000;while(Date.now()<end){assert.deepEqual(provider.errors,[]);if(await check())return;await new Promise(resolve=>setTimeout(resolve,35))}throw Error('Persistent effect UI timeout: '+label)};
  const launch=async()=>{desktop=await electron.launch({executablePath:exe,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});page=await desktop.firstWindow();page.setDefaultTimeout(30000);page.on('pageerror',e=>pageErrors.push(e.message));page.on('requestfailed',r=>transportErrors.push(r.url()+': '+r.failure()?.errorText))};
  const active=()=>page.locator('.workspace-panel:not([hidden])'),draft=()=>active().getByRole('textbox',{name:'对话草稿',exact:true}),draftText='原治理或责任结果待核实，普通对话草稿保留。';
@@ -44,7 +44,7 @@ try{
  report={mode,exe,identity,runId:started.runId,requests:provider.requests.length,actualOriginalWrites:source.writes,finalObservation:first,reopened,receipt:saved,originalDispatchHash:hash(originalDispatch),originalLedgerHash:hash(source.ledgerBytes),originalNativeHash:hash(source.native),originalCanonicalUnchanged:true,onlyDispositionAppended:true,reopenAddedRequests:0,pageErrors,transportErrors,providerErrors:provider.errors,screenshots,cleanup};
 }catch(error){keep=true;await fs.mkdir('test-results',{recursive:true});if(page)await page.screenshot({path:'test-results/'+artifact+'-failure.png'}).catch(()=>{});await fs.writeFile('test-results/'+artifact+'-failure.json',JSON.stringify({mode,exe,temp,error:String(error),providerErrors:source?.provider.errors,pageErrors,transportErrors},null,2));throw error}
 finally{
- await setup?.shutdown();if(desktop)await desktop.close();cleanup.desktopClosed=true;await source?.provider.close();cleanup.providerClosed=true;
+ await setup?.Shutdown();if(desktop)await desktop.close();cleanup.desktopClosed=true;await source?.provider.close();cleanup.providerClosed=true;
  if(!keep){const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-persistent-effect-ui-'))throw Error('Refusing unexpected test cleanup');await fs.rm(target,{recursive:true,force:true});cleanup.tempRemoved=true}
  if(report)await fs.writeFile('test-results/'+artifact+'-ui-smoke.json',JSON.stringify(report,null,2));
 }

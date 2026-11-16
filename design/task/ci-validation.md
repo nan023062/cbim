@@ -19,6 +19,8 @@
 
 不改变 testTimeout/hookTimeout、不增加测试自动重试、不打开 fileParallelism。依赖下载仍只允许原有三次有界安装尝试。
 
+`static` 同时执行 `pnpm check:method-names`：检查源码方法大驼峰及逐项登记的固定协议例外。命名检查与类型、架构及行为测试分别负责各自边界，不能相互替代。
+
 ## 按耗时分片与覆盖证明
 
 `CiTestSequencer` 接收 Vitest 实际发现的测试全集，`balancedShards` 使用最长任务优先的确定性分配；同权重以路径排序、同负载按分片编号。`ci-test-timings.json` 的毫秒权重来自成功 run 43386158632、43390467062，每文件取两轮最大实测耗时加 1000 ms 开销，内含完整来源和单位。后续可用成功报告的 testResults startTime/endTime 更新权重；历史权重不作为测试白名单，已删除条目不产生运行，新增/改名文件按 30000 ms 默认值纳入。

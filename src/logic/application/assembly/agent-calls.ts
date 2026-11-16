@@ -48,9 +48,9 @@ export interface AgentCallAssemblyInput
 
   requestBudgets?: ModelRequestBudgetService;
 
-  models?: Pick<LlmProfiles, 'withRuntimeConfiguration'>;
+  models?: Pick<LlmProfiles, 'WithRuntimeConfiguration'>;
 
-  authorizeNative: ExecutionServices['authorizeNative'];
+  authorizeNative: ExecutionServices['AuthorizeNative'];
 
   /** 可信宿主为每个业务子调用创建端口；普通调用不继承删除/移动能力。 */
   artifactTransitions?: () => ExecutionServices['artifactTransitions'];
@@ -71,11 +71,11 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   let unsupportedBudget = false;
   // 根运行共享输入回执与控制面提交的在途屏障；封存前须确认原操作均已返回。
   const inputs = new Set<Promise<unknown>>();
-  const insertInput: NonNullable<AgentLifecycle['insertInput']> = (runId, queueId, input, signal, send) =>
+  const insertInput: NonNullable<AgentLifecycle['InsertInput']> = (runId, queueId, input, signal, send) =>
   {
     if (closed || closing || runId !== rootRunId || !dispatch)
       fail('QUEUE_INSERT_STALE', '原 Agent 运行已结束或缺少持久输入服务');
-    const operation = dispatch.activeInputs.send(identity, scopeId, runId, queueId, input, signal, send);
+    const operation = dispatch.activeInputs.Send(identity, scopeId, runId, queueId, input, signal, send);
     inputs.add(operation);
     return operation.finally(() => inputs.delete(operation));
   };
@@ -87,19 +87,19 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
     let result = requestBudgetsByRole.get(role);
     if (!result)
     {
-      result = requestBudgets?.forRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId, kind: 'main' }, llm, role) ?? Promise.resolve(undefined);
+      result = requestBudgets?.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId, kind: 'main' }, llm, role) ?? Promise.resolve(undefined);
       requestBudgetsByRole.set(role, result)
     }
     return result;
   };
   const scheduler = new AgentCallScheduler({ maxDepth: 8 }, {
-    requestReview: options.requestQuestion, capacity: () =>
+    RequestReview: options.RequestQuestion, Capacity: () =>
     {
-      const usage = admission?.manager.snapshot();
+      const usage = admission?.manager.Snapshot();
       return { current: usage?.occupied.length ?? 0, limit: usage?.policy.maxConcurrentRuns ?? 0 }
-    }, list: async () =>
+    }, List: async () =>
     {
-      workspace.assert();
+      workspace.Assert();
       if (!members)
         return { items: [], reason: '当前宿主没有已配置的 Agent 目录' };
       const items:
@@ -122,14 +122,14 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
           reason?: string
         }[] = [];
       let offset = 0,
-        cursor: Awaited<ReturnType<WorkspaceMembers['list']>>['registryCursor'] | undefined;
+        cursor: Awaited<ReturnType<WorkspaceMembers['List']>>['registryCursor'] | undefined;
       do
       {
-        const page = await members.list({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, offset, ...(cursor ? { expectedRegistryCursor: cursor } : {}) });
+        const page = await members.List({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, offset, ...(cursor ? { expectedRegistryCursor: cursor } : {}) });
         cursor = page.registryCursor;
         for (const item of page.items)
         {
-          const detail = await members.get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: item.memberId }),
+          const detail = await members.Get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: item.memberId }),
             policy = detail.member.runtimePolicy,
             model = { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId };
           const reason = item.state !== 'active' ? 'Agent 已暂停或退役' : detail.currentDiff.capability.status !== 'same' || detail.currentDiff.model.status !== 'same' ? '配置变化，需要先核实采纳' : unsupportedBudget ? '当前预算模式不能可靠计量子调用' : undefined;
@@ -141,9 +141,9 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       }
       while (true);
       return { items };
-    }, prepare: async request =>
+    }, Prepare: async request =>
     {
-      workspace.assert();
+      workspace.Assert();
       request.signal.throwIfAborted();
       if (!rootRunId || closed)
         fail('AGENT_ROOT_CLOSED', '原调用者已经结束');
@@ -153,20 +153,20 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         fail('AGENT_CATALOG_UNAVAILABLE', '当前宿主没有已配置的 Agent 目录');
       if (!admission)
         fail('AGENT_ADMISSION_UNAVAILABLE', '当前宿主没有真实子运行准入，未启动 Agent');
-      const detail = await members.get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: request.agentId });
+      const detail = await members.Get({ workspaceId: workspace.entry.id, instanceId: workspace.instanceId, memberId: request.agentId });
       if (detail.member.state !== 'active')
         fail('AGENT_UNAVAILABLE', '目标 Agent 已暂停或退役');
       if (detail.currentDiff.capability.status !== 'same' || detail.currentDiff.model.status !== 'same')
         fail('AGENT_CONFIGURATION_CHANGED', '目标 Agent 配置已变化，请先核实并采纳配置');
       const policy = detail.member.runtimePolicy;
       const engine = workspaceMemberEngine(policy) ?? 'pi';
-      const childLlm = input.models ? await input.models.withRuntimeConfiguration({ profileId: policy.profileId, modelId: policy.modelId, engine: workspaceMemberEngine(policy), modelRoles: policy.modelRoles }, async captured =>
+      const childLlm = input.models ? await input.models.WithRuntimeConfiguration({ profileId: policy.profileId, modelId: policy.modelId, engine: workspaceMemberEngine(policy), modelRoles: policy.modelRoles }, async captured =>
       {
         if (workspaceMemberModelHash(captured.profile) !== policy.configurationHash)
           fail('AGENT_CONFIGURATION_CHANGED', '目标模型配置已变化，未启动子运行');
-        await requestBudgets?.preflight(task.taskId, scopeId, { profile: captured.profile });
+        await requestBudgets?.Preflight(task.taskId, scopeId, { profile: captured.profile });
         request.signal.throwIfAborted();
-        return captured.resolve();
+        return captured.Resolve();
       }) : llm;
       if (!childLlm || childLlm.profile.id !== policy.profileId || childLlm.profile.model !== policy.modelId || workspaceMemberModelHash(childLlm.profile) !== policy.configurationHash)
         fail('AGENT_MODEL_UNAVAILABLE', '目标模型不能按冻结配置解析，未替换为根模型');
@@ -174,15 +174,15 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
       const childTaskId = randomUUID(),
         definition = detail.member.adoption.configuration;
       const agent = new Agent({ id: detail.member.memberId, name: detail.member.name, permission: rootAgent.definition.permission, model: { engine: workspaceMemberEngine(policy) ?? 'pi', profileId: policy.profileId, modelId: policy.modelId }, instructions: [definition.principles, detail.member.adaptation.instructions, ...definition.effectiveSkills.map(skill => skill.content)].filter(Boolean).join('\n\n') }, { workspaceId: workspace.entry.id, taskId: childTaskId });
-      const permit = admission.manager.attempt({ workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: childTaskId, scopeId, requestId: childTaskId, ownerEpoch: admission.ownerEpoch, source: 'direct', workspacePermission: agent.definition.permission }, {
+      const permit = admission.manager.Attempt({ workspaceId: workspace.entry.id, rootSessionId: task.taskId, taskId: childTaskId, scopeId, requestId: childTaskId, ownerEpoch: admission.ownerEpoch, source: 'direct', workspacePermission: agent.definition.permission }, {
         // 根独占租约仍在；Runtime 已核实父工具批次唯一，不能将此入口暴露给任意任务。
-        canAcquire: () => undefined, acquire: () => () =>
+        CanAcquire: () => undefined, Acquire: () => () =>
         {
-        }, isCurrent: () => admission.isCurrent() && !closed && !request.signal.aborted,
+        }, IsCurrent: () => admission.IsCurrent() && !closed && !request.signal.aborted,
       });
       if (permit.kind !== 'granted')
       {
-        const usage = admission.manager.snapshot();
+        const usage = admission.manager.Snapshot();
         throw new AgentConstraintError('AGENT_CONCURRENCY_LIMIT', '当前真实运行名额不足，未启动子 Agent；父进程仍计入资源占用', { current: usage.occupied.length, requested: 1, limit: usage.policy.maxConcurrentRuns, unit: 'process' })
       }
       try
@@ -196,50 +196,50 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         const childBudgets = new Map<string, Promise<RequestBudgetPort | undefined>>();
         const assertChild = () =>
         {
-          workspace.assert();
+          workspace.Assert();
           if (closed || !childAlive || request.signal.aborted)
             fail('AGENT_CALL_CANCELLED', '原子调用已结束，不能发送新请求')
         };
         const child = await createWorkspaceLoop(workspace.paths, workspace, {
-          ...options, engine, llm: childLlm, profileId: policy.profileId, model: policy.modelId, modelRoles: policy.modelRoles, provider: 'cbim-' + policy.profileId, process: undefined, images: [], attachmentIds: [], requestQuestion: async (args, signal) =>
+          ...options, engine, llm: childLlm, profileId: policy.profileId, model: policy.modelId, modelRoles: policy.modelRoles, provider: 'cbim-' + policy.profileId, process: undefined, images: [], attachmentIds: [], RequestQuestion: async (args, signal) =>
           {
             if (!childContext)
               fail('AGENT_CALL_NOT_STARTED', '子调用尚未受理');
-            childContext.assertQuestionWait?.();
-            return request.requestQuestion(args, signal);
+            childContext.AssertQuestionWait?.();
+            return request.RequestQuestion(args, signal);
           }
         }, {
-          ...business?.services, storage, agent, agentCall: request.reference, agentTools: context =>
+          ...business?.services, storage, agent, AgentCall: request.reference, AgentTools: context =>
           {
             childContext = context;
-            return scheduler.bind(context, request.parent.depth + 1)
-          }, requestBudget: (context, role = 'primary') =>
+            return scheduler.Bind(context, request.parent.depth + 1)
+          }, RequestBudget: (context, role = 'primary') =>
           {
             assertChild();
             let result = childBudgets.get(role);
             if (!result)
             {
-              result = requestBudgets?.forRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId!, kind: 'main', agentRun: { taskId: childTaskId, runId: context.runId } }, childLlm, role, assertChild) ?? Promise.resolve(undefined);
+              result = requestBudgets?.ForRun({ rootSessionId: task.taskId, taskId: task.taskId, runId: rootRunId!, kind: 'main', agentRun: { taskId: childTaskId, runId: context.runId } }, childLlm, role, assertChild) ?? Promise.resolve(undefined);
               childBudgets.set(role, result)
             }
             return result;
           },
-          acquireLease: async () =>
+          AcquireLease: async () =>
           {
-            workspace.assert();
+            workspace.Assert();
             if (closed || request.signal.aborted)
               fail('AGENT_CALL_CANCELLED', '调用已停止');
             return () =>
             {
             }
           },
-          authorizeNative: input.authorizeNative,
+          AuthorizeNative: input.authorizeNative,
         });
         return {
-          agent, task: childTask, runtime: child.runtime, ...(business ? { launch: business.launch, verify: business.verify, beforeRun: business.beforeRun } : {}), release: async () =>
+          agent, task: childTask, runtime: child.runtime, ...(business ? { launch: business.launch, Verify: business.Verify, BeforeRun: business.BeforeRun } : {}), Release: async () =>
           {
             childAlive = false;
-            await business?.close();
+            await business?.Close();
             permit.release()
           }
         };
@@ -256,7 +256,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
     if (closed)
       return;
     closing = true;
-    await scheduler.close();
+    await scheduler.Close();
     await Promise.allSettled([...inputs]);
     try
     {
@@ -265,7 +265,7 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         const outcome = summary?.status === 'completed' && !summary.unresolvedTools.length ? 'completed' : summary?.status === 'cancelled' ? 'cancelled' : summary?.status === 'interrupted' || summary?.unresolvedTools.length ? 'interrupted' : 'failed';
         try
         {
-          await dispatch.closeScope(identity, scopeId, outcome, summary)
+          await dispatch.CloseScope(identity, scopeId, outcome, summary)
         }
         catch (error)
         {
@@ -275,8 +275,8 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
               code?: string
             })?.code?.startsWith('GOAL_'))
             throw error;
-          await dispatch.goals.block(identity, scopeId, error instanceof Error ? error.message : String(error));
-          await dispatch.closeScope(identity, scopeId, 'failed', summary);
+          await dispatch.goals.Block(identity, scopeId, error instanceof Error ? error.message : String(error));
+          await dispatch.CloseScope(identity, scopeId, 'failed', summary);
           closed = true;
           throw error;
         }
@@ -292,19 +292,19 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
   return {
     rootAgent,
     // 与旧协议共用窄契约，但身份来自本次真实主调用，不读取 Auto 的最新批次。
-    mainToolContext(currentTask: TaskSpec, runId: string): MainToolContext | undefined
+    MainToolContext(currentTask: TaskSpec, runId: string): MainToolContext | undefined
     {
       if (!opened || closed || closing || runId !== rootRunId || currentTask.taskId !== task.taskId || currentTask.workspaceId !== workspace.entry.id || currentTask.root !== workspace.entry.path)
         return undefined;
       const current = (signal?: AbortSignal) =>
       {
         signal?.throwIfAborted();
-        workspace.assert();
-        if (closed || closing || runId !== rootRunId || admission && !admission.isCurrent())
+        workspace.Assert();
+        if (closed || closing || runId !== rootRunId || admission && !admission.IsCurrent())
           fail('AGENT_ROOT_CLOSED', '原主运行已停止，不能提交控制面操作')
       };
       return {
-        binding: Object.freeze({ ...identity, scopeId, runId }), assertCurrent: current, track: <T>(operation: () => Promise<T>) =>
+        binding: Object.freeze({ ...identity, scopeId, runId }), AssertCurrent: current, Track: <T>(operation: () => Promise<T>) =>
         {
           current();
           const pending = Promise.resolve().then(() =>
@@ -319,15 +319,15 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
     },
     officeHistory: dispatch ? new OfficeHistoryTools(identity, (query, signal) =>
     {
-      workspace.assert();
+      workspace.Assert();
       if (closed || !rootRunId)
         fail('AGENT_ROOT_CLOSED', '原主运行已经结束');
-      return dispatch.history.read(identity, query, signal)
+      return dispatch.history.Read(identity, query, signal)
     }) : undefined,
-    agentTools: (context: AgentToolContext) => scheduler.bind(context), requestBudget: budget,
+    AgentTools: (context: AgentToolContext) => scheduler.Bind(context), requestBudget: budget,
     agentLifecycle: {
-      insertInput,
-      beforeRun: async (runId: string, context?: Parameters<AgentLifecycle['beforeRun']>[1]) =>
+      InsertInput: insertInput,
+      BeforeRun: async (runId: string, context?: Parameters<AgentLifecycle['BeforeRun']>[1]) =>
       {
         if (rootRunId && rootRunId !== runId)
           fail('AGENT_ROOT_CONFLICT', '根运行已经绑定');
@@ -335,8 +335,8 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
         scopeId = context?.scopeId ?? scopeId;
         if (dispatch)
         {
-          releaseBudget = dispatch.budgets.holdMain(runId);
-          const scope = await dispatch.openScope(identity, scopeId, {
+          releaseBudget = dispatch.budgets.HoldMain(runId);
+          const scope = await dispatch.OpenScope(identity, scopeId, {
             message: context?.message ?? task.goal,
             ...(context?.attachmentIds ? { attachmentIds: context.attachmentIds } : {}),
           }, runId, undefined, context?.followupOf);
@@ -344,8 +344,8 @@ export function createAgentCallAssembly(input: AgentCallAssemblyInput)
           opened = true;
         }
       },
-      settled: finish,
-      failed: async (_error: unknown) => finish(),
+      Settled: finish,
+      Failed: async (_error: unknown) => finish(),
     },
   };
 }

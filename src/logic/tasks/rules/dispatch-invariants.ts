@@ -73,7 +73,7 @@ const sameAgent = (a: AgentRef, b: AgentRef) => a.agentId === b.agentId && a.age
 
 /** JSON 属性顺序不影响身份；数组顺序仍是冻结输入的一部分。 */
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: false });
+const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: false });
 
 const equal = (a: unknown, b: unknown) => JSON.stringify(ordered(a)) === JSON.stringify(ordered(b));
 

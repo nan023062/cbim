@@ -12,6 +12,7 @@ export interface EngineToolSchema
   inputSchema: Record<string, unknown>
 }
 
+/** 已发布引擎包直接消费 list/call；保留固定协议名，不改动模型可见的工具名称。 */
 export interface EngineToolsPort
 {
   list(): Promise<EngineToolSchema[]>;

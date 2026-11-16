@@ -159,7 +159,7 @@ export class WorkspaceMemberCommands
     this.records = new JsonRecordStorage(ports.storage, this.storageKey, 2 * 1024 * 1024);
     try
     {
-      const parsed = this.records.read('超过本机记录容量');
+      const parsed = this.records.Read('超过本机记录容量');
       if (parsed === undefined)
         return;
       if (parsed.version !== 1 || parsed.workspaceId !== workspaceId || Object.keys(parsed).some(key => !['version', 'workspaceId', 'records'].includes(key)) || !Array.isArray(parsed.records) || parsed.records.length > 128)
@@ -201,22 +201,22 @@ export class WorkspaceMemberCommands
     return !this.listeners.size && !this.pending.size
   }
 
-  subscribe(listener: () => void)
+  Subscribe(listener: () => void)
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   }
 
-  isPending(id: string)
+  IsPending(id: string)
   {
     return this.pending.has(id)
   }
 
-  private emit()
+  private Emit()
   {
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
-  private save(record: WorkspaceMemberAttempt)
+  private Save(record: WorkspaceMemberAttempt)
   {
     const records = [...this.value.records],
       index = records.findIndex(item => item.request.commandId === record.request.commandId);
@@ -229,22 +229,22 @@ export class WorkspaceMemberCommands
     {
       if (this.corrupt || records.length > 128)
         throw Error('本机记录不可写或达到 128 条上限');
-      this.records.write({ version: 1, workspaceId: this.workspaceId, records }, '本机记录超过 2 MiB');
+      this.records.Write({ version: 1, workspaceId: this.workspaceId, records }, '本机记录超过 2 MiB');
       this.unavailable = false;
-      this.emit();
+      this.Emit();
       return true
     }
     catch (error)
     {
       this.unavailable = true;
       this.value = { records, error: '本机保存失败，保留原命令并停止新提交：' + message(error) };
-      this.emit();
+      this.Emit();
       return false
     }
   }
 
   /** 显式选择/提交后发送当前预览；返回本次原命令记录，避免组合调用错取其它页面的最后一条记录。 */
-  async submit(input: WorkspaceMemberPreviewInput, preview: WorkspaceMemberPreview)
+  async Submit(input: WorkspaceMemberPreviewInput, preview: WorkspaceMemberPreview)
   {
     if (this.blocked || input.workspaceId !== this.workspaceId)
       return;
@@ -257,81 +257,81 @@ export class WorkspaceMemberCommands
     catch (error)
     {
       this.value = { ...this.value, error: message(error) };
-      this.emit();
+      this.Emit();
       return
     }
     const record: WorkspaceMemberAttempt = { request, phase: 'submitting', uncertain: false };
-    if (this.save(record))
-      await this.send(record);
+    if (this.Save(record))
+      await this.Send(record);
     return this.value.records.find(item => item.request.commandId === request.commandId);
   }
 
-  private async send(record: WorkspaceMemberAttempt)
+  private async Send(record: WorkspaceMemberAttempt)
   {
     const request = record.request;
     if (this.pending.has(request.commandId))
       return;
     this.pending.add(request.commandId);
-    this.emit();
+    this.Emit();
     try
     {
       const receipt = checkedWorkspaceMemberReceipt(await this.ports.commit(structuredClone(request)), request, record.receipt);
-      this.save({ ...record, phase: 'accepted', receipt, error: undefined })
+      this.Save({ ...record, phase: 'accepted', receipt, error: undefined })
     }
     catch (error)
     {
       const rejected = !record.uncertain && workspaceMemberPreRejected(error);
-      this.save({ ...record, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: message(error) })
+      this.Save({ ...record, phase: rejected ? 'rejected' : 'unknown', uncertain: !rejected, error: message(error) })
     }
     finally
     {
       this.pending.delete(request.commandId);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 手动重送永远使用已冻结原请求；重开应用不会调用本接口。 */
-  async retry(id: string)
+  async Retry(id: string)
   {
     const record = this.value.records.find(item => item.request.commandId === id);
     if (this.unavailable || this.pending.size || record?.phase !== 'unknown')
       return;
-    await this.send(record)
+    await this.Send(record)
   }
 
   /** 查询失败或空回执仍是未知；允许修复“已受理但本机保存失败”，不执行新的登记。 */
-  async query(id: string)
+  async Query(id: string)
   {
     const record = this.value.records.find(item => item.request.commandId === id);
     if (this.corrupt || !record || this.pending.has(id))
       return;
     this.pending.add(id);
-    this.emit();
+    this.Emit();
     try
     {
       const raw = await this.ports.lookup({ workspaceId: this.workspaceId, commandId: id });
       if (raw !== undefined)
-        this.save({ ...record, phase: 'accepted', receipt: checkedWorkspaceMemberReceipt(raw, record.request, record.receipt), error: undefined });
+        this.Save({ ...record, phase: 'accepted', receipt: checkedWorkspaceMemberReceipt(raw, record.request, record.receipt), error: undefined });
       else if (record.phase !== 'accepted')
-        this.save({ ...record, phase: 'unknown', uncertain: true, error: '尚未查到原回执；不能据此新建命令。' })
+        this.Save({ ...record, phase: 'unknown', uncertain: true, error: '尚未查到原回执；不能据此新建命令。' })
     }
     catch (error)
     {
-      this.save({ ...record, phase: record.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询未确认：' + message(error) })
+      this.Save({ ...record, phase: record.phase === 'accepted' ? 'accepted' : 'unknown', uncertain: true, error: '查询未确认：' + message(error) })
     }
     finally
     {
       this.pending.delete(id);
-      this.emit()
+      this.Emit()
     }
   }
 
   /** 重开只核实已持久未知命令；尚未查到回执不会自动预览、提交或换新 ID。 */
-  async restore()
+  async Restore()
   {
     for (const record of this.value.records)
       if (record.phase === 'unknown')
-        await this.query(record.request.commandId)
+        await this.Query(record.request.commandId)
   }
 }
 
@@ -340,7 +340,7 @@ export class WorkspaceMemberCommandPool
 {
   private values = new Map<string, WorkspaceMemberCommands>();
 
-  get(workspaceId: string, ports: WorkspaceMemberCommandPorts)
+  Get(workspaceId: string, ports: WorkspaceMemberCommandPorts)
   {
     const value = this.values.get(workspaceId) ?? new WorkspaceMemberCommands(workspaceId, ports);
     this.values.delete(workspaceId);

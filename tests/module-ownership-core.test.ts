@@ -43,7 +43,7 @@ function ownershipEvent(state:DispatchState,nextMemberId:string|null=state.works
 }
 const mutation=(event:ModuleOwnershipChange):DispatchMutation=>({ownershipChanges:[event],receipt:moduleOwnershipReceipt(event)});
 const advance=(state:DispatchState,event:ModuleOwnershipChange):DispatchState=>({...state,...projectModuleOwnershipMutation(state,mutation(event),moduleOwnershipCommand(event.request,event.actor))});
-const commit=(store:FileDispatchStore,event:ModuleOwnershipChange)=>store.transact(moduleOwnershipCommand(event.request,event.actor),async()=>mutation(event));
+const commit=(store:FileDispatchStore,event:ModuleOwnershipChange)=>store.Transact(moduleOwnershipCommand(event.request,event.actor),async()=>mutation(event));
 const main:AgentRef={agentId:'cbim:main',agentInstanceId:'main-instance',agentSessionId:'main-task-channel',name:'主调度'};
 const actor:ModuleOwnershipMainActor={kind:'main_agent',rootSessionId:'root',scopeId:'scope',agentInstanceId:main.agentInstanceId,agentSessionId:'main-conversation',runId:'main-run',toolCallId:'ownership-call',toolName:'cbim_module_owner_change_commit'};
 function mainMutation():DispatchMutation{
@@ -53,8 +53,8 @@ function mainMutation():DispatchMutation{
 }
 function mainState(state=seeded()):DispatchState{const m=mainMutation();return {...state,members:m.members!,sessions:m.sessions!,graphs:[applyGraphBatch(undefined,m.batch!)],scopes:m.scopes}}
 function task(id:string):TaskNode{return {kind:'task',nodeId:'task:'+id,taskId:id,identity:{workspaceId,rootSessionId:'root'},requester:main,assignee:{agentId:capability.agentId,agentInstanceId:'old-executor',agentSessionId:'old-channel',name:'旧协议执行者'},modules:[{moduleId,name:'game',knowledgeRevision:'k',maintenanceBindingId:'m',maintainerPersonIds:['person'],workflow:{kind:'general',id:'general',version:'1',reason:'通用'}}],goal:'旧任务',acceptance:[{id:'a',text:'实际验收'}],revision:1,planRevision:1,status:'queued',awaitedChildren:[],runIds:[],createdAt:at,updatedAt:at}}
-async function setup(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-ownership-core-')),store=new FileDispatchStore(directory,workspaceId);return {store,directory,file:path.join(directory,'dispatch.jsonl'),cleanup:async()=>{await store.close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-ownership-core-')))throw Error('unsafe temp');await fs.rm(directory,{recursive:true,force:true})}}}
-async function registerTwo(store:FileDispatchStore){for(let i=0;i<2;i++){const event=memberEvent(await store.read());await store.transact(workspaceMemberCommand(event.request),async()=>memberMutation(event))}}
+async function setup(){const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-ownership-core-')),store=new FileDispatchStore(directory,workspaceId);return {store,directory,file:path.join(directory,'dispatch.jsonl'),cleanup:async()=>{await store.Close();if(!path.resolve(directory).startsWith(path.join(os.tmpdir(),'cbim-ownership-core-')))throw Error('unsafe temp');await fs.rm(directory,{recursive:true,force:true})}}}
+async function registerTwo(store:FileDispatchStore){for(let i=0;i<2;i++){const event=memberEvent(await store.Read());await store.Transact(workspaceMemberCommand(event.request),async()=>memberMutation(event))}}
 afterEach(()=>vi.restoreAllMocks());
 
 it('请求不能自报actor/来源，空变更与伪造来源连续性严格拒绝',()=>{
@@ -130,53 +130,53 @@ it('查询分页、历史、负责人和回执无法拼接不同工作区或伪�
 
 it('真实Store旧空兼容、单条追加、原回执优先与重开均不创建执行或重写字节',async()=>{
   const f=await setup();try{
-    const initial=await f.store.read();expect(initial.moduleOwnerships).toEqual([]);expect(initial.ownershipCursor).toBeNull();await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
-    await registerTwo(f.store);const before=await f.store.read(),event=ownershipEvent(before),command=moduleOwnershipCommand(event.request,event.actor),prepare=vi.fn(async()=>mutation(event));
-    const replies=await Promise.all([f.store.transact(command,prepare),f.store.transact(command,prepare)]);expect(prepare).toHaveBeenCalledTimes(1);expect(replies[0]).toEqual(replies[1]);
-    const next=await f.store.read();for(const key of ['graphs','members','sessions','runs','scopes','outbox','workspaceMembers','registryCursor'] as const)expect(next[key]).toEqual(before[key]);
-    const bytes=await fs.readFile(f.file);await f.store.close();const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.commandReceipt(command.commandId))?.receipt).toEqual(replies[0]);expect(await reader.transact(command,async()=>{throw Error('不能重放')})).toEqual(replies[0]);expect(await fs.readFile(f.file)).toEqual(bytes);expect((await reader.read()).moduleOwnerships).toEqual(next.moduleOwnerships)}finally{await reader.close()}
+    const initial=await f.store.Read();expect(initial.moduleOwnerships).toEqual([]);expect(initial.ownershipCursor).toBeNull();await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
+    await registerTwo(f.store);const before=await f.store.Read(),event=ownershipEvent(before),command=moduleOwnershipCommand(event.request,event.actor),prepare=vi.fn(async()=>mutation(event));
+    const replies=await Promise.all([f.store.Transact(command,prepare),f.store.Transact(command,prepare)]);expect(prepare).toHaveBeenCalledTimes(1);expect(replies[0]).toEqual(replies[1]);
+    const next=await f.store.Read();for(const key of ['graphs','members','sessions','runs','scopes','outbox','workspaceMembers','registryCursor'] as const)expect(next[key]).toEqual(before[key]);
+    const bytes=await fs.readFile(f.file);await f.store.Close();const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.CommandReceipt(command.commandId))?.receipt).toEqual(replies[0]);expect(await reader.Transact(command,async()=>{throw Error('不能重放')})).toEqual(replies[0]);expect(await fs.readFile(f.file)).toEqual(bytes);expect((await reader.Read()).moduleOwnerships).toEqual(next.moduleOwnerships)}finally{await reader.Close()}
   }finally{await f.cleanup()}
 });
 
 it('Store指派与退休同队列两向竞争：先成功者阻止另一方，解除后允许退休',async()=>{
   for(const retireFirst of [false,true]){const f=await setup();try{
-    await registerTwo(f.store);const state=await f.store.read(),a=state.workspaceMembers![0],assign=ownershipEvent(state),retire=memberEvent(state,{kind:'state',memberId:a.memberId,expectedRevision:a.revision,nextState:'retired',reason:'明确退休'});
-    const retirement=()=>f.store.transact(workspaceMemberCommand(retire.request),async()=>memberMutation(retire));
+    await registerTwo(f.store);const state=await f.store.Read(),a=state.workspaceMembers![0],assign=ownershipEvent(state),retire=memberEvent(state,{kind:'state',memberId:a.memberId,expectedRevision:a.revision,nextState:'retired',reason:'明确退休'});
+    const retirement=()=>f.store.Transact(workspaceMemberCommand(retire.request),async()=>memberMutation(retire));
     const operations=retireFirst?[retirement(),commit(f.store,assign)]:[commit(f.store,assign),retirement()];const result=await Promise.allSettled(operations);expect(result[0].status).toBe('fulfilled');expect(result[1].status).toBe('rejected');
-    if(!retireFirst){expect((result[1] as PromiseRejectedResult).reason).toMatchObject({code:'MEMBER_OWNERSHIP_ACTIVE'});await commit(f.store,ownershipEvent(await f.store.read(),null));const current=await f.store.read(),again=memberEvent(current,{kind:'state',memberId:a.memberId,expectedRevision:a.revision,nextState:'retired',reason:'解除后退休'});await f.store.transact(workspaceMemberCommand(again.request),async()=>memberMutation(again));}
+    if(!retireFirst){expect((result[1] as PromiseRejectedResult).reason).toMatchObject({code:'MEMBER_OWNERSHIP_ACTIVE'});await commit(f.store,ownershipEvent(await f.store.Read(),null));const current=await f.store.Read(),again=memberEvent(current,{kind:'state',memberId:a.memberId,expectedRevision:a.revision,nextState:'retired',reason:'解除后退休'});await f.store.Transact(workspaceMemberCommand(again.request),async()=>memberMutation(again));}
   }finally{await f.cleanup()}}
 });
 
 it('并发更换只一方通过CAS，异参复用命令不新增审计',async()=>{
   const f=await setup();try{
-    await registerTwo(f.store);await commit(f.store,ownershipEvent(await f.store.read()));const state=await f.store.read(),replace=ownershipEvent(state,state.workspaceMembers![1].memberId),release=ownershipEvent(state,null);
-    const outcomes=await Promise.allSettled([commit(f.store,replace),commit(f.store,release)]);expect(outcomes.map(item=>item.status)).toEqual(['fulfilled','rejected']);expect((await f.store.read()).ownershipChanges).toHaveLength(2);
+    await registerTwo(f.store);await commit(f.store,ownershipEvent(await f.store.Read()));const state=await f.store.Read(),replace=ownershipEvent(state,state.workspaceMembers![1].memberId),release=ownershipEvent(state,null);
+    const outcomes=await Promise.allSettled([commit(f.store,replace),commit(f.store,release)]);expect(outcomes.map(item=>item.status)).toEqual(['fulfilled','rejected']);expect((await f.store.Read()).ownershipChanges).toHaveLength(2);
     const bytes=await fs.readFile(f.file),changed=structuredClone(replace);changed.request.change.reason='另一个原请求';await expect(commit(f.store,changed)).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});expect(await fs.readFile(f.file)).toEqual(bytes);
   }finally{await f.cleanup()}
 });
 
 it('主actor在真实历史prefix中合法，后来周期关闭重开不反向否定原登记',async()=>{
   const f=await setup();try{
-    await registerTwo(f.store);await f.store.transact({commandId:'setup-main',fingerprint:'main'},async()=>mainMutation());const event=ownershipEvent(await f.store.read(),undefined,actor);await commit(f.store,event);
-    const scope=(await f.store.read()).scopes![0];await f.store.transact({commandId:'close-main',fingerprint:'close'},async()=>({scopes:[{...scope,status:'closed',outcome:'cancelled',closedAt:at}],receipt:{closed:true}}));const bytes=await fs.readFile(f.file);
-    await f.store.close();const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.read()).scopes![0].status).toBe('closed');expect((await reader.commandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId))?.receipt).toEqual(moduleOwnershipReceipt(event));expect(await fs.readFile(f.file)).toEqual(bytes)}finally{await reader.close()}
+    await registerTwo(f.store);await f.store.Transact({commandId:'setup-main',fingerprint:'main'},async()=>mainMutation());const event=ownershipEvent(await f.store.Read(),undefined,actor);await commit(f.store,event);
+    const scope=(await f.store.Read()).scopes![0];await f.store.Transact({commandId:'close-main',fingerprint:'close'},async()=>({scopes:[{...scope,status:'closed',outcome:'cancelled',closedAt:at}],receipt:{closed:true}}));const bytes=await fs.readFile(f.file);
+    await f.store.Close();const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.Read()).scopes![0].status).toBe('closed');expect((await reader.CommandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId))?.receipt).toEqual(moduleOwnershipReceipt(event));expect(await fs.readFile(f.file)).toEqual(bytes)}finally{await reader.Close()}
   }finally{await f.cleanup()}
 });
 
 it('重算日志外层校验和也不能伪造责任头、actor、回执、岗位或混合mutation',async()=>{
   const f=await setup();try{
-    await registerTwo(f.store);await commit(f.store,ownershipEvent(await f.store.read()));await f.store.close();const bytes=await fs.readFile(f.file,'utf8'),lines=bytes.trimEnd().split('\n');
+    await registerTwo(f.store);await commit(f.store,ownershipEvent(await f.store.Read()));await f.store.Close();const bytes=await fs.readFile(f.file,'utf8'),lines=bytes.trimEnd().split('\n');
     for(const alter of [(b:any)=>{b.mutation.moduleOwnerships=[b.mutation.ownershipChanges[0].next]},(b:any)=>{b.mutation.ownershipChanges[0].next.revision=6},(b:any)=>{b.mutation.ownershipChanges[0].actor={...actor}},(b:any)=>{b.mutation.receipt.bindingHash=hash('fake')},(b:any)=>{b.mutation.members=[]},(b:any)=>{delete b.mutation.ownershipChanges}]){
-      const copy=[...lines],last=JSON.parse(copy.pop()!);alter(last.body);last.checksum=hash(JSON.stringify(last.body));copy.push(JSON.stringify(last));await fs.writeFile(f.file,copy.join('\n')+'\n');const reader=new FileDispatchStore(f.directory,workspaceId);try{await expect(reader.read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.close()}
+      const copy=[...lines],last=JSON.parse(copy.pop()!);alter(last.body);last.checksum=hash(JSON.stringify(last.body));copy.push(JSON.stringify(last));await fs.writeFile(f.file,copy.join('\n')+'\n');const reader=new FileDispatchStore(f.directory,workspaceId);try{await expect(reader.Read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.Close()}
     }
   }finally{await f.cleanup()}
 });
 
 it('写入确认未知时封闭本实例，重开只核完整原事件而不执行回调',async()=>{
   const f=await setup();try{
-    await registerTwo(f.store);const event=ownershipEvent(await f.store.read()),original=fs.open.bind(fs);vi.spyOn(fs,'open').mockImplementation((async(...args:any[])=>{const handle=await (original as any)(...args);if(args[0]===f.file&&args[1]==='a')vi.spyOn(handle,'sync').mockRejectedValue(Error('sync lost'));return handle}) as any);
-    await expect(commit(f.store,event)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});vi.restoreAllMocks();await expect(f.store.commandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});await f.store.close();
-    const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.commandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId))?.receipt).toEqual(moduleOwnershipReceipt(event));expect((await reader.read()).ownershipChanges).toHaveLength(1)}finally{await reader.close()}
+    await registerTwo(f.store);const event=ownershipEvent(await f.store.Read()),original=fs.open.bind(fs);vi.spyOn(fs,'open').mockImplementation((async(...args:any[])=>{const handle=await (original as any)(...args);if(args[0]===f.file&&args[1]==='a')vi.spyOn(handle,'sync').mockRejectedValue(Error('sync lost'));return handle}) as any);
+    await expect(commit(f.store,event)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});vi.restoreAllMocks();await expect(f.store.CommandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});await f.store.Close();
+    const reader=new FileDispatchStore(f.directory,workspaceId);try{expect((await reader.CommandReceipt(moduleOwnershipCommand(event.request,event.actor).commandId))?.receipt).toEqual(moduleOwnershipReceipt(event));expect((await reader.Read()).ownershipChanges).toHaveLength(1)}finally{await reader.Close()}
   }finally{await f.cleanup()}
 });
 

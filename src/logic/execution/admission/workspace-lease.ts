@@ -12,7 +12,7 @@ export class WorkspaceExecutionLease
   private listeners = new Set<() => void>();
 
   /** 仅在占用真正释放后通知调度重试；不把监听者异常传播给已结束的执行。 */
-  observeRelease(listener: () => void)
+  ObserveRelease(listener: () => void)
   {
     this.listeners.add(listener);
     return () =>
@@ -30,7 +30,7 @@ export class WorkspaceExecutionLease
     }>();
 
   /** 同步只读资格检查，不占用也不排队；准入器可跳过本地暂不可领取的请求。 */
-  canAcquire(runKey: string, permission: ChatPermission, agentInstanceId?: string): 'agent_busy' | 'workspace_conflict' | undefined
+  CanAcquire(runKey: string, permission: ChatPermission, agentInstanceId?: string): 'agent_busy' | 'workspace_conflict' | undefined
   {
     const active = [...this.leases.values()];
     if (agentInstanceId && active.some(lease => lease.agentInstanceId === agentInstanceId))
@@ -40,30 +40,30 @@ export class WorkspaceExecutionLease
   }
 
   /** 非阻塞领取；同实例任何权限都串行，ask 按写入独占。旧未登记调用可缺省实例；释放函数幂等。 */
-  acquire(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
+  Acquire(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
   {
-    const reason = this.canAcquire(runKey, permission, agentInstanceId);
+    const reason = this.CanAcquire(runKey, permission, agentInstanceId);
     if (reason === 'agent_busy')
       fail('MEMBER_BUSY', '该成员实例正在执行其他任务，请等待当前运行结束');
     if (reason === 'workspace_conflict')
       fail('WORKSPACE_EXECUTION_BUSY', '工作区有冲突运行，请等待结束后启动；不同实例的只读任务可以并行');
-    return this.hold(runKey, permission, agentInstanceId);
+    return this.Hold(runKey, permission, agentInstanceId);
   }
 
   /**
        * 仅供装配方确认属于 ownerKey 的运行内只读核证。没有原占用时按普通读申请，不能借其他运行跳过排他。
        * 派生占用独立释放；即使原运行先结束，尚未结束的读取仍阻止后续写入。此方法不授予工具权限。
        */
-  acquireReadWithin(runKey: string, ownerKey: string): () => void
+  AcquireReadWithin(runKey: string, ownerKey: string): () => void
   {
     if (!this.leases.has(ownerKey))
-      return this.acquire(runKey, 'read');
+      return this.Acquire(runKey, 'read');
     if (this.leases.has(runKey) || [...this.leases].some(([key, lease]) => key !== ownerKey && lease.permission !== 'read'))
       fail('WORKSPACE_EXECUTION_BUSY', '证据核实与其他工作区运行冲突');
-    return this.hold(runKey, 'read');
+    return this.Hold(runKey, 'read');
   }
 
-  private hold(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
+  private Hold(runKey: string, permission: ChatPermission, agentInstanceId?: string): () => void
   {
     this.leases.set(runKey, { permission, agentInstanceId });
     let released = false;

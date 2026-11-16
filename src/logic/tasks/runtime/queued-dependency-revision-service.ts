@@ -31,7 +31,7 @@ export class QueuedDependencyRevisionService
   }
 
   /** 停止和版本竞争在读取前后复核；已保存的同命令只读返回，不再次变更或启动任务。 */
-  async revise(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
+  async Revise(identity: GraphIdentity, scopeId: string, runId: string, commandId: string, raw: ReviseQueuedDependenciesInput, assertCurrent?: () => void): Promise<ReviseQueuedDependenciesReceipt>
   {
     const parsed = reviseQueuedDependenciesInputSchema.safeParse(raw),
       context = contextSchema.safeParse({ ...identity, scopeId, runId, commandId });
@@ -41,31 +41,31 @@ export class QueuedDependencyRevisionService
       fixed = context.data,
       alive = () =>
       {
-        this.owner.assert();
+        this.owner.Assert();
         assertCurrent?.();
         if (fixed.workspaceId !== this.owner.entry.id)
           fail('GRAPH_IDENTITY_MISMATCH', '前置修订不属于当前工作区')
       };
     const command = contextualMainCommand('dispatch.reviseDependencies', fixed, input),
-      old = await this.owners.replay<ReviseQueuedDependenciesReceipt>(command);
+      old = await this.owners.Replay<ReviseQueuedDependenciesReceipt>(command);
     if (old)
       return old.receipt;
     alive();
-    return this.owners.withContext(state => this.owners.selections(queuedDependencyRevisionSelection(state, fixed, scopeId, runId, input).tasks), context => this.store.transact(command, async state =>
+    return this.owners.WithContext(state => this.owners.Selections(queuedDependencyRevisionSelection(state, fixed, scopeId, runId, input).tasks), context => this.store.Transact(command, async state =>
     {
       alive();
       const { graph, scope, target, removed, added, tasks, members, status } = queuedDependencyRevisionSelection(state, fixed, scopeId, runId, input),
         knowledgeRevision = scope.goal!.plan!.knowledgeRevision;
-      if ((await this.owner.read()).revision !== knowledgeRevision)
+      if ((await this.owner.Read()).revision !== knowledgeRevision)
         fail('DEPENDENCY_KNOWLEDGE_STALE', '知识基线已变化，不能修订旧待办');
       alive();
       let latest: Awaited<ReturnType<typeof prepareDispatchExecutionContext>> | undefined;
       for (const task of tasks)
       {
-        await this.owners.verifyTask(state, context, task);
+        await this.owners.VerifyTask(state, context, task);
         alive();
         const binding = task.ownerBinding;
-        this.goals.validateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(m => m.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
+        this.goals.ValidateDispatch(state, scope, { assigneeAgentId: task.assignee.agentId, ...(binding ? { ownerSelection: ownerExecutionSelectionFor(binding) } : {}), moduleIds: task.modules.map(m => m.moduleId), ...(task.workflowSelections ? { workflowSelections: task.workflowSelections } : {}), goal: task.goal, acceptance: task.acceptance, prerequisites: [] }, knowledgeRevision, binding, task.fallbackBinding);
         latest = await prepareDispatchExecutionContext(this.owner, task, context.snapshot, binding ? state.workspaceMembers!.find(member => member.memberId === binding.memberId) : undefined);
         alive();
         if (latest.knowledgeRevision !== knowledgeRevision || latest.agent.teamId !== members.find(m => m.agentInstanceId === task.assignee.agentInstanceId)!.teamId)

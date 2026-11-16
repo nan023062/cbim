@@ -97,16 +97,16 @@ class N_src_logic_feedback_service_github_feedback_auth_ts["github-feedback-auth
 }
 class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["GitHubFeedbackAuth"] {
   +constructor()
-  +status()
-  +checkConnection()
-  +begin()
-  +poll()
-  +verifyIdentity()
-  +capture()
-  +withConnection()
-  +disconnect()
-  +cancel()
-  +close()
+  +Status()
+  +CheckConnection()
+  +Begin()
+  +Poll()
+  +VerifyIdentity()
+  +Capture()
+  +WithConnection()
+  +Disconnect()
+  +Cancel()
+  +Close()
   -filename
   -cipher
   -request
@@ -128,11 +128,11 @@ class N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth["G
   -closed
   -lifetime
   -generation
-  -serial()
-  -read()
-  -secure()
-  -view()
-  -cancelFlow()
+  -Serial()
+  -Read()
+  -Secure()
+  -View()
+  -CancelFlow()
 }
 N_src_logic_feedback_service_github_feedback_auth_ts ..> N_src_logic_feedback_service_github_feedback_auth_ts_GitHubFeedbackAuth : 声明
 ```
@@ -165,20 +165,20 @@ N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service
 class N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback["GitHubFeedback"] {
   +auth
   +constructor()
-  +prepare()
-  +close()
+  +Prepare()
+  +Close()
   -directory
   -request
   -queue
-  -serial()
-  -filename()
-  -read()
-  -save()
-  -result()
-  -verify()
-  -submit()
-  -issueNumber()
-  -receipt()
+  -Serial()
+  -Filename()
+  -Read()
+  -Save()
+  -Result()
+  -Verify()
+  -Submit()
+  -IssueNumber()
+  -Receipt()
 }
 N_src_logic_feedback_service_github_feedback_ts ..> N_src_logic_feedback_service_github_feedback_ts_GitHubFeedback : 声明
 ```
@@ -284,4 +284,4 @@ reader 取消不依赖 fetch 转发信号；中断、超限或坏 JSON 均沿原
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `ByteUtils.readBoundedBytes`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `ByteUtils.ReadBoundedBytes`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

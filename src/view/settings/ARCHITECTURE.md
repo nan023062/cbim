@@ -176,15 +176,15 @@ class N_src_view_settings_budget_settings_state_ts_BudgetSettingsController["Bud
   +constructor()
   +snapshot
   +subscribe
-  +edit()
-  +cancel()
-  +load()
-  +save()
+  +Edit()
+  +Cancel()
+  +Load()
+  +Save()
   -call
   -state
   -generation
   -listeners
-  -publish()
+  -Publish()
 }
 N_src_view_settings_budget_settings_state_ts ..> N_src_view_settings_budget_settings_state_ts_BudgetSettingsController : 声明
 ```

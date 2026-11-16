@@ -16,8 +16,8 @@ export function BudgetSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bool
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
   useEffect(() =>
   {
-    void controller.load();
-    return () => controller.cancel()
+    void controller.Load();
+    return () => controller.Cancel()
   }, [controller]);
   const unsaved = !!state.policy && (state.enabled !== state.policy.enabled || state.enforcement !== state.policy.enforcement || state.tokens !== String(state.policy.limits.tokens ?? '') || state.estimatedCostUsd !== String(state.policy.limits.estimatedCostUsd ?? ''));
   useEffect(() =>
@@ -36,13 +36,13 @@ export function BudgetSettings({ onDirtyChange }: { onDirtyChange?: (dirty: bool
   }
   return <section className="repository-settings" aria-label="目标软限额设置" data-testid="budget-settings"><h2>目标软限额</h2>
     <p>主 Agent 与执行成员共用本目标的额度。默认关闭；保存后仅对新目标生效，已开始的目标和等待中的目标保留原设置。</p>
-    <label className="budget-settings-toggle"><input type="checkbox" aria-label="启用新目标软限额" checked={state.enabled} disabled={!state.policy || state.busy} onChange={event => controller.edit({ enabled: event.target.checked })} />启用新目标软限额</label>
-    <label className="budget-settings-toggle"><input type="checkbox" aria-label="启用逐请求预算预留" checked={state.enforcement === 'request'} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.edit({ enforcement: event.target.checked ? 'request' : undefined })} />逐请求预留（新目标）</label>
-    <div className="budget-settings-fields"><label>Token 软限额<input aria-label="Token 软限额" type="text" inputMode="numeric" placeholder="留空表示不限制这一项" value={state.tokens} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.edit({ tokens: event.target.value })} /></label><label>估算费用软限额（美元）<input aria-label="估算费用软限额（美元）" type="text" inputMode="decimal" placeholder="留空表示不限制这一项" value={state.estimatedCostUsd} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.edit({ estimatedCostUsd: event.target.value })} /></label></div>
-    <div className="budget-settings-actions"><button className="solid-button" disabled={!state.policy || state.busy || !valid} onClick={() => void controller.save()}>保存软限额</button><button disabled={state.busy} onClick={() =>
+    <label className="budget-settings-toggle"><input type="checkbox" aria-label="启用新目标软限额" checked={state.enabled} disabled={!state.policy || state.busy} onChange={event => controller.Edit({ enabled: event.target.checked })} />启用新目标软限额</label>
+    <label className="budget-settings-toggle"><input type="checkbox" aria-label="启用逐请求预算预留" checked={state.enforcement === 'request'} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.Edit({ enforcement: event.target.checked ? 'request' : undefined })} />逐请求预留（新目标）</label>
+    <div className="budget-settings-fields"><label>Token 软限额<input aria-label="Token 软限额" type="text" inputMode="numeric" placeholder="留空表示不限制这一项" value={state.tokens} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.Edit({ tokens: event.target.value })} /></label><label>估算费用软限额（美元）<input aria-label="估算费用软限额（美元）" type="text" inputMode="decimal" placeholder="留空表示不限制这一项" value={state.estimatedCostUsd} disabled={!state.policy || state.busy || !state.enabled} onChange={event => controller.Edit({ estimatedCostUsd: event.target.value })} /></label></div>
+    <div className="budget-settings-actions"><button className="solid-button" disabled={!state.policy || state.busy || !valid} onClick={() => void controller.Save()}>保存软限额</button><button disabled={state.busy} onClick={() =>
     {
       if (!unsaved || confirm('刷新会放弃未保存的软限额，继续吗？'))
-        void controller.load()
+        void controller.Load()
     }}>刷新软限额</button></div>
     {state.enforcement === 'request' ? <p>每次请求发送前，用模型完整输入容量加本次输出上限作保守预留；不足则不发送。主轮、成员、重试和自动摘要共用额度，完整用量保存后释放余量。断流、缺用量或重启遗留保持占用。金额按冻结价格本地估算，不是供应商账单上限；小于单次模型预留的额度可能连首个请求也无法发出。</p> : <p>达到任一额度后不再启动下一轮。已开始的一轮继续结算，可能因多个模型请求、重试或自动摘要超过额度；这不是硬账单上限。用量无法核实时不会按零放行。</p>}
     <p>启用后，同一目标的主轮与成员轮按用量结算顺序执行；其它目标仍受全局并发上限控制。修改设置不会重启或解除旧目标的限制。</p>

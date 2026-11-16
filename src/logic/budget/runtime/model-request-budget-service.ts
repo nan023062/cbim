@@ -22,7 +22,7 @@ type Owner =
 
     instanceId: string;
 
-    assert(): void
+    Assert(): void
   };
 
 /** 每个活动工作区仅一份；实例代际来自工作区所有权，不从磁盘请求或页面输入恢复。 */
@@ -36,25 +36,25 @@ export class ModelRequestBudgetService
   }
 
   /** 主工厂已解析配置但尚未消费等待时调用；没有当前周期表示新目标，由其首次请求独立核验。 */
-  async preflight(rootSessionId: string, scopeId: string | undefined, llm: RequestBudgetExecutionModel | undefined): Promise<void>
+  async Preflight(rootSessionId: string, scopeId: string | undefined, llm: RequestBudgetExecutionModel | undefined): Promise<void>
   {
     if (!scopeId)
       return;
-    this.owner.assert();
-    const state = await this.store.readBudget(),
+    this.owner.Assert();
+    const state = await this.store.ReadBudget(),
       scope = state.scopes?.find(s => s.scopeId === scopeId && s.rootSessionId === rootSessionId);
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
       return;
     if (!llm)
       fail('MODEL_REQUEST_CONFIGURATION', '逐请求预算缺少已解析模型，原等待保留');
-    this.budgets.preflightRequest(state, scope, llm.profile);
+    this.budgets.PreflightRequest(state, scope, llm.profile);
   }
 
   /** 在真实 run 登记后冻结模型计价；assertCaller 在每次发送前核实原子调用，终态用量不因停止被丢弃。旧成员须先领取 running。 */
-  async forRun(input: { rootSessionId: string; taskId: string; runId: string; kind: 'main' | 'member'; scopeId?: string; agentRun?: { taskId: string; runId: string } }, llm?: RequestBudgetExecutionModel, role = 'primary', assertCaller?: () => void): Promise<RequestBudgetPort | undefined>
+  async ForRun(input: { rootSessionId: string; taskId: string; runId: string; kind: 'main' | 'member'; scopeId?: string; agentRun?: { taskId: string; runId: string } }, llm?: RequestBudgetExecutionModel, role = 'primary', assertCaller?: () => void): Promise<RequestBudgetPort | undefined>
   {
-    this.owner.assert();
-    const state = await this.store.readBudget();
+    this.owner.Assert();
+    const state = await this.store.ReadBudget();
     const scope = input.kind === 'main' ? state.scopes?.find(s => s.rootSessionId === input.rootSessionId && s.runTracking?.mainRunIds.includes(input.runId)) : state.scopes?.find(s => s.scopeId === input.scopeId && s.rootSessionId === input.rootSessionId);
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
       return;
@@ -66,20 +66,20 @@ export class ModelRequestBudgetService
     return {
       model: structuredClone(model), reserve: async request =>
       {
-        this.assertLive(binding, assertCaller);
+        this.AssertLive(binding, assertCaller);
         if (this.stoppedScopes.has(binding.scopeId))
           fail('MODEL_REQUEST_UNVERIFIED', '本周期请求结果待核实，未发送新的请求');
         const intent: RequestBudgetIntent = { version: 1, requestId: randomUUID(), binding, policyRevision, model, requestHash: request.requestHash, maxOutputTokens: request.maxOutputTokens, ...requestBudgetReservation(model, request.maxOutputTokens), createdAt: new Date().toISOString() };
         const initial: ModelRequestBudgetChange = { requestId: intent.requestId, revision: 1, recordedAt: intent.createdAt, phase: 'reserved', intent };
         let denial = '';
-        const receipt = await this.store.transactBudget(requestBudgetCommand(initial), async current =>
+        const receipt = await this.store.TransactBudget(requestBudgetCommand(initial), async current =>
         {
-          this.assertLive(binding, assertCaller);
+          this.AssertLive(binding, assertCaller);
           const currentScope = current.scopes?.find(s => s.scopeId === binding.scopeId);
           if (!currentScope?.budget)
             fail('MODEL_REQUEST_BUDGET_STALE', '请求所属周期或冻结预算已不存在');
           const records = requestBudgetRecords(current.modelRequestBudgetChanges ?? []),
-            report = this.summary(current, binding),
+            report = this.Summary(current, binding),
             reason = requestBudgetDecision(currentScope.budget.policy, report, intent, records);
           const change: ModelRequestBudgetChange = reason ? { ...initial, phase: 'denied', reason } : initial;
           if (reason)
@@ -91,22 +91,22 @@ export class ModelRequestBudgetService
         });
         if (receipt.phase === 'denied')
           fail('MODEL_REQUEST_BUDGET_DENIED', denial + '；已在发送前停止，原结果保留');
-        return this.ticket(intent, assertCaller);
+        return this.Ticket(intent, assertCaller);
       }
     };
   }
 
   /** 纯读取，不补终态、不启动模型；调用者必须提供完整的周期归属。 */
-  async report(input: unknown)
+  async Report(input: unknown)
   {
-    this.owner.assert();
+    this.owner.Assert();
     const query = requestBudgetQuerySchema.parse(input);
     if (query.workspaceId !== this.owner.entry.id)
       fail('MODEL_REQUEST_IDENTITY', '请求账本属于其它工作区');
-    return this.summary(await this.store.readBudget(), query)
+    return this.Summary(await this.store.ReadBudget(), query)
   }
 
-  private summary(state: RequestBudgetState, b: { workspaceId: string; rootSessionId: string; scopeId: string })
+  private Summary(state: RequestBudgetState, b: { workspaceId: string; rootSessionId: string; scopeId: string })
   {
     const scope = state.scopes?.find(s => s.scopeId === b.scopeId && s.rootSessionId === b.rootSessionId && s.workspaceId === b.workspaceId);
     if (!scope?.budget?.policy.enabled || scope.budget.policy.enforcement !== 'request')
@@ -114,15 +114,15 @@ export class ModelRequestBudgetService
     return requestBudgetReport(requestBudgetRecords(state.modelRequestBudgetChanges ?? []), { workspaceId: b.workspaceId, rootSessionId: b.rootSessionId, scopeId: b.scopeId, policyRevision: scope.budget.policy.revision }, this.owner.instanceId);
   }
 
-  private assertLive(binding: RequestBudgetBinding, assertCaller?: () => void)
+  private AssertLive(binding: RequestBudgetBinding, assertCaller?: () => void)
   {
-    this.owner.assert();
+    this.owner.Assert();
     assertCaller?.();
-    if (binding.kind === 'main' && !this.budgets.isMainLive(binding.runId))
+    if (binding.kind === 'main' && !this.budgets.IsMainLive(binding.runId))
       fail('MODEL_REQUEST_RUN_STALE', '原主运行已结束，未发送新的模型请求')
   }
 
-  private ticket(intent: RequestBudgetIntent, assertCaller?: () => void): RequestBudgetTicket
+  private Ticket(intent: RequestBudgetIntent, assertCaller?: () => void): RequestBudgetTicket
   {
     let revision = 1,
       phase: 'reserved' | 'issuing' | 'terminal' = 'reserved',
@@ -135,11 +135,11 @@ export class ModelRequestBudgetService
       const change = { ...next, requestId: intent.requestId, revision: revision + 1, recordedAt: new Date().toISOString() } as ModelRequestBudgetChange;
       try
       {
-        await this.store.transactBudget(requestBudgetCommand(change), async () =>
+        await this.store.TransactBudget(requestBudgetCommand(change), async () =>
         {
           if (change.phase === 'issuing')
           {
-            this.assertLive(intent.binding, assertCaller);
+            this.AssertLive(intent.binding, assertCaller);
             if (this.stoppedScopes.has(intent.binding.scopeId))
               fail('MODEL_REQUEST_UNVERIFIED', '本周期已有未核实请求')
           }
@@ -162,7 +162,7 @@ export class ModelRequestBudgetService
     return {
       requestId: intent.requestId, issue: () => save({ phase: 'issuing' }), assertSend: () =>
       {
-        this.assertLive(intent.binding, assertCaller);
+        this.AssertLive(intent.binding, assertCaller);
         if (phase !== 'issuing' || this.stoppedScopes.has(intent.binding.scopeId))
           fail('MODEL_REQUEST_UNVERIFIED', '原请求已停止或有待核实消耗')
       }, report: usage =>

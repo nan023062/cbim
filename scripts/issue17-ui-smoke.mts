@@ -14,10 +14,10 @@ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-issue17-')),root=path.jo
 await fs.mkdir(root);await fs.mkdir('test-results',{recursive:true});
 const errors:string[]=[],checks:string[]=[];let desktop:ElectronApplication|undefined,setup:Application|undefined,page:Page|undefined;
 try{
-  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.init();
-  const entry=await setup.dispatch('add',{path:root}),team=await seedTeam(setup.workspace(entry.id));
-  await setup.models.save({profile:{name:'No execution fixture',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'Fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}]}});
-  await setup.shutdown();setup=undefined;
+  setup=new Application(new Paths(user,path.resolve('.')),path.resolve('assets'));await setup.Init();
+  const entry=await setup.Dispatch('add',{path:root}),team=await seedTeam(setup.Workspace(entry.id));
+  await setup.models.Save({profile:{name:'No execution fixture',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',defaultModel:'fixture',models:[{id:'fixture',name:'Fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}]}});
+  await setup.Shutdown();setup=undefined;
   const executable=await latestExecutable();assert.ok(path.resolve(executable).startsWith(path.resolve('build')+path.sep));
   desktop=await electron.launch({executablePath:executable,env:{...process.env,CBIM_USER_DATA_ROOT:user},timeout:60000});
   assert.equal(path.resolve(await desktop.evaluate(({app})=>app.getPath('userData'))),path.resolve(user,'desktop'));
@@ -64,4 +64,4 @@ try{
   assert.deepEqual(errors,[]);assert.deepEqual(await call('loop.list',{id:entry.id}),beforeRuns);
   const report={executable,checks,pageErrors:errors,source:'packaged Electron with real IPC, one post-commit reply fault, isolated files',modelRequests:0};await fs.writeFile('test-results/issue17-ui-report.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(error){const stem='test-results/issue17-ui-failure-'+Date.now();await fs.writeFile(stem+'.json',JSON.stringify({error:String(error),checks,errors,body:await page?.locator('body').innerText()},null,2));await page?.screenshot({path:stem+'.png'});throw error}
-finally{await desktop?.close();await setup?.shutdown();const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-issue17-'))throw Error('拒绝清理非本次测试目录');await fs.rm(target,{recursive:true,force:true})}
+finally{await desktop?.close();await setup?.Shutdown();const target=path.resolve(temp);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-issue17-'))throw Error('拒绝清理非本次测试目录');await fs.rm(target,{recursive:true,force:true})}

@@ -36,7 +36,7 @@ const renew = () =>
   {
     try
     {
-      file?.close()
+      file?.Close()
     }
     finally
     {
@@ -54,7 +54,7 @@ port.on('message', event =>
   {
     try
     {
-      file?.close()
+      file?.Close()
     }
     finally
     {
@@ -67,7 +67,7 @@ port.on('message', event =>
   {
     try
     {
-      file?.close()
+      file?.Close()
     }
     finally
     {
@@ -82,7 +82,7 @@ port.on('message', event =>
   {
     if (input.kind === 'close')
     {
-      file?.close();
+      file?.Close();
       file = undefined;
       send({ kind: 'closed', token, seq: lastSeq });
       setImmediate(() => process.exit(0));
@@ -93,7 +93,7 @@ port.on('message', event =>
       if (file || lastSeq !== 1)
         throw Object.assign(Error('CONTROLLED_SESSION_USED'), { code: 'CONTROLLED_SESSION_USED' });
       file = new Win32ControlledFile(input.root, input.relativePath, input.protectedRoots, input.koffiPath, input.transition);
-      const result = file.read();
+      const result = file.Read();
       send({ kind: 'opened', token, seq: lastSeq, identity: result.identity, fact: result.fact, bytes: result.bytes.toString('base64') });
       return;
     }
@@ -101,7 +101,7 @@ port.on('message', event =>
       throw Object.assign(Error('CONTROLLED_SESSION_CLOSED'), { code: 'CONTROLLED_SESSION_CLOSED' });
     if (input.kind === 'recheck')
     {
-      const result = file.read();
+      const result = file.Read();
       send({ kind: 'checked', token, seq: lastSeq, identity: result.identity, fact: result.fact });
       return
     }
@@ -110,14 +110,14 @@ port.on('message', event =>
     used = true;
     if (input.kind === 'transition')
     {
-      const result = file.transition();
+      const result = file.Transition();
       send({ kind: 'transitioned', token, seq: lastSeq, ...result });
       return
     }
     const bytes = Buffer.from(input.bytes, 'base64');
     if (bytes.toString('base64') !== input.bytes || bytes.length !== input.expected.byteLength || createHash('sha256').update(bytes).digest('hex') !== input.expected.sha256)
       throw Object.assign(Error('CONTROLLED_INPUT'), { code: 'CONTROLLED_INPUT' });
-    const result = file.replace(bytes);
+    const result = file.Replace(bytes);
     send({ kind: 'applied', token, seq: lastSeq, identity: result.identity, fact: result.fact });
   }
   catch (error)

@@ -16,7 +16,7 @@
 | [graphs.ts](graphs.ts)：GraphUtils | 纯结构无环判断；节点身份、边选择及业务错误由调用方校验。 |
 | [async.ts](async.ts)：SerialQueue、PendingRequests、PendingReply、InFlightOperations | 三种独立实例结构分别拥有尾链、请求/计时器和 Promise 集合；没有共享关闭策略或全局调度器。 |
 
-静态工具的构造函数私有，方法不依赖 this。普通消费者使用 `XxxUtils.method()`；Core Node `serialization.ts` 中仍在使用的 `json` 兼容出口直接引用 `JsonUtils.formatJson`，不创建包装函数，保留回调身份。utility 不再导出旧的独立函数，真实消费者与测试统一使用新类入口。
+静态工具的构造函数私有，方法不依赖 this。普通消费者使用 `XxxUtils.Method()`；Core Node `serialization.ts` 中仍在使用的 `json` 兼容出口直接引用 `JsonUtils.FormatJson`，不创建包装函数，保留回调身份。utility 不再导出旧的独立函数，真实消费者与测试统一使用新类入口。
 
 ## 入口与真实消费者
 
@@ -26,9 +26,9 @@
 - `async.ts`：SerialQueue、InFlightOperations 和 PendingRequests，按异步协调类别合并；各类、各实例独立持有状态，执行队列与在途跟踪不互相替代。
 - `strings.ts`：字符串处理，当前承载 LF 增量分帧及精确文本脱敏；`bytes.ts`：字节处理，当前承载有界流收集。文本与原始字节的计量和生命周期不同，保持分别归属。
 - `graphs.ts` 提供有向图无环判断。上述五个类别文件是私有实现，消费者只导入公开入口。
-- 前端 view/foundations/utility/json.ts 的 equalJson 组合 JsonUtils.orderJsonValue，显式保留 localeCompare 和省略 undefined；后端各历史协议继续选择自己的策略。前端交互状态与后端指纹字段均不进入算法。
+- 前端 view/foundations/utility/json.ts 的 equalJson 组合 JsonUtils.OrderJsonValue，显式保留 localeCompare 和省略 undefined；后端各历史协议继续选择自己的策略。前端交互状态与后端指纹字段均不进入算法。
 - WebSettings、BudgetSettings、AdmissionSettings、MainAgentSettings、LlmProfiles 直接组合 SerialQueue。旧 `foundations/concurrency` 目录及入口已移除。
-- Core `platform/node/serialization.ts` 保留 `hash/json` 名称兼容：hash 重导出 Node digest 的 sha256，json 直接引用 JsonUtils.formatJson；两种算法各有唯一实现和相同回调身份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
+- Core `platform/node/serialization.ts` 保留 `hash/json` 名称兼容：hash 重导出 Node digest 的 sha256，json 直接引用 JsonUtils.FormatJson；两种算法各有唯一实现和相同回调身份。现有知识版本、证据及配置消费者保持原调用和输出字节。该适配出口尚未退役，后续迁移须核对其真实消费者及逻辑边界，不机械批量改路径。
 - Core `json.ts` 只将 StrictJsonError 转回原 JSON Fault；知识与产物验证保留原提示、字段和限制。Logic 的资源仓库、GitHub 请求、网页资料，以及更新服务的 Release 列表和小清单组合有界字节消费；URL、凭据、期限、编码、JSON 协议和错误脱敏仍由消费者负责。
 
 ## SerialQueue
@@ -39,7 +39,7 @@
 
 ## 数据算法
 
-`JsonUtils.formatJson` 保持原两空格缩进、末尾 LF 和 JSON.stringify 的属性顺序/异常行为；不做严格 JSON 解析或规范排序。顶层 undefined、函数、Symbol 沿兼容行为形成 `undefined\n`，不能作为有效 JSON 输入使用。调用者负责约束值，不能在抽取中暗改历史文本或指纹。
+`JsonUtils.FormatJson` 保持原两空格缩进、末尾 LF 和 JSON.stringify 的属性顺序/异常行为；不做严格 JSON 解析或规范排序。顶层 undefined、函数、Symbol 沿兼容行为形成 `undefined\n`，不能作为有效 JSON 输入使用。调用者负责约束值，不能在抽取中暗改历史文本或指纹。
 
 `sha256` 接受 UTF-8 字符串或 Uint8Array（含 Buffer），返回小写十六进制；字节视图不扩大到背后的整个 ArrayBuffer。业务选择哪些字段、如何序列化、是否接受摘要仍在原模块；该算法不承担验签或可信来源判断。
 
@@ -47,31 +47,31 @@
 
 ### 有界字节流
 
-`ByteUtils.readBoundedBytes(body, {maxBytes, signal})` 仅完整成功时返回 Uint8Array。maxBytes 为非负安全整数，按字节累计，不相信 Content-Length；超限抛 ByteLimitError，流错误与 signal.reason 原样传出，null 正文为空。非法上限/预先取消在取得 reader 前拒绝，流仍由调用者持有；已接管后，失败请求一次 cancel，正常或失败均移除监听并释放 reader 锁。
+`ByteUtils.ReadBoundedBytes(body, {maxBytes, signal})` 仅完整成功时返回 Uint8Array。maxBytes 为非负安全整数，按字节累计，不相信 Content-Length；超限抛 ByteLimitError，流错误与 signal.reason 原样传出，null 正文为空。非法上限/预先取消在取得 reader 前拒绝，流仍由调用者持有；已接管后，失败请求一次 cancel，正常或失败均移除监听并释放 reader 锁。
 
 取消显式唤醒挂起 read，且不等待不合作的底层 cancel Promise，避免取消自己再次挂起；清理失败不覆盖原错误。这证明本次读取不再等待，不证明网络/进程物理退出，相关屏障仍归原宿主。分块按可见视图显式复制（含 Buffer），生产者后续复用存储不改变已读取字节；最终合并的内存与字节上限同阶，不返回截断前缀。大安装包流式落盘、模型字符上限、Node 原始 HTTP 传输及其他协议不强行套用该内存收集器。
 
 ### 严格 JSON
 
-`JsonUtils.parseStrictJson` 保留原 jsonc-parser 行为，拒绝注释、尾逗号、无效语法和同对象重复键；转义后同名也重复，不同对象可以有同名键。StrictJsonError 分别给出 invalid-syntax、duplicate-key 与重复 key，不包含业务 code。
+`JsonUtils.ParseStrictJson` 保留原 jsonc-parser 行为，拒绝注释、尾逗号、无效语法和同对象重复键；转义后同名也重复，不同对象可以有同名键。StrictJsonError 分别给出 invalid-syntax、duplicate-key 与重复 key，不包含业务 code。
 
 解析不进行危险键裁剪、Schema 校验、字段排序或大小/深度限制；资源预算、原字节身份与错误对外映射由消费者决定。远端 HTTP 的普通 JSON 解码未擅自改成严格解析，避免改变已有协议。
 
 ### 对象键递归排序
 
-`JsonUtils.orderJsonValue(value, policy)` 只递归复制并排序自身可枚举字符串键，比较器必须显式传入；`omitUndefinedProperties` 只决定对象 undefined 属性是否省略。数组顺序、空位和元素保持原义，整数键仍按 JS 对象枚举规则输出。只处理既有 JSON 形状快照，不验证 Schema、危险键、循环或深度，不承担序列化、摘要、身份和业务验收。
+`JsonUtils.OrderJsonValue(value, policy)` 只递归复制并排序自身可枚举字符串键，比较器必须显式传入；`omitUndefinedProperties` 只决定对象 undefined 属性是否省略。数组顺序、空位和元素保持原义，整数键仍按 JS 对象枚举规则输出。只处理既有 JSON 形状快照，不验证 Schema、危险键、循环或深度，不承担序列化、摘要、身份和业务验收。
 
 既有 Logic 领域适配保留四种历史组合：artifact-evidence、预算/周期运行、检查点和依赖替换/任务取消沿用 localeCompare 并省略 undefined；portable-package、dispatch-invariants 沿用 localeCompare 并保留属性；workflow-evidence、validation-evidence、scope-goal 沿用字符序并省略；output-manifest-identity、execution-context 沿用字符序并保留。最终 JSON 字节与历史指纹不升级，localeCompare 不保证跨语言环境统一。图重放/治理的手写字符串 canonical、工具失败参数及调度内部比较未整体替换；它们须另核序列化和边界，不能仅凭函数名相同统一。
 
 ### 在途操作集合
 
-`InFlightOperations.track(promise)` 按 Promise 身份去重、原样返回，成功或失败后移除；不启动任务、不重试，不生成未处理的清理拒绝。`size` 是当前集合大小，`drain()` 等调用时快照全部 settled 后返回，后来加入的任务不延长本次等待。它不封闭集合、不取消任务、不聚合历史错误，也不证明进程退出。
+`InFlightOperations.Track(promise)` 按 Promise 身份去重、原样返回，成功或失败后移除；不启动任务、不重试，不生成未处理的清理拒绝。`size` 是当前集合大小，`Drain()` 等调用时快照全部 settled 后返回，后来加入的任务不延长本次等待。它不封闭集合、不取消任务、不聚合历史错误，也不证明进程退出。
 
 ControlledFiles、ChatMaterialImports、三种 Run 能力、Codex 工具及 RPC 处理分别拥有实例。业务继续先停止接单/发出取消，再等待集合及平台 drain/真实 child exit，最后按原规则释放占用。未知写屏障、短门闩、授权和物理退出失败不因 Promise 已 settled 而解除；动态新增任务或循环排空场景不能机械替换成快照等待。
 
 ### LF 文本分帧
 
-`LineFramer` 只持有单输入流的尾部字符串，`push` 同步依次交付 LF 终止帧（不含 LF）；不 trim、解析消息或在 EOF 交付尾部。完整帧与未终止尾部由两个显式检查函数限定，异常原样传出。检查/消费者异常停止本次处理，已交付消息不回滚，后续帧仍留在实例；回调不得重入 push。按输入字符串缓冲，无全局共享状态，不声称对传入整个 chunk 有额外内存上限。
+`LineFramer` 只持有单输入流的尾部字符串，`Push` 同步依次交付 LF 终止帧（不含 LF）；不 trim、解析消息或在 EOF 交付尾部。完整帧与未终止尾部由两个显式检查函数限定，异常原样传出。检查/消费者异常停止本次处理，已交付消息不回滚，后续帧仍留在实例；回调不得重入 Push。按输入字符串缓冲，无全局共享状态，不声称对传入整个 chunk 有额外内存上限。
 
 Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 数、完整行先去单个 CR，Codex 用 UTF-8 字节数且保留 CR；两者忽略完整空白行，尾部仍检查。错误文案、请求关联、通知顺序、超时、凭据脱敏与进程终止留在适配器，不能借公共拆行统一协议策略。
 
@@ -84,19 +84,19 @@ Pi/Codex 都保留 32×1024×1024 的原限额值，但 Pi 用 UTF-16 code unit 
 
 ### 后端 JSON 补齐迁移
 
-岗位登记、知识来源、负责人执行绑定、人工决定依据及调度执行上下文复用 JsonUtils.orderJsonValue。前两项和人工依据省略对象 undefined，绑定与上下文保留；均使用字符比较器 a<b/-1、a>b/1，其余 0，不改为 localeCompare。手工拼接的 graph-reducer/module-governance 与按 Object.keys 排序后读取属性的 repeated-tool-failures 保留不同语义。调度器仅获通用 index 入口依赖，不开放 Node/files/web。
+岗位登记、知识来源、负责人执行绑定、人工决定依据及调度执行上下文复用 JsonUtils.OrderJsonValue。前两项和人工依据省略对象 undefined，绑定与上下文保留；均使用字符比较器 a<b/-1、a>b/1，其余 0，不改为 localeCompare。手工拼接的 graph-reducer/module-governance 与按 Object.keys 排序后读取属性的 repeated-tool-failures 保留不同语义。调度器仅获通用 index 入口依赖，不开放 Node/files/web。
 
 
 ### 精确文本脱敏
 
-strings.ts 的 StringUtils.redactLiteral 使用非重叠 split/join，将非空精确凭据替换为 [REDACTED]，空或 undefined 不改输入；不解释正则、大小写或 JSON 转义。Pi/Claude/Codex 为真实消费者，凭据选择、认证判断和事件编码顺序属于各引擎；不保证识别编码/变形后的凭据。
+strings.ts 的 StringUtils.RedactLiteral 使用非重叠 split/join，将非空精确凭据替换为 [REDACTED]，空或 undefined 不改输入；不解释正则、大小写或 JSON 转义。Pi/Claude/Codex 为真实消费者，凭据选择、认证判断和事件编码顺序属于各引擎；不保证识别编码/变形后的凭据。
 
 
 ### 有时限的请求关联表
 
-async.ts 的 PendingRequests 保存实例 ID→结算回调/定时器。register 拒绝覆盖重复 ID，take 移除并清计时器，未知 ID 无副作用；rejectAll 按登记顺序拒绝并清理，可传错误工厂保留每请求独立错误身份，表不封闭。调用方使用不抛错的 Promise resolve/reject。超时回调仍决定单项或整体失败；计时器触发不自动删除项，须由适配器 take/rejectAll。表不创建协议 ID、发送、重试、杀进程或确认退出。
+async.ts 的 PendingRequests 保存实例 ID→结算回调/定时器。Register 拒绝覆盖重复 ID，Take 移除并清计时器，未知 ID 无副作用；RejectAll 按登记顺序拒绝并清理，可传错误工厂保留每请求独立错误身份，表不封闭。调用方使用不抛错的 Promise resolve/reject。超时回调仍决定单项或整体失败；计时器触发不自动删除项，须由适配器 Take/RejectAll。表不创建协议 ID、发送、重试、杀进程或确认退出。
 
 
 ### 后端有向图校验
 
-graphs.ts 的 GraphUtils.isDirectedAcyclic 对唯一节点、完整端点执行无环判断；重复节点或缺端点抛错，自环返回 false，平行边逐条处理，空图为 true。Logic 任务图规则已先校验节点和端点，用它分别核验派发/依赖图与等待图，领域边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 保留。此实现不依赖前端，也不提供授权或任务可执行保证。
+graphs.ts 的 GraphUtils.IsDirectedAcyclic 对唯一节点、完整端点执行无环判断；重复节点或缺端点抛错，自环返回 false，平行边逐条处理，空图为 true。Logic 任务图规则已先校验节点和端点，用它分别核验派发/依赖图与等待图，领域边选择及 GRAPH_CYCLE/GRAPH_WAIT_CYCLE 保留。此实现不依赖前端，也不提供授权或任务可执行保证。

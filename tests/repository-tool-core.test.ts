@@ -63,14 +63,14 @@ it('正文按Unicode codepoint有界，全文hash保留，末页不能冒充全�
 it('仓库描述只允许本轮已捕获的read，不触发业务审批或原生文件守卫',async()=>{
   const guard=vi.fn(async()=>({allow:true})),approve=vi.fn(async()=>({allow:true}));
   for(const permission of ['read','ask','execute'] as const){
-    const result=await authorizeRunTool(request,{effects:['read'],native:false,scope},{workspaceId:identity.workspaceId,permission,guard,approve});
+    const result=await authorizeRunTool(request,{effects:['read'],native:false,scope},{workspaceId:identity.workspaceId,permission,Guard: guard,Approve: approve});
     expect(result.allow).toBe(true);expect(result.scope).toEqual(scope);expect(result.scope).not.toBe(scope);
   }
   expect(guard).not.toHaveBeenCalled();expect(approve).not.toHaveBeenCalled();
 });
 
 it('缺范围、错目标、错操作、跨工作区或假原生/写入描述均拒绝，不消费审批',async()=>{
-  const guard=vi.fn(async()=>({allow:true})),approve=vi.fn(async()=>({allow:true})),context={workspaceId:identity.workspaceId,permission:'execute' as const,guard,approve};
+  const guard=vi.fn(async()=>({allow:true})),approve=vi.fn(async()=>({allow:true})),context={workspaceId:identity.workspaceId,permission:'execute' as const,Guard: guard,Approve: approve};
   const descriptors:RunToolDescriptor[]=[
     {effects:['read'],native:false},{effects:['read'],native:false,scope:{kind:'workspace',workspaceId:'workspace'}},
     {effects:['read'],native:true,scope},{effects:['read','maintenance'],native:false,scope},{effects:['business-write'],native:false,scope},
@@ -85,14 +85,14 @@ it('缺范围、错目标、错操作、跨工作区或假原生/写入描述均
 
 it('仓库成功回执保留canonical身份，但不能作为任务步骤或Workflow交付证据',async()=>{
   const tools=new TaskProgressTools(undefined,async()=>{},{identity}),remote=toolReceipt(identity,request,decision,'succeeded',{text:'资料'});
-  await tools.call('cbim_task_plan',{expectedVersion:0,goal:'业务目标',reason:'执行业务',acceptance:['读取业务文件'],steps:[{id:'s',title:'核实成果',owner:'executor'}]});
+  await tools.Call('cbim_task_plan',{expectedVersion:0,goal:'业务目标',reason:'执行业务',acceptance:['读取业务文件'],steps:[{id:'s',title:'核实成果',owner:'executor'}]});
   const variants=[remote,{...remote,toolName:'read'},{...remote,scope:{kind:'workspace' as const,workspaceId:'workspace'}}];
-  for(const receipt of variants)tools.record(receipt,tools.generation);
-  await expect(tools.call('cbim_task_step',{expectedVersion:1,id:'s',state:'reported_done',evidenceIds:[remote.toolCallId]})).rejects.toThrow('证据不存在');
+  for(const receipt of variants)tools.Record(receipt,tools.generation);
+  await expect(tools.Call('cbim_task_step',{expectedVersion:1,id:'s',state:'reported_done',evidenceIds:[remote.toolCallId]})).rejects.toThrow('证据不存在');
   const binding:WorkflowContractBinding={moduleId:'module',workflowId:'module/flow',workflowVersion:'version',contract:{version:1,delivery:{requiredToolEvidence:[{id:'read-file',toolName:'read'}]}}};
   for(const receipt of variants)expect(()=>evaluateWorkflowDelivery([binding],[receipt],identity)).toThrow();
-  const local:ToolReceipt={...remote,toolName:'read',toolCallId:'local',scope:{kind:'workspace',workspaceId:'workspace'}};tools.record(local,tools.generation);
-  await expect(tools.call('cbim_task_step',{expectedVersion:1,id:'s',state:'reported_done',evidenceIds:['local']})).resolves.toBeDefined();
+  const local:ToolReceipt={...remote,toolName:'read',toolCallId:'local',scope:{kind:'workspace',workspaceId:'workspace'}};tools.Record(local,tools.generation);
+  await expect(tools.Call('cbim_task_step',{expectedVersion:1,id:'s',state:'reported_done',evidenceIds:['local']})).resolves.toBeDefined();
   expect(evaluateWorkflowDelivery([binding],[local],identity).checks[0].toolCallIds).toEqual(['local']);
 });
 

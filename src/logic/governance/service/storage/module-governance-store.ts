@@ -63,7 +63,7 @@ export class ModuleGovernanceStore
     return this.filename + '.anchor'
   }
 
-  private async bytes(file: string, limit: number)
+  private async Bytes(file: string, limit: number)
   {
     try
     {
@@ -81,12 +81,12 @@ export class ModuleGovernanceStore
     }
   }
 
-  async init()
+  async Init()
   {
     try
     {
-      const bytes = await this.bytes(this.filename, governanceLedgerLimit),
-        anchorBytes = await this.bytes(this.anchorFile, 4096);
+      const bytes = await this.Bytes(this.filename, governanceLedgerLimit),
+        anchorBytes = await this.Bytes(this.anchorFile, 4096);
       let anchor = anchorBytes ? anchorSchema.parse(JSON.parse(anchorBytes.toString('utf8'))) : undefined;
       if (!bytes)
       {
@@ -101,7 +101,7 @@ export class ModuleGovernanceStore
       }
       const value = ledgerSchema.parse(JSON.parse(bytes.toString('utf8')));
       valid(value.workspaceId === this.workspaceId, '治理账本工作区身份不一致');
-      this.validate(value.commands);
+      this.Validate(value.commands);
       const head = { revision: value.commands.length, hash: hash(bytes) };
       if (!anchor)
       {
@@ -129,31 +129,31 @@ export class ModuleGovernanceStore
     }
   }
 
-  private current()
+  private Current()
   {
     if (this.uncertain || !this.anchor)
       fail('GOVERNANCE_DATA', '治理账本写入结果未知，请重开核实原记录；当前保护未解除')
   }
 
-  all(): readonly GovernanceCommand[]
+  All(): readonly GovernanceCommand[]
   {
-    this.current();
+    this.Current();
     return structuredClone(this.commands)
   }
 
-  find(commandId: string)
+  Find(commandId: string)
   {
-    this.current();
+    this.Current();
     return structuredClone(this.commands.find(command => command.receipt.commandId === commandId))
   }
 
   /** 磁盘写入成功后才发布新状态；失败保留原账本，不静默裁剪历史。 */
-  async append(command: GovernanceCommand)
+  async Append(command: GovernanceCommand)
   {
-    this.current();
+    this.Current();
     const parsed = commandSchema.parse(command),
       next = [...this.commands, parsed];
-    this.validate(next);
+    this.Validate(next);
     const encoded = json({ version: 1, workspaceId: this.workspaceId, ledgerId: this.anchor!.ledgerId, commands: next });
     if (Buffer.byteLength(encoded) > governanceLedgerLimit || next.length > 512)
       fail('GOVERNANCE_LIMIT', '治理历史已达本机有界上限，未保存新命令');
@@ -175,7 +175,7 @@ export class ModuleGovernanceStore
     }
   }
 
-  private validate(commands: GovernanceCommand[])
+  private Validate(commands: GovernanceCommand[])
   {
     const ids = new Set<string>(),
       protections = new Map<string, ModuleGovernanceProtection>(),

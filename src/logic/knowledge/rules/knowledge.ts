@@ -48,7 +48,7 @@ export class Rules
   {
   }
 
-  async init()
+  async Init()
   {
     const ajv = new Ajv2020({ allErrors: true, strict: false });
     for (const [key, file] of Object.entries({ module: 'business/module.schema.json', agent: 'capability/agent.schema.json', skills: 'capability/team-skills.schema.json', connectors: 'connector/registry.schema.json' }))
@@ -56,7 +56,7 @@ export class Rules
   }
 
   /** 对传入的完整候选知识校验并派生索引；读取 source 存在性但不修改业务工程。 */
-  async validate(root: string, files: KnowledgeFile[]): Promise<Validation>
+  async Validate(root: string, files: KnowledgeFile[]): Promise<Validation>
   {
     const texts = new Map(files.map(f => [f.path, f.text]));
     const parsed = new Map<string, any>();
@@ -142,8 +142,8 @@ export class Rules
     if (schema('.cbim/connectors/registry.json', 'connectors'))
     {
       const registry = new ConnectorRegistry(data('.cbim/connectors/registry.json').connectors);
-      connectorIds = registry.ids();
-      for (const _id of registry.duplicates())
+      connectorIds = registry.Ids();
+      for (const _id of registry.Duplicates())
         add('.cbim/connectors/registry.json', 'duplicate', '链接器标识或提供方身份重复');
     }
     let ignores = ignore({ ignorecase: true });
@@ -186,9 +186,9 @@ export class Rules
         add(f.path, 'name', '模块目录和名称须一致并使用小写 snake_case');
       // 旧 maintenance 仅保留为历史描述，不再生成关系、核实真人或作为执行门禁。
       ref(id, d.overview);
-      this.body(id, d, texts.get(id + '/module.md') || '', add);
+      this.Body(id, d, texts.get(id + '/module.md') || '', add);
       const actual = files.filter(x => x.path.startsWith(id + '/workflows/') && x.path.endsWith('/workflow.md')).map(x => x.path);
-      this.inventory(id, d.workflows, actual, ref, add, 'workflow');
+      this.Inventory(id, d.workflows, actual, ref, add, 'workflow');
       for (const source of d.sources)
       {
         const location = source.location.replaceAll('\\', '/');
@@ -283,7 +283,7 @@ export class Rules
           list = data(p).skills
       }
       const actual = files.filter(f => f.path.startsWith(owner + '/skills/') && f.path.endsWith('/SKILL.md')).map(f => f.path);
-      this.inventory(owner, list, actual, ref, add, 'skill');
+      this.Inventory(owner, list, actual, ref, add, 'skill');
       inventories.set(owner, list);
     }
     const skills: NonNullable<Validation['skills']> = {};
@@ -418,7 +418,7 @@ export class Rules
     return { issues, indexes, skills, tree: { nodes, roots: [...modules.keys()].filter(id => !parents.has(id)).sort() }, structural: !issues.some(x => x.severity === 'error'), architecture: 'review-required', business: 'not-run' };
   }
 
-  private inventory(owner: string, list: any[], actual: string[], ref: (o: string, r: string) => string, add: (p: string, c: string, m: string) => void, kind: string)
+  private Inventory(owner: string, list: any[], actual: string[], ref: (o: string, r: string) => string, add: (p: string, c: string, m: string) => void, kind: string)
   {
     const paths = new Set<string>(),
       names = new Set<string>();
@@ -440,7 +440,7 @@ export class Rules
         add(p, 'inventory', '清单不是有效方法入口');
   }
 
-  private body(id: string, d: any, text: string, add: (p: string, c: string, m: string) => void)
+  private Body(id: string, d: any, text: string, add: (p: string, c: string, m: string) => void)
   {
     const p = id + '/module.md';
     const sections = moduleSections;

@@ -22,34 +22,34 @@ import { memberPublicTask } from '../../runtime/monitoring/member-events';
 /** 平台必须重新枚举全部原范围；check 的结论与摘要在服务再次核对，不接受只验旧文件列表。 */
 export interface OutputManifestReportPorts
 {
-  inspect(run: DispatchRun): Promise<RunSummary>;
+  Inspect(run: DispatchRun): Promise<RunSummary>;
 
   /** 固定新协议日志入口；缺省保持不可用，不回退旧派工路径。 */
-  inspectAgent?(run: AgentBusinessRun): Promise<RunSummary>;
+  InspectAgent?(run: AgentBusinessRun): Promise<RunSummary>;
 
-  check(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
+  Check(expected: OutputManifestSnapshot, signal: AbortSignal): Promise<OutputManifestCheck>;
 
-  acquireRead(): () => void;
+  AcquireRead(): () => void;
 }
 
 export class OutputManifestReportService
 {
-  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'assert' | 'read'>, private readonly store: Pick<DispatchStore, 'read'>, private readonly ports: OutputManifestReportPorts)
+  constructor(private readonly owner: Pick<KnowledgeWorkspace, 'entry' | 'Assert' | 'Read'>, private readonly store: Pick<DispatchStore, 'Read'>, private readonly ports: OutputManifestReportPorts)
   {
   }
 
   /** 缺 manifestId 只读历史引用；明确选择后才读取当前目录，失败不会自动选其它清单或重试。 */
-  async read(raw: unknown): Promise<OutputManifestReport>
+  async Read(raw: unknown): Promise<OutputManifestReport>
   {
     const parsed = outputManifestQuerySchema.safeParse(raw);
     if (!parsed.success)
       fail('MANIFEST_INPUT_INVALID', '完整产物清单查询参数无效');
     const { manifestId, ...identity } = parsed.data;
-    this.owner.assert();
+    this.owner.Assert();
     if (identity.workspaceId !== this.owner.entry.id)
       fail('GRAPH_IDENTITY_MISMATCH', '完整产物清单不属于当前工作区');
-    const before = await this.store.read(),
-      facts = this.facts(before, identity.rootSessionId, identity.taskId, identity.runId),
+    const before = await this.store.Read(),
+      facts = this.Facts(before, identity.rootSessionId, identity.taskId, identity.runId),
       { task, run, recursive } = facts;
     const report: OutputManifestReport = { identity, checkedAt: new Date().toISOString(), basis: '0'.repeat(64), consistency: 'stable', log: 'unavailable', coverage: 'declared_scope_complete', manifests: [], issues: [] };
     const issue = (code: string, message: string) =>
@@ -73,7 +73,7 @@ export class OutputManifestReportService
     {
       try
       {
-        summary = await this.inspect(run)
+        summary = await this.Inspect(run)
       }
       catch
       {
@@ -119,16 +119,16 @@ export class OutputManifestReportService
               unavailable('派发状态与日志终态尚未一致');
             else
             {
-              const current = await this.owner.read();
+              const current = await this.owner.Read();
               let release: (() => void) | undefined;
               try
               {
-                release = this.ports.acquireRead();
+                release = this.ports.AcquireRead();
                 const expected = record.manifest.snapshot,
                   signal = AbortSignal.timeout(artifactScopeLimits.readMs),
-                  check = outputManifestCheckSchema.parse(await this.ports.check(structuredClone(expected), signal));
+                  check = outputManifestCheckSchema.parse(await this.ports.Check(structuredClone(expected), signal));
                 signal.throwIfAborted();
-                this.owner.assert();
+                this.owner.Assert();
                 if (check.expectedHash !== record.manifest.manifestHash)
                   throw Error('复核换绑原清单');
                 if (check.state === 'unverifiable')
@@ -149,7 +149,7 @@ export class OutputManifestReportService
               {
                 release?.()
               }
-              const latest = await this.owner.read();
+              const latest = await this.owner.Read();
               if (latest.revision !== current.revision)
               {
                 report.consistency = 'changed_during_read';
@@ -171,9 +171,9 @@ export class OutputManifestReportService
         }
       }
     }
-    const after = await this.store.read();
-    this.owner.assert();
-    if (this.stamp(facts) !== this.stamp(this.facts(after, identity.rootSessionId, identity.taskId, identity.runId)))
+    const after = await this.store.Read();
+    this.owner.Assert();
+    if (this.Stamp(facts) !== this.Stamp(this.Facts(after, identity.rootSessionId, identity.taskId, identity.runId)))
     {
       report.consistency = 'changed_during_read';
       unavailable('读取期间任务或运行事实变化');
@@ -183,7 +183,7 @@ export class OutputManifestReportService
     {
       try
       {
-        const afterLog = await this.inspect(run);
+        const afterLog = await this.Inspect(run);
         if (afterLog.logIntegrity?.partialTail !== false || hash(json(afterLog.events)) !== logStamp)
           throw Error('日志变化')
       }
@@ -194,22 +194,22 @@ export class OutputManifestReportService
         issue('MANIFEST_LOG_CHANGED', '复核期间原日志变化，本次观察无效')
       }
     }
-    report.basis = hash(json({ state: this.stamp(facts), log: logStamp ?? report.log, scopes: report.scopes, manifests: report.manifests, verification: report.verification, issues: report.issues, consistency: report.consistency }));
+    report.basis = hash(json({ state: this.Stamp(facts), log: logStamp ?? report.log, scopes: report.scopes, manifests: report.manifests, verification: report.verification, issues: report.issues, consistency: report.consistency }));
     return outputManifestReportSchema.parse(report);
   }
 
-  private inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
+  private Inspect(run: DispatchRun | AgentBusinessRun): Promise<RunSummary>
   {
     if ('protocol' in run)
     {
-      if (!this.ports.inspectAgent)
+      if (!this.ports.InspectAgent)
         fail('EVIDENCE_SOURCE_UNAVAILABLE', '未装配递归运行只读日志入口');
-      return this.ports.inspectAgent(run)
+      return this.ports.InspectAgent(run)
     }
-    return this.ports.inspect(run);
+    return this.ports.Inspect(run);
   }
 
-  private facts(state: DispatchState, root: string, taskId: string, runId: string)
+  private Facts(state: DispatchState, root: string, taskId: string, runId: string)
   {
     const graph = state.graphs.find(g => g.identity.workspaceId === this.owner.entry.id && g.identity.rootSessionId === root),
       task = graph?.tasks.find(t => t.taskId === taskId),
@@ -221,7 +221,7 @@ export class OutputManifestReportService
     return { graph, task, run, scope, recursive };
   }
 
-  private stamp(facts: ReturnType<OutputManifestReportService['facts']>)
+  private Stamp(facts: ReturnType<OutputManifestReportService['Facts']>)
   {
     return hash(json({ graph: facts.graph.cursor, task: facts.task, run: facts.run, scope: facts.scope }))
   }

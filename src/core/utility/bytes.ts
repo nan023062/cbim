@@ -34,7 +34,7 @@ export class ByteUtils
      * 失败请求 cancel 并释放锁/监听；底层 cancel 失败不覆盖原错误，也不代表网络/进程已经退出。
      * 分块复制后合并，保留字节视图范围；存储 O(maxBytes)，不适用于大文件落盘下载。
      */
-  public static async readBoundedBytes(body: ReadableStream<Uint8Array> | null, options: { maxBytes: number; signal?: AbortSignal; }): Promise<Uint8Array>
+  public static async ReadBoundedBytes(body: ReadableStream<Uint8Array> | null, options: { maxBytes: number; signal?: AbortSignal; }): Promise<Uint8Array>
   {
     const { maxBytes, signal } = options;
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 0)

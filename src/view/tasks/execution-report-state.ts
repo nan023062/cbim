@@ -92,63 +92,63 @@ export class ExecutionReportController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: ExecutionReportState)
+  private Publish(value: ExecutionReportState)
   {
     this.value = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
   /** 切换/卸载只忽略迟到读取；不停止后端任务或改变日志。 */
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.value = { ...this.value, loading: false }
   }
 
   /** 新草稿必须重新显式核实；清除旧缓存并作废已发出的读取，绝不自动回读或恢复运行。 */
-  invalidate()
+  Invalidate()
   {
-    this.generation.advance();
-    this.publish({ loading: false, error: '' })
+    this.generation.Advance();
+    this.Publish({ loading: false, error: '' })
   }
 
-  async inspect()
+  async Inspect()
   {
-    await this.pull()
+    await this.Pull()
   }
 
-  async more()
+  async More()
   {
     const report = this.value.report;
     if (!report?.tools.nextCursor || report.consistency !== 'stable')
       return;
-    await this.pull(report.tools.nextCursor)
+    await this.Pull(report.tools.nextCursor)
   }
 
-  private async pull(cursor?: NonNullable<ExecutionReportInput['cursor']>)
+  private async Pull(cursor?: NonNullable<ExecutionReportInput['cursor']>)
   {
     if (this.value.loading)
       return;
     const { workspaceId, rootSessionId, taskId, runId } = this.selection,
       request: ExecutionReportInput = { workspaceId, rootSessionId, taskId, ...(runId ? { runId } : {}), limit: this.limit, ...(cursor ? { cursor } : {}) };
-    const generation = this.generation.capture(),
+    const generation = this.generation.Capture(),
       previous = this.value.report;
-    this.publish({ ...this.value, loading: true, error: '' });
+    this.Publish({ ...this.value, loading: true, error: '' });
     try
     {
       const response = await this.read(request);
-      if (!this.generation.isCurrent(generation))
+      if (!this.generation.IsCurrent(generation))
         return;
       const report = applyExecutionReport(previous, response, request, this.selection);
-      this.publish({ report, loading: false, error: '' })
+      this.Publish({ report, loading: false, error: '' })
     }
     catch (cause)
     {
-      if (this.generation.isCurrent(generation))
-        this.publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '执行记录核实失败，请重新读取' })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '执行记录核实失败，请重新读取' })
     }
   }
 }

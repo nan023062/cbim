@@ -22,7 +22,7 @@ export interface KnowledgeSourceWorkspace extends KnowledgeWorkspace
 {
   readonly sources?: KnowledgeSources;
 
-  withSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
+  WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>): Promise<T>
 }
 
 /** 只读取同次校验的有效注册表与原定义字节；模块可见性不等于 tree.nodes 中存在。 */
@@ -67,10 +67,10 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   {
   }
 
-  async build(request: ChangeRequest, current: Snapshot, projected: Snapshot, before: Record<string, string | null>, after: Record<string, string | null>, plan?: PlannedKnowledgeCommit): Promise<KnowledgeSourceJournal>
+  async Build(request: ChangeRequest, current: Snapshot, projected: Snapshot, before: Record<string, string | null>, after: Record<string, string | null>, plan?: PlannedKnowledgeCommit): Promise<KnowledgeSourceJournal>
   {
-    const state = await this.store.read();
-    this.assertAvailable(state);
+    const state = await this.store.Read();
+    this.AssertAvailable(state);
     const previous = sourceObservations(current),
       next = sourceObservations(projected),
       transitionId = sourceTransitionId(request.workspaceId, request.requestId),
@@ -114,11 +114,11 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   }
 
   /** 原 prepared 已可靠保存才进入此入口；保存失败或未知不能开始知识文件写入。 */
-  async prepare(source: KnowledgeSourceJournal)
+  async Prepare(source: KnowledgeSourceJournal)
   {
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       event = { version: 1 as const, kind: 'prepared' as const, changeId: randomUUID(), workspaceId: this.workspaceId, sourceCursor: nextKnowledgeSourceCursor(state, randomUUID()), recordedAt: source.transition.preparedAt, transition: source.transition };
-    await this.store.transact(knowledgeSourceCommand(event), async current =>
+    await this.store.Transact(knowledgeSourceCommand(event), async current =>
     {
       if (!isDeepStrictEqual(current.sourceCursor ?? null, source.transition.expectedSourceCursor))
         fail('SOURCE_STALE', '来源登记已变化，未写入知识');
@@ -127,9 +127,9 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   }
 
   /** 只按原 journal 事实结算；不得在调用方的知识 rollback catch 内执行。 */
-  async settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string)
+  async Settle(source: KnowledgeSourceJournal, outcome: 'committed' | 'rolled_back', proofHash: string, revision?: string)
   {
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       transition = state.knowledgeSourceTransitions?.find(x => x.transitionId === source.transition.transitionId);
     if (!transition)
     {
@@ -143,14 +143,14 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
         fail('SOURCE_JOURNAL_INVALID', '来源结算与原日志不同');
       return
     }
-    await this.verify(source, true);
+    await this.Verify(source, true);
     const event = { version: 1 as const, kind: 'resolved' as const, changeId: randomUUID(), workspaceId: this.workspaceId, sourceCursor: nextKnowledgeSourceCursor(state, randomUUID()), recordedAt: new Date().toISOString(), transitionId: transition.transitionId, requestFingerprint: transition.requestFingerprint, journalBindingHash: transition.journalBindingHash, outcome, journalProofHash: proofHash, ...(revision ? { committedRevision: revision } : {}) };
-    await this.store.transact(knowledgeSourceCommand(event), async () => ({ knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) }));
+    await this.store.Transact(knowledgeSourceCommand(event), async () => ({ knowledgeSourceChanges: [event], receipt: knowledgeSourceReceipt(event) }));
   }
 
-  async verify(source: KnowledgeSourceJournal, required: boolean)
+  async Verify(source: KnowledgeSourceJournal, required: boolean)
   {
-    const state = await this.store.read(),
+    const state = await this.store.Read(),
       saved = state.knowledgeSourceTransitions?.find(x => x.transitionId === source.transition.transitionId);
     if (!saved)
     {
@@ -163,25 +163,25 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
       fail('SOURCE_JOURNAL_INVALID', '来源屏障与原知识事务不一致')
   }
 
-  async pending()
+  async Pending()
   {
-    return (await this.store.read()).knowledgeSourceTransitions?.filter(x => x.state === 'pending') ?? []
+    return (await this.store.Read()).knowledgeSourceTransitions?.filter(x => x.state === 'pending') ?? []
   }
 
-  async transitions()
+  async Transitions()
   {
-    return (await this.store.read()).knowledgeSourceTransitions ?? []
+    return (await this.store.Read()).knowledgeSourceTransitions ?? []
   }
 
-  assertAvailable(state: DispatchState)
+  AssertAvailable(state: DispatchState)
   {
     if (knowledgeSourcePending(state))
       fail('SOURCE_PENDING', '来源事务尚未核实，暂不能采纳或建立新责任')
   }
 
-  selection(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey): SourceSelection
+  Selection(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey): SourceSelection
   {
-    this.assertAvailable(state);
+    this.AssertAvailable(state);
     if (!snapshot.validation?.structural)
       fail('SOURCE_INVALID', '来源知识结构尚未通过校验');
     const observation = sourceObservations(snapshot).get(knowledgeSourceKey(source));
@@ -191,9 +191,9 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
   }
 
   /** 首次观察仅在明确采纳事务中分配代次；预览不生成 UUID。 */
-  capture(state: DispatchState, selection: SourceSelection, consumer: { kind: 'workspace_member' | 'module_ownership'; changeId: string }, at: string): { ref: CapabilitySourceRef; event?: KnowledgeSourceCapture }
+  Capture(state: DispatchState, selection: SourceSelection, consumer: { kind: 'workspace_member' | 'module_ownership'; changeId: string }, at: string): { ref: CapabilitySourceRef; event?: KnowledgeSourceCapture }
   {
-    this.assertAvailable(state);
+    this.AssertAvailable(state);
     if (selection.kind === 'builtin')
       return { ref: selection.ref };
     const current = currentKnowledgeSource(state, selection.source);
@@ -209,7 +209,7 @@ export class KnowledgeSources implements KnowledgeSourceAuthority
     return { ref: knowledgeSourceRef(event.generation), event };
   }
 
-  status(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey, saved?: CapabilitySourceRef): KnowledgeSourceReadState
+  Status(state: DispatchState, snapshot: Snapshot, source: KnowledgeSourceKey, saved?: CapabilitySourceRef): KnowledgeSourceReadState
   {
     const pending = knowledgeSourcePending(state);
     if (pending)

@@ -10,13 +10,13 @@ import { admissionIdentitySchema, admissionRequestSchema, admissionPolicySchema,
 /** 本地端口必须同步；canAcquire/isCurrent 只查询，acquire 原子取得本地租约，通知不能直接绕过 attempt 执行。 */
 export interface LocalAdmissionPort
 {
-  canAcquire(): undefined | 'workspace_conflict' | 'agent_busy';
+  CanAcquire(): undefined | 'workspace_conflict' | 'agent_busy';
 
-  acquire(): () => void;
+  Acquire(): () => void;
 
-  isCurrent(): boolean;
+  IsCurrent(): boolean;
 
-  onReady?(): void;
+  OnReady?(): void;
 }
 
 export type AdmissionAttempt =
@@ -94,7 +94,7 @@ export class GlobalRunAdmission
 
   private wakeScheduled = false;
 
-  private changed()
+  private Changed()
   {
     this.revision++;
     if (this.changeScheduled)
@@ -115,7 +115,7 @@ export class GlobalRunAdmission
     });
   }
 
-  observeChange(listener: () => void)
+  ObserveChange(listener: () => void)
   {
     this.listeners.add(listener);
     return () =>
@@ -124,13 +124,13 @@ export class GlobalRunAdmission
     }
   }
 
-  private current(request: AdmissionRequest, port: LocalAdmissionPort)
+  private Current(request: AdmissionRequest, port: LocalAdmissionPort)
   {
     if (this.retired.has(ownerKey(request.workspaceId, request.ownerEpoch)))
       return false;
     try
     {
-      return port.isCurrent() === true
+      return port.IsCurrent() === true
     }
     catch
     {
@@ -138,11 +138,11 @@ export class GlobalRunAdmission
     }
   }
 
-  private local(port: LocalAdmissionPort): AdmissionWaitReason | undefined
+  private Local(port: LocalAdmissionPort): AdmissionWaitReason | undefined
   {
     try
     {
-      const value = port.canAcquire();
+      const value = port.CanAcquire();
       return value === undefined ? undefined : value === 'agent_busy' ? 'agent_busy' : 'workspace_conflict'
     }
     catch
@@ -151,21 +151,21 @@ export class GlobalRunAdmission
     }
   }
 
-  private prune()
+  private Prune()
   {
     let removed = false;
     for (const [id, item] of this.waiting)
-      if (!this.current(item.request, item.port))
+      if (!this.Current(item.request, item.port))
       {
         this.waiting.delete(id);
-        this.changed();
+        this.Changed();
         removed = true
       }
     return removed
   }
 
   /** FIFO 只比较可领取票；较早 writer 即使本地阻塞也形成同工作区屏障，不能被后来 reader 饿死。 */
-  private evaluate(candidate?: Waiting)
+  private Evaluate(candidate?: Waiting)
   {
     const entries = [...this.waiting.values(), ...(candidate ? [candidate] : [])].sort((left, right) => left.ticket.order - right.ticket.order);
     let free = Math.max(0, this.policy.maxConcurrentRuns - this.occupied.size);
@@ -184,7 +184,7 @@ export class GlobalRunAdmission
         id = key(request),
         workspace = request.workspaceId,
         agent = request.agentInstanceId ? JSON.stringify([workspace, request.agentInstanceId]) : undefined;
-      let reason = this.local(item.port);
+      let reason = this.Local(item.port);
       if (writers.has(workspace))
         reason = 'fairness';
       else if (agent && selectedAgents.has(agent))
@@ -207,7 +207,7 @@ export class GlobalRunAdmission
     return choices;
   }
 
-  private updateReasons(choices: ReturnType<GlobalRunAdmission['evaluate']>)
+  private UpdateReasons(choices: ReturnType<GlobalRunAdmission['Evaluate']>)
   {
     for (const [id, item] of this.waiting)
     {
@@ -215,7 +215,7 @@ export class GlobalRunAdmission
       if (reason && reason !== item.ticket.reason)
       {
         item.ticket = { ...item.ticket, reason };
-        this.changed()
+        this.Changed()
       }
     }
   }
@@ -224,7 +224,7 @@ export class GlobalRunAdmission
        * 同请求排队重试保留原票；变参拒绝，已占用不返回第二把释放句柄。direct 拒绝不排票。
        * 本地领取失败不会创建全局占用；只有成功返回 granted 才允许调用方继续创建 run/模型。
        */
-  attempt(raw: AdmissionRequest, port: LocalAdmissionPort): AdmissionAttempt
+  Attempt(raw: AdmissionRequest, port: LocalAdmissionPort): AdmissionAttempt
   {
     if (this.inAttempt)
       fail('ADMISSION_REENTRANT', '准入的同步本地检查不能重入领取');
@@ -243,12 +243,12 @@ export class GlobalRunAdmission
     this.inAttempt = true;
     try
     {
-      if (this.prune())
-        this.wake();
-      if (!this.current(request, port))
+      if (this.Prune())
+        this.Wake();
+      if (!this.Current(request, port))
       {
         if (this.waiting.delete(id))
-          this.changed();
+          this.Changed();
         return { kind: 'denied', reason: 'stale_request' }
       }
       // 等待者仍由当前调用的可信本地端口负责，身份/来源/权限保持原值，不存储模型正文。
@@ -256,21 +256,21 @@ export class GlobalRunAdmission
       if (item)
         item.port = port;
       const candidate = item ?? { request, ticket: { ...request, ticketId: randomUUID(), order: this.order + 1, requestedAt: new Date().toISOString(), reason: 'fairness' as const }, port };
-      const choices = this.evaluate(item ? undefined : candidate),
+      const choices = this.Evaluate(item ? undefined : candidate),
         choice = choices.get(id)!;
-      this.updateReasons(choices);
+      this.UpdateReasons(choices);
       if (!choice.ready)
-        return this.waitOrDeny(candidate, choice.reason);
-      if (!this.current(request, port))
+        return this.WaitOrDeny(candidate, choice.reason);
+      if (!this.Current(request, port))
       {
         if (this.waiting.delete(id))
-          this.changed();
+          this.Changed();
         return { kind: 'denied', reason: 'stale_request' }
       }
       let releaseLocal: () => void;
       try
       {
-        releaseLocal = port.acquire();
+        releaseLocal = port.Acquire();
         if (typeof releaseLocal !== 'function')
           throw Error('invalid local release')
       }
@@ -281,26 +281,26 @@ export class GlobalRunAdmission
             code?: string
           })?.code;
         if (code === 'WORKSPACE_EXECUTION_BUSY' || code === 'MEMBER_BUSY')
-          return this.waitOrDeny(candidate, code === 'MEMBER_BUSY' ? 'agent_busy' : 'workspace_conflict');
+          return this.WaitOrDeny(candidate, code === 'MEMBER_BUSY' ? 'agent_busy' : 'workspace_conflict');
         if (this.waiting.delete(id))
         {
-          this.changed();
-          this.wake()
+          this.Changed();
+          this.Wake()
         }
         return { kind: 'denied', reason: 'local_acquire_failed' };
       }
       // acquire 契约要求同步；若它在内部触发停止，立即退回本地占用而不创建全局许可。
-      if (!this.current(request, port))
+      if (!this.Current(request, port))
       {
         releaseLocal();
         if (this.waiting.delete(id))
-          this.changed();
+          this.Changed();
         return { kind: 'denied', reason: 'stale_request' }
       }
       this.waiting.delete(id);
       const view: AdmissionOccupant = { ...request, acquiredAt: new Date().toISOString() };
       this.occupied.set(id, { request, view });
-      this.changed();
+      this.Changed();
       let released = false;
       return {
         kind: 'granted', occupant: clone(view), release: () =>
@@ -309,7 +309,7 @@ export class GlobalRunAdmission
             return;
           released = true;
           this.occupied.delete(id);
-          this.changed();
+          this.Changed();
           // 先退出全局，再释放本地；finally 保证异常释放也会通知其它工作区，旧句柄不可二次释放新占用。
           try
           {
@@ -317,7 +317,7 @@ export class GlobalRunAdmission
           }
           finally
           {
-            this.wake()
+            this.Wake()
           }
         }
       };
@@ -328,7 +328,7 @@ export class GlobalRunAdmission
     }
   }
 
-  private waitOrDeny(item: Waiting, reason: AdmissionWaitReason): AdmissionAttempt
+  private WaitOrDeny(item: Waiting, reason: AdmissionWaitReason): AdmissionAttempt
   {
     if (item.request.source === 'direct')
       return { kind: 'denied', reason };
@@ -338,19 +338,19 @@ export class GlobalRunAdmission
     {
       item.ticket = { ...item.ticket, order: ++this.order, reason };
       this.waiting.set(id, item);
-      this.changed()
+      this.Changed()
     }
     else if (old.ticket.reason !== reason)
     {
       old.ticket = { ...old.ticket, reason };
-      this.changed()
+      this.Changed()
     }
     // 排队本身不触发 onReady；只有外部状态变化唤醒，防止无资源重试形成微任务忙循环。
     return { kind: 'waiting', ticket: clone(this.waiting.get(id)!.ticket) };
   }
 
   /** 只撤销等待票；提供的可选身份必须匹配，不会中止或假释放已运行占用。 */
-  withdraw(raw: AdmissionIdentity): boolean
+  Withdraw(raw: AdmissionIdentity): boolean
   {
     const parsed = admissionIdentitySchema.safeParse(raw);
     if (!parsed.success)
@@ -363,13 +363,13 @@ export class GlobalRunAdmission
     if (Object.entries(identity).some(([field, value]) => (item.request as Record<string, unknown>)[field] !== value))
       fail('ADMISSION_REQUEST_CONFLICT', '撤票身份与原执行请求不一致');
     this.waiting.delete(id);
-    this.changed();
-    this.wake();
+    this.Changed();
+    this.Wake();
     return true;
   }
 
   /** 工作区关闭代际只撤等待；既有运行持续占用名额直到其真实释放函数返回。 */
-  retireOwner(workspaceId: string, ownerEpoch: number): void
+  RetireOwner(workspaceId: string, ownerEpoch: number): void
   {
     const parsed = admissionIdentitySchema.pick({ workspaceId: true, ownerEpoch: true }).safeParse({ workspaceId, ownerEpoch });
     if (!parsed.success)
@@ -383,12 +383,12 @@ export class GlobalRunAdmission
         changed = true
       }
     if (changed)
-      this.changed();
-    this.wake();
+      this.Changed();
+    this.Wake();
   }
 
   /** 合并外部释放/配置/本地状态变化，仅通知可轮到的原协调器；不直接创建模型或运行。 */
-  wake(): void
+  Wake(): void
   {
     if (this.wakeScheduled)
       return;
@@ -396,18 +396,18 @@ export class GlobalRunAdmission
     queueMicrotask(() =>
     {
       this.wakeScheduled = false;
-      this.prune();
-      const choices = this.evaluate();
-      this.updateReasons(choices);
+      this.Prune();
+      const choices = this.Evaluate();
+      this.UpdateReasons(choices);
       const ready = [...this.waiting].filter(([id]) => choices.get(id)?.ready).map(([id]) => id);
       for (const id of ready)
       {
         const item = this.waiting.get(id);
-        if (!item || !this.current(item.request, item.port) || !this.evaluate().get(id)?.ready)
+        if (!item || !this.Current(item.request, item.port) || !this.Evaluate().get(id)?.ready)
           continue;
         try
         {
-          item.port.onReady?.()
+          item.port.OnReady?.()
         }
         catch
         {
@@ -418,7 +418,7 @@ export class GlobalRunAdmission
   }
 
   /** 持久设置只允许在启动恢复阶段安装一次；不能在执行过请求或改配后回滚版本。 */
-  restorePolicy(raw: AdmissionPolicy): void
+  RestorePolicy(raw: AdmissionPolicy): void
   {
     if (this.attempted || this.configured || this.policyRestored || this.occupied.size || this.waiting.size || this.inAttempt)
       fail('ADMISSION_RESTORE_FORBIDDEN', '运行准入已经开始，不能覆盖恢复策略');
@@ -429,12 +429,12 @@ export class GlobalRunAdmission
     if (!same(this.policy, parsed.data))
     {
       this.policy = parsed.data;
-      this.changed()
+      this.Changed()
     }
   }
 
   /** revision 是当前策略的 CAS 版本；额度下降不取消已有占用。调用方须先可靠保存新策略再调用。 */
-  configure(raw: AdmissionPolicy): AdmissionPolicy
+  Configure(raw: AdmissionPolicy): AdmissionPolicy
   {
     if (this.inAttempt)
       fail('ADMISSION_REENTRANT', '准入领取期间不能重入修改策略');
@@ -445,23 +445,23 @@ export class GlobalRunAdmission
       fail('ADMISSION_POLICY_CONFLICT', '执行并发策略版本已变化，请重新读取');
     this.configured = true;
     this.policy = { revision: this.policy.revision + 1, maxConcurrentRuns: parsed.data.maxConcurrentRuns };
-    this.changed();
-    this.wake();
+    this.Changed();
+    this.Wake();
     return clone(this.policy);
   }
 
-  snapshot(): AdmissionSnapshot
+  Snapshot(): AdmissionSnapshot
   {
     return { cursor: { streamId: this.streamId, revision: this.revision }, policy: clone(this.policy), occupied: [...this.occupied.values()].map(item => clone(item.view)), waiting: [...this.waiting.values()].sort((a, b) => a.ticket.order - b.ticket.order).map(item => clone(item.ticket)) }
   }
 
   /** 读取不执行本地回调、不清理票据、不扫描日志；不同/未来游标返回新快照，同游标为 noop。 */
-  read(cursor?: AdmissionCursor): AdmissionRead
+  Read(cursor?: AdmissionCursor): AdmissionRead
   {
     if (cursor !== undefined && !admissionCursorSchema.safeParse(cursor).success)
       fail('ADMISSION_CURSOR_INVALID', '运行准入游标无效');
     if (cursor?.streamId === this.streamId && cursor.revision === this.revision)
       return { kind: 'noop', cursor: { ...cursor } };
-    return { kind: 'snapshot', snapshot: this.snapshot() };
+    return { kind: 'snapshot', snapshot: this.Snapshot() };
   }
 }

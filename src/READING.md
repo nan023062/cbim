@@ -32,9 +32,9 @@ flowchart TB
 以下是普通桌面会话的入口链。新会话、排队输入和历史续接由不同操作承接，不能从界面“发送成功”推断模型已经完成业务。
 
 1. [view/main.tsx](view/main.tsx) 挂载 [App](view/shell/App.tsx)。进入 [Conversation](view/conversation/Conversation.tsx) 的 `send`，先看工作区、任务、运行和模型选择，再看分支：新会话调用 `loop.chat`；已有会话按状态调用 `loop.enqueue` 或 `loop.resume`；安全等待交给续接控制器。
-2. [preload](bridge/preload/preload.ts) 将固定调用转交 `cbim:call`。[桌面入口](bridge/server/main.ts) 核实调用窗口与请求；[Bridge Application](bridge/server/application.ts) 只增加 `dispatch`，业务生命周期仍属于 Logic。
-3. [loop-handlers.ts](bridge/server/ipc/loop-handlers.ts) 把已经解析的请求交给明确工作区的执行服务；附件正文与图片通过 `ChatInputs` 和 `Application.chatOptions` 处理。路由不持有第二套任务状态。
-4. [WorkspaceExecutionManager](logic/conversation/runtime/execution-manager.ts) 管理主会话活动运行、排队、续接和启动准备；`launch` 选择可信 `executionModel`。新协议与旧日志恢复分支在此有实际区别，阅读时不要合并理解。
+2. [preload](bridge/preload/preload.ts) 将固定调用转交 `cbim:call`。[桌面入口](bridge/server/main.ts) 核实调用窗口与请求；[Bridge Application](bridge/server/application.ts) 只增加 `Dispatch`，业务生命周期仍属于 Logic。
+3. [loop-handlers.ts](bridge/server/ipc/loop-handlers.ts) 把已经解析的请求交给明确工作区的执行服务；附件正文与图片通过 `ChatInputs` 和 `Application.ChatOptions` 处理。路由不持有第二套任务状态。
+4. [WorkspaceExecutionManager](logic/conversation/runtime/execution-manager.ts) 管理主会话活动运行、排队、续接和启动准备；`Launch` 选择可信 `executionModel`。新协议与旧日志恢复分支在此有实际区别，阅读时不要合并理解。
 5. [createExecutionManager](logic/application/assembly/execution.ts) 注入工作区、模型快照、租约及业务端口；新 Agent 调用协议在 [agent-calls.ts](logic/application/assembly/agent-calls.ts) 装配。具体引擎由 [loop-engine.ts](logic/execution/assembly/loop-engine.ts) 选择并组合。
 6. [LoopRuntime](logic/execution/rules/runtime/runtime.ts) 执行工具授权、事件记录、取消与排空；[FileRunStorage](logic/execution/storage/run-storage.ts) 和 [RunJournal](logic/execution/storage/run-journal.ts) 维护真实运行日志。页面通过 `loop.threadView` 等读取结果，不由界面缓存替代执行事实。
 
@@ -72,7 +72,7 @@ flowchart TB
 
 - `ARCHITECTURE.md`：完整直接文件清单、当前声明、静态依赖和子目录导航。父目录只展开本层边界，子目录内部继续下钻；同名类的分图合起来阅读。
 - `CONTRACT.md`：人工维护的封装理由、状态与资源所有权、调用契约和扩展边界。其内容由生成器附加到同目录架构文档，不直接修改生成附录。
-- 源码文件头与成员注释：对照实现理解具体决策、失败与释放语义。静态工具使用 `XxxUtils.method()`；有独立生命周期的对象使用实例；接口、React 组件和宿主入口保留各自形式。
+- 源码文件头与成员注释：对照实现理解具体决策、失败与释放语义。静态工具使用 `XxxUtils.Method()`；有独立生命周期的对象使用实例；接口、React 组件和宿主入口保留各自形式。
 - 验证：按实际变更选择 [测试模块归属](../tests/modules.json) 中相关单元和边界测试。只读或纯文档整理不需要运行产品测试；生成器的一致性检查不能代替代码语义 review。
 
 当前整理切片及实际验证记在 [开发记录](../design/development-log.md)。该记录是历史证据，实时开发清单仍在 GitHub Issues。

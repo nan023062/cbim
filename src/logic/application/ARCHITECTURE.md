@@ -78,13 +78,13 @@ Application 持有一份 WebSettings/WebService，启动恢复加密搜索配置
 
 固定 bootstrap 验证签名 R 后调用 startDesktop(runtime)。Main 只持有应用/窗口生命周期，调用私有宿主端口取得更新服务与受管引擎；自身不改活动版本指针。R 的 preload、worker、renderer 都相对同一资源目录解析，koffi 和 EXE 品牌仍来自 C。
 
-桌面使用 Application.init({restore:false}) 初始化目录/配置，窗口加载后再 background restore；CLI/其它消费者默认 init 仍等待恢复。停止标记阻止恢复继续打开下一工作区。启动确认需要页面加载成功与 React 的 list IPC 成功，不用单纯进程存活作为更新成功证据。
+桌面使用 Application.Init({restore:false}) 初始化目录/配置，窗口加载后再 background restore；CLI/其它消费者默认 init 仍等待恢复。停止标记阻止恢复继续打开下一工作区。启动确认需要页面加载成功与 React 的 list IPC 成功，不用单纯进程存活作为更新成功证据。
 
 Paths 的 protectedRoots 包括整个安装/用户身份的程序缓存；主/成员受控读写、删除/移动及资源仓库配置都继承该边界。引擎下载与账号历史分开，createExecutionManager/createMemberServices 只注入固定 EngineRuntimeResolver。
 
 ## 后台预下载与用户确认安装
 
-Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.shutdown` 后才标记安装退出。后台检查自动预下载，固定 `desktop.updates.download` 只手动重试下载/校验，不接受地址或命令；`desktop.updates.install` 在包已就绪后明确确认重启或重试安装。预下载不调用业务关闭回调；installing 期间才拒绝普通业务 IPC 与拖入附件，状态查询仍可用来展示进度。
+Main 为 `DesktopUpdates` 注入唯一的业务关闭回调，停止终端、等待 `Application.Shutdown` 后才标记安装退出。后台检查自动预下载，固定 `desktop.updates.download` 只手动重试下载/校验，不接受地址或命令；`desktop.updates.install` 在包已就绪后明确确认重启或重试安装。预下载不调用业务关闭回调；installing 期间才拒绝普通业务 IPC 与拖入附件，状态查询仍可用来展示进度。
 
 普通 before-quit 先 close 更新服务再排空，避免用户主动退出时迟到的下载或安装让出继续触发安装。安装器触发的退出已由成功排空设置 quitting，走原正常退出路径。安装失败没有升级成功保证，必须在新进程核实版本；不更改应用身份、用户目录或 NSIS 校验规则。
 
@@ -102,7 +102,7 @@ note for main_brand "名称与图标只属于桌面呈现，不参与运行身�
 
 ## 反馈连接诊断与提交端口
 
-`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.checkConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存归 Logic feedback/service，Main 负责装配和关闭，工具命名／提示归调度层，更新程序不参与。
+`createExecutionManager` 只在桌面 chat 主运行注入反馈服务：`feedbackTools` 捕获固定连接，`feedbackStatus` 独立调用 `GitHubFeedbackAuth.CheckConnection` 并检查工作区仍有效。未连接时只读诊断仍可用，运行中连接变化不替换原提交范围。认证状态及保存归 Logic feedback/service，Main 负责装配和关闭，工具命名／提示归调度层，更新程序不参与。
 
 ```mermaid
 classDiagram
@@ -114,13 +114,13 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 ## 长期岗位登记的独立装配
 
-`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `EngineModelProfiles.configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
+`createMemberServices` 为 `WorkspaceMembers` 注入与派发共用的 FileDispatchStore、工作区代际及 `EngineModelProfiles.Configuration` 公开配置端口。Application 按工作区保存该服务，关闭/重开先退役代际，原 store 排空后更换实例；岗位没有独立运行或重放生命周期。
 
 岗位登记保存长期身份、名称/职责、项目适应、能力采纳及公开模型配置，不直接创建运行。新业务执行从真实模块责任解析该岗位，核来源、能力和配置后冻结到计划、任务与运行；active 单独不代表可执行。原回执查重早于新请求的实例和来源校验，重开仍可核实旧命令，不自动重新提交。
 
 ## 安全等待补充的附件准备
 
-`createExecutionManager` 将 `ChatInputs.prepareContinuation` 注入主运行管理器。仅新的附件补充在创建工厂前准备一次正文、图片与清单；模型工厂使用 `ExecutionLaunchContext.preparedInputImages`，包括明确的空数组，不再读取附件 ID。图片不写入 `WorkspaceLoopOptions`，后续成员结果回注不会再次附加图片，原生历史仍保留先前真实用户图消息。
+`createExecutionManager` 将 `ChatInputs.PrepareContinuation` 注入主运行管理器。仅新的附件补充在创建工厂前准备一次正文、图片与清单；模型工厂使用 `ExecutionLaunchContext.preparedInputImages`，包括明确的空数组，不再读取附件 ID。图片不写入 `WorkspaceLoopOptions`，后续成员结果回注不会再次附加图片，原生历史仍保留先前真实用户图消息。
 
 `Application.chatMaterials` 统一管理显式目录、链接、网页与已授权仓库资料导入，绑定原工作区实例及唯一 importId；停止工作区、重开和应用关闭先取消在途来源读取。仓库资料经当前授权闭包真实 HTTP 读取并复核；不执行资源，不为旧 connector 定义补造来源。续跑只读已经保存的 v1 文件或 v2 多来源快照，导入后的撤权不改写历史资料，也不触发重新联网。
 
@@ -128,9 +128,9 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 ## 模块知识保护与桌面治理
 
-每个 `Workspace` 装配独立 `ModuleGovernanceService` 和用户数据账本；`Application.governance(id)` 只返回已就绪实例。桌面登记和人工决定由 IPC 注入本机明确操作标记，模型工具、普通知识参数和资源内容不能签发批准。正式实施另走显式 apply，仍由原 KnowledgeStore 串行事务写入；服务关闭随知识队列排空，不恢复未完成意图。
+每个 `Workspace` 装配独立 `ModuleGovernanceService` 和用户数据账本；`Application.Governance(id)` 只返回已就绪实例。桌面登记和人工决定由 IPC 注入本机明确操作标记，模型工具、普通知识参数和资源内容不能签发批准。正式实施另走显式 apply，仍由原 KnowledgeStore 串行事务写入；服务关闭随知识队列排空，不恢复未完成意图。
 
-`createExecutionManager` 仅为已登记主对话实例提供 `ExecutionServices.governanceTools` 工厂；实际 createEngine 得到 runId 后才绑定四个窄端口。端口不缓存到共享 KnowledgeTools，执行成员及未装配 CLI 没有治理工具。主模型只读依据、保存观察/提案和查询原回执；作用域为当前 knowledge，但不授予知识写或业务执行权限。来源和稳定命令来自可信主绑定与工具调用 ID，输出有界，停止后的未知结果仍只查询原命令。
+`createExecutionManager` 仅为已登记主对话实例提供 `ExecutionServices.GovernanceTools` 工厂；实际 createEngine 得到 runId 后才绑定四个窄端口。端口不缓存到共享 KnowledgeTools，执行成员及未装配 CLI 没有治理工具。主模型只读依据、保存观察/提案和查询原回执；作用域为当前 knowledge，但不授予知识写或业务执行权限。来源和稳定命令来自可信主绑定与工具调用 ID，输出有界，停止后的未知结果仍只查询原命令。
 
 ## 本机资源仓库连接生命周期
 
@@ -142,7 +142,7 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 `member-dispatch.prepare` 从与 Pi 实际注册相同的 `core/tools/native-tools` 清单，按本轮 permission 返回 availableTools；密钥和实际模型留在可信工厂。执行服务在 claim/run 之前预检冻结的模块约定。创建 Runtime 时注入全部 `preparedWorkflowContracts(run.prepared)`，普通主聊天不接正式成员 Workflow 门禁；Auto 的原生业务能力由周期模式与权限独立决定，不因注入成员契约而获得。
 
-同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.validateFile/validateTable/validateImage`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
+同一工厂通过 `availableValidators:['json-schema-v1','csv-table-v1','png-raster-v1']` 声明实际平台验证能力，不在无约定时冒称已注册验证工具。成员 Runtime 分别注入 `ArtifactFiles.ValidateFile/validateTable/validateImage`，路径与 Schema 来自冻结要求；目标审阅另注入 `normalizeValidationPath/checkValidationFiles`，成员结算复用已有 artifacts 端口。所有者代际与停止覆盖读取，判断使用当前字节，不通过报告服务重入派发事务或创建新运行。
 
 ## 本机显式人工决定
 
@@ -197,9 +197,9 @@ note for execution "主 chat 分别注入 feedbackTools 与 feedbackStatus；新
 
 ## 来源恢复与共享 Store 生命周期
 
-Application 在 Workspace.open 前只构造一个带监控观察器的 DispatchStore；实际加载在工程锁及路径身份核实之后。知识来源、岗位、责任与派发服务复用它，不创建恢复专用第二 Store。停止/退出先停止运行，再由 Workspace.prepareClose 排空知识与来源结算，随后关闭派发持久服务，最后释放工程锁。来源恢复、明确采纳均不新建运行或调用模型。
+Application 在 Workspace.Open 前只构造一个带监控观察器的 DispatchStore；实际加载在工程锁及路径身份核实之后。知识来源、岗位、责任与派发服务复用它，不创建恢复专用第二 Store。停止/退出先停止运行，再由 Workspace.PrepareClose 排空知识与来源结算，随后关闭派发持久服务，最后释放工程锁。来源恢复、明确采纳均不新建运行或调用模型。
 
-可信 `beforeDispatchLoad` 阶段在路径归属及工程锁核实后初始化 Agent 历史索引，然后才读取 Store。`WorkspaceRuntimeMonitor.initializeHistory` 复用历史服务的幂等初始化，保证首次 loaded 与知识恢复期间 committed 均在索引装载之后各投递一次；不清空运行投影、不缓冲无界事务，也不放宽坏索引或重复持久记录检测。阶段失败沿工作区打开失败路径释放锁并阻止服务就绪。
+可信 `beforeDispatchLoad` 阶段在路径归属及工程锁核实后初始化 Agent 历史索引，然后才读取 Store。`WorkspaceRuntimeMonitor.InitializeHistory` 复用历史服务的幂等初始化，保证首次 loaded 与知识恢复期间 committed 均在索引装载之后各投递一次；不清空运行投影、不缓冲无界事务，也不放宽坏索引或重复持久记录检测。阶段失败沿工作区打开失败路径释放锁并阻止服务就绪。
 
 ## 检查点交接历史端口
 
@@ -227,7 +227,7 @@ member-dispatch 的影响端口另装配原知识事务只读适配，借已打�
 
 ## 受控文件统一影响观察（Step40）
 
-影响观察的 `observeControlled` 复用同一已装配 ControlledFiles.report，读取前后核停止；原报告沿唯一 Store/canonical 验证，不产生 utility、租约、业务文件 IO 或补偿命令。原来源读取和实际写/补偿入口仍分离。
+影响观察的 `observeControlled` 复用同一已装配 ControlledFiles.Report，读取前后核停止；原报告沿唯一 Store/canonical 验证，不产生 utility、租约、业务文件 IO 或补偿命令。原来源读取和实际写/补偿入口仍分离。
 
 ## 持久成员等待的只读装配
 
@@ -246,7 +246,7 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 
 ## R07-B1 完整集合共同验收
 
-固定工作区的同一OutputManifestFiles.check注入成员结算、目标服务及人工服务。人工选择/继续沿既有read租约和当前工作区校验，不调用模型、不改日志，也不复用旧native执行；真实执行仍由独立显式继续入口负责。
+固定工作区的同一OutputManifestFiles.Check注入成员结算、目标服务及人工服务。人工选择/继续沿既有read租约和当前工作区校验，不调用模型、不改日志，也不复用旧native执行；真实执行仍由独立显式继续入口负责。
 
 主轮业务占用与工具权限一致：Team 与 Auto 的 read 使用只读占用，ask／execute 使用独占，审批等待也不能与其他运行并发。人工接续 accept 与主运行目标审阅的文件核证通过 acquireMainRead 按已验证的 rootSessionId 派生读占用；原占用不存在时退回普通读申请。桌面预览、决定与接续预检仍走独立 acquireRead，不能复用正在运行的写占用。恢复及成员回注优先读取原周期冻结模式，历史缺省 Team，不用缺失的运行参数覆盖已保存的 Auto 策略；知识写仍由独立事务和权限保护。
 
@@ -256,7 +256,7 @@ Application 每工作区装配一个请求预算服务，主工厂固定已解�
 
 CSV 能力由同一成员工厂的真实平台实现公开；知识声明、岗位准备与领取继续核对可用验证器，CSV 不复用 JSON 参数或绕过原工作区有效性与停止检查。
 
-成员工厂公开png-raster-v1并注入ArtifactFiles.validateImage，准备/领取按真实可用验证器核要求。图片与JSON/CSV共用当前知识、工作区代际、停止和原文件证明；目标及人工出口不另开绕过复核的路径。
+成员工厂公开png-raster-v1并注入ArtifactFiles.ValidateImage，准备/领取按真实可用验证器核要求。图片与JSON/CSV共用当前知识、工作区代际、停止和原文件证明；目标及人工出口不另开绕过复核的路径。
 
 ## 冻结范围成员执行
 
@@ -270,7 +270,7 @@ Application按当前工作区装配唯一IsolatedExecutions，共享DispatchStor
 
 Application 发送时固定公开 engine，执行工厂核对它与所选供应商一致；配置被改到另一引擎时拒绝旧排队请求。成员使用自己采纳的模型及引擎，主选型不覆盖。member-dispatch 按真实引擎提供能力预检，并按受管目录把原生指纹读取交给对应格式适配。
 
-业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.observeFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
+业务重规划 accept 的原影响核证也按已核主身份调用 EffectObservationService.ObserveFromMain，派生本运行读占用，避免把自身占用冲突误记为文件不可观察而改变 basis。预览、preflight、公开 observe 和人工处置仍使用独立读占用；不改变原失败回执、证据指纹和权限。
 
 ## 角色历史的独立装配
 

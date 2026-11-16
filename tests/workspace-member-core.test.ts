@@ -31,8 +31,8 @@ function makeEvent(state:DispatchState,change:WorkspaceMemberChangeInput=registe
 const mutation=(event:WorkspaceMemberChange):DispatchMutation=>({workspaceMemberChanges:[event],receipt:workspaceMemberReceipt(event)});
 const advance=(state:DispatchState,event:WorkspaceMemberChange):DispatchState=>({...state,...projectWorkspaceMemberMutation(state,mutation(event),workspaceMemberCommand(event.request))});
 const update=(member:WorkspaceMember,name:string):WorkspaceMemberChangeInput=>({kind:'update',memberId:member.memberId,expectedRevision:member.revision,patch:{name},reason:'改名'});
-async function setup(){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-workspace-member-core-'));const store=new FileDispatchStore(dir,workspaceId);return {dir,store,file:path.join(dir,'dispatch.jsonl'),cleanup:async()=>{await store.close();if(!path.resolve(dir).startsWith(path.join(os.tmpdir(),'cbim-workspace-member-core-')))throw Error('unexpected temp path');await fs.rm(dir,{recursive:true,force:true})}}}
-const commit=(store:FileDispatchStore,event:WorkspaceMemberChange)=>store.transact(workspaceMemberCommand(event.request),async()=>mutation(event));
+async function setup(){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-workspace-member-core-'));const store=new FileDispatchStore(dir,workspaceId);return {dir,store,file:path.join(dir,'dispatch.jsonl'),cleanup:async()=>{await store.Close();if(!path.resolve(dir).startsWith(path.join(os.tmpdir(),'cbim-workspace-member-core-')))throw Error('unexpected temp path');await fs.rm(dir,{recursive:true,force:true})}}}
+const commit=(store:FileDispatchStore,event:WorkspaceMemberChange)=>store.Transact(workspaceMemberCommand(event.request),async()=>mutation(event));
 afterEach(()=>vi.restoreAllMocks());
 
 it('strict 公共协议保留实际模型缺省，拒绝凭据、主角色、伪来源与越界参数',()=>{
@@ -119,37 +119,37 @@ it('字节与数量容量明确拒绝，不裁剪原则、不静默删除旧审�
 
 it('旧Store只读空兼容，查询不创建文件；登记写一次并重开返回原immutable回执',async()=>{
   const f=await setup();try{
-    expect(await f.store.commandReceipt('unknown')).toBeUndefined();const initial=await f.store.read();expect(initial.workspaceMembers).toEqual([]);expect(initial.registryCursor).toBeNull();await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
-    const e=makeEvent(initial),command=workspaceMemberCommand(e.request),prepare=vi.fn(async()=>mutation(e));const receipts=await Promise.all([f.store.transact(command,prepare),f.store.transact(command,prepare)]);expect(prepare).toHaveBeenCalledTimes(1);expect(receipts[0]).toEqual(receipts[1]);expect(workspaceMemberReceiptSchema.safeParse(receipts[0]).success).toBe(true);
-    const bytes=await fs.readFile(f.file);const read=vi.spyOn(fs,'readFile');expect((await f.store.commandReceipt(command.commandId))?.receipt).toEqual(receipts[0]);expect(read).not.toHaveBeenCalled();read.mockRestore();
-    await f.store.close();const reopened=new FileDispatchStore(f.dir,workspaceId);try{expect((await reopened.commandReceipt(command.commandId))?.receipt).toEqual(receipts[0]);expect(await reopened.transact(command,async()=>{throw Error('不允许重放')})).toEqual(receipts[0]);expect(await fs.readFile(f.file)).toEqual(bytes);const result=await reopened.commandReceipt(command.commandId);(result!.receipt as any).memberRevision=999;expect((await reopened.commandReceipt(command.commandId))?.receipt).toEqual(receipts[0])}finally{await reopened.close()}
+    expect(await f.store.CommandReceipt('unknown')).toBeUndefined();const initial=await f.store.Read();expect(initial.workspaceMembers).toEqual([]);expect(initial.registryCursor).toBeNull();await expect(fs.stat(f.file)).rejects.toMatchObject({code:'ENOENT'});
+    const e=makeEvent(initial),command=workspaceMemberCommand(e.request),prepare=vi.fn(async()=>mutation(e));const receipts=await Promise.all([f.store.Transact(command,prepare),f.store.Transact(command,prepare)]);expect(prepare).toHaveBeenCalledTimes(1);expect(receipts[0]).toEqual(receipts[1]);expect(workspaceMemberReceiptSchema.safeParse(receipts[0]).success).toBe(true);
+    const bytes=await fs.readFile(f.file);const read=vi.spyOn(fs,'readFile');expect((await f.store.CommandReceipt(command.commandId))?.receipt).toEqual(receipts[0]);expect(read).not.toHaveBeenCalled();read.mockRestore();
+    await f.store.Close();const reopened=new FileDispatchStore(f.dir,workspaceId);try{expect((await reopened.CommandReceipt(command.commandId))?.receipt).toEqual(receipts[0]);expect(await reopened.Transact(command,async()=>{throw Error('不允许重放')})).toEqual(receipts[0]);expect(await fs.readFile(f.file)).toEqual(bytes);const result=await reopened.CommandReceipt(command.commandId);(result!.receipt as any).memberRevision=999;expect((await reopened.CommandReceipt(command.commandId))?.receipt).toEqual(receipts[0])}finally{await reopened.Close()}
   }finally{await f.cleanup()}
 });
 
 it('Store串行CAS只有一个编辑成功，错误命令不追加记录，原回执不会变成最新成员',async()=>{
   const f=await setup();try{
-    const first=makeEvent(await f.store.read()),original=await commit(f.store,first),state=await f.store.read(),a=makeEvent(state,update(first.next,'版本A')),b=makeEvent(state,update(first.next,'版本B'));
-    const outcomes=await Promise.allSettled([commit(f.store,a),commit(f.store,b)]);expect(outcomes.filter(item=>item.status==='fulfilled')).toHaveLength(1);expect((await f.store.read()).workspaceMemberChanges).toHaveLength(2);
-    expect((await f.store.commandReceipt(workspaceMemberCommand(first.request).commandId))?.receipt).toEqual(original);
-    const bytes=await fs.readFile(f.file);await expect(f.store.transact({...workspaceMemberCommand(first.request),fingerprint:'other'},async()=>mutation(first))).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});expect(await fs.readFile(f.file)).toEqual(bytes);
+    const first=makeEvent(await f.store.Read()),original=await commit(f.store,first),state=await f.store.Read(),a=makeEvent(state,update(first.next,'版本A')),b=makeEvent(state,update(first.next,'版本B'));
+    const outcomes=await Promise.allSettled([commit(f.store,a),commit(f.store,b)]);expect(outcomes.filter(item=>item.status==='fulfilled')).toHaveLength(1);expect((await f.store.Read()).workspaceMemberChanges).toHaveLength(2);
+    expect((await f.store.CommandReceipt(workspaceMemberCommand(first.request).commandId))?.receipt).toEqual(original);
+    const bytes=await fs.readFile(f.file);await expect(f.store.Transact({...workspaceMemberCommand(first.request),fingerprint:'other'},async()=>mutation(first))).rejects.toMatchObject({code:'COMMAND_ID_CONFLICT'});expect(await fs.readFile(f.file)).toEqual(bytes);
   }finally{await f.cleanup()}
 });
 
 it('登记与旧执行账本双向隔离，普通旧事务也不能覆写或漏掉登记投影',async()=>{
   const f=await setup();try{
     // 真实旧 v1 命令没有登记字段；保留其旧 bytes 与回执，不伪造岗位。
-    await f.store.transact({commandId:'legacy-readonly',fingerprint:'legacy'},async()=>({receipt:{legacy:true}}));const old=await fs.readFile(f.file),state=await f.store.read();const e=makeEvent(state);await commit(f.store,e);const registered=await f.store.read();
+    await f.store.Transact({commandId:'legacy-readonly',fingerprint:'legacy'},async()=>({receipt:{legacy:true}}));const old=await fs.readFile(f.file),state=await f.store.Read();const e=makeEvent(state);await commit(f.store,e);const registered=await f.store.Read();
     for(const key of ['members','sessions','graphs','outbox','runs','scopes'] as const)expect(registered[key]).toEqual(state[key]);expect((await fs.readFile(f.file)).subarray(0,old.length)).toEqual(old);
-    const forbidden={...mutation(makeEvent(registered)),members:[]};const frozen=await fs.readFile(f.file);await expect(f.store.transact(workspaceMemberCommand(forbidden.workspaceMemberChanges![0].request),async()=>forbidden)).rejects.toMatchObject({code:'MEMBER_AUDIT'});expect(await fs.readFile(f.file)).toEqual(frozen);
-    await f.store.transact({commandId:'legacy-next',fingerprint:'next'},async()=>({receipt:{legacy:2}}));const next=await f.store.read();expect(next.registryCursor).toEqual(registered.registryCursor);expect(next.workspaceMembers).toEqual(registered.workspaceMembers);expect(next.workspaceMemberChanges).toEqual(registered.workspaceMemberChanges);
+    const forbidden={...mutation(makeEvent(registered)),members:[]};const frozen=await fs.readFile(f.file);await expect(f.store.Transact(workspaceMemberCommand(forbidden.workspaceMemberChanges![0].request),async()=>forbidden)).rejects.toMatchObject({code:'MEMBER_AUDIT'});expect(await fs.readFile(f.file)).toEqual(frozen);
+    await f.store.Transact({commandId:'legacy-next',fingerprint:'next'},async()=>({receipt:{legacy:2}}));const next=await f.store.Read();expect(next.registryCursor).toEqual(registered.registryCursor);expect(next.workspaceMembers).toEqual(registered.workspaceMembers);expect(next.workspaceMemberChanges).toEqual(registered.workspaceMemberChanges);
   }finally{await f.cleanup()}
 });
 
 it('重算日志checksum仍不能伪造审计、head或紧凑回执',async()=>{
   const f=await setup();try{
-    await commit(f.store,makeEvent(await f.store.read()));await f.store.close();const original=await fs.readFile(f.file,'utf8');
+    await commit(f.store,makeEvent(await f.store.Read()));await f.store.Close();const original=await fs.readFile(f.file,'utf8');
     for(const alter of [(body:any)=>{body.mutation.workspaceMemberChanges[0].next.revision=4},(body:any)=>{body.mutation.workspaceMemberChanges[0].next.runtimePolicy.snapshot.apiKey='secret'},(body:any)=>{body.mutation.receipt.memberHash='0'.repeat(64)},(body:any)=>{body.mutation.workspaceMembers=[body.mutation.workspaceMemberChanges[0].next]},(body:any)=>{delete body.mutation.workspaceMemberChanges}]){
-      const record=JSON.parse(original);alter(record.body);record.checksum=hash(JSON.stringify(record.body));await fs.writeFile(f.file,JSON.stringify(record)+'\n');const reader=new FileDispatchStore(f.dir,workspaceId);try{await expect(reader.read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.close()}
+      const record=JSON.parse(original);alter(record.body);record.checksum=hash(JSON.stringify(record.body));await fs.writeFile(f.file,JSON.stringify(record)+'\n');const reader=new FileDispatchStore(f.dir,workspaceId);try{await expect(reader.Read()).rejects.toMatchObject({code:'GRAPH_LOG_CORRUPT'})}finally{await reader.Close()}
     }
     await fs.writeFile(f.file,original);
   }finally{await f.cleanup()}
@@ -157,8 +157,8 @@ it('重算日志checksum仍不能伪造审计、head或紧凑回执',async()=>{
 
 it('fsync未知关闭原实例，重开从完整原日志核实，不再调用prepare登记第二岗位',async()=>{
   const f=await setup();try{
-    const e=makeEvent(await f.store.read()),open=fs.open.bind(fs);vi.spyOn(fs,'open').mockImplementation(async(...args:any[])=>{const handle=await (open as any)(...args);return args[1]==='a'?new Proxy(handle,{get(target,key){if(key==='sync')return async()=>{throw Error('fsync未确认')};const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value}}):handle});
-    await expect(commit(f.store,e)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});vi.restoreAllMocks();await expect(f.store.commandReceipt(workspaceMemberCommand(e.request).commandId)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});await f.store.close();
-    const reader=new FileDispatchStore(f.dir,workspaceId);try{expect((await reader.commandReceipt(workspaceMemberCommand(e.request).commandId))?.receipt).toEqual(workspaceMemberReceipt(e));expect((await reader.read()).workspaceMembers).toHaveLength(1)}finally{await reader.close()}
+    const e=makeEvent(await f.store.Read()),open=fs.open.bind(fs);vi.spyOn(fs,'open').mockImplementation(async(...args:any[])=>{const handle=await (open as any)(...args);return args[1]==='a'?new Proxy(handle,{get(target,key){if(key==='sync')return async()=>{throw Error('fsync未确认')};const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value}}):handle});
+    await expect(commit(f.store,e)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});vi.restoreAllMocks();await expect(f.store.CommandReceipt(workspaceMemberCommand(e.request).commandId)).rejects.toMatchObject({code:'GRAPH_STORAGE_FAILED'});await f.store.Close();
+    const reader=new FileDispatchStore(f.dir,workspaceId);try{expect((await reader.CommandReceipt(workspaceMemberCommand(e.request).commandId))?.receipt).toEqual(workspaceMemberReceipt(e));expect((await reader.Read()).workspaceMembers).toHaveLength(1)}finally{await reader.Close()}
   }finally{await f.cleanup()}
 });

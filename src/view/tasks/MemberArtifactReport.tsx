@@ -66,6 +66,6 @@ export function MemberArtifactReport({ identity, task, graphCursor, scope }: { i
   const key = artifactSelectionKey(identity);
   const controller = useMemo(() => new ArtifactReportController(identity, input => window.cbim.call('dispatch.artifactReport', input), () => current.current), [key]);
   const state = useSyncExternalStore(controller.subscribe, () => controller.snapshot, () => controller.snapshot);
-  useEffect(() => () => controller.cancel(), [controller]);
-  return <ArtifactReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, list: () => controller.list(), inspect: () => controller.inspect(), select: id => controller.select(id) }} />;
+  useEffect(() => () => controller.Cancel(), [controller]);
+  return <ArtifactReportPanel taskId={identity.taskId} runId={identity.runId} state={{ ...state, stale: !!state.report && state.sourceVersion !== version, list: () => controller.List(), inspect: () => controller.Inspect(), select: id => controller.Select(id) }} />;
 }

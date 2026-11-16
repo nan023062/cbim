@@ -299,8 +299,8 @@ class N_src_logic_team_rules_session_history_storage_ts_AgentHistoryRecord["Agen
 N_src_logic_team_rules_session_history_storage_ts ..> N_src_logic_team_rules_session_history_storage_ts_AgentHistoryRecord : 声明
 class N_src_logic_team_rules_session_history_storage_ts_AgentHistoryStore["AgentHistoryStore"] {
   <<interface>>
-  +load()
-  +put()
+  +Load()
+  +Put()
 }
 N_src_logic_team_rules_session_history_storage_ts ..> N_src_logic_team_rules_session_history_storage_ts_AgentHistoryStore : 声明
 ```
@@ -545,7 +545,7 @@ class N_src_logic_team_rules_workspace_member_tools_ts_MemberToolBinding["Member
 N_src_logic_team_rules_workspace_member_tools_ts ..> N_src_logic_team_rules_workspace_member_tools_ts_MemberToolBinding : 声明
 class N_src_logic_team_rules_workspace_member_tools_ts_WorkspaceMemberToolsPort["WorkspaceMemberToolsPort"] {
   <<interface>>
-  +call()
+  +Call()
 }
 N_src_logic_team_rules_workspace_member_tools_ts ..> N_src_logic_team_rules_workspace_member_tools_ts_WorkspaceMemberToolsPort : 声明
 ```
@@ -851,7 +851,7 @@ N_src_logic_team_rules_workspace_member_tools_ts ..> N_src_logic_team_rules_work
 
 静态 Agent 与动态 AgentInstance 分开：应用级索引由 `logic/runtime/monitoring/global-runtime.ts 的 GlobalRuntimeManager` 统一观察，Team 不反向引用它。成员权威登记仍来自工作区派发事务。全局监管 epoch 仅隔离观察回调，不替代未来执行租约的 leaseEpoch；恢复出的历史活动不代表当前执行活跃。
 
-- Team.agents() 和 Team.agent() 提供组织、角色定义及有效 Skill；Team.people() 与 cbim_people_list 已删除，authorPeople 固定为空数组以兼容旧响应。角色不包含运行进程或可变会话状态。
+- Team.Agents() 和 Team.Agent() 提供组织、角色定义及有效 Skill；Team.people() 与 cbim_people_list 已删除，authorPeople 固定为空数组以兼容旧响应。角色不包含运行进程或可变会话状态。
 - Team 根与小组是组织节点，只有叶子是 Agent。成员继承自身与所有祖先的 Skill，角色解析仍服从现有冲突校验。
 - 默认主 Agent 是内置角色 `cbim:main`，与自定义成员使用同一大脑、工具策略和执行内核。主 Agent 的调度职责只在其主会话开放，不享有隐含的业务工具权限提升，也不是其它成员的父执行进程。
 - 主 Agent 默认在原会话按实际权限完成业务、验证及团队／业务知识管理；只有明确配置自定义负责岗位的模块才派给独立成员。`cbim:main` 可以作为目标计划中的主执行分配，但不能被派成独立成员；`cbim:executor` 已退役，不得重新登记、分配或派发。已配置岗位失效须报告真实缺口，不冒充未配置。独立成员保留自己的状态、Session、模型思考与环境探索，按目标模块工作并返回证据或缺口，不获得派发权。
@@ -926,7 +926,7 @@ interface AgentSessionBinding extends AgentIdentity {
 
 原生进程是成员的一次运行载体，不是成员身份。新的周期任务创建新实例；恢复先将不确定运行标为 interrupted，再关闭遗留活动周期并释放其执行实例，不能把旧任务恢复为活跃执行或自动重放副作用。
 
-现有 `Team.agent()` 查询的是已通过知识校验的自定义 Agent；它并不自动返回 `cbim:main`。实施时由统一角色解析入口补充内置主角色来源，并把它绑定到目标工作区的 Team，不能伪造一条已经存在的知识定义或绕过自定义角色的校验。
+现有 `Team.Agent()` 查询的是已通过知识校验的自定义 Agent；它并不自动返回 `cbim:main`。实施时由统一角色解析入口补充内置主角色来源，并把它绑定到目标工作区的 Team，不能伪造一条已经存在的知识定义或绕过自定义角色的校验。
 
 `rootSessionId` 是主 Agent 对话视图与派发图的归属，不是全团队唯一 Session。一个角色可以为不同主对话持有不同 `agentSessionId`；同一根对话内也可显式创建隔离通道。不得仅凭 `agentId` 寻找“最近一次会话”并复用其上下文。
 
@@ -1022,7 +1022,7 @@ workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命
 
 ### JSON 排序复用边界
 
-本目录既有对象排序通过后端 utility 的 JsonUtils.orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+本目录既有对象排序通过后端 utility 的 JsonUtils.OrderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
 
 ### V2 角色引用与采纳
 
@@ -1035,4 +1035,4 @@ AgentHistoryRecord 可保存严格 agentCall 原父引用。新业务子运行�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `JsonUtils.orderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `JsonUtils.OrderJsonValue`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

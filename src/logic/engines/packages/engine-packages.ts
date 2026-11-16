@@ -51,7 +51,7 @@ export class EnginePackages implements EngineRuntimeResolver
   {
   }
 
-  init()
+  Init()
   {
     return this.initialized ??= (async () =>
     {
@@ -72,14 +72,14 @@ export class EnginePackages implements EngineRuntimeResolver
     })()
   }
 
-  private async save(next: State)
+  private async Save(next: State)
   {
     next.revision = this.state.revision + 1;
     await atomic(this.file, JSON.stringify(stateSchema.parse(next)));
     this.state = next
   }
 
-  private trusted(artifact: EngineArtifact)
+  private Trusted(artifact: EngineArtifact)
   {
     const descriptor = engineDescriptor(loopEngineSchema.parse(artifact.kind));
     if (artifact.protocol !== 1 || artifact.dependencies.length !== (descriptor.packageDependencies ?? []).length || artifact.dependencies.some(ref => !(descriptor.packageDependencies ?? []).includes(loopEngineSchema.parse(ref.kind))))
@@ -87,14 +87,14 @@ export class EnginePackages implements EngineRuntimeResolver
     return artifact;
   }
 
-  private closure(root: EngineArtifact, available: EngineArtifact[])
+  private Closure(root: EngineArtifact, available: EngineArtifact[])
   {
     const result: EngineArtifact[] = [],
       visiting = new Set<string>(),
       visited = new Set<string>();
     const visit = (value: EngineArtifact) =>
     {
-      this.trusted(value);
+      this.Trusted(value);
       const key = value.kind + ':' + value.identity;
       if (visiting.has(key))
         throw Error('引擎依赖成环');
@@ -117,7 +117,7 @@ export class EnginePackages implements EngineRuntimeResolver
   }
 
   /** 包服务核验和复用既有缓存；安装与真实首次运行都通过此入口报告短期状态。 */
-  private async prepare(artifact: EngineArtifact)
+  private async Prepare(artifact: EngineArtifact)
   {
     const progress:
       {
@@ -132,7 +132,7 @@ export class EnginePackages implements EngineRuntimeResolver
     this.preparations.add(progress);
     try
     {
-      return await this.artifacts.prepare(artifact.kind, artifact.identity, value =>
+      return await this.artifacts.Prepare(artifact.kind, artifact.identity, value =>
       {
         if (Number.isFinite(value))
           progress.progress = Math.min(100, Math.max(0, value))
@@ -144,10 +144,10 @@ export class EnginePackages implements EngineRuntimeResolver
     }
   }
 
-  async read(): Promise<EnginePackageSettings>
+  async Read(): Promise<EnginePackageSettings>
   {
-    await this.init();
-    const versions = await this.artifacts.list();
+    await this.Init();
+    const versions = await this.artifacts.List();
     const items: EnginePackageStatus[] = supportedEngines.map(descriptor =>
     {
       const kind = descriptor.id,
@@ -166,42 +166,42 @@ export class EnginePackages implements EngineRuntimeResolver
     return { managed: true, revision: this.state.revision, items };
   }
 
-  async list()
+  async List()
   {
-    return (await this.read()).items
+    return (await this.Read()).items
   }
 
-  async check()
+  async Check()
   {
-    await this.init();
-    await this.artifacts.check();
-    return this.list()
+    await this.Init();
+    await this.artifacts.Check();
+    return this.List()
   }
 
   /** 用户显式动作；整个依赖闭包准备完成才改活动指针，其他引擎的活动版本不随依赖下载改变。 */
-  install(kind: LoopEngine, expected?: { revision: number; identity: string })
+  Install(kind: LoopEngine, expected?: { revision: number; identity: string })
   {
-    return this.queue.run(async () =>
+    return this.queue.Run(async () =>
     {
-      await this.init();
-      this.assertRevision(expected?.revision);
-      return this.installNow(kind, true, expected?.identity)
+      await this.Init();
+      this.AssertRevision(expected?.revision);
+      return this.InstallNow(kind, true, expected?.identity)
     })
   }
 
-  private assertRevision(revision?: number)
+  private AssertRevision(revision?: number)
   {
     if (revision !== undefined && revision !== this.state.revision)
       throw Error('引擎设置已变化，请刷新后再操作')
   }
 
-  private async installNow(kind: LoopEngine, explicit: boolean, expectedIdentity?: string)
+  private async InstallNow(kind: LoopEngine, explicit: boolean, expectedIdentity?: string)
   {
     loopEngineSchema.parse(kind);
     const previous = this.state.entries.find(item => item.kind === kind);
     if (!explicit && (previous?.enabled === false || previous?.error || this.failures.has(kind)))
       throw Error(previous?.error ?? this.failures.get(kind)?.message ?? '引擎已停用，请在引擎设置中启用');
-    const versions = await this.artifacts.list(),
+    const versions = await this.artifacts.List(),
       candidate = versions.current.find(item => item.kind === kind);
     if (!candidate)
       throw Error('官方目录没有可安装的兼容引擎版本');
@@ -210,12 +210,12 @@ export class EnginePackages implements EngineRuntimeResolver
     this.busy.add(kind);
     try
     {
-      const closure = this.closure(candidate, versions.available);
+      const closure = this.Closure(candidate, versions.available);
       for (const dependency of closure)
       {
         if (dependency.kind !== kind && this.state.entries.find(item => item.kind === dependency.kind)?.enabled === false)
           throw Error('依赖引擎已停用，请先启用 ' + dependency.kind);
-        await this.prepare(dependency)
+        await this.Prepare(dependency)
       }
       const next = structuredClone(this.state);
       for (const dependency of closure)
@@ -235,7 +235,7 @@ export class EnginePackages implements EngineRuntimeResolver
           delete item.error
         }
       }
-      await this.save(next);
+      await this.Save(next);
       this.failures.delete(kind);
       for (const dependency of closure)
         this.failures.delete(dependency.kind + ':' + dependency.identity);
@@ -252,7 +252,7 @@ export class EnginePackages implements EngineRuntimeResolver
         next.entries.push(item)
       }
       item.error = failure.message.slice(0, 2000);
-      await this.save(next);
+      await this.Save(next);
       throw failure
     }
     finally
@@ -262,24 +262,24 @@ export class EnginePackages implements EngineRuntimeResolver
   }
 
   /** 停用与移除均拒绝正在运行的引用和活动依赖；移除不删除历史包字节或模型设置。 */
-  setEnabled(kind: LoopEngine, enabled: boolean, remove = false, revision?: number)
+  SetEnabled(kind: LoopEngine, enabled: boolean, remove = false, revision?: number)
   {
-    return this.queue.run(async () =>
+    return this.queue.Run(async () =>
     {
-      await this.init();
-      this.assertRevision(revision);
+      await this.Init();
+      this.AssertRevision(revision);
       loopEngineSchema.parse(kind);
       if (!enabled)
       {
         if ([...this.references].some(([key, count]) => key.startsWith(kind + ':') && count > 0))
           throw Error('引擎仍有运行引用，请先结束任务');
-        const versions = await this.artifacts.list();
+        const versions = await this.artifacts.List();
         for (const item of this.state.entries)
         {
           if (item.kind === kind || !item.enabled || !item.active)
             continue;
           const artifact = versions.available.find(v => v.kind === item.kind && v.identity === item.active);
-          if (artifact && this.closure(artifact, versions.available).some(v => v.kind === kind))
+          if (artifact && this.Closure(artifact, versions.available).some(v => v.kind === kind))
             throw Error('仍被启用的 ' + item.kind + ' 引擎依赖，请先停用它')
         }
       }
@@ -293,35 +293,35 @@ export class EnginePackages implements EngineRuntimeResolver
       item.enabled = enabled;
       if (remove)
         delete item.active;
-      await this.save(next);
+      await this.Save(next);
     })
   }
 
   /** 每次装配固定活动版本及其准确依赖。升级不会改变已返回地址；缺包明确失败，不改选 latest。 */
-  async resolveEngine(raw: string): Promise<EngineRuntimePackage>
+  async ResolveEngine(raw: string): Promise<EngineRuntimePackage>
   {
     const kind = loopEngineSchema.parse(raw);
-    await this.init();
+    await this.Init();
     let item = this.state.entries.find(value => value.kind === kind);
     if (item?.enabled === false)
       throw Error('引擎已停用，请在引擎设置中启用');
     if (!item?.active)
     {
-      await this.queue.run(async () =>
+      await this.queue.Run(async () =>
       {
         if (!this.state.entries.find(value => value.kind === kind)?.active)
-          await this.installNow(kind, false)
+          await this.InstallNow(kind, false)
       });
       item = this.state.entries.find(value => value.kind === kind)
     }
     if (!item?.enabled || !item.active)
       throw Error('引擎尚未启用');
     const identity = item.active,
-      versions = await this.artifacts.list(),
+      versions = await this.artifacts.List(),
       artifact = versions.available.find(value => value.kind === kind && value.identity === identity);
     if (!artifact)
       throw Error('已安装引擎的受信版本记录缺失');
-    const closure = this.closure(artifact, versions.available),
+    const closure = this.Closure(artifact, versions.available),
       prepared = new Map<string, EngineRuntimePackage>();
     for (const dependency of closure)
     {
@@ -330,7 +330,7 @@ export class EnginePackages implements EngineRuntimeResolver
         throw this.failures.get(key);
       try
       {
-        prepared.set(key, await this.prepare(dependency))
+        prepared.set(key, await this.Prepare(dependency))
       }
       catch (error)
       {

@@ -12,7 +12,7 @@ import { humanDecisionProofSchema, type HumanDecisionProof, type HumanDecisionPr
 
 function normalized(value: unknown): unknown
 {
-  return JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true })
+  return JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a < b ? -1 : a > b ? 1 : 0, omitUndefinedProperties: true })
 }
 
 /** 去除候选菜单及显示正文，保留用于决定的固定事实；未就绪预览不能签发可提交证明。 */

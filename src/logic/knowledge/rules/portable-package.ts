@@ -1,7 +1,7 @@
 /**
  * 作用定位：把工作区静态团队能力或完整业务架构转为可复用资源包，并纯计算目标知识变更。
  * 设计原因：包只携带定义与闭合正文引用，人员、维护授权、源码定位和连接器绑定必须在目标项目重新建立；运行实例与主会话任务图不属于可复用架构。
- * 职责边界：不读取磁盘、不写知识、不授予权限。Workflow 条件随原正文保留并独立严格解析；完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.preview/commit 统一验证。
+ * 职责边界：不读取磁盘、不写知识、不授予权限。Workflow 条件随原正文保留并独立严格解析；完整目标 Schema/目录与引用规则仍由 KnowledgeWorkspace.Preview/commit 统一验证。
  * 可复用 Team/Agent 包剔除本机 runtime 引用，避免把无效供应商身份带到另一台机器。
  * 机制边界：对象递归排序由 utility 提供，本模块保留历史比较器、字段省略和业务指纹规则。
  * 算法入口：通过 Core JsonUtils 静态方法复用机制，本文件继续拥有原业务策略。
@@ -114,7 +114,7 @@ function check(condition: unknown, message: string): asserts condition
 }
 
 /** 保留本模块历史键排序与 undefined 规则；utility 只提供递归复制机制。 */
-const ordered = (value: unknown): unknown => JsonUtils.orderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: false });
+const ordered = (value: unknown): unknown => JsonUtils.OrderJsonValue(value, { compareKeys: (a, b) => a.localeCompare(b), omitUndefinedProperties: false });
 
 /** 指纹涵盖所有静态定义；不覆盖或传递任何执行授权。 */
 export function workspacePackageFingerprint(value: Omit<WorkspacePackage, 'fingerprint'> | WorkspacePackage)

@@ -14,7 +14,7 @@ import type { Workspace } from '../../workspace/service/workspace';
 /** 缺少专用传输返回 undefined，使运行准备按实际能力拒绝；不让只读 Node 宿主伪造执行能力。 */
 export function createArtifactTransitionPort(owner: Workspace, transport: ControlledFileTransport | undefined, isCurrent: () => boolean): ArtifactTransitionRunPort | undefined
 {
-  if (!transport?.withExclusiveTransition)
+  if (!transport?.WithExclusiveTransition)
     return;
   const root = owner.entry.path,
     instanceId = owner.instanceId,
@@ -22,35 +22,35 @@ export function createArtifactTransitionPort(owner: Workspace, transport: Contro
     protectedRoots = [owner.paths.userRoot, owner.paths.installRoot, ...(owner.paths.protectedRoots ?? [])];
   const check = () =>
   {
-    owner.assert({ workspaceId, instanceId });
+    owner.Assert({ workspaceId, instanceId });
     if (!isCurrent())
       fail('ARTIFACT_TRANSITION_UNAVAILABLE', '工作区正在停止，不能发出删除/移动')
   };
   return {
-    withExclusive: async (operation, signal, use) =>
+    WithExclusive: async (operation, signal, use) =>
     {
       check();
       signal.throwIfAborted();
       const frozen = structuredClone(operation),
         source = frozen.kind === 'delete' ? frozen.path : frozen.from,
         transition: ControlledNamespaceChange = frozen.kind === 'delete' ? { kind: 'delete' } : { kind: 'move', targetRelativePath: frozen.to };
-      return transport.withExclusiveTransition!(root, source, transition, protectedRoots, signal, async file => use({
-        readBefore: async () =>
+      return transport.WithExclusiveTransition!(root, source, transition, protectedRoots, signal, async file => use({
+        ReadBefore: async () =>
         {
           check();
           signal.throwIfAborted();
-          const value = await file.readBefore();
+          const value = await file.ReadBefore();
           return { identity: value.identity, fact: value.fact }
-        }, apply: async () =>
+        }, Apply: async () =>
         {
           check();
           signal.throwIfAborted();
-          const result = await file.transitionAndVerify();
+          const result = await file.TransitionAndVerify();
           if (!equal(result.transition, transition) || result.sourceMissing !== true)
             fail('ARTIFACT_TRANSITION_RESULT_INVALID', '平台返回了另一项删除/移动');
           return { identity: result.identity, fact: result.fact, operation: frozen, sourceMissing: true };
         }
       }));
-    }, drain: () => transport.drain(root)
+    }, Drain: () => transport.Drain(root)
   };
 }

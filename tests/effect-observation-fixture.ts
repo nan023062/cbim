@@ -19,10 +19,10 @@ export async function effectWait(check:()=>Promise<boolean>,provider:Awaited<Ret
 
 /** 完成真实知识、岗位、负责人和模型登记，不修改通用 seedTeam，也不从主模型隐式回退。 */
 export async function seedEffectObservation(app:Application,project:string,provider:Awaited<ReturnType<typeof effectObservationProvider>>){
-  const saved=await app.models.save({profile:{name:'Effect observation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Effect fixture',enabled:true,contextWindow:131072,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}),profile=saved.profiles.find(item=>item.name==='Effect observation fixture');assert.ok(profile);
-  const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
+  const saved=await app.models.Save({profile:{name:'Effect observation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Effect fixture',enabled:true,contextWindow:131072,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}),profile=saved.profiles.find(item=>item.name==='Effect observation fixture');assert.ok(profile);
+  const entry=await app.Dispatch('add',{path:project}),workspace=app.Workspace(entry.id),team=await seedTeam(workspace),snapshot=await workspace.Snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(snapshot.files.find(file=>file.path===modulePath)!.text);
   definition.maintenance={bindingId:'effect-maintainer',maintainerPersonIds:['owner'],revision:1,state:'active',confirmation:{recordId:'effect-review',source:'local_user',confirmedAt:new Date().toISOString()}};
-  await workspace.commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
+  await workspace.Commit(request(snapshot,[{path:modulePath,text:JSON.stringify(definition)},{path:'.cbim/team/people.json',text:JSON.stringify({people:[{id:'owner',name:'维护人',team:'.cbim/team'}]})}]));
   const owner=await registerExplicitFixtureOwner(app,entry.id,{agentId:team.input.agentId,moduleIds:[team.input.moduleId],profileId:profile.id,modelId:data.model});provider.bind(team.input.agentId,team.input.moduleId,owner.selection);
   return {entry,team,owner,options:{profileId:profile.id,provider:'cbim-'+profile.id,model:data.model,permission:'execute' as const,turnTimeoutMs:60000}};
 }
@@ -32,10 +32,10 @@ export async function prepareUnknownEffect(app:Application,user:string,project:s
   const seed=await seedEffectObservation(app,project,provider),id=seed.entry.id,fault=unsupported||edit?undefined:loseOriginalEffectResult(project);
   if(edit)await fs.writeFile(path.join(project,data.file),data.editSeedText);
   try{
-    const started=await app.dispatch('loop.chat',{id,message:data.oldGoal,options:seed.options}),identity={workspaceId:id,rootSessionId:started.taskId};
-    await effectWait(async()=>{const records=await additionRecords(user,id);return records.scopes.length===1&&records.scopes[0].status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0},provider,'original scope closed');
-    const records=await additionRecords(user,id),graph:GraphSnapshot=await app.dispatch('dispatch.graphSnapshot',{identity}),task=graph.tasks[0];assert.equal(graph.tasks.length,1);assert.equal(records.scopes[0].outcome,'failed');assert.ok(task);assert.equal(task.runIds.length,1);assert.equal(task.result,undefined);assert.equal(provider.main.length,6);assert.equal(provider.member.length,3);
-    const runId=task.runIds[0],toolCallId=unsupported?'effect-old-command':edit?'effect-old-edit':'effect-old-write',subject={kind:'member_run' as const,taskId:task.taskId,runId,toolCallIds:[toolCallId]},directory=path.join(user,id,'dispatch','runs','tasks',task.taskId,runId),summary=await new FileRunStorage().read(directory);
+    const started=await app.Dispatch('loop.chat',{id,message:data.oldGoal,options:seed.options}),identity={workspaceId:id,rootSessionId:started.taskId};
+    await effectWait(async()=>{const records=await additionRecords(user,id);return records.scopes.length===1&&records.scopes[0].status==='closed'&&app.runtime.Snapshot().pressure.activeRuns===0},provider,'original scope closed');
+    const records=await additionRecords(user,id),graph:GraphSnapshot=await app.Dispatch('dispatch.graphSnapshot',{identity}),task=graph.tasks[0];assert.equal(graph.tasks.length,1);assert.equal(records.scopes[0].outcome,'failed');assert.ok(task);assert.equal(task.runIds.length,1);assert.equal(task.result,undefined);assert.equal(provider.main.length,6);assert.equal(provider.member.length,3);
+    const runId=task.runIds[0],toolCallId=unsupported?'effect-old-command':edit?'effect-old-edit':'effect-old-write',subject={kind:'member_run' as const,taskId:task.taskId,runId,toolCallIds:[toolCallId]},directory=path.join(user,id,'dispatch','runs','tasks',task.taskId,runId),summary=await new FileRunStorage().Read(directory);
     assert.ok(summary.sessionFile);assert.equal(summary.logIntegrity?.partialTail,false);assert.ok(summary.events.some(event=>event.type==='session.bound'&&event.data.sessionFile===summary.sessionFile&&typeof event.data.sessionId==='string'&&event.data.sessionId.length>0));
     assert.equal(summary.events.filter(event=>event.type==='tool.allowed'&&event.data.id===toolCallId).length,1);assert.equal(summary.events.filter(event=>event.type==='artifact.baseline_captured').length,0);
     if(!unsupported&&!edit){assert.equal(fault!.events.length,1);assert.ok(summary.unresolvedTools?.includes(toolCallId));assert.equal(summary.events.filter(event=>event.type==='tool.finished'&&event.data.id===toolCallId).length,0);assert.equal(await fs.readFile(path.join(project,data.file),'utf8'),data.oldText)}
@@ -50,7 +50,7 @@ export async function assertOriginalEffectUnchanged(original:Pick<Awaited<Return
 
 /** 核实每个真实主/成员绑定；fresh 周期本来就有不同 native，不把它们误判成同一会话文件。 */
 export async function effectRunBytes(app:Application,user:string,workspaceId:string,rootSessionId:string){
-  assert.equal(app.workspace(workspaceId).entry.id,workspaceId);
+  assert.equal(app.Workspace(workspaceId).entry.id,workspaceId);
   return effectPersistedRunBytes(user,workspaceId,rootSessionId);
 }
 export async function effectPersistedRunBytes(user:string,workspaceId:string,rootSessionId:string){
@@ -58,12 +58,12 @@ export async function effectPersistedRunBytes(user:string,workspaceId:string,roo
   // Public thread() intentionally exposes only the current fresh epoch. The persisted tracking
   // lists identify every old and new actual main run without guessing directories or borrowing one epoch.
   const mainIds=[...new Set(records.scopes.filter(scope=>scope.rootSessionId===rootSessionId).flatMap(scope=>scope.runTracking?.mainRunIds??[]))];assert.ok(mainIds.length);
-  const main=await Promise.all(mainIds.map(runId=>storage.read(path.join(user,workspaceId,'loop-engine','tasks',rootSessionId,runId))));
+  const main=await Promise.all(mainIds.map(runId=>storage.Read(path.join(user,workspaceId,'loop-engine','tasks',rootSessionId,runId))));
   const runs:Array<{kind:'main'|'member';summary:RunSummary}>=main.map(summary=>({kind:'main',summary}));
-  for(const run of records.runs.filter(run=>run.binding.rootSessionId===rootSessionId))runs.push({kind:'member',summary:await storage.read(path.join(user,workspaceId,'dispatch','runs','tasks',run.binding.taskId,run.binding.runId))});
+  for(const run of records.runs.filter(run=>run.binding.rootSessionId===rootSessionId))runs.push({kind:'member',summary:await storage.Read(path.join(user,workspaceId,'dispatch','runs','tasks',run.binding.taskId,run.binding.runId))});
   const journal=await fs.readFile(path.join(user,workspaceId,'dispatch/dispatch.jsonl'),'utf8'),business=new Map<string,{binding:{rootSessionId:string;taskId:string;runId:string}}>();
   for(const line of journal.trim().split('\n'))for(const run of JSON.parse(line).body.mutation.agentBusinessRuns??[])business.set(run.binding.runId,run);
-  for(const run of business.values())if(run.binding.rootSessionId===rootSessionId)runs.push({kind:'member',summary:await storage.read(path.join(user,workspaceId,'loop-engine/tasks',run.binding.taskId,run.binding.runId))});
+  for(const run of business.values())if(run.binding.rootSessionId===rootSessionId)runs.push({kind:'member',summary:await storage.Read(path.join(user,workspaceId,'loop-engine/tasks',run.binding.taskId,run.binding.runId))});
   assert.ok(main.length>0);
   return Promise.all(runs.map(async({kind,summary})=>{
     assert.equal(summary.task.workspaceId,workspaceId);assert.equal(summary.logIntegrity?.partialTail,false);const nativePath=summary.sessionFile;assert.ok(nativePath?.trim());assert.ok(nativePath);

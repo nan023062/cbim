@@ -49,7 +49,7 @@ export interface ModuleOwnershipPanelProps
 
 export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberId, memberId, onClose, registration, onDirtyChange }: ModuleOwnershipPanelProps)
 {
-  const controller = useMemo(() => commands.get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), [identity.workspaceId]);
+  const controller = useMemo(() => commands.Get(identity.workspaceId, { storage: window.localStorage, uuid: () => crypto.randomUUID(), commit: input => window.cbim.call('workspace.ownerships.commit', input), lookup: input => window.cbim.call('workspace.ownerships.receipt', input) }), [identity.workspaceId]);
   const [, setTick] = useState(0),
     [page, setPage] = useState<ModuleOwnershipPage>(),
     [detail, setDetail] = useState<ModuleOwnershipDetail>(),
@@ -77,8 +77,8 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   useEffect(() =>
   {
     alive.current = true;
-    const unsubscribe = controller.subscribe(() => setTick(value => value + 1));
-    void controller.restore().then(async () =>
+    const unsubscribe = controller.Subscribe(() => setTick(value => value + 1));
+    void controller.Restore().then(async () =>
     {
       if (!alive.current)
         return;
@@ -254,7 +254,7 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       return;
     lock.current = true;
     setLoading(true);
-    await controller.submit({ ...identity, change: preview.change }, preview);
+    await controller.Submit({ ...identity, change: preview.change }, preview);
     lock.current = false;
     if (!alive.current)
       return;
@@ -274,9 +274,9 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
   async function query(commandId: string, retry = false)
   {
     if (retry)
-      await controller.retry(commandId);
+      await controller.Retry(commandId);
     else
-      await controller.query(commandId);
+      await controller.Query(commandId);
     if (alive.current)
       await list()
   }
@@ -326,6 +326,6 @@ export function ModuleOwnershipPanel({ identity, initialModuleId, initialMemberI
       {!detail && !loading && <p>选择模块查看或修改负责人。</p>}
       {preview && <section className="module-ownership-preview" data-testid="module-ownership-preview-result"><h3>{isModuleOwnershipSourceAdoption(preview.change) ? '来源采纳预览' : '负责人变更预览'}</h3><KnowledgeSourceSelection selection={preview.sourceSelection} /><p>{preview.previousOwner?.name ?? '自动解析（未显式设置）'} → <strong>{preview.nextOwner?.name ?? '自动解析（未显式设置）'}</strong></p><p>{preview.change.reason}</p><p>关联任务 {preview.impact.total} 个：未领取 {preview.impact.counts.unclaimed}、执行中 {preview.impact.counts.inFlight}、检查点 {preview.impact.counts.checkpointed}、已终结 {preview.impact.counts.terminal}、其他 {preview.impact.counts.other}。此次登记不会改变这些任务。</p>{preview.issues.map((issue, index) => <p key={index}>{issue.message}</p>)}<button className="solid-button" data-testid="module-ownership-commit" disabled={blocked || loading} onClick={() => void commit()}>{isModuleOwnershipSourceAdoption(preview.change) ? '确认采纳当前来源' : '确认保存负责人'}</button></section>}
     </div></div>
-    {!!state.records.length && <details className="module-ownership-commands" open={blocked}><summary>本机责任提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record => <div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{ submitting: '正在提交', unknown: '结果未确认', accepted: '已受理', rejected: '未受理' }[record.phase]}</strong><code>{record.request.commandId}</code>{record.error && <p role="alert">{record.error}</p>}{record.receipt && <p>{record.receipt.moduleId} · 责任第 {record.receipt.revision} 版</p>}{record.phase !== 'rejected' && <button data-testid="module-ownership-receipt-query" disabled={controller.isPending(record.request.commandId)} onClick={() => void query(record.request.commandId)}><Icon name="search" size={16} />查询原命令</button>}{record.phase === 'unknown' && <button disabled={controller.isPending(record.request.commandId)} onClick={() => void query(record.request.commandId, true)}><Icon name="retry" size={16} />重送同一请求</button>}{record.receipt && <button disabled={loading} onClick={() => void select(record.receipt!.moduleId)}><Icon name="inspect" size={16} />查看模块责任</button>}</div>)}</details>}
+    {!!state.records.length && <details className="module-ownership-commands" open={blocked}><summary>本机责任提交记录 · {state.records.length}</summary>{[...state.records].reverse().map(record => <div key={record.request.commandId} data-command-id={record.request.commandId}><strong>{{ submitting: '正在提交', unknown: '结果未确认', accepted: '已受理', rejected: '未受理' }[record.phase]}</strong><code>{record.request.commandId}</code>{record.error && <p role="alert">{record.error}</p>}{record.receipt && <p>{record.receipt.moduleId} · 责任第 {record.receipt.revision} 版</p>}{record.phase !== 'rejected' && <button data-testid="module-ownership-receipt-query" disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId)}><Icon name="search" size={16} />查询原命令</button>}{record.phase === 'unknown' && <button disabled={controller.IsPending(record.request.commandId)} onClick={() => void query(record.request.commandId, true)}><Icon name="retry" size={16} />重送同一请求</button>}{record.receipt && <button disabled={loading} onClick={() => void select(record.receipt!.moduleId)}><Icon name="inspect" size={16} />查看模块责任</button>}</div>)}</details>}
   </section>;
 }

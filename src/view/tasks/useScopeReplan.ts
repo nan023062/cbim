@@ -100,7 +100,7 @@ export function useScopeReplan(workspaceId: string, rootSessionId: string | unde
   rootRef.current = rootKey;
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
-  const controller = useMemo(() => rootSessionId ? controllers.get(workspaceId, rootSessionId, {
+  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: name => window.localStorage.getItem(name), setItem: (name, value) => window.localStorage.setItem(name, value) },
     preview: input => window.cbim.call('dispatch.replans.preview', input), submit: request => window.cbim.call('loop.replanStart', request), lookup: input => window.cbim.call('loop.replanReceipt', input), uuid: () => crypto.randomUUID(),
   }) : undefined, [workspaceId, rootSessionId]);
@@ -111,8 +111,8 @@ export function useScopeReplan(workspaceId: string, rootSessionId: string | unde
   {
     if (!controller)
       return;
-    const unsubscribe = controller.subscribe(() => changed(value => value + 1));
-    void controller.restore().then(() =>
+    const unsubscribe = controller.Subscribe(() => changed(value => value + 1));
+    void controller.Restore().then(() =>
     {
       if (rootRef.current === rootKey)
         refreshRef.current()
@@ -120,27 +120,27 @@ export function useScopeReplan(workspaceId: string, rootSessionId: string | unde
     return () =>
     {
       unsubscribe();
-      controller.observeTarget(undefined)
+      controller.ObserveTarget(undefined)
     }
   }, [controller, rootKey]);
   const oldSource = state.selectedScope?.recovery?.source,
     selection = oldSource ? recoverySourceSelection(recoveryRequestSource(oldSource)) : undefined;
   const effectSource: EffectObservationInput | undefined = rootSessionId && selection && 'kind' in selection ? { workspaceId, rootSessionId, subject: selection } : undefined;
-  const disposition = effectSource ? effects?.selected(effectSource) : undefined,
+  const disposition = effectSource ? effects?.Selected(effectSource) : undefined,
     dispositionId = disposition?.request.decision === 'repair_in_new_cycle' ? disposition.dispositionId : undefined;
   const eligibility = replanTarget(workspaceId, rootSessionId, state, JSON.stringify(model?.options)),
     target = eligibility.target ? { ...eligibility.target, ...(dispositionId ? { dispositionId } : {}) } : undefined;
   // 布局提交时先作废旧来源/版本；即使请求在切换窗口后返回，也不能启用另一来源的提交按钮。
-  useLayoutEffect(() => controller?.observeTarget(target), [controller, target?.anchor, target?.inspectionScopeId, target?.dispositionId]);
+  useLayoutEffect(() => controller?.ObserveTarget(target), [controller, target?.anchor, target?.inspectionScopeId, target?.dispositionId]);
   const source = state.selectedScopeId,
-    record = source ? controller?.record(source) : undefined,
+    record = source ? controller?.Record(source) : undefined,
     attempt = record?.attempt;
-  const pending = controller?.isPending(record) ?? false,
+  const pending = controller?.IsPending(record) ?? false,
     editable = !!target && !!controller?.available && !pending && (!attempt || attempt.phase === 'rejected');
   const summary = state.scopes.find(item => item.scopeId === source),
     observedPreview = controller?.snapshot.preview,
     previewState = observedPreview?.target.inspectionScopeId === source ? observedPreview : undefined;
-  const fresh = controller?.ready(target),
+  const fresh = controller?.Ready(target),
     modelLabel = attempt && attempt.phase !== 'rejected' ? attempt.request.options.model + ' · ' + (attempt.request.options.permission === 'ask' ? '默认权限' : '完全访问') + '（本次请求已固定）' : model?.label ?? '请先在对话输入区选择可用模型';
   const after = async (work: () => Promise<void>) =>
   {
@@ -155,28 +155,28 @@ export function useScopeReplan(workspaceId: string, rootSessionId: string | unde
     edit: (message, permission) =>
     {
       if (editable && source)
-        controller!.edit(source, message, permission)
+        controller!.Edit(source, message, permission)
     },
     preview: () => after(async () =>
     {
       if (editable && target)
-        await controller!.preview(target)
+        await controller!.Preview(target)
     }),
     submit: () => after(async () =>
     {
       if (editable && target && model && (!effectSource || dispositionId))
-        await controller!.submit(target, model.options)
+        await controller!.Submit(target, model.options)
     }),
     query: () => after(async () =>
     {
       if (record)
-        await controller!.query(record.inspectionScopeId)
+        await controller!.Query(record.inspectionScopeId)
     }),
     // 已冻结命令先由后端去重；当前已有周期或预览过期不能隐藏它的查询/原请求重试入口。
     retry: () => after(async () =>
     {
       if (record && attempt?.phase === 'unknown')
-        await controller!.retry(record.inspectionScopeId)
+        await controller!.Retry(record.inspectionScopeId)
     }),
     showCreated: () =>
     {

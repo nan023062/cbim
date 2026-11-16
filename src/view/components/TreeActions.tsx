@@ -15,7 +15,7 @@ export interface TreeAction
 
   disabled?: boolean;
 
-  onSelect(): void
+  OnSelect(): void
 }
 
 /** 操作只在点击后通知宿主；点击外部或 Escape 收起，保留原节点选择。 */
@@ -43,6 +43,6 @@ export function TreeActions({ name, actions }: { name: string; actions: readonly
   }}><summary title={name + '的操作'} aria-label={name + '的操作'}><Icon name="more" size={16} /></summary><div className="knowledge-row-actions" role="group" aria-label={name + '的操作项'}>{actions.map(action => <button type="button" key={action.id} data-tree-action={action.id} title={action.label} aria-label={action.label} disabled={action.disabled} onClick={() =>
   {
     menu.current?.removeAttribute('open');
-    action.onSelect()
+    action.OnSelect()
   }}><Icon name={action.icon} size={17} /></button>)}</div></details>;
 }

@@ -17,10 +17,10 @@ it.each(['complete','owner-before-answer','model-after-answer'] as const)('keeps
   await c.answer(c.first);
   if(mode==='model-after-answer'){
    await c.until(()=>expect(c.provider.state.continued).toBe(true));
-   await c.app.models.save({id:binding.model.profileId,profile:{name:'Member checkpoint fixture',api:'openai-completions',baseUrl:c.provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Member checkpoint fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
+   await c.app.models.Save({id:binding.model.profileId,profile:{name:'Member checkpoint fixture',api:'openai-completions',baseUrl:c.provider.url,auth:'none',defaultModel:data.model,models:[{id:data.model,name:'Member checkpoint fixture',enabled:true,contextWindow:65536,maxTokens:2048,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
    c.provider.releaseContinuation();
   }
-  await c.until(async()=>{expect((await c.state()).scopes?.[0].status).toBe('closed');expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  await c.until(async()=>{expect((await c.state()).scopes?.[0].status).toBe('closed');expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0)});
   const saved=await c.state(),runs=saved.agentBusinessRuns!,child=await c.child();
   expect(runs).toHaveLength(mode==='complete'?3:1);expect(runs[0].binding).toEqual(original.binding);expect(runs[0].prepared).toEqual(original.prepared);
   expect(child.task.ownerBinding).toEqual(binding);expect(child.sessionFile).toBe(first.sessionFile);

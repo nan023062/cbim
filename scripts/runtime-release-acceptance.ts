@@ -89,17 +89,17 @@ async function main(){
     if(mode==='candidate'){
       await close();
       const store=new RuntimeStore(cache,cold,async(pkg,target,_signal,progress)=>{const file=path.join(downloads,pkg.name);assert.equal(await hash(file),pkg.sha256);await fs.copyFile(file,target);progress(100)});
-      await store.saveManifest(envelope);await store.prepare(checked.manifest.resource,new AbortController().signal);
-      await launch();assert.equal((await status()).currentResourceVersion,1);await close();assert.equal(journal.read().pending,undefined);
+      await store.SaveManifest(envelope);await store.Prepare(checked.manifest.resource,new AbortController().signal);
+      await launch();assert.equal((await status()).currentResourceVersion,1);await close();assert.equal(journal.Read().pending,undefined);
       // 候选预发布阶段由测试明确授权缓存中的真实签名包；不冒充公开下载或真实 UI 点击。
-      journal.authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});await launch();
+      journal.Authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});await launch();
     }else{
       const ready=await until(status,v=>v.phase==='ready',300000);assert.equal(ready.release?.resourceVersion,checked.manifest.resourceVersion);assert.equal(ready.release?.delivery,'resources');
-      await save('ready',ready);await page.screenshot({path:path.join(root,'ready.png')});assert.equal(journal.read().pending,undefined);
-      await close();await launch();assert.equal((await status()).currentResourceVersion,1);assert.equal(journal.read().pending,undefined);
+      await save('ready',ready);await page.screenshot({path:path.join(root,'ready.png')});assert.equal(journal.Read().pending,undefined);
+      await close();await launch();assert.equal((await status()).currentResourceVersion,1);assert.equal(journal.Read().pending,undefined);
       await until(status,v=>v.phase==='ready',300000);const oldPid=app!.pid;
       await page.waitForFunction(()=>document.querySelector('.software-update-button')?.getAttribute('aria-disabled')==='false');try{await app!.exitAfter(()=>page.getByRole('button',{name:'版本与更新',exact:true}).click(),'resource-ui-install')}finally{app=undefined}
-      await until(async()=>journal.read(),v=>v.confirmed===expected&&!v.pending);
+      await until(async()=>journal.Read(),v=>v.confirmed===expected&&!v.pending);
       const escaped=exe.replaceAll("'","''");
       const restarted=await until(async()=>{const raw=ps(`Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '${escaped}' -and $_.ProcessId -ne ${oldPid} -and $_.CommandLine -notlike '*--type=*' } | Select-Object ProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Compress`);return raw?JSON.parse(raw):undefined},v=>!!v);
       assert.ok(!Array.isArray(restarted));await save('actual-restart',restarted);
@@ -112,7 +112,7 @@ async function main(){
     assert.deepEqual(await page.evaluate(()=>window.cbim.call('models.list')),models);
     const knowledge=await page.evaluate(id=>window.cbim.call('snapshot',{id}),entry.id);assert.equal(knowledge.revision,beforeKnowledge.revision);assert.deepEqual(knowledge.files,beforeKnowledge.files);
     const summary=await page.evaluate(args=>window.cbim.call('loop.inspect',args),{id:entry.id,taskId:task.taskId,runId:task.runId});assert.equal(summary.status,'completed');assert.equal(requests,1);
-    assert.equal(journal.read().confirmed,expected);assert.equal(journal.read().pending,undefined);assert.deepEqual(errors,[]);
+    assert.equal(journal.Read().confirmed,expected);assert.equal(journal.Read().pending,undefined);assert.deepEqual(errors,[]);
     await page.screenshot({path:path.join(root,'upgraded.png')});
     if(coldVersion==='0.1.17'){
       // 实际安装版验证新设置中心、旧主题迁移和保存；不连接生产账号或改动模型。
@@ -142,11 +142,11 @@ async function main(){
     if(mode==='candidate'){
       // 独立状态目录验证同一真实包的加载前损坏回退与数据访问后拒绝降级，不触碰已升级 profile。
       const failureState=path.join(root,'failure-state'),testCache=path.join(root,'failure-cache');const failureStore=new RuntimeStore(testCache,cold,async(pkg,target)=>fs.copyFile(path.join(downloads,pkg.name),target));
-      await failureStore.saveManifest(envelope);const prepared=await failureStore.prepare(checked.manifest.resource,new AbortController().signal);
-      const failureJournal=new RuntimeJournal(failureState,{digest:initial.digest,resourceVersion:1});failureJournal.authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});
+      await failureStore.SaveManifest(envelope);const prepared=await failureStore.Prepare(checked.manifest.resource,new AbortController().signal);
+      const failureJournal=new RuntimeJournal(failureState,{digest:initial.digest,resourceVersion:1});failureJournal.Authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});
       const first=checked.manifest.resource.files[0],target=path.join(prepared,first.path),original=await fs.readFile(target);await fs.writeFile(target,'corrupted');
-      const selected=selectBootResources(cold,testCache,path.join(install,'resources/bundled-resources'),path.join(install,'resources/runtime-initial.json'),failureState);assert.equal(selected.manifest.resourceVersion,1);assert.ok(failureJournal.read().quarantined.includes(expected));recoveryChecks.push('before-data corruption quarantined and R1 selected');
-      await fs.writeFile(target,original);const afterState=path.join(root,'after-data-state'),afterJournal=new RuntimeJournal(afterState,{digest:initial.digest,resourceVersion:1});afterJournal.authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});afterJournal.accessData(expected);
+      const selected=selectBootResources(cold,testCache,path.join(install,'resources/bundled-resources'),path.join(install,'resources/runtime-initial.json'),failureState);assert.equal(selected.manifest.resourceVersion,1);assert.ok(failureJournal.Read().quarantined.includes(expected));recoveryChecks.push('before-data corruption quarantined and R1 selected');
+      await fs.writeFile(target,original);const afterState=path.join(root,'after-data-state'),afterJournal=new RuntimeJournal(afterState,{digest:initial.digest,resourceVersion:1});afterJournal.Authorize({digest:expected,resourceVersion:checked.manifest.resourceVersion});afterJournal.AccessData(expected);
       assert.throws(()=>selectBootResources(cold,testCache,path.join(install,'resources/bundled-resources'),path.join(install,'resources/runtime-initial.json'),afterState),/RESOURCE_RECOVERY_REQUIRED/);recoveryChecks.push('after-data unconfirmed launch refuses downgrade');
     }
     await save('report',{success:true,mode,source,digest:expected,resourceVersion:checked.manifest.resourceVersion,coldVersion,coldInstallerSha256:await hash(installer),resourceSha256:checked.manifest.resource.sha256,resourceBytes:checked.manifest.resource.bytes,native,retained:{workspace:true,knowledge:true,models:true,completedTask:true,businessFile:true,localStorage:true,noReplay:true,engineInstallationAndCache:!!retainedEngine},engineOverviewVerified:coldVersion==='0.1.18',requests,pageErrors:errors,recoveryChecks,limitations:mode==='candidate'?'Signed candidate staged by harness; public discovery/UI apply tested separately. Failure branches use actual package with selector, not native recovery dialog.':'Real anonymous public channel and UI apply; deterministic localhost model validates retention, not model quality.',completedAt:new Date().toISOString()});

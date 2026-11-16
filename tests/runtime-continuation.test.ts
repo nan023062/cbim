@@ -15,17 +15,17 @@ it.each(['before-intent','journal-init','engine-start','engine-ready','lease-fai
   const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-runtime-continue-')),boundary=deferred(),entered=deferred(),engines:{ran:boolean;closed:boolean;stopped:boolean}[]=[];
   let leases=0,continuing=false;
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Original goal',mode:'chat',moduleIds:[],acceptance:[]};
-  const storage=new FileRunStorage(),createJournal=storage.createJournal.bind(storage);
-  storage.createJournal=(directory,task,runId)=>{const journal=createJournal(directory,task,runId),initialize=journal.init.bind(journal);journal.init=async()=>{await initialize();if(continuing&&mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
-  const runtime=new LoopRuntime({directory,storage,engineKind:'test',acquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},toolPolicy:async()=>({allow:false}),onEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},createEngine:()=>{
+  const storage=new FileRunStorage(),createJournal=storage.CreateJournal.bind(storage);
+  storage.CreateJournal=(directory,task,runId)=>{const journal=createJournal(directory,task,runId),initialize=journal.Init.bind(journal);journal.Init=async()=>{await initialize();if(continuing&&mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
+  const runtime=new LoopRuntime({directory,storage,engineKind:'test',AcquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},ToolPolicy:async()=>({allow:false}),OnEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},CreateEngine:()=>{
     const state={ran:false,closed:false,stopped:false};engines.push(state);
     const engine:AgentEngine={kind:'test',start:async(context:EngineContext)=>{await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId??task.taskId,sessionFile:context.sessionFile??path.join(context.directory,'native.jsonl')}});if(continuing&&mode==='engine-start'){entered.resolve();await boundary.promise}},run:async()=>{state.ran=true;return {status:'completed'}},stop:async()=>{state.stopped=true},close:async()=>{state.closed=true}};return engine;
   }});
   try{
-    const original=await runtime.start(task);await original.done;expect(leases).toBe(0);continuing=true;
+    const original=await runtime.Start(task);await original.done;expect(leases).toBe(0);continuing=true;
     const controller=new AbortController(),beforeRun=vi.fn(async(input:{task:TaskSpec;runId:string})=>{expect(input.task).toEqual(task);expect(input.runId).not.toBe(original.runId);if(mode==='before-intent'){entered.resolve();await boundary.promise}});
     if(mode==='aborted-before-start')controller.abort(Error('Stopped before startup'));
-    const pending=runtime.start(task,'Explicit format supplement',{runId:original.runId},source,{signal:controller.signal,beforeRun});
+    const pending=runtime.Start(task,'Explicit format supplement',{runId:original.runId},source,{signal:controller.signal,BeforeRun: beforeRun});
     if(mode==='lease-failed'||mode==='aborted-before-start'){
       await expect(pending).rejects.toThrow(mode==='lease-failed'?'MEMBER_BUSY':'Stopped before startup');expect(beforeRun).not.toHaveBeenCalled();expect(engines).toHaveLength(1);
     }else if(mode==='before-intent'){
@@ -38,9 +38,9 @@ it.each(['before-intent','journal-init','engine-start','engine-ready','lease-fai
       expect(result.status).toBe('cancelled');expect(result.source).toEqual(source);expect(engines).toHaveLength(2);expect(engines[1]).toEqual({ran:false,closed:true,stopped:true});expect(beforeRun).toHaveBeenCalledTimes(1);
     }
     expect(leases).toBe(0);
-    const logs=await new FileRunStorage().list(path.join(directory,task.taskId));expect(logs).toHaveLength(['journal-init','engine-start','engine-ready'].includes(mode)?2:1);
-    for(const id of logs){const record=await storage.read(path.join(directory,task.taskId,id));expect(record.task).toEqual(task);expect(record.events[0].type).toBe('run.started');expect(record.status).toBe(id===original.runId?'completed':'cancelled')}
-  }finally{boundary.resolve();await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-runtime-continue-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}
+    const logs=await new FileRunStorage().List(path.join(directory,task.taskId));expect(logs).toHaveLength(['journal-init','engine-start','engine-ready'].includes(mode)?2:1);
+    for(const id of logs){const record=await storage.Read(path.join(directory,task.taskId,id));expect(record.task).toEqual(task);expect(record.events[0].type).toBe('run.started');expect(record.status).toBe(id===original.runId?'completed':'cancelled')}
+  }finally{boundary.resolve();await runtime.Close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-runtime-continue-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}
 });
 
 /** Engine history is a precondition of durable acceptance, not a failed run after acceptance. */
@@ -51,7 +51,7 @@ it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as con
   let leases=0;
   const acquireLease=async()=>{leases++;return()=>{leases--}};
   let originalContext:EngineContext|undefined,nextContext:EngineContext|undefined;
-  const first=new LoopRuntime({directory,storage,engineKind:'pi',acquireLease,toolPolicy:async()=>({allow:false}),createEngine:()=>({kind:'pi',start:async context=>{
+  const first=new LoopRuntime({directory,storage,engineKind:'pi',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),CreateEngine:()=>({kind:'pi',start:async context=>{
     originalContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
   },run:async()=>{await originalContext!.emit({type:'message',data:{text:mode==='oversized'?'x'.repeat(1024*1024):'Original result'}});return {status:'completed'}},stop:async()=>{},close:async()=>{}})});
   const beforeRun=vi.fn(async()=>{}),close=vi.fn(async()=>{});
@@ -60,14 +60,14 @@ it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as con
     if(mode==='factory-failed')throw Error('Assembly failed');
     const engine:AgentEngine={kind:mode==='wrong-engine'?'pi':'codex',start:async context=>{
       nextContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
-    },run:async()=>({status:'completed'}),stop:async()=>{},close};return engine;
+    },run:async()=>({status:'completed'}),stop:async()=>{},close: close};return engine;
   });
-  const second=new LoopRuntime({directory,storage,engineKind:'codex',acquireLease,toolPolicy:async()=>({allow:false}),createEngine});
+  const second=new LoopRuntime({directory,storage,engineKind:'codex',AcquireLease: acquireLease,ToolPolicy:async()=>({allow:false}),CreateEngine: createEngine});
   try{
-    const old=await first.start(task);await old.done;await first.close();
-    const read=storage.read.bind(storage);
-    storage.read=async location=>{const result=await read(location);if(mode==='cancelled')controller.abort(Error('Cancelled during history check'));return result};
-    const start=second.start(task,'Continue with Codex',{runId:old.runId},undefined,{signal:controller.signal,beforeRun});
+    const old=await first.Start(task);await old.done;await first.Close();
+    const read=storage.Read.bind(storage);
+    storage.Read=async location=>{const result=await read(location);if(mode==='cancelled')controller.abort(Error('Cancelled during history check'));return result};
+    const start=second.Start(task,'Continue with Codex',{runId:old.runId},undefined,{signal:controller.signal,BeforeRun: beforeRun});
     if(mode==='oversized'||mode==='cancelled'){
       await expect(start).rejects.toThrow(mode==='oversized'?'1 MiB':'Cancelled during history check');
       expect(beforeRun).not.toHaveBeenCalled();expect(createEngine).not.toHaveBeenCalled();
@@ -81,9 +81,9 @@ it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as con
       expect(nextContext!.sessionFile).toBeUndefined();
     }
     expect(leases).toBe(0);
-    expect(await storage.list(path.join(directory,task.taskId))).toHaveLength(mode==='valid'?2:1);
+    expect(await storage.List(path.join(directory,task.taskId))).toHaveLength(mode==='valid'?2:1);
   }finally{
-    await first.close();await second.close();
+    await first.Close();await second.Close();
     const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-preflight-'))throw Error('Unexpected cleanup path');
     await fs.rm(target,{recursive:true,force:true});
   }

@@ -23,31 +23,31 @@ const faultState={beforeWriteReached:false,signalAborted:false,appliedWriteCalls
 
 function observedTransport(real:ControlledFileTransport):ControlledFileTransport{
   return {
-    withExclusiveTransition:async(root,relativePath,transition,protectedRoots,signal,use)=>{
-      assert.ok(real.withExclusiveTransition);traces.push({kind:'transition-open-request'});
-      return real.withExclusiveTransition(root,relativePath,transition,protectedRoots,signal,async session=>{
+    WithExclusiveTransition:async(root,relativePath,transition,protectedRoots,signal,use)=>{
+      assert.ok(real.WithExclusiveTransition);traces.push({kind:'transition-open-request'});
+      return real.WithExclusiveTransition(root,relativePath,transition,protectedRoots,signal,async session=>{
         const internal=session as typeof session&{child?:{pid?:number};exited?:Promise<void>};assert.ok(internal.child?.pid);assert.ok(internal.exited);const pid=internal.child.pid;traces.push({kind:'transition-opened',pid});void internal.exited.then(()=>traces.push({kind:'transition-exited',pid}));
-        return use({readBefore:()=>session.readBefore(),recheckIdentity:()=>session.recheckIdentity(),get writeIssued(){return session.writeIssued},transitionAndVerify:async()=>{traces.push({kind:'transition-enter',pid});const value=await session.transitionAndVerify();traces.push({kind:'transition-confirmed',pid,byteLength:value.fact.byteLength,sha256:value.fact.sha256});return value}});
+        return use({ReadBefore:()=>session.ReadBefore(),RecheckIdentity:()=>session.RecheckIdentity(),get writeIssued(){return session.writeIssued},TransitionAndVerify:async()=>{traces.push({kind:'transition-enter',pid});const value=await session.TransitionAndVerify();traces.push({kind:'transition-confirmed',pid,byteLength:value.fact.byteLength,sha256:value.fact.sha256});return value}});
       });
     },
-    withExclusiveExisting:async(root,relativePath,protectedRoots,signal,use)=>{
+    WithExclusiveExisting:async(root,relativePath,protectedRoots,signal,use)=>{
       traces.push({kind:'open-request'});
-      return real.withExclusiveExisting(root,relativePath,protectedRoots,signal,async session=>{
+      return real.WithExclusiveExisting(root,relativePath,protectedRoots,signal,async session=>{
         const internal=session as ExclusiveControlledFile&{child?:{pid?:number;on:(name:string,fn:(value:any)=>void)=>void};exited?:Promise<void>};
         assert.ok(internal.child?.pid,'必须实际启动持有句柄的 utility child');assert.ok(internal.exited);
         const pid=internal.child.pid;traces.push({kind:'opened',pid});void internal.exited.then(()=>traces.push({kind:'exited',pid}));
         internal.child.on('message',reply=>traces.push({kind:'reply',pid,phase:reply.kind,seq:reply.seq,...(reply.code?{code:reply.code}:{}),...(typeof reply.writeIssued==='boolean'?{writeIssued:reply.writeIssued}:{})}));
         const stopped=()=>{faultState.signalAborted=true;traces.push({kind:'aborted',pid,writeIssued:session.writeIssued})};signal.addEventListener('abort',stopped,{once:true});
-        const wrapper:ExclusiveControlledFile={readBefore:()=>session.readBefore(),recheckIdentity:()=>session.recheckIdentity(),get writeIssued(){return session.writeIssued},replaceAndFlush:async bytes=>{
+        const wrapper:ExclusiveControlledFile={ReadBefore:()=>session.ReadBefore(),RecheckIdentity:()=>session.RecheckIdentity(),get writeIssued(){return session.writeIssued},ReplaceAndFlush:async bytes=>{
           traces.push({kind:'replace-enter',pid,byteLength:bytes.byteLength});
           if(holdBeforeWrite){holdBeforeWrite=false;faultState.beforeWriteReached=true;await stopGate!.promise}
-          const result=await session.replaceAndFlush(bytes);traces.push({kind:'replace-confirmed',pid,byteLength:result.fact.byteLength,sha256:result.fact.sha256});return result;
+          const result=await session.ReplaceAndFlush(bytes);traces.push({kind:'replace-confirmed',pid,byteLength:result.fact.byteLength,sha256:result.fact.sha256});return result;
         }};
         try{return await use(wrapper)}finally{signal.removeEventListener('abort',stopped)}
       });
     },
-    drain:async root=>{traces.push({kind:'transport-drain'});await real.drain(root);traces.push({kind:'transport-drained'})},
-    close:async()=>{traces.push({kind:'transport-close'});await real.close();traces.push({kind:'transport-closed'})},
+    Drain:async root=>{traces.push({kind:'transport-drain'});await real.Drain(root);traces.push({kind:'transport-drained'})},
+    Close:async()=>{traces.push({kind:'transport-close'});await real.Close();traces.push({kind:'transport-closed'})},
   };
 }
 
@@ -56,12 +56,12 @@ async function handle(op:string,args:any){
   if(op==='seed')return seedControlledFile(application,config.project,args.providerUrl);
   if(op==='seed-scoped')return seedScopedExecution(application,config.project,args.providerUrl,args.mode);
   if(op==='seed-transition')return seedCompleteOutput(application,config.project,{url:args.providerUrl,bind:()=>{}},true);
-  if(op==='dispatch')return application.dispatch(args.action,args.args);
+  if(op==='dispatch')return application.Dispatch(args.action,args.args);
   if(op==='trace')return traces;
   if(op==='fault-status')return faultState;
   if(op==='corrupt-applied-output'){
-    const service=application.controlledFiles(args.workspaceId),write=service.write.bind(service);
-    service.write=async(...values:Parameters<typeof write>)=>{
+    const service=application.ControlledFiles(args.workspaceId),write=service.Write.bind(service);
+    service.Write=async(...values:Parameters<typeof write>)=>{
       const actual=await write(...values);faultState.appliedWriteCalls++;assert.equal(actual.state,'applied');
       faultState.corruptedOutputs++;return {...structuredClone(actual),toolCallId:'different-controlled-call'};
     };
@@ -71,13 +71,13 @@ async function handle(op:string,args:any){
     assert.equal(holdBeforeWrite,false);let release!:()=>void;const promise=new Promise<void>(resolve=>{release=resolve});stopGate={release,promise};holdBeforeWrite=true;return {armed:true};
   }
   if(op==='release-before-write'){stopGate?.release();return {released:true}}
-  if(op==='shutdown'){await application.shutdown();return {closed:true}}
+  if(op==='shutdown'){await application.Shutdown();return {closed:true}}
   throw Error('Unknown controlled test host operation '+op);
 }
 
 void electronApp.whenReady().then(async()=>{
   const transport=observedTransport(createControlledFileTransport({entryPath:config.childEntry,koffiPath:config.koffiPath}));
-  application=new Application(new Paths(config.user,config.repository),path.join(config.repository,'assets'),undefined,{controlledFiles:transport});await application.init();
+  application=new Application(new Paths(config.user,config.repository),path.join(config.repository,'assets'),undefined,{controlledFiles:transport});await application.Init();
   // Windows GUI Electron 不保证继承的 stdin 可持续读取；测试控制使用仅 loopback 的私有随机端口。
   const server=http.createServer(async(req,res)=>{try{assert.equal(req.method,'POST');assert.equal(req.headers['x-cbim-test-token'],config.controlToken);let body='';for await(const chunk of req)body+=chunk;const request=JSON.parse(body),value=await handle(request.op,request.args);res.end(JSON.stringify({value}));if(request.op==='shutdown')res.once('finish',()=>{server.close();setImmediate(()=>electronApp.exit(0))})}catch(error){res.end(JSON.stringify({error:{message:String(error instanceof Error?error.message:error),code:(error as {code?:string})?.code,stack:error instanceof Error?error.stack:undefined}}))}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');

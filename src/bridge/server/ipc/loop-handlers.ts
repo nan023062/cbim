@@ -15,19 +15,19 @@ export function loopIpcHandlers(app: ApplicationServices): IpcHandlers<keyof Loo
   return {
     'loop.prepare': async args =>
     {
-      return app.execution(args.id).prepare(args.task);
+      return app.Execution(args.id).Prepare(args.task);
     },
     'loop.choices': async args =>
     {
-      return loopChoicesSchema.parse(await app.execution(args.id).choices());
+      return loopChoicesSchema.parse(await app.Execution(args.id).Choices());
     },
     'loop.thread': async args =>
     {
-      return app.execution(args.id).thread(args.taskId);
+      return app.Execution(args.id).Thread(args.taskId);
     },
     'loop.threadView': async args =>
     {
-      return app.execution(args.id).threadView(args.taskId);
+      return app.Execution(args.id).ThreadView(args.taskId);
     },
     'loop.start': async args =>
     {
@@ -35,107 +35,107 @@ export function loopIpcHandlers(app: ApplicationServices): IpcHandlers<keyof Loo
     },
     'loop.queue': async args =>
     {
-      return app.execution(args.id).queued(args.taskId);
+      return app.Execution(args.id).Queued(args.taskId);
     },
     'loop.queueDelta': async args =>
     {
-      return app.execution(args.id).queueDelta(args.taskId, args.cursor);
+      return app.Execution(args.id).QueueDelta(args.taskId, args.cursor);
     },
     'loop.enqueue': async args =>
     {
-      return app.execution(args.id).enqueue(args.taskId, args.message, await app.chatOptions(args.id, args.options, args.attachments), args.followupOf);
+      return app.Execution(args.id).Enqueue(args.taskId, args.message, await app.ChatOptions(args.id, args.options, args.attachments), args.followupOf);
     },
     'loop.queueChange': async args =>
     {
-      return app.execution(args.id).changeQueued(args.taskId, args.queueId, args.action);
+      return app.Execution(args.id).ChangeQueued(args.taskId, args.queueId, args.action);
     },
     'loop.queueEdit': async args =>
     {
-      return app.execution(args.id).editQueued(args.taskId, args.queueId, args.message, args.expected);
+      return app.Execution(args.id).EditQueued(args.taskId, args.queueId, args.message, args.expected);
     },
     'loop.queueMove': async args =>
     {
-      return app.execution(args.id).moveQueued(args.taskId, args.queueId, args.beforeId);
+      return app.Execution(args.id).MoveQueued(args.taskId, args.queueId, args.beforeId);
     },
     'loop.queueInsert': async args =>
     {
-      return app.execution(args.id).insertQueued(args.taskId, args.queueId, args.expectedRunId);
+      return app.Execution(args.id).InsertQueued(args.taskId, args.queueId, args.expectedRunId);
     },
     'loop.queueContinue': async args =>
     {
-      return app.execution(args.id).continueQueue(args.taskId);
+      return app.Execution(args.id).ContinueQueue(args.taskId);
     },
     'loop.chat': async args =>
     {
-      return app.execution(args.id).chat(await new ChatInputs(app.workspace(args.id)).message(args.message, args.attachments), await app.chatOptions(args.id, args.options, args.attachments));
+      return app.Execution(args.id).Chat(await new ChatInputs(app.Workspace(args.id)).Message(args.message, args.attachments), await app.ChatOptions(args.id, args.options, args.attachments));
     },
     'loop.resume': async args =>
     {
-      return app.execution(args.id).resume(args.taskId, args.runId, await new ChatInputs(app.workspace(args.id)).message(args.message, args.attachments), await app.chatOptions(args.id, args.options, args.attachments), args.reconciledToolIds);
+      return app.Execution(args.id).Resume(args.taskId, args.runId, await new ChatInputs(app.Workspace(args.id)).Message(args.message, args.attachments), await app.ChatOptions(args.id, args.options, args.attachments), args.reconciledToolIds);
     },
     'loop.goalContinue': async args =>
     {
-      return app.execution(args.workspaceId).continueGoal(args);
+      return app.Execution(args.workspaceId).ContinueGoal(args);
     },
     'loop.topicInterrupt': async args =>
     {
-      return app.execution(args.workspaceId).interruptTopic(args);
+      return app.Execution(args.workspaceId).InterruptTopic(args);
     },
     'loop.goalContinuation': async args =>
     {
-      return app.memberDispatch(args.workspaceId).continuations.inspect(args);
+      return app.MemberDispatch(args.workspaceId).continuations.Inspect(args);
     },
     'loop.humanContinue': async args =>
     {
-      return app.execution(args.workspaceId).continueFromHumanDecisions(args);
+      return app.Execution(args.workspaceId).ContinueFromHumanDecisions(args);
     },
     'loop.humanContinuation': async args =>
     {
-      return app.memberDispatch(args.workspaceId).humanContinuations.inspect(args);
+      return app.MemberDispatch(args.workspaceId).humanContinuations.Inspect(args);
     },
     'loop.recoveryStart': async args =>
     {
-      return app.execution(args.workspaceId).recoverExecution(args);
+      return app.Execution(args.workspaceId).RecoverExecution(args);
     },
     'loop.recoveryReceipt': async args =>
     {
-      return app.memberDispatch(args.workspaceId).recoveries.inspect(args);
+      return app.MemberDispatch(args.workspaceId).recoveries.Inspect(args);
     },
     'loop.replanStart': async args =>
     {
-      return app.execution(args.workspaceId).replanExecution(args);
+      return app.Execution(args.workspaceId).ReplanExecution(args);
     },
     'loop.replanReceipt': async args =>
     {
-      return app.memberDispatch(args.workspaceId).replans.inspect(args);
+      return app.MemberDispatch(args.workspaceId).replans.Inspect(args);
     },
     'loop.questions': async args =>
     {
-      return app.execution(args.id).pendingQuestions(args.taskId);
+      return app.Execution(args.id).PendingQuestions(args.taskId);
     },
     'loop.answerQuestion': async args =>
     {
-      return app.execution(args.id).answerQuestion(args.taskId, args.questionId, args.answers);
+      return app.Execution(args.id).AnswerQuestion(args.taskId, args.questionId, args.answers);
     },
     'loop.approvals': async args =>
     {
-      return app.execution(args.id).pendingApprovals(args.taskId);
+      return app.Execution(args.id).PendingApprovals(args.taskId);
     },
     'loop.approve': async args =>
     {
-      return app.execution(args.id).answerApproval(args.taskId, args.approvalId, args.allow, args.allowAll === true);
+      return app.Execution(args.id).AnswerApproval(args.taskId, args.approvalId, args.allow, args.allowAll === true);
     },
     'loop.stop': async args =>
     {
-      return app.execution(args.id).stop(args.taskId);
+      return app.Execution(args.id).Stop(args.taskId);
     },
     'loop.inspect': async args =>
     {
-      return app.execution(args.id).inspect(args.taskId, args.runId);
+      return app.Execution(args.id).Inspect(args.taskId, args.runId);
     },
     'loop.list': async args =>
     {
-      return app.execution(args.id).list();
+      return app.Execution(args.id).List();
     },
   };
 }

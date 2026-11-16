@@ -15,4 +15,4 @@ RemoteRepository 组合 utility.readBoundedBytes，按 `MAX_BYTES + 65536` 限�
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `ByteUtils.readBoundedBytes`、`JsonUtils.formatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `ByteUtils.ReadBoundedBytes`、`JsonUtils.FormatJson`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

@@ -11,23 +11,23 @@ export class KnowledgeQueries
   {
   }
 
-  async modules(query = '')
+  async Modules(query = '')
   {
-    return new BusinessWorkspace(await this.workspace.snapshot()).modules(query)
+    return new BusinessWorkspace(await this.workspace.Snapshot()).Modules(query)
   }
 
-  async module(id: string)
+  async Module(id: string)
   {
-    return new BusinessWorkspace(await this.workspace.snapshot()).module(id)
+    return new BusinessWorkspace(await this.workspace.Snapshot()).Module(id)
   }
 
-  async agents(query = '')
+  async Agents(query = '')
   {
-    return new Team(await this.workspace.snapshot()).agents(query)
+    return new Team(await this.workspace.Snapshot()).Agents(query)
   }
 
-  async agent(id: string)
+  async Agent(id: string)
   {
-    return new Team(await this.workspace.snapshot()).agent(id)
+    return new Team(await this.workspace.Snapshot()).Agent(id)
   }
 }

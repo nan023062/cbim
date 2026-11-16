@@ -39,9 +39,9 @@ export interface RunPolicyContext
   permission: ChatPermission;
 
   /** 平台强制边界不可由“本次全部通过”跳过。 */
-  guard(call: ToolCall): Promise<ToolDecision>;
+  Guard(call: ToolCall): Promise<ToolDecision>;
 
-  approve?(call: ToolCall): Promise<ToolDecision>;
+  Approve?(call: ToolCall): Promise<ToolDecision>;
 
   /** 来自桌面设置和本轮端口的窄授权；不存在时，任何 external-write 都拒绝。 */
   feedbackGrant?: FeedbackScope;
@@ -113,15 +113,15 @@ export async function authorizeRunTool(call: ToolCall, tool: RunToolDescriptor, 
     return decision(true, '本机已明确允许向捕获的 GitHub 仓库自动提交反馈，或核实原提交');
   if (tool.native)
   {
-    const guarded = await context.guard(call);
+    const guarded = await context.Guard(call);
     if (!guarded.allow)
       return decision(false, guarded.reason)
   }
   if (writes && context.permission === 'ask')
   {
-    if (!context.approve)
+    if (!context.Approve)
       return decision(false, '审批通道不可用');
-    const approved = await context.approve(call);
+    const approved = await context.Approve(call);
     return decision(approved.allow, approved.reason);
   }
   return decision(true, writes ? '本轮执行权限允许此操作' : '本轮允许只读、预览及维护查询');

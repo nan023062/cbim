@@ -108,7 +108,7 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
   keyRef.current = key;
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
-  const controller = useMemo(() => rootSessionId ? controllers.get(workspaceId, rootSessionId, {
+  const controller = useMemo(() => rootSessionId ? controllers.Get(workspaceId, rootSessionId, {
     storage: { getItem: name => window.localStorage.getItem(name), setItem: (name, value) => window.localStorage.setItem(name, value) },
     submit: request => window.cbim.call('loop.goalContinue', request), lookup: request => window.cbim.call('loop.goalContinuation', request), uuid: () => crypto.randomUUID(),
     pickFiles: () => window.cbim.call('chat.pick', { id: workspaceId, kind: 'file' }),
@@ -121,8 +121,8 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
     mounted.current = true;
     if (!controller)
       return;
-    const unsubscribe = controller.subscribe(() => changed(value => value + 1));
-    void controller.restore().then(() =>
+    const unsubscribe = controller.Subscribe(() => changed(value => value + 1));
+    void controller.Restore().then(() =>
     {
       if (keyRef.current === key)
         refreshRef.current()
@@ -143,10 +143,10 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
   useEffect(() => () =>
   {
     if (target)
-      controller?.cancelImport(target)
+      controller?.CancelImport(target)
   }, [controller, stamp]);
-  const record = target ? controller?.record(target.scopeId, target.waitId) : [...records].reverse().find(item => item.scopeId === state.selectedScopeId);
-  const pending = controller?.isPending(record) ?? false,
+  const record = target ? controller?.Record(target.scopeId, target.waitId) : [...records].reverse().find(item => item.scopeId === state.selectedScopeId);
+  const pending = controller?.IsPending(record) ?? false,
     attempt = record?.attempt,
     error = controller?.snapshot.error ?? '';
   const editable = !!target && !!controller?.available && !pending && (!attempt || attempt.phase === 'rejected');
@@ -170,53 +170,53 @@ export function useScopeContinuation(workspaceId: string, rootSessionId: string 
     edit: text =>
     {
       if (editable && target)
-        controller!.edit(target, text)
+        controller!.Edit(target, text)
     },
     pickFiles: async () =>
     {
       if (!editable || !target || !controller)
         return;
       const generation = selection.current.generation;
-      await controller.pickFiles(target, () => mounted.current && selection.current.generation === generation && selection.current.stamp === stamp)
+      await controller.PickFiles(target, () => mounted.current && selection.current.generation === generation && selection.current.stamp === stamp)
     },
     sourceSelectionKey: stamp + ':' + selection.current.generation,
     importSource: async input =>
     {
       if (editable && target && controller)
-        await controller.importSource(target, input, currentSelection())
+        await controller.ImportSource(target, input, currentSelection())
     },
-    materialTargets: async () => editable && target && controller ? controller.materialTargets(target, currentSelection()) : undefined,
-    materialList: async input => editable && target && controller ? controller.materialList(target, input, currentSelection()) : undefined,
+    materialTargets: async () => editable && target && controller ? controller.MaterialTargets(target, currentSelection()) : undefined,
+    materialList: async input => editable && target && controller ? controller.MaterialList(target, input, currentSelection()) : undefined,
     cancelImport: () =>
     {
       if (target)
-        controller?.cancelImport(target)
+        controller?.CancelImport(target)
     },
     removeFile: id =>
     {
       if (editable && target)
-        controller!.removeFile(target, id)
+        controller!.RemoveFile(target, id)
     },
     submit: () => refreshAfter(async () =>
     {
       if (editable && target && effectiveModel)
-        await controller!.submit(target, effectiveModel.options)
+        await controller!.Submit(target, effectiveModel.options)
     }),
     submitInput: (text, attachments) => refreshAfter(async () =>
     {
       if (!editable || !target || !effectiveModel)
         throw Error('当前等待目标尚未就绪，请返回当前目标并核对补充记录。');
-      await controller!.submitInput(target, effectiveModel.options, text, attachments);
+      await controller!.SubmitInput(target, effectiveModel.options, text, attachments);
     }),
     query: () => refreshAfter(async () =>
     {
       if (record)
-        await controller!.query(record.scopeId, record.waitId)
+        await controller!.Query(record.scopeId, record.waitId)
     }),
     retry: () => refreshAfter(async () =>
     {
       if (target && attempt?.phase === 'unknown')
-        await controller!.retry(target.scopeId, target.waitId)
+        await controller!.Retry(target.scopeId, target.waitId)
     }),
   };
 }

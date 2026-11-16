@@ -18,6 +18,7 @@ export interface AppearancePreferences
   reduceMotion: boolean;
 }
 
+/** 直接接受 localStorage；保留浏览器标准方法名，测试替身遵循同一契约。 */
 export interface PreferenceStorage
 {
   getItem(key: string): string | null;

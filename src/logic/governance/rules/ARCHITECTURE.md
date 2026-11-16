@@ -207,10 +207,10 @@ class N_src_logic_governance_rules_module_governance_tools_ts_GovernanceBodyView
 N_src_logic_governance_rules_module_governance_tools_ts ..> N_src_logic_governance_rules_module_governance_tools_ts_GovernanceBodyView : 声明
 class N_src_logic_governance_rules_module_governance_tools_ts_GovernanceToolsPort["GovernanceToolsPort"] {
   <<interface>>
-  +get()
-  +observe()
-  +propose()
-  +receipt()
+  +Get()
+  +Observe()
+  +Propose()
+  +Receipt()
 }
 N_src_logic_governance_rules_module_governance_tools_ts ..> N_src_logic_governance_rules_module_governance_tools_ts_GovernanceToolsPort : 声明
 ```

@@ -146,7 +146,7 @@ PNG继续复用cbim_validation_run及同一gate/call身份。提示明确实际�
 
 ### 凭据文本替换
 
-精确字符串替换使用后端 utility 的 StringUtils.redactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
+精确字符串替换使用后端 utility 的 StringUtils.RedactLiteral，仍由引擎选择凭据及触发路径。Pi 保留 api-key 条件，Claude 无凭据时保留事件引用；JSON 编码后替换与异常路径保持原顺序，不新增凭据搜集、正则或解码规则。
 
 
 ### RPC 请求关联边界
@@ -162,4 +162,4 @@ package.ts 导出协议 1 的 Pi 工厂和适配器版本；它保留 SDK 1.5.0 
 
 ## 共享算法调用边界
 
-本目录通过 Core 公开入口调用 `StringUtils.redactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。
+本目录通过 Core 公开入口调用 `StringUtils.RedactLiteral`。静态类只承载原算法；本目录继续决定字段、比较器、错误映射及资源生命周期。函数改为静态方法不改变原持久化字节或失败语义。

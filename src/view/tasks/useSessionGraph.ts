@@ -76,10 +76,10 @@ export function useSessionGraph(workspaceId: string, rootSessionId?: string, act
       try
       {
         const requestedScopeId = selectionRef.current;
-        const result: DispatchSessionRead = await window.cbim.call('dispatch.sessionRead', { identity: { workspaceId, rootSessionId }, graphCursor: reset ? undefined : projection.graphCursor, scopeCursor: reset ? undefined : projection.scopeCursor, selectedScopeId: requestedScopeId, detailStamp: reset ? undefined : projection.detailStamp(requestedScopeId), limit: 100 });
+        const result: DispatchSessionRead = await window.cbim.call('dispatch.sessionRead', { identity: { workspaceId, rootSessionId }, graphCursor: reset ? undefined : projection.graphCursor, scopeCursor: reset ? undefined : projection.scopeCursor, selectedScopeId: requestedScopeId, detailStamp: reset ? undefined : projection.DetailStamp(requestedScopeId), limit: 100 });
         if (stopped)
           return;
-        projection.apply(result, requestedScopeId);
+        projection.Apply(result, requestedScopeId);
         reset = false;
         more = result.graph.mode === 'delta' && result.graph.hasMore || result.scopes.mode === 'delta' && result.scopes.hasMore;
         // 任一流仍有分页时继续内部追赶，保留上一完整组合；避免完成目标和旧 running 节点同时发布。

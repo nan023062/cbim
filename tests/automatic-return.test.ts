@@ -37,11 +37,11 @@ it('第三次异常后尚未来得及保存blocked就退出，重启检查仍拒
   const graph={tasks:Array.from({length:3},(_,i)=>({taskId:'replacement-'+i,scopeId:scope.scopeId,status:'interrupted',runIds:['run-'+i]}))} as GraphSnapshot;
   const readKnowledge=vi.fn(),validateCandidate=vi.fn();
   const service=new AutomaticReturnService(
-    {assert:()=>{},read:readKnowledge} as unknown as KnowledgeWorkspace,
-    {read:async()=>({})} as DispatchStore,
-    {repairContext:async()=>({scope:saved,graph}),validateMemberCandidate:validateCandidate} as unknown as ScopeGoalService,
-    {inspectMain:async()=>({events:[]})} as unknown as ScopeGoalPorts,
-    {configuration:async()=>model,withConfigurations:async()=>{throw Error('自动回传核实不应进入模型写锁')}} satisfies OwnerExecutionModelPorts);
-  await expect(service.inspect(saved)).rejects.toMatchObject({code:'GOAL_MEMBER_FAILURE_LIMIT',message:expect.stringContaining('累计 3 次')});
+    {Assert:()=>{},Read:readKnowledge} as unknown as KnowledgeWorkspace,
+    {Read:async()=>({})} as DispatchStore,
+    {RepairContext:async()=>({scope:saved,graph}),ValidateMemberCandidate:validateCandidate} as unknown as ScopeGoalService,
+    {InspectMain:async()=>({events:[]})} as unknown as ScopeGoalPorts,
+    {Configuration:async()=>model,WithConfigurations:async()=>{throw Error('自动回传核实不应进入模型写锁')}} satisfies OwnerExecutionModelPorts);
+  await expect(service.Inspect(saved)).rejects.toMatchObject({code:'GOAL_MEMBER_FAILURE_LIMIT',message:expect.stringContaining('累计 3 次')});
   expect(readKnowledge).not.toHaveBeenCalled();expect(validateCandidate).not.toHaveBeenCalled();
 });

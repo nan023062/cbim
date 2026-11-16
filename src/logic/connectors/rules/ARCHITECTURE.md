@@ -63,10 +63,10 @@ class N_src_logic_connectors_rules_registry_ts["registry.ts"] {
 }
 class N_src_logic_connectors_rules_registry_ts_ConnectorRegistry["ConnectorRegistry"] {
   +constructor()
-  +list()
-  +get()
-  +ids()
-  +duplicates()
+  +List()
+  +Get()
+  +Ids()
+  +Duplicates()
   -entries
 }
 N_src_logic_connectors_rules_registry_ts ..> N_src_logic_connectors_rules_registry_ts_ConnectorRegistry : 声明
@@ -240,8 +240,8 @@ N_src_logic_connectors_rules_repository_tools_ts ..> N_src_logic_connectors_rule
 class N_src_logic_connectors_rules_repository_tools_ts_RepositoryToolsPort["RepositoryToolsPort"] {
   <<interface>>
   +targets
-  +list()
-  +get()
+  +List()
+  +Get()
 }
 N_src_logic_connectors_rules_repository_tools_ts ..> N_src_logic_connectors_rules_repository_tools_ts_RepositoryToolsPort : 声明
 ```

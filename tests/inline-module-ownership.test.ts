@@ -9,24 +9,24 @@ import {assignInlineOwner,readInlineOwners,inlineOwnerChoices} from '../src/view
 
 it('新岗位采纳 Agent 自选引擎和模型；失效选择不回落到本机默认',async()=>{
   const f=await setup();try{
-    const settings=await f.app.models.save({profile:{name:'Claude for Agent',engine:'claude-code',api:'anthropic-messages',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'cc',name:'Claude',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}],defaultModel:'cc'}});
+    const settings=await f.app.models.Save({profile:{name:'Claude for Agent',engine:'claude-code',api:'anthropic-messages',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'cc',name:'Claude',enabled:true,contextWindow:200000,maxTokens:4096,reasoning:false}],defaultModel:'cc'}});
     const profileId=settings.profiles.find(p=>p.engine==='claude-code')!.id;
     Object.assign(f.agents[0],{runtime:{engine:'claude-code',profileId,modelId:'cc'}});
-    await f.assign('agent:'+f.team.input.agentId);const member=(await f.ws.dispatchStore.read()).workspaceMembers![0];
+    await f.assign('agent:'+f.team.input.agentId);const member=(await f.ws.dispatchStore.Read()).workspaceMembers![0];
     expect(member.runtimePolicy.snapshot).toMatchObject({engine:'claude-code',model:'cc',id:profileId});
-    await f.app.models.remove(profileId);await f.assign('member:'+member.memberId,f.team.child);
-    expect((await f.ws.dispatchStore.read()).workspaceMembers![0]).toEqual(member);
-    const other=await setup();try{Object.assign(other.agents[0],{runtime:{engine:'claude-code',profileId,modelId:'cc'}});await expect(other.assign('agent:'+other.team.input.agentId)).rejects.toThrow('不可用');expect((await other.ws.dispatchStore.read()).workspaceMembers??[]).toEqual([])}finally{await other.cleanup()}
+    await f.app.models.Remove(profileId);await f.assign('member:'+member.memberId,f.team.child);
+    expect((await f.ws.dispatchStore.Read()).workspaceMembers![0]).toEqual(member);
+    const other=await setup();try{Object.assign(other.agents[0],{runtime:{engine:'claude-code',profileId,modelId:'cc'}});await expect(other.assign('agent:'+other.team.input.agentId)).rejects.toThrow('不可用');expect((await other.ws.dispatchStore.Read()).workspaceMembers??[]).toEqual([])}finally{await other.cleanup()}
   }finally{await f.cleanup()}
 });
 
 async function setup(model=true){
-  const f=await fixture(),entry=await f.app.dispatch('add',{path:f.a}),ws=f.app.workspace(entry.id),team=await seedTeam(ws);
-  if(model)await f.app.models.save({profile:{name:'Inline fixture',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'fixture',name:'Fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'fixture'}});
+  const f=await fixture(),entry=await f.app.Dispatch('add',{path:f.a}),ws=f.app.Workspace(entry.id),team=await seedTeam(ws);
+  if(model)await f.app.models.Save({profile:{name:'Inline fixture',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'fixture',name:'Fixture',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'fixture'}});
   const identity={workspaceId:entry.id,instanceId:ws.instanceId},agents=[{id:team.input.agentId,name:'开发者'},{id:'cbim:executor',name:'默认执行者'},{id:'cbim:main',name:'主 Agent'}];
   const saved=new Map<string,string>(),storage={getItem:(key:string)=>saved.get(key)??null,setItem:(key:string,value:string)=>{saved.set(key,value)}};
   const calls:string[]=[];let after:(action:string,result:any)=>unknown=()=>{},alive=true;
-  const call=async(action:string,args?:unknown)=>{calls.push(action);try{const value=await f.app.dispatch(action,args);after(action,value);return value}catch(error:any){throw Error(error.code?error.code+': '+error.message:String(error))}};
+  const call=async(action:string,args?:unknown)=>{calls.push(action);try{const value=await f.app.Dispatch(action,args);after(action,value);return value}catch(error:any){throw Error(error.code?error.code+': '+error.message:String(error))}};
   const controllers=()=>({members:new WorkspaceMemberCommands(entry.id,{storage,uuid:randomUUID,commit:args=>call('workspace.members.commit',args),lookup:args=>call('workspace.members.receipt',args)}),ownerships:new ModuleOwnershipCommands(entry.id,{storage,uuid:randomUUID,commit:args=>call('workspace.ownerships.commit',args),lookup:args=>call('workspace.ownerships.receipt',args)}),call,isCurrent:()=>alive});
   const ports=controllers();
   return {...f,entry,ws,team,identity,agents,calls,ports,controllers,after:(fn:typeof after)=>{after=fn},leave:()=>{alive=false},assign:(value:string,moduleId=team.input.moduleId)=>assignInlineOwner(identity,moduleId,value,agents,ports)};
@@ -40,31 +40,31 @@ it('一级下拉只包含自定义 Agent，默认主 Agent 不需要登记，选
     expect(member).toMatchObject({agentId:f.team.input.agentId,modelId:'fixture',state:'active'});expect(first.views.find(item=>item.moduleId===f.team.input.moduleId)?.binding?.ownerMemberId).toBe(member.memberId);
     await f.assign('member:'+member.memberId,f.team.child);await f.assign('member:'+member.memberId);
     expect(f.calls.filter(action=>action==='workspace.members.commit')).toHaveLength(1);expect(f.calls.filter(action=>action==='workspace.ownerships.commit')).toHaveLength(2);
-    await f.assign('agent:'+f.team.input.agentId);await f.assign('');const state=await f.ws.dispatchStore.read();
+    await f.assign('agent:'+f.team.input.agentId);await f.assign('');const state=await f.ws.dispatchStore.Read();
     expect(state.workspaceMembers).toHaveLength(1);expect(state.moduleOwnerships?.find(item=>item.moduleId===f.team.input.moduleId)?.ownerMemberId).toBeNull();expect(state.graphs).toHaveLength(0);expect(state.runs??[]).toHaveLength(0);
   }finally{await f.cleanup()}
 });
 
 it('模块卡片沿自定义 Agent 的 Claude 选型采纳同一供应商的 Anthropic 接口',async()=>{
   const f=await setup(false);try{
-    const settings=await f.app.models.save({profile:{name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'none',defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,contextWindow:1048576,maxTokens:4096,reasoning:true}]}});
+    const settings=await f.app.models.Save({profile:{name:'DeepSeek',api:'openai-completions',baseUrl:'https://api.deepseek.com/v1',auth:'none',defaultModel:'deepseek-flash',models:[{id:'deepseek-flash',name:'Flash',enabled:true,contextWindow:1048576,maxTokens:4096,reasoning:true}]}});
     const runtime={engine:'claude-code' as const,profileId:settings.selectedId!,modelId:'deepseek-flash'};
     await assignInlineOwner(f.identity,f.team.input.moduleId,'agent:'+f.team.input.agentId,[{...f.agents[0],runtime}],f.ports);
-    const state=await f.ws.dispatchStore.read();
+    const state=await f.ws.dispatchStore.Read();
     expect(state.workspaceMembers).toHaveLength(1);
     expect(state.workspaceMembers![0].runtimePolicy.snapshot).toMatchObject({engine:'claude-code',api:'anthropic-messages',baseUrl:'https://api.deepseek.com/anthropic',model:'deepseek-flash'});
-    expect(state.runs??[]).toHaveLength(0);expect(await f.app.models.list()).toEqual(settings);
+    expect(state.runs??[]).toHaveLength(0);expect(await f.app.models.List()).toEqual(settings);
   }finally{await f.cleanup()}
 });
 
 it('没有默认模型时不造岗位；已存在岗位不会随默认模型改变而重新采纳',async()=>{
   const f=await setup(false);try{
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('默认模型');expect(f.calls.filter(action=>action.endsWith('.commit'))).toHaveLength(0);
-    await f.app.models.save({profile:{name:'Configured',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'old',name:'Old',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'old'}});
-    await f.assign('agent:'+f.team.input.agentId);const before=(await f.ws.dispatchStore.read()).workspaceMembers![0];
-    const settings=await f.app.models.save({profile:{name:'Other',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'new',name:'New',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'new'}});
-    await f.app.models.select(settings.profiles.find(item=>item.name==='Other')!.id);
-    await f.assign('member:'+before.memberId,f.team.child);expect((await f.ws.dispatchStore.read()).workspaceMembers![0]).toEqual(before);
+    await f.app.models.Save({profile:{name:'Configured',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'old',name:'Old',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'old'}});
+    await f.assign('agent:'+f.team.input.agentId);const before=(await f.ws.dispatchStore.Read()).workspaceMembers![0];
+    const settings=await f.app.models.Save({profile:{name:'Other',api:'openai-completions',baseUrl:'http://127.0.0.1:1',auth:'none',models:[{id:'new',name:'New',enabled:true,contextWindow:32768,maxTokens:1024,reasoning:false}],defaultModel:'new'}});
+    await f.app.models.Select(settings.profiles.find(item=>item.name==='Other')!.id);
+    await f.assign('member:'+before.memberId,f.team.child);expect((await f.ws.dispatchStore.Read()).workspaceMembers![0]).toEqual(before);
   }finally{await f.cleanup()}
 });
 
@@ -72,12 +72,12 @@ it.each(['workspace.members.commit','workspace.ownerships.commit'])('丢失 %s �
   const f=await setup();try{
     let dropped=false;f.after(action=>{if(action===lost&&!dropped){dropped=true;throw Error('IPC_TIMEOUT')}});
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('尚未确认');
-    expect((await f.ws.dispatchStore.read()).workspaceMembers).toHaveLength(1);
+    expect((await f.ws.dispatchStore.Read()).workspaceMembers).toHaveLength(1);
     const writes=f.calls.filter(action=>action.endsWith('.commit')).length;
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('未核实');
-    const restored=f.controllers();await restored.members.restore();await restored.ownerships.restore();
+    const restored=f.controllers();await restored.members.Restore();await restored.ownerships.Restore();
     expect(f.calls.filter(action=>action.endsWith('.commit'))).toHaveLength(writes);
-    expect((await f.ws.dispatchStore.read()).moduleOwnerships??[]).toHaveLength(lost==='workspace.members.commit'?0:1);
+    expect((await f.ws.dispatchStore.Read()).moduleOwnerships??[]).toHaveLength(lost==='workspace.members.commit'?0:1);
     await assignInlineOwner(f.identity,f.team.input.moduleId,'agent:'+f.team.input.agentId,f.agents,restored);
     expect(f.calls.filter(action=>action==='workspace.members.commit')).toHaveLength(1);expect(f.calls.filter(action=>action==='workspace.ownerships.commit')).toHaveLength(1);
   }finally{await f.cleanup()}
@@ -86,7 +86,7 @@ it.each(['workspace.members.commit','workspace.ownerships.commit'])('丢失 %s �
 it.each(['workspace.members.preview','workspace.members.commit'])('离开原视图后不继续下一步，已受理事实保留：%s',async stopAt=>{
   const f=await setup();try{
     f.after(action=>{if(action===stopAt)f.leave()});await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('离开');
-    const state=await f.ws.dispatchStore.read();expect(state.workspaceMembers??[]).toHaveLength(stopAt==='workspace.members.commit'?1:0);expect(state.moduleOwnerships??[]).toHaveLength(0);
+    const state=await f.ws.dispatchStore.Read();expect(state.workspaceMembers??[]).toHaveLength(stopAt==='workspace.members.commit'?1:0);expect(state.moduleOwnerships??[]).toHaveLength(0);
   }finally{await f.cleanup()}
 });
 
@@ -95,7 +95,7 @@ it('停用岗位不隐式重建，同 Agent 多个岗位在同级区分；非法
     await expect(f.assign('agent:cbim:main')).rejects.toThrow('不存在');
     await f.assign('agent:'+f.team.input.agentId);await f.assign('');let data=await readInlineOwners(f.identity,f.ports.call);const member=data.members[0];
     const input={...f.identity,change:{kind:'state',memberId:member.memberId,expectedRevision:member.revision,nextState:'suspended',reason:'测试停用'}};
-    const preview=workspaceMemberPreviewSchema.parse(await f.ports.call('workspace.members.preview',input));await f.ports.members.submit(input as any,preview);
+    const preview=workspaceMemberPreviewSchema.parse(await f.ports.call('workspace.members.preview',input));await f.ports.members.Submit(input as any,preview);
     await expect(f.assign('agent:'+f.team.input.agentId)).rejects.toThrow('不可用');data=await readInlineOwners(f.identity,f.ports.call);
     expect(inlineOwnerChoices(f.agents,data.members).find(item=>item.value==='member:'+member.memberId)?.disabled).toBe(true);
     const count=f.calls.filter(action=>action.endsWith('.commit')).length;

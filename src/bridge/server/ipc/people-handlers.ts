@@ -12,47 +12,47 @@ export function peopleIpcHandlers(app: ApplicationServices): IpcHandlers<keyof P
   return {
     'workspace.members.list': async args =>
     {
-      return app.workspaceMembers(args.workspaceId).list(args);
+      return app.WorkspaceMembers(args.workspaceId).List(args);
     },
     'workspace.members.get': async args =>
     {
-      return app.workspaceMembers(args.workspaceId).get(args);
+      return app.WorkspaceMembers(args.workspaceId).Get(args);
     },
     'workspace.members.preview': async args =>
     {
-      return app.workspaceMembers(args.workspaceId).preview(args);
+      return app.WorkspaceMembers(args.workspaceId).Preview(args);
     },
     'workspace.members.receipt': async args =>
     {
-      return app.workspaceMembers(args.workspaceId).receipt(args);
+      return app.WorkspaceMembers(args.workspaceId).Receipt(args);
     },
     'workspace.members.commit': async args =>
     {
-      return app.workspaceMembers(args.workspaceId).commit(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
+      return app.WorkspaceMembers(args.workspaceId).Commit(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
     },
     'workspace.ownerships.list': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).list(args);
+      return app.WorkspaceOwnerships(args.workspaceId).List(args);
     },
     'workspace.ownerships.get': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).get(args);
+      return app.WorkspaceOwnerships(args.workspaceId).Get(args);
     },
     'workspace.ownerships.byMember': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).byMember(args);
+      return app.WorkspaceOwnerships(args.workspaceId).ByMember(args);
     },
     'workspace.ownerships.preview': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).preview(args);
+      return app.WorkspaceOwnerships(args.workspaceId).Preview(args);
     },
     'workspace.ownerships.receipt': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).receipt(args);
+      return app.WorkspaceOwnerships(args.workspaceId).Receipt(args);
     },
     'workspace.ownerships.commit': async args =>
     {
-      return app.workspaceOwnerships(args.workspaceId).commit(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
+      return app.WorkspaceOwnerships(args.workspaceId).Commit(args, { kind: 'local_desktop', interaction: 'explicit_submit' });
     },
   };
 }

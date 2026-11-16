@@ -153,7 +153,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
       for await (const part of reply.body)
       {
         controller.signal.throwIfAborted();
-        for (const frame of parser.push(part))
+        for (const frame of parser.Push(part))
         {
           if (!res.write(frame))
             await new Promise<void>((resolve, reject) =>
@@ -175,7 +175,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         }
       }
       unknownReason = 'incomplete_usage';
-      const result = parser.finish();
+      const result = parser.Finish();
       await ticket.report(result.usage);
       terminal = true;
       const cost = requestBudgetCost(model, result.usage);
@@ -231,17 +231,17 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
   });
   return {
     endpoint, token, url: 'http://127.0.0.1:' + (server.address() as import('node:net').AddressInfo).port,
-    assertReady()
+    AssertReady()
     {
       if (!ready || closing)
         throw Error('逐请求预算门禁未完成启动核验')
     },
-    error()
+    Error()
     {
       return blocked
     },
     /** 原生引擎可能在 SSE 完成前调用工具；先等实际请求全部结算，失败或停止不得进入工具授权。 */
-    async assertSettled()
+    async AssertSettled()
     {
       while (active.size)
         await Promise.all([...active.keys()]);
@@ -249,7 +249,7 @@ export async function openRequestBudgetTransport(llm: ResolvedLlm, port: Request
         throw Error(blocked ?? '模型请求已停止');
     },
     /** 原生停止先取消实际 IO，保留已经可靠结算的用量；等待全部未决阶段落盘后才关闭资源。 */
-    close()
+    Close()
     {
       return closingPromise ??= (async () =>
       {

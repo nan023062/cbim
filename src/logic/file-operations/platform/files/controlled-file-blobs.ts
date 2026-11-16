@@ -20,7 +20,7 @@ export class ControlledFileBlobs
   {
   }
 
-  private async checkedDirectory(create = false)
+  private async CheckedDirectory(create = false)
   {
     const absolute = path.resolve(this.directory),
       root = path.parse(absolute).root;
@@ -50,11 +50,11 @@ export class ControlledFileBlobs
   }
 
   /** 同一工作区容量预留串行；写失败留下的临时字节不会被排除额度。 */
-  savePair(operationId: string, before: Uint8Array, after: Uint8Array): Promise<{ before: ControlledFileBlobRef; intendedAfter: ControlledFileBlobRef }>
+  SavePair(operationId: string, before: Uint8Array, after: Uint8Array): Promise<{ before: ControlledFileBlobRef; intendedAfter: ControlledFileBlobRef }>
   {
     const run = this.tail.then(async () =>
     {
-      await this.checkedDirectory(true);
+      await this.CheckedDirectory(true);
       let bytes = 0;
       for (const name of await fs.readdir(this.directory))
       {
@@ -65,7 +65,7 @@ export class ControlledFileBlobs
       }
       if (before.length > controlledFileLimits.contentBytes || after.length > controlledFileLimits.contentBytes || bytes + before.length + after.length > controlledFileLimits.blobBytes)
         fail('CONTROLLED_BLOB_LIMIT', '备份容量已达上限，未写业务文件');
-      return { before: await this.save(operationId, 'before', before), intendedAfter: await this.save(operationId, 'intended_after', after) };
+      return { before: await this.Save(operationId, 'before', before), intendedAfter: await this.Save(operationId, 'intended_after', after) };
     });
     this.tail = run.catch(() =>
     {
@@ -73,7 +73,7 @@ export class ControlledFileBlobs
     return run;
   }
 
-  private async save(operationId: string, role: 'before' | 'intended_after', bytes: Uint8Array): Promise<ControlledFileBlobRef>
+  private async Save(operationId: string, role: 'before' | 'intended_after', bytes: Uint8Array): Promise<ControlledFileBlobRef>
   {
     const blobId = randomUUID(),
       target = path.join(this.directory, blobId),
@@ -90,15 +90,15 @@ export class ControlledFileBlobs
     }
     await fs.rename(temporary, target);
     const ref = controlledFileBlobRefSchema.parse({ version: 1, blobId, createdForOperationId: operationId, role, ...fact(bytes) });
-    await this.read(ref);
+    await this.Read(ref);
     return ref;
   }
 
   /** 引用并不是路径；逐次验证实际私有文件、大小和哈希，绝不重读原业务 source 代替备份。 */
-  async read(input: ControlledFileBlobRef): Promise<Buffer>
+  async Read(input: ControlledFileBlobRef): Promise<Buffer>
   {
     const ref = controlledFileBlobRefSchema.parse(input);
-    await this.checkedDirectory();
+    await this.CheckedDirectory();
     const filename = path.join(this.directory, ref.blobId),
       before = await fs.lstat(filename);
     if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || before.size !== ref.byteLength)

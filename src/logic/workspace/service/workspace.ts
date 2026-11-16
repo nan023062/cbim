@@ -66,17 +66,17 @@ export class Workspace implements KnowledgeWorkspace
   constructor(readonly entry: WorkspaceEntry, readonly paths: Paths, readonly rules: Rules, readonly fault?: (step: number) => void)
   {
     this.objects = new FileObjectStorage(this);
-    this.governance = new ModuleGovernanceService(this, path.join(paths.project(entry.id), 'governance', 'module-ledger.json'));
-    this.knowledge = new KnowledgeStore(this, (event, details) => this.log(event, details), this.governance)
+    this.governance = new ModuleGovernanceService(this, path.join(paths.Project(entry.id), 'governance', 'module-ledger.json'));
+    this.knowledge = new KnowledgeStore(this, (event, details) => this.Log(event, details), this.governance)
   }
 
-  view(): WorkspaceView
+  View(): WorkspaceView
   {
     return { ...this.entry, state: this.state, error: this.error, tasks: [...this.tasks.values()], revision: this.lastRevision, changed: this.changed, instanceId: this.instanceId, knowledgeErrors: this.knowledgeErrors }
   }
 
   /** 区分工程选错与运行实例变化；只提示刷新身份，不重绑定旧计划或重放未知写入。 */
-  assert(identity?: { workspaceId: string; instanceId: string })
+  Assert(identity?: { workspaceId: string; instanceId: string })
   {
     if (this.state !== 'running')
       fail('NOT_RUNNING', `工作区当前状态：${this.state}`);
@@ -87,7 +87,7 @@ export class Workspace implements KnowledgeWorkspace
   }
 
   /** Application 可在 open 前注入带监控器的唯一 Store；此时不读取磁盘。 */
-  attachDispatchStore(store: FileDispatchStore)
+  AttachDispatchStore(store: FileDispatchStore)
   {
     if (this.sharedDispatch && this.sharedDispatch !== store)
       fail('SOURCE_UNAVAILABLE', '工作区已有派发存储');
@@ -95,7 +95,7 @@ export class Workspace implements KnowledgeWorkspace
       fail('SOURCE_UNAVAILABLE', '派发存储工作区不匹配');
     this.sharedDispatch = store;
     this.sources ??= new KnowledgeSources(this.entry.id, store);
-    this.knowledge.attachSources(this.sources)
+    this.knowledge.AttachSources(this.sources)
   }
 
   get dispatchStore()
@@ -110,42 +110,42 @@ export class Workspace implements KnowledgeWorkspace
        * beforeDispatchLoad 是 Main 装配方的可信启动阶段：路径归属核实后、Store 首次读取或恢复提交前，先恢复观察器需要的历史索引。
        * 此回调不来自 IPC 或模型，不应读取或提交同一 Store；阶段失败沿打开失败路径封闭实例，不继续恢复事务。
        */
-  async open(hooks: { beforeDispatchLoad?: () => Promise<void> } = {})
+  async Open(hooks: { beforeDispatchLoad?: () => Promise<void> } = {})
   {
     if (this.state === 'running')
       return;
     this.state = 'opening';
     try
     {
-      const identity = await this.paths.identity(this.entry.path);
+      const identity = await this.paths.Identity(this.entry.path);
       if (identity.id !== this.entry.id)
         fail('IDENTITY', '工程真实路径已变化，需要重新定位');
       this.lock = new KernelLock(identity.path, identity.id);
       if (!this.sharedDispatch)
-        this.attachDispatchStore(new FileDispatchStore(path.join(this.paths.project(this.entry.id), 'dispatch'), this.entry.id));
-      const mapping = path.join(this.paths.project(identity.id), 'identity.json');
+        this.AttachDispatchStore(new FileDispatchStore(path.join(this.paths.Project(this.entry.id), 'dispatch'), this.entry.id));
+      const mapping = path.join(this.paths.Project(identity.id), 'identity.json');
       if (await exists(mapping) && (await readJson(mapping)).path !== identity.path)
         fail('IDENTITY', '本地历史记录绑定的工程不匹配');
       await atomic(mapping, json(identity));
       // 先核实项目路径归属，再允许 Store 修复其自身末尾记录；身份不符不得触碰旧调度历史。
       await hooks.beforeDispatchLoad?.();
-      await this.dispatchStore.read();
-      await this.governance.init();
-      await this.knowledge.recover();
-      await this.knowledge.initialize();
-      const snapshot = await this.read();
+      await this.dispatchStore.Read();
+      await this.governance.Init();
+      await this.knowledge.Recover();
+      await this.knowledge.Initialize();
+      const snapshot = await this.Read();
       this.lastRevision = snapshot.revision;
-      const validation = await this.rules.validate(this.entry.path, snapshot.files);
+      const validation = await this.rules.Validate(this.entry.path, snapshot.files);
       this.knowledgeErrors = validation.issues.filter(i => i.severity === 'error').length;
       this.state = 'running';
-      await this.governance.validatePersisted();
-      await this.log('opened');
+      await this.governance.ValidatePersisted();
+      await this.Log('opened');
       this.watcher = setInterval(() =>
       {
         if (this.polling || this.state !== 'running' || this.knowledge.activeOperations)
           return;
         this.polling = true;
-        void this.read().then(s =>
+        void this.Read().then(s =>
         {
           if (s.revision !== this.lastRevision)
           {
@@ -166,73 +166,73 @@ export class Workspace implements KnowledgeWorkspace
     {
       this.error = e.message;
       this.state = 'failed';
-      await this.sharedDispatch?.close().catch(() =>
+      await this.sharedDispatch?.Close().catch(() =>
       {
       });
-      this.lock?.close();
+      this.lock?.Close();
       this.lock = undefined;
       throw e
     }
   }
 
   /** 存储操作统一委托，工作区仍负责实例身份和生命周期。 */
-  read()
+  Read()
   {
-    return this.knowledge.read()
+    return this.knowledge.Read()
   }
 
-  snapshot()
+  Snapshot()
   {
-    return this.knowledge.snapshot()
+    return this.knowledge.Snapshot()
   }
 
-  preview(request: ChangeRequest)
+  Preview(request: ChangeRequest)
   {
-    return this.knowledge.preview(request)
+    return this.knowledge.Preview(request)
   }
 
-  commit(request: ChangeRequest)
+  Commit(request: ChangeRequest)
   {
-    return this.knowledge.commit(request)
+    return this.knowledge.Commit(request)
   }
 
-  commitPlanned(reference: KnowledgePlanRef)
+  CommitPlanned(reference: KnowledgePlanRef)
   {
-    return this.knowledge.commitPlanned(reference)
+    return this.knowledge.CommitPlanned(reference)
   }
 
   /** 原成功回执先由服务查询；新的来源采纳才持此知识观察锁进入一个 Store 事务。 */
-  withSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>)
+  WithSourceSnapshot<T>(operation: (snapshot: Snapshot) => Promise<T>)
   {
-    return this.knowledge.withSourceSnapshot(operation)
+    return this.knowledge.WithSourceSnapshot(operation)
   }
 
   /** Main 私有治理端口；回调已经持有知识队列，不可重入公开提交方法。 */
-  governed<T>(operation: (tx: KnowledgeGovernanceTransaction) => Promise<T>)
+  Governed<T>(operation: (tx: KnowledgeGovernanceTransaction) => Promise<T>)
   {
-    return this.knowledge.governed(operation)
+    return this.knowledge.Governed(operation)
   }
 
   /** 查询原知识事务回执；旧实例请求可核实，但不会被重新提交。 */
-  committedReceipt(request: ChangeRequest)
+  CommittedReceipt(request: ChangeRequest)
   {
-    return this.knowledge.committedReceipt(request)
+    return this.knowledge.CommittedReceipt(request)
   }
 
   /** 未受理核实只看原事务记录是否存在，不把回滚或未完成记录当作不存在。 */
-  hasRecordedRequest(request: ChangeRequest)
+  HasRecordedRequest(request: ChangeRequest)
   {
-    return this.knowledge.hasRecordedRequest(request)
+    return this.knowledge.HasRecordedRequest(request)
   }
 
-  planMove(snapshot: Snapshot, from: string, to: string | null)
+  PlanMove(snapshot: Snapshot, from: string, to: string | null)
   {
-    return this.knowledge.planMove(snapshot, from, to)
+    return this.knowledge.PlanMove(snapshot, from, to)
   }
 
-  startTask(name: 'validate' | 'reindex')
+  StartTask(name: 'validate' | 'reindex')
   {
-    this.assert();
+    this.Assert();
     const id = randomUUID(),
       controller = new AbortController();
     this.controllers.set(id, controller);
@@ -245,13 +245,13 @@ export class Workspace implements KnowledgeWorkspace
         await new Promise(r => setTimeout(r, 0));
         if (controller.signal.aborted)
           fail('CANCELLED', '任务已取消');
-        const snap = await this.snapshot();
+        const snap = await this.Snapshot();
         if (controller.signal.aborted)
           fail('CANCELLED', '任务已取消');
         if (name === 'reindex')
         {
           task.progress = '提交索引；此阶段等待完成后关闭';
-          task.result = await this.commit({ workspaceId: this.entry.id, instanceId: this.instanceId, revision: snap.revision, requestId: id, changes: [] })
+          task.result = await this.Commit({ workspaceId: this.entry.id, instanceId: this.instanceId, revision: snap.revision, requestId: id, changes: [] })
         }
         else
           task.result = snap.validation;
@@ -266,7 +266,7 @@ export class Workspace implements KnowledgeWorkspace
       finally
       {
         this.controllers.delete(id);
-        await atomic(path.join(this.paths.local(this.entry.id, 'task-records'), id + '.json'), json(task)).catch(() =>
+        await atomic(path.join(this.paths.Local(this.entry.id, 'task-records'), id + '.json'), json(task)).catch(() =>
         {
         })
       }
@@ -278,9 +278,9 @@ export class Workspace implements KnowledgeWorkspace
        * 仅取消本实例的知识检查或索引维护任务；对话和成员派发任务不在此任务表中。
        * 未运行或不存在时抛出明确错误。返回当前真实状态：abort 只是取消请求，已进入提交的事务可继续完成；终态重复取消保持原结果。
        */
-  cancelTask(id: string): TaskView
+  CancelTask(id: string): TaskView
   {
-    this.assert();
+    this.Assert();
     const task = this.tasks.get(id);
     if (!task || task.workspaceId !== this.entry.id)
       fail('TASK_NOT_FOUND', '当前工作区实例中不存在该维护任务；此接口仅支持知识检查或索引维护任务，不接受对话或成员派发任务 ID');
@@ -289,16 +289,16 @@ export class Workspace implements KnowledgeWorkspace
     return task;
   }
 
-  async localData(kind: 'memory' | 'task-records' | 'logs')
+  async LocalData(kind: 'memory' | 'task-records' | 'logs')
   {
-    const dir = this.paths.local(this.entry.id, kind);
+    const dir = this.paths.Local(this.entry.id, kind);
     await fs.mkdir(dir, { recursive: true });
     return { source: 'local', nature: kind, workspaceId: this.entry.id, files: await fs.readdir(dir) }
   }
 
-  private async log(event: string, details: Record<string, unknown> = {})
+  private async Log(event: string, details: Record<string, unknown> = {})
   {
-    const directory = this.paths.local(this.entry.id, 'logs');
+    const directory = this.paths.Local(this.entry.id, 'logs');
     await fs.mkdir(directory, { recursive: true });
     await fs.appendFile(path.join(directory, 'events.ndjson'), JSON.stringify({ time: new Date().toISOString(), workspaceId: this.entry.id, instanceId: this.instanceId, event, ...details }) + '\n', { mode: 0o600 }).catch(() =>
     {
@@ -306,7 +306,7 @@ export class Workspace implements KnowledgeWorkspace
   }
 
   /** 停止监听与任务，等待正在提交的事务，再释放本实例持有的锁。 */
-  async prepareClose()
+  async PrepareClose()
   {
     return this.closePreparation ??= (async () =>
     {
@@ -317,21 +317,21 @@ export class Workspace implements KnowledgeWorkspace
         clearInterval(this.watcher);
       for (const c of this.controllers.values())
         c.abort();
-      await this.knowledge.drain();
+      await this.knowledge.Drain();
       while (this.controllers.size)
         await new Promise(r => setTimeout(r, 10))
     })()
   }
 
-  async close()
+  async Close()
   {
     if (this.state === 'closed')
       return;
-    await this.prepareClose();
-    await this.sharedDispatch?.close();
-    this.lock?.close();
+    await this.PrepareClose();
+    await this.sharedDispatch?.Close();
+    this.lock?.Close();
     this.lock = undefined;
     this.state = 'closed';
-    await this.log('closed')
+    await this.Log('closed')
   }
 }

@@ -19,9 +19,9 @@ export interface DesktopRuntimeHost
   engineArtifacts: EngineArtifactsPort;
 
   /** 退出/安装排空前取消尚在准备的引擎包，避免等到 will-quit 才取消而阻塞工厂关闭。 */
-  stopPreparingEngines(): void;
+  StopPreparingEngines(): void;
 
-  updates(beforeInstall: () => Promise<void>, enabled: boolean): DesktopUpdates;
+  Updates(beforeInstall: () => Promise<void>, enabled: boolean): DesktopUpdates;
 
-  confirm(): void;
+  Confirm(): void;
 }

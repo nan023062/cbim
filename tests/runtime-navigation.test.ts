@@ -11,7 +11,7 @@ function deferred<T>(){let resolve!:(value:T)=>void,reject!:(error:Error)=>void;
 it('定位仅查询同一就绪实例和真实主会话，忽略目标附带的非身份信息，不调用执行或 open',async()=>{
   const read=vi.fn(async(action:string)=>action==='list'?{entries:[workspace]}:records);
   const resolver=new RuntimeNavigationResolver(read);
-  const verified=await resolver.resolve(target);
+  const verified=await resolver.Resolve(target);
   expect(verified).toEqual({target,workspace,conversation:{taskId:'main-a',goal:'原始目标\n上下文附件'}});
   expect(read.mock.calls).toEqual([['list'],['loop.list',{id:workspace.id}],['list']]);
 });
@@ -19,17 +19,17 @@ it('定位仅查询同一就绪实例和真实主会话，忽略目标附带的�
 it('不同工作区、非聊天、不可读和缺失的原会话均拒绝；后台未就绪不尝试打开',async()=>{
   for(const rows of [[],[{taskId:'main-a',runId:'broken',status:'unreadable'}],[{task:{...records[0].task,workspaceId:'workspace-b'}}],[{task:{...records[0].task,mode:'member'}}]]){
     const resolver=new RuntimeNavigationResolver(async action=>action==='list'?{entries:[workspace]}:rows);
-    await expect(resolver.resolve(target)).rejects.toThrow();
+    await expect(resolver.Resolve(target)).rejects.toThrow();
   }
   const read=vi.fn(async()=>({entries:[{...workspace,state:'closed'}]}));
-  await expect(new RuntimeNavigationResolver(read).resolve(target)).rejects.toThrow('未就绪');
+  await expect(new RuntimeNavigationResolver(read).Resolve(target)).rejects.toThrow('未就绪');
   expect(read).toHaveBeenCalledTimes(1);
 });
 
 it('会话读取期间实例重开或退役，原目标不得写入页面',async()=>{
   for(const changed of [{...workspace,instanceId:'new-instance'},{...workspace,state:'closing'}]){
     let lists=0;const read=vi.fn(async(action:string)=>action==='list'?{entries:[++lists===1?workspace:changed]}:records);
-    await expect(new RuntimeNavigationResolver(read).resolve(target)).rejects.toThrow();
+    await expect(new RuntimeNavigationResolver(read).Resolve(target)).rejects.toThrow();
     expect(read.mock.calls).toHaveLength(3);
   }
 });
@@ -37,16 +37,16 @@ it('会话读取期间实例重开或退役，原目标不得写入页面',async
 it('切屏取消、较新导航和迟到错误均不能覆盖后续页面',async()=>{
   const gate=deferred<unknown>();let listReads=0;
   const read=vi.fn(async(action:string)=>action==='list'&&++listReads===1?gate.promise:action==='list'?{entries:[workspace]}:records);
-  const resolver=new RuntimeNavigationResolver(read),old=resolver.resolve(target);
-  const newer=await resolver.resolve({...target,taskId:undefined,scopeId:undefined});
+  const resolver=new RuntimeNavigationResolver(read),old=resolver.Resolve(target);
+  const newer=await resolver.Resolve({...target,taskId:undefined,scopeId:undefined});
   expect(newer?.target.taskId).toBeUndefined();gate.resolve({entries:[workspace]});expect(await old).toBeUndefined();
   expect(read.mock.calls.filter(call=>call[0]==='loop.list')).toHaveLength(1);
-  const delayed=deferred<unknown>(),cancelled=new RuntimeNavigationResolver(()=>delayed.promise),pending=cancelled.resolve(target);
-  cancelled.cancel();delayed.reject(Error('迟到的网络错误'));await expect(pending).resolves.toBeUndefined();
+  const delayed=deferred<unknown>(),cancelled=new RuntimeNavigationResolver(()=>delayed.promise),pending=cancelled.Resolve(target);
+  cancelled.Cancel();delayed.reject(Error('迟到的网络错误'));await expect(pending).resolves.toBeUndefined();
 });
 
 it('已有原会话页签只切 active，保留草稿、附件、标题与其他工作区',async()=>{
-  const verified=(await new RuntimeNavigationResolver(async action=>action==='list'?{entries:[workspace]}:records).resolve(target))!;
+  const verified=(await new RuntimeNavigationResolver(async action=>action==='list'?{entries:[workspace]}:records).Resolve(target))!;
   const attachment={id:'attachment',kind:'file' as const,name:'参考文件',source:'managed/file'};
   const layout:TabLayout={active:'draft',tabs:[{id:'draft',kind:'chat',title:'尚未发送',draft:'独立草稿'},{id:'original',kind:'chat',title:'自定义标题',taskId:'main-a',draft:'原会话草稿',attachments:[attachment]}]};
   const other:TabLayout={active:'b',tabs:[{id:'b',kind:'chat',title:'B',taskId:'main-a',draft:'另一工作区'}]};
@@ -56,7 +56,7 @@ it('已有原会话页签只切 active，保留草稿、附件、标题与其他
 });
 
 it('缺少本机页签时只补原历史绑定，双击不重复，也不挪用未发送草稿',async()=>{
-  const verified=(await new RuntimeNavigationResolver(async action=>action==='list'?{entries:[workspace]}:records).resolve(target))!;
+  const verified=(await new RuntimeNavigationResolver(async action=>action==='list'?{entries:[workspace]}:records).Resolve(target))!;
   const layout:TabLayout={active:'draft',tabs:[{id:'draft',kind:'chat',title:'新对话',draft:'保留我'}]};
   const selected=bindRuntimeConversation(layout,verified),repeated=bindRuntimeConversation(selected,verified);
   expect(repeated).toBe(selected);expect(selected.tabs).toHaveLength(2);expect(selected.tabs[0]).toBe(layout.tabs[0]);

@@ -20,7 +20,7 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
 
   private downloaded = false;
 
-  async prepare(release: DesktopRelease)
+  async Prepare(release: DesktopRelease)
   {
     this.pending?.cancellationToken?.cancel();
     this.updater?.removeAllListeners();
@@ -56,7 +56,7 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
     this.pending = result;
   }
 
-  async download(progress: (percent: number) => void)
+  async Download(progress: (percent: number) => void)
   {
     if (this.closed || !this.updater || !this.pending)
       throw Error('更新尚未准备');
@@ -67,14 +67,14 @@ export class NsisUpdateInstaller implements DesktopUpdateInstaller
     this.downloaded = true;
   }
 
-  install()
+  Install()
   {
     if (this.closed || !this.updater || !this.downloaded || this.error)
       throw Error('安装包尚未就绪');
     this.updater.quitAndInstall(true, true)
   }
 
-  close()
+  Close()
   {
     this.closed = true;
     this.pending?.cancellationToken?.cancel()

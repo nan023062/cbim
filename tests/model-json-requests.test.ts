@@ -15,7 +15,7 @@ function harness(override:Partial<RequestBudgetTicket>={}){
 }
 test('生成/向量使用独立连接与预留，可靠用量先于结果交付',async()=>{
   const {api,entries}=harness(),fetch=vi.fn().mockResolvedValueOnce(reply({prompt_tokens:4,completion_tokens:2,total_tokens:6})).mockResolvedValueOnce(reply({prompt_tokens:3,total_tokens:3}));vi.stubGlobal('fetch',fetch);
-  await api.chat([{role:'user',content:'hi'}]);await api.embed(['source']);
+  await api.Chat([{role:'user',content:'hi'}]);await api.Embed(['source']);
   expect(entries).toEqual([['primary',1024],'issue','send',{input:4,output:2,cacheRead:0,cacheWrite:0,totalTokens:6},['embedding',0],'issue','send',{input:3,output:0,cacheRead:0,cacheWrite:0,totalTokens:3}]);
   expect(fetch.mock.calls.map(c=>c[0])).toEqual(['https://chat.example/v1/chat/completions','https://vector.example/v1/embeddings']);
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({input:['source'],encoding_format:'float',model:'vector'});
@@ -23,20 +23,20 @@ test('生成/向量使用独立连接与预留，可靠用量先于结果交付'
 });
 test('用量未知阻断两个角色，不用下一次调用掩盖失败',async()=>{
   const {api,entries}=harness(),fetch=vi.fn().mockResolvedValue(reply({prompt_tokens:4}));vi.stubGlobal('fetch',fetch);
-  await expect(api.embed(['source'])).rejects.toThrow('无法确认');await expect(api.chat([])).rejects.toThrow('已停止');
+  await expect(api.Embed(['source'])).rejects.toThrow('无法确认');await expect(api.Chat([])).rejects.toThrow('已停止');
   expect(fetch).toHaveBeenCalledTimes(1);expect(entries.at(-1)).toEqual(['unknown','incomplete_usage']);
 });
 test('发送前取消释放原预留，未调用供应商',async()=>{
   const h=harness({issue:async()=>h.controller.abort()}),fetch=vi.fn();vi.stubGlobal('fetch',fetch);
-  await expect(h.api.embed(['source'])).rejects.toThrow();expect(fetch).not.toHaveBeenCalled();expect(h.entries.at(-1)).toEqual(['not_sent','cancelled_before_send']);
+  await expect(h.api.Embed(['source'])).rejects.toThrow();expect(fetch).not.toHaveBeenCalled();expect(h.entries.at(-1)).toEqual(['not_sent','cancelled_before_send']);
 });
 test('结算失败不交付正文；超限保存实际用量但不再继续',async()=>{
   const fetch=vi.fn().mockImplementation(async()=>reply({prompt_tokens:9000,total_tokens:9000}));vi.stubGlobal('fetch',fetch);
-  const first=harness();await expect(first.api.embed(['source'])).rejects.toThrow('超过原预留');expect(first.entries.at(-1)).toMatchObject({input:9000});
-  const second=harness({report:async()=>{throw Error('disk failure')}});await expect(second.api.embed(['source'])).rejects.toThrow('无法确认');expect(second.entries.at(-1)).toEqual(['unknown','incomplete_usage']);
+  const first=harness();await expect(first.api.Embed(['source'])).rejects.toThrow('超过原预留');expect(first.entries.at(-1)).toMatchObject({input:9000});
+  const second=harness({report:async()=>{throw Error('disk failure')}});await expect(second.api.Embed(['source'])).rejects.toThrow('无法确认');expect(second.entries.at(-1)).toEqual(['unknown','incomplete_usage']);
 });
 test('预算角色或连接快照不一致时拒绝发网',async()=>{
   const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
   const api=new ModelJsonRequests(llm,async()=>({model:requestBudgetModelFor(llm.profile),reserve:vi.fn()}),new AbortController().signal);
-  await expect(api.embed(['source'])).rejects.toThrow('预算快照');expect(fetch).not.toHaveBeenCalled();
+  await expect(api.Embed(['source'])).rejects.toThrow('预算快照');expect(fetch).not.toHaveBeenCalled();
 });

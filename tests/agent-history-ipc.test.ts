@@ -9,19 +9,19 @@ import {ipcRequests} from '../src/bridge/contracts/ipc-call';
 
 const workspaceId='workspace';
 function setup(){
-  const port:AgentHistoryQueryPort={roles:vi.fn(async()=>({roles:[],diagnostics:[]})),sessions:vi.fn(async()=>({items:[],diagnostics:[]})),runs:vi.fn(async()=>({items:[],diagnostics:[]})),events:vi.fn(async()=>{throw Error('canonical unavailable')})};
-  const app={agentHistory:vi.fn((_workspaceId:string)=>port)};return {app,port};
+  const port:AgentHistoryQueryPort={Roles:vi.fn(async()=>({roles:[],diagnostics:[]})),Sessions:vi.fn(async()=>({items:[],diagnostics:[]})),Runs:vi.fn(async()=>({items:[],diagnostics:[]})),Events:vi.fn(async()=>{throw Error('canonical unavailable')})};
+  const app={AgentHistory:vi.fn((_workspaceId:string)=>port)};return {app,port};
 }
 it('四项查询在查找服务前解析，补齐默认分页并保持原异常',async()=>{
   const {app,port}=setup(),identity={workspaceId,agentId:'cbim:main',sessionId:'session',taskId:'task',runId:'run'};
   expect(await dispatchApplication(app as unknown as Application,'agentHistory.roles',{workspaceId})).toEqual({roles:[],diagnostics:[]});
   await dispatchApplication(app as unknown as Application,'agentHistory.sessions',{workspaceId,agentId:identity.agentId});
-  expect(port.sessions).toHaveBeenCalledWith({workspaceId,agentId:identity.agentId,limit:30});
+  expect(port.Sessions).toHaveBeenCalledWith({workspaceId,agentId:identity.agentId,limit:30});
   await dispatchApplication(app as unknown as Application,'agentHistory.runs',{workspaceId,agentId:identity.agentId,sessionId:identity.sessionId,limit:1});
-  expect(port.runs).toHaveBeenCalledWith({workspaceId,agentId:identity.agentId,sessionId:identity.sessionId,limit:1});
+  expect(port.Runs).toHaveBeenCalledWith({workspaceId,agentId:identity.agentId,sessionId:identity.sessionId,limit:1});
   await expect(dispatchApplication(app as unknown as Application,'agentHistory.events',identity)).rejects.toThrow('canonical unavailable');
-  expect(port.events).toHaveBeenCalledWith({...identity,limit:200});
-  expect(app.agentHistory.mock.calls.every(([id])=>id===workspaceId)).toBe(true);
+  expect(port.Events).toHaveBeenCalledWith({...identity,limit:200});
+  expect(app.AgentHistory.mock.calls.every(([id])=>id===workspaceId)).toBe(true);
 });
 it('畸形身份、额外字段、越界分页和错误游标不进入服务',async()=>{
   const {app}=setup();
@@ -33,7 +33,7 @@ it('畸形身份、额外字段、越界分页和错误游标不进入服务',as
     [app,'agentHistory.events',{workspaceId,agentId:'main',sessionId:'s',taskId:'t',runId:'r',cursor:'wrong'}],
   ];
   for(const request of bad)await expect(dispatchApplication(request[0] as unknown as Application,request[1],request[2])).rejects.toThrow();
-  expect(app.agentHistory).not.toHaveBeenCalled();
+  expect(app.AgentHistory).not.toHaveBeenCalled();
 });
 it('未知操作和原型属性不落入历史处理器，保留主分派未知操作拒绝',async()=>{
   for(const action of ['agentHistory.unknown','toString','constructor','__proto__'])expect(isAgentHistoryAction(action)).toBe(false);

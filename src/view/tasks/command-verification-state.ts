@@ -79,41 +79,41 @@ export class CommandVerificationController
 
   subscribe = (listener: () => void) =>
   {
-    return this.listeners.subscribe(listener)
+    return this.listeners.Subscribe(listener)
   };
 
-  private publish(value: CommandVerificationState)
+  private Publish(value: CommandVerificationState)
   {
     this.value = value;
-    this.listeners.notify()
+    this.listeners.Notify()
   }
 
   /** 卸载只取消观察，忽略迟到回包；不停止原任务、不修改服务端日志。 */
-  cancel()
+  Cancel()
   {
-    this.generation.advance();
+    this.generation.Advance();
     this.value = { ...this.value, loading: false }
   }
 
   /** 同一实例在途时合并重复点击；失败保留旧报告，绝不转调原工具或自动重读。 */
-  async inspect()
+  async Inspect()
   {
     if (this.value.loading)
       return;
     const { workspaceId, rootSessionId, runId, toolCallId } = this.selection,
-      generation = this.generation.capture();
-    this.publish({ ...this.value, loading: true, error: '' });
+      generation = this.generation.Capture();
+    this.Publish({ ...this.value, loading: true, error: '' });
     try
     {
       const raw = await this.read({ workspaceId, rootSessionId, runId, toolCallId });
-      if (!this.generation.isCurrent(generation))
+      if (!this.generation.IsCurrent(generation))
         return;
-      this.publish({ report: applyCommandVerification(raw, this.selection), loading: false, error: '' })
+      this.Publish({ report: applyCommandVerification(raw, this.selection), loading: false, error: '' })
     }
     catch (cause)
     {
-      if (this.generation.isCurrent(generation))
-        this.publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '原命令核实失败，请重新读取' })
+      if (this.generation.IsCurrent(generation))
+        this.Publish({ ...this.value, loading: false, error: cause instanceof Error ? cause.message : '原命令核实失败，请重新读取' })
     }
   }
 }

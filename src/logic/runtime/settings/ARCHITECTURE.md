@@ -27,21 +27,21 @@ class N_src_logic_runtime_settings_admission_settings_ts["admission-settings.ts"
 }
 class N_src_logic_runtime_settings_admission_settings_ts_AdmissionSettingsStorage["AdmissionSettingsStorage"] {
   <<interface>>
-  +read()
-  +write()
+  +Read()
+  +Write()
 }
 N_src_logic_runtime_settings_admission_settings_ts ..> N_src_logic_runtime_settings_admission_settings_ts_AdmissionSettingsStorage : 声明
 class N_src_logic_runtime_settings_admission_settings_ts_AdmissionSettings["AdmissionSettings"] {
   +constructor()
-  +init()
-  +read()
-  +configure()
+  +Init()
+  +Read()
+  +Configure()
   -filename
   -admission
   -storage
   -queue
   -initialized
-  -serial()
+  -Serial()
 }
 N_src_logic_runtime_settings_admission_settings_ts ..> N_src_logic_runtime_settings_admission_settings_ts_AdmissionSettings : 声明
 ```

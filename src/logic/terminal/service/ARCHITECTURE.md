@@ -25,10 +25,10 @@ class N_src_logic_terminal_service_terminal_ts["terminal.ts"] {
   <<module>>
 }
 class N_src_logic_terminal_service_terminal_ts_TerminalSessions["TerminalSessions"] {
-  +start()
-  +read()
-  +close()
-  +closeAll()
+  +Start()
+  +Read()
+  +Close()
+  +CloseAll()
   -entries
 }
 N_src_logic_terminal_service_terminal_ts ..> N_src_logic_terminal_service_terminal_ts_TerminalSessions : 声明

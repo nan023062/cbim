@@ -32,9 +32,9 @@ export interface FeedbackToolsPort
 {
   readonly scope: FeedbackScope;
 
-  submit(input: FeedbackInput, signal: AbortSignal): Promise<FeedbackResult>;
+  Submit(input: FeedbackInput, signal: AbortSignal): Promise<FeedbackResult>;
 
-  receipt(signal: AbortSignal): Promise<FeedbackResult>;
+  Receipt(signal: AbortSignal): Promise<FeedbackResult>;
 }
 
 /** 本机连接检查只读公开状态与代际，不请求 GitHub、不解密令牌、不查询提交历史。 */

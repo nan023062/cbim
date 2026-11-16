@@ -21,12 +21,12 @@ it.each(['complete','stop','abandon','changed-original'] as const)('two recursiv
   expect(await c.state()).toEqual(waitingState);expect(c.provider.sequence).toEqual(sequence);
   expect(await c.questions()).toEqual([second]);
   if(mode==='stop')await c.stop();
-  else if(mode==='abandon')(c.app.execution(c.entry.id) as unknown as {questions:QuestionQueue}).questions.cancel(c.start.taskId);
+  else if(mode==='abandon')(c.app.Execution(c.entry.id) as unknown as {questions:QuestionQueue}).questions.Cancel(c.start.taskId);
   else{
    if(mode==='changed-original')await fs.writeFile(file,'changed file captured before first pause');
    await c.answer(second);
   }
-  await c.until(async()=>{expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0);expect((await c.state()).scopes![0].status).toBe('closed')});
+  await c.until(async()=>{expect(c.app.runtime.Snapshot().pressure.activeRuns).toBe(0);expect((await c.state()).scopes![0].status).toBe('closed')});
   const final=await c.state(),child=await c.child();
   expect(child.events.filter(e=>e.type==='tool.proposed'&&e.data.name==='write')).toHaveLength(1);
   expect(child.events.filter(e=>e.type==='tool.proposed'&&['pause-ask','pause-ask-again'].includes(String(e.data.id)))).toHaveLength(2);

@@ -14,9 +14,9 @@ const maintenance=(bindingId:string)=>({
 it('默认执行员拒绝重新解析，自定义角色从真实知识版本继承 Skill',async()=>{
   const f=await fixture();
   try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id);
-    await expect(resolveDispatchAgent(await w.snapshot(),'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
-    const seeded=await seedTeam(w),snapshot=await w.snapshot();
+    const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id);
+    await expect(resolveDispatchAgent(await w.Snapshot(),'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
+    const seeded=await seedTeam(w),snapshot=await w.Snapshot();
     const custom=await resolveDispatchAgent(snapshot,seeded.input.agentId);
     await expect(resolveDispatchAgent(snapshot,'cbim:executor')).rejects.toMatchObject({code:'AGENT_RETIRED'});
     expect(custom.effectiveSkills.find(skill=>skill.inherited)).toMatchObject({ownerId:'.cbim/team',inherited:true,content:'# 团队校验规则'});
@@ -32,15 +32,15 @@ it('默认执行员拒绝重新解析，自定义角色从真实知识版本继�
 it('模块解析不再依赖真人、作者或旧维护声明，只冻结模块版本和各自 Workflow',async()=>{
   const f=await fixture();
   try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seeded=await seedTeam(w);
-    const snapshot=await w.snapshot(),module=JSON.parse(snapshot.files.find(x=>x.path===seeded.input.moduleId+'/module.json')!.text);
+    const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id),seeded=await seedTeam(w);
+    const snapshot=await w.Snapshot(),module=JSON.parse(snapshot.files.find(x=>x.path===seeded.input.moduleId+'/module.json')!.text);
     const fresh=await resolveDispatchModules(snapshot,[seeded.input.moduleId,seeded.child]);
     expect(fresh[0]).toMatchObject({moduleId:seeded.input.moduleId,workflow:{kind:'module',id:seeded.input.workflowId}});
     expect(fresh[1].workflow).toMatchObject({kind:'general',id:'cbim:general',version:'1'});
     expect(fresh.every(binding=>!('maintainerPersonIds' in binding)&&!('maintenanceBindingId' in binding))).toBe(true);
     module.authors=['未登记的历史作者'];module.maintenance={...maintenance('legacy-maintenance'),state:'retired'};
-    await w.commit(request(snapshot,[{path:seeded.input.moduleId+'/module.json',text:json(module)},{path:'.cbim/team/people.json',text:'旧花名册已不可解析，保留原字节'}]));
-    const after=await w.snapshot();expect(after.validation!.structural).toBe(true);
+    await w.Commit(request(snapshot,[{path:seeded.input.moduleId+'/module.json',text:json(module)},{path:'.cbim/team/people.json',text:'旧花名册已不可解析，保留原字节'}]));
+    const after=await w.Snapshot();expect(after.validation!.structural).toBe(true);
     expect((await resolveDispatchModules(after,[seeded.input.moduleId]))[0]).toEqual({...fresh[0],knowledgeRevision:after.revision});
     expect(after.files.find(file=>file.path==='.cbim/team/people.json')!.text).toBe('旧花名册已不可解析，保留原字节');
   }finally{await f.cleanup()}
@@ -49,11 +49,11 @@ it('模块解析不再依赖真人、作者或旧维护声明，只冻结模块�
 it('废弃维护声明不阻塞旧数据，模块范围和真实知识校验继续生效',async()=>{
   const f=await fixture();
   try{
-    const e=await f.app.dispatch('add',{path:f.a}),w=f.app.workspace(e.id),seeded=await seedTeam(w);
-    const snapshot=await w.snapshot(),module=JSON.parse(snapshot.files.find(x=>x.path===seeded.input.moduleId+'/module.json')!.text);
+    const e=await f.app.Dispatch('add',{path:f.a}),w=f.app.Workspace(e.id),seeded=await seedTeam(w);
+    const snapshot=await w.Snapshot(),module=JSON.parse(snapshot.files.find(x=>x.path===seeded.input.moduleId+'/module.json')!.text);
     module.maintenance={...maintenance('legacy'),confirmation:{recordId:'old',source:'local_user',confirmedAt:'旧历史时间'}};
-    await w.commit(request(snapshot,[{path:seeded.input.moduleId+'/module.json',text:json(module)}]));
-    const saved=await w.snapshot();expect(saved.validation!.structural).toBe(true);
+    await w.Commit(request(snapshot,[{path:seeded.input.moduleId+'/module.json',text:json(module)}]));
+    const saved=await w.Snapshot();expect(saved.validation!.structural).toBe(true);
     await expect(resolveDispatchModules(snapshot,[])).rejects.toMatchObject({code:'MODULE_MISSING'});
     await expect(resolveDispatchModules(snapshot,[seeded.child,seeded.child])).rejects.toMatchObject({code:'MODULE_MISSING'});
     await expect(resolveDispatchModules(snapshot,['.cbim/workspace/missing'])).rejects.toMatchObject({code:'MODULE_MISSING'});
@@ -63,6 +63,6 @@ it('废弃维护声明不阻塞旧数据，模块范围和真实知识校验继�
     expect(()=>resolveConversationAgent({...invalid,revision:''})).toThrowError(expect.objectContaining({code:'KNOWLEDGE_INVALID'}));
     await expect(resolveDispatchAgent(invalid,'cbim:main')).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
     await expect(resolveDispatchModules(invalid,[seeded.child])).rejects.toMatchObject({code:'KNOWLEDGE_INVALID'});
-    expect((await w.snapshot()).revision).toBe(saved.revision);
+    expect((await w.Snapshot()).revision).toBe(saved.revision);
   }finally{await f.cleanup()}
 });

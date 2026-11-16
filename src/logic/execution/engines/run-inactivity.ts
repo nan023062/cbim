@@ -29,25 +29,25 @@ export class RunInactivityTimer
   }
 
   /** 仅由适配器确认的新输出调用；不发送模型请求，不改变工具权限。 */
-  progress()
+  Progress()
   {
     if (!this.closed)
       this.timer.refresh()
   }
 
   /** 工具生命周期与有内容的新进度快照续期；空快照、重复快照和普通状态事件忽略。 */
-  observe(event: EngineEvent)
+  Observe(event: EngineEvent)
   {
     if (this.closed)
       return;
     if (event.type === 'message.delta' && typeof event.data.text === 'string' && event.data.text.length)
     {
-      this.progress();
+      this.Progress();
       return
     }
     if (event.type === 'message' && event.data.role === 'assistant' && (event.data.text || Array.isArray(event.data.toolCallIds) && event.data.toolCallIds.length))
     {
-      this.progress();
+      this.Progress();
       return
     }
     if (!['tool.started', 'tool.updated', 'tool.finished'].includes(event.type) || typeof event.data.id !== 'string')
@@ -70,11 +70,11 @@ export class RunInactivityTimer
     if (this.toolProgress.get(event.data.id) === signature)
       return;
     this.toolProgress.set(event.data.id, signature);
-    this.progress();
+    this.Progress();
   }
 
   /** run 的 finally、显式停止及关闭都可调用；无副作用地重复释放。 */
-  dispose()
+  Dispose()
   {
     this.closed = true;
     clearTimeout(this.timer);

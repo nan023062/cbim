@@ -151,5 +151,5 @@ export function selectCodeCheck(bindings: readonly CodeCheckBinding[], receipts:
 /** 平台执行拥有进程和快照；Core 只接受冻结命令与已登记工作区的真实结果。 */
 export interface CodeCheckPort
 {
-  run(checks: readonly FrozenCodeCheck[], scopes: OutputManifestSnapshot['scopes'], signal: AbortSignal): Promise<CodeCheckExecution>
+  Run(checks: readonly FrozenCodeCheck[], scopes: OutputManifestSnapshot['scopes'], signal: AbortSignal): Promise<CodeCheckExecution>
 }

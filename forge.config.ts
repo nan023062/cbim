@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
 import {packageOfficialEngineRuntimes} from './scripts/package-pi-runtime.mjs';
-import {signingConfig, desktopSigningMode, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
+import {signingConfig, desktopSigningMode, desktopReleaseNotes, updaterConfigYaml} from './scripts/desktop-signing/config.cjs';
 import {verifyBrandAssets} from './scripts/build-brand-assets.mjs';
 import {runtimeSigningKey,stageColdRuntime} from './scripts/runtime-packaging';
 import {desktopBuilds} from './desktop-builds';
@@ -23,6 +23,7 @@ const signingMode=desktopRelease?desktopSigningMode():'signed';
 const signing=desktopRelease&&signingMode==='signed'?signingConfig():undefined;
 const desktopVersion=process.env.CBIM_DESKTOP_VERSION||JSON.parse(readFileSync('package.json','utf8')).version;
 if(desktopRelease&&!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(desktopVersion))throw Error('桌面版本格式无效');
+const releaseNotes=desktopRelease?desktopReleaseNotes():undefined;
 const executableName=desktopRelease?'CBIM Desktop':'CBIM';
 async function saveBuildInfo(info:unknown){
   await fs.mkdir(buildOut,{recursive:true});await fs.writeFile(metadataPath,JSON.stringify(info,null,2)+'\n');
@@ -35,7 +36,7 @@ const config: ForgeConfig = {
   makers: [new MakerZIP({}, ['win32'])],
   hooks:{
     prePackage:async()=>{await runtimeSigningKey()},
-    generateAssets:async()=>{await verifyBrandAssets();await packageOfficialEngineRuntimes(buildOut);if(desktopRelease){const notes=await fs.readFile(process.env.CBIM_DESKTOP_NOTES||`engineering/releases/desktop-v${desktopVersion}.md`,'utf8');await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
+    generateAssets:async()=>{await verifyBrandAssets();await packageOfficialEngineRuntimes(buildOut);if(desktopRelease){await fs.writeFile(path.join(buildOut,'desktop-release.json'),JSON.stringify({channel:'desktop-stable',version:desktopVersion,notes:releaseNotes,signingMode}));await fs.writeFile(path.join(buildOut,'app-update.yml'),updaterConfigYaml(desktopVersion,signing?.publisherName,signingMode))}},
     readPackageJson:async(_config,pkg)=>desktopRelease?{...pkg,version:desktopVersion}:pkg,
     packageAfterPrune:async(_config,appDirectory)=>{
       await runtimeSigningKey();

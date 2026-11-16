@@ -9,4 +9,4 @@
 | runtime | 内置 Skill、通用规则及方法结构规范 |
 | task | 任务、基线、循环、基础抽象与架构评估的内置规范 |
 
-运行资源包仅收集上述五个业务目录与 legal，不收集 design、docs 或 branding。Rules/Builtins 接收显式 assetsRoot；白名单 ID、只读约束与内容版本校验保持不变。产品目标、核心取舍、未落地设计与原型留在 design；工程记录和旧格式参考归 engineering，不进入运行资源包；概念设计留在 docs。
+运行资源包仅收集上述五个业务目录与 legal，不收集 design、docs 或 branding。Rules/Builtins 接收显式 assetsRoot；白名单 ID、只读约束与内容版本校验保持不变。产品目标、核心取舍、未落地设计与原型留在 design；工程记录与旧格式参考从 Git 历史追溯，不进入运行资源包；概念设计留在 docs。

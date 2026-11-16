@@ -1,8 +1,18 @@
 const path = require('node:path');
+const {readFileSync} = require('node:fs');
 const {AppInfo} = require('electron-builder');
 
 // NSIS 从 package.name 派生 installer.exe 的缓存目录；更新配置和制品校验复用同一生产者，避免与 EXE/展示名混用。
 const updaterCacheDirName = new AppInfo({metadata: require('../../package.json'), config: {}}).updaterCacheDirName;
+
+// 发布说明由本次构建显式提供；读取原文，不依赖仓库内的历史资料目录。
+function desktopReleaseNotes(env = process.env) {
+  const file = env.CBIM_DESKTOP_NOTES;
+  if (typeof file !== 'string' || !file.trim()) throw Error('RELEASE_NOTES_REQUIRED：请将 CBIM_DESKTOP_NOTES 指向本次发布说明文件');
+  const notes = readFileSync(file, 'utf8');
+  if (!notes.trim()) throw Error('RELEASE_NOTES_EMPTY：发布说明文件不能为空');
+  return notes;
+}
 
 // Only public certificate selectors belong in build configuration. The private key stays in the Windows provider.
 function signingConfig(env = process.env) {
@@ -34,4 +44,4 @@ function updaterConfigYaml(version, publisherName, mode = 'signed') {
   return `provider: generic\nurl: https://github.com/nan023062/cbim/releases/download/desktop-v${version}/\nupdaterCacheDirName: ${updaterCacheDirName}\n` + (mode === 'signed' ? `publisherName:\n  - ${JSON.stringify(publisherName)}\n` : '');
 }
 
-module.exports = {signingConfig, desktopSigningMode, updaterConfigYaml, updaterCacheDirName};
+module.exports = {signingConfig, desktopSigningMode, desktopReleaseNotes, updaterConfigYaml, updaterCacheDirName};

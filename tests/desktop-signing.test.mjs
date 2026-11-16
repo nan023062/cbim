@@ -4,7 +4,7 @@ import path from 'node:path';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {parse, stringify} from 'yaml';
 import {AppInfo} from 'electron-builder';
-import {signingConfig, desktopSigningMode, updaterConfigYaml} from '../scripts/desktop-signing/config.cjs';
+import {signingConfig, desktopSigningMode, desktopReleaseNotes, updaterConfigYaml} from '../scripts/desktop-signing/config.cjs';
 import {createWindowsSigner} from '../scripts/desktop-signing/windows.mjs';
 import {digest, signPayload, windowsPayloads} from '../scripts/desktop-signing/payload.mjs';
 import {artifactHashes, releaseNames, verifyCandidate, verifyUpdateManifest} from '../scripts/desktop-signing/artifacts.mjs';
@@ -18,6 +18,22 @@ afterEach(async () => {
   }
 });
 async function temp() { const root = await fs.mkdtemp(path.join(os.tmpdir(), 'cbim-signing-test-')); roots.push(root); return root; }
+describe('explicit desktop release notes', () => {
+  it.each([{}, {CBIM_DESKTOP_NOTES: ''}, {CBIM_DESKTOP_NOTES: '  '}])('requires a supplied file before building: %j', env => {
+    expect(() => desktopReleaseNotes(env)).toThrow('RELEASE_NOTES_REQUIRED');
+  });
+  it('reads the supplied document verbatim, including Unicode, spaces and line endings', async () => {
+    const file = path.join(await temp(), '发布 notes.md'), notes = '# 新版说明\r\n\r\n实际变化与限制。\r\n';
+    await fs.writeFile(file, notes);
+    expect(desktopReleaseNotes({CBIM_DESKTOP_NOTES: file})).toBe(notes);
+  });
+  it('rejects missing or blank content instead of falling back to old version notes', async () => {
+    const file = path.join(await temp(), 'notes.md');
+    expect(() => desktopReleaseNotes({CBIM_DESKTOP_NOTES: file})).toThrow(/ENOENT/);
+    await fs.writeFile(file, ' \r\n\t');
+    expect(() => desktopReleaseNotes({CBIM_DESKTOP_NOTES: file})).toThrow('RELEASE_NOTES_EMPTY');
+  });
+});
 const config = {thumbprint: 'A'.repeat(40), publisherName: 'CBIM Test Publisher', signTool: path.resolve('SDK/signtool.exe'), store: 'CurrentUser', timestampUrl: 'http://timestamp.digicert.com'};
 const goodSignature = {status: 'Valid', thumbprint: config.thumbprint, publisherName: config.publisherName, timestampThumbprint: 'B'.repeat(40)};
 const env = {CBIM_SIGN_CERT_SHA1: config.thumbprint, CBIM_SIGN_PUBLISHER: config.publisherName, CBIM_SIGNTOOL_PATH: config.signTool};

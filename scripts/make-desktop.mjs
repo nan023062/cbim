@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {signingConfig, desktopSigningMode} from './desktop-signing/config.cjs';
+import {signingConfig, desktopSigningMode, desktopReleaseNotes} from './desktop-signing/config.cjs';
 import {createWindowsSigner, runCommand} from './desktop-signing/windows.mjs';
 import {signPayload, windowsPayloads, digest} from './desktop-signing/payload.mjs';
 import {artifactHashes, verifyCandidate} from './desktop-signing/artifacts.mjs';
@@ -9,6 +9,8 @@ import {artifactHashes, verifyCandidate} from './desktop-signing/artifacts.mjs';
 if (process.platform !== 'win32' || process.arch !== 'x64') throw Error('正式安装包当前只支持 Windows x64 构建');
 const args = process.argv.slice(2);
 if (args.length > 1 || (args[0] && args[0] !== '--unsigned')) throw Error('用法：pnpm make:desktop [--unsigned]');
+// 在证书检查、候选目录及构建锁创建前核实显式发布正文。
+desktopReleaseNotes();
 // 模式由本次命令决定，不继承环境中残留的未签名选择，也不在失败时自动降级。
 process.env.CBIM_DESKTOP_SIGNING_MODE = args[0] === '--unsigned' ? 'unsigned' : 'signed';
 const mode = desktopSigningMode(), unsigned = mode === 'unsigned';

@@ -25,4 +25,4 @@ Core 不依赖业务；Logic 使用 Core，不依赖 Bridge、View 或 Electron�
 
 [Core](../src/core/ARCHITECTURE.md) · [Logic](../src/logic/ARCHITECTURE.md) · [Bridge](../src/bridge/ARCHITECTURE.md) · [View](../src/view/ARCHITECTURE.md)。
 
-迁移步骤、测试数量和历史验收不在此重复维护，沿 [工程记录](../engineering/development-log.md) 或其固定历史版本查询。
+迁移步骤、测试数量和历史验收不在此重复维护，沿 Git 提交及关联 Issue／PR 查询，旧记录从对应固定版本追溯。

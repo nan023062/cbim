@@ -6,7 +6,7 @@
 
 ## 持续开发 Skill
 
-开发清单从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取，产品设计见 [design/](design/README.md)，开发指南与记录见 [engineering/](engineering/README.md)，四份概念设计见 [设计文档](README.md#设计文档)。继续开发或处理 Issue 时，使用 `cbim-development`：
+开发清单从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取，产品设计见 [design/](design/README.md)，开发流程沿下方项目 Skill 维护，记录查 Git 提交及关联 Issue／PR，四份概念设计见 [设计文档](README.md#设计文档)。继续开发或处理 Issue 时，使用 `cbim-development`：
 
 - [Claude Code 入口](.claude/skills/cbim-development/SKILL.md)
 - [Codex 入口](.codex/skills/cbim-development/SKILL.md)

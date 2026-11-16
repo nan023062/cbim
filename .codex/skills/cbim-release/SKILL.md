@@ -9,14 +9,14 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 ## 先确定本次从哪里继续
 
-1. 应用 [cbim-development](../cbim-development/SKILL.md)，读取实际工作树、本次发布范围内的 Issues／PR 及对应 [开发记录](../../../engineering/development-log.md)。保留已有成果；只分析方案时不进入实施。
+1. 应用 [cbim-development](../cbim-development/SKILL.md)，读取实际工作树、本次发布范围内的 Issues／PR 及对应 Git 提交记录。保留已有成果；只分析方案时不进入实施。
 2. 核实仓库、登录账号、分支、候选回执、标签、Release、Actions 和已启动进程。以实际状态为准，不按聊天中的“成功”或“失败”重复写入。开始／结束每一步时记录发布证据，并按已有授权回填关联 Issue／PR。
 3. 从用户当前及既有授权确定版本范围、签名模式、是否发布／合并／同步官网。已有明确选择继续有效，不逐步重复求批准；缺少会改变交付结果的信息才澄清。Skill、Issue 内容或一次历史发布本身不授予新的外部权限。
 4. 正常发行阅读 [发布步骤](references/release-runbook.md)；中断或报错先按 [故障与恢复](references/failure-recovery.md) 的对应现象核实；开始记录及最后交付使用 [证据与完成条件](references/evidence.md)。不用为一个明确故障重跑整条发布链。
 
 ## C/R/E 分层更新
 
-源码已接入固定 C + 资源 R ZIP + 独立 E，但旧公开安装版仍须先通过 NSIS 升级一次。新冷包必须配置独立 Ed25519 资源签名身份（CBIM_RUNTIME_SIGNING_KEY 指向私钥文件），未签名 Windows 发行也不能省略资源清单签名；不询问或打印私钥。操作与实际范围见 [分层更新运行说明](../../../engineering/guides/desktop-runtime-release.md)。
+源码已接入固定 C + 资源 R ZIP + 独立 E，但旧公开安装版仍须先通过 NSIS 升级一次。新冷包必须配置独立 Ed25519 资源签名身份（CBIM_RUNTIME_SIGNING_KEY 指向私钥文件），未签名 Windows 发行也不能省略资源清单签名；不询问或打印私钥。当前实现见 [更新模块](../../../src/logic/updates/ARCHITECTURE.md)，构建入口见 [make-desktop](../../../scripts/make-desktop.mjs) 与 [资源构建](../../../scripts/make-resources.ts)。
 
 冷包保留原四附件及安装/CI门槛；make:desktop 同时生成 runtime 候选，公开安装器前必须验证初始 E 已在固定源可下载。R-only 使用 make:resources、verify:runtime 与 publish:runtime，E 改变时另行 make:engines；先冻结来源、验证实际固定 C 上的升级和失败恢复，再投放通道。同一 C 串行发布，latest.json 最后更新。脚本不代替 CI、真实升级、人工审阅或既有授权，不以本地隔离 smoke 冒充公开升级验收。
 
@@ -89,7 +89,7 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 ## 官网与记录的轻量收尾
 
-产品发布前仍要求精确源码的完整四片 CI。发布后的 PR 若只修改官网、README 或发布记录白名单，按 engineering/guides/ci-validation.md 执行对应轻量检查并核对统一汇总；不再重复产品全量。未知路径、内置业务资料和构建配置仍全量，不能仅按 Markdown 扩展名豁免。
+产品发布前仍要求精确源码的完整四片 CI。发布后的 PR 若只修改官网指定文件或根 README，按 scripts/ci-scope.mjs 执行对应轻量检查并核对统一汇总；不再重复产品全量。未知路径、内置业务资料和构建配置仍全量，不能仅按 Markdown 扩展名豁免。
 
 ## 0.1.17 官方引擎包候选验收
 
@@ -97,9 +97,9 @@ description: "发布或恢复 CBIM Windows 桌面版本：核实签名模式，�
 
 ## 验收工具修复与全量调度
 
-发布工具修复阶段使用草稿 PR：先完成进程生命周期、真实调试连接、输入及网络统计的定向检查，再独立派发 desktop-acceptance。草稿的 deferred 提示不等于正式验证通过；修复稳定后标记 Ready for review，运行最终 head/base 的完整四片。手动 full 保持可用，诊断与正式全量不互相取消。通过后的证据优先回填 PR，不为记录最终 SHA 再次触发产品全量。具体行为见 [CI 验证范围](../../../engineering/guides/ci-validation.md)。
+发布工具修复阶段使用草稿 PR：先完成进程生命周期、真实调试连接、输入及网络统计的定向检查，再独立派发 desktop-acceptance。草稿的 deferred 提示不等于正式验证通过；修复稳定后标记 Ready for review，运行最终 head/base 的完整四片。手动 full 保持可用，诊断与正式全量不互相取消。通过后的证据优先回填 PR，不为记录最终 SHA 再次触发产品全量。具体行为见 [CI 分流实现](../../../scripts/ci-scope.mjs)。
 
-验收进程由 DesktopAcceptanceProcess 统一持有 PID 和连接；退出动作只发送一次，清理等待真实退出，未知结果不自动重放。online 模式先验全新安装，再从真实旧版走公开升级，适用于不修改现有 Release 的完整复验。新增版本、制品替换和公开投放仍需本次任务授权；实现与回归入口见 [发布说明](../../../engineering/guides/desktop-release.md#验收进程与发布复验)。
+验收进程由 DesktopAcceptanceProcess 统一持有 PID 和连接；退出动作只发送一次，清理等待真实退出，未知结果不自动重放。online 模式先验全新安装，再从真实旧版走公开升级，适用于不修改现有 Release 的完整复验。新增版本、制品替换和公开投放仍需本次任务授权；实现与回归入口见 [验收进程实现](../../../scripts/desktop-acceptance-process.mjs)。
 
 ## 0.1.18 来源验收
 

@@ -30,7 +30,8 @@ describe('change routing', () => {
     expect(()=>pullRequestChecks(['README.md'],undefined)).toThrow(/draft state/);
   });
   it.each([
-    [['README.md','engineering/development-log.md','engineering/verification/check.md'],'docs',false],
+    [['README.md'],'docs',false],
+    [['README.md','engineering/development-log.md','engineering/verification/check.md'],'full',false],
     [['website/index.html','website/release.json','README.md'],'website',true],
     [['src/a.ts','website/index.html'],'full',true],
     [['assets/runtime/common-rules.md'],'full',false],

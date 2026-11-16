@@ -13,7 +13,7 @@ import {hash,json} from '../src/core/platform/node/serialization';
 import {waitingMixedSourcesProvider,mixedSourceGoal as goal,mixedSourceData as data,mixedResourceKinds,mixedResourceText,requestImages} from './waiting-mixed-sources-provider';
 import {seedMixedSources,mixedSnapshotEvidence,mixedRecords,mixedRunBytes,mixedRunByteEvidence,attachmentHash,attachmentWait} from './waiting-mixed-sources-fixture';
 
-it.each(['snapshot','preaccept','import-cancel','response-lost'] as const)('continues a real waiting goal with explicit mixed material snapshots and no source replay (%s)',async mode=>{
+it.each(['snapshot','preaccept','response-lost'] as const)('continues a real waiting goal with explicit mixed material snapshots and no source replay (%s)',async mode=>{
   const f=await fixture(),provider=await waitingMixedSourcesProvider();let app=f.app,traceClose=()=>{};
   try{
     const seed=await seedMixedSources(app,f.a,f.temp,provider);traceClose=seed.trace.close;
@@ -33,10 +33,6 @@ it.each(['snapshot','preaccept','import-cancel','response-lost'] as const)('cont
       await app.dispatch('resources.connection.grant',{...seed.identity,connectorId:data.connectorId,repositoryId:seed.library.repositoryId,definitionHash:seed.preview.definitionHash,expectedGrantRevision:seed.grant.grant.revision+1,commandId:randomUUID()});await app.dispatch('resources.stopSharing');await app.dispatch('resources.share',{lan:false,port:0});
       await expect(app.dispatch('chat.import',{id:seed.entry.id,importId:randomUUID(),attachment:source})).rejects.toMatchObject({code:'REPOSITORY_CONNECTION_STALE'});expect(await snapshots()).toEqual(before);expect(await seed.scopes()).toEqual([original]);expect(await mixedRunBytes(f.user,seed.entry.id,started.taskId,originalThread,originalRecords.runs)).toEqual(originalBytes);
       expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);expect(provider.httpRequests).toEqual([]);await app.shutdown();app=seed.reopen(f.user);await app.init();expect(await seed.scopes()).toEqual([original]);expect(app.resources.status().sharing).toBeUndefined();expect(provider.mainRequests).toHaveLength(6);expect(await mixedRunBytes(f.user,seed.entry.id,started.taskId,await app.execution(seed.entry.id).thread(started.taskId),originalRecords.runs)).toEqual(originalBytes);await app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});
-    }else if(mode==='import-cancel'){
-      const importId=randomUUID(),before=await snapshots(),pending=app.dispatch('chat.import',{id:seed.entry.id,importId,attachment:{kind:'web',value:provider.webUrl+'/held'}}),settled=Promise.allSettled([pending]);await attachmentWait(async()=>provider.webHeld,'actual page HTTP reached controlled server');
-      expect(await app.dispatch('chat.importCancel',{id:seed.entry.id,importId})).toEqual({cancelled:true});provider.releaseWeb();expect((await settled)[0].status).toBe('rejected');expect(await snapshots()).toEqual(before);expect(await seed.scopes()).toEqual([original]);expect(await graph()).toEqual(originalGraph);expect(await mixedRunBytes(f.user,seed.entry.id,started.taskId,originalThread,originalRecords.runs)).toEqual(originalBytes);
-      expect(provider.httpRequests).toEqual([{method:'GET',url:'/held'}]);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);await app.shutdown();app=seed.reopen(f.user);await app.init();expect(await seed.scopes()).toEqual([original]);expect(provider.mainRequests).toHaveLength(6);expect(app.resources.status().sharing).toBeUndefined();expect(await mixedRunBytes(f.user,seed.entry.id,started.taskId,await app.execution(seed.entry.id).thread(started.taskId),originalRecords.runs)).toEqual(originalBytes);await app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});
     }else{
       const imported=await seed.importSources(app),items=imported.items,ids=items.map(item=>item.id),stored=await mixedSnapshotEvidence(seed,items),request=seed.continuation(original,ids),lookup={...identity,scopeId:original.scopeId,commandId:request.commandId};
       expect(provider.httpRequests).toEqual([{method:'GET',url:'/page'}]);expect(seed.trace.requests).toHaveLength(8);expect(seed.trace.requests.every(item=>item.method==='GET'&&item.path==='/v1/resources')).toBe(true);
@@ -56,7 +52,42 @@ it.each(['snapshot','preaccept','import-cancel','response-lost'] as const)('cont
       await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-mixed-sources-${mode}-pi-evidence.json`,JSON.stringify({mode,receipt,requests:{main:13,member:10,web:provider.httpRequests,repository:seed.trace.requests},runBytes:mixedRunByteEvidence(bytes),sourceChangedUsesSnapshot:true,oneNativeImageMessage:true,restartNoReplay:true,providerErrors:provider.errors},null,2));
     }
     expect((await app.workspace(seed.entry.id).snapshot()).revision).toBe(originalKnowledge.revision);expect((await app.workspace(seed.entry.id).snapshot()).files).toEqual(originalKnowledge.files);expect(provider.errors).toEqual([]);
-    if(mode==='preaccept'||mode==='import-cancel'){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-mixed-sources-${mode}-pi-evidence.json`,JSON.stringify({mode,requests:{main:provider.mainRequests.length,member:provider.memberRequests.length,web:provider.httpRequests,repository:seed.trace.requests},runBytes:mixedRunByteEvidence(originalBytes),waitingUnconsumedUntilExplicitStop:true,restartNoReplay:true,formalKnowledgeUnchanged:true,providerErrors:provider.errors},null,2))}
+    if(mode==='preaccept'){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-mixed-sources-${mode}-pi-evidence.json`,JSON.stringify({mode,requests:{main:provider.mainRequests.length,member:provider.memberRequests.length,web:provider.httpRequests,repository:seed.trace.requests},runBytes:mixedRunByteEvidence(originalBytes),waitingUnconsumedUntilExplicitStop:true,restartNoReplay:true,formalKnowledgeUnchanged:true,providerErrors:provider.errors},null,2))}
   }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-mixed-sources-${mode}-pi-failure.json`,JSON.stringify({mode,error:String(error),main:provider.mainRequests,member:provider.memberRequests,http:provider.httpRequests,errors:provider.errors},null,2));throw error}
   finally{traceClose();provider.release();provider.releaseWeb();await app.shutdown();await provider.close();await f.cleanup()}
+},120000);
+
+it('cancels a real material import while the recursive call is waiting for user input',async()=>{
+ const f=await fixture(),provider=await waitingMixedSourcesProvider(true);let app=f.app,traceClose=()=>{};
+ try{
+  const seed=await seedMixedSources(app,f.a,f.temp,provider);traceClose=seed.trace.close;
+  const started=await app.dispatch('loop.chat',{id:seed.entry.id,message:goal.mainGoal,options:seed.options});
+  const questions=()=>app.dispatch('loop.questions',{id:seed.entry.id,taskId:started.taskId});
+  await attachmentWait(async()=>{if(provider.errors.length)throw Error(JSON.stringify({errors:provider.errors,main:provider.mainRequests.at(-1),member:provider.memberRequests.at(-1)}));return (await questions()).length===1},'recursive question pending');
+  expect(provider.errors).toEqual([]);expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(5);
+  const scope=(await seed.scopes())[0],state=await app.workspace(seed.entry.id).dispatchStore.read();
+  expect(scope.status).toBe('active');expect(scope.wait).toBeUndefined();expect(scope.goal?.plan).toBeUndefined();
+  expect(state.graphs[0].tasks).toEqual([]);expect(state.agentBusinessRuns).toHaveLength(1);
+  const thread=await app.execution(seed.entry.id).thread(started.taskId);
+  expect(thread).toHaveLength(1);const native=await fs.readFile(thread[0].sessionFile!);
+  const snapshots=()=>fs.readdir(path.dirname(seed.snapshotPath('unused'))).catch((error:NodeJS.ErrnoException)=>{if(error.code==='ENOENT')return [];throw error});
+  const before=await snapshots(),pendingQuestions=await questions(),importId=randomUUID();
+  const pending=app.dispatch('chat.import',{id:seed.entry.id,importId,attachment:{kind:'web',value:provider.webUrl+'/held'}}),settled=Promise.allSettled([pending]);
+  await attachmentWait(async()=>provider.webHeld,'material HTTP received');
+  expect(await app.dispatch('chat.importCancel',{id:seed.entry.id,importId})).toEqual({cancelled:true});
+  provider.releaseWeb();expect((await settled)[0].status).toBe('rejected');
+  expect(await snapshots()).toEqual(before);expect(await seed.scopes()).toEqual([scope]);expect(await questions()).toEqual(pendingQuestions);
+  expect(await app.workspace(seed.entry.id).dispatchStore.read()).toEqual(state);
+  expect(await app.execution(seed.entry.id).thread(started.taskId)).toEqual(thread);expect(await fs.readFile(thread[0].sessionFile!)).toEqual(native);
+  expect(provider.httpRequests).toEqual([{method:'GET',url:'/held'}]);expect(seed.trace.requests).toEqual([]);
+  await app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});
+  await attachmentWait(async()=>(await seed.scopes())[0].status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0,'recursive stop');
+  const closed=(await seed.scopes())[0],finalThread=await app.execution(seed.entry.id).thread(started.taskId),finalNative=await fs.readFile(thread[0].sessionFile!);
+  expect(closed.outcome).toBe('cancelled');
+  await app.shutdown();app=seed.reopen(f.user);await app.init();
+  expect(await seed.scopes()).toEqual([closed]);expect(await app.execution(seed.entry.id).thread(started.taskId)).toEqual(finalThread);
+  expect(await fs.readFile(thread[0].sessionFile!)).toEqual(finalNative);
+  expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(5);expect(provider.errors).toEqual([]);
+ }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/recursive-material-cancel-failure.json',JSON.stringify({error:String(error),main:provider.mainRequests,member:provider.memberRequests,errors:provider.errors},null,2));throw error}
+ finally{provider.releaseWeb();traceClose();await app.shutdown();await provider.close();await f.cleanup()}
 },120000);

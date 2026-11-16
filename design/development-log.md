@@ -3331,3 +3331,16 @@ member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取�
 以 b06f3f9e 为基线，将原命令核查的三种场景迁移至实际 Agent 调用：登记后回包丢失、执行结果回包丢失、进入调用前失败。另迁移父调用副作用观察，分别核实失败的父工具回包与已完成的子调用，未将父回包失败等同于未发生执行。保留精确 callId、跨 root 隔离、重复只读查询、重启字节不变和无自动重放断言；不生成旧 TaskNode。
 
 验证：`pnpm exec vitest run tests/original-command-pi.test.ts tests/main-tool-contract-pi.test.ts --reporter=json --outputFile=build/recursive-original-commands.json`：7/7 通过（新迁移 3 项、受影响供应器消费者 4 项）。`pnpm exec vitest run tests/effect-observation-pi.test.ts -t 'observes a failed recursive parent' --reporter=json --outputFile=build/recursive-parent-effect.json`：1/1 选中通过，其余 4 项未选中。`pnpm typecheck`、`pnpm check:test-modules` 通过，541 套件登记（174 unit、166 contract、201 integration）。仅测试与记录修改，无 src 注释/类图变更。全量 CI、桌面、安装升级未在本切片执行；仍待迁移补充材料 8 项、业务重新规划 3 项及完整观察后修复 1 项。
+
+
+## Issue #94：递归对话材料校验及两项等待场景迁移
+
+普通 message/images 路径此前直接解析快照，未统一校验身份及非图片来源证明。本切片在 Logic/materials/service 内复用已有有界快照读取和 Schema，校验严格 UTF-8、快照身份、重复 ID、来源 proof、图片签名及大小；普通文本展开保留原 transcript 分隔格式。保留旧 connector 静态引用语义，不冒充真实资源采集。更新 chat-inputs 注释、service/CONTRACT.md 和生成的 ARCHITECTURE.md。
+
+两项旧等待场景迁移至真实 Agent 调用后、原根调用中用户问题暂停：附件预接收拒绝（无视觉模型、未知 ID、跨工作区、损坏快照），以及真实 HTTP 材料导入取消。使用真实子调用、问题队列、导入取消、持久状态及原生会话；未创建旧 TaskNode。停止后重启不重放，不声称新问题支持旧检查点跨进程续接。
+
+验证：chat-inputs + continuation-chat-inputs 首轮 10 通过、1 transcript 格式回归失败；恢复原分隔文本后精确补跑该项通过（build/recursive-material-transcript.json）。vision + chat-clipboard 7/7 通过（build/recursive-material-image-consumers.json）。新 import-cancel 首轮模型夹具只提供一个选项，被真实工具拒绝；改为两个选项后 1/1 通过（build/recursive-material-import-cancel-verified.json）。新附件 preaccept 1/1 通过（build/recursive-material-preaccept.json）。类型检查通过；架构检查 135 目录/836 文件、依赖 1671 文件/7920 边、零循环/违规。测试归属检查 541 套件通过。
+
+尚未完成：材料其他 6 场景（含运行中插入附件清单持久化与回包丢失）、业务重新规划 3 场景、完整观察后修复 1 场景，以及桌面脚本/安装升级。现有校验不等于这些流程全部通过。
+
+上一提交 b06f3f9e 的完整 CI 43804317093 已结束：3692 通过、16 失败、2 pending；第三分片成功。该 CI 不含 53959156 及本切片，不能用本地新增通过项推算新 head 的全量结果。

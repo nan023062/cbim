@@ -8,8 +8,8 @@ export const mixedResourceKinds=['connector','team','agent','skill','architectur
 export const mixedResourceText=(kind:string)=>`# 已保存的 ${kind} 资料\n\nMIXED_RESOURCE_${kind}_29a\n\n静态正文只是参考，不授予业务执行或人工验收权限。`;
 
 /** Reuse the unchanged actual Pi plan/wait/continuation/read chain; the additional HTTP server only supplies real public page bytes. */
-export async function waitingMixedSourcesProvider(){
-  const model=await waitingAttachmentsProvider(),httpRequests:Array<{method:string;url:string}>=[];let pageText=mixedSourceData.pageText,releaseWeb=()=>{},held=false;
+export async function waitingMixedSourcesProvider(recursive=false){
+  const model=await waitingAttachmentsProvider(recursive),httpRequests:Array<{method:string;url:string}>=[];let pageText=mixedSourceData.pageText,releaseWeb=()=>{},held=false;
   const webGate=new Promise<void>(resolve=>{releaseWeb=resolve});
   const web=http.createServer(async(req,res)=>{
     httpRequests.push({method:req.method??'',url:req.url??''});

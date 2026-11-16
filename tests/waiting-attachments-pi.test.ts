@@ -11,7 +11,7 @@ import {hash,json} from '../src/core/platform/node/serialization';
 import type {GraphSnapshot} from '../src/logic/tasks/rules/graph-types';
 import type {GoalContinuationReceipt} from '../src/logic/tasks/rules/scope-continuation';
 
-for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as const)it('keeps explicit waiting attachments bound to one accepted native user message with real Pi ('+mode+')',async()=>{
+for(const mode of ['snapshot','response-lost','budget-stop'] as const)it('keeps explicit waiting attachments bound to one accepted native user message with real Pi ('+mode+')',async()=>{
   const f=await fixture(),provider=await waitingAttachmentsProvider();let app=f.app,releaseBudget=()=>{};
   try{
     const seed=await seedWaitingAttachments(app,f.a,provider);
@@ -23,23 +23,6 @@ for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as cons
     expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);expect(originalThread).toHaveLength(2);
     const attachments=await seed.importFiles(app),ids=attachments.map(item=>item.id),snapshotBytes=await Promise.all(ids.map(id=>fs.readFile(seed.snapshotPath(id)))),request=seed.continuation(original,ids),lookup={...identity,scopeId:original.scopeId,commandId:request.commandId};
     await fs.writeFile(seed.sources.text,'原文已经改变，不应进入已登记快照');await fs.unlink(seed.sources.image);
-    if(mode==='preaccept'){
-      const other=await app.dispatch('add',{path:f.b}),foreign=await new ChatInputs(app.workspace(other.id)).path('file',seed.sources.text),bad=await new ChatInputs(app.workspace(seed.entry.id)).path('file',seed.sources.text);
-      await fs.writeFile(seed.snapshotPath(bad.id),'{broken snapshot');
-      const attempts=[
-        {...request,commandId:randomUUID(),options:{...request.options,model:'attachment-plain'}},
-        {...request,commandId:randomUUID(),input:{...request.input,attachmentIds:[randomUUID()]}},
-        {...request,commandId:randomUUID(),input:{...request.input,attachmentIds:[foreign.id]}},
-        {...request,commandId:randomUUID(),input:{...request.input,attachmentIds:[bad.id]}},
-      ];
-      for(const attempt of attempts){
-        await expect(app.dispatch('loop.goalContinue',attempt)).rejects.toMatchObject({code:expect.stringMatching(/^GOAL_ATTACHMENT_/)});
-        expect(await app.dispatch('loop.goalContinuation',{...lookup,commandId:attempt.commandId})).toBeUndefined();expect(await seed.scopes()).toEqual([original]);expect(await graph()).toEqual(originalGraph);expect(await app.execution(seed.entry.id).thread(started.taskId)).toEqual(originalThread);
-        expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(5);expect(app.runtime.snapshot().pressure.activeRuns).toBe(0);
-      }
-      await app.shutdown();app=seed.reopen(f.user);await app.init();expect(await seed.scopes()).toEqual([original]);expect(provider.mainRequests).toHaveLength(6);
-      await app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});return;
-    }
     if(mode==='budget-stop'){
       const budgets=app.memberDispatch(seed.entry.id).budgets,admit=budgets.admit.bind(budgets);let entered=false;
       const gate=new Promise<void>(resolve=>{releaseBudget=resolve});
@@ -88,4 +71,42 @@ for(const mode of ['snapshot','preaccept','response-lost','budget-stop'] as cons
     expect(required((await app.dispatch('loop.goalContinuation',lookup))).continuation).toEqual(receipt.continuation);expect((await app.dispatch('loop.goalContinue',request)).continuation).toEqual(receipt.continuation);expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(10);expect(provider.errors).toEqual([]);
   }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile(`test-results/waiting-attachments-${mode}-pi-failure.json`,JSON.stringify({error:String(error),mainRequests:provider.mainRequests,memberRequests:provider.memberRequests,transportErrors:provider.errors},null,2));throw error}
   finally{releaseBudget();provider.release();await app.shutdown();await provider.close();await f.cleanup()}
+},120000);
+
+it('rejects invalid attachments before inserting into a recursive pending question',async()=>{
+ const f=await fixture(),provider=await waitingAttachmentsProvider(true);let app=f.app;
+ try{
+  const seed=await seedWaitingAttachments(app,f.a,provider);
+  const started=await app.dispatch('loop.chat',{id:seed.entry.id,message:data.mainGoal,options:seed.options});
+  const questions=()=>app.dispatch('loop.questions',{id:seed.entry.id,taskId:started.taskId});
+  await attachmentWait(async()=>{if(provider.errors.length)throw Error(provider.errors.join('\n'));return (await questions()).length===1},'recursive attachment question');
+  const scope=(await seed.scopes())[0],thread=await app.execution(seed.entry.id).thread(started.taskId),pending=await questions();
+  expect(scope.status).toBe('active');expect(scope.wait).toBeUndefined();expect(scope.goal?.plan).toBeUndefined();
+  const attachments=await seed.importFiles(app),ids=attachments.map(item=>item.id);
+  const other=await app.dispatch('add',{path:f.b}),foreign=await new ChatInputs(app.workspace(other.id)).path('file',seed.sources.text),bad=await new ChatInputs(app.workspace(seed.entry.id)).path('file',seed.sources.text);
+  await fs.writeFile(seed.snapshotPath(bad.id),'{broken snapshot');
+  const state=await app.workspace(seed.entry.id).dispatchStore.read(),native=await fs.readFile(thread[0].sessionFile!);
+  const attempts=[
+   {attachments:ids,options:{...seed.options,model:'attachment-plain'}},
+   {attachments:[randomUUID()],options:seed.options},
+   {attachments:[foreign.id],options:seed.options},
+   {attachments:[bad.id],options:seed.options},
+  ];
+  for(const attempt of attempts){
+   await expect(app.dispatch('loop.enqueue',{id:seed.entry.id,taskId:started.taskId,message:data.supplement,...attempt})).rejects.toThrow();
+   expect(await app.dispatch('loop.queue',{id:seed.entry.id,taskId:started.taskId})).toEqual([]);
+   expect(await seed.scopes()).toEqual([scope]);expect(await questions()).toEqual(pending);
+   expect(await app.workspace(seed.entry.id).dispatchStore.read()).toEqual(state);
+   expect(await app.execution(seed.entry.id).thread(started.taskId)).toEqual(thread);expect(await fs.readFile(thread[0].sessionFile!)).toEqual(native);
+   expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(5);
+  }
+  expect(state.graphs[0].tasks).toEqual([]);expect(state.agentBusinessRuns).toHaveLength(1);
+  await app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});
+  await attachmentWait(async()=>(await seed.scopes())[0].status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0,'stop after rejected materials');
+  const closed=(await seed.scopes())[0],stopped=await app.execution(seed.entry.id).thread(started.taskId),bytes=await fs.readFile(thread[0].sessionFile!);
+  expect(closed.outcome).toBe('cancelled');
+  await app.shutdown();app=seed.reopen(f.user);await app.init();
+  expect(await seed.scopes()).toEqual([closed]);expect(await app.execution(seed.entry.id).thread(started.taskId)).toEqual(stopped);expect(await fs.readFile(thread[0].sessionFile!)).toEqual(bytes);
+  expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(5);expect(provider.errors).toEqual([]);
+ }finally{await app.shutdown();await provider.close();await f.cleanup()}
 },120000);

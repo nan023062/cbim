@@ -3200,3 +3200,13 @@ coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际�
 - 只允许 agents/contracts 这个明确入口；Agent 对象、问答协调及聚合入口仍限制在 execution/assembly。同时将 contracts 纳入纯规则的禁止反向导入检查，并明确禁止 assembly，不能通过开放整个目录掩盖依赖。
 - pnpm exec vitest run tests/core-layer-contracts.test.ts --reporter=default --reporter=json --outputFile=build/recursive-contract-boundary-final.json：2/2 通过；新增边界断言后复验，无产品代码改动。
 - ee9c3047 的 CI 43790338820 四片报告为 782/31/1、771/36/0、1135/23/1、866/42/0（通过/失败/待执行）；报告记录 132 失败，片 1/3/4 缺 terminal-state，不是完整通过。全部报告已下载 build/ci-43790338820/。后续提交修复不能倒填该次结果。
+
+
+## 2026-11-16 · #94 人工决定迁移与普通采集字节复核
+基线先快进到 065d9697，保留并应用文档组织规范更新。本片将 human-decisions-pi 四项真实 Pi 场景迁入 cbim_agent_call/result_review 和主问题队列；接受、拒绝、要求证据、原调用再次评价、意见保存后的独立继续、停止与重启不重放均核对原 canonical/native 和唯一子运行。新流程不制造旧 goal waiting 或 humanContinue；旧命令 CAS、来源/决定版本及 supersedes 的兼容检查仍由 human-decision-service/core 专项负责，本片不将普通文本视为人工授权。共享桌面旧脚本尚未迁移，未宣称桌面验收通过。
+
+发现实际缺陷：已成功采集的普通文本文件，因 Workflow 没有结构验证要求，原业务 verify 返回空文件证明，文件改变后仍可接受。新增无状态 AgentArtifactVerification 静态工具类，组合既有 verifyArtifactBaselines 和受限 checkFiles；精确登记 evidence/runtime 公共入口。损坏采集、已失效无替代、字节变化、缺失或虚假文件返回均拒绝；不重新采集、不过度宣称完整影响范围。装配的交付/result_check/人工接受/接受后继续共用此复核闭包，结构验证和完整清单仍保留。源码注释、CONTRACT 与生成类图同步；新契约测试登记 evidence 模块。
+
+验证选择：新证据组合及普通人工意见直接受影响，完整清单和 JSON/CSV/PNG 为共享业务 verify 消费者。初跑 human-decisions-pi 3 通过、过期接受失败，暴露上述缺口。修复后定向 stale acceptance 1/1 通过。pnpm exec vitest run tests/agent-artifact-verification.test.ts tests/human-decisions-pi.test.ts tests/complete-output-pi.test.ts tests/artifact-baseline-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-human-artifact-consumers.json：12/12 通过。按路径合并证明后 pnpm exec vitest run tests/json-validation-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-artifact-validation-consumers.json：15/15 通过。
+
+pnpm typecheck、check:architecture、check:test-modules、git diff --check 通过；依赖 1663 文件/7915 边、零环，541 测试文件。首次架构检查发现新公共入口尚未登记，精确补入后通过，没有扩大整个目录权限。新文件按静态类/中文成员说明组织；现有 agent-business 保留装配函数与闭包生命周期，未顺带重排全部装配源码。未运行全套桌面、安装升级、完整本地回归；远端 43794310879 为本片之前的提交，不能充作本片通过依据。

@@ -772,7 +772,8 @@
           "tests/artifact-report-service.test.ts",
           "tests/effect-observation-service.test.ts",
           "tests/knowledge-effect-service.test.ts",
-          "tests/persistent-effect-service.test.ts"
+          "tests/persistent-effect-service.test.ts",
+          "tests/agent-artifact-verification.test.ts"
         ],
         "integration": []
       }

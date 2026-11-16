@@ -75,3 +75,7 @@ member-dispatch 将现有 inspectMember 同时注入产物/完整清单报告的
 ## 递归执行记录核实
 
 member-dispatch 同时为执行记录报告装配 inspectAgent，复用已有 BusinessRunSource 的明确协议路径；新增来源与产物报告一致，不重复保存日志或派发状态。
+
+
+## 递归人工审阅的普通文件证明
+[agent-business](agent-business.ts) 的 verify 在既有 Workflow 核验后调用 AgentArtifactVerification，复核普通采集文件。原 JSON/CSV/PNG 或完整集合验证保持原规则；两类已核实文件按路径合并，避免同一文件重复出现在人工意见对象中。首次交付、result_check、人工接受与接受后继续均使用同一原日志核验闭包，当前字节变化返回 ARTIFACT_BASELINE_STALE，不能把旧读取回执当作当前文件相同的证明。

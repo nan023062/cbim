@@ -10,6 +10,7 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [agent-artifact-verification.ts](agent-artifact-verification.ts) | Logic 证据层复核递归交付中已采集的普通文件基线，补足非结构化产物的字节验证。 |
 | [artifact-report-service.ts](artifact-report-service.ts) | 按指定旧成员或已登记递归运行列出可信文件基线，并在明确选定后对实际文件作独立只读复核。 |
 | [command-verification-service.ts](command-verification-service.ts) | 把原主运行的 canonical 调用与同一 Store 已提交命令只读关联，供桌面和主工具共用。 |
 | [effect-controlled-file.ts](effect-controlled-file.ts) | 在影响观察中核对已有受控文件报告与原成员完整绑定、参数和字节摘要。 |
@@ -23,6 +24,21 @@
 | [recursive-evidence-source.ts](recursive-evidence-source.ts) | 证据报告读取递归业务运行时，核对持久登记、原调用和固定 canonical 身份。 |
 
 ## 架构类图
+
+### agent-artifact-verification.ts
+
+```mermaid
+classDiagram
+class N_src_logic_evidence_runtime_agent_artifact_verification_ts["agent-artifact-verification.ts"] {
+  <<module>>
+}
+class N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification["AgentArtifactVerification"] {
+  +verify()
+}
+N_src_logic_evidence_runtime_agent_artifact_verification_ts ..> N_src_logic_evidence_runtime_agent_artifact_verification_ts_AgentArtifactVerification : 声明
+```
+
+直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../rules/artifact-evidence.ts](../rules/artifact-evidence.ts)、[../rules/artifact-baseline.ts](../rules/artifact-baseline.ts)。
 
 ### artifact-report-service.ts
 
@@ -483,3 +499,7 @@ ArtifactReportService 与 OutputManifestReportService 读取同一 DispatchStore
 ## 递归执行记录核实
 
 执行记录报告同样按 agentBusinessRuns 读取原子调用；执行模型明确为 agent-tools-v1，不制造旧 taskRevision/taskStatus 或交付候选。active/closed 是登记状态，只有闭合登记与可信日志终态一致才 settled；未选择运行不读取最新日志。沿用工具授权/回执核验及分页，坏正文、缺失日志和读后登记变化保持 unknown；读取不启动引擎。
+
+
+## 普通交付文件的再次核实
+[AgentArtifactVerification](agent-artifact-verification.ts) 是无状态静态封装。它只组合既有 verifyArtifactBaselines 与注入的受限 checkFiles，读取原采集绑定、知识版本及成功授权链，拒绝损坏或全部已失效的采集。只复核当前有效基线列出的文件，逐项核对返回的路径、expected、observed 和 matches，不把文件集合称为完整影响范围。没有采集时返回空文件集合，不补采或伪造基线。调用方负责 canonical 完整身份与工作区生命周期；后续增加采集来源仍修改原 artifact-evidence 规则，不另建验证协议。

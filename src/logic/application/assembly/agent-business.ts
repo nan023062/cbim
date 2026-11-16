@@ -2,8 +2,10 @@
  * 作用定位：把递归 Agent 的显式业务范围接入既有冻结知识、文件验证及 canonical 交付核验。
  * 设计原因：普通指令不隐式授予业务范围；复用现有执行契约，不创建旧派发图、队列或 Team 会话。
  * 内部 TaskNode/DispatchRun 仅作既有验证器的输入投影；真实事实仍是本次 LoopRuntime 日志。
+ * 实现形式：工作区执行装配入口；普通文件采集和结构验证分别复核，未配置验证器不等于字节仍有效。
  */
 import path from 'node:path';
+import {AgentArtifactVerification} from '../../evidence/runtime/agent-artifact-verification';
 import type {AgentCallReference} from '../../agents/contracts';
 import type {AgentBusinessRun} from '../../execution/rules/business-run';
 import {ScopedExecutionFiles} from '../../file-operations/platform/files/scoped-execution-files';
@@ -96,6 +98,9 @@ export async function prepareAgentBusiness(input:{
     if(canonical.runId!==summary.runId)fail('AGENT_RESULT_IDENTITY','核验结果不属于原调用');
     const run:DispatchRun={binding,assignmentMessageId:task.taskId,status:canonical.status==='completed'?'completed':'failed',prepared,model:input.model.profile,permission:input.permission,session:{...launch.session,sessionFile:canonical.sessionFile},createdAt:now};
     await validateMemberWorkflow(task,run,canonical,workspace.entry.path,{normalizePath,checkFiles:files.checkFiles.bind(files),checkManifest:manifests.check.bind(manifests),signal});
-    return {state:'verified',taskId:task.taskId,runId:binding.runId,files:memberWorkflowFiles(task,run,canonical,workspace.entry.path,normalizePath),acceptance:'not_evaluated'};
+    // 结构验证器不覆盖普通文本采集；交付及人工接受均须复核原采集字节。
+    const captured=await AgentArtifactVerification.verify(canonical.events,binding,prepared.knowledgeRevision,normalizePath,files.checkFiles.bind(files),signal);
+    const currentFiles=new Map([...memberWorkflowFiles(task,run,canonical,workspace.entry.path,normalizePath),...captured].map(file=>[normalizePath(file.relativePath),file]));
+    return {state:'verified',taskId:task.taskId,runId:binding.runId,files:[...currentFiles.values()],acceptance:'not_evaluated'};
   }};
 }

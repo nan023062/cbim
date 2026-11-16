@@ -7,7 +7,8 @@
 // #region 公开类型与实例
 
 /** 消费者定义文本帧限制，字符/字节计量及协议策略保持在调用方。 */
-export interface LineFramePolicy {
+export interface LineFramePolicy
+{
   // #region 属性
 
   /** 验证完整原始帧（不含 LF）；CR、空白、大小单位及异常由消费者解释。 */
@@ -16,10 +17,10 @@ export interface LineFramePolicy {
   checkRemainder: (text: string) => void;
 
   // #endregion
-
 }
 /** 单输入流的增量文本缓冲；按 LF 分帧并保留未终止尾部，不共享状态。 */
-export class LineFramer {
+export class LineFramer
+{
   // #region 私有成员
 
   // #region 字段
@@ -38,7 +39,8 @@ export class LineFramer {
   // #region 构造函数
 
   /** 为一个输入流绑定校验器，调用方负责分配独立实例。 */
-  public constructor(policy: LineFramePolicy) {
+  public constructor(policy: LineFramePolicy)
+  {
     this.policy = policy;
   }
 
@@ -50,10 +52,12 @@ export class LineFramer {
    * 同步依次交付完整帧；检查或接收回调抛错即停止，已交付帧不撤回，后续完整帧不提前丢弃。
    * 不 trim、不解析 JSON、不 flush EOF；不支持回调重入 push，同一实例仅供一个输入流使用。
    */
-  public push(chunk: string, receive: (line: string) => void): void {
+  public push(chunk: string, receive: (line: string) => void): void
+  {
     this.remainder += chunk;
     let offset: number;
-    while ((offset = this.remainder.indexOf('\n')) >= 0) {
+    while ((offset = this.remainder.indexOf('\n')) >= 0)
+    {
       const line = this.remainder.slice(0, offset);
       this.remainder = this.remainder.slice(offset + 1);
       this.policy.checkLine(line);
@@ -65,7 +69,6 @@ export class LineFramer {
   // #endregion
 
   // #endregion
-
 }
 
 // #endregion
@@ -73,13 +76,16 @@ export class LineFramer {
 // #region 公开工具
 
 /** 精确字符串算法；凭据来源、协议和错误屏障由消费者决定。 方法不依赖 this，可作为回调传递。 */
-export class StringUtils {
+export class StringUtils
+{
   // #region 私有成员
 
   // #region 构造函数
 
   /** 算法只依赖显式输入，不允许创建工具实例。 */
-  private constructor() { }
+  private constructor()
+  {
+  }
 
   // #endregion
 
@@ -90,14 +96,14 @@ export class StringUtils {
   // #region 方法
 
   /** 精确、区分大小写地替换所有凭据文本；空/缺失凭据不改输入，不识别正则、转义或凭据来源。 */
-  public static redactLiteral(text: string, secret: string | undefined): string {
+  public static redactLiteral(text: string, secret: string | undefined): string
+  {
     return secret ? text.split(secret).join('[REDACTED]') : text;
   }
 
   // #endregion
 
   // #endregion
-
 }
 
 // #endregion

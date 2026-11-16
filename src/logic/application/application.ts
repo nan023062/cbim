@@ -54,7 +54,8 @@ import type { ModuleOwnerships } from '../workspace/service/module-ownerships';
 // #region 内部类型
 
 /** 宿主可选能力的装配契约；不从页面或模型参数构造。 */
-interface ApplicationPlatform {
+interface ApplicationPlatform
+{
   // #region 契约成员
 
   /** 真实文件工人传输；缺省时不开放受控写入，查询已有记录仍可用。 */
@@ -74,7 +75,8 @@ interface ApplicationPlatform {
 // #region 公开类型
 
 /** 业务服务的唯一生命周期所有者；Bridge 子类只补充通信分发，不复制本类状态。 */
-export class Application {
+export class Application
+{
   // #region 私有成员
 
   // #region 字段
@@ -144,19 +146,22 @@ export class Application {
   // #region 方法
 
   /** 退役当前准入代际并移除撤销闭包；真实运行仍通过原释放函数归还名额。 */
-  private retireAdmission(id: string) {
+  private retireAdmission(id: string)
+  {
     this.admissionOwners.get(id)?.();
     this.admissionOwners.delete(id);
   }
 
   /** 绑定一次工作区打开；退役只撤销票据与通知，不删除尚未释放的实际占用。 */
-  private bindAdmission(workspace: Workspace, lease: WorkspaceExecutionLease): WorkspaceAdmission {
+  private bindAdmission(workspace: Workspace, lease: WorkspaceExecutionLease): WorkspaceAdmission
+  {
     const id = workspace.entry.id,
       ownerEpoch = ++this.nextAdmissionEpoch,
       controller = new AbortController();
     let current = true;
     const release = lease.observeRelease(() => this.admission.wake());
-    this.admissionOwners.set(id, () => {
+    this.admissionOwners.set(id, () =>
+    {
       current = false;
       controller.abort(Error('工作区执行代际已退役'));
       release();
@@ -172,19 +177,26 @@ export class Application {
   }
 
   /** 进入工作区关闭或重启屏障，返回仅退出本次计数的闭包。 */
-  private retire(id: string) {
+  private retire(id: string)
+  {
     this.retiring.set(id, (this.retiring.get(id) ?? 0) + 1);
-    return () => {
+    return () =>
+    {
       const count = this.retiring.get(id)! - 1;
-      if (count) this.retiring.set(id, count);
-      else this.retiring.delete(id);
+      if (count)
+        this.retiring.set(id, count);
+      else
+        this.retiring.delete(id);
     };
   }
 
   /** 拒绝应用退出及工作区退役期间的新服务请求，不隐式打开或恢复工程。 */
-  private assertServiceAvailable(id: string) {
-    if (this.stopping) fail('SHUTTING_DOWN', 'CBIM 正在退出');
-    if (this.retiring.has(id)) fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
+  private assertServiceAvailable(id: string)
+  {
+    if (this.stopping)
+      fail('SHUTTING_DOWN', 'CBIM 正在退出');
+    if (this.retiring.has(id))
+      fail('WORKSPACE_STOPPING', '工作区正在关闭或重启，请稍后重试');
   }
 
   // #endregion
@@ -251,7 +263,8 @@ export class Application {
   // #region 属性
 
   /** IPC 新增工作区前检查关停状态；只暴露读取，不允许路由修改生命周期。 */
-  public get isStopping() {
+  public get isStopping()
+  {
     return this.stopping;
   }
 
@@ -266,7 +279,8 @@ export class Application {
     assetsRoot: string,
     secretCipher?: SecretCipher,
     platform: ApplicationPlatform = {}
-  ) {
+  )
+  {
     this.paths = paths;
     this.platform = platform;
     if (platform.engineArtifacts)
@@ -280,7 +294,8 @@ export class Application {
     this.engineModels = new EngineModelProfiles(this.models);
     this.mainAgentSettings = new MainAgentSettings(
       (id) => path.join(paths.project(id), 'main-agent.json'),
-      (identity) => {
+      (identity) =>
+      {
         this.assertServiceAvailable(identity.workspaceId);
         this.workspace(identity.workspaceId).assert(identity);
       },
@@ -298,14 +313,16 @@ export class Application {
     this.repositoryConnections = new RepositoryConnections(
       path.join(paths.userRoot, 'repository-connections.json'),
       this.resources,
-      (id) => {
+      (id) =>
+      {
         this.assertServiceAvailable(id);
         const ws = this.workspace(id);
         ws.assert();
         return ws;
       }
     );
-    this.chatMaterials = new ChatMaterialImports((id) => {
+    this.chatMaterials = new ChatMaterialImports((id) =>
+    {
       this.assertServiceAvailable(id);
       const ws = this.workspace(id);
       ws.assert();
@@ -318,108 +335,130 @@ export class Application {
   // #region 方法
 
   /** 自动化仅在当前打开实例调度，关闭先停止新触发，再排空主/成员运行。 */
-  public automations(id: string) {
+  public automations(id: string)
+  {
     this.assertServiceAvailable(id);
     this.workspace(id).assert();
     const service = this.automationServices.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '工作区自动化尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '工作区自动化尚未就绪');
     return service;
   }
 
   /** 成员图与邮箱每工作区只有一个写入服务，沿用已持有的工作区锁。 */
-  public memberDispatch(id: string) {
+  public memberDispatch(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const service = this.dispatchers.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '工作区成员服务尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '工作区成员服务尚未就绪');
     return service;
   }
 
   /** 岗位登记和旧命令查询只访问已打开工作区；旧实例回执由服务先查，不据当前来源重建。 */
-  public workspaceMembers(id: string) {
+  public workspaceMembers(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const service = this.memberRegistries.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '工作区岗位登记尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '工作区岗位登记尚未就绪');
     return service;
   }
 
   /** 模块责任共用岗位与派发日志；未接到业务执行策略，查询不启动任何运行。 */
-  public workspaceOwnerships(id: string) {
+  public workspaceOwnerships(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const service = this.ownershipRegistries.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '工作区模块责任尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '工作区模块责任尚未就绪');
     return service;
   }
 
   /** 明确绑定工作区的成员执行入口；不依赖界面选中状态或普通对话的活动任务。 */
-  public memberExecution(id: string) {
+  public memberExecution(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const service = this.memberExecutions.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '工作区成员执行服务尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '工作区成员执行服务尚未就绪');
     return service;
   }
 
   /** 每个工作区实例唯一的执行管理器；调用必须显式指定工作区。 */
-  public execution(id: string) {
+  public execution(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const manager = this.executions.get(id);
-    if (!manager) fail('SERVICE_NOT_READY', '工作区执行服务尚未就绪');
+    if (!manager)
+      fail('SERVICE_NOT_READY', '工作区执行服务尚未就绪');
     return manager;
   }
 
   /** 明确工作区的只读角色历史；没有执行、审批或恢复模型的副作用。 */
-  public agentHistory(id: string) {
+  public agentHistory(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
     const history = this.histories.get(id);
-    if (!history) fail('SERVICE_NOT_READY', '工作区 Agent 历史尚未就绪');
+    if (!history)
+      fail('SERVICE_NOT_READY', '工作区 Agent 历史尚未就绪');
     return history;
   }
 
   /** 取得当前工作区已装配的请求预算服务，不恢复或重发历史请求。 */
-  public requestBudgets(id: string) {
+  public requestBudgets(id: string)
+  {
     this.assertServiceAvailable(id);
     this.workspace(id).assert();
     const service = this.requestBudgetServices.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '请求预算服务尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '请求预算服务尚未就绪');
     return service;
   }
 
   /** 只取得已打开工作区的原隔离记录，查询不启动程序或隐式清理。 */
-  public isolatedExecutions(id: string) {
+  public isolatedExecutions(id: string)
+  {
     this.assertServiceAvailable(id);
     this.workspace(id).assert();
     const service = this.isolatedExecutionServices.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '隔离资源服务尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '隔离资源服务尚未就绪');
     return service;
   }
 
   /** 原报告不隐式打开工作区；平台缺省只禁新写入，不影响已保存历史查询。 */
-  public controlledFiles(id: string) {
+  public controlledFiles(id: string)
+  {
     this.assertServiceAvailable(id);
     this.workspace(id).assert();
     const service = this.controlledFileServices.get(id);
-    if (!service) fail('SERVICE_NOT_READY', '受控文件服务尚未就绪');
+    if (!service)
+      fail('SERVICE_NOT_READY', '受控文件服务尚未就绪');
     return service;
   }
 
   /** 桌面可先初始化基础配置并显示窗口；默认仍恢复全部工作区，CLI/现有消费者行为不变。 */
   public async init(
-    options: {
-      /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */
-      restore?: boolean;
-    } = {}
-  ) {
+    options:
+      {
+        /** false 仅初始化应用配置；工作区恢复由可信宿主稍后显式调用。 */
+        restore?: boolean;
+      } = {}
+  )
+  {
     await this.enginePackages?.init();
     await this.webSettings.init();
     await this.catalog.init();
@@ -428,11 +467,13 @@ export class Application {
     await this.repositoryConnections.init();
     await this.admissionSettings.init();
     await this.budgetSettings.init();
-    if (options.restore !== false) await this.restore();
+    if (options.restore !== false)
+      await this.restore();
   }
 
   /** 合并登记簿与当前实例视图；未打开的工作区只检查目录是否存在。 */
-  public async list() {
+  public async list()
+  {
     const data = await this.catalog.read();
     return {
       ...data,
@@ -451,14 +492,17 @@ export class Application {
   }
 
   /** 仅取得已登记在运行集合中的实例；调用方继续按业务需要核实其就绪状态。 */
-  public workspace(id: string) {
+  public workspace(id: string)
+  {
     const ws = this.running.get(id);
-    if (!ws) fail('NOT_RUNNING', '工作区未运行，请由用户在桌面打开');
+    if (!ws)
+      fail('NOT_RUNNING', '工作区未运行，请由用户在桌面打开');
     return ws;
   }
 
   /** 只取得已就绪工作区的私有治理服务；不把计划或决定接到模型执行入口。 */
-  public governance(id: string) {
+  public governance(id: string)
+  {
     this.assertServiceAvailable(id);
     const ws = this.workspace(id);
     ws.assert();
@@ -466,17 +510,24 @@ export class Application {
   }
 
   /** 合并同工作区的并发打开并装配内部执行服务；restart 只更换此工作区实例，不修改外部工具配置。 */
-  public async open(id: string, restart = false) {
-    if (this.stopping) fail('SHUTTING_DOWN', 'CBIM 正在退出');
-    if (this.opening.has(id)) return this.opening.get(id)!;
+  public async open(id: string, restart = false)
+  {
+    if (this.stopping)
+      fail('SHUTTING_DOWN', 'CBIM 正在退出');
+    if (this.opening.has(id))
+      return this.opening.get(id)!;
     this.assertServiceAvailable(id);
-    const pending = (async () => {
+    const pending = (async () =>
+    {
       const entry = (await this.catalog.read()).entries.find((x) => x.id === id);
-      if (!entry) fail('NOT_REGISTERED', '工作区未登记');
+      if (!entry)
+        fail('NOT_REGISTERED', '工作区未登记');
       let ws = this.running.get(id);
-      if (restart || ws?.state !== 'running') {
+      if (restart || ws?.state !== 'running')
+      {
         const release = this.retire(id);
-        try {
+        try
+        {
           // 退役先阻止旧代际的新活动；后续异步排空期间不能再进入新业务。
           this.chatMaterials.retireWorkspace(id);
           this.repositoryConnections.retireWorkspace(id);
@@ -510,7 +561,8 @@ export class Application {
           this.histories.set(id, history);
           const monitor = new WorkspaceRuntimeMonitor(this.runtime, id, entry.name, history);
           this.monitors.set(id, monitor);
-          try {
+          try
+          {
             ws.attachDispatchStore(
               new FileDispatchStore(
                 path.join(this.paths.project(id), 'dispatch'),
@@ -584,7 +636,9 @@ export class Application {
             );
             this.automationServices.set(id, automations);
             await automations.scheduler.initialize();
-          } catch (error) {
+          }
+          catch (error)
+          {
             // 知识库打开成功不代表内部服务已就绪。等待恢复若中途失败，阻止半就绪服务接受请求；下次 open 走统一关闭/重建路径。
             this.retireAdmission(id);
             monitor.unavailable(error);
@@ -592,33 +646,44 @@ export class Application {
             ws.state = 'failed';
             throw error;
           }
-        } finally {
+        }
+        finally
+        {
           release();
         }
       }
-      await this.catalog.update((d) => {
+      await this.catalog.update((d) =>
+      {
         const item = d.entries.find((e) => e.id === id);
-        if (item) item.lastOpened = new Date().toISOString();
+        if (item)
+          item.lastOpened = new Date().toISOString();
         d.recent = [id, ...d.recent.filter((x) => x !== id)].slice(0, 30);
       });
       return ws;
     })();
     this.opening.set(id, pending);
-    try {
+    try
+    {
       return await pending;
-    } finally {
+    }
+    finally
+    {
       this.opening.delete(id);
     }
   }
 
   /** 内部生命周期入口；先禁用自动协作，再依次关闭主执行、成员、派发、监控和工作区，页面关闭不会调用它。 */
-  public async stop(id: string) {
+  public async stop(id: string)
+  {
     const release = this.retire(id);
     this.chatMaterials.retireWorkspace(id);
     this.repositoryConnections.retireWorkspace(id);
     this.retireAdmission(id);
-    try {
-      await this.opening.get(id)?.catch(() => {});
+    try
+    {
+      await this.opening.get(id)?.catch(() =>
+      {
+      });
       this.retireAdmission(id);
       await this.automationServices.get(id)?.scheduler.close();
       this.automationServices.delete(id);
@@ -645,42 +710,56 @@ export class Application {
       const ws = this.running.get(id);
       await ws?.close();
       this.running.delete(id);
-    } finally {
+    }
+    finally
+    {
       release();
     }
   }
 
   /** 先关闭目标工作区，再移除登记和监管投影；不删除用户工程文件。 */
-  public async remove(id: string) {
+  public async remove(id: string)
+  {
     await this.stop(id);
     await this.catalog.remove(id);
     this.runtime.forget(id);
   }
 
   /** 仍按原策略恢复全部已登记工作区；与界面手动打开合并，退出后不再开始新的恢复。 */
-  public async restore() {
+  public async restore()
+  {
     const d = await this.catalog.read();
-    for (const entry of d.entries) {
-      if (this.stopping) break;
-      try {
+    for (const entry of d.entries)
+    {
+      if (this.stopping)
+        break;
+      try
+      {
         await this.open(entry.id);
-      } catch {
+      }
+      catch
+      {
         // 保留失败工作区供界面查看，继续恢复其他已登记工作区。
       }
     }
   }
 
   /** 幂等关闭应用，等待正在打开的工作区及提交完成，再释放服务和共享仓库。 */
-  public async shutdown() {
-    if (this.shutdownPromise) return this.shutdownPromise;
+  public async shutdown()
+  {
+    if (this.shutdownPromise)
+      return this.shutdownPromise;
     this.stopping = true;
-    for (const id of this.admissionOwners.keys()) this.retireAdmission(id);
-    this.shutdownPromise = (async () => {
+    for (const id of this.admissionOwners.keys())
+      this.retireAdmission(id);
+    this.shutdownPromise = (async () =>
+    {
       await this.githubFeedback.close();
       await this.chatMaterials.close();
       await this.repositoryConnections.close();
       await Promise.allSettled([...this.opening.values()]);
-      for (const id of this.admissionOwners.keys()) this.retireAdmission(id);
+      for (const id of this.admissionOwners.keys())
+        this.retireAdmission(id);
       await Promise.all([...this.automationServices.values()].map((x) => x.scheduler.close()));
       this.automationServices.clear();
       await Promise.all([...this.collaborations.values()].map((x) => x.close()));
@@ -700,7 +779,8 @@ export class Application {
       this.dispatchers.clear();
       this.memberRegistries.clear();
       this.ownershipRegistries.clear();
-      for (const monitor of this.monitors.values()) monitor.close();
+      for (const monitor of this.monitors.values())
+        monitor.close();
       await Promise.all([...this.histories.values()].map((x) => x.close()));
       this.histories.clear();
       this.monitors.clear();
@@ -708,9 +788,11 @@ export class Application {
       await this.resources.close();
       this.running.clear();
       const failed = results.find((r) => r.status === 'rejected');
-      if (failed?.status === 'rejected') throw failed.reason;
+      if (failed?.status === 'rejected')
+        throw failed.reason;
     })();
-    void this.shutdownPromise.catch((error) => {
+    void this.shutdownPromise.catch((error) =>
+    {
       if (['CONTROLLED_FILE_DRAIN_PENDING', 'EXECUTION_SCOPE_DRAIN_PENDING'].includes(error?.code))
         this.shutdownPromise = undefined;
     });
@@ -718,8 +800,10 @@ export class Application {
   }
 
   /** 默认选择转为独立引擎及明确模型身份，校验协议后仅向调度层返回公开标识；工作区工厂随后取得运行快照，兼容 CLI 显式模型。 */
-  public async modelOptions(input: any = {}) {
-    if (input?.provider && input?.model && !input.profileId) return input;
+  public async modelOptions(input: any = {})
+  {
+    if (input?.provider && input?.model && !input.profileId)
+      return input;
     const { profile } = await this.engineModels.resolve(
       input?.profileId,
       input?.model,
@@ -736,8 +820,10 @@ export class Application {
   }
 
   /** 发送前验证图片能力；队列只保存工作区快照 ID，启动时再检查当前模型。 */
-  public async chatOptions(id: string, input: any, attachments: unknown) {
-    if (!input?.profileId && !input?.provider && !input?.model && !input?.engine) {
+  public async chatOptions(id: string, input: any, attachments: unknown)
+  {
+    if (!input?.profileId && !input?.provider && !input?.model && !input?.engine)
+    {
       const workspace = this.workspace(id),
         setting = await this.mainAgentSettings.read({ workspaceId: id, instanceId: workspace.instanceId });
       if (setting.selection)

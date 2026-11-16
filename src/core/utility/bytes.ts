@@ -7,7 +7,8 @@
 // #region 公开类型与实例
 
 /** 流超过调用者给定字节上限；业务错误码、重试及显示文案由消费者决定。 */
-export class ByteLimitError extends RangeError {
+export class ByteLimitError extends RangeError
+{
   // #region 公开成员
 
   // #region 字段
@@ -20,7 +21,8 @@ export class ByteLimitError extends RangeError {
   // #region 构造函数
 
   /** 保存超限事实，不推断连接状态或重试资格。 */
-  public constructor(maxBytes: number) {
+  public constructor(maxBytes: number)
+  {
     super('Byte stream exceeds limit');
     this.maxBytes = maxBytes;
     this.name = 'ByteLimitError';
@@ -29,7 +31,6 @@ export class ByteLimitError extends RangeError {
   // #endregion
 
   // #endregion
-
 }
 
 // #endregion
@@ -37,13 +38,16 @@ export class ByteLimitError extends RangeError {
 // #region 公开工具
 
 /** 有界字节流消费；每次调用独立拥有 reader、缓冲和取消监听。 方法不依赖 this，可作为回调传递。 */
-export class ByteUtils {
+export class ByteUtils
+{
   // #region 私有成员
 
   // #region 构造函数
 
   /** 算法只依赖显式输入，不允许创建工具实例。 */
-  private constructor() { }
+  private constructor()
+  {
+  }
 
   // #endregion
 
@@ -59,34 +63,55 @@ export class ByteUtils {
    * 失败请求 cancel 并释放锁/监听；底层 cancel 失败不覆盖原错误，也不代表网络/进程已经退出。
    * 分块复制后合并，保留字节视图范围；存储 O(maxBytes)，不适用于大文件落盘下载。
    */
-  public static async readBoundedBytes(body: ReadableStream<Uint8Array> | null, options: {
-    maxBytes: number;
-    signal?: AbortSignal;
-  }): Promise<Uint8Array> {
+  public static async readBoundedBytes(
+    body: ReadableStream<Uint8Array> | null,
+    options:
+      {
+        maxBytes: number;
+        signal?: AbortSignal;
+      }
+  ): Promise<Uint8Array>
+  {
     const { maxBytes, signal } = options;
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 0)
       throw new RangeError('maxBytes must be a non-negative safe integer');
     signal?.throwIfAborted();
     if (!body)
       return new Uint8Array();
-    const reader = body.getReader(), chunks: Uint8Array[] = [];
-    let total = 0, cancelled = false, rejectRead: ((reason: unknown) => void) | undefined;
-    const cancel = (reason: unknown) => {
+    const reader = body.getReader(),
+      chunks: Uint8Array[] = [];
+    let total = 0,
+      cancelled = false,
+      rejectRead: ((reason: unknown) => void) | undefined;
+    const cancel = (reason: unknown) =>
+    {
       if (cancelled)
         return;
       cancelled = true;
       // 底层取消可能一直不返回；只观察拒绝，不能让取消本身成为新的无限等待。
-      try {
-        void reader.cancel(reason).catch(() => { });
+      try
+      {
+        void reader.cancel(reason).catch(() =>
+        {
+        });
       }
-      catch { }
+      catch
+      {
+      }
     };
-    const abort = () => { cancel(signal!.reason); rejectRead?.(signal!.reason); };
+    const abort = () =>
+    {
+      cancel(signal!.reason);
+      rejectRead?.(signal!.reason);
+    };
     signal?.addEventListener('abort', abort, { once: true });
-    try {
-      for (;;) {
+    try
+    {
+      for (; ;)
+      {
         signal?.throwIfAborted();
-        const part = await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) => {
+        const part = await new Promise<ReadableStreamReadResult<Uint8Array>>((resolve, reject) =>
+        {
           rejectRead = reject;
           void reader.read().then(resolve, reject);
         });
@@ -103,17 +128,20 @@ export class ByteUtils {
       }
       const result = new Uint8Array(total);
       let offset = 0;
-      for (const chunk of chunks) {
+      for (const chunk of chunks)
+      {
         result.set(chunk, offset);
         offset += chunk.byteLength;
       }
       return result;
     }
-    catch (error) {
+    catch (error)
+    {
       cancel(error);
       throw error;
     }
-    finally {
+    finally
+    {
       rejectRead = undefined;
       signal?.removeEventListener('abort', abort);
       reader.releaseLock();
@@ -123,7 +151,6 @@ export class ByteUtils {
   // #endregion
 
   // #endregion
-
 }
 
 // #endregion

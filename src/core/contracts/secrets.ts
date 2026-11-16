@@ -3,4 +3,9 @@
  * 设计原因：业务决定何时解析凭据，宿主提供系统加密；端口不依赖模型业务或具体平台。
  */
 /** 不可用时调用方必须拒绝保存密钥，不能自动回退明文。 */
-export interface SecretCipher {available():boolean;encrypt(value:string):string;decrypt(value:string):string}
+export interface SecretCipher
+{
+  available(): boolean;
+  encrypt(value: string): string;
+  decrypt(value: string): string;
+}

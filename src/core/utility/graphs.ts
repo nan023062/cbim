@@ -6,13 +6,16 @@
 // #region 公开工具
 
 /** 有向图结构算法；领域边选择和错误码由消费者决定。 方法不依赖 this，可作为回调传递。 */
-export class GraphUtils {
+export class GraphUtils
+{
   // #region 私有成员
 
   // #region 构造函数
 
   /** 算法只依赖显式输入，不允许创建工具实例。 */
-  private constructor() { }
+  private constructor()
+  {
+  }
 
   // #endregion
 
@@ -26,19 +29,27 @@ export class GraphUtils {
    * 对唯一节点及完整端点执行拓扑遍历；平行边逐条计数，自环返回 false，空图返回 true。
    * 不修改输入；重复节点或缺端点抛错。领域入口应先核验身份，不能以无环代替授权。
    */
-  public static isDirectedAcyclic(nodes: readonly string[], edges: readonly (readonly [string, string])[]): boolean {
-    const incoming = new Map(nodes.map(node => [node, 0])), outgoing = new Map<string, string[]>();
+  public static isDirectedAcyclic(
+    nodes: readonly string[],
+    edges: readonly (readonly [string, string])[]
+  ): boolean
+  {
+    const incoming = new Map(nodes.map((node) => [node, 0])),
+      outgoing = new Map<string, string[]>();
     if (incoming.size !== nodes.length)
       throw Error('Duplicate graph node');
-    for (const [from, to] of edges) {
+    for (const [from, to] of edges)
+    {
       if (!incoming.has(from) || !incoming.has(to))
         throw Error('Missing graph endpoint');
       incoming.set(to, incoming.get(to)! + 1);
       outgoing.set(from, [...(outgoing.get(from) ?? []), to]);
     }
-    const queue = nodes.filter(node => incoming.get(node) === 0);
-    for (let i = 0; i < queue.length; i++) {
-      for (const target of outgoing.get(queue[i]) ?? []) {
+    const queue = nodes.filter((node) => incoming.get(node) === 0);
+    for (let i = 0; i < queue.length; i++)
+    {
+      for (const target of outgoing.get(queue[i]) ?? [])
+      {
         const count = incoming.get(target)! - 1;
         incoming.set(target, count);
         if (count === 0)
@@ -51,7 +62,6 @@ export class GraphUtils {
   // #endregion
 
   // #endregion
-
 }
 
 // #endregion

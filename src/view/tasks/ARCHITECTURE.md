@@ -59,7 +59,7 @@
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
 | [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
 | [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。 |
-| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
+| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的原调用登记、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
 | [MemberProgressSummary.tsx](MemberProgressSummary.tsx) | 在成员公开对话卡中直接展示结构化步骤、证据数量及交付限制。 |
@@ -4547,3 +4547,8 @@ SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人�
 普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
 
 任务状态与正文复用共享字号；执行 Agent 记录继承主 Markdown 标题，small/span 说明不当作代码。result_ready 和 interrupted 统一从共享样式取得 warning 颜色。
+
+
+## 递归执行记录核实
+
+ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结计划版本，active/closed 使用登记含义的标签，不显示虚构旧任务版本；旧报告仍保留历史状态。读取、分页、错误和过期控制不新增执行操作。

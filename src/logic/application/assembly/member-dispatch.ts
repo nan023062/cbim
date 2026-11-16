@@ -178,7 +178,7 @@ export function createMemberServices(workspace:Workspace,models:EngineModelProfi
       if(workspaceMemberModelHash(configuration.profile)!==model.configurationHash)fail('OWNER_MODEL_CHANGED','岗位模型配置已变化，请明确采纳后重新规划');
       return use({model:configuration.profile,prepare:()=>prepareEngine(configuration.resolve(),options)});
     }),
-    inspect:inspectMember,
+    inspect:inspectMember,inspectAgent:inspectMember,
   });
   const workspaceMembers=new WorkspaceMembers(workspace,store,models,()=>admission?.isCurrent()??true);
   const moduleOwnerships=new ModuleOwnerships(workspace,store,()=>admission?.isCurrent()??true);

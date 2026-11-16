@@ -876,3 +876,8 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ## 递归来源的影响处置
 
 影响报告 source.executionModel 可为 agent-tools-v1，仅用于已登记的执行 Agent 来源；不能携带旧派工任务版本或用于主运行。历史报告不补字段、指纹不变。effect-observation-invariants 在提交和重放时要求同 workspace/root/task/run 的登记已关闭且 scope 一致；不能用递归标识绕过旧任务归属。处置是独立附录，原 unknown、补偿和后续业务验收仍分别保留。
+
+
+## 递归执行记录核实
+
+执行记录报告 basis 的 agent-tools-v1 分支只公开原登记和冻结计划版本，禁止携带旧任务版本或状态。历史分支仍要求 taskRevision/planRevision/taskStatus，不能使用递归 active/closed。报告只读，不构成恢复或业务验收授权。

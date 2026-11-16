@@ -70,3 +70,8 @@ WorkspaceRuntimeMonitor 的两目录扫描区分旧成员和新递归业务：�
 ## 递归产物报告日志端口
 
 member-dispatch 将现有 inspectMember 同时注入产物/完整清单报告的 inspectAgent。BusinessRunSource.protocol 固定新日志位于 loop-engine/tasks，旧派工继续用 dispatch/runs/tasks；报告服务自行核对持久身份、父调用与原生绑定。只读报告不启动引擎，不读取最新模型配置，也不生成兼容派工图。
+
+
+## 递归执行记录核实
+
+member-dispatch 同时为执行记录报告装配 inspectAgent，复用已有 BusinessRunSource 的明确协议路径；新增来源与产物报告一致，不重复保存日志或派发状态。

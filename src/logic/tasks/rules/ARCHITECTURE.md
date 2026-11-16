@@ -30,7 +30,7 @@
 | [effect-observation-rules.ts](effect-observation-rules.ts) | 计算影响观察的事实依据与处置命令，并构造原不可变回执/摘要。 |
 | [effect-observation.ts](effect-observation.ts) | 定义原成员/主调用的影响观察、本机处置附录及后续周期关系的公开叶子契约。 |
 | [execution-context.ts](execution-context.ts) | 成员业务执行所需的可持久化知识快照，以及存储与调度共用的完整性校验。 |
-| [execution-report.ts](execution-report.ts) | 成员执行异常核实的只读报告协议，供调度服务与界面共享。 |
+| [execution-report.ts](execution-report.ts) | 旧成员与递归业务执行异常核实的只读报告协议，供调度服务与界面共享。 |
 | [fresh-context.ts](fresh-context.ts) | 定义显式新周期共用的原生上下文隔离边界。 |
 | [graph-reducer.ts](graph-reducer.ts) | 把已提交的图事件原子转换为内存投影，并按游标输出增量读取结果。 |
 | [graph-rules.ts](graph-rules.ts) | 任务图的纯领域校验，完整图与单项公开查询共用节点状态规则，并检查身份、派发父关系及依赖/等待无环。 |
@@ -5321,3 +5321,8 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ## 递归来源的影响处置
 
 影响报告 source.executionModel 可为 agent-tools-v1，仅用于已登记的执行 Agent 来源；不能携带旧派工任务版本或用于主运行。历史报告不补字段、指纹不变。effect-observation-invariants 在提交和重放时要求同 workspace/root/task/run 的登记已关闭且 scope 一致；不能用递归标识绕过旧任务归属。处置是独立附录，原 unknown、补偿和后续业务验收仍分别保留。
+
+
+## 递归执行记录核实
+
+执行记录报告 basis 的 agent-tools-v1 分支只公开原登记和冻结计划版本，禁止携带旧任务版本或状态。历史分支仍要求 taskRevision/planRevision/taskStatus，不能使用递归 active/closed。报告只读，不构成恢复或业务验收授权。

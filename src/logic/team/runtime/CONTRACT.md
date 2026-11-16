@@ -27,3 +27,8 @@ dependenciesReady 同时供自动协调器和实际成员领取使用：有候�
 ## 旧成员 Workflow 预检复用
 
 MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登记之前，调用 workspace/rules 的 assertWorkflowCapabilities。原 PreparedEngine 提供可信普通/范围工具和验证器清单，artifacts 端口仍单独检查；规则与新递归入口共用，旧事务、错误码和失败释放语义不变。
+
+
+## 递归执行记录核实
+
+MemberExecutionManager.report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。

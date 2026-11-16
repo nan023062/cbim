@@ -3150,3 +3150,15 @@ pnpm exec vitest run tests/knowledge-effect-pi.test.ts tests/knowledge-contract-
 验证选择：根装配的身份与排空、岗位/责任原工具直接消费者，以及真实 Pi 控制面。agent-call-assembly、module-ownership-tools、workspace-member-tools 共 26/26 通过，新增关闭等待原提交、跨根/未受理禁止访问。module-ownership-pi 6 个主场景（read/ask拒绝/ask批准/execute/坏回包/stop）通过；其执行 Agent 隔离场景迁至 cbim_agent_call，两个真实岗位模型分别执行且均无责任管理工具，-t 'actual executor' 1/1 通过。persistent-effect-pi -t ownership 1/1 通过；原保存损坏回包可查询且重启不重放。
 
 coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际发送可编译、真实责任预览后过期依据提交拒绝、原回执查询不授权重试、连续三次失败熔断、没有责任写入或派发图任务，1/1 通过。相应报告为 build/recursive-root-context.json、recursive-root-tools.json（6 项通过及旧流程 4 项失败的原始报告）、recursive-owner-executor.json、recursive-ownership-effect.json、recursive-coordination.json。member-tool-contract-pi 两个旧 help/checkpoint 场景仍待迁移，不计为通过。pnpm typecheck、check:architecture（0 环/0 违规）、check:test-modules（540 文件）、git diff --check 通过。未运行全套桌面安装/升级，未公开旧候选。
+
+
+## 2026-11-16 · #94 递归执行记录报告与旧恢复边界
+- ExecutionReportService 使用 agentBusinessRuns 与明确 inspectAgent 读取原调用，复用唯一来源/父引用/岗位/原生绑定核验。无需旧任务图，展示原 active/closed 登记；不伪造任务版本、候选或恢复资格。
+- 失败工具的已有副作用、未选运行、缺失/截断日志、读取期间状态变化、分页和关闭周期语义保留；异常正文不击穿整张报告。
+- 报告协议和界面同步；旧 ScopeRecoveryService 明确拒绝递归报告充当旧任务凭据。相关六目录 CONTRACT、源码说明和生成架构图同步。
+- 验证选取：执行报告行为和 UI 直接受影响，ScopeRecovery 是版本字段消费者；真实 Pi 用例仍执行读/写/失败命令及只读报告，不以替身删除平台覆盖。
+- pnpm exec vitest run tests/execution-report-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-execution-report.json：2/2 通过。
+- pnpm exec vitest run tests/execution-report.test.ts tests/execution-report-view.test.ts tests/scope-recovery.test.ts --reporter=default --reporter=json --outputFile=build/recursive-execution-report-contracts.json：32 通过、1 新断言失败。坏工具正文原规则保留可读前缀且标 TOOL_EVIDENCE_INVALID/unknown；断言修正为该真实语义，不降低授权核验。
+- pnpm exec vitest run tests/execution-report.test.ts -t '递归报告' --reporter=default --reporter=json --outputFile=build/recursive-execution-report-identity.json：新增用例通过，16 未选；已通过用例不重复运行。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture、git diff --check 通过。边界 540 测试文件，依赖 1661 文件/7908 边，零环。
+- 未运行桌面报告逐页验收、安装升级或最终制品构建；CI 43790338820 是 ee9c3047，不能作为此本地提交的通过证明。

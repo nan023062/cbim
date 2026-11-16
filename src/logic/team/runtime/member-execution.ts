@@ -35,6 +35,7 @@ import {publicRunFailure} from '../../execution/rules/run-failure';
 import type {DispatchRun} from '../../tasks/rules/dispatch-execution';
 import type {DispatchStore,DispatchState,DispatchMessage} from '../../dispatch/rules/dispatch-storage';
 import type {TaskNode} from '../../tasks/rules/graph-types';
+import type {AgentBusinessRun} from '../../execution/rules/business-run';
 import {assertWorkflowCapabilities} from '../../workspace/rules/workflow-contract';
 import {memberStartInput,memberTaskInput,memberMessageInput,memberAcknowledgeInput,type MemberStartOptions,type MemberStartReceipt,type MemberExecutionView} from '../../tasks/rules/member-commands';
 import {prepareDispatchExecutionContext,recheckDispatchExecutionContext} from '../../execution/context/execution-context';
@@ -99,6 +100,8 @@ export interface MemberExecutionPorts {
   }>;
   /** 读取指定 run 的真实日志，校验通道安全续接；不得用最新运行或内存猜测替代。 */
   inspect(run:DispatchRun):Promise<RunSummary>;
+  /** 递归报告仅核原登记与固定 canonical，不进入旧成员恢复。 */
+  inspectAgent?(run:AgentBusinessRun):Promise<RunSummary>;
 }
 export type PreparedEngine=Awaited<ReturnType<MemberExecutionPorts['prepare']>>;
 /** 一个业务任务当前的进程句柄；done 包含运行关闭和终态事务，失败时句柄保留以阻止再次领取。 */
@@ -122,7 +125,7 @@ export class MemberExecutionManager {
   private eventStreams:MemberEventStreams;
   constructor(private owner:KnowledgeWorkspace,private store:DispatchStore,private ports:MemberExecutionPorts){this.eventStreams=new MemberEventStreams(run=>ports.inspect(run))}
   /** 手动只读核实指定任务/轮次；不调用 initialize，不恢复、启动、确认消息或重写异常日志。 */
-  async report(raw:unknown):Promise<ExecutionReport>{this.owner.assert();return new ExecutionReportService(this.owner,this.store,run=>this.ports.inspect(run)).read(raw)}
+  async report(raw:unknown):Promise<ExecutionReport>{this.owner.assert();return new ExecutionReportService(this.owner,this.store,run=>this.ports.inspect(run),this.ports.inspectAgent).read(raw)}
   /** 必须明确指定运行；不传 baselineId 时只列举，不能猜测最近一份或启动采集。 */
   async artifactReport(raw:unknown):Promise<ArtifactReport>{this.owner.assert();if(!this.ports.artifacts)fail('ARTIFACT_UNAVAILABLE','文件基线复核服务未装配');return new ArtifactReportService(this.owner,this.store,{...this.ports.artifacts,inspect:run=>this.ports.inspect(run)}).read(raw)}
   /** 列举不读业务文件，明确 manifestId 后才重新枚举原声明的全部范围。 */

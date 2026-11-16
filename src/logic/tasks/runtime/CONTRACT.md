@@ -16,3 +16,8 @@ OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封�
 ## 根运行插入回执
 
 ScopeActiveInputService.send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
+
+
+## 递归执行记录核实
+
+ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告，不能由原子调用报告冒充旧派工恢复凭据；此边界不实现新的递归恢复入口。

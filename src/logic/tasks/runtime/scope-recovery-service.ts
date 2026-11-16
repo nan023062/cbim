@@ -93,6 +93,7 @@ export class ScopeRecoveryService {
     const report=await new ExecutionReportService(this.owner,{read:async()=>structuredClone(state)},run=>this.logs!.inspectMember(run)).read({workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,taskId:input.source.taskId,runId:input.source.runId});
     check(report.consistency==='stable'&&report.basis.key===input.source.reportBasis,'RECOVERY_REPORT_STALE','核实报告基线已变化，请重新核实后提交新请求');
     check(report.execution!=='in_flight','RECOVERY_BUSY','来源执行仍在途，请等待结束后核实');
+    check(!report.basis.executionModel&&report.basis.taskRevision!==undefined&&report.basis.planRevision!==undefined,'RECOVERY_SOURCE_INVALID','旧任务恢复仅接受旧任务版本，不能把递归调用当作派发任务');
     return {...input.source,taskRevision:report.basis.taskRevision,planRevision:report.basis.planRevision,scopeOutcome:source.outcome,reportExecution:report.execution,logState:report.log.state,unknownToolCount:report.tools.counts.unknown} satisfies ScopeRecovery['source'];
   }
   /** 新周期、当前软限额策略及首轮证明同事务提交；同命令变参拒绝，重复不读日志或提供 fresh。 */

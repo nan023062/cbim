@@ -498,3 +498,8 @@ SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人�
 普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
 
 任务状态与正文复用共享字号；执行 Agent 记录继承主 Markdown 标题，small/span 说明不当作代码。result_ready 和 interrupted 统一从共享样式取得 warning 颜色。
+
+
+## 递归执行记录核实
+
+ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结计划版本，active/closed 使用登记含义的标签，不显示虚构旧任务版本；旧报告仍保留历史状态。读取、分页、错误和过期控制不新增执行操作。

@@ -72,3 +72,12 @@ it('报告只含核实与分页操作，候选/工具成功均不宣称业务验
   expect(html).toContain('本轮交付候选 · 尚未验收');expect(html).toContain('收到成功回执');expect(html).toContain('不是业务产物指纹');expect(html).toContain('重新核实');expect(html).not.toContain('批准</button>');expect(html).not.toContain('重试</button>');expect(html).not.toContain('改派</button>');expect(html).not.toContain('恢复</button>');
   expect(()=>applyExecutionReport(undefined,{...value,sessionFile:'PRIVATE_SENTINEL'},request(),selection)).toThrow();
 });
+
+it('递归报告显示原调用登记，不伪造旧任务版本；协议拒绝混入旧状态',()=>{
+  const value=report();delete value.basis.taskRevision;delete value.basis.taskStatus;
+  value.basis.executionModel='agent-tools-v1';value.basis.runStatus='closed';
+  const accepted=applyExecutionReport(undefined,value,request(),selection),html=render(accepted);
+  expect(html).toContain('原调用登记');expect(html).toContain('原调用已关闭');expect(html).not.toContain('任务第');
+  expect(()=>applyExecutionReport(undefined,{...value,basis:{...value.basis,taskRevision:3}},request(),selection)).toThrow();
+  const legacy=report();delete legacy.basis.taskRevision;expect(()=>applyExecutionReport(undefined,legacy,request(),selection)).toThrow();
+});

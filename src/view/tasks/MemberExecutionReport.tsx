@@ -1,5 +1,5 @@
 /**
- * 作用定位：在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。
+ * 作用定位：在任务节点详情中展示一次显式核实的原调用登记、日志与工具回执报告，独立于成员流式正文。
  * 设计原因：坏日志也必须能查看核实诊断；仓库 scope 保留独立来源，不当作文件基线或恢复证据。独立表单才可显式新建只读核实周期，不恢复旧任务或提供业务验收。
  * 受控补偿：只对原正式工具显示独立账本/预览入口；新操作核当前实例，原工具失败不被新补偿改写。
  * 当前影响：用户明确选择原调用后才观察文件和保存处置；原报告与新影响分别显示，不因当前文件存在而清除 unknown。
@@ -26,7 +26,7 @@ const logLabels:Record<ExecutionReport['log']['state'],string>={not_expected:'�
 const toolLabels={succeeded:'收到成功回执',failed:'收到失败回执',denied:'已拒绝授权',unknown:'结果尚未确认',not_authorized:'未记录执行授权'};
 const effectLabels:Record<string,string>={read:'读取',preview:'预览',maintenance:'维护', 'business-write':'业务写入','knowledge-write':'知识写入',command:'命令'};
 const scopeLabels:Record<string,string>={workspace:'业务工作区',knowledge:'知识库',unknown:'范围未知',repository:'资源仓库'};
-const runLabels={starting:'启动意图已登记',running:'执行中',completed:'本轮结束',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
+const runLabels={active:'启动意图已登记',closed:'原调用已关闭',starting:'启动意图已登记',running:'执行中',completed:'本轮结束',failed:'执行失败',cancelled:'已停止',interrupted:'执行中断'};
 
 /** 呈现后端核实事实；纯组件不读取数据，测试和桌面入口使用相同安全文案。 */
 export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReportView;taskId:string;runId?:string}){
@@ -59,7 +59,7 @@ export function ExecutionReportPanel({state,taskId,runId}:{state:ExecutionReport
       </div>
       {report.candidate&&<div className="execution-report-candidate" data-testid="execution-report-candidate"><h5>本轮交付候选 · 尚未验收</h5><p>计划第 {report.candidate.planRevision} 版 · <code>{report.candidate.resultId}</code></p></div>}
       <p className="member-muted" data-testid="execution-report-next">{report.next.reason}</p>
-      <details className="execution-report-basis"><summary>核实依据版本</summary><p>任务第 {report.basis.taskRevision} 版 · 计划第 {report.basis.planRevision} 版</p><p>图记录 {report.basis.graphCursor.seq} · 运行日志 {report.basis.logSeq??'未知'}</p><code>{report.basis.key}</code></details>
+      <details className="execution-report-basis"><summary>核实依据版本</summary>{report.basis.executionModel?<p>原调用登记 · 计划第 {report.basis.planRevision??'未知'} 版</p>:<p>任务第 {report.basis.taskRevision} 版 · 计划第 {report.basis.planRevision} 版</p>}<p>图记录 {report.basis.graphCursor.seq} · 运行日志 {report.basis.logSeq??'未知'}</p><code>{report.basis.key}</code></details>
     </>}
   </section>;
 }

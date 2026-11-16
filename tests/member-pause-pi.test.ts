@@ -1,38 +1,61 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
-import {memberPauseProvider,memberPauseData as data} from './member-pause-provider';
-import {seedMemberCheckpoint,checkpointRecords,checkpointRuns,checkpointLogBytes,assertCheckpointGraph} from './member-checkpoint-fixture';
+import {recursivePauseProvider,pauseQuestion} from './recursive-pause-provider';
+import {memberCheckpointFixture as data} from './member-checkpoint-provider';
+import {seedMemberCheckpoint} from './member-checkpoint-fixture';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import type {GoalContinuationRequest} from '../src/logic/tasks/rules/scope-continuation';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
+import type {PendingQuestion} from '../src/logic/tools/rules/questions';
 
-it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as const)('durable member pause and explicit continuation through real Pi (%s)',async mode=>{
-  const f=await fixture(),provider=await memberPauseProvider(mode==='submitted-stop');let app=f.app;
-  try{
-    const {entry}=await seedMemberCheckpoint(app,f.a,provider),profileId=(await app.models.list()).selectedId!;
-    const start=await app.dispatch('loop.chat',{id:entry.id,message:data.goal,options:{permission:'execute',turnTimeoutMs:60000}}) as {taskId:string;runId:string},identity={workspaceId:entry.id,rootSessionId:start.taskId};
-    const records=()=>checkpointRecords(f.user,entry.id),graph=()=>app.dispatch('dispatch.graphSnapshot',{identity});
-    await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe('waiting');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:45000,interval:30});
-    const original=await records(),waiting=original.scopes[0],parked=await graph(),runs=await checkpointRuns(f.user,entry.id),logs=await checkpointLogBytes(f.user,entry.id,runs),native=await fs.readFile(runs[0].session.sessionFile!);expect(waiting.wait?.memberPause?.tasks).toHaveLength(3);expect(provider.main).toHaveLength(8);expect(provider.member).toHaveLength(7);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(original);expect(await graph()).toEqual(parked);expect(await fs.readFile(runs[0].session.sessionFile!)).toEqual(native);expect(provider.main).toHaveLength(8);expect(provider.member).toHaveLength(7);
-    const input:GoalContinuationRequest={...identity,scopeId:waiting.scopeId,waitId:waiting.wait!.waitId,expectedGoalRevision:waiting.goal!.revision,expectedInputRevision:waiting.goal!.inputRevision??1,commandId:randomUUID(),input:{message:data.supplement},options:{provider:'cbim-'+profileId,model:data.model,profileId,permission:'execute',turnTimeoutMs:60000}};
-    if(mode==='stop-wait')await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});
-    else{
-      if(mode==='changed-files'){
-        await expect(app.dispatch('loop.goalContinue',{...input,options:{...input.options,permission:'read'}})).rejects.toMatchObject({code:'GOAL_MEMBER_PAUSE_PERMISSION'});expect(await records()).toEqual(original);expect(provider.main).toHaveLength(8);
-        await fs.writeFile(path.join(f.a,data.files[0]),'external update');await expect(app.dispatch('loop.goalContinue',input)).rejects.toMatchObject({code:'MEMBER_CHECKPOINT_ARTIFACT_CHANGED'});expect(await records()).toEqual(original);expect(provider.main).toHaveLength(8);expect(provider.member).toHaveLength(7);await fs.writeFile(path.join(f.a,data.files[0]),data.facts[0]);
-      }
-      const accepted=await app.dispatch('loop.goalContinue',input);expect(accepted.continuation.wait).toEqual(waiting.wait);expect((await app.dispatch('loop.goalContinue',input)).continuation).toEqual(accepted.continuation);
-      if(mode==='submitted-stop'){await vi.waitFor(()=>expect(provider.state.continued).toBe(true),{timeout:15000});await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});provider.releaseContinuation()}
-    }
-    await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await records()).scopes[0].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:60000,interval:40});
-    const complete=mode==='complete-restart'||mode==='changed-files',saved=await records(),finalGraph=await graph(),finalRuns=await checkpointRuns(f.user,entry.id);assertCheckpointGraph(finalGraph,parked,finalRuns,complete);expect(saved.scopes[0].outcome).toBe(complete?'completed':'cancelled');expect(saved.scopes[0].goal!.input).toEqual(waiting.goal!.input);expect((await checkpointLogBytes(f.user,entry.id,runs))).toEqual(logs);expect(provider.main).toHaveLength(complete?22:mode==='stop-wait'?8:9);expect(provider.member).toHaveLength(complete?22:7);
-    if(!complete)expect(await fs.readFile(runs[0].session.sessionFile!)).toEqual(native);else expect(saved.scopes[0].continuations![0].wait).toEqual(waiting.wait);
-    if(mode==='stop-wait')await expect(app.dispatch('loop.goalContinue',input)).rejects.toThrow();else{const receipt=await app.dispatch('loop.goalContinuation',{...identity,scopeId:waiting.scopeId,commandId:input.commandId});expect((await app.dispatch('loop.goalContinue',input)).continuation).toEqual(receipt!.continuation)}
-    const sequence=[...provider.sequence];await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await records()).toEqual(saved);expect(await graph()).toEqual(finalGraph);expect(await checkpointRuns(f.user,entry.id)).toEqual(finalRuns);expect(provider.sequence).toEqual(sequence);expect(provider.errors).toEqual([]);
-  }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/member-pause-pi-'+mode+'-diagnostic.json',JSON.stringify({error:String(error),state:provider.state,main:provider.main.length,member:provider.member.length,errors:provider.errors,sequence:provider.sequence},null,2));throw error}
-  finally{provider.releaseContinuation();await app.shutdown();await f.cleanup();await provider.close()}
-},150000);
+// 新协议在同一个调用内暂停；关闭应用不将未知等待伪装成可重放检查点。
+it.each(['complete-restart','stop-wait','changed-files','submitted-stop'] as const)('recursive pause keeps the original run and gates dependent work (%s)',async mode=>{
+ const f=await fixture(),provider=await recursivePauseProvider(mode==='submitted-stop');let app=f.app;
+ try{
+  const {entry}=await seedMemberCheckpoint(app,f.a,provider);
+  const start=await app.dispatch('loop.chat',{id:entry.id,message:'依次完成 A、B、C，在 A 原调用内暂停求助',options:{permission:'execute',turnTimeoutMs:60000}});
+  const until=async(check:()=>Promise<void>|void)=>{await vi.waitFor(async()=>{if(provider.errors.length)return;await check()},{timeout:30000,interval:30});expect(provider.errors).toEqual([])};
+  const questions=()=>app.dispatch('loop.questions',{id:entry.id,taskId:start.taskId}) as Promise<PendingQuestion[]>;
+  await until(async()=>expect(await questions()).toHaveLength(1));
+  const question=(await questions())[0];expect(question.questions).toEqual(pauseQuestion.questions);
+  const first=(await app.workspace(entry.id).dispatchStore.read()).agentBusinessRuns![0];
+  const childDir=path.join(f.user,entry.id,'loop-engine/tasks',first.binding.taskId,first.binding.runId),storage=new FileRunStorage();
+  const before=await storage.read(childDir);
+  expect(provider.byChild.map(c=>c.length)).toEqual([5,0,0]);
+  expect(await fs.readFile(path.join(f.a,data.files[0]),'utf8')).toBe(data.facts[0]);
+  expect((await app.workspace(entry.id).dispatchStore.read()).graphs[0].tasks).toEqual([]);
+  if(mode==='stop-wait')await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});
+  else{
+   if(mode==='changed-files')await fs.writeFile(path.join(f.a,data.files[0]),'external change during original pause');
+   await app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:'继续同一次调用，不重放写入'}]});
+   if(mode==='submitted-stop'){await until(()=>expect(provider.state.continued).toBe(true));await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});provider.releaseContinuation()}
+  }
+  await until(()=>expect(app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  const state=await app.workspace(entry.id).dispatchStore.read(),child=await storage.read(childDir),runs=state.agentBusinessRuns!;
+  expect(child.runId).toBe(before.runId);expect(child.sessionFile).toBe(before.sessionFile);
+  expect(child.events.filter(e=>e.type==='tool.proposed'&&e.data.id==='pause-write')).toHaveLength(1);
+  expect(child.events.filter(e=>e.type==='tool.proposed'&&e.data.id==='pause-ask')).toHaveLength(1);
+  expect(runs.every(r=>r.status==='closed')).toBe(true);
+  if(mode==='complete-restart'){
+   expect(runs).toHaveLength(3);expect(provider.byChild.map(c=>c.length)).toEqual([9,6,6]);
+   expect(provider.state.results.map(r=>r.status)).toEqual(['completed','completed','completed']);
+   expect(provider.state.result.agentCall).toEqual(provider.state.waiting.agentCall);
+   const aEnd=provider.sequence.indexOf('child0:8'),bStart=provider.sequence.indexOf('child1:0'),bEnd=provider.sequence.indexOf('child1:5'),cStart=provider.sequence.indexOf('child2:0');
+   expect(bStart).toBeGreaterThan(aEnd);expect(cStart).toBeGreaterThan(bEnd);
+  }else{
+   expect(runs).toHaveLength(1);expect(provider.byChild.slice(1)).toEqual([[],[]]);
+   if(mode==='changed-files')expect(provider.state.result.error.code).toBe('ARTIFACT_BASELINE_STALE');
+   else expect(child.status).toBe('cancelled');
+  }
+  const expected=mode==='changed-files'?'external change during original pause':data.facts[0];
+  expect(await fs.readFile(path.join(f.a,data.files[0]),'utf8')).toBe(expected);
+  const sequence=[...provider.sequence],logs=await Promise.all(runs.map(r=>fs.readFile(path.join(f.user,entry.id,'loop-engine/tasks',r.binding.taskId,r.binding.runId,'events.jsonl'),'utf8')));
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await app.workspace(entry.id).dispatchStore.read()).toEqual(state);expect(await questions()).toEqual([]);expect(provider.sequence).toEqual(sequence);
+  await expect(app.dispatch('loop.answerQuestion',{id:entry.id,taskId:start.taskId,questionId:question.id,answers:[{option:0,other:''}]})).rejects.toThrow();
+  expect(await Promise.all(runs.map(r=>fs.readFile(path.join(f.user,entry.id,'loop-engine/tasks',r.binding.taskId,r.binding.runId,'events.jsonl'),'utf8')))).toEqual(logs);
+  expect(provider.sequence).toEqual(sequence);expect(await fs.readFile(path.join(f.a,data.files[0]),'utf8')).toBe(expected);
+ }finally{provider.releaseContinuation();await app.shutdown();await provider.close();await f.cleanup()}
+},90000);

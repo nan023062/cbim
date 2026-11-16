@@ -3226,3 +3226,11 @@ human-reconsideration-pi 原旧目标等待入口改为同一原调用的第二�
 model-request-budget-pi 的旧 goalContinue 等待用例改为原工具内暂停后的继续。将未来默认额度调大仍不能改变本轮冻结账本；被拒绝后保存的意见、原调用、1920 tokens 和拒绝记录经重开保持不变。共享夹具 app 改为读取当前已重开实例。
 
 验证：human-reconsideration-pi 3/3；complete-output-pi 4/4（同模型替身消费者）；model-request-budget-pi -t "recursive human wait" 1/1（其余10项未选择，不记通过）。pnpm typecheck、pnpm check:test-modules 通过。完整 CI、桌面/升级未运行，未发布。
+
+## 2026-11-16 · #94 原调用暂停与后继执行迁移
+
+member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取、采集后向直接调用方求助；主 Agent 转交用户并通过 agent_reply 继续同一 task/run/session。完成才依次执行 B/C 并真实读取前置文件；原写入仅一次。等待停止、答复后停止均无后继；等待中外部改写使原采集复核失败，后继不启动。重开保持日志与原文件，不自动恢复或重放已结束的问题。
+
+边界：新协议不再以停泊图创建新运行恢复检查点；原旧检查点/暂停持久服务兼容测试保留，不能将新同调用等待声称为跨进程继续能力。旧桌面 member-pause-ui-smoke 仍使用旧模型替身，尚待迁移，不记已验收。
+
+受影响验证：pnpm exec vitest run tests/member-pause-pi.test.ts 4/4（build/recursive-member-pause.json）；pnpm typecheck、pnpm check:test-modules 通过。该批仅测试迁移，无 src 改动。全量 CI、桌面发布未通过。

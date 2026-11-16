@@ -60,9 +60,9 @@ pnpm start
 
 新人先阅读 [项目协作规范（AGENTS.md）](AGENTS.md)；Claude Code 的项目入口见 [CLAUDE.md](CLAUDE.md)。
 
-开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](design/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[关联方案、规范与记录](design/README.md)，`docs/` 仅保留下方四份概念设计。
+开发清单与实时进度统一从 [GitHub Issues](https://github.com/nan023062/cbim/issues) 获取。读取选定 Issue、[相关开发记录](design/development-log.md) 和实际代码，核实范围、依赖与验收后实施，每个 Issue 独立验证、提交并在已有授权内回填。`design/` 保存[关联方案、规范与记录](design/README.md)，`docs/` 保存下方概念设计与工程文件组织设计。
 
-开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
+开发流程 `cbim-development` 提供 [Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md) 和 [通用项目](.agents/skills/cbim-development/SKILL.md) 三个同步入口；必须遵守 [文档 1：通用项目架构设计规范与原则](docs/06-通用项目架构设计规范与原则.md)。项目架构治理入口 `architecture-evolution` 必须遵守文档 1 并按 [文档 2：架构治理规范与治理流程](docs/07-架构治理规范与治理流程.md) 执行。上述入口仅服务本工程开发，不是产品内置业务 Skill。
 
 桌面发版使用 `cbim-release`：[通用项目](.agents/skills/cbim-release/SKILL.md)、[Claude Code](.claude/skills/cbim-release/SKILL.md)、[Codex](.codex/skills/cbim-release/SKILL.md)。流程覆盖签名／明确选择的未签名发行、CI、草稿恢复、隔离安装与线上升级、官网及双分支收尾；具体分工见 [开发者 Skill 说明](design/README.md#开发入口)。
 
@@ -93,7 +93,7 @@ pnpm start
 | `src/bridge/server/` | 桌面入口、冷启动、IPC、CLI 与平台传输 |
 | `src/bridge/contracts/`、`src/bridge/preload/` | 公开通信契约及受限安全桥 |
 | `src/view/` | React 页面、控制器、hooks 和视图专属适配 |
-| `docs/` | 01–04 四份概念设计 |
+| `docs/` | 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则 |
 | `design/` | Issue 关联方案、运行规范、Schema 与开发／验证记录 |
 | `legal/` | 随包分发的第三方许可和 NOTICE |
 | `tests/` | 隔离工程、规则、内部工具、调度与故障恢复测试 |
@@ -132,11 +132,16 @@ pnpm start
 
 ## 设计文档
 
-`docs/` 仅保留以下四份设计文档，表达理念、架构原则与目标流程；当前实现和验证事实以源码及开发记录为准。
+`docs/` 保存以下七份设计与规范文档，表达理念、架构原则、目标流程与工程文件组织规范；当前实现和验证事实以源码及开发记录为准。
 
 1. [AI-Native 设计思想总纲](docs/01-AI-Native设计思想总纲.md)
 2. [CBIM 架构设计理论](docs/02-CBIM架构设计理论.md)
 3. [渐进式架构演进与人工认知保障体系](docs/03-渐进式架构演进与人工认知保障体系.md)
 4. [AI-Native 开发全流程设计方案](docs/04-AI-Native开发全流程设计方案.md)
+5. [工程文件组织与代码阅读设计](docs/05-工程文件组织与代码阅读设计.md)
+6. [通用项目架构设计规范与原则](docs/06-通用项目架构设计规范与原则.md)
+7. [架构治理规范与治理流程](docs/07-架构治理规范与治理流程.md)
+
+`docs/` 不依赖 `design/`；具体项目方案与验证记录依据这些准则维护。
 
 其余旧设计文档已清理，历史内容可用 `git show 812bec16:<原仓库相对路径>` 查阅。产品实际读取的 [Skill／Workflow 规范](design/runtime/shared-skills-workflows.md) 归入运行资料；Cindy 的 [许可](legal/cindy-LICENSE) 与 [NOTICE](legal/cindy-NOTICE) 归入 `legal/` 并随包分发，NOTICE 中的上游目录说明保留原文。

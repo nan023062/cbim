@@ -4,7 +4,7 @@
 > 版本：设计方案 1.3｜日期：2026-11-12
 > 定位：本地／多端 AI Native 工具的自动开发目标流程，不作为运行授权，不声明全部流程已经实现。
 
-本方案与 [总纲](01-AI-Native设计思想总纲.md)、[CBIM 架构理论](02-CBIM架构设计理论.md)、[架构演进与认知保障](03-渐进式架构演进与人工认知保障体系.md) 共同构成概念设计。对象模型见 [本地 AI 团队核心模型](../design/team-workspace-network.md)，实现及缺口见 [源码审计](../design/verification/local-ai-workflow-audit-20261112.md)。此前 Unity 玩法组试点是设计背景，不再限定产品范围。
+本方案与 [总纲](01-AI-Native设计思想总纲.md)、[CBIM 架构理论](02-CBIM架构设计理论.md)、[架构演进与认知保障](03-渐进式架构演进与人工认知保障体系.md) 共同构成概念设计。本文自行说明目标对象与流程，实现状态须由源码与执行证据另行核实。此前 Unity 玩法组试点是设计背景，不再限定产品范围。
 
 ## 第一篇：方案范围与交付对象
 
@@ -38,13 +38,13 @@ C 保存可复用能力，B 保存业务事实，M 可保存个人临时线索�
 6. **有界返工。** 将失败原因及原候选身份交给修复任务，再核实新结果。限制轮次、成本和无进展重复，保留旧证据。
 7. **交付与沉淀。** 核实验收条件、未决副作用及剩余任务；将有复用价值的方法和项目知识分别归入 C/B。
 
-上述是目标闭环，具体行为与验收以 [Agent 工具调用需求](../design/agent-tool-product-requirements.md) 和 [UX 设计](../design/agent-tool-ux-design.md) 为准。现有单层派发不代表递归执行已经接通，源码现状和迁移边界见 [工程交接](../design/agent-tool-engineering.md)。
+上述是目标闭环。验收必须覆盖原调用身份、递归结果回传、权限与预算边界、取消及恢复；单层派发成功不能证明完整递归能力已经实现。
 
 ## 第四篇：架构观察、评审与重构流程
 
 从真实变更原因、重复规则和边界问题判断是否值得抽象。已授权范围内的局部分析、实现和验证自动推进；需要新业务取舍、扩大权限或改变正式规则时才升级给人。
 
-保护稳定能力，将易变策略限制在明确边界。优先使用既有依赖图、契约和增量 diff；只有职责或契约实际变化时才更新对应视图，不为每次 review 重建全仓说明。具体约束由 [架构规范](../design/project-architecture-standard.md) 和 [治理流程](../design/architecture-governance-process.md) 维护，本文不另建审批表或待办清单。
+保护稳定能力，将易变策略限制在明确边界。优先使用既有依赖图、契约和增量 diff；只有职责或契约实际变化时才更新对应视图，不为每次 review 重建全仓说明。具体约束由 [架构规范](06-通用项目架构设计规范与原则.md) 和 [治理流程](07-架构治理规范与治理流程.md) 维护，本文不另建审批表或待办清单。
 
 ## 第五篇：质量检查、知识维护与负责人复盘
 
@@ -56,11 +56,11 @@ C 保存可复用能力，B 保存业务事实，M 可保存个人临时线索�
 
 ## 第六篇：资产组织与实施顺序
 
-产品加载范围由 [内置知识白名单](../src/logic/knowledge/rules/builtins.ts) 决定。`design/runtime/` 正文进入运行上下文，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
+产品加载范围由 [内置知识白名单](../src/logic/knowledge/rules/builtins.ts) 决定。被白名单加载的运行知识属于产品资产，不能因普通 Markdown 引用少就删除。项目开发 Skill 与产品内置 Skill 分别维护。
 
-布局和字段以 [模块规范](../design/business/module-spec.md)、[Agent 规范](../design/capability/agent-spec.md)、[Skill／Workflow 规范](../design/runtime/shared-skills-workflows.md) 为准；任务与恢复以 [任务契约](../src/logic/tasks/rules/CONTRACT.md) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
+模块、Agent、Skill 与 Workflow 的具体布局和字段由运行 Schema 定义并校验；任务与恢复以 [任务契约](../src/logic/tasks/rules/CONTRACT.md) 及真实存储为准，本文不复制 Schema 或猜测用户数据路径。
 
-现行入口是桌面应用与内部 TypeScript 服务。旧 Python 工具、旧 `design/skills/` 方法副本和模块预览器已退出维护，原文可从 Git 历史查阅。
+现行入口是桌面应用与内部 TypeScript 服务。旧 Python 工具、旧方法副本和模块预览器已退出维护，原文可从 Git 历史查阅。
 
 先围绕单工作区的验证、返工与可靠交付收敛，再扩展复杂的本地协作。具体开发选择来自 [GitHub Issues](https://github.com/nan023062/cbim/issues)，概念文档不保存实时进度。
 

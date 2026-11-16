@@ -1,5 +1,5 @@
 import {expect,it} from 'vitest';
-import {parseWorkflowContract,workflowContractSchema,workflowContractLimits} from '../src/logic/workspace/rules/workflow-contract';
+import {assertWorkflowCapabilities,parseWorkflowContract,workflowContractSchema,workflowContractLimits} from '../src/logic/workspace/rules/workflow-contract';
 
 const contract={version:1,beforeEffects:{requirePlan:true},delivery:{requiredToolEvidence:[{id:'inspect-result',toolName:'read'}]}};
 const block=(value:unknown,mark='```')=>mark+'cbim-workflow\n'+JSON.stringify(value)+'\n'+mark;
@@ -38,4 +38,31 @@ it('已声明的重复块、未闭合、额外标记和不匹配关闭均明确�
 it('严格JSON拒绝重复字段/注释/尾逗号，条件块按UTF-8字节有界',()=>{
   for(const source of ['', '{', 'null','[]','{"version":1,"version":1,"beforeEffects":{"requirePlan":true}}','{"version":1,/* comment */"beforeEffects":{"requirePlan":true}}','{"version":1,"beforeEffects":{"requirePlan":true},}'])invalid('```cbim-workflow\n'+source+'\n```');
   invalid('```cbim-workflow\n'+' '.repeat(workflowContractLimits.blockBytes)+JSON.stringify(contract)+'\n```');
+});
+
+it('启动能力按可信工具集合拒绝缺失工具，无声明保持旧入口可用',()=>{
+ expect(()=>assertWorkflowCapabilities([],{artifacts:false})).not.toThrow();
+ const bindings=[{contract:workflowContractSchema.parse(contract)}];
+ expect(()=>assertWorkflowCapabilities(bindings,{artifacts:false})).toThrowError(expect.objectContaining({code:'WORKFLOW_CAPABILITIES_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities(bindings,{availableTools:[],artifacts:false})).toThrowError(expect.objectContaining({code:'WORKFLOW_TOOL_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities(bindings,{availableTools:['read'],artifacts:false})).not.toThrow();
+ const write=[{contract:workflowContractSchema.parse({version:1,delivery:{requiredToolEvidence:[{id:'write',toolName:'write'}]}})}];
+ expect(()=>assertWorkflowCapabilities(write,{availableTools:['read'],artifacts:true})).toThrowError(expect.objectContaining({code:'WORKFLOW_TOOL_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities(write,{availableTools:['read','write'],artifacts:true})).not.toThrow();
+});
+it('启动结构验证同时要求实际验证器和文件端口，并保留总量上限',()=>{
+ const binding={contract:workflowContractSchema.parse({version:1,delivery:{requiredValidations:[{id:'json',validator:'json-schema-v1',artifactPath:'result.json',schema:{type:'object'}}]}})};
+ const actual={availableTools:[],availableValidators:['json-schema-v1'],artifacts:true};
+ expect(()=>assertWorkflowCapabilities([binding],actual)).not.toThrow();
+ expect(()=>assertWorkflowCapabilities([binding],{...actual,artifacts:false})).toThrowError(expect.objectContaining({code:'WORKFLOW_VALIDATION_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities([binding],{...actual,availableValidators:[]})).toThrowError(expect.objectContaining({code:'WORKFLOW_VALIDATION_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities(Array.from({length:17},()=>binding),actual)).toThrowError(expect.objectContaining({code:'WORKFLOW_VALIDATION_LIMIT'}));
+});
+
+it('显式隔离范围只接受范围能力，不回退原生工具',()=>{
+ const contract=workflowContractSchema.parse({version:1,executionScope:{version:1,profile:'windows-lpac-node-v1',read:[{path:'result.txt',kind:'file'}],write:[]},delivery:{requiredToolEvidence:[{id:'read',toolName:'cbim_scoped_read'}]}});
+ const native={availableTools:['read','write','cbim_scoped_read'],artifacts:true};
+ expect(()=>assertWorkflowCapabilities([{contract}],native)).toThrowError(expect.objectContaining({code:'EXECUTION_SCOPE_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities([{contract}],{...native,scopedTools:[]})).toThrowError(expect.objectContaining({code:'WORKFLOW_TOOL_UNAVAILABLE'}));
+ expect(()=>assertWorkflowCapabilities([{contract}],{...native,scopedTools:['cbim_scoped_read']})).not.toThrow();
 });

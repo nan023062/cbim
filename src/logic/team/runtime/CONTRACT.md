@@ -23,3 +23,17 @@ dependenciesReady 同时供自动协调器和实际成员领取使用：有候�
 ### 多角色执行准备
 
 领取从被冻结版本的岗位 RuntimePolicy 或正式 fallbackBinding 恢复 modelRoles，连同 primary 在模型配置短锁中准备。完整 configurationHash 和成员版本仍由领取事务核对；公开预览不携带密钥，解密准备不能在回调结束后重新调用。
+
+## 旧成员 Workflow 预检复用
+
+MemberExecutionManager 在持有准入、冻结知识之后且领取/运行登记之前，调用 workspace/rules 的 assertWorkflowCapabilities。原 PreparedEngine 提供可信普通/范围工具和验证器清单，artifacts 端口仍单独检查；规则与新递归入口共用，旧事务、错误码和失败释放语义不变。
+
+
+## 递归执行记录核实
+
+MemberExecutionManager.report 将独立 inspectAgent 传给 ExecutionReportService；登记决定日志来源，旧 inspect 与递归端口不可按最近记录互相回退。报告核实不领取、不准备引擎、不修改执行状态。
+
+
+### 递归工具迁移收口
+
+validateBusinessWorkflow 以原 TaskSpec 及冻结 binding/prepared/session 核验同一套 Workflow、验证记录和完整出口；原 validateMemberWorkflow 仅适配旧 TaskNode。递归只读核实与旧候选验证共用稳定算法，权限/来源/生命周期由各自调用方核对。

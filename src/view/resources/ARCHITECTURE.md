@@ -318,3 +318,8 @@ WorkspaceResourceTransfer 不再要求登记真人维护人；整套业务导入
 ResourceRepositoryView 在来源尚未返回时显示读取中；读取失败、未配置、空仓库和筛选无结果分别呈现。筛选有 aria-pressed 和清除入口。编辑定义及选择应用目标复用 ModalFrame 原生焦点边界；Escape 与关闭按钮共用 busy 和脏稿检查。资源包正文只读、预览事务和授权边界不变。
 
 WorkspaceResourceTransfer 同样使用 ModalFrame；选择、审阅、回执三个阶段来自实际 preview/result，不用计时器推进。切换资源或目标仍清除旧预览，只有后端返回成功回执才进入结果阶段；关闭不撤销已发生的操作。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

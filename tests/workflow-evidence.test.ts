@@ -42,9 +42,9 @@ it('所有模块条件分别评价，成功回执不能跨运行且命令范围�
   const shell:WorkflowContractBinding={...second,contract:{version:1,delivery:{requiredToolEvidence:[{id:'command',toolName:'bash'}]}}};expect(evaluateWorkflowDelivery([shell],[evidence('bash','shell-one')],identity).checks[0].toolName).toBe('bash');expect(()=>evaluateWorkflowDelivery([shell],[{...evidence('bash','shell-one'),scope:{kind:'workspace',workspaceId:identity.workspaceId}}],identity)).toThrow(expect.objectContaining({code:'WORKFLOW_EVIDENCE_REQUIRED'}));
 });
 
-async function canonical(){
-  const events:ArtifactEvidenceEvent[]=[];const emit=(type:string,data:Record<string,unknown>)=>{events.push({...identity,seq:events.length+1,type,data:structuredClone(data)})};emit('run.started',{task,workflowContracts:bindings});
-  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],workflow:{bindings,task,identity}});
+async function canonical(withWorkflow=true){
+  const events:ArtifactEvidenceEvent[]=[];const emit=(type:string,data:Record<string,unknown>)=>{events.push({...identity,seq:events.length+1,type,data:structuredClone(data)})};emit('run.started',{task,...(withWorkflow?{workflowContracts:bindings}:{})});
+  const tools=new TaskProgressTools(undefined,async progress=>{emit('task.updated',{progress})},{identity,artifacts:()=>[],...(withWorkflow?{workflow:{bindings,task,identity}}:{})});
   async function call(id:string,name:string,input:Record<string,unknown>){const call:ToolCall={id,name,input},auth=decision(name);emit('tool.proposed',{...call});if(name==='write')await tools.invalidate('写入前',tools.beforeEffects());emit('tool.allowed',{...call,...auth});const generation=tools.generation,result=name.startsWith('cbim_')?await tools.call(name,input):{content:[{type:'text',text:name==='read'?'actual file':'written'}]};const receipt=toolReceipt(identity,call,auth,'succeeded',result);emit('tool.finished',{id,name,result,receipt});tools.record(receipt,generation)}
   await call('plan','cbim_task_plan',planInput);await call('write-one','write',{path:'result.txt',content:'actual file'});await call('read-one','read',{path:'result.txt'});await call('step','cbim_task_step',{expectedVersion:2,id:'implement',state:'reported_done',evidenceIds:['write-one','read-one']});await call('deliver','cbim_delivery_prepare',{expectedVersion:3,summary:'成果',limitations:[]});emit('run.settled',{status:'completed'});return events;
 }
@@ -96,4 +96,15 @@ it.each(['source','scope','hash','plan','proof','sequence','after-effect','nativ
   if(kind==='effect-scope')events.find(event=>event.type==='tool.allowed'&&event.data.id==='step')!.data.scope={kind:'workspace',workspaceId:'other'};
   if(kind==='after-effect'){const last=events.pop()!;events.push({...identity,seq:events.length+1,type:'tool.allowed',data:{id:'late',name:'write',effects:['business-write']}});events.push({...last,seq:events.length+1})}
   expect(()=>validateWorkflowEvidence(events,task,bindings)).toThrow();
+});
+
+it.each(['valid','missing-delivery','wrong-goal','invalid-receipt'] as const)('explicit business delivery without optional Workflow (%s)',async mode=>{
+ let events=await canonical(false);
+ if(mode==='missing-delivery'){events=events.filter(e=>!(e.data.id==='deliver'||e.type==='task.updated'&&(e.data.progress as TaskProgress).delivery));events.forEach((e,i)=>e.seq=i+1)}
+ if(mode==='wrong-goal')events[0].data.task={...task,goal:'changed business'};
+ if(mode==='invalid-receipt')(events.find(e=>e.type==='tool.finished'&&e.data.id==='read-one')!.data.receipt as ToolReceipt).resultHash='0'.repeat(64);
+ const check=()=>validateWorkflowEvidence(events,task,[],[],undefined,{requireDelivery:true});
+ if(mode==='valid')expect(check()).toBeUndefined();else expect(check).toThrow();
+ // 旧无约定记录的读取契约不随新业务入口改变。
+ expect(validateWorkflowEvidence(events,task,[])).toBeUndefined();
 });

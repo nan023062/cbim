@@ -14,6 +14,9 @@
 
 ```mermaid
 classDiagram
+class N_src_logic_agents["agents/"] {
+  <<directory>>
+}
 class N_src_logic_application["application/"] {
   <<directory>>
 }
@@ -29,23 +32,20 @@ class N_src_logic_connectors["connectors/"] {
 class N_src_logic_conversation["conversation/"] {
   <<directory>>
 }
-class N_src_logic_dispatch["dispatch/"] {
-  <<directory>>
-}
 N_src_logic_application ..> N_src_logic_automation : 导入依赖
 N_src_logic_application ..> N_src_logic_budget : 导入依赖
-N_src_logic_application ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_application ..> N_src_logic_conversation : 导入依赖
 N_src_logic_application ..> N_src_logic_connectors : 导入依赖
+N_src_logic_application ..> N_src_logic_agents : 导入依赖
 N_src_logic_automation ..> N_src_logic_conversation : 导入依赖
-N_src_logic_automation ..> N_src_logic_dispatch : 导入依赖
-N_src_logic_budget ..> N_src_logic_dispatch : 导入依赖
-N_src_logic_dispatch ..> N_src_logic_budget : 导入依赖
-N_src_logic_dispatch ..> N_src_logic_conversation : 导入依赖
+N_src_logic_budget ..> N_src_logic_agents : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_dispatch["dispatch/"] {
+  <<directory>>
+}
 class N_src_logic_engines["engines/"] {
   <<directory>>
 }
@@ -61,25 +61,29 @@ class N_src_logic_feedback["feedback/"] {
 class N_src_logic_file_operations["file-operations/"] {
   <<directory>>
 }
-class N_src_logic_governance["governance/"] {
-  <<directory>>
-}
+N_src_logic_dispatch ..> N_src_logic_execution : 导入依赖
+N_src_logic_dispatch ..> N_src_logic_file_operations : 导入依赖
+N_src_logic_dispatch ..> N_src_logic_engines : 导入依赖
+N_src_logic_dispatch ..> N_src_logic_evidence : 导入依赖
 N_src_logic_engines ..> N_src_logic_execution : 导入依赖
 N_src_logic_evidence ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_evidence ..> N_src_logic_execution : 导入依赖
-N_src_logic_evidence ..> N_src_logic_governance : 导入依赖
+N_src_logic_evidence ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_execution ..> N_src_logic_engines : 导入依赖
 N_src_logic_execution ..> N_src_logic_evidence : 导入依赖
 N_src_logic_execution ..> N_src_logic_file_operations : 导入依赖
 N_src_logic_execution ..> N_src_logic_feedback : 导入依赖
-N_src_logic_execution ..> N_src_logic_governance : 导入依赖
+N_src_logic_execution ..> N_src_logic_dispatch : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_evidence : 导入依赖
 N_src_logic_file_operations ..> N_src_logic_execution : 导入依赖
-N_src_logic_governance ..> N_src_logic_execution : 导入依赖
+N_src_logic_file_operations ..> N_src_logic_dispatch : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_governance["governance/"] {
+  <<directory>>
+}
 class N_src_logic_history["history/"] {
   <<directory>>
 }
@@ -95,16 +99,16 @@ class N_src_logic_models["models/"] {
 class N_src_logic_resources["resources/"] {
   <<directory>>
 }
-class N_src_logic_runtime["runtime/"] {
-  <<directory>>
-}
-N_src_logic_history ..> N_src_logic_runtime : 导入依赖
+N_src_logic_governance ..> N_src_logic_knowledge : 导入依赖
 N_src_logic_materials ..> N_src_logic_knowledge : 导入依赖
 N_src_logic_resources ..> N_src_logic_knowledge : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_runtime["runtime/"] {
+  <<directory>>
+}
 class N_src_logic_tasks["tasks/"] {
   <<directory>>
 }
@@ -120,19 +124,23 @@ class N_src_logic_tools["tools/"] {
 class N_src_logic_updates["updates/"] {
   <<directory>>
 }
-class N_src_logic_web["web/"] {
-  <<directory>>
-}
+N_src_logic_runtime ..> N_src_logic_tasks : 导入依赖
+N_src_logic_runtime ..> N_src_logic_team : 导入依赖
+N_src_logic_runtime ..> N_src_logic_tools : 导入依赖
 N_src_logic_tasks ..> N_src_logic_team : 导入依赖
 N_src_logic_tasks ..> N_src_logic_tools : 导入依赖
+N_src_logic_tasks ..> N_src_logic_runtime : 导入依赖
 N_src_logic_team ..> N_src_logic_tasks : 导入依赖
+N_src_logic_team ..> N_src_logic_runtime : 导入依赖
 N_src_logic_tools ..> N_src_logic_team : 导入依赖
 N_src_logic_tools ..> N_src_logic_tasks : 导入依赖
-N_src_logic_tools ..> N_src_logic_web : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_web["web/"] {
+  <<directory>>
+}
 class N_src_logic_workspace["workspace/"] {
   <<directory>>
 }
@@ -140,6 +148,9 @@ class N_src_logic_workspace["workspace/"] {
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `agents` → `tools`：导入。
+- `agents` → `tasks`：导入。
+- `agents` → `execution`：导入。
 - `application` → `web`：导入。
 - `application` → `automation`：导入。
 - `application` → `file-operations`：导入。
@@ -159,10 +170,11 @@ class N_src_logic_workspace["workspace/"] {
 - `application` → `knowledge`：导入。
 - `application` → `resources`：导入。
 - `application` → `connectors`：导入。
-- `application` → `governance`：导入。
+- `application` → `evidence`：导入。
+- `application` → `agents`：导入。
 - `application` → `tasks`：导入。
 - `application` → `tools`：导入。
-- `application` → `evidence`：导入。
+- `application` → `governance`：导入。
 - `automation` → `workspace`：导入。
 - `automation` → `conversation`：导入。
 - `automation` → `dispatch`：导入。
@@ -173,6 +185,7 @@ class N_src_logic_workspace["workspace/"] {
 - `budget` → `engines`：导入。
 - `budget` → `tasks`：导入。
 - `budget` → `execution`：导入。
+- `budget` → `agents`：导入。
 - `budget` → `knowledge`：导入。
 - `connectors` → `tools`：导入。
 - `connectors` → `knowledge`：导入。
@@ -182,12 +195,12 @@ class N_src_logic_workspace["workspace/"] {
 - `conversation` → `knowledge`：导入。
 - `conversation` → `execution`：导入。
 - `conversation` → `tasks`：导入。
+- `dispatch` → `execution`：导入。
 - `dispatch` → `team`：导入。
 - `dispatch` → `tasks`：导入。
 - `dispatch` → `workspace`：导入。
 - `dispatch` → `file-operations`：导入。
 - `dispatch` → `budget`：导入。
-- `dispatch` → `execution`：导入。
 - `dispatch` → `knowledge`：导入。
 - `dispatch` → `tools`：导入。
 - `dispatch` → `conversation`：导入。
@@ -200,14 +213,16 @@ class N_src_logic_workspace["workspace/"] {
 - `evidence` → `tools`：导入。
 - `evidence` → `tasks`：导入。
 - `evidence` → `workspace`：导入。
+- `evidence` → `execution`：导入。
 - `evidence` → `dispatch`：导入。
 - `evidence` → `knowledge`：导入。
-- `evidence` → `execution`：导入。
 - `evidence` → `runtime`：导入。
 - `evidence` → `team`：导入。
+- `evidence` → `agents`：导入。
 - `evidence` → `governance`：导入。
 - `execution` → `runtime`：导入。
 - `execution` → `tools`：导入。
+- `execution` → `agents`：导入。
 - `execution` → `engines`：导入。
 - `execution` → `web`：导入。
 - `execution` → `workspace`：导入。
@@ -222,6 +237,7 @@ class N_src_logic_workspace["workspace/"] {
 - `execution` → `team`：导入。
 - `execution` → `budget`：导入。
 - `execution` → `models`：导入。
+- `execution` → `dispatch`：导入。
 - `file-operations` → `evidence`：导入。
 - `file-operations` → `workspace`：导入。
 - `file-operations` → `tasks`：导入。
@@ -232,6 +248,7 @@ class N_src_logic_workspace["workspace/"] {
 - `governance` → `execution`：导入。
 - `governance` → `workspace`：导入。
 - `governance` → `knowledge`：导入。
+- `history` → `agents`：导入。
 - `history` → `execution`：导入。
 - `history` → `dispatch`：导入。
 - `history` → `tasks`：导入。
@@ -267,6 +284,7 @@ class N_src_logic_workspace["workspace/"] {
 - `tasks` → `runtime`：导入。
 - `team` → `engines`：导入。
 - `team` → `workspace`：导入。
+- `team` → `agents`：导入。
 - `team` → `tasks`：导入。
 - `team` → `execution`：导入。
 - `team` → `models`：导入。
@@ -296,6 +314,7 @@ class N_src_logic_workspace["workspace/"] {
 
 ## 子目录导航
 
+- [agents/](agents/ARCHITECTURE.md)：独立 Agent 对象、单次执行循环和调用调度：纯契约与实现分离，调度通过注入端口执行，不依赖 Application 或具体引擎。
 - [application/](application/ARCHITECTURE.md)：唯一应用生命周期：装配业务服务，按工作区实例打开、撤票、取消、排空与关闭；不导入 IPC 或 Electron。
 - [automation/](automation/ARCHITECTURE.md)：自动化计划、触发条件及计划契约；服务与规则分开归属，实际依赖通过明确入口验证。
 - [budget/](budget/ARCHITECTURE.md)：模型请求额度与作用域预算规则；服务与规则分开归属，实际依赖通过明确入口验证。

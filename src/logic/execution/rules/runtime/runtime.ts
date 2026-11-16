@@ -1,4 +1,5 @@
 /**
+ * 可信插入指纹包含附件清单；原生 ACK 与持久输入绑定同一材料，不把回包丢失转换为重新发送。
  * 执行前 Schema 异常转换为可读字段说明并保留错误码；此转换不用于已经执行后的失败。
  * 目录归属：logic/execution/rules/execution/runtime；运行生命周期内核。
 
@@ -8,13 +9,14 @@
  * 删除/移动只交给冻结约定的专用端口；原阶段由可信 append 保存，失败屏障与实际进程排空同样参与终态。
  * 每个正式成员运行最多暂存一次检查点，可信剩余额度允许后续运行再次停泊，零额度仍保留正常交付。
  * 受控文件边界：自身 beforeTool 可靠保存 allowed 才签发一次许可；写入及冻结删除/移动未确认后整轮限制为读取/求助并按 interrupted 封存，原失败回执不改写。停止等待文件 child 退出，失败保留原占用。
- * 作用定位：LoopRuntime 持有任务租约、工具授权与终态；显式续聊由会话选择器核实原生恢复或无交互失败重试。
+ * 主 Agent 和递归执行 Agent 直接共用本运行时；AbortSignal、引擎关闭和排空只有此处持有，不另设 Agent 循环包装。
+ * 作用定位：LoopRuntime 持有任务租约、工具授权与终态；业务 Agent 启动关联父工具，使用递归求助，历史交接保持独立。
  * 能力边界：验证准备交给所属能力，工具集合由显式装配提供；本层继续持有授权、日志、在途操作及停止排空时序。
  * 设计原因：工具先分类与计划门禁再审批；每轮进度绑定真实 workspace/task/run，成员专属工具另绑定完整实例。完整集合观察、产物验证及交付复核各持短锁，异步读取前后核知识、计划与停止；坏回包保留事实，求助/检查点不解锁，采集/验证只随真实结束释放。
  * 插入边界：核对原 run、可信周期令牌和发送前停止信号；原生接受后返回真实日志序号，适配器不能伪造该令牌。终态等待在途记录排空，接受后的保存失败仍属未知，不自动重放。
  * 核实边界：历史 reconciledToolIds 仅保留可读；新请求不能据裸调用 ID 续接 unknown。授权记录中的契约版本只取可信工具描述，旧记录不补造版本。
  * 外部写同样受原未知文件影响屏障约束，不因写入 GitHub 而绕过运行内写入禁令。
- * 引擎切换：主会话由会话选择器核对原生绑定；无交互启动失败只转交公开输入，未决工具与损坏记录仍拒绝，成员恢复保持冻结引擎。
+ * 引擎切换：产品装配先声明冻结引擎身份，在登记启动意图前核对可转交历史；适配器仍在意图后装配，避免空话题及提前依赖周期工具。
  */
 import path from 'node:path';
 import {selectEngineSession,type EngineSessionSelection} from '../engine-session';
@@ -59,12 +61,17 @@ import type {RunToolDescriptor} from '../../../tools/rules/policy/tool-policy';
 import type {WorkflowContractBinding} from '../../../tasks/rules/execution-context';
 import {workflowHasEffects} from '../../../evidence/rules/workflow-evidence';
 import {fail} from '../../../../core/errors';
+import type {AgentCallReference,AgentToolContext,AgentToolsBinding} from '../../../agents/contracts';
 import {toolInputError} from '../../../tools/rules/input-validation';
-import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt} from '../../../tasks/rules/scope-active-input';
+import {scopeActiveInputTokenSchema,type ScopeActiveInputToken,type ScopeActiveInputSendReceipt,type ScopeActiveInputPayload} from '../../../tasks/rules/scope-active-input';
 import {scopedActiveInputHash} from '../../../tasks/rules/scope-active-input-rules';
 
 /** 运行装配端口；可靠启动确认与只读事件观察分开，业务状态不能靠观察回调提交。 */
 export interface RuntimeOptions {
+  /** 可信调度装配的统一 Agent 工具；父工具批次必须独占才能把执行权交给子循环。 */
+  agentTools?(context:AgentToolContext):AgentToolsBinding;
+  /** 子循环的可信调用来源；记录查询使用此引用，不从工具参数推断父子身份。 */
+  agentCall?(taskId:string,runId:string):AgentCallReference;
   /** 应用注入的可靠存储；大脑不导入平台文件实现。 */
   storage:RunStorage;
   /** 本工作区的任务记录根目录，运行时按 taskId/runId 分层写入。 */
@@ -98,6 +105,8 @@ export interface RuntimeOptions {
   assertMemberResumeInputs?():Promise<void>;
   /** 返回覆盖完整运行生命周期的跨进程任务租约释放函数；拒绝时不创建运行日志或引擎。 */
   acquireLease(task:TaskSpec):Promise<()=>void>;
+  /** 产品装配的冻结引擎身份，用于 beforeRun 受理前预检历史；旧独立工厂缺省时仍在创建适配器后核验。 */
+  engineKind?:string;
   /** 每轮创建独立引擎，并以已确定的任务/运行身份装配工具；不接受模型指定身份。 */
   createEngine(context:{task:TaskSpec;runId:string}):AgentEngine;
   /** 复用此前纯分类结果授权或审批；没有约定的旧装配可缺 descriptor，不能在此重新解释已给分类。 */
@@ -111,11 +120,11 @@ export interface RuntimeOptions {
 export interface RunStartControl {
   /** 启动尚未进入 active 时也必须能取消；调用者负责在停止/退出时触发。 */
   signal:AbortSignal;
-  /** 租约和旧运行绑定检查之后、任何新日志/引擎之前调用，runId 由本运行时生成。 */
+  /** 租约、旧绑定及已声明引擎的历史预检后、任何新日志/引擎之前调用；runId 由运行时生成。 */
   beforeRun?(input:{task:TaskSpec;runId:string}):Promise<void>;
 }
 /** 插入绑定用户选定的原主运行；停止信号只阻止发送前准备，不撤销已确认接收。 */
-export interface RunSteerControl {expectedRunId:string;signal:AbortSignal;activeInput?:{token:ScopeActiveInputToken;attachmentIds?:string[]}}
+export interface RunSteerControl {expectedRunId:string;signal:AbortSignal;activeInput?:{token:ScopeActiveInputToken;attachmentIds?:string[];attachmentManifest?:ScopeActiveInputPayload['attachmentManifest']}}
 /** 可信调度器专用的新主上下文入口；运行/原生身份及旧运行集合由大脑在租约内生成，公开请求不能提供。 */
 export interface FreshMainStartControl {
   signal:AbortSignal;
@@ -142,9 +151,9 @@ export class LoopRuntime {
   }
   /**
    * 启动已可靠领取的成员任务。只接收新业务 taskId；调用方负责成员互斥及前一通道运行的安全核实。
-   * 本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
+   * 递归调用同样使用本入口及 beforeRun 记录父工具关系；本入口不绕过任务租约、工具门禁或日志，也不自动重试已存在任务。可信停止信号覆盖尚未登记 active 的原生准备阶段。
    */
-  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch,control?:Pick<RunStartControl,'signal'>):Promise<{runId:string;done:Promise<RunSummary>}>{
+  async startMember(task:TaskSpec,message:string,launch:MemberRunLaunch,control?:RunStartControl):Promise<{runId:string;done:Promise<RunSummary>}>{
     if(this.closing)throw Error('Loop Engine 正在关闭');
     const prepared=checkedMemberRunLaunch(launch,task);
     const pending=this.startInternal(task,message,undefined,prepared,undefined,control);this.starting.add(pending);
@@ -219,13 +228,19 @@ export class LoopRuntime {
         await this.options.storage.reserveTask(this.options.directory,task.taskId); // 已存在任务只能经显式恢复入口继续。
       }
       const runId=member?.binding.runId??randomUUID(),directory=path.join(this.options.directory,safeId(task.taskId),runId);
+      // 周期依赖的工具装配不能前移；只用冻结身份预检，不创建引擎、不登记 scope。
+      const declaredEngine=this.options.engineKind;
+      let engineSession:EngineSessionSelection|undefined=previous&&!member&&declaredEngine!==undefined
+        ?await selectEngineSession(declaredEngine,previous,id=>this.inspect(task.taskId,id)):undefined;
       control?.signal.throwIfAborted();
       if(fresh)await fresh.beforeRun({task:structuredClone(task),runId,nativeSessionId:nativeSessionId!,excludedRunIds:[...excludedRunIds!]});
       await control?.beforeRun?.({task:structuredClone(task),runId});
       control?.signal.throwIfAborted();
       // 先创建尚未启动的适配器，工具装配失败不留下空运行日志。init 成功后必须写入头和真实取消终态，不能直接抛取消而破坏整条会话读取。
       const engine=preparedEngine=this.options.createEngine({task:structuredClone(task),runId});
-      const engineSession:EngineSessionSelection=previous&&!member?await selectEngineSession(engine.kind,previous,id=>this.inspect(task.taskId,id)):{sessionFile:member?.session.sessionFile};
+      if(declaredEngine!==undefined&&engine.kind!==declaredEngine)throw Error('实际引擎与启动预检的冻结引擎身份不一致');
+      // 独立旧工厂未声明引擎时保留原检查；产品 createWorkspaceLoop 始终声明，不能走该兼容路径。
+      engineSession??=previous&&!member?await selectEngineSession(engine.kind,previous,id=>this.inspect(task.taskId,id)):{sessionFile:member?.session.sessionFile};
       const journal=this.options.storage.createJournal(directory,task,runId);await journal.init();
       let boundSessionFile:string|undefined,boundNativeSessionId:string|undefined;
       const pendingTools=new Set<string>();
@@ -247,6 +262,7 @@ export class LoopRuntime {
       let scopedExecution:RunScopedExecution|undefined;
       const taskTools=new TaskProgressTools(previous?.taskProgress,async state=>{await emit({type:'task.updated',data:{progress:state}})},{identity,assertDeliveryReady,codeChecks:{records:()=>codeChecks?.records()??[]},artifacts:()=>artifactCapture?.refs()??[],...(completeOutputRequired(workflows)?{manifests:{select:(id,version)=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');return manifestCapture.select(id,version)},verifyCurrent:async record=>{if(!manifestCapture)fail('MANIFEST_UNAVAILABLE','本轮完整产物端口尚未就绪');await manifestCapture.verifyCurrent(record,'cbim_delivery_prepare')}}}:{}),...(validationRequired?{validations:{records:()=>validation?.records()??[],verifyCurrent:async records=>{if(!validation)fail('VALIDATION_UNAVAILABLE','本轮验证端口尚未就绪');await validation.verifyCurrent(records)}}}:{}),...(workflows.length?{workflow:{bindings:workflows,task:{goal:task.goal,acceptance:task.acceptance},identity}}:{})});
       const emit=async(event:EngineEvent,trustedArtifact=false)=>{
+        if(!trustedArtifact&&event.type==='tool.updated'&&event.data.agentCall!==undefined)fail('AGENT_CALL_IDENTITY','Agent 调用引用只能由可信调度器保存');
         // 契约版本来自真实描述和授权；模型/引擎事件不能给旧调用补造新协议来源。
         if(!trustedArtifact&&event.data.contractVersion!==undefined){const {contractVersion:_,...data}=event.data;event={...event,data}}
         if(event.type==='tool.allowed'&&[controlledFileWriteToolName,artifactTransitionToolName,scopedReadToolName,scopedNodeToolName].includes(String(event.data.name))&&!trustedArtifact)fail('CONTROLLED_FILE_AUTHORIZATION','受控文件授权只能由本轮策略可靠保存');
@@ -296,7 +312,13 @@ export class LoopRuntime {
       };
       let stopping=false;
       let stopFailure:unknown;
-      const memberHelpTools=member?new MemberHelpTools(member.binding,{
+      const agentTools=this.options.agentTools?.({task,runId,emit:async event=>{await emit(event,true)},assertQuestionWait:()=>{
+        const ids=[...pendingTools];if(stopping||ids.length!==1||calls.get(ids[0])?.call.name!=='cbim_ask_user_question'||[...activeCalls].some(id=>id!==ids[0]))fail('AGENT_QUESTION_BUSY','必须等待其他工具完成后才能向调用方求助');
+      },assertExclusive:id=>{
+        if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))fail('AGENT_CALL_BUSY','存在其他在途工具或审批，不能交接 Agent 调用');
+      }});
+      // 递归调用使用同调用求助；旧终止交接/检查点仅供历史执行链。
+      const memberHelpTools=member&&!agentTools?new MemberHelpTools(member.binding,{
         save:async help=>{await emit({type:'task.help_requested',data:{help}})},
         assertReady:(id,attempted)=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id))throw Error('求助调用已停止或未获得授权');
@@ -326,7 +348,7 @@ export class LoopRuntime {
       });
       const checkpointAllowance=this.options.memberCheckpointAllowance??(memberResume?0:1);
       if(!Number.isInteger(checkpointAllowance)||checkpointAllowance<0||checkpointAllowance>memberCheckpointLimit)throw Error('成员检查点剩余额度无效');
-      if(member&&this.options.artifacts&&checkpointAllowance>0)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
+      if(member&&!agentTools&&this.options.artifacts&&checkpointAllowance>0)checkpointTools=new RunMemberCheckpoint(member.binding,this.options.artifacts,{
         current:()=>taskTools.current(),assertReady:id=>{
           if(stopping||calls.get(id)?.decision.allow!==true||!pendingTools.has(id)||[...activeCalls].some(other=>other!==id)||[...pendingTools].some(other=>other!==id))throw Error('检查点调用已停止、未获准或仍有其他在途操作');
         },save:async checkpoint=>{await emit({type:'task.checkpoint_requested',data:{checkpoint}},true)},
@@ -363,7 +385,7 @@ export class LoopRuntime {
         };
         assertReady();
         const token=activeInput?scopeActiveInputTokenSchema.parse(structuredClone(activeInput.token)):undefined;
-        if(token&&(token.runId!==runId||token.inputHash!==scopedActiveInputHash({message,...(activeInput?.attachmentIds?{attachmentIds:activeInput.attachmentIds}:{})})))fail('QUEUE_INSERT_STALE','原插入快照与准备记录不一致，原消息仍保留在队列');
+        if(token&&(token.runId!==runId||token.inputHash!==scopedActiveInputHash({message,...(activeInput?.attachmentIds?{attachmentIds:activeInput.attachmentIds}:{}),...(activeInput?.attachmentManifest?{attachmentManifest:activeInput.attachmentManifest}:{})})))fail('QUEUE_INSERT_STALE','原插入快照与准备记录不一致，原消息仍保留在队列');
         const requested=await emit({type:'engine.status',data:{metric:'insertion',state:'requested',message,...(token?{activeInput:token}:{}),label:'正在插入用户补充'}},true);
         let nativeAccepted=false;
         try{
@@ -381,13 +403,13 @@ export class LoopRuntime {
       }};
       this.injections.set(task.taskId,injection);
       // 保存输入及可信来源；显式补充仍是用户消息，成员结果不能在界面或原生上下文中冒充用户授权。
-      await emit({type:'run.started',data:{task,message,engine:engine.kind,resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
+      await emit({type:'run.started',data:{task,message,engine:engine.kind,...(agentTools?{executionModel:'agent-tools-v1'}:{}),resumeFrom:resume?.runId,reconciledToolIds:resume?.reconciledToolIds??[],...(this.options.agentCall?{agentCall:this.options.agentCall(task.taskId,runId)}:{}),...(workflows.length?{workflowContracts:workflows}:{}),...(memberResume?{memberResume:{checkpointId:memberResume.checkpointId,runId:memberResume.runId}}:{}),...(conversationBinding?{conversationBinding}:{}),...(source?{source}:{}),...(member?{memberBinding:member.binding,nativeSessionId:member.session.nativeSessionId}:{}),...(fresh?{freshMain:{nativeSessionId,excludedRunIds}}:{})}});
       await taskTools.invalidate('新一轮执行需要重新核实产物与证据');
       const stop=async()=>{
         if(stopping)return;stopping=true;artifactCapture?.stop();manifestCapture?.stop();checkpointTools?.stop();validation?.stop();codeChecks?.stop();controlledFile?.stop();artifactTransition?.stop();scopedExecution?.stop();
         try{await emit({type:'run.stop_requested',data:{}})}catch(error){stopFailure=error}
         // 记录失败不能阻止实际 abort；失败事实在收尾按 interrupted 保留，不把无日志停止写成正常求助。
-        try{await engine.stop()}catch(error){stopFailure??=error}
+        const stopped=await Promise.allSettled([engine.stop(),agentTools?.stop()]);for(const result of stopped)if(result.status==='rejected')stopFailure??=result.reason;
         if(stopFailure)throw stopFailure;
       };
       const abort=()=>{void stop().catch(()=>{})};
@@ -397,14 +419,14 @@ export class LoopRuntime {
         let failure:unknown;
         try{
           if(control?.signal.aborted)await stop();
-          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:memberToolCapabilities({codeCheckTools:codeChecks,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution}),assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
+          if(!stopping)await engine.start({task,runId,directory,sessionFile:engineSession.sessionFile,engineHandoff:engineSession.handoff,nativeSessionId:previous&&!member?engineSession.nativeSessionId:nativeSessionId,memberBinding:member?.binding,conversationBinding:conversationBinding?structuredClone(conversationBinding):undefined,source:source?structuredClone(source):undefined,capabilities:[...(agentTools?[agentTools.capability]:[]),...memberToolCapabilities({codeCheckTools:codeChecks,taskTools,memberHelpTools,artifactTools:artifactCapture?.tools,manifestTools:manifestCapture?.tools,memberCheckpointTools:checkpointTools?.tools,validationTools:validation?.tools,controlledFileTools:controlledFile,artifactTransitionTools:artifactTransition,scopedExecutionTools:scopedExecution})],assertMemberResume:memberResume?this.options.assertMemberResume:undefined,emit:async event=>{await emit(event)},beforeTool:async call=>{
             call=structuredClone(call);
             if(calls.has(call.id))return {allow:false,reason:'同一运行不能重复使用工具调用 ID'};
             const originalInput=structuredClone(call.input);let normalizationError:unknown;
             try{if(this.options.normalizeToolInput)call.input=structuredClone(this.options.normalizeToolInput(structuredClone(call)))}catch(error){normalizationError=error}
             repeatedFailures.proposed(call);
             // 验证、采集与停泊先同步预占，再进入策略；短读锁不会绕过求助/检查点的本轮结束门闩。
-            const scopedReason=executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
+            const scopedReason=agentTools?.active()&&!agentTools.allowsWhileWaiting?.(call.name)?'AGENT_CALL_ACTIVE: 当前工具正在等待执行 Agent，不能并发操作父运行':executionScope&&nativeToolDescriptor(call.name)?'EXECUTION_SCOPE_NATIVE: 冻结范围任务禁止原生文件与命令工具':scopedExecution?.guard(call.name,call.id,call.input,[...activeCalls])??(!scopedExecution&&call.name.startsWith('cbim_scoped_')?'本轮未提供范围执行能力':undefined);
             const transitionReason=scopedReason??artifactTransition?.guard(call.name,call.id,call.input,[...activeCalls])??(!artifactTransition&&call.name===artifactTransitionToolName?'本轮未提供冻结删除/移动能力':undefined);
             const controlledReason=transitionReason??controlledFile?.guard(call.name,call.id,call.input,[...activeCalls])??(!controlledFile&&call.name===controlledFileWriteToolName?'本轮未提供受控文件工具':undefined);
             const validationReason=controlledReason??codeChecks?.guard(call.name,call.id,call.input,[...activeCalls])??(!codeChecks&&call.name===codeCheckToolName?'本轮未装配代码检查':undefined)??validation?.guard(call.name,call.id,call.input,[...activeCalls])??(!validation&&call.name===validationToolName?'本轮未提供冻结要求的 JSON/CSV/PNG 产物验证工具':undefined);
@@ -430,6 +452,9 @@ export class LoopRuntime {
               }
             }catch(error){inputFailure=toolInputError(error);error=inputFailure;const code=(error as {code?:string})?.code;decision={allow:false,reason:(code?.startsWith('WORKFLOW_')?code+': ':'')+(error instanceof Error?error.message:String(error)),...(descriptor?{effects:descriptor.effects}:{})}}
             if(stopping){inputFailure=undefined;decision={...decision,allow:false,reason:'任务正在停止'}};
+            // 人工意见只授权处理意见；子调用和主运行直接工具必须遵守同一副作用屏障。
+            const humanReason=decision.allow?agentTools?.guardEffects?.(descriptor?.effects??decision.effects):undefined;
+            if(humanReason)decision={...decision,allow:false,reason:humanReason};
             // Workflow 首片仅约束业务副作用；知识提交仍沿用原来的证据失效规则，不能因分类拆分保留旧证据。
             if(decision.allow&&((descriptor?.effects??decision.effects)?.some(effect=>['business-write','knowledge-write','external-write','command'].includes(effect))||(!descriptor&&['write','edit','bash'].includes(call.name)))){
               if(workflows.length){
@@ -456,6 +481,7 @@ export class LoopRuntime {
           if(!stopping&&memberResume)await this.options.assertMemberResumeInputs!();
           if(control?.signal.aborted)await stop();
           result=stopping?{status:'cancelled' as const}:await engine.run(message);
+          if(!stopping&&agentTools?.active())fail('AGENT_REPLY_REQUIRED','仍有未答复的子调用，已停止原子树；不能报告本轮完成');
         }catch(error){
           failure=error;
         }finally{
@@ -469,6 +495,7 @@ export class LoopRuntime {
           // 只重试原收尾屏障，不重试文件写。首次退出未确认保留 active；再次 close 可确认原 child 后完成日志收尾。
           let draining:Promise<void>|undefined;
           const drain=()=>draining??=(async()=>{
+            await agentTools?.stop();
             await scopedExecution?.drain();
             await controlledFile?.drain();
             await artifactTransition?.drain();

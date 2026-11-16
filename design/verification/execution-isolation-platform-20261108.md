@@ -39,4 +39,4 @@
 
 本片只支持明确Windows x64平台端口。registryRead与Windows授予LPAC的系统资源仍可访问，不声称任意OS对象完全不可见；输出空间没有磁盘硬配额，期限需宿主事件循环正常调度，CPU/进程/提交内存由Job约束。暂未给模型原生read/write/edit/bash增加隔离，也没有任务级细粒度范围、未知执行持久核实或自动孤儿清理。下一片R12-B把这些边界接入冻结任务与可信授权，再接R09-C程序验证。
 
-中文文件头、关键接口及字段已维护于三个isolated-node源码；platform/CONTRACT.md、platform/ARCHITECTURE.md和main/ARCHITECTURE.md同步。Core/Bridge/Frontend不导入Win32，第三方koffi的私有固定加载已审核。见[支持矩阵](../task/execution-isolation-support.md)与[剩余交付](../task/remaining-deliveries.md)。本地独立提交，不推送；第1–8组继续，第9组仅计划。
+中文文件头、关键接口及字段已维护于三个isolated-node源码；platform/CONTRACT.md、platform/ARCHITECTURE.md和main/ARCHITECTURE.md同步。Core/Bridge/Frontend不导入Win32，第三方koffi的私有固定加载已审核。见[支持矩阵](../task/execution-isolation-support.md)与[剩余交付](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/task/remaining-deliveries.md)。本地独立提交，不推送；第1–8组继续，第9组仅计划。

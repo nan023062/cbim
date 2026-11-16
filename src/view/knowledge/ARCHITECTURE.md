@@ -312,3 +312,8 @@ GovernanceLaunch 明确点击后通过 loop.chat 启动对应团队/业务架构
 ArchitectureEditor 使用 ModalFrame 管理原生焦点范围与返回。Escape 和显式关闭共用既有草稿确认，busy 时不关闭；预览和提交的版本、对象及 IPC 不改变。
 
 KnowledgeFilePreview 的 FileEditor 采用同一模态边界；Escape 复用脏稿及原提交事实确认，saving 时保持打开。原请求锁定和事务身份不变；焦点机制不重新创建预览或重发写入。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

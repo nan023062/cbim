@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {goalPlanArguments,goalInspection,goalCompleteArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import {type GoalFixtureRequest} from './goal-provider-fixture';
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 
 export type WorkflowConditionMode='complete'|'missing-capability'|'stop'|'parallel-effects';
@@ -11,22 +11,20 @@ function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{rel
 
 /** Model responses are local; saved workflows, permissions, approvals and every native file receipt are real. */
 export async function workflowConditionProvider(mode:WorkflowConditionMode='complete'){
-  const d=workflowConditionFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],beforePlan=gate(),beforeRead=gate();let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
-  const state:{earlyWrite?:any;prematureDelivery?:any;delivery?:any;blockedTask?:unknown;parallelInspect?:any;staleStep?:any}={};
+  const d=workflowConditionFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[],beforePlan=gate(),beforeRead=gate();let moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
+  const state:{earlyWrite?:any;prematureDelivery?:any;delivery?:any;call?:any;check?:any;parallelInspect?:any;staleStep?:any}={};
   const server=http.createServer(async(req,res)=>{try{
-    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(value=>value.function.name==='cbim_dispatch_task')===true,turn=(isMain?main:member).length;(isMain?main:member).push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(value=>value.function.name==='cbim_agent_result_review')===true,turn=(isMain?main:member).length;(isMain?main:member).push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'workflow-condition-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const batch=(calls:Array<{id:string;name:string;args:unknown}>)=>{emit({role:'assistant',tool_calls:calls.map((call,index)=>({index,id:call.id,type:'function',function:{name:call.name,arguments:JSON.stringify(call.args)}}))});emit({},'tool_calls')},tool=(id:string,name:string,args:unknown)=>batch([{id,name,args}]),reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(value=>!['cbim_task_help','cbim_task_checkpoint'].includes(value.function.name)));
-      if(turn===0){assert.ok(ownerSelection,'测试必须先通过真实登记/责任查询准备岗位选择');tool('workflow-goal-plan','cbim_goal_plan',goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance,ownerSelection}))}
-      else if(turn===1)tool('workflow-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      else if(turn===2)reply('已按真实模块Workflow派发执行任务。');
-      else if(turn===3){if(mode==='missing-capability'){const source=JSON.stringify(body.messages);assert.ok(source.includes('当前权限或引擎未提供 Workflow 必需工具：write'),'主会话必须收到真实缺能力 limitation，不能只听模型假设');}tool('workflow-inspect','cbim_goal_inspect',{})}
-      else if(turn===4){
-        if(mode==='missing-capability'){const {scope,graph}=goalInspection(body,'workflow-inspect'),task=graph.tasks.find(value=>value.scopeId===scope.scopeId);assert.ok(task);assert.equal(task.result,undefined);assert.notEqual(task.status,'result_ready');state.blockedTask=task;tool('workflow-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(value=>({criterionId:value.id,outcome:'unmet',reason:'当前只读权限不具备模块Workflow要求的write能力',evidence:[]})),superseded:[],gaps:['需具备真实write能力及相应权限，不能凭模型自述完成'],reason:'成员启动前能力核验拒绝，未执行业务'})}
-        else tool('workflow-review','cbim_goal_review',goalCompleteArguments(body,'workflow-inspect'));
-      }else if(turn===5){const reviewed=result(body,'workflow-review');assert.equal(reviewed.goal?.review?.decision,mode==='missing-capability'?'blocked':'complete','主调度必须得到真实保存的审阅回执');reply(mode==='missing-capability'?'缺少实际执行能力，本目标没有完成。':d.final);}
+      if(turn===0){assert.ok(ownerSelection);tool('workflow-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}})}
+      else if(turn===1){
+        state.call=result(body,'workflow-call');
+        if(mode==='missing-capability'){assert.match(JSON.stringify(state.call),/WORKFLOW_TOOL_UNAVAILABLE/);assert.equal(state.call.error.started,false);reply('缺少实际执行能力；原调用未启动，没有完成业务任务。')}
+        else{assert.equal(state.call.status,'completed');assert.equal(state.call.verification.state,'verified');tool('workflow-check','cbim_agent_result_check',{callId:'workflow-call'})}
+      }else if(turn===2){state.check=result(body,'workflow-check');assert.equal(state.check.state,'verified');reply('原调用的 Workflow 工具条件已核实，仍未进行人工业务验收。')}
       else throw Error('Workflow fixture不允许重放主运行 '+turn);
     }else{
       assert.notEqual(mode,'missing-capability','缺实际工具能力时不得启动成员模型');
@@ -56,5 +54,5 @@ export async function workflowConditionProvider(mode:WorkflowConditionMode='comp
     res.end('data: [DONE]\n\n');
   }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Workflow condition fixture failed')}});
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');const releaseAll=()=>{beforePlan.release();beforeRead.release()};
-  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=structuredClone(selection)},releasePlan:()=>beforePlan.release(),releaseRead:()=>beforeRead.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,main,member,errors,sequence,state,bind:(_agent:string,module:string,selection:OwnerExecutionSelection)=>{moduleId=module;ownerSelection=structuredClone(selection)},releasePlan:()=>beforePlan.release(),releaseRead:()=>beforeRead.release(),releaseAll,close:async()=>{releaseAll();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

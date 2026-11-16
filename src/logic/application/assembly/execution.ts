@@ -1,4 +1,5 @@
 /**
+ * 统一 Agent 路径：可信 launch.executionModel 选择独立 Agent 调度装配，主/子共用对象与执行循环；旧 Auto/Team 规则仅用于旧日志续接。
  * 主模型和附加角色交由同一次引擎配置解析，不重新选择单独角色。
  * 目录归属：logic/application/assembly；应用与执行服务装配。
 
@@ -16,6 +17,8 @@
  * 执行工厂把宿主的固定引擎解析端口传给调度装配；公开聊天选项不能替换该端口或传入下载路径。
  */
 import path from 'node:path';
+import type {ControlledFileTransport} from '../../file-operations/platform/files/controlled-file-protocol';
+import {createArtifactTransitionPort} from '../../file-operations/service/artifact-transitions';
 import type {WebToolsPort} from '../../web';
 import {FileRunStorage} from '../../execution/storage/run-storage';
 import {ChatInputs} from '../../materials/service/chat-inputs';
@@ -40,6 +43,8 @@ import {mainModuleOwnershipTools} from '../../workspace/service/main-module-owne
 import type {ModuleOwnerships} from '../../workspace/service/module-ownerships';
 import type {WorkspaceMembers} from '../../team/service/workspace-members';
 import type {ModelRequestBudgetService} from '../../budget/runtime/model-request-budget-service';
+import {createAgentCallAssembly} from './agent-calls';
+import type {AgentBusinessServices} from './agent-business';
 
 /**
  * 每个工作区实例装配独立管理器；锁键和访问策略固定绑定本实例身份。
@@ -47,7 +52,7 @@ import type {ModelRequestBudgetService} from '../../budget/runtime/model-request
  * 独立 CLI/测试未装配 dispatch 时保留旧只按会话执行的边界，不编造已登记的成员身份。
  * repositories 是可选可信服务，不接受运行选项提供地址或授权；每次工厂调用固定自己的连接代际。
  */
-export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver){
+export function createExecutionManager(workspace:Workspace,models:EngineModelProfiles,lease=new WorkspaceExecutionLease(),collaboration?:()=>AutoCollaboration|undefined,dispatch?:WorkspaceDispatchService,admission?:WorkspaceAdmission,repositories?:RepositoryConnections,ownerships?:{service:ModuleOwnerships;members:WorkspaceMembers},requestBudgets?:ModelRequestBudgetService,feedback?:GitHubFeedback,web?:WebToolsPort,engineRuntimes?:EngineRuntimeResolver,controlledTransport?:ControlledFileTransport,businessServices?:AgentBusinessServices){
   const storage=new FileRunStorage();
   return new WorkspaceExecutionManager(workspace,storage,async(options,task,launch)=>{
     const llm=options.profileId?await models.resolve(options.profileId,options.model,options.engine,options.modelRoles):undefined;
@@ -63,9 +68,17 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
     }
     const conversationBinding=task.mode==='chat'?await dispatch?.conversationBinding(task):undefined;
     const repositoryTools=task.mode==='chat'?await repositories?.prepareTools({workspaceId:workspace.entry.id,instanceId:workspace.instanceId}):undefined;
+    const authorizeNative:import('../../execution/assembly/loop-engine').ExecutionServices['authorizeNative']=async call=>{
+      workspace.assert();const mapped=call.name==='find'?'Glob':call.name;const reason=guard({name:mapped,input:call.input},workspace.entry.path);return {allow:!reason,reason};
+    };
+    const agentCalls=launch.executionModel==='agent-tools-v1'?createAgentCallAssembly({models,workspace,task,options:{...options,engineRuntimes},llm,storage,members:ownerships?.members,admission,dispatch,requestBudgets,authorizeNative,businessServices,
+      // 每个业务子调用独立捕获工作区身份；仅复用已有受控工人，不降级到任意文件命令。
+      artifactTransitions:()=>createArtifactTransitionPort(workspace,controlledTransport,()=>admission?.isCurrent()??false),
+    }):undefined;
     return createWorkspaceLoop(workspace.paths,workspace,{...options,llm,images,engineRuntimes},{
     storage,
-    requestBudget:requestBudgets?({task,runId},role)=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm,role):undefined,
+    ...agentCalls,
+    requestBudget:agentCalls?agentCalls.requestBudget:requestBudgets?({task,runId},role)=>requestBudgets.forRun({rootSessionId:task.taskId,taskId:task.taskId,runId,kind:'main'},llm,role):undefined,
     conversationBinding,
     repositoryTools,
     // 主会话使用同一实例的公开网页端口；每次网络前后核实工作区仍有效。
@@ -73,8 +86,8 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
     feedbackTools:task.mode==='chat'&&feedback?()=>feedback.prepare({workspaceId:workspace.entry.id,rootSessionId:task.taskId},()=>workspace.assert()):undefined,
     feedbackStatus:task.mode==='chat'&&feedback?scope=>{workspace.assert();return feedback.auth.checkConnection(scope)}:undefined,
     governanceTools:conversationBinding?({task,runId})=>mainGovernanceTools(workspace,task,runId,conversationBinding):undefined,
-    ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context,dispatch?.owners),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
-    memberTools:conversationBinding&&ownerships?({task,runId})=>{const context=collaboration?.()?.mainToolContext(task,runId);return context?{port:mainWorkspaceMemberTools(workspace,ownerships.members,task,runId,conversationBinding,context),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
+    ownershipTools:conversationBinding&&ownerships?({task,runId})=>{const context=agentCalls?agentCalls.mainToolContext(task,runId):collaboration?.()?.mainToolContext(task,runId);return context?{port:mainModuleOwnershipTools(workspace,ownerships.service,ownerships.members,task,runId,conversationBinding,context,dispatch?.owners),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
+    memberTools:conversationBinding&&ownerships?({task,runId})=>{const context=agentCalls?agentCalls.mainToolContext(task,runId):collaboration?.()?.mainToolContext(task,runId);return context?{port:mainWorkspaceMemberTools(workspace,ownerships.members,task,runId,conversationBinding,context),binding:{...context.binding,instanceId:workspace.instanceId,agentInstanceId:conversationBinding.agentInstanceId,agentSessionId:conversationBinding.agentSessionId}}:undefined}:undefined,
     dispatchTools:({task,runId})=>collaboration?.()?.tools(task,runId,options),
     acquireLease:async task=>{
       workspace.assert();
@@ -86,11 +99,6 @@ export function createExecutionManager(workspace:Workspace,models:EngineModelPro
       try{const lock=new KernelLock(directory,hash(workspace.entry.id+':'+task.taskId),'loop');return ()=>{try{lock.close()}finally{release()}}}
       catch(error){release();throw error}
     },
-    authorizeNative:async call=>{
-      workspace.assert();
-      const mapped=call.name==='find'?'Glob':call.name;
-      const reason=guard({name:mapped,input:call.input},workspace.entry.path);
-      return {allow:!reason,reason};
-    },
+    authorizeNative,
   });},ids=>new ChatInputs(workspace).images(ids),(input,signal)=>new ChatInputs(workspace).prepareContinuation(input.message,input.attachmentIds,signal));
 }

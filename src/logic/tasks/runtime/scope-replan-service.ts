@@ -1,4 +1,5 @@
 /**
+ * 递归修复依据真实封存业务与原验收文本，核实全部模块、当前文件与旧影响；无法恢复原要求时保守拒绝。
  * 目录归属：logic/tasks/runtime；目标状态与核证恢复服务。
  * 作用定位：在完成的只读核实基础上创建独立业务周期，冻结真实证据、原人工约束和用户明确的新目标。
  * 设计原因：旧任务和未知回执保持封存；事务外核实主/成员来源及完整只读证据，知识短锁内仅做 Store CAS。重复命令先读原回执，明确处置只关联新目标，不修正旧失败。
@@ -46,6 +47,22 @@ export class ScopeReplanService {
     const original=inspection.recovery.source,main='kind' in original&&original.kind==='main_run';
     const sourceTaskId='taskId' in original?original.taskId:undefined;
     const source=state.scopes?.find(item=>item.scopeId===original.scopeId),task=sourceTaskId?graph.tasks.find(item=>item.taskId===sourceTaskId):undefined;
+    if('executionModel' in original&&original.executionModel==='agent-tools-v1'){
+      check(source?.goal&&source.status==='closed'&&source.rootSessionId===input.rootSessionId&&this.logs&&this.effects,'REPLAN_SOURCE_INVALID','递归原来源缺失');
+      const run=state.agentBusinessRuns?.find(run=>run.binding.taskId===original.taskId&&run.binding.runId===original.runId&&run.scopeId===source.scopeId);
+      check(run?.request&&run.status==='closed','REPLAN_LEGACY','原业务没有冻结目标及验收要求，不能从损坏日志推断');
+      const verified=await this.goals.validateCompletedInspection(state,inspection);
+      const required=[...new Set(run.prepared.modules.map(module=>module.binding.moduleId))].sort();
+      check(required.length>0&&required.every(id=>verified.coveredModuleIds.includes(id)),'REPLAN_PROOF_INVALID','核实未覆盖全部原业务模块');
+      const snapshot=await this.owner.snapshot();check(snapshot.revision===verified.knowledgeRevision,'REPLAN_KNOWLEDGE_CHANGED','知识已变化');
+      const modules=await resolveDispatchModules(snapshot,required),subject={kind:'member_run' as const,taskId:original.taskId,runId:original.runId,toolCallIds:original.toolCallIds};
+      const selection={workspaceId:input.workspaceId,rootSessionId:input.rootSessionId,subject},observe=()=>withinMainRun?this.effects!.observeFromMain(selection):this.effects!.observe(selection),report=await observe();
+      check(report.consistency==='stable'&&report.source.execution!=='in_flight'&&report.source.scopeId===source.scopeId,'REPLAN_STALE','原影响依据已变化');
+      const proof:InspectionProof={kind:'member_run',executionModel:'agent-tools-v1',inspectionGoalRevision:inspection.goal!.revision,inspectionRunId:inspection.recovery.context.initialRunId,knowledgeRevision:verified.knowledgeRevision,sourceScopeId:source.scopeId,sourceTaskId:original.taskId,sourceRunId:original.runId,sourceToolCallIds:original.toolCallIds,sourceReportBasis:report.basis,evidenceDigest:verified.evidenceDigest,requiredModules:modules.map(module=>({moduleId:module.moduleId,name:module.name})),inheritedHuman:[],sourceAcceptance:[...run.request.acceptance]};
+      check((await observe()).basis===report.basis&&(await this.owner.read()).revision===verified.knowledgeRevision,'REPLAN_STALE','核证期间依据变化');
+      const graphCursor={streamId:graph.cursor.streamId,seq:graph.cursor.seq};
+      return {proof,basis:hash(json({identity:input,graphCursor,proof})),graphCursor};
+    }
     check(source?.goal?.plan&&source.status==='closed'&&source.rootSessionId===input.rootSessionId&&(main||task?.scopeId===source.scopeId),'REPLAN_LEGACY','原业务缺少可信目标计划，不能推断或补造人工验收条件');
     check(this.logs,'REPLAN_PROOF_INVALID','没有可用的可信运行核实入口');
     const verified=await this.goals.validateCompletedInspection(state,inspection),required=[...new Set([...(task?.modules.map(item=>item.moduleId)??[]),...source.goal.plan.assignments.flatMap(item=>item.moduleIds)])].sort();

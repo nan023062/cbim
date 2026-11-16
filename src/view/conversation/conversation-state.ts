@@ -1,6 +1,6 @@
 /**
  * 作用定位：把主模型运行、开放调度周期和普通消息队列转换为输入区操作状态。
- * 设计原因：普通发送始终是新任务，开放话题（包括持久等待）期间排队；补充必须走显式话题入口。等待事实优先于迟到 running 日志。
+ * 设计原因：执行和持久等待分别投影；shouldQueue 仅描述普通队列准入，主输入在 waiting 时先走原目标补充入口。等待事实优先于迟到 running 日志。
  */
 import type {RunSummary} from '../../bridge/contracts/execution';
 import type {ScopeSummary} from '../../bridge/contracts/dispatch';

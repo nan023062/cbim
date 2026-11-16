@@ -6,7 +6,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {pendingTopicInterruption} from '../../bridge/contracts/dispatch';
 import type {PublicDispatchScope,TopicInterruptionRequest} from '../../bridge/contracts/dispatch';
 import {ChannelDraftInput} from './ChannelDraftInput';
-import type {ChannelDraftView} from './useChannelDraft';
+import {useChannelDraft,type ChannelDraftView} from './useChannelDraft';
 import {TopicInterruptionController} from './topic-interruption-state';
 
 /** 外层以工作区实例、话题和输入版本作 key；隐藏会话不允许新提交，已在途请求仍保留回执。 */
@@ -32,3 +32,6 @@ export function TopicInterruptionForm({scope,options,active,onRefresh,draft}:{sc
     {state.request&&<><button disabled={state.pending} onClick={()=>void execute(()=>controller.query())}>查询原请求</button>{!state.receipt&&scope.status!=='closed'&&<button disabled={!active||state.pending} onClick={()=>void execute(()=>controller.retry())}>原请求重试</button>}<details><summary>提交标识</summary><code>{state.request.commandId}</code></details></>}
   </details>;
 }
+
+/** 旧历史恢复仍用原作用域草稿，普通对话不创建新的频道。 */
+export function LegacyTopicInterruptionForm(props:Omit<Parameters<typeof TopicInterruptionForm>[0],'draft'>){const draft=useChannelDraft(props.scope,props.active);return <TopicInterruptionForm {...props} draft={draft}/>;}

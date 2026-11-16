@@ -1,4 +1,5 @@
 /**
+ * 递归只读核实交由独立证据核证器验证；旧目标计划和审阅分支保留原约束。
  * 候选审阅与最终目标验收分开：当前主运行核实原候选后保存一次决定，拒绝候选不能作为完成证据。
  * 目录归属：logic/tasks/runtime；目标状态与核证恢复服务。
 
@@ -15,6 +16,7 @@
  * 输入边界：运行中补充按真实接收提升输入版本；未决记录阻止推进，审阅、完成和安全等待还双向核对可信插入日志，不能沿旧审阅遗漏新增要求。
  * GitHub 外部提交计入副作用时序，但不充当主知识提交或业务验收证据。
  */
+import {RecursiveInspectionEvidence} from '../../evidence/runtime/recursive-inspection-evidence';
 import {resolveExecutionModules} from '../../execution/context/automatic-context';
 import {sameAutomaticExecutionForModules,type AutomaticExecutionBinding} from '../../team/rules/automatic-execution';
 import {z} from 'zod';
@@ -56,6 +58,7 @@ import type {CancelQueuedTasksInput} from '../rules/queued-task-cancel';
 
 /** 端口只按可信已登记身份读取 canonical 日志；不能接受模型提供路径或摘要。 */
 export interface ScopeGoalPorts {
+  inspectAgent?(taskId:string,runId:string):Promise<RunSummary>;
   inspectMember(run:DispatchRun):Promise<RunSummary>;
   inspectMain(rootSessionId:string,runId:string):Promise<RunSummary>;
   /** 与执行端同一纯路径规则及只读文件能力；不得通过报告服务重入当前派发事务。 */
@@ -460,6 +463,7 @@ export class ScopeGoalService {
    * 全部主链与成员运行均读取 canonical 记录；旧业务的未知事实不在此更正。返回哈希只是这批记录的版本证明，不是业务产物指纹。
    */
   async validateCompletedInspection(state:DispatchState,scope:DispatchScope):Promise<{knowledgeRevision:string;evidenceDigest:string;coveredModuleIds:string[]}>{
+    if(scope.recovery&&'executionModel' in scope.recovery.source&&scope.recovery.source.executionModel==='agent-tools-v1')return RecursiveInspectionEvidence.verify(state,scope,this.owner,{...this.logs(),validateActiveInputs:summary=>validateScopeActiveInputLog(scope,summary)});
     const logs=this.logs(),graph=this.graph(state,scope),goal=scope.goal,review=goal?.review,recovery=scope.recovery;
     check(scope.status==='closed'&&scope.outcome==='completed'&&recovery&&goal&&!goal.blocked&&goal.plan&&review?.decision==='complete'&&review.revision===goal.revision&&review.planRevision===goal.plan.revision,'REPLAN_SOURCE_INVALID','只能从已完成并通过目标审阅的只读核实周期创建业务新周期');
     check(!goalNeedsReplan(goal)&&goalInputRevision(review)===goalInputRevision(goal)&&goal.plan.knowledgeRevision===review.knowledgeRevision,'REPLAN_PROOF_INVALID','核实计划、输入和审阅版本不一致');

@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import {WorkspaceExecutionManager} from '../src/logic/conversation/runtime/execution-manager';
+import {Agent} from '../src/logic/agents/agent';
 import type {ExecutionCollaboration} from '../src/logic/conversation/runtime/execution-manager';
 import {LoopRuntime} from '../src/logic/execution/rules/runtime/runtime';
 import type {AgentEngine,EngineContext,RunInputSource,TaskSpec} from '../src/logic/execution/rules/types';
@@ -14,6 +15,35 @@ import type {ExecutionLaunchContext,ExecutionAdmissionWait} from '../src/logic/e
 import {admissionRequestId,acquireExecutionLease} from '../src/logic/application/assembly/execution-admission';
 
 const options={provider:'test',model:'model-one',permission:'ask' as const,allowNativeExecution:true};
+
+test('统一 Agent 根运行只使用独立生命周期，不触发旧协调器',async()=>{
+  const f=await fixture();
+  const lifecycle={beforeRun:vi.fn(async()=>{}),settled:vi.fn(async()=>{}),failed:vi.fn(async()=>{})};
+  const original=f.factory.getMockImplementation()!;
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  try{
+    const run=await f.manager.chat('通过统一工具执行',options);
+    expect(f.factory.mock.calls[0][2].executionModel).toBe('agent-tools-v1');
+    expect(lifecycle.beforeRun).toHaveBeenCalledWith(run.runId,{message:'通过统一工具执行',attachmentIds:undefined});
+    expect(f.starting).not.toHaveBeenCalled();
+    f.runs[0].finish('completed');
+    await vi.waitFor(()=>expect(lifecycle.settled).toHaveBeenCalledWith(expect.objectContaining({runId:run.runId,status:'completed'})));
+    expect(f.settled).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
+  }finally{await f.cleanup()}
+});
+
+test('统一 Agent 受理失败归原生命周期，不能调用旧失败清理',async()=>{
+  const f=await fixture();const refusal=new Error('budget denied');
+  const lifecycle={beforeRun:vi.fn(async()=>{throw refusal}),settled:vi.fn(async()=>{}),failed:vi.fn(async()=>{})};
+  const original=f.factory.getMockImplementation()!;
+  f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+  try{
+    await expect(f.manager.chat('拒绝前不得派发',options)).rejects.toThrow('budget denied');
+    expect(lifecycle.failed).toHaveBeenCalledWith(refusal);
+    expect(f.starting).not.toHaveBeenCalled();expect(f.startFailed).not.toHaveBeenCalled();
+    expect(f.runs[0].message).toBeUndefined();
+  }finally{await f.cleanup()}
+});
 const source=(continuationId='continuation-one',messageIds=['result-one'],taskIds=['member-task-one']):RunInputSource=>({kind:'member-results',continuationId,messageIds,taskIds});
 
 function occupied(admission:GlobalRunAdmission){
@@ -297,4 +327,40 @@ test('用户队列容量不足保留并暂停原消息，释放额度不会把�
     await f.manager.continueQueue(chat.taskId);expect(await f.manager.queued(chat.taskId)).toEqual([]);
     await f.finish(f.runs.length-1);
   }finally{release();await f.cleanup()}
+});
+
+test('活动原运行的未决工具只允许补充排队，不启动新模型或接受核实 ID',async()=>{
+  const f=await fixture(undefined,true);
+  try{
+    const run=await f.manager.chat('原运行',options);
+    const call={id:'active-agent-call',name:'write',input:{path:'result.txt',content:'pending'}};
+    expect((await f.runs[0].context!.beforeTool(call)).allow).toBe(true);
+    await expect(f.manager.resume(run.taskId,run.runId,'不能用 ID 绕过',options,[call.id])).rejects.toMatchObject({code:'COLLABORATION_BUSY'});
+    const queued=await f.manager.resume(run.taskId,run.runId,'保留新的用户要求',{...options,model:'model-two'});
+    expect(queued).toMatchObject({taskId:run.taskId,runId:run.runId,queued:true});
+    expect(f.factory).toHaveBeenCalledTimes(1);
+    expect(await f.manager.queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'pending',options:{model:'model-two'}}]);
+    await f.manager.stop(run.taskId);
+    expect(await f.manager.queued(run.taskId)).toMatchObject([{message:'保留新的用户要求',status:'paused'}]);
+    await expect(f.manager.resume(run.taskId,run.runId,'历史未知操作不能排队恢复',options)).rejects.toMatchObject({code:'RECOVERY_INSPECTION_REQUIRED'});
+    expect(f.factory).toHaveBeenCalledTimes(1);
+  }finally{await f.cleanup()}
+});
+
+test.each([false,true])('closing waits for unified Agent durable settlement and reports its failure (%s)',async reject=>{
+ const f=await fixture();let release!:()=>void;const gate=new Promise<void>(resolve=>release=resolve);
+ const lifecycle={beforeRun:vi.fn(async()=>{}),settled:vi.fn(async()=>{await gate;if(reject)throw Error('durable settlement failed')}),failed:vi.fn(async()=>{})};
+ const original=f.factory.getMockImplementation()!;
+ f.factory.mockImplementation(async(...args)=>({...await original(...args),agent:new Agent({id:'cbim:main',name:'main',instructions:'',permission:'ask'},{workspaceId:args[1].workspaceId,taskId:args[1].taskId}),unifiedAgentTools:true,agentLifecycle:lifecycle}));
+ try{
+  const run=await f.manager.chat('关闭仍需保存原运行事实',options);
+  await f.manager.enqueue(run.taskId,'关闭后不得自动执行',options);
+  let done=false;const closing=f.manager.close();const observed=closing.then(()=>{done=true;return undefined},error=>{done=true;return error});
+  await vi.waitFor(()=>expect(lifecycle.settled).toHaveBeenCalledTimes(1));
+  expect(done).toBe(false);expect(f.runs).toHaveLength(1);
+  expect(lifecycle.settled).toHaveBeenCalledWith(expect.objectContaining({runId:run.runId,status:'cancelled'}));
+  release();const failure=await observed;
+  if(reject)expect(failure?.message).toBe('durable settlement failed');else expect(failure).toBeUndefined();
+  expect(f.settled).not.toHaveBeenCalled();expect(f.runs).toHaveLength(1);
+ }finally{release();await f.cleanup()}
 });

@@ -108,7 +108,7 @@ class N_src_logic_history_runtime_agent_history_ts_AgentHistoryService["AgentHis
 N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_agent_history_ts_AgentHistoryService : 声明
 ```
 
-直接依赖：[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)、[../../team/rules/session-history.ts](../../team/rules/session-history.ts)、[../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)、[../../runtime/monitoring/public-run-events.ts](../../runtime/monitoring/public-run-events.ts)。
+直接依赖：[../../agents/contracts.ts](../../agents/contracts.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../execution/rules/conversation-binding.ts](../../execution/rules/conversation-binding.ts)、[../../execution/rules/member-run.ts](../../execution/rules/member-run.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/member-events.ts](../../tasks/rules/member-events.ts)、[../../team/rules/session-history.ts](../../team/rules/session-history.ts)、[../../team/rules/session-history-storage.ts](../../team/rules/session-history-storage.ts)、[../../runtime/monitoring/public-run-events.ts](../../runtime/monitoring/public-run-events.ts)。
 
 
 ## 子目录导航
@@ -118,3 +118,11 @@ N_src_logic_history_runtime_agent_history_ts ..> N_src_logic_history_runtime_age
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+## 新递归运行归档
+
+AgentHistoryService 在 run.started 核对 agent-tools-v1 与原父引用，允许业务成员绑定来自 loop 日志。索引保存原 agentCall；增量、恢复和详情读取都不得更换引用。旧 member 日志不接受新引用，缺协议或错身份仍显示诊断，不通过改目录或重放补齐。列表依旧仅读索引，正文依旧按原 journal/task/run 读取。

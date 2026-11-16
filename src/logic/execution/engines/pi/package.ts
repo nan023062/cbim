@@ -1,4 +1,5 @@
 /**
+ * 1.1.1 冻结递归 Agent 请求预算协议；与已公开 1.1.0 使用不同制品身份，旧会话不被静默改投。
  * 本包版本携带静态能力声明，随完整文件清单验签并在创建实例前核对。
  * 作用定位：Pi 官方包的统一工厂入口，拥有 SDK 版本和进程准备策略。
  * 设计原因：宿主不再知道 Pi 的启动脚本或 SDK 版本；开发模式仍可注入受控 RPC 进程。
@@ -25,4 +26,4 @@ function command(options:EngineAdapterOptions){
   }
   throw Error('缺少 Pi 运行时，请先安装项目依赖');
 }
-export const engineAdapter:EngineAdapter=Object.freeze({protocol:1,id:'pi',version:'1.1.0',descriptor:engineDescriptor('pi'),create:(options:EngineAdapterOptions)=>new PiEngine({...options,process:command(options)})});
+export const engineAdapter:EngineAdapter=Object.freeze({protocol:1,id:'pi',version:'1.1.1',descriptor:engineDescriptor('pi'),create:(options:EngineAdapterOptions)=>new PiEngine({...options,process:command(options)})});

@@ -10,7 +10,8 @@ import {outputManifestReportSchema} from '../src/logic/evidence/rules/output-man
 import {outputManifestHash} from '../src/logic/evidence/rules/output-manifest-evidence';
 import {hash} from '../src/core/platform/node/serialization';
 export {workflowConditionRecords as manifestRecords} from './workflow-condition-fixture';
-export {reportFiles as manifestLogFiles} from './execution-report-fixture';
+import {reportFiles} from './execution-report-fixture';
+export const manifestLogFiles=(user:string,workspaceId:string,taskId:string,runId:string)=>reportFiles(user,workspaceId,taskId,runId,'agent-tools-v1');
 
 export async function seedOutputManifest(app:Application,project:string,provider:Pick<Awaited<ReturnType<typeof outputManifestProvider>>,'url'|'bind'>){
   const models=await app.models.save({profile:{name:'Complete output manifest fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:d.model,models:[{id:d.model,name:'Complete manifest fixture',enabled:true,contextWindow:65536,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}}),profile=models.profiles.find(item=>item.name==='Complete output manifest fixture');assert.ok(profile);

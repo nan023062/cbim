@@ -2,13 +2,13 @@
  * 可选executionScope冻结文件/目录边界与固定Node预算，产物/验证须在本模块范围内；全任务混合模式另由执行知识校验拒绝。
  * 作用定位：定义模块 Workflow 正文中可选执行条件的严格协议，供知识治理、资源包与执行准备共同解析。
  * 设计原因：自然语言方法仍由模型运用，只有显式声明的少量稳定条件才交程序检查；坏声明不能静默退回无约束流程。
- * 职责边界：纯解析，JSON/CSV/PNG要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
+ * 职责边界：纯规则解析及启动能力预检，JSON/CSV/PNG要求固定产物与受限结构；普通artifactScope只声明观察，删除/移动约定须启用requireCompleteManifest并核原操作。不读取工程或签发权限。
  */
 import {codeCheckRequirementSchema} from './code-check';
 import {z} from 'zod';
 import {fail} from '../../../core/errors';
 import {parseJson} from '../../../core/json';
-import {boundedJsonSchemaSchema} from './json-validation-schema';
+import {boundedJsonSchemaSchema,jsonValidationLimits} from './json-validation-schema';
 import {csvTableSchema} from './csv-validation-schema';
 import {pngImageSchema} from './png-validation-schema';
 import {artifactScopeSchema} from './artifact-scope';
@@ -48,6 +48,27 @@ export const workflowContractSchema=z.object({
   if(new Set(ids).size!==ids.length)context.addIssue({code:z.ZodIssueCode.custom,path:['delivery','requiredToolEvidence'],message:'证据要求 ID 不能重复'});
 });
 export type WorkflowContract=z.infer<typeof workflowContractSchema>;
+
+/** 可信启动方提供当前引擎/权限下的能力；目录可见不等于获准执行，不由模型自行声明。 */
+export interface WorkflowCapabilities {
+  availableTools?:readonly string[];
+  scopedTools?:readonly string[];
+  availableValidators?:readonly string[];
+  artifacts:boolean;
+}
+/** 原派工和递归调用共用的启动前检查；缺能力即拒绝，不建运行、不申请工具审批或自动提高权限。 */
+export function assertWorkflowCapabilities(bindings:readonly {contract:WorkflowContract}[],capabilities:WorkflowCapabilities):void{
+  const scoped=preparedExecutionScope(bindings),available=scoped?capabilities.scopedTools:capabilities.availableTools;
+  if(scoped&&!available)fail('EXECUTION_SCOPE_UNAVAILABLE','本机引擎没有实际范围执行能力');
+  if(!bindings.length)return;
+  if(!available)fail('WORKFLOW_CAPABILITIES_UNAVAILABLE','本次引擎未提供可信工具能力清单，不能执行带约定的 Workflow');
+  const missing=[...new Set(bindings.flatMap(binding=>binding.contract.delivery?.requiredToolEvidence?.map(item=>item.toolName)??[]))].filter(name=>!available.includes(name));
+  if(missing.length)fail('WORKFLOW_TOOL_UNAVAILABLE','当前权限或引擎未提供 Workflow 必需工具：'+missing.join('、'));
+  const requirements=bindings.flatMap(binding=>binding.contract.delivery?.requiredValidations??[]);
+  if(requirements.length>jsonValidationLimits.records)fail('WORKFLOW_VALIDATION_LIMIT','本任务的结构验证要求超过单轮记录上限，请拆分明确模块任务');
+  const validators=[...new Set(requirements.map(item=>item.validator))];
+  if(validators.some(validator=>!capabilities.availableValidators?.includes(validator))||validators.length&&!capabilities.artifacts)fail('WORKFLOW_VALIDATION_UNAVAILABLE','当前引擎或文件端口未提供 Workflow 必需结构验证能力');
+}
 
 function invalid(reason:string):never{fail('WORKFLOW_CONTRACT_INVALID','Workflow 执行约定无效：'+reason)}
 /**

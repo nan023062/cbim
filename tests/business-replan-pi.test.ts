@@ -1,55 +1,65 @@
-import {required} from './support/assertions';
-import {expect,it,vi} from 'vitest';
+import {expect,it} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {fixture} from './helpers';
 import {businessReplanProvider,businessReplanFixture as data} from './business-replan-provider';
-import {prepareBusinessReplan} from './business-replan-fixture';
+import {prepareRecursiveReplan} from './recursive-replan-fixture';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
-import type {ReplanRequest,ReplanReceipt,ReplanPreview} from '../src/logic/tasks/rules/scope-replan';
-import type {ConversationThreadView} from '../src/logic/execution/rules/types';
+import type {ReplanRequest} from '../src/logic/tasks/rules/scope-replan';
 
-it.each(['execute','ask','stop'] as const)('creates explicit independent business work after real read-only evidence (%s)',async mode=>{
-  const f=await fixture(),provider=await businessReplanProvider({holdBusiness:true,holdOld:true});let app=f.app;
-  try{
-    const seeded=await prepareBusinessReplan(app,f.a,f.user,provider),{entry,identity,profileId,inspection,inspectionTask,oldTask,oldScope,originalGraph,corruption,marker,markerStat}=seeded;
-    const scopes=()=>seeded.scopes(),graph=()=>app.dispatch('dispatch.graphSnapshot',{identity}),previewQuery={...identity,inspectionScopeId:inspection.scopeId},dispatchFile=path.join(f.user,entry.id,'dispatch','dispatch.jsonl');
-    expect(provider.mainRequests).toHaveLength(12);expect(provider.memberRequests).toHaveLength(8);expect(inspection.recovery?.options.permission).toBe('read');
-    const before=await fs.readFile(dispatchFile,'utf8'),preview=await app.dispatch('dispatch.replans.preview',previewQuery) as ReplanPreview;
-    expect(preview.eligible,JSON.stringify(preview)).toBe(true);expect(preview.basis).toMatch(/^[a-f0-9]{64}$/);expect(preview.requiredModules.map(item=>item.moduleId)).toEqual(inspectionTask.modules.map(item=>item.moduleId));expect(preview.inheritedHuman).toEqual([]);
-    expect((await app.dispatch('dispatch.replans.preview',previewQuery)).basis).toBe(preview.basis);expect(await fs.readFile(dispatchFile,'utf8')).toBe(before);expect(provider.mainRequests).toHaveLength(12);
-    // A real inspection candidate loses eligibility when its canonical evidence tail is incomplete.
-    const evidence=path.join(f.user,entry.id,'dispatch','runs','tasks',inspectionTask.taskId,inspectionTask.result!.runId,'events.jsonl'),evidenceBytes=await fs.readFile(evidence,'utf8');await fs.appendFile(evidence,'{"fixture_incomplete":');
-    try{expect((await app.dispatch('dispatch.replans.preview',previewQuery)).eligible).toBe(false)}finally{await fs.writeFile(evidence,evidenceBytes)}
-    const req:ReplanRequest={...identity,commandId:randomUUID(),source:{inspectionScopeId:inspection.scopeId,expectedBasis:preview.basis!},input:{message:data.businessGoal},options:{profileId,provider:'cbim-'+profileId,model:'report-fixture',permission:mode==='ask'?'ask':'execute',turnTimeoutMs:30000}},lookup={...identity,commandId:req.commandId};
-    expect(await app.dispatch('loop.replanReceipt',lookup)).toBeUndefined();await expect(app.dispatch('loop.replanStart',{...req,source:{...req.source,expectedBasis:'0'.repeat(64)}})).rejects.toThrow();
-    await expect(app.dispatch('loop.replanStart',{...req,options:{...req.options,permission:'read'}} as any)).rejects.toThrow();expect(await scopes()).toEqual([oldScope,inspection]);expect(provider.mainRequests).toHaveLength(12);
-    const [receipt,duplicate]=await Promise.all([app.dispatch('loop.replanStart',req),app.dispatch('loop.replanStart',req)]) as ReplanReceipt[];expect(duplicate.replan).toEqual(receipt.replan);expect(receipt).toMatchObject({...identity,scopeId:req.commandId,replan:{replanId:req.commandId,operation:'business_replan',input:req.input,options:req.options,source:{inspectionScopeId:inspection.scopeId,expectedBasis:preview.basis}}});expect(JSON.stringify(receipt)).not.toContain('excludedRunIds');
-    await vi.waitFor(()=>expect(provider.mainRequests).toHaveLength(13),{timeout:20000,interval:30});
-    const business=(await scopes())[2];expect(business.scopeId).not.toBe(inspection.scopeId);expect(business.recovery).toBeUndefined();expect(business.replan!.context.nativeSessionId).not.toBe(inspection.recovery!.context.nativeSessionId);expect(business.goal?.input).toEqual({message:data.businessGoal,attachmentIds:[]});expect((await graph()).root.agent).toEqual(originalGraph.root.agent);expect((await scopes()).slice(0,2)).toEqual([oldScope,inspection]);
-    expect((await app.dispatch('loop.replanStart',req)).replan).toEqual(receipt.replan);expect(required((await app.dispatch('loop.replanReceipt',lookup))).replan).toEqual(receipt.replan);expect(provider.mainRequests).toHaveLength(13);await expect(app.dispatch('loop.replanStart',{...req,input:{message:'changed'}})).rejects.toThrow();
-    if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:identity.rootSessionId});
-    else{
-      provider.releaseBusiness();
-      if(mode==='ask'){
-        await vi.waitFor(async()=>{const task=(await graph()).tasks.find((item:any)=>item.scopeId===business.scopeId);expect(task).toBeDefined();const approvals=await app.dispatch('dispatch.approvals',{...identity,taskId:required(task).taskId});expect(approvals.some((item:any)=>item.name==='write')).toBe(true)},{timeout:20000,interval:30});
-        await expect(fs.access(path.join(f.a,data.result))).rejects.toThrow();const task=(await graph()).tasks.find((item:any)=>item.scopeId===business.scopeId),approval=(await app.dispatch('dispatch.approvals',{...identity,taskId:required(task).taskId})).find((item:any)=>item.name==='write');await app.dispatch('dispatch.approve',{...identity,taskId:required(task).taskId,approvalId:required(approval).id,allow:true});
-      }
-    }
-    await vi.waitFor(async()=>{expect((await scopes())[2].status).toBe('closed');expect(app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
-    const outcome=(await scopes())[2].outcome;
-    if(outcome!==(mode==='stop'?'cancelled':'completed'))console.info('Business fixture diagnostics',JSON.stringify({mode,outcome,blocked:(await scopes())[2].goal?.blocked,errors:provider.errors,main:provider.mainRequests.length,member:provider.memberRequests.length,lastMemberTools:provider.memberRequests.at(-1)?.messages.filter(item=>item.role==='tool').map(item=>({id:item.tool_call_id,content:String(item.content).slice(0,1500)}))}));
-    expect(outcome).toBe(mode==='stop'?'cancelled':'completed');
-    if(mode==='stop'){expect(provider.mainRequests).toHaveLength(13);expect(provider.memberRequests).toHaveLength(8);await expect(fs.access(path.join(f.a,data.result))).rejects.toThrow()}
-    else{
-      expect(provider.mainRequests).toHaveLength(18);expect(provider.memberRequests).toHaveLength(15);expect(await fs.readFile(path.join(f.a,data.result),'utf8')).toBe(data.resultText);
-      const task=(await graph()).tasks.find((item:any)=>item.scopeId===business.scopeId);expect(required(task).assignee.agentInstanceId).not.toBe(inspectionTask.assignee.agentInstanceId);expect(required(task).assignee.agentInstanceId).not.toBe(oldTask.assignee.agentInstanceId);expect(required(required(task).result).evidenceRefs).toEqual(expect.arrayContaining(['business-write','business-read']));
-    }
-    const view=await app.dispatch('loop.threadView',{id:entry.id,taskId:identity.rootSessionId}) as ConversationThreadView,first=view.runs.find(run=>run.runId===receipt.replan.runId)!;expect(first.events[0].data.freshMain).toEqual({nativeSessionId:business.replan!.context.nativeSessionId,excludedRunIds:business.replan!.context.excludedRunIds});expect(first.conversationBinding?.agentInstanceId).toBe(originalGraph.root.agent.agentInstanceId);expect(view.issues).toHaveLength(corruption.oldIds.length);
-    const settled=await scopes(),counts=[provider.mainRequests.length,provider.memberRequests.length];expect(settled.slice(0,2)).toEqual([oldScope,inspection]);expect((await graph()).tasks.find((task:any)=>task.taskId===oldTask.taskId)).toEqual(oldTask);expect(await fs.readFile(marker,'utf8')).toBe(data.markerLine);expect((await fs.stat(marker)).mtimeMs).toBe(markerStat.mtimeMs);await corruption.unchanged();expect(provider.errors).toEqual([]);expect((await app.dispatch('loop.queue',{id:entry.id,taskId:identity.rootSessionId}))[0]).toMatchObject({message:data.queued,status:'paused'});
-    expect((await app.dispatch('dispatch.replans.preview',previewQuery)).eligible,'较晚业务周期已经消费核实基线，旧核实不能换命令继续批准新业务').toBe(false);
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect(await scopes()).toEqual(settled);expect(required((await app.dispatch('loop.replanReceipt',lookup))).scopeStatus).toBe('closed');expect((await app.dispatch('loop.replanStart',req)).replan).toEqual(receipt.replan);expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);await corruption.unchanged();
-  }finally{provider.releaseBusiness();provider.releaseOld();await app.shutdown();await f.cleanup();await provider.close()}
+it.each(['execute','ask','stop'] as const)('creates explicit recursive business work from verified inspection (%s)',async mode=>{
+ const f=await fixture(),provider=await businessReplanProvider({recursive:true,holdBusiness:true,holdOld:true});let app=f.app;
+ try{
+  const seed=await prepareRecursiveReplan(app,f.a,f.user,provider),{entry,identity,profileId,inspection,inspectionRun,oldScope,oldRun}=seed;
+  const query={...identity,inspectionScopeId:inspection.scopeId},journal=path.join(f.user,entry.id,'dispatch/dispatch.jsonl'),before=await fs.readFile(journal),preview=await app.dispatch('dispatch.replans.preview',query);
+  expect(preview.eligible,JSON.stringify(preview)).toBe(true);expect(preview.requiredModules.map(item=>item.moduleId)).toEqual(inspectionRun.prepared.modules.map(item=>item.binding.moduleId));
+  expect((await app.dispatch('dispatch.replans.preview',query)).basis).toBe(preview.basis);expect(await fs.readFile(journal)).toEqual(before);
+  const evidence=path.join(f.user,entry.id,'loop-engine/tasks',inspectionRun.binding.taskId,inspectionRun.binding.runId,'events.jsonl'),bytes=await fs.readFile(evidence);
+  await fs.appendFile(evidence,'{"incomplete":');
+  try{expect((await app.dispatch('dispatch.replans.preview',query)).eligible).toBe(false)}finally{await fs.writeFile(evidence,bytes)}
+  const request:ReplanRequest={...identity,commandId:randomUUID(),source:{inspectionScopeId:inspection.scopeId,expectedBasis:preview.basis!},input:{message:data.businessGoal},options:{profileId,provider:'cbim-'+profileId,model:'report-fixture',permission:mode==='ask'?'ask':'execute',turnTimeoutMs:30000}},lookup={...identity,commandId:request.commandId};
+  await expect(app.dispatch('loop.replanStart',{...request,source:{...request.source,expectedBasis:'0'.repeat(64)}})).rejects.toThrow();
+  await expect(app.dispatch('loop.replanStart',{...request,options:{...request.options,permission:'read'}} as never)).rejects.toThrow();
+  expect(await seed.scopes()).toEqual([oldScope,inspection]);expect(provider.mainRequests).toHaveLength(4);
+  const [receipt,duplicate]=await Promise.all([app.dispatch('loop.replanStart',request),app.dispatch('loop.replanStart',request)]);
+  expect(duplicate.replan).toEqual(receipt.replan);expect(receipt.replan.source.proof).toMatchObject({executionModel:'agent-tools-v1',sourceAcceptance:oldRun.request!.acceptance,sourceTaskId:oldRun.binding.taskId,inspectionRunId:inspection.recovery!.context.initialRunId});
+  expect(receipt.replan.source.proof).not.toHaveProperty('inspectionPlanRevision');expect(JSON.stringify(receipt)).not.toContain('excludedRunIds');
+  await seed.wait(async()=>provider.mainRequests.length===5,'new root held');
+  const newInput=JSON.stringify(provider.mainRequests[4].messages);
+  for(const requirement of oldRun.request!.acceptance)expect(newInput).toContain(requirement);
+  for(const module of oldRun.prepared.modules)expect(newInput).toContain(module.binding.moduleId);
+  expect((await app.dispatch('loop.replanStart',request)).replan).toEqual(receipt.replan);
+  await expect(app.dispatch('loop.replanStart',{...request,input:{message:'changed'}})).rejects.toThrow();
+  if(mode==='stop')await app.dispatch('loop.stop',{id:entry.id,taskId:identity.rootSessionId});
+  else{
+   provider.releaseBusiness();
+   if(mode==='ask'){
+    const input={id:entry.id,taskId:identity.rootSessionId};
+    await seed.wait(async()=>(await app.dispatch('loop.approvals',input)).some(item=>item.name==='write'),'actual write approval');
+    await expect(fs.access(path.join(f.a,data.result))).rejects.toThrow();
+    const approval=(await app.dispatch('loop.approvals',input)).find(item=>item.name==='write')!;
+    await app.dispatch('loop.approve',{...input,approvalId:approval.id,allow:true});
+   }
+  }
+  await seed.wait(async()=>(await seed.scopes())[2]?.status==='closed'&&app.runtime.snapshot().pressure.activeRuns===0,'new business closed');
+  const scopes=await seed.scopes(),business=scopes[2],state=await app.workspace(entry.id).dispatchStore.read();
+  expect(business.outcome).toBe(mode==='stop'?'cancelled':'completed');expect(scopes.slice(0,2)).toEqual([oldScope,inspection]);expect(state.graphs[0].tasks).toEqual([]);
+  expect(state.agentBusinessRuns!.find(run=>run.binding.runId===oldRun.binding.runId)).toEqual(oldRun);
+  expect(business.replan!.context.nativeSessionId).not.toBe(inspection.recovery!.context.nativeSessionId);
+  if(mode==='stop'){expect(provider.mainRequests).toHaveLength(5);expect(provider.memberRequests).toHaveLength(8);await expect(fs.access(path.join(f.a,data.result))).rejects.toThrow()}
+  else{
+   expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(15);expect(await fs.readFile(path.join(f.a,data.result),'utf8')).toBe(data.resultText);
+   const run=state.agentBusinessRuns!.find(run=>run.scopeId===business.scopeId)!;expect(run.binding.agentInstanceId).not.toBe(inspectionRun.binding.agentInstanceId);expect(run.request?.acceptance).toEqual(oldRun.request!.acceptance);
+  }
+  await seed.unchanged();expect(await fs.readFile(seed.marker,'utf8')).toBe(data.markerLine);expect((await fs.stat(seed.marker)).mtimeMs).toBe(seed.markerStat.mtimeMs);
+  expect((await app.dispatch('loop.queue',{id:entry.id,taskId:identity.rootSessionId}))[0]).toMatchObject({message:data.queued,status:'paused'});
+  expect((await app.dispatch('dispatch.replans.preview',query)).eligible).toBe(false);
+  const counts=[provider.mainRequests.length,provider.memberRequests.length];
+  await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();
+  expect(await seed.scopes()).toEqual(scopes);expect((await app.dispatch('loop.replanReceipt',lookup))?.scopeStatus).toBe('closed');expect((await app.dispatch('loop.replanStart',request)).replan).toEqual(receipt.replan);
+  expect([provider.mainRequests.length,provider.memberRequests.length]).toEqual(counts);await seed.unchanged();expect(provider.errors).toEqual([]);
+ }catch(error){await fs.mkdir('test-results',{recursive:true});await fs.writeFile('test-results/recursive-replan-'+mode+'.json',JSON.stringify({error:String(error),main:provider.mainRequests,member:provider.memberRequests,errors:provider.errors},null,2));throw error}
+ finally{provider.releaseBusiness();provider.releaseOld();await app.shutdown();await provider.close();await f.cleanup()}
 },120000);

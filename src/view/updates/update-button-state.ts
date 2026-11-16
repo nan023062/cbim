@@ -1,6 +1,6 @@
 /**
  * 作用定位：把后端更新快照转换为侧栏图标的版本、进度和点击语义，不持有下载状态。
- * 设计原因：下载百分比到 100 不等于校验就绪；安装资格只认后端 ready，错误与未知进度明确展示；引擎准备属于引擎设置，不能改变应用更新图标。
+ * 设计原因：下载百分比到 100 不等于校验就绪；安装资格只认后端 ready，错误与未知进度明确展示；引擎准备仅在对话引擎菜单显示。
  */
 import {desktopVersionLabel,type DesktopUpdateStatus} from '../../bridge/contracts/desktop-updates';
 

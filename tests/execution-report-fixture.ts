@@ -21,8 +21,8 @@ export async function seedExecutionReport(app:Application,project:string,provide
 }
 
 /** Read immutable bytes for no-mutation assertions, not a replacement for product log validation. */
-export async function reportFiles(user:string,workspaceId:string,taskId:string,runId:string){
+export async function reportFiles(user:string,workspaceId:string,taskId:string,runId:string,protocol:'legacy'|'agent-tools-v1'='legacy'){
   const directory=path.join(user,workspaceId,'dispatch');
-  const log=path.join(directory,'runs','tasks',taskId,runId,'events.jsonl');
+  const log=path.join(protocol==='agent-tools-v1'?path.join(user,workspaceId,'loop-engine'):path.join(directory,'runs'),'tasks',taskId,runId,'events.jsonl');
   return {log,dispatch:path.join(directory,'dispatch.jsonl'),read:async()=>({log:await fs.readFile(log,'utf8'),dispatch:await fs.readFile(path.join(directory,'dispatch.jsonl'),'utf8')})};
 }

@@ -1,25 +1,35 @@
-import {expect,it} from 'vitest';
-import {randomUUID} from 'node:crypto';
+import {expect,it,vi} from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {fixture} from './helpers';
 import {activeInputProvider,activeInputData as data} from './active-goal-input-provider';
-import {activeInputWait,seedActiveInput} from './active-goal-input-fixture';
+import {seedActiveInput} from './active-goal-input-fixture';
+import {FileRunStorage} from '../src/logic/execution/storage/run-storage';
 
-it('真实 Pi 中断旧主轮后按原话题新版本重新规划，已返回成员候选不重放',async()=>{
-  const f=await fixture(),provider=await activeInputProvider('replan');
-  try{
-    const seed=await seedActiveInput(f.app,f.a,f.user,provider),started=await f.app.dispatch('loop.chat',{id:seed.entry.id,message:data.goal,options:seed.options});
-    await activeInputWait(async()=>provider.main.length===6,'旧主轮已审阅且仍在输出');
-    const original=(await seed.scopes())[0],identity={workspaceId:seed.entry.id,rootSessionId:started.taskId};
-    const before=await f.app.dispatch('dispatch.graphSnapshot',{identity});
-    const request={...identity,scopeId:original.scopeId,expectedInputRevision:1,commandId:randomUUID(),input:{message:data.insert},options:seed.options};
-    const [accepted,repeated]=await Promise.all([f.app.dispatch('loop.topicInterrupt',request),f.app.dispatch('loop.topicInterrupt',request)]);
-    expect(repeated.continuation).toEqual(accepted.continuation);expect(accepted.continuation.wait.interruptionId).toBe(request.commandId);
-    await activeInputWait(async()=>{const scope=(await seed.scopes())[0];return scope.status==='closed'&&f.app.runtime.snapshot().pressure.activeRuns===0},'新输入在原话题重新审阅完成');
-    const scopes=await seed.scopes(),scope=scopes[0],thread=await f.app.execution(seed.entry.id).thread(started.taskId);
-    expect(scopes).toHaveLength(1);expect(scope).toMatchObject({scopeId:original.scopeId,status:'closed',outcome:'completed',goal:{inputRevision:2,review:{inputRevision:2,decision:'complete'}}});
-    expect(scope.goal?.input).toEqual(original.goal?.input);expect(scope.topicInterruptions?.[0].request).toEqual(request);
-    expect(thread).toHaveLength(3);expect(thread[1].status).toBe('cancelled');expect(thread[2].source).toMatchObject({kind:'user-continuation',scopeId:original.scopeId,interruptionId:request.commandId,inputRevision:2});
-    expect(provider.member).toHaveLength(5);expect((await f.app.dispatch('dispatch.graphSnapshot',{identity})).tasks).toEqual(before.tasks);
-    const count=provider.main.length;expect((await f.app.dispatch('loop.topicInterrupt',request)).continuation).toEqual(accepted.continuation);expect(provider.main).toHaveLength(count);expect(provider.errors).toEqual([]);
-  }finally{provider.release();await f.cleanup();await provider.close()}
+it('stops the actual root then continues its conversation without replaying completed child calls',async()=>{
+ const f=await fixture(),provider=await activeInputProvider('interrupt',true);
+ try{
+  const seed=await seedActiveInput(f.app,f.a,f.user,provider),started=await f.app.dispatch('loop.chat',{id:seed.entry.id,message:data.goal,options:seed.options});
+  const until=(check:()=>void|Promise<void>)=>vi.waitFor(async()=>{expect(provider.errors).toEqual([]);await check()},{timeout:45000,interval:30});
+  await until(()=>expect(provider.main).toHaveLength(2));expect(provider.member).toHaveLength(5);
+  const before=await f.app.workspace(seed.entry.id).dispatchStore.read(),original=before.agentBusinessRuns![0];
+  expect(original.status).toBe('closed');
+  const directory=path.join(f.user,seed.entry.id,'loop-engine/tasks',original.binding.taskId,original.binding.runId);
+  const child=await new FileRunStorage().read(directory),canonical=await fs.readFile(path.join(directory,'events.jsonl')),native=await fs.readFile(child.sessionFile!);
+  await f.app.dispatch('loop.stop',{id:seed.entry.id,taskId:started.taskId});provider.release();
+  await until(async()=>{expect((await seed.scopes())[0].status).toBe('closed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  expect((await seed.scopes())[0].outcome).toBe('cancelled');
+  const resumed=await f.app.dispatch('loop.resume',{id:seed.entry.id,taskId:started.taskId,runId:started.runId,message:data.insert,options:seed.options});
+  expect(resumed.runId).not.toBe(started.runId);
+  await until(async()=>{const scopes=await seed.scopes();expect(scopes).toHaveLength(2);expect(scopes[1]).toMatchObject({status:'closed',outcome:'completed'});expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)});
+  const state=await f.app.workspace(seed.entry.id).dispatchStore.read(),thread=await f.app.execution(seed.entry.id).thread(started.taskId);
+  expect(state.agentBusinessRuns).toEqual([original]);expect(state.graphs[0].tasks).toEqual([]);
+  expect(thread.map(r=>r.status)).toEqual(['cancelled','completed']);expect(thread[1].runId).toBe(resumed.runId);
+  expect(thread[1].toolReceipts?.find(r=>r.toolCallId==='active-current-read')?.outcome).toBe('succeeded');
+  expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(5);
+  expect(await fs.readFile(path.join(directory,'events.jsonl'))).toEqual(canonical);expect(await fs.readFile(child.sessionFile!)).toEqual(native);
+  await f.app.open(seed.entry.id,true);
+  expect(await f.app.workspace(seed.entry.id).dispatchStore.read()).toEqual(state);expect(await f.app.execution(seed.entry.id).thread(started.taskId)).toEqual(thread);
+  expect(provider.main).toHaveLength(4);expect(provider.member).toHaveLength(5);
+ }finally{provider.release();await f.cleanup();await provider.close()}
 },90000);

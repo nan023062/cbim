@@ -1,8 +1,9 @@
+/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
 /*
  * 作用定位：原命令核实卡的主题排版与独立状态颜色。
  * 设计原因：原工具失败色不能覆盖核实结果；保存/未知分别着色，长身份在窄布局换行。
  */
-.command-verification{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px;min-width:0;font-size:12px;line-height:1.6;color:var(--text)}
+.command-verification{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:8px;min-width:0;font-size:var(--font-ui);line-height:1.6;color:var(--text)}
 .command-verification header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .command-verification p{margin:8px 0}
 .command-verification code,.command-verification dd{overflow-wrap:anywhere;white-space:normal}

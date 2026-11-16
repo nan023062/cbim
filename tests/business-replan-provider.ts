@@ -1,3 +1,4 @@
+import {mainToolValue} from './main-tool-contract-provider';
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -23,20 +24,30 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 function toolValue(body:Request,id:string){const message=body.messages.find(item=>item.role==='tool'&&item.tool_call_id===id);assert.ok(message);assert.equal(typeof message.content,'string');return JSON.parse(message.content as string)}
 
 /** Local model responses drive three real Pi cycles: failed write, read-only inspection, new work. */
-export async function businessReplanProvider(options:{holdBusiness?:boolean;holdOld?:boolean}={}){
+export async function businessReplanProvider(options:{holdBusiness?:boolean;holdOld?:boolean;recursive?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',releaseBusiness=()=>{},releaseOld=()=>{};
   const businessGate=new Promise<void>(resolve=>{releaseBusiness=resolve}),oldGate=new Promise<void>(resolve=>{releaseOld=resolve}),d=businessReplanFixture;
   const acceptance=['提交当前目标实际工具回执和读取验证'];
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=isMain?mainRequests:memberRequests,turn=list.length;list.push(body);
+    const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name===(options.recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true,list=isMain?mainRequests:memberRequests,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'replan-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     const dispatch=(id:string,goal:string)=>tool(id,'cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal,acceptance:acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
     const plan=(id:string,goal:string)=>tool(id,'cbim_goal_plan',goalPlanArguments({objective:goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance}));
-    if(isMain){
+    if(isMain&&options.recursive){
+      assert.ok(ownerSelection);
+      const call=(id:string,message:string)=>tool(id,'cbim_agent_call',{agentId:ownerSelection!.memberId,message,business:{moduleIds:[moduleId],acceptance}});
+      if(turn===0)call('old-agent-call',d.oldMemberGoal);
+      else if(turn===1){assert.equal(mainToolValue(body,'old-agent-call').status,'unknown');reply('Original failed operation is retained. '+d.oldSecret)}
+      else if(turn===2){assert.ok(body.messages.every(message=>message.role==='system'||message.role==='user'));assert.ok(!JSON.stringify(body.messages).includes(d.oldSecret));call('inspection-agent-call',d.inspectionMemberGoal)}
+      else if(turn===3){assert.equal(mainToolValue(body,'inspection-agent-call').verification?.state,'verified',JSON.stringify(mainToolValue(body,'inspection-agent-call')));reply(d.inspectionSecret)}
+      else if(turn===4){assert.ok(body.messages.every(message=>message.role==='system'||message.role==='user'));assert.ok(!JSON.stringify(body.messages).includes(d.inspectionSecret));if(options.holdBusiness){emit({role:'assistant',content:d.businessLive});await businessGate}call('business-agent-call',d.businessMemberGoal)}
+      else if(turn===5){assert.equal(mainToolValue(body,'business-agent-call').verification?.state,'verified',JSON.stringify(mainToolValue(body,'business-agent-call')));reply(d.final)}
+      else throw Error('Unexpected recursive replan replay '+turn);
+    }else if(isMain){
       assert.ok(body.tools?.every(item=>!['cbim_task_help','cbim_task_checkpoint'].includes(item.function.name)),'主 Agent 可按权限执行业务，但不能提交成员检查点或求助');
       if(turn===0)plan('old-plan',d.oldGoal);
       else if(turn===1)dispatch('old-dispatch',d.oldMemberGoal);

@@ -51,7 +51,7 @@ import type {AbandonCheckpointInput,AbandonCheckpointReceipt} from '../../tasks/
 import type {AddQueuedDependencyInput,AddQueuedDependencyReceipt} from '../../tasks/rules/queued-dependency-addition';
 import type {ReplaceQueuedDependencyInput,ReplaceQueuedDependencyReceipt} from '../../tasks/rules/queued-dependency-replacement';
 import {isMemberCheckpointPending} from '../../tasks/rules/member-checkpoint';
-import {ScopeUsageService} from '../../budget/runtime/scope-usage-service';
+import {ScopeUsageService,type ScopeUsageLogs} from '../../budget/runtime/scope-usage-service';
 import {ScopeBudgetService,rejectBudget,type ScopeBudgetRejected} from '../../budget/runtime/scope-budget-service';
 import type {ScopeBudgetPolicy} from '../../budget/rules/scope-budget';
 import type {CancelQueuedTasksInput,CancelQueuedTasksReceipt} from '../../tasks/rules/queued-task-cancel';
@@ -107,7 +107,7 @@ export class WorkspaceDispatchService {
   private readonly commandVerification:CommandVerificationService;
   /** 重启只恢复等待占位；本服务仅在显式审阅或用户继续时核实原成员。 */
   readonly memberPauses:MemberPauseService;
-  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts,memberPausePorts?:MemberPausePorts){
+  constructor(private readonly owner:DispatchWorkspace,private readonly store:DispatchStore,goalPorts?:ScopeGoalPorts&ScopeUsageLogs,budgetPolicy?:()=>ScopeBudgetPolicy,humanPorts?:HumanDecisionPorts,modelPorts?:OwnerExecutionModelPorts,checkpointHistory?:MemberCheckpointHistoryPorts,effectPorts?:EffectObservationPorts,memberPausePorts?:MemberPausePorts){
     this.owners=new OwnerExecutionService(owner,store,modelPorts);
     this.memberPauses=new MemberPauseService(owner,store,this.owners,memberPausePorts);
     this.goals=new ScopeGoalService(owner,store,goalPorts,humanPorts,this.owners,this.memberPauses);

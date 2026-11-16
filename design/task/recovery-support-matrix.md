@@ -1,6 +1,6 @@
 # 异常恢复支持矩阵
 
-2026-11-08，按 Step35–49 的实际代码归纳。Step41 刷新已通过真实Pi及最终EXE，见[验证](../verification/refresh-effect-verification-20261108.md)。Step42新增前置原子修订的原命令核实已通过相关测试及最终EXE，见[验证](../verification/queued-dependency-revision-20261108.md)。本表定义覆盖与缺口，不把通用异常恢复标为全部完成；实时状态见 [roadmap](../tool-architecture-roadmap.md)。
+2026-11-08，按 Step35–49 的实际代码归纳。Step41 刷新已通过真实Pi及最终EXE，见[验证](../verification/refresh-effect-verification-20261108.md)。Step42新增前置原子修订的原命令核实已通过相关测试及最终EXE，见[验证](../verification/queued-dependency-revision-20261108.md)。本表定义覆盖与缺口，不把通用异常恢复标为全部完成；实时状态见 [GitHub Issues](https://github.com/nan023062/cbim/issues)。
 
 | 原通道 | 可核实的事实和处理 | 仍未覆盖的事实 |
 | --- | --- | --- |

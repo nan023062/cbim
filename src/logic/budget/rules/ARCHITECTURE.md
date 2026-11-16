@@ -457,6 +457,9 @@ request-budget.ts 提供 RequestBudgetPort、RequestBudgetTicket 与未知原因
 
 实际请求传输位于 [execution/engines/transport](../../execution/engines/transport/ARCHITECTURE.md)，预算编排在 [budget/runtime](../runtime/ARCHITECTURE.md)，持久化由 [dispatch/storage](../../dispatch/storage/CONTRACT.md) 承担。模型目录和配置服务分别见 [models](../../models/CONTRACT.md) 与 [models/service](../../models/service/CONTRACT.md)。迁移保留账本、结算与工具授权顺序。
 
+## 递归模型的计费归属
+
+main 请求绑定可携带 agentRun 记录实际子 taskId/runId；预算授权仍由原 rootSessionId/taskId/runId/scopeId 决定，不以 agentRun 授权或新开额度。每个子模型使用自身冻结价格申请与结算，共享根账本的已用及预留上限。
 ### V2 逐角色预算
 
 model-request-configuration.ts 从原执行快照投影预算模型；primary 保留旧字段及指纹，附加角色保存 slot、角色配置指纹和完整执行 bindingHash。成员预留/发送审计逐字段核对原 run.model 中的角色，不能仅复制 hash 后更换价格。

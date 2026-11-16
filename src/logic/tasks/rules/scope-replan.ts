@@ -1,4 +1,5 @@
 /**
+ * 递归证明使用 inspectionRunId 与原 sourceAcceptance，不伪造旧 reviewRunId 或计划版本。
  * 作用定位：定义完成只读核实后显式创建业务新周期的预览、启动意图和公开回执。
  * 设计原因：业务重规划独立于只读 recovery，冻结用户新目标、权限与真实核实证据；旧未知事实不被更正，人工约束必须传递到新计划。
  */
@@ -29,7 +30,8 @@ const legacyProof=z.object({...commonProof,sourceTaskId:id,sourceRunId:id.option
 const memberProof=z.object({...commonProof,kind:z.literal('member_run'),sourceTaskId:id,sourceRunId:id,sourceToolCallIds:sourceCalls}).strict();
 const mainProof=z.object({...commonProof,kind:z.literal('main_run'),sourceRunId:id,sourceToolCallIds:sourceCalls,sourceGoalRevision:revision,sourceInputRevision:revision,sourcePlanRevision:revision}).strict();
 /** main proof 没有成员任务，旧无 kind proof 不默认升级或放宽必需字段。 */
-export const inspectionProofSchema=z.union([legacyProof,memberProof,mainProof]);
+const recursiveProof=memberProof.omit({inspectionPlanRevision:true,reviewRunId:true}).extend({executionModel:z.literal('agent-tools-v1'),inspectionRunId:id,sourceAcceptance:z.array(z.string().min(1).max(16000)).max(50)}).strict();
+export const inspectionProofSchema=z.union([legacyProof,memberProof,mainProof,recursiveProof]);
 export type InspectionProof=z.infer<typeof inspectionProofSchema>;
 export const scopeReplanSchema=z.object({replanId:z.string().uuid(),acceptedAt:z.string().datetime(),source:source.extend({proof:inspectionProofSchema}).strict(),operation:z.literal('business_replan'),input,options,context:freshContextSchema,dispositionId:z.string().uuid().optional()}).strict();
 export type ScopeReplan=z.infer<typeof scopeReplanSchema>;

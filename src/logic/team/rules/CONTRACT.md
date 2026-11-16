@@ -206,3 +206,7 @@ workspaceMemberMainCommandId 从真实主调用稳定派生；主来源进入命
 ### V2 角色引用与采纳
 
 AgentModelSelection 和 WorkspaceMemberModelRef 可包含 version:2 的额外 modelRoles。primary 不重复保存；岗位 RuntimePolicy 的引用与快照必须逐角色同能力、同供应商、同型号，完整快照进入原 configurationHash。OwnerExecutionBinding 仍记录岗位 revision 和该完整 hash；领取时从匹配岗位恢复角色，不能由主会话覆盖。旧缺省不回填。
+
+## 递归 Agent 历史索引
+
+AgentHistoryRecord 可保存严格 agentCall 原父引用。新业务子运行的 kind=task/source=member，journal=loop；只有显式引用与当前子身份一致才允许这种组合，旧成员仍 journal=member。主记录不能伪装为子调用，新索引不补造旧引用，也不保存原生路径或凭据。

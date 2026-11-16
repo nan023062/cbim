@@ -49,6 +49,6 @@
 
 限 Windows x64、当前 Windows 登录会话、当前本地用户可信私有记录与本产品的新协议执行。目录最多 4096 对象/64 层；记录每调用 256 KiB/32 帧、每 run 256 调用。原目录/owner/来源不可信、记录损坏、不同登录会话、旧无记录临时资源保持不可核实；不猜测归属、不按 PID 杀进程、不自动补造旧记录。同用户恶意重写整个私有数据库不在本信任边界内。
 
-R12 的 Windows 冻结范围执行与本次生命周期片已完成；其它平台、通用资源授权与 R13 衔接仍不扩称已完成。R09-C 及其它未完成项保留计划。同步 [roadmap](../tool-architecture-roadmap.md) 与 [开发记录](../development-log.md)，独立本地提交，不推送；按用户最新要求，本轮开发至此结束。
+R12 的 Windows 冻结范围执行与本次生命周期片已完成；其它平台、通用资源授权与 R13 衔接仍不扩称已完成。R09-C 及其它未完成项保留计划。同步 [roadmap](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/tool-architecture-roadmap.md) 与 [开发记录](../development-log.md)，独立本地提交，不推送；按用户最新要求，本轮开发至此结束。
 
 原生依据：[Job 生命周期](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)、[进程退出语义](https://learn.microsoft.com/en-us/windows/win32/procthread/terminating-a-process)、[GetProcessTimes](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes)、[DeleteAppContainerProfile](https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-deleteappcontainerprofile)。

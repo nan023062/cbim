@@ -41,3 +41,24 @@ AutomaticReturnService 在恢复取证中使用同一策略，覆盖第三次异
 ### 多角色冻结与恢复
 
 负责人配置捕获、正式兜底 policy、自动协作批次和返回模型 hash 均携带完整 modelRoles。完整快照变化阻止旧绑定继续领取；不自动替换模型或重启任务。
+
+
+## 根运行插入回执
+
+旧协调器的 insertActiveInput 复用 ScopeActiveInputService.send 完成 prepare/原生发送/resolve，仍由当前 cycle 核实运行与停止状态；新根生命周期不创建旧 cycle。
+
+MainToolContext 的公共定义移至 execution/rules/conversation-binding；AutoCollaboration 仍按旧批次实现相同语义，没有新增执行队列或改变旧恢复行为。
+
+## 递归用量只读装配
+
+WorkspaceDispatchService 的 goalPorts 可同时提供 ScopeUsageLogs.inspectAgent，交给原 ScopeUsageService 读取递归后代。旧目标审核仍只消费自己的 inspectMain/inspectMember，不通过新增用量读取端口获得恢复或执行能力。
+
+
+## 递归核实意图的所有权
+
+AutoCollaboration.recoveryPreflight 返回已核实来源的协议。acceptRecovery 仍提交真实新核实意图，但对 agent-tools-v1 来源不创建旧 cycles；预算、子调用和终态由新根 AgentLifecycle 负责。旧来源继续保留旧协调器的恢复语义，不将旧任务冒充新调用。
+
+
+### 递归工具迁移收口
+
+重规划预检只返回已核实来源的执行协议。递归来源交由 Agent 根生命周期，acceptReplan 不注册旧 cycles；旧来源保持旧协调器路径。

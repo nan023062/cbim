@@ -1,10 +1,12 @@
 /**
  * 目录归属：logic/evidence/runtime；目标状态与核证恢复服务。
- * 作用定位：对指定成员运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。
+ * 作用定位：对指定旧成员或已登记递归运行列出原完整清单，并在用户明确选定后重新观察全部冻结范围。
  * 设计原因：完整日志、任务/原生身份及冻结约定须先一致，读取后复核知识、Store 和日志，不能把跨版本结果合为有效观察。
  * 职责边界：查询不创建运行、补采旧清单、写文件或签署验收；短读占用只约束本应用，外部进程仍可能随后改变文件。
  */
 import {isDeepStrictEqual as equal} from 'node:util';
+import type {AgentBusinessRun} from '../../execution/rules/business-run';
+import {recursiveEvidenceRun,recursiveEvidenceLogMatches} from './recursive-evidence-source';
 import {fail} from '../../../core/errors';
 import {hash,json} from '../../../core/platform/node/serialization';
 import {outputManifestQuerySchema,outputManifestReportSchema,outputManifestCheckSchema,type OutputManifestReport,type OutputManifestSnapshot,type OutputManifestCheck} from '../rules/output-manifest';
@@ -20,6 +22,8 @@ import {memberPublicTask} from '../../runtime/monitoring/member-events';
 /** 平台必须重新枚举全部原范围；check 的结论与摘要在服务再次核对，不接受只验旧文件列表。 */
 export interface OutputManifestReportPorts {
   inspect(run:DispatchRun):Promise<RunSummary>;
+  /** 固定新协议日志入口；缺省保持不可用，不回退旧派工路径。 */
+  inspectAgent?(run:AgentBusinessRun):Promise<RunSummary>;
   check(expected:OutputManifestSnapshot,signal:AbortSignal):Promise<OutputManifestCheck>;
   acquireRead():()=>void;
 }
@@ -29,18 +33,18 @@ export class OutputManifestReportService {
   async read(raw:unknown):Promise<OutputManifestReport>{
     const parsed=outputManifestQuerySchema.safeParse(raw);if(!parsed.success)fail('MANIFEST_INPUT_INVALID','完整产物清单查询参数无效');
     const {manifestId,...identity}=parsed.data;this.owner.assert();if(identity.workspaceId!==this.owner.entry.id)fail('GRAPH_IDENTITY_MISMATCH','完整产物清单不属于当前工作区');
-    const before=await this.store.read(),facts=this.facts(before,identity.rootSessionId,identity.taskId,identity.runId),{task,run}=facts;
+    const before=await this.store.read(),facts=this.facts(before,identity.rootSessionId,identity.taskId,identity.runId),{task,run,recursive}=facts;
     const report:OutputManifestReport={identity,checkedAt:new Date().toISOString(),basis:'0'.repeat(64),consistency:'stable',log:'unavailable',coverage:'declared_scope_complete',manifests:[],issues:[]};
     const issue=(code:string,message:string)=>{if(report.issues.length<32)report.issues.push({code,message})};
     const unavailable=(reason:string)=>{if(manifestId)report.verification={manifestId,state:'unverifiable',expectedHash:report.manifests.find(item=>item.manifestId===manifestId)?.manifestHash??'0'.repeat(64),reason}};
     let summary:RunSummary|undefined,logStamp:string|undefined;
-    if(!run||!task.runIds.includes(identity.runId)){issue('MANIFEST_RUN_MISSING','此运行没有完整派发登记，不能借用其它轮次的清单');unavailable('原运行登记不完整')}
+    if(!run||!recursive&&!task?.runIds.includes(identity.runId)){issue('MANIFEST_RUN_MISSING','此运行没有完整派发登记，不能借用其它轮次的清单');unavailable('原运行登记不完整')}
     else{
-      try{summary=await this.ports.inspect(run)}catch{issue('MANIFEST_LOG_UNAVAILABLE','所选运行日志不可核实，缺失或损坏不表示产物未变化');unavailable('原日志不可核实')}
+      try{summary=await this.inspect(run)}catch{issue('MANIFEST_LOG_UNAVAILABLE','所选运行日志不可核实，缺失或损坏不表示产物未变化');unavailable('原日志不可核实')}
       if(summary){
         try{
           const binding=run.binding,first=summary.events[0],bounds=summary.events.filter(event=>event.type==='session.bound'),contracts=preparedWorkflowContracts(run.prepared);
-          if(binding.workspaceId!==identity.workspaceId||binding.rootSessionId!==identity.rootSessionId||binding.taskId!==identity.taskId||binding.agentId!==task.assignee.agentId||binding.agentInstanceId!==task.assignee.agentInstanceId||binding.agentSessionId!==task.assignee.agentSessionId||binding.planRevision!==task.planRevision||summary.runId!==binding.runId||!equal(summary.memberBinding,binding)||summary.conversationBinding||!equal(summary.task,memberPublicTask(task,this.owner.entry.path))||first?.type!=='run.started'||!equal(first.data.memberBinding,binding)||!equal(first.data.task,summary.task)||!equal(first.data.workflowContracts??[],contracts)||summary.sessionFile!==run.session.sessionFile||!summary.events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId)||bounds.some(event=>event.data.sessionId!==run.session.nativeSessionId||event.data.sessionFile!==run.session.sessionFile)||run.session.sessionFile&&!bounds.length||summary.events.some(event=>event.type==='artifact.manifest_captured')&&(!run.session.sessionFile||!bounds.length))throw Error('日志身份、连续性或冻结范围不符');
+          if(recursive?!recursiveEvidenceLogMatches(recursive,summary,this.owner.entry.path):(binding.workspaceId!==identity.workspaceId||binding.rootSessionId!==identity.rootSessionId||binding.taskId!==identity.taskId||binding.agentId!==task!.assignee.agentId||binding.agentInstanceId!==task!.assignee.agentInstanceId||binding.agentSessionId!==task!.assignee.agentSessionId||binding.planRevision!==task!.planRevision||summary.runId!==binding.runId||!equal(summary.memberBinding,binding)||summary.conversationBinding||!equal(summary.task,memberPublicTask(task!,this.owner.entry.path))||first?.type!=='run.started'||!equal(first.data.memberBinding,binding)||!equal(first.data.task,summary.task)||!equal(first.data.workflowContracts??[],contracts)||summary.sessionFile!==(run as DispatchRun).session.sessionFile||!summary.events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId)||bounds.some(event=>event.data.sessionId!==(run as DispatchRun).session.nativeSessionId||event.data.sessionFile!==(run as DispatchRun).session.sessionFile)||(run as DispatchRun).session.sessionFile&&!bounds.length||summary.events.some(event=>event.type==='artifact.manifest_captured')&&(!(run as DispatchRun).session.sessionFile||!bounds.length)))throw Error('日志身份、连续性或冻结范围不符');
           if(summary.logIntegrity?.partialTail!==false)throw Error('原日志完整性未确认');
           const scopes=preparedArtifactScopes(contracts),verified=verifyOutputManifests(summary.events,binding,run.prepared.knowledgeRevision,scopes);
           report.log='verified';if(scopes.length)report.scopes=scopes;report.manifests=verified.refs;for(const item of verified.issues)issue(item.code,item.message);logStamp=hash(json(summary.events));
@@ -50,8 +54,8 @@ export class OutputManifestReportService {
           if(manifestId){
             const record=verified.records.find(item=>item.manifest.manifestId===manifestId),terminal=summary.events.at(-1);
             if(!record)unavailable('所选清单不存在或缺少原成功采集回执');
-            else if(run.status==='starting'||run.status==='running')unavailable('本轮仍在运行，请结束后再明确复核');
-            else if(summary.status!==run.status||!terminal||!['run.settled','run.interrupted'].includes(terminal.type))unavailable('派发状态与日志终态尚未一致');
+            else if(run.status==='active'||run.status==='starting'||run.status==='running')unavailable('本轮仍在运行，请结束后再明确复核');
+            else if((!recursive&&summary.status!==run.status)||!terminal||!['run.settled','run.interrupted'].includes(terminal.type))unavailable('派发状态与日志终态尚未一致');
             else{
               const current=await this.owner.read();let release:(()=>void)|undefined;
               try{
@@ -71,13 +75,18 @@ export class OutputManifestReportService {
     }
     const after=await this.store.read();this.owner.assert();
     if(this.stamp(facts)!==this.stamp(this.facts(after,identity.rootSessionId,identity.taskId,identity.runId))){report.consistency='changed_during_read';unavailable('读取期间任务或运行事实变化');issue('MANIFEST_STATE_CHANGED','任务或运行事实已变化，请重新核实')}
-    if(manifestId&&run&&logStamp){try{const afterLog=await this.ports.inspect(run);if(afterLog.logIntegrity?.partialTail!==false||hash(json(afterLog.events))!==logStamp)throw Error('日志变化')}catch{report.consistency='changed_during_read';unavailable('复核期间原日志变化或不可读');issue('MANIFEST_LOG_CHANGED','复核期间原日志变化，本次观察无效')}}
+    if(manifestId&&run&&logStamp){try{const afterLog=await this.inspect(run);if(afterLog.logIntegrity?.partialTail!==false||hash(json(afterLog.events))!==logStamp)throw Error('日志变化')}catch{report.consistency='changed_during_read';unavailable('复核期间原日志变化或不可读');issue('MANIFEST_LOG_CHANGED','复核期间原日志变化，本次观察无效')}}
     report.basis=hash(json({state:this.stamp(facts),log:logStamp??report.log,scopes:report.scopes,manifests:report.manifests,verification:report.verification,issues:report.issues,consistency:report.consistency}));return outputManifestReportSchema.parse(report);
   }
+  private inspect(run:DispatchRun|AgentBusinessRun):Promise<RunSummary>{
+    if('protocol' in run){if(!this.ports.inspectAgent)fail('EVIDENCE_SOURCE_UNAVAILABLE','未装配递归运行只读日志入口');return this.ports.inspectAgent(run)}
+    return this.ports.inspect(run);
+  }
   private facts(state:DispatchState,root:string,taskId:string,runId:string){
-    const graph=state.graphs.find(item=>item.identity.workspaceId===this.owner.entry.id&&item.identity.rootSessionId===root),task=graph?.tasks.find(item=>item.taskId===taskId);
-    if(state.workspaceId!==this.owner.entry.id||!graph||!task)fail('TASK_NOT_FOUND','当前主会话没有此任务');
-    const run=state.runs?.find(item=>item.binding.workspaceId===this.owner.entry.id&&item.binding.rootSessionId===root&&item.binding.taskId===taskId&&item.binding.runId===runId),scope=state.scopes?.find(item=>item.rootSessionId===root&&item.scopeId===task.scopeId);return {graph,task,run,scope};
+    const graph=state.graphs.find(g=>g.identity.workspaceId===this.owner.entry.id&&g.identity.rootSessionId===root),task=graph?.tasks.find(t=>t.taskId===taskId),recursive=recursiveEvidenceRun(state,this.owner.entry.id,root,taskId,runId);
+    if(state.workspaceId!==this.owner.entry.id||!graph||!task&&!recursive)fail('TASK_NOT_FOUND','当前主会话没有此任务');
+    const run=recursive??state.runs?.find(r=>r.binding.workspaceId===this.owner.entry.id&&r.binding.rootSessionId===root&&r.binding.taskId===taskId&&r.binding.runId===runId),scope=state.scopes?.find(s=>s.workspaceId===this.owner.entry.id&&s.rootSessionId===root&&s.scopeId===(recursive?.scopeId??task?.scopeId));
+    return {graph,task,run,scope,recursive};
   }
   private stamp(facts:ReturnType<OutputManifestReportService['facts']>){return hash(json({graph:facts.graph.cursor,task:facts.task,run:facts.run,scope:facts.scope}))}
 }

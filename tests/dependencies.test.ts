@@ -5,6 +5,8 @@ import {afterEach, expect, test} from 'vitest';
 import {auditDependencies} from '../scripts/check-dependencies.mjs';
 
 test.each([
+  ['src/logic/application/assembly/agent-calls.ts','src/logic/execution/assembly/agent-call-scheduler.ts',true],
+  ['src/logic/execution/rules/example.ts','src/logic/execution/assembly/agent-call-scheduler.ts',false],
   ['src/logic/engines/package-status.ts','src/logic/updates/engine-artifacts.ts',true],
   ['src/logic/engines/package-status.ts','src/logic/updates/service/engine-artifacts.ts',false],
   ['src/logic/application/application.ts','src/logic/engines/packages/index.ts',true],

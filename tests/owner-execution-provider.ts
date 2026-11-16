@@ -17,7 +17,7 @@ export function ownerExecutionToolValue(body:OwnerExecutionRequest,id:string):an
 }
 
 /** The provider chooses calls only. Real owner selections and result references are read from actual tool replies, never supplied by the fixture. */
-export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete'){
+export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete',recursive=false){
   const main:OwnerExecutionRequest[]=[],members:[OwnerExecutionRequest[],OwnerExecutionRequest[]]=[[],[]],errors:string[]=[],sequence:string[]=[],httpRequests:Array<{path:string;model:string}>=[];
   const state:{discovery?:OwnerExecutionDiscovery;selections?:OwnerExecutionSelection[];before?:GraphSnapshot;final?:GraphSnapshot;held?:boolean;review?:unknown;badWire?:unknown}={};
   let agentId='',modules:string[]=[],releaseMain!:()=>void,releaseMembers!:()=>void;
@@ -31,7 +31,20 @@ export async function ownerExecutionProvider(mode:OwnerExecutionMode='complete')
     const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'owner-execution-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(text:string)=>{emit({role:'assistant',content:text});emit({},'stop')};
-    if(isMain){
+    if(isMain&&recursive){
+      assert.ok(body.tools?.some(item=>item.function.name==='cbim_agent_call'));assert.ok(!body.tools?.some(item=>item.function.name==='cbim_dispatch_task'));
+      if(turn===0)tool('execution-owner-discovery','cbim_module_owner_inspect',{moduleIds:modules});
+      else if(turn===1||turn===2){
+        if(turn===1){const discovery=ownerExecutionDiscoverySchema.parse(ownerExecutionToolValue(body,'execution-owner-discovery').execution);state.discovery=discovery;assert.equal(discovery.groups.length,2);state.selections=modules.map(moduleId=>{const group=discovery.groups.find(g=>g.moduleIds.includes(moduleId));assert.ok(group?.selection);assert.deepEqual(group.issues,[]);return group.selection})}
+        else if(mode==='bad-wire'){const value=ownerExecutionToolValue(body,'execution-call-0');assert.ok(JSON.stringify(value).includes('OWNER_REPLY_LOST'));state.badWire=value;tool('execution-call-check','cbim_agent_result_check',{callId:'execution-call-0'});res.end('data: [DONE]\n\n');return}
+        else if(mode==='owner-before-claim'||mode==='profile-before-claim'){const value=ownerExecutionToolValue(body,'execution-call-0');assert.ok(JSON.stringify(value).includes(mode==='owner-before-claim'?'AGENT_BUSINESS_OWNER':'AGENT_CONFIGURATION_CHANGED'));state.review=value;reply('调用条件已变化，保留真实拒绝；需要核实配置后再执行。');res.end('data: [DONE]\n\n');return}
+        else assert.equal(ownerExecutionToolValue(body,'execution-call-0').verification.state,'verified');
+        if(turn===1){state.held=true;emit({role:'assistant',content:'已读到真实岗位，尚未调用。'});await mainGate}
+        const index=turn-1;tool('execution-call-'+index,'cbim_agent_call',{agentId:state.selections![index].memberId,message:data.goals[index],business:{moduleIds:[modules[index]],acceptance:data.acceptance}});
+      }else if(turn===3&&mode==='bad-wire'){assert.equal(ownerExecutionToolValue(body,'execution-call-check').state,'verified');tool('execution-call-1','cbim_agent_call',{agentId:state.selections![1].memberId,message:data.goals[1],business:{moduleIds:[modules[1]],acceptance:data.acceptance}})}
+      else if(turn===(mode==='bad-wire'?4:3)){assert.equal(ownerExecutionToolValue(body,'execution-call-1').verification.state,'verified');reply(data.final)}
+      else throw Error('Unexpected recursive owner replay '+turn);
+    }else if(isMain){
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_module_owner_inspect'));
       assert.ok(body.tools?.every(item=>!['write','edit','bash'].includes(item.function.name)));
       if(turn===0)tool('execution-owner-discovery','cbim_module_owner_inspect',{moduleIds:modules});

@@ -12,7 +12,7 @@ import type {TaskSpec} from '../../tasks/rules/types';
 import {workspaceMemberMainCommandId} from '../rules/workspace-member-rules';
 import {workspaceMemberMainActorSchema,type WorkspaceMemberChangeInput} from '../rules/workspace-member';
 import {memberToolInspectSchema,memberToolPreviewSchema,memberToolCommitSchema,memberToolReceiptSchema,type MemberToolChange,type WorkspaceMemberToolsPort} from '../rules/workspace-member-tools';
-import type {MainToolContext} from '../../dispatch/runtime/auto-collaboration';
+import type {MainToolContext} from '../../execution/rules/conversation-binding';
 import type {WorkspaceMembers} from './workspace-members';
 
 /** 只有主运行工厂可装配；模型不能指定根会话、权限或“本机用户”来源。 */

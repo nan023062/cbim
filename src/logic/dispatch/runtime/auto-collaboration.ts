@@ -1,4 +1,5 @@
 /**
+ * 递归重规划只登记显式意图，交由统一根生命周期，不创建旧自动派工 cycle。
  * 批次完整捕获额外模型角色，不从后续主 Agent 设置回填。
  * 审阅关口使候选先回主轮；下一批继承未启动待办，批准后沿原任务身份继续，不重复派发。
  * 同一目标累计三次成员异常即停止自动接续；终态图是额度依据，换任务编号、结果回注或验收返工均不能清零。
@@ -56,12 +57,7 @@ import type {GoalRepairSource} from '../../execution/rules/input-source';
 import {goalRepairFeedback} from './goal-repair';
 import {memberFailureStopReason} from './member-failure-limit';
 
-/** 本轮控制面工具的窄生命周期端口；只捕获已登记批次，不创建周期或授予写权。 */
-export interface MainToolContext {
-  readonly binding:Readonly<{workspaceId:string;rootSessionId:string;scopeId:string;runId:string}>;
-  assertCurrent(signal:AbortSignal):void;
-  track<T>(operation:()=>Promise<T>):Promise<T>;
-}
+import type {MainToolContext} from '../../execution/rules/conversation-binding';
 
 /** 只保存主轮选择的公开运行选项；不保存密钥、附件字节或本轮 allowAll。 */
 type Options={engine?:import('../../engines').LoopEngine;modelRoles?:import('../../engines').ModelRolesSelection;collaborationMode?:'auto'|'team';provider:string;model:string;profileId:string;permission:'read'|'ask'|'execute';allowNativeExecution:boolean;turnTimeoutMs?:number};
@@ -88,22 +84,7 @@ export class AutoCollaboration {
     const cycle=this.cycles.get(rootSessionId);
     if(!cycle)return send().then(()=>{}); // 未装配业务周期的独立聊天仍保持旧轻量行为。
     if(this.closed||cycle.stopped||!cycle.mainRuns.has(runId))return Promise.reject(Object.assign(Error('原主运行已经停止插入，消息仍保留在队列'),{code:'QUEUE_INSERT_STOPPED'}));
-    const fixed=structuredClone(input),identity=this.identity(cycle);
-    const operation=(async()=>{
-      const prepared=await this.dispatch.activeInputs.prepare(identity,cycle.scopeId,runId,queueId,fixed,signal);
-      if(!prepared.fresh){if(prepared.record.status==='accepted')return;fail('QUEUE_INSERT_UNKNOWN','原插入已有记录，请核实原运行，不能再次发送')}
-      let receipt:ScopeActiveInputSendReceipt|undefined;
-      try{receipt=await send(prepared.token)}catch(error){
-        const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
-        try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:rejected?'rejected':'unknown',reason:rejected?'原生发送前已停止或原运行失效':'原生发送或接受日志未能确认，不能自动重发'})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结算记录未能确认，原尝试保留，请核实后处理')}
-        throw error;
-      }
-      // queued 后不再检查 signal；目标记录失败也不能伪装 rejected，原 pending 会阻止成功关闭。
-      if(!receipt)fail('QUEUE_INSERT_UNKNOWN','原生接收缺少可信日志依据，原尝试保留待核实');
-      try{await this.dispatch.activeInputs.resolve(identity,prepared.token,{status:'accepted',input:fixed,receipt})}
-      catch{fail('QUEUE_INSERT_UNKNOWN','原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')}
-    })();
-    return this.track(cycle,operation);
+    return this.track(cycle,this.dispatch.activeInputs.send(this.identity(cycle),cycle.scopeId,runId,queueId,input,signal,send));
   }
   constructor(private owner:KnowledgeWorkspace,private dispatch:WorkspaceDispatchService,private members:MemberExecutionManager,private execution:WorkspaceExecutionManager,lease:WorkspaceExecutionLease,private reportIssue:(rootSessionId:string,error:unknown)=>void=()=>{}){
     this.releaseListener=lease.observeRelease(()=>this.schedule());
@@ -140,7 +121,8 @@ export class AutoCollaboration {
   private async replanPreflight(request:ReplanRequest){
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
-    await this.dispatch.replans.preflight(request);
+    const value=await this.dispatch.replans.preflight(request);
+    return {executionModel:'executionModel' in value.proof?value.proof.executionModel:'legacy' as const,requiredModules:value.proof.requiredModules.map(module=>module.moduleId),acceptance:'sourceAcceptance' in value.proof?[...value.proof.sourceAcceptance]:[]};
   }
   /** 新业务周期使用新的执行实例，既有只读周期和旧失败任务保持封存；停止共享受理屏障。 */
   private acceptReplan(request:ReplanRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
@@ -150,7 +132,7 @@ export class AutoCollaboration {
       if(this.busy(task.taskId))fail('REPLAN_BUSY','当前主会话还有未结束目标');
       const accepted=await this.dispatch.replans.accept(request,context);
       if(!accepted.fresh)fail('REPLAN_REPLAY','业务目标意图已受理，请查询原回执，不重复启动');
-      this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false});
+      if(!('executionModel' in accepted.replan.source.proof))this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false});
     })().catch(async error=>{
       // 仅收束这次运行的已落盘意图。旧命令的幂等回执不能被一次迟到请求关闭或重新执行。
       try{
@@ -167,7 +149,8 @@ export class AutoCollaboration {
   private async recoveryPreflight(request:RecoveryRequest){
     if(this.closed)fail('COLLABORATION_STOPPED','协作调度正在关闭');
     if(this.busy(request.rootSessionId)||this.resuming.has(request.rootSessionId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
-    await this.dispatch.recoveries.preflight(request);
+    const source=await this.dispatch.recoveries.preflight(request);
+    return 'executionModel' in source&&source.executionModel==='agent-tools-v1'?'agent-tools-v1' as const:'legacy' as const;
   }
   /** 新周期不复活旧成员；可靠意图先落盘，之后绑定同一主实例的全新原生上下文，等待停止屏障收束。 */
   private acceptRecovery(request:RecoveryRequest,task:TaskSpec,context:{runId:string;nativeSessionId:string;excludedRunIds:string[];signal?:AbortSignal}):Promise<void>{
@@ -177,6 +160,8 @@ export class AutoCollaboration {
       if(this.busy(task.taskId))fail('RECOVERY_BUSY','当前主会话还有未结束目标');
       const accepted=await this.dispatch.recoveries.accept(request,context);
       if(!accepted.fresh)fail('RECOVERY_REPLAY','核实意图已受理，请查询原记录，不重复启动');
+      // 递归核实由新根生命周期拥有运行与收尾；旧协调器只提交可信核实意图。
+      if('executionModel' in accepted.recovery.source)return;
       this.cycles.set(task.taskId,{task:structuredClone(task),scopeId:accepted.scope.scopeId,collaborationMode:accepted.scope.executionPolicy?.mode??'team',tasks:new Set(),operations:new Set(),mainRuns:new Set([context.runId]),workRequested:true,stopped:false,readOnly:true});
     })().catch(async error=>{
       // 已提交后读取失败也不能撤销或复用启动意图，只收束本次运行，不能误关闭同 ID 的旧回执。

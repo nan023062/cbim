@@ -196,6 +196,7 @@ class N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInpu
 }
 N_src_logic_tasks_runtime_scope_active_input_service_ts ..> N_src_logic_tasks_runtime_scope_active_input_service_ts_PreparedActiveInput : 声明
 class N_src_logic_tasks_runtime_scope_active_input_service_ts_ScopeActiveInputService["ScopeActiveInputService"] {
+  +send()
   +inspect()
   +prepare()
   +resolve()
@@ -253,6 +254,7 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts["scope-goal-service.ts"] {
 }
 class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalPorts["ScopeGoalPorts"] {
   <<interface>>
+  +inspectAgent()
   +inspectMember()
   +inspectMain()
   +normalizeValidationPath()
@@ -329,7 +331,7 @@ class N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService["ScopeGoa
 N_src_logic_tasks_runtime_scope_goal_service_ts ..> N_src_logic_tasks_runtime_scope_goal_service_ts_ScopeGoalService : 声明
 ```
 
-直接依赖：[../../execution/context/automatic-context.ts](../../execution/context/automatic-context.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../rules/candidate-review.ts](../rules/candidate-review.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/scope-active-input.ts](../rules/scope-active-input.ts)、[scope-active-input-evidence.ts](scope-active-input-evidence.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/dispatch-execution.ts](../rules/dispatch-execution.ts)、[../rules/dispatch-commands.ts](../rules/dispatch-commands.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../evidence/runtime/execution-report-facts.ts](../../evidence/runtime/execution-report-facts.ts)、[../../team/runtime/member-help-state.ts](../../team/runtime/member-help-state.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../evidence/runtime/human-decision-evidence.ts](../../evidence/runtime/human-decision-evidence.ts)、[../rules/human-decisions.ts](../rules/human-decisions.ts)、[../rules/human-continuation-rules.ts](../rules/human-continuation-rules.ts)、[../../team/runtime/member-workflow.ts](../../team/runtime/member-workflow.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../rules/workflow-selection.ts](../rules/workflow-selection.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../rules/checkpoint-handoff-rules.ts](../rules/checkpoint-handoff-rules.ts)、[../../team/runtime/member-checkpoint-verifier.ts](../../team/runtime/member-checkpoint-verifier.ts)、[../../team/runtime/member-pause-service.ts](../../team/runtime/member-pause-service.ts)、[../rules/coordination-preview.ts](../rules/coordination-preview.ts)、[../rules/queued-task-cancel.ts](../rules/queued-task-cancel.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)。
+直接依赖：[../../evidence/runtime/recursive-inspection-evidence.ts](../../evidence/runtime/recursive-inspection-evidence.ts)、[../../execution/context/automatic-context.ts](../../execution/context/automatic-context.ts)、[../../team/rules/automatic-execution.ts](../../team/rules/automatic-execution.ts)、[../rules/candidate-review.ts](../rules/candidate-review.ts)、[../../tools/rules/questions.ts](../../tools/rules/questions.ts)、[../rules/scope-active-input.ts](../rules/scope-active-input.ts)、[scope-active-input-evidence.ts](scope-active-input-evidence.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/platform/node/serialization.ts](../../../core/platform/node/serialization.ts)、[main-command-request.ts](main-command-request.ts)、[../../knowledge/rules/ports.ts](../../knowledge/rules/ports.ts)、[../../execution/rules/types.ts](../../execution/rules/types.ts)、[../../tools/rules/types.ts](../../tools/rules/types.ts)、[../../dispatch/rules/dispatch-storage.ts](../../dispatch/rules/dispatch-storage.ts)、[../rules/dispatch-execution.ts](../rules/dispatch-execution.ts)、[../rules/dispatch-commands.ts](../rules/dispatch-commands.ts)、[../rules/dispatch-scope.ts](../rules/dispatch-scope.ts)、[../rules/graph-types.ts](../rules/graph-types.ts)、[../rules/scope-goal.ts](../rules/scope-goal.ts)、[../../execution/context/dispatch-context.ts](../../execution/context/dispatch-context.ts)、[../../evidence/runtime/execution-report-facts.ts](../../evidence/runtime/execution-report-facts.ts)、[../../team/runtime/member-help-state.ts](../../team/runtime/member-help-state.ts)、[../../runtime/monitoring/member-events.ts](../../runtime/monitoring/member-events.ts)、[../../evidence/runtime/human-decision-evidence.ts](../../evidence/runtime/human-decision-evidence.ts)、[../rules/human-decisions.ts](../rules/human-decisions.ts)、[../rules/human-continuation-rules.ts](../rules/human-continuation-rules.ts)、[../../team/runtime/member-workflow.ts](../../team/runtime/member-workflow.ts)、[../../evidence/rules/output-manifest.ts](../../evidence/rules/output-manifest.ts)、[../../evidence/rules/artifact-baseline.ts](../../evidence/rules/artifact-baseline.ts)、[../rules/workflow-selection.ts](../rules/workflow-selection.ts)、[../../team/rules/member-execution-binding.ts](../../team/rules/member-execution-binding.ts)、[../../dispatch/runtime/owner-execution-service.ts](../../dispatch/runtime/owner-execution-service.ts)、[../rules/checkpoint-handoff-rules.ts](../rules/checkpoint-handoff-rules.ts)、[../../team/runtime/member-checkpoint-verifier.ts](../../team/runtime/member-checkpoint-verifier.ts)、[../../team/runtime/member-pause-service.ts](../../team/runtime/member-pause-service.ts)、[../rules/coordination-preview.ts](../rules/coordination-preview.ts)、[../rules/queued-task-cancel.ts](../rules/queued-task-cancel.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)。
 
 ### scope-human-continuation-service.ts
 
@@ -655,3 +657,18 @@ accept 仅允许后继使用此结果；reject 的候选不能作为最终目标
 `TopicInterruptionService` 负责用户指定话题补充的持久意图和排空后的等待提交，不停止引擎。prepare 检查原输入版本、剩余主轮/决策/正文额度并保存原请求；park 重核可信主轮日志完整性、原生文件身份和全部原话题成员终态。新等待不伪造 awaiting_user 审阅；ScopeContinuationService 只消费同一 commandId、原文、附件和选型，拒绝更换权限或冒充人工决定。可靠等待重启可显式查询/接续，未可靠排空不自动执行。
 
 OfficeHistoryService 从原 DispatchStore、mainRunIds、task.scopeId 和信封生成归档目录，仅选中引用才读 canonical 正文；不另存正文。完整公开消息按版本分块，内部成员提示词、原生会话和工具正文仍走公开白名单；旧记录缺少明确归属不按时间猜测。主归档和当前模型工作窗口分开，查询不启动、复活或验收历史运行。
+
+
+## 根运行插入回执
+
+ScopeActiveInputService.send 是新根生命周期与旧协调器共用的输入事务入口：发送前持久 prepare，可信 ACK 后 accepted，停止/失效 rejected，回执丢失 unknown；原尝试不可自动重放。持久核证继续由 prepare/resolve/inspect 承担，不复制状态账本。
+
+
+## 递归执行记录核实
+
+ScopeRecoveryService 的旧任务执行报告来源明确拒绝递归 executionModel 或缺少旧任务版本的报告。递归来源必须使用 member_run 影响观察及精确 taskId/runId/toolCallIds；冻结 executionModel=agent-tools-v1、原周期、日志前缀和观察依据，由 Store 核验原业务调用已关闭且归属一致，不伪造 TaskNode 修订号。只读核实建立独立原生上下文，原调用与副作用事实不被改写。
+
+
+### 递归工具迁移收口
+
+ScopeReplanService 对递归来源要求原 AgentBusinessRun.request，缺少原验收要求时拒绝自动推断。ScopeGoalService 委托 RecursiveInspectionEvidence 重读完整根与子调用、冻结 Workflow、当前文件及来源身份，并二次读取检测变化。原业务影响仍按原主体观察，旧记录不改写；事务再次核依据，只有显式新意图可进入 ask/execute。

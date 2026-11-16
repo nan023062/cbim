@@ -1,3 +1,8 @@
+### 主对话工具详情与旧执行记录
+
+`ToolActivity` 透传按原调用 ID 的只读详情插槽，由共享工具轨道在展开后挂载。`MemberRunTranscript` 按原日志顺序交错显示调用方输入、执行 Agent 文字与工具；新的 Agent 工具使用 `AgentCallDetails` 核验并递归读取，旧成员历史仍只读。输入对象是调用方 Agent，不提供用户直发执行 Agent 的控件。`ScopeContinuationForm` 保留持久续接请求的核实与异常恢复；正常补充也可以由主对话输入框提交同一控制器，不把表单显示当作人工验收。
+
+### 办公室长期对话联合投影
 ### 办公室导航与显式运行核实
 
 SessionTaskView 只装配办公室与用量，不接收停止/恢复控制器。OfficeScene 的任务和调度详情链接交回原 taskId，由 Conversation 按正式 TeamSession 导航到成员工作审阅或主对话，主根保留原选中话题。session-task-state 的 sessionRuns/sessionRoot 保留原工作区、主根、目标及坏日志投影，办公室和核实共用。
@@ -486,3 +491,20 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 ## 交互区 Agent 选择
 
 SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人物用边框突出，缺省为主 Agent。只匹配当前主会话的真实人物，不改变任务选择、状态或动画事件。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+任务状态与正文复用共享字号；执行 Agent 记录继承主 Markdown 标题，small/span 说明不当作代码。result_ready 和 interrupted 统一从共享样式取得 warning 颜色。
+
+
+## 递归执行记录核实
+
+ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结计划版本，active/closed 使用登记含义的标签，不显示虚构旧任务版本；旧报告仍保留历史状态。读取、分页、错误和过期控制不新增执行操作。
+
+
+### 递归工具迁移收口
+
+修复回执校验兼容新的 inspectionRunId 与旧 reviewRunId，二者均不得作为新业务 runId；前端不推断旧任务图或补造核实计划。

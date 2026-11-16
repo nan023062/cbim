@@ -14,40 +14,38 @@ it.each([false,true])('reads real Pi execution evidence without running or recon
     const started=await f.app.dispatch('loop.chat',{id:entry.id,message:data.mainGoal,options:{permission:success?'read':'execute',turnTimeoutMs:30000}}) as {taskId:string;runId:string};
     const identity={workspaceId:entry.id,rootSessionId:started.taskId},graph=()=>f.app.dispatch('dispatch.graphSnapshot',{identity});
     await vi.waitFor(()=>expect(provider.memberRequests).toHaveLength(3),{timeout:30000,interval:30});
-    const running=(await graph()).tasks[0];expect(running.status).toBe('running');expect(running.activeRunId).toBeTruthy();
-    const query={...identity,taskId:running.taskId,runId:running.activeRunId!,limit:100};
+    const registered=(await f.app.workspace(entry.id).dispatchStore.read()).agentBusinessRuns!;expect(registered).toHaveLength(1);const running=registered[0];expect(running.status).toBe('active');expect((await graph()).tasks).toEqual([]);
+    const query={...identity,taskId:running.binding.taskId,runId:running.binding.runId,limit:100};
     const inFlight=await f.app.dispatch('dispatch.executionReport',query);
     if(inFlight.execution==='unknown'){
-      const diagnostic=await reportFiles(f.user,entry.id,query.taskId,query.runId),raw=await fs.readFile(diagnostic.log,'utf8');
+      const diagnostic=await reportFiles(f.user,entry.id,query.taskId,query.runId,'agent-tools-v1'),raw=await fs.readFile(diagnostic.log,'utf8');
       console.info('Native tool event order',raw.trim().split('\n').map(line=>JSON.parse(line)).filter(event=>event.type.startsWith('tool.')).map(event=>({type:event.type,seq:event.seq,id:event.data.id,name:event.data.name,receiptOutcome:event.data.receipt?.outcome})));
     }
     expect(inFlight.execution,JSON.stringify(inFlight)).toBe('in_flight');expect(inFlight.log.state).toBe('verified');expect(inFlight.tools.available).toBe(true);
     expect(inFlight.tools.items.find((tool:any)=>tool.toolCallId===(success?'report-business-read':'report-business-command'))?.status).toBe(success?'succeeded':'failed');
     if(!success)expect(await fs.readFile(path.join(f.a,data.marker),'utf8')).toBe(data.fact);
-    expect(provider.memberRequests).toHaveLength(3);expect(provider.mainRequests).toHaveLength(3);
+    expect(provider.memberRequests).toHaveLength(3);expect(provider.mainRequests).toHaveLength(1);
     const dispatcher=f.app.memberDispatch(entry.id);
-    // A failed goal still has durable block/close work after the last main lease is released.
-    // Hold that real service boundary to prove activeRuns=0 is not a stable report baseline.
+    // 冻结真实周期关闭边界；子运行终态不能替代整个周期已封存的事实。
     let closingEntered:Promise<void>|undefined;
     if(!success){
       let entered=()=>{};closingEntered=new Promise<void>(resolve=>{entered=resolve});
-      const closingGate=new Promise<void>(resolve=>{releaseClosing=resolve}),block=dispatcher.goals.block.bind(dispatcher.goals);
-      vi.spyOn(dispatcher.goals,'block').mockImplementationOnce(async(...args)=>{entered();await closingGate;return block(...args)});
+      const closingGate=new Promise<void>(resolve=>{releaseClosing=resolve}),block=dispatcher.closeScope.bind(dispatcher);
+      vi.spyOn(dispatcher,'closeScope').mockImplementationOnce(async(...args)=>{entered();await closingGate;return block(...args)});
     }
     provider.release();
-    await vi.waitFor(async()=>{expect((await graph()).tasks[0].status).toBe(success?'result_ready':'failed');expect(provider.mainRequests).toHaveLength(6);expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
-    if(closingEntered){await closingEntered;expect((await dispatcher.goals.inspect(identity,running.scopeId!)).status).toBe('active');releaseClosing()}
+    if(closingEntered){await closingEntered;expect((await dispatcher.goals.inspect(identity,running.scopeId)).status).toBe('active');releaseClosing()}
+    await vi.waitFor(async()=>{expect((await f.app.workspace(entry.id).dispatchStore.read()).agentBusinessRuns![0].status).toBe('closed');expect(provider.mainRequests).toHaveLength(2);expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:30000,interval:30});
     // executionReport rejects a read crossing scope revision/status changes; wait for the
     // actual cycle closure before asserting settled and byte-for-byte no-mutation reads.
     await vi.waitFor(async()=>expect((await dispatcher.goals.inspect(identity,running.scopeId!)).status).toBe('closed'),{timeout:30000,interval:30});
-    const files=await reportFiles(f.user,entry.id,query.taskId,query.runId),before=await files.read(),graphBefore=await graph();
+    const files=await reportFiles(f.user,entry.id,query.taskId,query.runId,'agent-tools-v1'),before=await files.read(),graphBefore=await graph();
     const report=await f.app.dispatch('dispatch.executionReport',query);
     expect(report.execution,JSON.stringify(report)).toBe('settled');expect(report.log.state).toBe('verified');expect(report.consistency).toBe('stable');
     expect(report.tools.items.find((tool:any)=>tool.toolCallId===(success?'report-business-read':'report-business-command'))?.status).toBe(success?'succeeded':'failed');
     const serialized=JSON.stringify(report);for(const secret of [f.a,f.user,data.fact,'writeFileSync','sessionFile','preparedKnowledge'])expect(serialized).not.toContain(secret);
-    expect(report.candidate!==undefined).toBe(success);
-    if(success)expect(report.candidate?.acceptance).toBe('not_evaluated');
-    else expect(report.issues.some((issue:{code:string})=>issue.code==='TOOLS_FAILED_WITH_POSSIBLE_EFFECTS')).toBe(true);
+    expect(report.candidate).toBeUndefined();expect(report.basis.executionModel).toBe('agent-tools-v1');expect(report.basis.taskRevision).toBeUndefined();expect(report.basis.taskStatus).toBeUndefined();
+    if(!success)expect(report.issues.some((issue:{code:string})=>issue.code==='TOOLS_FAILED_WITH_POSSIBLE_EFFECTS')).toBe(true);
     const unselected=await f.app.dispatch('dispatch.executionReport',{...identity,taskId:query.taskId});
     expect(unselected.log.state).toBe('not_selected');expect(unselected.identity.runId).toBeUndefined();expect(unselected.tools.available).toBe(false);expect(unselected.candidate).toBeUndefined();
     const first=await f.app.dispatch('dispatch.executionReport',{...query,limit:1});expect(first.tools.items).toHaveLength(1);
@@ -60,7 +58,7 @@ it.each([false,true])('reads real Pi execution evidence without running or recon
       const mismatch=await f.app.dispatch('dispatch.executionReport',{...query,runId});
       expect(mismatch.execution).toBe('unknown');expect(mismatch.tools.available).toBe(false);expect(mismatch.candidate).toBeUndefined();expect(mismatch.log.state).not.toBe('verified');
     }
-    expect(await files.read()).toEqual(before);expect(await graph()).toEqual(graphBefore);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(success?5:3);
+    expect(await files.read()).toEqual(before);expect(await graph()).toEqual(graphBefore);expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(success?5:3);
     if(!success){
       // Explicit fault injection only after all real runs settled. The original bytes are restored
       // before cleanup, and none of these reads may infer success from cached UI/run state.
@@ -72,7 +70,7 @@ it.each([false,true])('reads real Pi execution evidence without running or recon
       finally{await fs.writeFile(files.log,before.log)}
       expect((await f.app.dispatch('dispatch.executionReport',query)).log.state).toBe('verified');
       expect(await fs.readFile(path.join(f.a,data.marker),'utf8')).toBe(data.fact);
-      expect(await files.read()).toEqual(before);expect(await graph()).toEqual(graphBefore);expect(provider.mainRequests).toHaveLength(6);expect(provider.memberRequests).toHaveLength(3);
+      expect(await files.read()).toEqual(before);expect(await graph()).toEqual(graphBefore);expect(provider.mainRequests).toHaveLength(2);expect(provider.memberRequests).toHaveLength(3);
     }
     expect(provider.errors).toEqual([]);
   }finally{releaseClosing();provider.release();await f.cleanup();await provider.close()}

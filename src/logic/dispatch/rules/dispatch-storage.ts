@@ -5,6 +5,7 @@
  * 职责边界：独立审计不能夹带执行变化；受控文件事件不含字节正文、不实施 IO，持久化意图、文件 applied 与业务验收分开。
  * 请求预算附录只保存实际运行绑定、预留与结算；不含请求正文或凭据，不发网，不给重启遗留补未发送证明。
  */
+import type {AgentBusinessRun} from '../../execution/rules/business-run';
 import type {AgentInstance, AgentSessionBinding} from '../../team/rules/agent-types';
 import type {TeamSession} from '../../team/rules/team-session';
 import type {AgentRef, GraphIdentity, GraphEventBatch, GraphSnapshot, GraphCursor, GraphDelta} from '../../tasks/rules/graph-types';
@@ -40,6 +41,8 @@ export type DispatchMessage=AssignmentMessage|ResultMessage|HelpMessage|Checkpoi
 
 /** 工作区级状态；主实例随会话保留，周期执行实例与历史图分开计量。 */
 export interface DispatchState {
+  /** 递归业务的冻结身份与排空事实；不创建旧图、成员或信封。 */
+  agentBusinessRuns?:AgentBusinessRun[];
   workspaceId: string;
   /** 办公室内的长期逻辑对话；主/子角色共用，独立于按任务冻结的原生执行通道。旧日志缺省不迁移。 */
   teamSessions?:TeamSession[];
@@ -97,6 +100,8 @@ export interface DispatchCommandEvidence {
 
 /** 一个命令的完整提交单元；可选数组按对象 ID 写入完整新记录，省略不改变集合，重复 ID 须拒绝。 */
 export interface DispatchMutation<T = unknown> {
+  /** 独立单条运行身份提交，不与业务文件阶段混写。 */
+  agentBusinessRuns?:AgentBusinessRun[];
   /** 与主根/成员登记或首次派发同事务建立长期身份；任务关闭不移除，不承载正文副本。 */
   teamSessions?:TeamSession[];
   /** 一次只保存一条预留/发送/结算事实，不与业务、权限或周期变更混写。 */

@@ -15,7 +15,7 @@ import {hash} from '../src/core/platform/node/serialization';
 import {knowledgeEffectObjectProvider} from './knowledge-effect-object-provider';
 
 it.each(['direct','object','refresh'] as const)('真实 Pi %s 已提交知识后坏输出：原调用仍失败，原事务可核实与明确处置，重开零写入重放',async kind=>{
- const f=await fixture(),provider=kind==='direct'?await knowledgeContractProvider('malformed-after-commit'):kind==='refresh'?await knowledgeRefreshProvider():await knowledgeEffectObjectProvider(),callId=kind==='direct'?'contract-commit':kind==='refresh'?'refresh-commit':'object-commit',requestCount=kind==='direct'?11:8;let app=f.app;
+ const f=await fixture(),provider=kind==='direct'?await knowledgeContractProvider('malformed-after-commit'):kind==='refresh'?await knowledgeRefreshProvider():await knowledgeEffectObjectProvider(),callId=kind==='direct'?'contract-commit':kind==='refresh'?'refresh-commit':'object-commit',requestCount=kind==='direct'?9:6;let app=f.app;
  try{
   const {entry}=await seedKnowledgeContract(app,f.a,provider),workspace=app.workspace(entry.id);if(kind==='object')await workspace.commit(changeRequest(await workspace.snapshot(),moduleFiles()));if(kind==='refresh')for(const file of moduleFiles()){const target=path.join(f.a,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,file.text)}
   const actual=workspace.commit.bind(workspace),actualPlanned=workspace.commitPlanned.bind(workspace);

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {chromium} from 'playwright-core';
 
-const root=process.cwd(),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
+const root=await fs.realpath(process.env.CBIM_UI_ROOT||process.cwd()),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
 await fs.writeFile(path.join(out,'waiting-chat-ui.html'),'<div id="root"></div><script type="module" src="/test-results/waiting-chat-ui.tsx"></script>');
 await fs.writeFile(path.join(out,'waiting-chat-ui.tsx'),String.raw`
 import React from 'react';import {createRoot} from 'react-dom/client';import '/src/view/shell/shell.css';
@@ -36,7 +36,7 @@ window.cbim={call:async(action,args)=>{const f=window.fixture;f.calls.push({acti
 }};
 const {App}=await import('/src/view/shell/App.tsx');createRoot(document.getElementById('root')).render(React.createElement(App));
 `);
-const server=await createServer({root,configFile:false,esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});
+const server=await createServer({root,configFile:false,optimizeDeps:{entries:['test-results/waiting-chat-ui.tsx']},esbuild:{jsx:'automatic'},server:{host:'127.0.0.1',port:0},logLevel:'error'});
 let browser;const errors=[],checks=[];
 try{
   await server.listen();browser=await chromium.launch({channel:'msedge',headless:true});
@@ -46,10 +46,15 @@ try{
   await page.locator('.workspace-conversations').getByRole('button',{name:'等待补充的对话',exact:true}).click();
   const active=()=>page.locator('.workspace-panel:not([hidden])'),draft=()=>active().getByRole('textbox',{name:'对话草稿'}),composer=()=>active().locator('.chat-composer');
   await active().getByTestId('conversation-waiting').waitFor();
-  assert.match(await active().getByTestId('conversation-waiting').innerText(),/发送将补充并继续原目标/);
+  assert.match(await active().getByTestId('conversation-waiting').innerText(),/发送将继续当前目标/);
+  await active().getByRole('region',{name:'对话轮次',exact:true}).getByText('实现网页版中国象棋',{exact:true}).waitFor();
+  assert.equal(await active().getByRole('button',{name:'Agent 模式',exact:true}).count(),0);
+  assert.equal(await active().getByRole('button',{name:'团队模式',exact:true}).count(),0);
+  checks.push('continuous main dialogue without mode switch or topic selection');
   await draft().fill('继续');
   await page.waitForFunction(()=>!document.querySelector('.workspace-panel:not([hidden]) button.chat-send[aria-label="补充并继续"]').disabled);
   await draft().press('Enter');
+  await composer().getByText('已保存的补充与提交状态',{exact:true}).click();
   await composer().getByTestId('scope-continuation-accepted').waitFor();assert.equal(await draft().inputValue(),'');
   const result=await page.evaluate(()=>({unexpected:window.fixture.unexpected,writes:window.fixture.calls.filter(call=>['loop.goalContinue','loop.enqueue','loop.resume','loop.chat','loop.queueInsert','loop.queueChange'].includes(call.action))}));
   assert.equal(result.writes.length,1);assert.equal(result.writes[0].action,'loop.goalContinue');assert.equal(result.writes[0].args.input.message,'继续');assert.equal(result.writes[0].args.scopeId,'scope-one');assert.equal(result.writes[0].args.waitId,'wait');assert.equal(result.writes[0].args.options.engine,'codex');

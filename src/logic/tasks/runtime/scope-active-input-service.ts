@@ -1,4 +1,5 @@
 /**
+ * 新材料输入在 pending 前核清单、正文摘要与附件顺序；接受只消费该原指纹。
  * 目录归属：logic/tasks/runtime；目标状态与核证恢复服务。
  * 作用定位：在派发事务中登记运行中插入的准备、真实接收和不确定事实。
  * 设计原因：发送前先占用输入额度，确认后才提升目标版本；原生发送与磁盘事务不冒称原子，失败保留原尝试且不重放。
@@ -20,6 +21,21 @@ function check(value:unknown,code:string,message:string):asserts value{if(!value
 /** token 只能由本服务创建；fresh 不持久化，重查绝不重新取得发送权。 */
 export interface PreparedActiveInput {record:ScopeActiveInput;token:ScopeActiveInputToken;fresh:boolean}
 export class ScopeActiveInputService {
+  /** 发送沿原持久意图完成结算；原生回执不明保留 unknown，已接受后停止不得反悔。新旧运行共用此边界。 */
+  async send(identity:GraphIdentity,scopeId:string,runId:string,queueId:string,input:ScopeActiveInputPayload,signal:AbortSignal,send:(token:ScopeActiveInputToken)=>Promise<ScopeActiveInputSendReceipt|undefined>):Promise<void>{
+    const fixed=structuredClone(input),prepared=await this.prepare(identity,scopeId,runId,queueId,fixed,signal);
+    if(!prepared.fresh){if(prepared.record.status==='accepted')return;fail('QUEUE_INSERT_UNKNOWN','原插入已有记录，请核实原运行，不能再次发送')}
+    let receipt:ScopeActiveInputSendReceipt|undefined;
+    try{receipt=await send(prepared.token)}catch(error){
+      const rejected=['QUEUE_INSERT_STOPPED','QUEUE_INSERT_STALE'].includes((error as {code?:string})?.code??'');
+      try{await this.resolve(identity,prepared.token,{status:rejected?'rejected':'unknown',reason:rejected?'原生发送前已停止或原运行失效':'原生发送或接受日志未能确认，不能自动重发'})}catch{fail('QUEUE_INSERT_UNKNOWN','插入结算记录未能确认，原尝试保留，请核实后处理')}
+      throw error;
+    }
+    if(!receipt)fail('QUEUE_INSERT_UNKNOWN','原生接收缺少可信日志依据，原尝试保留待核实');
+    try{await this.resolve(identity,prepared.token,{status:'accepted',input:fixed,receipt})}
+    catch{fail('QUEUE_INSERT_UNKNOWN','原生已确认接收，但目标记录未能确认；请查询原记录，勿重复发送')}
+  }
+
   constructor(private readonly owner:Owner,private readonly store:DispatchStore){}
   private scope(state:DispatchState,identity:GraphIdentity,scopeId:string){
     this.owner.assert();check(state.workspaceId===identity.workspaceId&&identity.workspaceId===this.owner.entry.id,'GOAL_ACTIVE_INPUT_IDENTITY','补充不属于当前工作区');
@@ -35,7 +51,9 @@ export class ScopeActiveInputService {
   /** 事务返回前不得发送；pending 不修改目标，只预留版本/正文并阻止旧计划继续推进。 */
   async prepare(identity:GraphIdentity,scopeId:string,runId:string,queueId:string,raw:ScopeActiveInputPayload,signal:AbortSignal):Promise<PreparedActiveInput>{
     const parsed=scopeActiveInputPayloadSchema.safeParse(raw);check(parsed.success,'GOAL_ACTIVE_INPUT_INVALID','输入快照为空、超限或附件身份无效');
-    const input=structuredClone(parsed.data),inputHash=scopedActiveInputHash(input),insertionId=hash(json({scopeId,runId,queueId})),token={scopeId,insertionId,queueId,runId,inputHash};
+    const input=structuredClone(parsed.data);
+    if(input.attachmentManifest){check(input.attachmentManifest.expandedMessageHash===hash(input.message)&&input.attachmentManifest.expandedMessageBytes===Buffer.byteLength(input.message,'utf8')&&JSON.stringify(input.attachmentManifest.items.map(item=>item.attachmentId))===JSON.stringify(input.attachmentIds),'GOAL_ATTACHMENT_MANIFEST','补充清单与正文或附件顺序不一致')}
+    const inputHash=scopedActiveInputHash(input),insertionId=hash(json({scopeId,runId,queueId})),token={scopeId,insertionId,queueId,runId,inputHash};
     const observed=this.scope(await this.store.read(),identity,scopeId),prior=observed.activeInputs?.find(item=>item.queueId===queueId&&item.runId===runId);
     if(prior){check(prior.insertionId===insertionId&&prior.inputHash===inputHash,'GOAL_ACTIVE_INPUT_CONFLICT','原队列身份已绑定不同运行或输入快照');return {record:prior,token,fresh:false}}
     const messageBytes=Buffer.byteLength(input.message,'utf8'),messageCharacters=input.message.length;
@@ -52,7 +70,7 @@ export class ScopeActiveInputService {
       check(goal.revision+3<=scopeGoalDecisionLimit+1,'GOAL_DECISION_LIMIT','剩余目标版本不足以接收补充并重新规划审阅');
       const text=(scope.continuations??[]).reduce((total,item)=>total+(isHumanContinuation(item)?0:item.input.message.length),0)+(scope.activeInputs??[]).reduce((total,item)=>total+(item.status==='rejected'?0:item.messageCharacters),0);
       check(messageBytes<=scopeActiveInputLimits.messageBytes&&text+messageCharacters<=scopeActiveInputLimits.totalText,'GOAL_ACTIVE_INPUT_LIMIT','输入快照或目标补充正文累计超限，尚未发送');
-      const pending:ScopeActiveInput={insertionId,queueId,runId,inputHash,preparedAt:new Date().toISOString(),baseGoalRevision:goal.revision,baseInputRevision:goalInputRevision(goal),messageBytes,messageCharacters,...(input.attachmentIds?{attachmentIds:input.attachmentIds}:{}),status:'pending'};
+      const pending:ScopeActiveInput={insertionId,queueId,runId,inputHash,preparedAt:new Date().toISOString(),baseGoalRevision:goal.revision,baseInputRevision:goalInputRevision(goal),messageBytes,messageCharacters,...(input.attachmentIds?{attachmentIds:input.attachmentIds}:{}),...(input.attachmentManifest?{attachmentManifest:input.attachmentManifest}:{}),status:'pending'};
       alive();fresh=true;return {scopes:[{...scope,activeInputs:[...(scope.activeInputs??[]),pending]}],receipt:pending};
     });
     return {record,token,fresh};

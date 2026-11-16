@@ -1,3 +1,4 @@
+import {mainToolValue} from './main-tool-contract-provider';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
@@ -20,7 +21,7 @@ export type AttachmentProviderRequest=GoalFixtureRequest&{model:string;tools?:{f
 export function requestImages(body:AttachmentProviderRequest){return body.messages.flatMap(message=>Array.isArray(message.content)?message.content.filter((part:unknown)=>typeof part==='object'&&part!==null&&'type'in part&&part.type==='image_url'):[]) as {type:'image_url';image_url:{url:string}}[]}
 
 /** 只有模型响应确定；Pi、工具、工作区快照、真实读文件、等待/补充及回注均经过产品。 */
-export async function waitingAttachmentsProvider(){
+export async function waitingAttachmentsProvider(recursive=false){
   const mainRequests:AttachmentProviderRequest[]=[],memberRequests:AttachmentProviderRequest[]=[],errors:string[]=[];
   let agentId='',moduleId='',expectedImage='',release=()=>{};let ownerSelection:OwnerExecutionSelection;
   const gate=new Promise<void>(resolve=>{release=resolve});
@@ -28,14 +29,26 @@ export async function waitingAttachmentsProvider(){
     try{
       assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));
       let raw='';for await(const part of req)raw+=part;const body=JSON.parse(raw) as AttachmentProviderRequest;
-      const main=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,list=main?mainRequests:memberRequests,turn=list.length;list.push(body);
+      const main=body.tools?.some(tool=>tool.function.name===(recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true,list=main?mainRequests:memberRequests,turn=list.length;list.push(body);
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'waiting-attachments-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       const plan=(revision=1)=>goalPlanArguments({objective:attachmentFixture.mainGoal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:attachmentFixture.acceptance},revision);
       const dispatch=(goal:string)=>({agentId,moduleIds:[moduleId],ownerSelection,goal,acceptance:attachmentFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      if(main){
+      if(main&&recursive){
+        assert.ok(body.tools?.every(tool=>!['cbim_goal_plan','cbim_dispatch_task'].includes(tool.function.name)));
+        if(turn===0)tool('attach-recursive-first','cbim_agent_call',{agentId:ownerSelection.memberId,message:attachmentFixture.memberGoal,business:{moduleIds:[moduleId],acceptance:attachmentFixture.acceptance}});
+        else if(turn===1){
+          assert.equal(mainToolValue(body,'attach-recursive-first').status,'completed');
+          tool('attach-recursive-question','cbim_ask_user_question',{questions:[{question:attachmentFixture.waitReason,options:[{label:'继续核实'},{label:'暂不继续'}]}]});
+        }else if(turn===2){
+          assert.ok(JSON.stringify(body.messages).includes(attachmentFixture.supplement));
+          assert.deepEqual(requestImages(body),[{type:'image_url',image_url:{url:'data:image/png;base64,'+expectedImage}}]);
+          tool('attach-recursive-second','cbim_agent_call',{agentId:ownerSelection.memberId,message:attachmentFixture.secondGoal,business:{moduleIds:[moduleId],acceptance:attachmentFixture.acceptance}});
+        }else if(turn===3){assert.equal(mainToolValue(body,'attach-recursive-second').status,'completed');reply(attachmentFixture.final)}
+        else throw Error('Unexpected recursive material replay '+turn);
+      }else if(main){
         if(turn===0)tool('attach-initial-plan','cbim_goal_plan',plan());
         else if(turn===1)tool('attach-initial-dispatch','cbim_dispatch_task',dispatch(attachmentFixture.memberGoal));
         else if(turn===2)reply('已派发真实文件读取。');

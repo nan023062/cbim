@@ -42,7 +42,7 @@ Pi 测试使用真实子进程、生产主会话装配／权限／持久回执�
 
 新增／更新源码文件头、公开端口、授权范围、凭据和提交生命周期注释。同步 Core 的 connectors／policy／tools／tasks／brain，Main 的 resources／ipc／platform 及装配层，Scheduler 的 tools／execution／conversation，bridge/contracts，Frontend 的 settings／conversation 与受影响父层架构。相关 CONTRACT 和类图描述当前实现；依赖仍为 Main → Scheduler/Core、Scheduler → Core、Frontend → bridge/contracts，没有跨层反向调用。
 
-同步两项产品 Skill、[入口方案](../task/user-feedback-intake.md)、[开发管线](../cindy-development-pipeline.md)、[路线图](../tool-architecture-roadmap.md)与[开发记录](../development-log.md)。
+同步两项产品 Skill、[入口方案](../task/user-feedback-intake.md)、[开发管线](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/cindy-development-pipeline.md)、[路线图](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/tool-architecture-roadmap.md)与[开发记录](../development-log.md)。
 
 ## 剩余条件
 

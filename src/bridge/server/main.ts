@@ -1,4 +1,5 @@
 /**
+ * 引擎菜单仅调用固定 status/prepare 端口；只允许主 Frame 和已签名版本，查看不安装。
  * 资源边界：桌面从当前 R 的 assets 注入业务规范；开发态使用工程 assets，窗口品牌仍按安装边界读取。
  * 原生窗口及页面标题显示 CBIM，原 productName/EXE/用户目录和更新通道保留兼容。
  * 文件工人边界：app.ready 后装配独立打包 utility 入口，不复用窗口主入口作为工人；退出等待所有原文件操作排空。
@@ -76,6 +77,21 @@ app.whenReady().then(async()=>{
       return ipcSuccess(action,value);
     }catch{return {ok:false,error:{code:'DESKTOP_UPDATE',message:'更新操作未能完成，请检查当前状态后重试。'}}}
     if(updates?.status().phase==='installing')return {ok:false,error:{code:'UPDATING',message:'正在关闭任务并安装更新，请稍后重新打开。'}};
+
+    // 对话菜单复用 Application 的唯一引擎安装账本；冷壳仅提供验签制品，不维护第二份安装状态。
+    if(action==='desktop.engines.status'||action==='desktop.engines.prepare')try{
+      const request=action==='desktop.engines.prepare'?parseIpcRequest(action,args):(parseIpcRequest(action,args),undefined);
+      const packages=application.enginePackages;
+      if(request){
+        if(!packages)throw Error('当前宿主不支持引擎安装');
+        const state=await packages.read(),item=state.items.find(item=>item.kind===request.engine);
+        if(!item?.candidate)throw Error('没有可安装的兼容版本');
+        await packages.install(request.engine,{revision:state.revision,identity:item.candidate.identity});
+      }
+      const state=await packages?.read();
+      const value=state?state.items.map(item=>({engine:item.kind,state:item.preparing?'preparing' as const:item.error?'failed' as const:!item.active?'install' as const:!item.enabled?'failed' as const:item.candidate?.identity!==item.active.identity?'update' as const:'ready' as const,version:item.candidate?.version,installedVersion:item.active?.version,progress:item.preparation?.progress,error:item.error??(!item.enabled?'引擎已停用，可重新安装启用':undefined)})):(['pi','claude-code','codex','memory'] as const).map(engine=>({engine,state:runtime?'unavailable' as const:'bundled' as const}));
+      return action==='desktop.engines.status'?ipcSuccess(action,value):ipcSuccess(action,value.find(item=>item.engine===request!.engine)!);
+    }catch{return {ok:false,error:{code:'ENGINE_PREPARE',message:'引擎操作未完成，请检查引擎菜单状态后重试。'}}}
     if(action.startsWith('terminal.'))try{
       if(action==='terminal.close'){const request=parseIpcRequest(action,args);terminals.close(request.id+':'+request.tabId);return ipcSuccess(action,undefined)}
       if(action==='terminal.start'){const request=parseIpcRequest(action,args),ws=application.workspace(request.id);ws.assert();return ipcSuccess(action,terminals.start(request.id+':'+request.tabId,ws.entry.path,request.command))}

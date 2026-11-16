@@ -12,8 +12,7 @@ import {queuedTaskCancelFixture as data} from './queued-task-cancel-provider';
 
 /** Explicit local team and maintained business module; never reuse account settings or user projects. */
 export async function seedQueuedTaskCancel(app:Application,project:string,provider:{url:string;bind:(agent:string,module:string,selection:OwnerExecutionSelection)=>void}){
-  // 六个任务的多次完整图核验会超过旧 64K 夹具的压缩阈值；本用例验证撤销和重开，不模拟摘要模型。
-  // 保持真实自动压缩开启，仅给确定性夹具足够容量；正式产品和压缩专门测试的配置不变。
+  // Keep enough context for real sequential calls and explicit resume; no fixture compaction model.
   await app.models.save({profile:{name:'Queued cancellation fixture',api:'openai-completions',baseUrl:provider.url,auth:'none',defaultModel:'cancel-fixture',models:[{id:'cancel-fixture',name:'Cancel fixture',enabled:true,contextWindow:131072,maxTokens:4096,reasoning:false,pricing:{input:0,output:0,cacheRead:0,cacheWrite:0}}]}});
   const entry=await app.dispatch('add',{path:project}),workspace=app.workspace(entry.id),team=await seedTeam(workspace);
   const knowledge=await workspace.snapshot(),modulePath=team.input.moduleId+'/module.json',definition=JSON.parse(knowledge.files.find(file=>file.path===modulePath)!.text);

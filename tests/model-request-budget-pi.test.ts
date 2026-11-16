@@ -1,7 +1,7 @@
 import {expect,it,vi} from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {prepareRecursiveHumanReview} from './recursive-human-review-fixture';
 import {fixture} from './helpers';
 import {Application} from '../src/bridge/server/application';
 import {Paths} from '../src/logic/workspace/service/paths';
@@ -48,25 +48,33 @@ it.each(['two-requests','unknown','retry','compaction'] as RequestBudgetMode[])(
   }finally{await provider.close();await f.cleanup()}
 },60000);
 
-it('逐请求剩余容量不足时，安全等待补充在受理前拒绝，修改未来设置及重开均不消费原等待',async()=>{
-  const f=await fixture(),provider=await scopeBudgetProvider('waiting');let app=f.app;try{
-    const {entry,profileId}=await seedScopeBudget(app,f.a,provider,'waiting');await app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits:{tokens:71551}});provider.releaseAll();
-    const start=await app.dispatch('loop.chat',{id:entry.id,message:scopeBudgetFixture.goal,options:{profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:60000}});
-    await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('waiting'),{timeout:45000});await vi.waitFor(()=>expect(app.runtime.snapshot().pressure.activeRuns).toBe(0));const before=(await budgetScopes(f.user,entry.id))[0],identity={workspaceId:entry.id,rootSessionId:start.taskId},query={...identity,scopeId:before.scopeId},report=await app.dispatch('dispatch.requestBudget',query),sequence=[...provider.sequence];expect(report.tokens).toBe(1920);
-    const request={...query,waitId:before.wait!.waitId,expectedGoalRevision:before.goal!.revision,expectedInputRevision:before.goal!.inputRevision??1,commandId:randomUUID(),input:{message:scopeBudgetFixture.supplement},options:{provider:'cbim-'+profileId,profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:30000}};
-    await app.dispatch('budget.configure',{revision:2,enabled:true,enforcement:'request',limits:{tokens:300000}});
-    await expect(app.dispatch('loop.goalContinue',request)).rejects.toMatchObject({code:'MODEL_REQUEST_PREFLIGHT'});expect((await budgetScopes(f.user,entry.id))[0]).toEqual(before);expect(await app.dispatch('dispatch.requestBudget',query)).toEqual(report);expect(provider.sequence).toEqual(sequence);expect(await app.dispatch('loop.goalContinuation',{...query,commandId:request.commandId})).toBeUndefined();
-    await app.shutdown();app=new Application(new Paths(f.user,path.resolve('.')),path.resolve('assets'));await app.init();expect((await budgetScopes(f.user,entry.id))[0]).toEqual(before);expect(provider.sequence).toEqual(sequence);await app.dispatch('loop.stop',{id:entry.id,taskId:start.taskId});expect((await budgetScopes(f.user,entry.id))[0].outcome).toBe('cancelled');
-  }finally{provider.releaseAll();await app.shutdown();await provider.close();await f.cleanup()}
+it('recursive human wait keeps its frozen request budget despite future configuration and restart',async()=>{
+ const c=await prepareRecursiveHumanReview(false,'read',71551);
+ try{
+  const scope=(await budgetScopes(c.f.user,c.entry.id))[0],query={workspaceId:c.entry.id,rootSessionId:c.start.taskId,scopeId:scope.scopeId};
+  const before=await c.app.dispatch('dispatch.requestBudget',query);
+  expect(before).toMatchObject({reported:9,tokens:1920,denied:0});
+  const {continuation,record}=await c.saved(c.first,'accept');
+  await c.app.dispatch('budget.configure',{revision:2,enabled:true,enforcement:'request',limits:{tokens:300000}});
+  expect(await c.app.dispatch('dispatch.requestBudget',query)).toEqual(before);
+  await c.answer(continuation,'继续处理意见');
+  await c.until(()=>expect(c.app.runtime.snapshot().pressure.activeRuns).toBe(0));
+  const after=await c.app.dispatch('dispatch.requestBudget',query);
+  expect(after).toMatchObject({reported:9,denied:1,tokens:1920,lastDenial:'token_reserve'});
+  expect(c.provider.main).toHaveLength(2);expect(c.provider.member).toHaveLength(7);
+  expect(await c.stopAndReopen()).toEqual([record]);
+  expect(await c.app.dispatch('dispatch.requestBudget',query)).toEqual(after);
+  const state=await budgetScopes(c.f.user,c.entry.id);expect(state[0].outcome).toBe('failed');
+ }finally{await c.cleanup()}
 },60000);
 
 it.each(['main-block','member-block','complete'] as const)('实际主轮与正式岗位成员共用冻结请求额度：%s',async mode=>{
-  const f=await fixture(),provider=await scopeBudgetProvider('complete');try{
+  const f=await fixture(),provider=await scopeBudgetProvider('complete',true);try{
     const {entry,profileId}=await seedScopeBudget(f.app,f.a,provider,'complete');await f.app.dispatch('budget.configure',{revision:1,enabled:true,enforcement:'request',limits:{tokens:mode==='main-block'?69700:mode==='member-block'?70000:80000}});
     provider.releaseAll();const start=await f.app.dispatch('loop.chat',{id:entry.id,message:scopeBudgetFixture.goal,options:{profileId,model:scopeBudgetFixture.model,permission:'read',turnTimeoutMs:60000}});
     await vi.waitFor(async()=>expect((await budgetScopes(f.user,entry.id))[0]?.status).toBe('closed'),{timeout:45000});const scope=(await budgetScopes(f.user,entry.id))[0];const report=requestBudgetReportSchema.parse(await f.app.dispatch('dispatch.requestBudget',{workspaceId:entry.id,rootSessionId:start.taskId,scopeId:scope.scopeId}));
     expect(provider.errors).toEqual([]);expect(report.reported).toBe(provider.main.length+provider.member.length);expect(report.unknown).toBe(0);expect(report.reservedTokens).toBe(0);
-    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(3);expect(provider.member).toHaveLength(1);expect(report.denied).toBe(1)}else{expect(provider.main,JSON.stringify({outcome:scope.outcome,report,sequence:provider.sequence})).toHaveLength(6);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1920);expect(report.denied).toBe(0)}
+    if(mode==='main-block'){expect(provider.main).toHaveLength(1);expect(provider.member).toHaveLength(0);expect(report.denied).toBe(1)}else if(mode==='member-block'){expect(provider.main).toHaveLength(2);expect(provider.member).toHaveLength(1);expect(report).toMatchObject({requests:5,reported:3,denied:2,tokens:480,lastDenial:'token_reserve'})}else{expect(provider.main,JSON.stringify({outcome:scope.outcome,report,sequence:provider.sequence})).toHaveLength(4);expect(provider.member).toHaveLength(5);expect(report.tokens).toBe(1680);expect(report.denied).toBe(0)}
     expect(scope.outcome).toBe(mode==='complete'?'completed':'failed');
   }finally{provider.releaseAll();await provider.close();await f.cleanup()}
 },60000);

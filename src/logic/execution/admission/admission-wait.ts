@@ -17,6 +17,8 @@ export interface ExecutionAdmissionWait {
 /** 启动工厂的可信上下文；与可序列化用户 Options 分开，signal 只保护当前启动准备。 */
 export interface ExecutionLaunchContext {
   requestId:string;
+  /** 管理器根据新请求或可信历史选择；不是公开选项，旧日志仍走原协调协议。 */
+  executionModel?:'agent-tools-v1'|'legacy';
   scopeId?:string;
   wait?:ExecutionAdmissionWait;
   signal:AbortSignal;

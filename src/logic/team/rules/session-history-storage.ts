@@ -3,6 +3,7 @@
  * 设计原因：索引只保存可核验归属和公开摘要，正文继续属于原运行日志；目录定位由后端 source 与 task/run 标识确定，不接受前端路径。
  */
 import {z} from 'zod';
+import {agentCallReferenceSchema,checkedAgentCallReference,type AgentCallReference} from '../../agents/contracts';
 import type {TaskSpec} from '../../tasks/rules/types';
 import type {AgentHistoryRun,AgentHistorySession,AgentHistoryStatus} from './session-history';
 
@@ -12,6 +13,8 @@ export interface AgentHistoryRecord {
   view:AgentHistoryRun;
   kind:AgentHistorySession['kind'];
   journal:'loop'|'member';
+  /** 新递归调用的原父工具引用；journal 仍固定原 loop 路径，不能换成旧成员目录。 */
+  agentCall?:AgentCallReference;
   /** 仅目标、模块与验收等公开任务字段；禁止 workflowContext、原生路径或角色正文。 */
   task:TaskSpec;
   lastSeq:number;
@@ -34,16 +37,17 @@ const view=z.object({workspaceId:id,agentId:text,sessionId:z.string().min(1).max
   source:z.enum(['main','member','legacy']),binding:z.enum(['registered','legacy']),agentName:text,goal:z.string(),moduleIds:z.array(z.string()),status,startedAt:stamp,updatedAt:stamp,
   agentSessionId:id.optional(),agentInstanceId:id.optional(),rootSessionId:id.optional(),configurationRevision:z.string().optional(),
 }).strict();
-const shape=z.object({version:z.literal(1),view,kind:z.enum(['conversation','task','legacy']),journal:z.enum(['loop','member']),task,lastSeq:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),journalSeen:z.boolean(),dispatchStatus:status.optional()}).strict();
+const shape=z.object({version:z.literal(1),view,kind:z.enum(['conversation','task','legacy']),journal:z.enum(['loop','member']),agentCall:agentCallReferenceSchema.optional(),task,lastSeq:z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),journalSeen:z.boolean(),dispatchStatus:status.optional()}).strict();
 
 /** 索引损坏不能制造另一角色或运行的定位；只验证现有字段，不补造任何旧身份。 */
 export function checkedAgentHistoryRecord(value:unknown,workspaceId:string,root:string):AgentHistoryRecord{
   const result=shape.parse(value),v=result.view,t=result.task;
   if(v.workspaceId!==workspaceId||t.workspaceId!==workspaceId||t.root!==root||v.taskId!==t.taskId||v.agentId!==t.agentId||v.goal!==t.goal||JSON.stringify(v.moduleIds)!==JSON.stringify(t.moduleIds))throw Error('Agent 历史索引身份不一致');
+  if(result.agentCall){checkedAgentCallReference(result.agentCall,t,v.runId);if(result.journal!=='loop'||v.source==='main'||result.dispatchStatus)throw Error('递归历史来源无效')}
   if(v.binding==='registered'){
     if(!v.agentSessionId||!v.agentInstanceId||!v.rootSessionId||v.sessionId!==v.agentSessionId)throw Error('Agent 历史缺少已登记通道');
     if(v.source==='main'&&(v.agentId!=='cbim:main'||t.mode!=='chat'||v.rootSessionId!==t.taskId||result.kind!=='conversation'||result.journal!=='loop'))throw Error('主会话历史归属无效');
-    if(v.source==='member'&&(t.mode==='chat'||result.kind!=='task'||result.journal!=='member'))throw Error('成员历史归属无效');
+    if(v.source==='member'&&(t.mode==='chat'||result.kind!=='task'||(result.journal!=='member'&&!result.agentCall)))throw Error('成员历史归属无效');
     if(v.source==='legacy')throw Error('已登记身份不能标记为旧未知通道');
   }else if(v.source!=='legacy'||result.kind!=='legacy'||v.sessionId!==`legacy:${t.taskId}`||v.agentSessionId||v.agentInstanceId||v.rootSessionId||result.journal!=='loop')throw Error('旧历史不得补造实例或通道');
   return structuredClone(result) as AgentHistoryRecord;

@@ -246,17 +246,19 @@ async function restoredCatalog(page, id) {
   throw Error('Original workspace did not restore after the update');
 }
 // 读取已安装 Pi 的原共享目录和文件元数据；升级不能重写安装清单或以重新解压掩盖缓存丢失。
-async function retainedEngineSnapshot(page) {
+async function retainedEngineSnapshot(page, baseline) {
   const initial=JSON.parse(JSON.parse(await fs.readFile(path.join(install,'resources/runtime-initial.json'),'utf8')).payload);
   const descriptor=initial.engines.find(engine=>engine.kind==='pi');assert.ok(descriptor?.adapter);
   const appData=await app.evaluate(({app})=>app.getPath('appData'));
   const identity=createHash('sha256').update(path.resolve(exe).toLowerCase()+'\n'+path.resolve(userRoot).toLowerCase()).digest('hex').slice(0,24);
-  const directory=path.join(appData,'CBIM-runtime',identity,'engines','packages',descriptor.package.sha256);
+  // 升级保留的是旧安装，不是新冷包的推荐引擎；以升级前真实文件清单为基线。
+  const retained=baseline?{sha256:baseline.identity,files:baseline.files}:descriptor.package;
+  const directory=path.join(appData,'CBIM-runtime',identity,'engines','packages',retained.sha256);
   const files=[];
-  for(const item of descriptor.package.files){const file=path.join(directory,item.path),stat=await fs.stat(file);assert.equal(stat.size,item.bytes);assert.equal(await sha(file),item.sha256);files.push({path:item.path,bytes:stat.size,sha256:item.sha256,mtimeMs:stat.mtimeMs})}
+  for(const item of retained.files){const file=path.join(directory,item.path),stat=await fs.stat(file);assert.equal(stat.size,item.bytes);assert.equal(await sha(file),item.sha256);files.push({path:item.path,bytes:stat.size,sha256:item.sha256,mtimeMs:stat.mtimeMs})}
   const state=await page.evaluate(()=>window.cbim.call('engines.settings'));
-  const pi=state.items.find(item=>item.kind==='pi');assert.equal(pi?.active?.identity,descriptor.package.sha256);
-  return {identity:descriptor.package.sha256,files,installation:await fs.readFile(path.join(userRoot,'engine-installations.json'),'utf8'),enabled:pi.enabled};
+  const pi=state.items.find(item=>item.kind==='pi');assert.equal(pi?.active?.identity,retained.sha256);
+  return {identity:retained.sha256,files,installation:await fs.readFile(path.join(userRoot,'engine-installations.json'),'utf8'),enabled:pi.enabled};
 }
 // 首次冷包必须从真实固定公开源取得 E；不写缓存、不改下载地址、不向客户端传入 GitHub 凭据。
 async function verifyFreshEngine(page, profileRoot) {
@@ -291,7 +293,7 @@ try {
     const cachedInstaller = (await recordInstallerCache('fresh')).entries.find(item => item.configured);
     assert.equal(cachedInstaller.sha256, expected, 'NSIS must populate the cache configured for differential updates');
     let page = await launch(path.join(root, 'fresh-user'));
-    if(version==='0.1.20')await verifyDesktopBrand({app,page,executable:exe,installer:candidate,output:root});
+    if(['0.1.20','0.1.21'].includes(version))await verifyDesktopBrand({app,page,executable:exe,installer:candidate,output:root});
     assert.equal((await status(page)).currentVersion, version); assert.equal((await status(page)).enabled, true); await notes(page);
     if((await status(page)).currentResourceVersion!==undefined)freshEngine=await verifyFreshEngine(page,path.join(root,'fresh-user'));
     await close();requests=0; // 全新安装与旧版迁移是两个独立 profile，分别记录模型请求计数。
@@ -430,11 +432,11 @@ try {
   assert.equal(native.version, version); assert.equal(native.packaged, true); assert.equal(native.userData, path.join(userRoot, 'desktop'));
   assert.equal(await page.evaluate(() => localStorage.getItem('cbim.release-retention')), marker);
   assert.equal(await fs.readFile(path.join(userRoot, 'acceptance-marker.txt'), 'utf8'), marker);
-  if(previousEngine){const retained=await retainedEngineSnapshot(page);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
+  if(previousEngine){const retained=await retainedEngineSnapshot(page,previousEngine);assert.deepEqual(retained,previousEngine,'Cold upgrade must retain the disabled installation and exact shared engine files');await save('engine-cache-after',retained)}
   // 真实新客户端匿名检查 E 通道，覆盖换钥后的来源验证；发现版本不能更改原安装/停用选择。
-  if(['0.1.19','0.1.20'].includes(version)){
+  if(['0.1.19','0.1.20','0.1.21'].includes(version)){
     const checked=await page.evaluate(()=>window.cbim.call('engines.check'));
-    if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page),previousEngine);
+    if(previousEngine)assert.deepEqual(await retainedEngineSnapshot(page,previousEngine),previousEngine);
     await save('engine-channel-after',{checked:true,items:checked.items.map(item=>({kind:item.kind,enabled:item.enabled}))});
   }
   const models = await page.evaluate(() => window.cbim.call('models.list')); assert.deepEqual(models, savedModels);

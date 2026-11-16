@@ -136,3 +136,5 @@ WorkspaceMembers 按岗位引用及已采纳快照解析 engine，同一供应�
 ## 主工具岗位入口
 
 main-workspace-member-tools 绑定真实主周期，将窄操作交给 WorkspaceMembers 的既有预览/CAS/来源事务；写操作纳入 context.track，提交前及异步复核后检查停止，落盘后不伪装回滚。登记静态选型在事务中再次核对，模型输入不能改选。mainReceipt 只读同根会话原审计，unknown 不授权重试。
+
+main-module-ownership-tools 使用 execution 的 MainToolContext，主上下文可来自当前 Agent 根调用或旧批次。责任预览、提交与原回执继续复用 ModuleOwnerships；新工具入口不改变业务执行选择，也不授权自动更换负责岗位。

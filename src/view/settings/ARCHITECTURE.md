@@ -363,7 +363,7 @@ class N_src_view_settings_SettingsView_tsx_SettingsViewProps["SettingsViewProps"
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_SettingsView_tsx_SettingsViewProps : 声明
 ```
 
-直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[EngineSettings.tsx](EngineSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
+直接依赖：[../components/sidebar.css](../components/sidebar.css)、[../components/Icon.tsx](../components/Icon.tsx)、[ModelSettings.tsx](ModelSettings.tsx)、[AdmissionSettings.tsx](AdmissionSettings.tsx)、[BudgetSettings.tsx](BudgetSettings.tsx)、[WebSettings.tsx](WebSettings.tsx)、[ResourceSettings.tsx](ResourceSettings.tsx)、[AccountSettings.tsx](AccountSettings.tsx)、[AppearanceSettings.tsx](AppearanceSettings.tsx)、[AboutSettings.tsx](AboutSettings.tsx)、[settings-sections.ts](settings-sections.ts)、[useAppearance.ts](useAppearance.ts)、[../updates/useSoftwareUpdates.ts](../updates/useSoftwareUpdates.ts)、[settings.css](settings.css)。
 
 ### useAppearance.ts
 
@@ -477,24 +477,21 @@ class N_src_view_settings_ProviderConnections_tsx["ProviderConnections.tsx"] {
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
   <<component>>
 }
-class N_src_view_settings_EngineSettings_tsx["EngineSettings.tsx"] {
+class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
   <<component>>
 }
-class N_src_view_settings_AdmissionSettings_tsx["AdmissionSettings.tsx"] {
+class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
 N_src_view_settings_ModelSettings_tsx ..> N_src_view_settings_ProviderConnections_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ModelSettings_tsx : 导入依赖
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_EngineSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AdmissionSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_BudgetSettings_tsx["BudgetSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_WebSettings_tsx["WebSettings.tsx"] {
@@ -506,18 +503,18 @@ class N_src_view_settings_ResourceSettings_tsx["ResourceSettings.tsx"] {
 class N_src_view_settings_AccountSettings_tsx["AccountSettings.tsx"] {
   <<component>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_BudgetSettings_tsx : 导入依赖
+class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
+  <<component>>
+}
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_WebSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_ResourceSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AccountSettings_tsx : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
 ```
 
 ```mermaid
 classDiagram
 class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_AppearanceSettings_tsx["AppearanceSettings.tsx"] {
   <<component>>
 }
 class N_src_view_settings_AboutSettings_tsx["AboutSettings.tsx"] {
@@ -529,20 +526,17 @@ class N_src_view_settings_settings_sections_ts["settings-sections.ts"] {
 class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AppearanceSettings_tsx : 导入依赖
+class N_src_view_settings_settings_css["settings.css"] {
+  <<stylesheet>>
+}
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_AboutSettings_tsx : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_sections_ts : 导入依赖
 N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_useAppearance_ts : 导入依赖
+N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
 ```
 
 ```mermaid
 classDiagram
-class N_src_view_settings_SettingsView_tsx["SettingsView.tsx"] {
-  <<component>>
-}
-class N_src_view_settings_settings_css["settings.css"] {
-  <<stylesheet>>
-}
 class N_src_view_settings_useAppearance_ts["useAppearance.ts"] {
   <<module>>
 }
@@ -552,7 +546,6 @@ class N_src_view_settings_appearance_state_ts["appearance-state.ts"] {
 class N_src_view_settings_appearance_css["appearance.css"] {
   <<stylesheet>>
 }
-N_src_view_settings_SettingsView_tsx ..> N_src_view_settings_settings_css : 导入依赖
 N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_state_ts : 导入依赖
 N_src_view_settings_useAppearance_ts ..> N_src_view_settings_appearance_css : 导入依赖
 ```
@@ -635,3 +628,14 @@ EmbeddingModels 编辑明确向量端点、输入容量、维度和可选输入�
 `useAppearance` 由 App 唯一挂载，监听系统配色并将实际深浅模式及阅读变量写入根节点；选择“跟随系统”不会被解析结果改写。正文字号仅影响聊天消息，代码字号仅影响聊天代码块。减少动效和系统偏好共同生效。账号菜单快捷主题与 AppearanceSettings 共用此控制器。
 
 `AccountSettings` 明确 CBIM 当前本地使用、无云账号及跨设备同步；实际外部账号仍由 GitHubFeedbackSettings 管理，无伪登录或退出按钮。`ResourceSettings` 保留原目录验证与共享的显式启停，连接令牌仅在点击后读取。
+
+## 引擎管理入口迁移
+
+SettingsView 不再注册 engines 分页；安装、更新与进度由对话 EnginePicker 提供，使用 Application 同一 EnginePackages，不改变运行中的固定版本。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+textSize 控制全部普通界面与对话文字（13/15/17）；codeSize 独立控制代码和等宽日志（12/14/16，默认 14），已保存的旧选择继续有效。

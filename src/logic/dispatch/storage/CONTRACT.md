@@ -178,3 +178,6 @@ request-budget-store.ts 把唯一 DispatchStore 的 read/transact 适配为 Requ
 ## 全量 IPC 契约衔接
 
 ChatInputs 的公开连接器列表与附件预览在 JSON 投影处核实字段；损坏数据拒绝返回，不把 any 当作可靠响应。保存快照、取消、文件读取和续接附件证明不改变。
+
+
+DispatchStore 在追加及回放时调用 projectAgentBusinessRuns 校验独立身份登记事务，继续使用原 fsync、回执和未知结果语义。

@@ -5,9 +5,11 @@
 import {z} from 'zod';
 import {noIpcArgs,workspaceIdArgs} from './ipc-shapes';
 import {type ChatAttachment} from './chat';
-import {type DesktopUpdateStatus} from './desktop-updates';
+import {type DesktopUpdateStatus,type ManagedEngineStatus} from './desktop-updates';
 
 export const desktopIpcRequests={
+  'desktop.engines.status':noIpcArgs,
+  'desktop.engines.prepare':z.object({engine:z.enum(['pi','claude-code','codex','memory'])}).strict(),
   'desktop.updates.status':noIpcArgs,
   'desktop.updates.check':noIpcArgs,
   'desktop.updates.download':noIpcArgs,
@@ -21,6 +23,8 @@ export const desktopIpcRequests={
   'chooseFolder':noIpcArgs,
 };
 export interface DesktopIpcResponses {
+  'desktop.engines.status':ManagedEngineStatus[];
+  'desktop.engines.prepare':ManagedEngineStatus;
   'desktop.updates.status':DesktopUpdateStatus;
   'desktop.updates.check':DesktopUpdateStatus;
   'desktop.updates.download':DesktopUpdateStatus;

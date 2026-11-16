@@ -8,7 +8,6 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import '../components/sidebar.css';
 import {Icon} from '../components/Icon';
 import {ModelSettings} from './ModelSettings';
-import {EngineSettings} from './EngineSettings';
 import {AdmissionSettings} from './AdmissionSettings';
 import {BudgetSettings} from './BudgetSettings';
 import {WebSettings} from './WebSettings';
@@ -45,7 +44,6 @@ export function SettingsView({onDirtyChange,sidebarResize,section,onSectionChang
   function open(id:SettingsSectionId){onSectionChange(id);setQuery('')}
   function panel(id:SettingsSectionId){switch(id){
     case 'models':return <ModelSettings onDirtyChange={reporters.models}/>;
-    case 'engines':return <EngineSettings active={section==='engines'}/>;
     case 'accounts':return <AccountSettings onDirtyChange={reporters.accounts}/>;
     case 'appearance':return <AppearanceSettings appearance={appearance}/>;
     case 'runtime':return <AdmissionSettings onDirtyChange={reporters.runtime} active={section==='runtime'}/>;

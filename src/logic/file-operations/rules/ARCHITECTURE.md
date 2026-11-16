@@ -475,3 +475,9 @@ N_src_logic_file_operations_rules_controlled_file_rules_ts ..> N_src_logic_file_
 [返回上层](../ARCHITECTURE.md)。
 
 每次修改本目录代码，同步维护文件头、关键契约说明及本图。未实现的治理、证据验收和自动编排能力不列入当前类图。
+
+## 设计契约 v1 与落地范围
+
+以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
+
+递归业务受控写入从 agentBusinessRuns 核对活动身份、原周期及冻结知识；补偿仍要求原运行关闭。controlled-file-invariants 不把登记 active 当作写入成功。

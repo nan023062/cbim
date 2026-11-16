@@ -1,3 +1,4 @@
+/** 本视图样式负责原有布局；普通文字改用共享排版令牌，避免容器之间出现不同阅读字号。 */
 /* 项目组织树只改变展示：图内操作、左对齐层级和图标用于定位；不修改角色模型或 Skill 继承。 */
 .team-management{container-type:inline-size;width:100%;min-width:0;box-sizing:border-box;flex-shrink:0;padding:28px clamp(12px,4%,38px)}
 .team-toolbar,.team-definition-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -18,24 +19,24 @@
 .team-node-select>svg{flex-shrink:0}
 .team-node-select>span{min-width:0}
 .team-node-select b,.team-node-select small{display:block;overflow-wrap:anywhere}
-.team-node-select small{font-size:12px;color:var(--muted);margin-top:3px}
+.team-node-select small{font-size:var(--font-ui);color:var(--muted);margin-top:3px}
 .team-tree-children{margin-left:18px;padding-left:7px;border-left:1px solid var(--line)}
-.team-definition-detail{min-width:0;border-left:1px solid var(--line);padding-left:20px;font-size:13px;line-height:1.65}
-.team-definition-detail h2{margin:6px 0;font-size:19px;overflow-wrap:anywhere}
-.team-definition-detail h3{margin:22px 0 8px;font-size:14px}
-.team-definition-detail h3 small{font-weight:400;color:var(--muted);font-size:12px}
-.team-definition-detail code{font-size:12px;overflow-wrap:anywhere}
+.team-definition-detail{min-width:0;border-left:1px solid var(--line);padding-left:20px;font-size:var(--font-ui);line-height:1.65}
+.team-definition-detail h2{margin:6px 0;font-size:var(--font-dialog-title);overflow-wrap:anywhere}
+.team-definition-detail h3{margin:22px 0 8px;font-size:var(--font-ui)}
+.team-definition-detail h3 small{font-weight:var(--weight-regular);color:var(--muted);font-size:var(--font-ui)}
+.team-definition-detail code{font-size:var(--font-code);overflow-wrap:anywhere}
 .team-definition-detail p,.team-definition-detail li{overflow-wrap:anywhere}
 .team-definition-actions{margin:12px 0}
-.team-definition-actions button{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 9px}
+.team-definition-actions button{display:inline-flex;align-items:center;gap:6px;font-size:var(--font-ui);padding:6px 9px}
 .team-definition-actions button>svg,.team-toolbar button>svg{flex-shrink:0}
 .team-skill-title{display:flex;gap:6px;align-items:center}
-.team-empty-note{color:var(--muted);font-size:12px}
+.team-empty-note{color:var(--muted);font-size:var(--font-ui)}
 .team-skill-list{display:grid;gap:6px}
 .team-skill-list>button{display:grid;gap:4px;text-align:left;min-width:0;white-space:normal;padding:10px;border:1px solid var(--line);border-radius:8px;background:transparent}
-.team-skill-list small{color:var(--muted);font-size:12px}
-.team-skill-list span{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.team-skill-list small{color:var(--muted);font-size:var(--font-ui)}
+.team-skill-list span{font-size:var(--font-ui);color:var(--muted);overflow-wrap:anywhere}
 .team-skill-detail{margin-top:16px;padding-top:4px;border-top:1px solid var(--line)}
-.team-definition-detail .chat-markdown{font-size:13px;line-height:1.7}
-.team-issues{margin-bottom:15px;color:var(--muted);font-size:12px}
+.team-definition-detail .chat-markdown{font-size:var(--font-ui);line-height:1.7}
+.team-issues{margin-bottom:15px;color:var(--muted);font-size:var(--font-ui)}
 @container (max-width:650px){.team-management-layout{grid-template-columns:minmax(0,1fr)}.team-definition-detail{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:16px}.team-definition-tree{overflow-wrap:anywhere}.team-tree-children{margin-left:11px}.team-toolbar{gap:6px}}

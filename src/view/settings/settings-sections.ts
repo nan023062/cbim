@@ -4,7 +4,6 @@
  */
 export const settingsSections=[
   {id:'models',label:'大模型',group:'AI 能力',icon:'sparkles',description:'管理供应商、连接方式与生成 / 向量模型。',keywords:'供应商 API Key 密钥 连接 默认 模型 价格 token 上下文 embedding 向量'},
-  {id:'engines',label:'引擎',group:'AI 能力',icon:'plug',description:'了解业务专长和可用模型，管理官方引擎包。',keywords:'Pi Claude Code Codex 记忆 安装 更新 移除 停用 启用 能力'},
   {id:'accounts',label:'账号与连接',group:'偏好',icon:'team',description:'查看本地使用状态，管理反馈服务的账号连接。',keywords:'账户 登录 GitHub OAuth 反馈 绑定 退出 断开'},
   {id:'appearance',label:'主题与个性化',group:'偏好',icon:'sun',description:'选择显示模式、阅读字号和动态效果。',keywords:'外观 浅色 深色 系统 字体 字号 代码 动画 阅读 主题'},
   {id:'runtime',label:'任务运行',group:'工作方式',icon:'flow',description:'设置全局并发，查看名额占用与等待数量。',keywords:'Agent 并发 排队 执行 上限 工作区'},

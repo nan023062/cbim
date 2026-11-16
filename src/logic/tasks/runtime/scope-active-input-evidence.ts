@@ -1,4 +1,5 @@
 /**
+ * 原插入日志重算指纹时包含持久附件清单，正文相同但材料变化仍不能通过核证。
  * 目录归属：logic/tasks/runtime；目标状态与核证恢复服务。
  * 作用定位：把目标补充的持久接收记录与原主运行的可信插入日志逐项核对。
  * 设计原因：Scope 与运行日志是两个真实存储，不能靠单边记录推断原生已经接收；未知不会被旧 review 或普通聊天完成例外洗白。
@@ -23,7 +24,7 @@ export function validateScopeActiveInputLog(scope:DispatchScope,summary:RunSumma
     valid(record&&token.scopeId===scope.scopeId&&token.runId===summary.runId&&token.queueId===record.queueId&&token.inputHash===record.inputHash,'原生插入日志没有对应的目标接收记录');
     valid(event.data.metric==='insertion'&&['requested','accepted','failed'].includes(String(event.data.state))&&typeof event.data.message==='string','补充日志状态或正文无效');
     if(!record)continue;
-    valid(scopedActiveInputHash({message:String(event.data.message),...(record.attachmentIds?{attachmentIds:record.attachmentIds}:{})})===record.inputHash,'补充日志正文与原准备指纹不一致');
+    valid(scopedActiveInputHash({message:String(event.data.message),...(record.attachmentIds?{attachmentIds:record.attachmentIds}:{}),...(record.attachmentManifest?{attachmentManifest:record.attachmentManifest}:{})})===record.inputHash,'补充日志正文与原准备指纹不一致');
     if(event.data.state==='accepted')valid(record.status==='accepted'&&record.acceptedSeq===event.seq,'原生已接收补充尚未完整登记，不能沿旧目标完成');
     if(record.status==='accepted')valid(event.data.state!=='failed','已接收补充同时存在失败日志，结果需要核实');
   }

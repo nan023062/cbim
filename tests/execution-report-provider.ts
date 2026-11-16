@@ -1,7 +1,7 @@
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {goalCompleteArguments,goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import {type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const reportFixture={
   mainGoal:'EXECUTION_REPORT_MAIN: 执行隔离验证并如实核实工具结果',
@@ -18,30 +18,21 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 /** Only model transport is deterministic: native bash/read, policy, receipts and disk effects remain real. */
 export async function executionReportProvider(options:{success?:boolean;hold?:boolean}={}){
   const mainRequests:Request[]=[],memberRequests:Request[]=[],errors:string[]=[];
-  let ownerSelection:OwnerExecutionSelection|undefined;let agentId='',moduleId='',release=()=>{};
+  let ownerSelection:OwnerExecutionSelection|undefined;let moduleId='',release=()=>{};
   const gate=new Promise<void>(resolve=>{release=resolve});
   const server=http.createServer(async(req,res)=>{
     try{
       assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));
       let raw='';for await(const chunk of req)raw+=chunk;
-      const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true;
+      const body=JSON.parse(raw) as Request,isMain=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review')===true;
       const list=isMain?mainRequests:memberRequests,turn=list.length;list.push(body);
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'execution-report-'+(mainRequests.length+memberRequests.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
       const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
       const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
       if(isMain){
-        if(turn===0)tool('report-plan','cbim_goal_plan',goalPlanArguments({objective:reportFixture.mainGoal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:reportFixture.acceptance}));
-        else if(turn===1)tool('report-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:reportFixture.memberGoal,acceptance:reportFixture.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-        else if(turn===2)reply('已派发，等待真实工具结果。');
-        else if(turn===3)tool('report-inspect','cbim_goal_inspect',{});
-        else if(turn===4){
-          if(options.success)tool('report-review','cbim_goal_review',goalCompleteArguments(body,'report-inspect'));
-          else{
-            const {scope}=goalInspection(body,'report-inspect');
-            tool('report-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'blocked',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:'unmet',reason:reportFixture.failure,evidence:[]})),superseded:[],gaps:[reportFixture.failure],reason:reportFixture.failure});
-          }
-        }else if(turn===5)reply(reportFixture.final);
+        if(turn===0)tool('report-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:reportFixture.memberGoal,business:{moduleIds:[moduleId],acceptance:reportFixture.acceptance}});
+        else if(turn===1)reply(reportFixture.final);
         else throw Error('只读报告不得触发额外主模型请求：'+turn);
       }else{
         if(turn===0)tool('report-member-plan','cbim_task_plan',{expectedVersion:0,goal:reportFixture.memberGoal,reason:'验证真实执行记录，不重试已失败命令',acceptance:reportFixture.acceptance,steps:[{id:'verify',title:'执行隔离操作',owner:'开发者'}]});
@@ -62,5 +53,5 @@ export async function executionReportProvider(options:{success?:boolean;hold?:bo
     }catch(error){errors.push(String(error));if(!res.headersSent)res.writeHead(500);res.end('Execution report fixture failed')}
   });
   await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const address=server.address();assert.ok(address&&typeof address!=='string');
-  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,release,bind:(agent:string,module:string,selection?:OwnerExecutionSelection)=>{agentId=agent;moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
+  return {url:`http://127.0.0.1:${address.port}/v1`,mainRequests,memberRequests,errors,release,bind:(_agent:string,module:string,selection?:OwnerExecutionSelection)=>{moduleId=module;ownerSelection=selection?structuredClone(selection):undefined},close:async()=>{release();server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}};
 }

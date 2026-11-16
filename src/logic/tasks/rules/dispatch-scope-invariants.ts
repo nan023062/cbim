@@ -1,4 +1,5 @@
 /**
+ * 新递归重规划核对原登记、核实运行及验收文本，不借用旧计划/审阅字段；旧协议校验不放宽。
  * 协作模式及兜底模型自周期建立后不可更换；旧周期缺省不追溯获得 auto 资格。
  * 显式 memberPause 可保留无租约的检查点和后继；Store 独立核全量清单，等待取消仅开放精确封存变更。
  * 作用定位：校验调度周期、不可变回传批次、等待检查点、运行中补充和显式接续的持久状态及原子变更，供派发存储提交与重放共用。
@@ -96,6 +97,19 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
     if(replan){
       const inspection=scopes.find(item=>item.scopeId===replan.source.inspectionScopeId),proof=replan.source.proof;
       valid(inspection?.recovery&&inspection.status==='closed'&&inspection.outcome==='completed'&&inspection.rootSessionId===scope.rootSessionId&&inspection.workspaceId===scope.workspaceId&&scopes.indexOf(inspection)<scopes.indexOf(scope),'业务重规划必须引用此前完成的本会话只读核实');
+      if('executionModel' in proof){
+        const origin=inspection.recovery.source,original=scopes.find(item=>item.scopeId===proof.sourceScopeId);
+        valid('executionModel' in origin&&origin.executionModel==='agent-tools-v1'&&proof.executionModel==='agent-tools-v1'&&inspection.goal?.revision===proof.inspectionGoalRevision&&inspection.recovery.context.initialRunId===proof.inspectionRunId,'递归核实证明与原周期身份不一致');
+        valid(original?.status==='closed'&&original.scopeId===origin.scopeId&&proof.sourceRunId===origin.runId&&'taskId' in origin&&proof.sourceTaskId===origin.taskId&&equal(proof.sourceToolCallIds,origin.toolCallIds),'递归重规划原来源不匹配');
+        const source=(next.agentBusinessRuns??[]).find(run=>run.scopeId===original.scopeId&&run.binding.taskId===proof.sourceTaskId&&run.binding.runId===proof.sourceRunId);
+        valid(source?.request&&source.status==='closed'&&equal(source.request.acceptance,proof.sourceAcceptance),'递归重规划必须保留原验收要求');
+        const required=[...new Set(source.prepared.modules.map(module=>module.binding.moduleId))].sort();
+        valid(equal(required,[...proof.requiredModules.map(module=>module.moduleId)].sort())&&proof.inheritedHuman.length===0,'递归重规划不能扩大或遗漏原模块范围');
+        const inspected=(next.agentBusinessRuns??[]).filter(run=>run.scopeId===inspection.scopeId);
+        valid(inspected.length>0&&inspected.every(run=>run.status==='closed'&&run.permission==='read'&&run.prepared.knowledgeRevision===proof.knowledgeRevision)&&required.every(id=>inspected.some(run=>run.prepared.modules.some(module=>module.binding.moduleId===id))),'递归核实必须实际覆盖原模块');
+        valid(!scope.goal?.plan,'递归业务不能补造旧目标计划');
+        if(!old)valid(previous.scopes?.filter(item=>item.rootSessionId===scope.rootSessionId).at(-1)?.scopeId===inspection.scopeId,'递归核实必须是最后封存周期');
+      }else{
       valid(inspection.goal?.review?.decision==='complete'&&inspection.goal.revision===proof.inspectionGoalRevision&&inspection.goal.plan?.revision===proof.inspectionPlanRevision&&inspection.goal.review.runId===proof.reviewRunId&&inspection.goal.review.knowledgeRevision===proof.knowledgeRevision,'业务重规划的核实证明与封存周期不一致');
       const original=scopes.find(item=>item.scopeId===proof.sourceScopeId),origin=inspection.recovery.source;
       valid(original?.goal?.plan&&original.status==='closed'&&original.scopeId===origin.scopeId&&proof.sourceRunId===origin.runId,'业务重规划必须继承真实原业务来源，不补造旧计划');
@@ -123,6 +137,7 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
         const planned=scope.goal.plan.assignments.flatMap(item=>item.moduleIds);
         valid(planned.every(module=>required.includes(module))&&required.every(module=>planned.includes(module)),'新业务计划必须完整覆盖且不能超出已核实模块');
       }
+      }
     }
     if(old)valid(equal(old.recovery,recovery),'核实启动意图创建后不可补造、移除或改写');
     if(recovery){
@@ -138,6 +153,10 @@ export function validateDispatchScopes(previous:DispatchState,next:DispatchState
         valid(owners.length===1&&owners[0].scopeId===source.scopeId,'主核实来源必须属于唯一原周期');
         valid(origin.sourceGoalRevision===source.goal?.revision&&origin.sourceInputRevision===(source.goal?(source.goal.inputRevision??1):undefined)&&origin.sourcePlanRevision===source.goal?.plan?.revision,'主核实来源目标版本不一致');
         valid(next.sessions.some(s=>s.workspaceId===scope.workspaceId&&s.rootSessionId===scope.rootSessionId&&s.purpose==='conversation'&&s.agentId==='cbim:main'&&s.agentInstanceId===graph.root.agent.agentInstanceId),'主核实来源缺少真实对话通道');
+      }else if('executionModel' in origin){
+        // 递归来源只核真实登记与终态，不推造旧任务版本或按邻近时间选择来源。
+        const run=next.agentBusinessRuns?.find(r=>r.binding.workspaceId===scope.workspaceId&&r.binding.rootSessionId===scope.rootSessionId&&r.binding.taskId===origin.taskId&&r.binding.runId===origin.runId);
+        valid(origin.executionModel==='agent-tools-v1'&&run?.scopeId===source.scopeId&&run.status==='closed','递归核实来源必须是同主会话原周期的已关闭业务调用');
       }else{
         const task=graph.tasks.find(item=>item.taskId===origin.taskId);
         valid(task&&task.scopeId===source.scopeId&&task.revision===origin.taskRevision&&task.planRevision===origin.planRevision&&!task.activeRunId,'核实来源任务的身份或冻结版本不一致');

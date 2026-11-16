@@ -59,11 +59,11 @@
 | [MemberCancellationNotice.tsx](MemberCancellationNotice.tsx) | 在主对话成员卡和任务详情中显示主调度已经提交的未启动撤销事实。 |
 | [MemberCheckpointNotice.tsx](MemberCheckpointNotice.tsx) | 在主对话和任务详情展示检查点、续执行预约、显式放弃与新旧轮次关系。 |
 | [MemberDependencyNotice.tsx](MemberDependencyNotice.tsx) | 在成员动态和详情中展示前置追加/替换/原子增删原因，保留原边和来源身份。 |
-| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的派发、日志与工具回执报告，独立于成员流式正文。 |
+| [MemberExecutionReport.tsx](MemberExecutionReport.tsx) | 在任务节点详情中展示一次显式核实的原调用登记、日志与工具回执报告，独立于成员流式正文。 |
 | [MemberHelpNotice.tsx](MemberHelpNotice.tsx) | 在主对话成员卡和任务详情中只读呈现已经结算的求助交接记录。 |
 | [MemberOutputManifest.tsx](MemberOutputManifest.tsx) | 成员指定轮次的声明范围完整清单面板，明确显示根、缺失、集合变化及原删除/移动证明。 |
 | [MemberProgressSummary.tsx](MemberProgressSummary.tsx) | 在成员公开对话卡中直接展示结构化步骤、证据数量及交付限制。 |
-| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以成员身份显示公开消息和工具过程，供主会话成员卡片及任务详情共用。 |
+| [MemberRunTranscript.tsx](MemberRunTranscript.tsx) | 以执行 Agent 身份连续显示调用方输入、公开输出与工具过程，兼容旧成员卡片及任务详情。 |
 | [MemberTaskDetail.tsx](MemberTaskDetail.tsx) | 展示任务图选中成员的公开正文、工具、计划与候选；独立报告核实执行事实，独立表单显式创建新的只读核实周期。 |
 | [MemberValidationPanel.tsx](MemberValidationPanel.tsx) | 成员任务详情中的只读 JSON/CSV/PNG 验证记录，列出验证器、明确条件、文件与当时结论。 |
 | [office-scene.css](office-scene.css) | 主题自适应办公室家具、人物与往返动作；小屏工位逐列重排；当前任务正文按需进入详情，不另设列表占位。 |
@@ -94,7 +94,7 @@
 | [SessionTaskView.tsx](SessionTaskView.tsx) | 展示当前主会话的办公室及用量，人物详情和历史任务只导航对应对话。 |
 | [task-graph.css](task-graph.css) | 主会话办公室与显式运行核实对话框的自适应布局。 |
 | [task-history-state.ts](task-history-state.ts) | 为任务流程图划分默认折叠的历史任务，并统计被折叠的真实关联。 |
-| [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实与影响处置入口，供主对话及任务页使用。 |
+| [ToolActivity.tsx](ToolActivity.tsx) | 在共享工具轨道上组合原命令核实、影响处置和按调用 ID 延迟挂载的详情，供主对话及任务页使用。 |
 | [useAdmission.ts](useAdmission.ts) | 将当前窗口唯一的准入快照订阅接入 React，供多个会话与设置共用。 |
 | [useControlledFiles.ts](useControlledFiles.ts) | 将共享原文件操作/补偿控制器连接桌面 IPC，供成员原调用卡使用。 |
 | [useEffectObservation.ts](useEffectObservation.ts) | 将共享影响处置控制器接到桌面 IPC，供主工具记录、成员详情与业务重规划使用。 |
@@ -1689,7 +1689,7 @@ class N_src_view_tasks_MemberRunTranscript_tsx["MemberRunTranscript.tsx"] {
 }
 ```
 
-直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[MemberProgressSummary.tsx](MemberProgressSummary.tsx)。
+直接依赖：[../../bridge/contracts/execution.ts](../../bridge/contracts/execution.ts)、[../execution-view/transcript.ts](../execution-view/transcript.ts)、[../execution-view/MarkdownMessage.tsx](../execution-view/MarkdownMessage.tsx)、[../execution-view/WorkStatus.tsx](../execution-view/WorkStatus.tsx)、[MemberProgressSummary.tsx](MemberProgressSummary.tsx)、[../execution-view/ToolTimeline.tsx](../execution-view/ToolTimeline.tsx)、[../execution-view/AgentCallDetails.tsx](../execution-view/AgentCallDetails.tsx)。
 
 ### MemberTaskDetail.tsx
 
@@ -4047,6 +4047,11 @@ N_src_view_tasks_useSessionGraph_ts ..> N_src_view_tasks_scope_state_ts : 导入
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+### 主对话工具详情与旧执行记录
+
+`ToolActivity` 透传按原调用 ID 的只读详情插槽，由共享工具轨道在展开后挂载。`MemberRunTranscript` 按原日志顺序交错显示调用方输入、执行 Agent 文字与工具；新的 Agent 工具使用 `AgentCallDetails` 核验并递归读取，旧成员历史仍只读。输入对象是调用方 Agent，不提供用户直发执行 Agent 的控件。`ScopeContinuationForm` 保留持久续接请求的核实与异常恢复；正常补充也可以由主对话输入框提交同一控制器，不把表单显示当作人工验收。
+
+### 办公室长期对话联合投影
 ### 办公室导航与显式运行核实
 
 SessionTaskView 只装配办公室与用量，不接收停止/恢复控制器。OfficeScene 的任务和调度详情链接交回原 taskId，由 Conversation 按正式 TeamSession 导航到成员工作审阅或主对话，主根保留原选中话题。session-task-state 的 sessionRuns/sessionRoot 保留原工作区、主根、目标及坏日志投影，办公室和核实共用。
@@ -4535,3 +4540,20 @@ AdmissionFeed 仍拥有首订阅读取、末退订停轮询与代次失效；各
 ## 交互区 Agent 选择
 
 SessionTaskView 将侧栏选中的逻辑 Session 传给 OfficeScene；选中人物用边框突出，缺省为主 Agent。只匹配当前主会话的真实人物，不改变任务选择、状态或动画事件。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+任务状态与正文复用共享字号；执行 Agent 记录继承主 Markdown 标题，small/span 说明不当作代码。result_ready 和 interrupted 统一从共享样式取得 warning 颜色。
+
+
+## 递归执行记录核实
+
+ExecutionReportPanel 根据 basis.executionModel 显示原调用登记及冻结计划版本，active/closed 使用登记含义的标签，不显示虚构旧任务版本；旧报告仍保留历史状态。读取、分页、错误和过期控制不新增执行操作。
+
+
+### 递归工具迁移收口
+
+修复回执校验兼容新的 inspectionRunId 与旧 reviewRunId，二者均不得作为新业务 runId；前端不推断旧任务图或补造核实计划。

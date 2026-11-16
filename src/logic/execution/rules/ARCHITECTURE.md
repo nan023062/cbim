@@ -10,6 +10,8 @@
 
 | 文件 | 当前职责 |
 | --- | --- |
+| [business-run-invariants.ts](business-run-invariants.ts) | 在唯一工作区日志提交及重放时核实递归业务身份登记。 |
+| [business-run.ts](business-run.ts) | 递归业务运行的持久身份与冻结知识，供文件审计和隔离恢复定位原 canonical。 |
 | [conversation-binding.ts](conversation-binding.ts) | 定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。 |
 | [engine-adapter.ts](engine-adapter.ts) | 官方领域 Agent Loop 包与执行宿主之间的版本化工厂契约，创建前核对包身份与模型/历史声明。 |
 | [engine-instructions.ts](engine-instructions.ts) | 为主 Agent 和成员生成共用的运行职责、历史资料、冻结身份与工具边界说明。 |
@@ -37,25 +39,31 @@ class N_src_logic_execution_rules_capabilities["capabilities/"] {
 class N_src_logic_execution_rules_runtime["runtime/"] {
   <<directory>>
 }
+class N_src_logic_execution_rules_business_run_invariants_ts["business-run-invariants.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_business_run_ts["business-run.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_rules_conversation_binding_ts["conversation-binding.ts"] {
   <<module>>
 }
 class N_src_logic_execution_rules_engine_adapter_ts["engine-adapter.ts"] {
   <<module>>
 }
-class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts"] {
-  <<module>>
-}
-class N_src_logic_execution_rules_engine_runtime_ts["engine-runtime.ts"] {
-  <<module>>
-}
-N_src_logic_execution_rules_engine_adapter_ts ..> N_src_logic_execution_rules_engine_runtime_ts : 导入依赖
+N_src_logic_execution_rules_business_run_invariants_ts ..> N_src_logic_execution_rules_business_run_ts : 导入依赖
 N_src_logic_execution_rules_runtime ..> N_src_logic_execution_rules_capabilities : 导入依赖
 N_src_logic_execution_rules_runtime ..> N_src_logic_execution_rules_conversation_binding_ts : 导入依赖
 ```
 
 ```mermaid
 classDiagram
+class N_src_logic_execution_rules_engine_instructions_ts["engine-instructions.ts"] {
+  <<module>>
+}
+class N_src_logic_execution_rules_engine_runtime_ts["engine-runtime.ts"] {
+  <<module>>
+}
 class N_src_logic_execution_rules_engine_session_ts["engine-session.ts"] {
   <<module>>
 }
@@ -68,18 +76,18 @@ class N_src_logic_execution_rules_index_ts["index.ts"] {
 class N_src_logic_execution_rules_input_source_ts["input-source.ts"] {
   <<module>>
 }
+N_src_logic_execution_rules_engine_instructions_ts ..> N_src_logic_execution_rules_engine_tools_ts : 导入依赖
+N_src_logic_execution_rules_index_ts ..> N_src_logic_execution_rules_input_source_ts : 导入依赖
+```
+
+```mermaid
+classDiagram
 class N_src_logic_execution_rules_member_run_ts["member-run.ts"] {
   <<module>>
 }
 class N_src_logic_execution_rules_model_errors_ts["model-errors.ts"] {
   <<module>>
 }
-N_src_logic_execution_rules_index_ts ..> N_src_logic_execution_rules_member_run_ts : 导入依赖
-N_src_logic_execution_rules_index_ts ..> N_src_logic_execution_rules_input_source_ts : 导入依赖
-```
-
-```mermaid
-classDiagram
 class N_src_logic_execution_rules_repeated_tool_failures_ts["repeated-tool-failures.ts"] {
   <<module>>
 }
@@ -92,19 +100,24 @@ class N_src_logic_execution_rules_scope_usage_ts["scope-usage.ts"] {
 class N_src_logic_execution_rules_storage_ts["storage.ts"] {
   <<module>>
 }
+```
+
+```mermaid
+classDiagram
 class N_src_logic_execution_rules_types_ts["types.ts"] {
   <<module>>
 }
 class N_src_logic_execution_rules_usage_ts["usage.ts"] {
   <<module>>
 }
-N_src_logic_execution_rules_scope_usage_ts ..> N_src_logic_execution_rules_types_ts : 导入依赖
-N_src_logic_execution_rules_storage_ts ..> N_src_logic_execution_rules_types_ts : 导入依赖
 N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_types_ts : 导入依赖
 ```
 
 各图中的同名节点表示同一目录边界；跨组及完整直接依赖如下（无边不代表继承）：
 
+- `business-run-invariants.ts` → `member-run.ts`：导入。
+- `business-run-invariants.ts` → `business-run.ts`：导入。
+- `business-run.ts` → `member-run.ts`：导入。
 - `capabilities` → `member-run.ts`：导入。
 - `capabilities` → `types.ts`：导入。
 - `capabilities` → `engine-tools.ts`：导入。
@@ -135,6 +148,18 @@ N_src_logic_execution_rules_usage_ts ..> N_src_logic_execution_rules_types_ts : 
 - `types.ts` → `conversation-binding.ts`：导入。
 - `types.ts` → `engine-tools.ts`：导入。
 - `usage.ts` → `types.ts`：导入。
+
+### business-run-invariants.ts 公开入口
+
+```mermaid
+classDiagram
+class N_src_logic_execution_rules_business_run_invariants_ts["business-run-invariants.ts"] {
+  <<module>>
+  +agentBusinessRunCommand()
+  +projectAgentBusinessRuns()
+}
+```
+
 
 ### conversation-binding.ts 公开入口
 
@@ -704,3 +729,21 @@ engine-adapter.ts 定义版本 1 的 EngineAdapter 工厂、可信 EngineAdapter
 EngineRuntimeResolver 接受通用引擎 ID；EngineRuntimePackage 保留 SDK 的 entry/version，并可携带独立 adapter 的绝对入口、适配器版本及协议。选型范围仍由官方静态清单拥有，通用地址协议不提供任意路径注入。
 
 EngineRuntimePackage 可携带准确依赖映射和 retain 引用端口，仅在宿主内存使用；不序列化函数或加载路径到模型。
+
+## 递归业务登记事务
+
+business-run 定义受控文件消费者共用的最小运行来源与 AgentBusinessRun。business-run-invariants 在原 DispatchStore 提交和回放时投影 agentBusinessRuns；没有该字段的旧状态保持原形。每次登记独立单条事务，固定根作用域、父工具、来源链、岗位、知识和权限，不混写副作用阶段。
+
+启动必须属于当前活动根运行，同一父工具不能复用新运行身份；直接业务父级的模块和权限不可扩大。关闭仅允许 active→closed，所有直接及间接业务后代必须先关闭。容量满时拒绝新增，不淘汰审计历史。该登记不是派发队列、调度器或第二份执行事实。
+
+## 主控制面生命周期契约
+
+MainToolContext 随 ConversationAgentBinding 归属 execution/rules，供新递归装配和旧 Auto 历史协议共同实现；不再由具体旧调度器声明公共类型。固定 workspace/root/scope/run，assertCurrent 复核有效性，track 在启动操作前登记原提交，不能签发权限或创建周期。
+
+
+递归只读核实：business-run-invariants 仅允许 agent-tools-v1 来源的新 recovery 周期登记 permission=read 子调用。ask/execute 和旧恢复周期即使直接写 Store 也拒绝；仍核原父调用、根运行、模块范围和已冻结身份。
+
+
+### 递归工具迁移收口
+
+AgentBusinessRun.request 可选保存新业务原目标与验收要求；旧记录仍可读取。新增登记核对 request 形状，重规划子调用必须保留原要求且模块不超出已核实范围；关闭不能改写原 request。

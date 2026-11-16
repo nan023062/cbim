@@ -379,3 +379,8 @@ RuntimeNavigationResolver 组合前端 AsyncGeneration；每次 resolve 和 canc
 ## 设置中心与本机外观
 
 App 持有 SettingsSectionId 与 useAppearance；进入设置时隐藏原工作区侧栏和顶栏，保留原工作区、会话与侧栏展开状态，返回后恢复原显示。模型配置入口直达大模型，资源页面入口直达资源仓库；导航仍经过原未保存知识编辑检查且只检查一次。分类切换由 SettingsView 保留已访问表单；离开中心维持原卸载语义。UserMenu 消费已解析配色，切换回调写入同一个外观控制器，账号入口不触发登录。关于页与原侧栏更新组件共享一份更新 controller。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

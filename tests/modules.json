@@ -1,6 +1,19 @@
 {
   "version": 1,
   "modules": {
+    "agents": {
+      "roots": [
+        "src/logic/agents/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/agent-object.test.ts",
+          "tests/agent-call-exchange.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
     "application": {
       "roots": [
         "src/logic/application/",
@@ -9,7 +22,9 @@
       ],
       "tests": {
         "unit": [],
-        "contract": [],
+        "contract": [
+          "tests/agent-call-assembly.test.ts"
+        ],
         "integration": [
           "tests/abandoned-checkpoint-dependency-pi.test.ts",
           "tests/abandoned-checkpoint-dependency-service.test.ts",
@@ -197,7 +212,8 @@
           "tests/workspace-navigation.test.ts",
           "tests/workspace-packages.test.ts",
           "tests/workspace.test.ts",
-          "tests/memory-engine-application.test.ts"
+          "tests/memory-engine-application.test.ts",
+          "tests/agent-controlled-file-pi.test.ts"
         ]
       }
     },
@@ -269,7 +285,8 @@
           "tests/member-run.test.ts",
           "tests/run-failure.test.ts",
           "tests/tool-failure-control.test.ts",
-          "tests/tool-result-pi.test.ts"
+          "tests/tool-result-pi.test.ts",
+          "tests/business-run-registry.test.ts"
         ],
         "integration": [
           "tests/isolation-recovery-win32.test.ts"
@@ -654,7 +671,8 @@
         "unit": [],
         "contract": [
           "tests/loop-engine.test.ts",
-          "tests/run-journal-integrity.test.ts"
+          "tests/run-journal-integrity.test.ts",
+          "tests/business-run-storage.test.ts"
         ],
         "integration": []
       }
@@ -704,7 +722,9 @@
           "tests/scope-usage-service.test.ts",
           "tests/unit/logic/budget/model-role-service.test.ts"
         ],
-        "contract": [],
+        "contract": [
+          "tests/agent-request-budget.test.ts"
+        ],
         "integration": []
       }
     },
@@ -752,7 +772,8 @@
           "tests/artifact-report-service.test.ts",
           "tests/effect-observation-service.test.ts",
           "tests/knowledge-effect-service.test.ts",
-          "tests/persistent-effect-service.test.ts"
+          "tests/persistent-effect-service.test.ts",
+          "tests/agent-artifact-verification.test.ts"
         ],
         "integration": []
       }
@@ -842,7 +863,8 @@
           "tests/runtime-journal.test.ts",
           "tests/runtime-manifest.test.ts",
           "tests/runtime-store.test.ts",
-          "tests/runtime-updates.test.ts"
+          "tests/runtime-updates.test.ts",
+          "tests/managed-engines.test.ts"
         ],
         "integration": []
       }
@@ -921,7 +943,8 @@
           "tests/knowledge-tool-view.test.ts",
           "tests/markdown.test.ts",
           "tests/run-view.test.ts",
-          "tests/team-conversations.test.ts"
+          "tests/team-conversations.test.ts",
+          "tests/agent-call-view.test.ts"
         ],
         "contract": [
           "tests/inline-conversation.test.ts"
@@ -1617,6 +1640,18 @@
       "tests": {
         "unit": [
           "tests/diagnostics-view.test.ts"
+        ],
+        "contract": [],
+        "integration": []
+      }
+    },
+    "logic/execution/assembly": {
+      "roots": [
+        "src/logic/execution/assembly/"
+      ],
+      "tests": {
+        "unit": [
+          "tests/agent-call-scheduler.test.ts"
         ],
         "contract": [],
         "integration": []

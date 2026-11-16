@@ -315,7 +315,7 @@ class N_src_bridge_contracts_execution_ts_PublicValidationResult["PublicValidati
 N_src_bridge_contracts_execution_ts ..> N_src_bridge_contracts_execution_ts_PublicValidationResult : 声明
 ```
 
-直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)、[../../logic/tools/rules/input-validation.ts](../../logic/tools/rules/input-validation.ts)、[../../logic/tools/rules/scope-schema.ts](../../logic/tools/rules/scope-schema.ts)、[../../logic/evidence/rules/validation.ts](../../logic/evidence/rules/validation.ts)。
+直接依赖：[../../logic/execution/rules/types.ts](../../logic/execution/rules/types.ts)、[../../logic/agents/contracts.ts](../../logic/agents/contracts.ts)、[../../logic/tasks/rules/types.ts](../../logic/tasks/rules/types.ts)、[../../logic/tasks/rules/queue.ts](../../logic/tasks/rules/queue.ts)、[../../logic/tools/rules/questions.ts](../../logic/tools/rules/questions.ts)、[../../logic/tools/rules/input-validation.ts](../../logic/tools/rules/input-validation.ts)、[../../logic/tools/rules/scope-schema.ts](../../logic/tools/rules/scope-schema.ts)、[../../logic/evidence/rules/validation.ts](../../logic/evidence/rules/validation.ts)。
 
 ### github-feedback.ts
 
@@ -530,6 +530,8 @@ class N_src_bridge_contracts_ipc_desktop_ts["ipc-desktop.ts"] {
 }
 class N_src_bridge_contracts_ipc_desktop_ts_DesktopIpcResponses["DesktopIpcResponses"] {
   <<interface>>
+  +'desktop.engines.status'
+  +'desktop.engines.prepare'
   +'desktop.updates.status'
   +'desktop.updates.check'
   +'desktop.updates.download'
@@ -1377,6 +1379,9 @@ N_src_bridge_contracts_workspace_ts ..> N_src_bridge_contracts_chat_ts : 导入�
 
 以下内容区分已接通能力与后续设计；以各节的实现状态为准，不将目标图当作现状图。维护源：[CONTRACT.md](CONTRACT.md)；生成类图时同步附加，勿直接修改本附录。
 
+## 引擎管理公开契约
+
+ManagedEngineStatus 来自 Logic，区分 install/update/ready/preparing/failed/unavailable/bundled。desktop.engines.prepare 严格限定支持引擎，不接受路径、URL、版本或额外字段；status 只读。状态快照不能作为运行授权，实际执行继续校验固定包。
 ### 模块源码读取
 
 ipc-workspace 注册 source.list/source.read，重用 Logic 的严格纯请求及数据类型。必须提供 workspaceId、instanceId、revision、moduleId 和 source；path 相对已声明来源，默认目录根。协议不接受写入选项或绝对路径授权，服务重复核实真实绑定。
@@ -1764,6 +1769,9 @@ execution.ts 导出 Logic 领域规则的 inputIssueMessage，只有无原值的
 公开 `topicInterruptionSchema` 供前端核对持久补充的原身份；不允许用界面选择或未退出的状态替代后台可靠等待。
 
 loop.enqueue 可携带 followupOf 作为历史新任务的显式来源；不是 scope 覆盖参数，真实新 scope 仍由持久队列身份创建。
+### Agent 工具记录引用
+
+`execution.ts` 公开 Logic 的 `AgentCallReference` 类型，保存工作区、调用者运行、工具调用与被调用运行的明确关联。它只是公开日志定位，不是执行许可；界面展开须核对父工具身份和子运行记录，查询失败不能调用执行入口重试。
 
 引擎设置公开 engines.settings/check/install/configure。安装只接官方 ID、展示的准确摘要与 revision；启停/移除不接受 URL、路径或第三方来源。
 

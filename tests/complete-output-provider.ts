@@ -11,8 +11,8 @@ export const completeOutputTransitions:ArtifactTransitionDefinition[]=[{kind:'de
 type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]};
 const gate=()=>{let release=()=>{};const promise=new Promise<void>(resolve=>{release=resolve});return {promise,release}};
 /** 仅模型响应确定；真实 Pi 写入、全集合枚举、JSON、候选和人工接续均由产品执行。 */
-export async function completeOutputProvider(mode:CompleteOutputMode='automatic',transitions=false,reconsider=false){
-  const d=completeOutputData,main:Request[]=[],member:Request[]=[],compactions:Request[]=[],errors:string[]=[],sequence:string[]=[],review=gate(),continuation=gate(),state:{manifest?:any;validation?:any;delivery?:any;readyForReview?:boolean;review?:any;continuation?:any}={};let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
+export async function completeOutputProvider(mode:CompleteOutputMode='automatic',transitions=false,reconsider=false,recursive=false,staleReview=false){
+  const d=completeOutputData,main:Request[]=[],member:Request[]=[],compactions:Request[]=[],errors:string[]=[],sequence:string[]=[],review=gate(),continuation=gate(),state:{manifest?:any;validation?:any;delivery?:any;readyForReview?:boolean;call?:any;review?:any;humanReview?:any;secondReviewReady?:boolean;secondHumanReview?:any;continuation?:any}={};let agentId='',moduleId='',ownerSelection:OwnerExecutionSelection|undefined;
   const plan=(revision=1)=>{const p=goalPlanArguments({objective:d.goal,agentId,ownerSelection,moduleIds:[moduleId],acceptance:d.acceptance},revision);return mode==='human'?{...p,criteria:[...p.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:p.assignments.map(a=>({...a,criterionIds:[...a.criterionIds,d.humanId]}))}:p};
   const evidence=(task:any)=>{assert.equal(task.status,'result_ready');return {kind:'member-result',taskId:task.taskId,runId:task.result.runId,resultId:task.result.resultId,planRevision:task.result.planRevision,toolCallIds:task.result.evidenceRefs}};
   const server=http.createServer(async(req,res)=>{try{
@@ -23,9 +23,16 @@ export async function completeOutputProvider(mode:CompleteOutputMode='automatic'
       const summary='完整产物已交付并固定原清单。当前主会话需要处理用户明确保存的新人工决定，先 cbim_goal_inspect 核对当前等待、输入和决定版本，再按原候选复核；不得重放成员业务或继承上一等待的接受。';
       for(const [delta,finish_reason]of [[{role:'assistant',content:summary},null],[{},'stop']])res.write('data: '+JSON.stringify({id:'full-compaction-'+compactions.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');res.end('data: [DONE]\n\n');return;
     }
-    const isMain=body.tools?.some(t=>t.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
+    const isMain=body.tools?.some(t=>t.function.name===(recursive?'cbim_agent_result_review':'cbim_dispatch_task'))===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push((isMain?'main:':'member:')+turn);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'full-'+sequence.length,object:'chat.completion.chunk',created:1,model:d.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    if(isMain){
+    if(isMain&&recursive){
+      if(turn===0)tool('full-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}});
+      else if(turn===1){state.call=mainToolValue(body,'full-call');assert.equal(state.call.status,'completed');assert.equal(state.call.verification?.state,'verified');state.readyForReview=true;emit({role:'assistant',content:'重核原调用的完整产物。'});await review.promise;tool('full-check','cbim_agent_result_check',{callId:'full-call'})}
+      else if(turn===2){state.review=mainToolValue(body,'full-check');if(mode==='changed'){assert.ok(state.review.error);reply('原成果已变化，不能报告业务完成。')}else{assert.equal(state.review.state,'verified');if(mode==='human')tool('full-human','cbim_agent_result_review',{callId:'full-call'});else reply('完整集合与原操作证据复核通过。')}}
+      else if(turn===3&&mode==='human'){state.humanReview=mainToolValue(body,'full-human');if(staleReview){assert.ok(state.humanReview.error);assert.equal(state.humanReview.record,undefined);reply('评审期间文件变化，接受被拒绝。')}else{assert.equal(state.humanReview.record?.decision,'accept');assert.equal(state.humanReview.continued,true);if(reconsider){state.secondReviewReady=true;await continuation.promise;tool('full-human-again','cbim_agent_result_review',{callId:'full-call'})}else reply('已收到对原成果的人工接受，不重放执行。')}}
+      else if(turn===4&&mode==='human'&&reconsider){state.secondHumanReview=mainToolValue(body,'full-human-again');reply('新的明确意见独立保存，原成果和旧意见不被覆盖。')}
+      else throw Error('Unexpected recursive complete main replay '+turn);
+    }else if(isMain){
       if(turn===0)tool('full-plan','cbim_goal_plan',plan());
       else if(turn===1)tool('full-dispatch','cbim_dispatch_task',{agentId,ownerSelection,moduleIds:[moduleId],goal:d.memberGoal,acceptance:d.acceptance.map((text,i)=>({id:'criterion-'+i,text})),prerequisites:[]});
       else if(turn===2)reply('已派发完整产物任务。');

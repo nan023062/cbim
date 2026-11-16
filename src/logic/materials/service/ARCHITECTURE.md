@@ -44,6 +44,7 @@ class N_src_logic_materials_service_chat_inputs_ts_ChatInputs["ChatInputs"] {
   -workspace
   -directory()
   -save()
+  -conversationSnapshot()
   -continuationSnapshot()
 }
 N_src_logic_materials_service_chat_inputs_ts ..> N_src_logic_materials_service_chat_inputs_ts_ChatInputs : 声明
@@ -173,3 +174,8 @@ pastedPaths 只接受显式的绝对本地路径/file URL，拒绝相对、UNC/�
 目录由原生选择器指定真实路径，拒绝 `.cbim`，有界枚举首层最多 200 项及溢出哨兵，不递归、不读取文件正文或链接目标；同时受 64 KiB UTF-8 保存上限，真实部分性写入 proof。URL 指针零 fetch。网页仅一次 HTTP(S) GET，不使用登录凭据、不跟随重定向或执行脚本；15 秒超时/显式取消贯穿正文，完整响应最多 1 MiB，支持 UTF-8 `text/*` 或 `application/json`。完整有界原字节 hash 与实际文本摘录 hash 分开，摘录最多 64 KiB UTF-8，不切断字符；不是浏览器渲染、登录页面读取或公网 IP 隔离。
 
 仓库资料仅通过已授权 `resource_repository_v1` 当前共享闭包读取，冻结连接代次和资源版本，一次实际 HTTP 返回后保存七类静态资源正文。proof 记录当时定义、授权 revision、仓库/资源身份、全文 hash/字节数和真实截取状态；落盘后交付前再次核实授权。正文不会安装、应用或执行。后续撤权/停止共享禁止新导入，不篡改已经保存的历史资料；安全等待准备只读取原快照，不重新联网、换源或复活授权。旧 connector 附件仍只是静态定义，不能冒充真实仓库资料。
+
+
+### 递归对话的材料边界
+
+普通对话、排队消息及运行中插入的 message/images 入口都先有界读取当前工作区受管快照，检查 UUID 与内容身份、严格 UTF-8、文件/来源 Schema、来源 proof 和图片签名；不因没有 image 字段而跳过非图片校验。重复 ID、损坏证明和超过 512 KiB 的展开文本在发送前拒绝。保留旧 connector 入口的静态引用语义，不将其视为已采集的仓库来源。排队与运行中插入通过 prepareContinuation 冻结同一份文本、图片及附件清单；Conversation 保存排队清单并在首次发送前复核，Tasks 将清单绑定到输入哈希和持久接收记录。已接受回执的重复查询不再次读取附件或重放输入。旧 connector 静态引用不能作为此严格快照输入。

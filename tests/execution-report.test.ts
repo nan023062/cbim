@@ -21,7 +21,7 @@ import {json} from '../src/core/platform/node/serialization';
 import {FileDispatchStore} from '../src/logic/dispatch/storage/dispatch-store';
 import {WorkspaceDispatchService} from '../src/logic/dispatch/runtime/dispatch-service';
 
-async function setup(){
+async function setup(recursive=false){
   const root=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-report-')),identity={workspaceId:'workspace-1',rootSessionId:'root-1'},taskId='task-1',runId='run-1';
   const assignee={agentId:'.cbim/team/dev',agentInstanceId:'member-1',agentSessionId:'channel-1',name:'执行者'},requester={agentId:'cbim:main',agentInstanceId:'main-1',agentSessionId:'main-channel',name:'调度员'};
   const task:TaskNode={kind:'task',nodeId:'node-1',taskId,identity,requester,assignee,modules:[],goal:'核验产物',acceptance:[],revision:3,planRevision:1,status:'running',awaitedChildren:[],runIds:[runId],activeRunId:runId,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
@@ -32,8 +32,17 @@ async function setup(){
   const owner={entry:{id:identity.workspaceId,path:root},assert:vi.fn()} as unknown as KnowledgeWorkspace;
   const spec:TaskSpec={taskId,workspaceId:identity.workspaceId,root,goal:task.goal,agentId:assignee.agentId,moduleIds:['app'],acceptance:[]};
   const journal=new RunJournal(path.join(root,'journal'),spec,runId);await journal.init();await journal.append({type:'run.started',data:{task:spec,memberBinding:run.binding,message:'private input'}});await journal.append({type:'session.bound',data:{sessionFile:run.session.sessionFile,sessionId:'native-1'}});
+  if(recursive){
+    const parent={version:1 as const,workspaceId:identity.workspaceId,callerTaskId:identity.rootSessionId,callerRunId:'root-run',toolCallId:'child-call',taskId,runId};
+    const lines=(await fs.readFile(path.join(journal.directory,'events.jsonl'),'utf8')).trim().split('\n').map(line=>JSON.parse(line));
+    Object.assign(lines[0].data,{executionModel:'agent-tools-v1',agentCall:parent,nativeSessionId:'native-1'});
+    await fs.writeFile(path.join(journal.directory,'events.jsonl'),lines.map(line=>JSON.stringify(line)).join('\n')+'\n');
+    state.scopes=[{...identity,scopeId:'scope',status:'active',createdAt:task.createdAt}];
+    state.agentBusinessRuns=[{protocol:'agent-tools-v1',binding:run.binding,scopeId:'scope',parent,lineage:[parent],prepared:{...run.prepared,modules:spec.moduleIds.map(moduleId=>({binding:{moduleId}}))},permission:'read',status:'active',createdAt:task.createdAt}] as unknown as NonNullable<DispatchState['agentBusinessRuns']>;
+    state.runs=[];graph.tasks=[];
+  }
   const inspect=vi.fn(async()=>RunJournal.read(journal.directory)),prepare=vi.fn(async()=>{throw Error('must not create engine')}),acquire=vi.fn(()=>{throw Error('must not acquire lease')});
-  const manager=new MemberExecutionManager(owner,store,{inspect,prepare,acquire} as MemberExecutionPorts);
+  const manager=new MemberExecutionManager(owner,store,{inspect,inspectAgent:inspect,prepare,acquire} as MemberExecutionPorts);
   const input={...identity,taskId,runId};
   let callNumber=0;
   const call=async(outcome:'succeeded'|'failed'|'denied'|'pending'='succeeded',id='call-'+(++callNumber),startedBeforeGate=false)=>{
@@ -206,5 +215,25 @@ it('JSON可解析但工具事件正文缺失时返回未知，不抛投影异常
     await f.journal.append({type:'tool.started',data:undefined as never});await f.settle();
     const report=await f.manager.report(f.input);
     expect(report.execution).toBe('unknown');expect(report.issues.some(i=>i.code==='TOOL_EVIDENCE_INVALID')).toBe(true);
+  }finally{await f.cleanup()}
+});
+
+it('递归报告依据原登记和日志，无旧任务也能核实；身份、读取屏障和坏正文保持保守',async()=>{
+  const f=await setup(true);try{
+    await f.call('failed');await f.settle('failed');f.state.agentBusinessRuns![0].status='closed';
+    const good=await f.inspect(),read=()=>f.manager.report(f.input);
+    expect(await read()).toMatchObject({execution:'settled',basis:{executionModel:'agent-tools-v1',runStatus:'closed'},tools:{counts:{failed:1}}});
+    expect((await read()).basis.taskRevision).toBeUndefined();expect(f.graph.tasks).toEqual([]);expect(f.state.runs).toEqual([]);
+    f.inspect.mockClear();expect(await f.manager.report({...f.input,runId:undefined})).toMatchObject({execution:'unknown',log:{state:'not_selected'}});expect(f.inspect).not.toHaveBeenCalled();
+    for(const mutate of [
+      (s:RunSummary)=>{s.events[0].data.agentCall={...(s.events[0].data.agentCall as object),callerRunId:'other'}},
+      (s:RunSummary)=>{s.events[0].data.nativeSessionId='other'},
+      (s:RunSummary)=>{s.events[0].data.executionModel='legacy'},
+    ]){const bad=structuredClone(good);mutate(bad);f.inspect.mockResolvedValueOnce(bad);expect(await read()).toMatchObject({execution:'unknown',log:{state:'identity_mismatch'},tools:{available:false}})}
+    const bad=structuredClone(good);bad.events.find(e=>e.type==='tool.proposed')!.data=null as never;
+    f.inspect.mockResolvedValueOnce(bad);const damaged=await read();expect(damaged.execution).toBe('unknown');expect(damaged.issues.map(i=>i.code)).toContain('TOOL_EVIDENCE_INVALID');
+    f.inspect.mockImplementationOnce(async()=>{f.state.agentBusinessRuns![0].status='active';return good});
+    expect(await read()).toMatchObject({execution:'unknown',consistency:'changed_during_read',tools:{available:false}});
+    expect(f.prepare).not.toHaveBeenCalled();expect(f.acquire).not.toHaveBeenCalled();expect(f.store.transact).not.toHaveBeenCalled();
   }finally{await f.cleanup()}
 });

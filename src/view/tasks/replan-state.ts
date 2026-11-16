@@ -1,4 +1,5 @@
 /**
+ * 新旧修复回执分别核对 inspectionRunId/reviewRunId，防止把核实原运行伪装为新的业务运行。
  * 作用定位：保存从已完成核实周期创建正式业务周期的独立草稿、条件预览和稳定提交命令。
  * 设计原因：只读核实不能原地提权；提交前保存新目标和 ask/execute 权限。首次容量拒绝不锁死草稿，曾通信未知仍只能查询或重试原命令，不能借准入等待重放业务。
  * 职责边界：本模块不复活旧任务、不批准人工验收；来源与知识是否仍有效由后端在受理时再次核验。
@@ -50,7 +51,7 @@ export function checkedReplanReceipt(raw:unknown,request:ReplanRequest,proof:Rep
   if(value.dispositionId!==request.dispositionId)throw Error('新业务周期回执关联了其他处置，请查询原命令');
   if(receipt.workspaceId!==request.workspaceId||receipt.rootSessionId!==request.rootSessionId||receipt.scopeId!==request.commandId||receipt.scopeId===request.source.inspectionScopeId||value.replanId!==request.commandId||value.operation!=='business_replan'||value.source.inspectionScopeId!==request.source.inspectionScopeId||value.source.expectedBasis!==request.source.expectedBasis||value.input.message!==request.input.message||JSON.stringify(value.options)!==JSON.stringify(request.options)||proof.basis!==request.source.expectedBasis)throw Error('新业务周期回执与冻结请求不一致，请查询原命令');
   const facts=value.source.proof;
-  if(facts.inspectionGoalRevision!==proof.inspectionGoalRevision||facts.knowledgeRevision!==proof.knowledgeRevision||JSON.stringify(facts.requiredModules)!==JSON.stringify(proof.requiredModules)||JSON.stringify(facts.inheritedHuman)!==JSON.stringify(proof.inheritedHuman)||value.runId===facts.reviewRunId||value.runId===facts.sourceRunId)throw Error('新业务周期回执的前置依据与已核验条件不一致');
+  if(facts.inspectionGoalRevision!==proof.inspectionGoalRevision||facts.knowledgeRevision!==proof.knowledgeRevision||JSON.stringify(facts.requiredModules)!==JSON.stringify(proof.requiredModules)||JSON.stringify(facts.inheritedHuman)!==JSON.stringify(proof.inheritedHuman)||value.runId===('inspectionRunId' in facts?facts.inspectionRunId:facts.reviewRunId)||value.runId===facts.sourceRunId)throw Error('新业务周期回执的前置依据与已核验条件不一致');
   if(previous&&(JSON.stringify(previous.replan)!==JSON.stringify(value)||previous.scopeStatus==='closed'&&receipt.scopeStatus!=='closed'))throw Error('同一业务命令的受理事实发生冲突，保留原回执');
   return receipt;
 }

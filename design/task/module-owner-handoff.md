@@ -1,6 +1,6 @@
 # 负责人变更后的存量任务交接
 
-Step34 / R02-D。状态：2026-11-08 完成实现、定向和全仓回归、最终 EXE 三场验收；承接 Step33 提交 `f94c821`。证据见[验证报告](../verification/module-owner-handoff-20261108.md)，当前进度以[路线图](../tool-architecture-roadmap.md)为准。
+Step34 / R02-D。状态：2026-11-08 完成实现、定向和全仓回归、最终 EXE 三场验收；承接 Step33 提交 `f94c821`。证据见[验证报告](../verification/module-owner-handoff-20261108.md)，当前进度以[GitHub Issues](https://github.com/nan023062/cbim/issues)为准。
 
 ## 交付目标
 

@@ -1,6 +1,8 @@
 // 编排与适配按领域归属；公开文件单独登记，规则不得依赖运行服务。
 export const engineRoot='src/logic/execution/engines/';
 export const orchestrationRoots=[
+  "src/logic/agents/exchange.ts",
+  "src/logic/agents/index.ts",
   "src/logic/execution/admission/",
   "src/logic/execution/assembly/",
   "src/logic/automation/runtime/",
@@ -18,6 +20,8 @@ export const orchestrationRoots=[
 export const isOrchestration=file=>orchestrationRoots.some(root=>file.startsWith(root));
 export const isEngine=file=>file.startsWith(engineRoot);
 export const runtimePublicEntries=new Set([
+  "src/logic/agents/index.ts",
+  "src/logic/agents/exchange.ts",
   "src/logic/automation/runtime/scheduler.ts",
   "src/logic/budget/runtime/model-request-budget-service.ts",
   "src/logic/budget/runtime/scope-budget-service.ts",
@@ -29,6 +33,8 @@ export const runtimePublicEntries=new Set([
   "src/logic/dispatch/runtime/auto-collaboration.ts",
   "src/logic/dispatch/runtime/dispatch-service.ts",
   "src/logic/dispatch/runtime/owner-execution-service.ts",
+  "src/logic/evidence/runtime/agent-artifact-verification.ts",
+  "src/logic/evidence/runtime/recursive-inspection-evidence.ts",
   "src/logic/evidence/runtime/artifact-report-service.ts",
   "src/logic/evidence/runtime/command-verification-service.ts",
   "src/logic/evidence/runtime/effect-observation-service.ts",
@@ -42,6 +48,7 @@ export const runtimePublicEntries=new Set([
   "src/logic/execution/admission/run-admission.ts",
   "src/logic/execution/admission/workspace-lease.ts",
   "src/logic/execution/assembly/loop-engine.ts",
+  "src/logic/execution/assembly/agent-call-scheduler.ts",
   "src/logic/execution/context/automatic-context.ts",
   "src/logic/execution/context/dispatch-context.ts",
   "src/logic/execution/context/execution-context.ts",

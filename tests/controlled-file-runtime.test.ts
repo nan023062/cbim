@@ -88,3 +88,10 @@ it('可信未写证明只解除原调用屏障，新调用仍需独立授权，�
  },{port:{scopeId:'scope',write,confirmNotApplied:confirm,drain:async()=>{}}});
  try{const summary=await(await f.start()).done;expect(summary.status).toBe('completed');expect(summary.toolReceipts!.map(r=>r.outcome)).toEqual(['failed','succeeded']);expect(confirm).toHaveBeenCalledTimes(1);expect(confirm.mock.calls[0]?.[0]).toMatchObject({toolCallId:'call',inputHash:hash(JSON.stringify(input))});expect(write).toHaveBeenCalledTimes(2)}finally{await f.cleanup()}
 });
+
+it('allows an in-call question after unknown write but never clears the original write barrier',async()=>{
+ const tools=new RunControlledFile(binding,{scopeId:'scope',write:async()=>{throw Error('unknown')},drain:async()=>{},confirmNotApplied:async()=>false},()=>{});
+ tools.guard(tool,'original',input,[]);tools.authorize('original',7);await expect(tools.call(tool,input,'original')).rejects.toThrow('unknown');tools.observed('tool.finished','original');
+ expect(tools.guard('cbim_ask_user_question','help',{questions:[]},[])).toBeUndefined();
+ expect(tools.guard('write','after-help',{path:'File.txt',content:'unsafe'},[])).toContain('CONTROLLED_FILE_REVIEW_REQUIRED');expect(()=>tools.assertVerified()).toThrow();expect(tools.unverifiedCallIds).toEqual(['original']);
+});

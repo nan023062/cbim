@@ -10,7 +10,8 @@ const id=z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/),hash=z.string().r
 const money=z.number().finite().nonnegative().max(Number.MAX_SAFE_INTEGER);
 /** 同一工作区日志不淘汰原请求；新请求提前为后续两条阶段及其字节预留空间。 */
 export const modelRequestBudgetLimits={requests:16384,requestsPerScope:4096,storedBytes:32*1024*1024,terminalReserveBytes:2048} as const;
-export const requestBudgetBindingSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,taskId:id,runId:id,kind:z.enum(['main','member']),ownerInstanceId:id}).strict();
+/** agentRun 仅记录递归请求的实际子运行；根 task/run/scope 继续拥有预算，来源字段不授予额度。 */
+export const requestBudgetBindingSchema=z.object({workspaceId:id,rootSessionId:id,scopeId:id,taskId:id,runId:id,kind:z.enum(['main','member']),ownerInstanceId:id,agentRun:z.object({taskId:id,runId:id}).strict().optional()}).strict();
 export type RequestBudgetBinding=z.infer<typeof requestBudgetBindingSchema>;
 /** 配置指纹绑定完整已解析模型；公开计价分量不包含供应商地址或密钥。 */
 const roleBinding=z.object({slot:z.string().regex(/^[a-z][a-z0-9_-]{0,47}$/).refine(v=>!['primary','constructor','prototype','__proto__'].includes(v)),bindingHash:hash}).strict();

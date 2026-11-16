@@ -760,6 +760,7 @@ N_src_logic_workspace_rules_source_browser_ts ..> N_src_logic_workspace_rules_so
 classDiagram
 class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
   <<module>>
+  +assertWorkflowCapabilities()
   +parseWorkflowContract()
 }
 ```
@@ -789,6 +790,21 @@ class N_src_logic_workspace_rules_workflow_contract_ts_WorkflowContract["Workflo
 
 }
 N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_workflow_contract_ts_WorkflowContract : 声明
+```
+
+```mermaid
+classDiagram
+class N_src_logic_workspace_rules_workflow_contract_ts["workflow-contract.ts"] {
+  <<module>>
+}
+class N_src_logic_workspace_rules_workflow_contract_ts_WorkflowCapabilities["WorkflowCapabilities"] {
+  <<interface>>
+  +availableTools
+  +scopedTools
+  +availableValidators
+  +artifacts
+}
+N_src_logic_workspace_rules_workflow_contract_ts ..> N_src_logic_workspace_rules_workflow_contract_ts_WorkflowCapabilities : 声明
 ```
 
 直接依赖：[code-check.ts](code-check.ts)、[../../../core/errors.ts](../../../core/errors.ts)、[../../../core/json.ts](../../../core/json.ts)、[json-validation-schema.ts](json-validation-schema.ts)、[csv-validation-schema.ts](csv-validation-schema.ts)、[png-validation-schema.ts](png-validation-schema.ts)、[artifact-scope.ts](artifact-scope.ts)、[execution-scope.ts](execution-scope.ts)。
@@ -1004,3 +1020,7 @@ moduleOwnerInspect 的 moduleIds 分支可接收 matches：当前知识 revision
 ### JSON 排序复用边界
 
 本目录既有对象排序通过后端 utility 的 orderJsonValue 组合，字符序和省略 undefined 的原策略显式传入；原 JSON.stringify、字段选择、身份核验和哈希仍留在消费者。手工拼接 JSON 字符串的协议不直接替换，避免改变数字键次序或空值字节。
+
+## Workflow 启动能力规则
+
+assertWorkflowCapabilities 是旧成员启动和递归 Loop 装配共用的纯检查。能力由可信调用方按真实引擎、权限及平台端口提供；显式范围只认 scopedTools，不回退原生工具。缺清单、缺必需工具、结构验证总量超限或缺实际验证端口都在模型启动前拒绝。规则不申请审批、不登记任务、不升级权限；原解析 Schema 与错误码保持兼容。

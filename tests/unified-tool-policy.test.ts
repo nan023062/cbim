@@ -125,7 +125,7 @@ test.each(['team','auto'] as const)('real Pi %s main governs knowledge with actu
     }
     expect(advertisedTools.length).toBeGreaterThanOrEqual(6);
     for(const names of advertisedTools){
-      expect(names).toEqual(expect.arrayContaining(['cbim_knowledge_commit','cbim_object_preview','cbim_object_commit','cbim_dispatch_task']));
+      expect(names).toEqual(expect.arrayContaining(['cbim_knowledge_commit','cbim_object_preview','cbim_object_commit','cbim_agent_call']));
     }
     expect(transportErrors).toEqual([]);
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await f.cleanup()}

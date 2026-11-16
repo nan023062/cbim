@@ -17,7 +17,7 @@ it.each(['before-intent','journal-init','engine-start','engine-ready','lease-fai
   const task:TaskSpec={taskId:'main-session',workspaceId:'workspace',root:directory,goal:'Original goal',mode:'chat',moduleIds:[],acceptance:[]};
   const storage=new FileRunStorage(),createJournal=storage.createJournal.bind(storage);
   storage.createJournal=(directory,task,runId)=>{const journal=createJournal(directory,task,runId),initialize=journal.init.bind(journal);journal.init=async()=>{await initialize();if(continuing&&mode==='journal-init'){entered.resolve();await boundary.promise}};return journal};
-  const runtime=new LoopRuntime({directory,storage,acquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},toolPolicy:async()=>({allow:false}),onEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},createEngine:()=>{
+  const runtime=new LoopRuntime({directory,storage,engineKind:'test',acquireLease:async()=>{if(continuing&&mode==='lease-failed')throw Error('MEMBER_BUSY');leases++;return()=>{leases--}},toolPolicy:async()=>({allow:false}),onEngineReady:async()=>{if(continuing&&mode==='engine-ready'){entered.resolve();await boundary.promise}},createEngine:()=>{
     const state={ran:false,closed:false,stopped:false};engines.push(state);
     const engine:AgentEngine={kind:'test',start:async(context:EngineContext)=>{await context.emit({type:'session.bound',data:{sessionId:context.nativeSessionId??task.taskId,sessionFile:context.sessionFile??path.join(context.directory,'native.jsonl')}});if(continuing&&mode==='engine-start'){entered.resolve();await boundary.promise}},run:async()=>{state.ran=true;return {status:'completed'}},stop:async()=>{state.stopped=true},close:async()=>{state.closed=true}};return engine;
   }});
@@ -41,4 +41,50 @@ it.each(['before-intent','journal-init','engine-start','engine-ready','lease-fai
     const logs=await new FileRunStorage().list(path.join(directory,task.taskId));expect(logs).toHaveLength(['journal-init','engine-start','engine-ready'].includes(mode)?2:1);
     for(const id of logs){const record=await storage.read(path.join(directory,task.taskId,id));expect(record.task).toEqual(task);expect(record.events[0].type).toBe('run.started');expect(record.status).toBe(id===original.runId?'completed':'cancelled')}
   }finally{boundary.resolve();await runtime.close();const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-runtime-continue-'))throw Error('Unexpected test cleanup path');await fs.rm(target,{recursive:true,force:true})}
+});
+
+/** Engine history is a precondition of durable acceptance, not a failed run after acceptance. */
+it.each(['oversized','cancelled','valid','factory-failed','wrong-engine'] as const)('checks declared engine history before accepting continuation: %s',async mode=>{
+  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'cbim-preflight-'));
+  const storage=new FileRunStorage(),controller=new AbortController();
+  const task:TaskSpec={taskId:'session',workspaceId:'workspace',root:directory,goal:'Original request',mode:'chat',agentId:'cbim:main',moduleIds:[],acceptance:[]};
+  let leases=0;
+  const acquireLease=async()=>{leases++;return()=>{leases--}};
+  let originalContext:EngineContext|undefined,nextContext:EngineContext|undefined;
+  const first=new LoopRuntime({directory,storage,engineKind:'pi',acquireLease,toolPolicy:async()=>({allow:false}),createEngine:()=>({kind:'pi',start:async context=>{
+    originalContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
+  },run:async()=>{await originalContext!.emit({type:'message',data:{text:mode==='oversized'?'x'.repeat(1024*1024):'Original result'}});return {status:'completed'}},stop:async()=>{},close:async()=>{}})});
+  const beforeRun=vi.fn(async()=>{}),close=vi.fn(async()=>{});
+  const createEngine=vi.fn(()=>{
+    expect(beforeRun).toHaveBeenCalledTimes(1);
+    if(mode==='factory-failed')throw Error('Assembly failed');
+    const engine:AgentEngine={kind:mode==='wrong-engine'?'pi':'codex',start:async context=>{
+      nextContext=context;await context.emit({type:'session.bound',data:{sessionId:context.runId,sessionFile:path.join(context.directory,'native.jsonl')}});
+    },run:async()=>({status:'completed'}),stop:async()=>{},close};return engine;
+  });
+  const second=new LoopRuntime({directory,storage,engineKind:'codex',acquireLease,toolPolicy:async()=>({allow:false}),createEngine});
+  try{
+    const old=await first.start(task);await old.done;await first.close();
+    const read=storage.read.bind(storage);
+    storage.read=async location=>{const result=await read(location);if(mode==='cancelled')controller.abort(Error('Cancelled during history check'));return result};
+    const start=second.start(task,'Continue with Codex',{runId:old.runId},undefined,{signal:controller.signal,beforeRun});
+    if(mode==='oversized'||mode==='cancelled'){
+      await expect(start).rejects.toThrow(mode==='oversized'?'1 MiB':'Cancelled during history check');
+      expect(beforeRun).not.toHaveBeenCalled();expect(createEngine).not.toHaveBeenCalled();
+    }else if(mode==='factory-failed'||mode==='wrong-engine'){
+      await expect(start).rejects.toThrow(mode==='factory-failed'?'Assembly failed':'冻结引擎身份不一致');
+      expect(beforeRun).toHaveBeenCalledTimes(1);
+      if(mode==='wrong-engine')expect(close).toHaveBeenCalledTimes(1);
+    }else{
+      expect((await (await start).done).status).toBe('completed');
+      expect(JSON.parse(nextContext!.engineHandoff!)).toMatchObject([{runId:old.runId,input:task.goal}]);
+      expect(nextContext!.sessionFile).toBeUndefined();
+    }
+    expect(leases).toBe(0);
+    expect(await storage.list(path.join(directory,task.taskId))).toHaveLength(mode==='valid'?2:1);
+  }finally{
+    await first.close();await second.close();
+    const target=path.resolve(directory);if(path.dirname(target)!==path.resolve(os.tmpdir())||!path.basename(target).startsWith('cbim-preflight-'))throw Error('Unexpected cleanup path');
+    await fs.rm(target,{recursive:true,force:true});
+  }
 });

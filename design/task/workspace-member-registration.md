@@ -1,6 +1,6 @@
 # 项目岗位成员登记
 
-Step30 / R02-A1，承接 `df5a609`。状态：已完成，完整回归与打包桌面验收通过，见[验证报告](../verification/workspace-member-registration-20261107.md)。实时进度见[roadmap](../tool-architecture-roadmap.md)。本片是 R02 的登记子步骤，不等于整个模块负责人索引已完成。
+Step30 / R02-A1，承接 `df5a609`。状态：已完成，完整回归与打包桌面验收通过，见[验证报告](../verification/workspace-member-registration-20261107.md)。实时进度见[GitHub Issues](https://github.com/nan023062/cbim/issues)。本片是 R02 的登记子步骤，不等于整个模块负责人索引已完成。
 
 ## 交付与边界
 

@@ -48,13 +48,13 @@ it.each(['read','ask-deny','ask-approve','execute','bad-wire','stop'] as ModuleO
 },90000);
 
 it('actual executor Pi has none of the four ownership-control tools despite registered positions',async()=>{
-  const f=await fixture(),provider=await ownerExecutionProvider('complete');
+  const f=await fixture(),provider=await ownerExecutionProvider('complete',true);
   try{
     // The former direct builtin dispatch bypass is closed. Explicit registration, sources, responsibility and a real main plan now precede member execution.
     const seeded=await seedOwnerExecution(f.app,f.a,provider.urls),id=seeded.entry.id;provider.bind(seeded.team.input.agentId,seeded.modules);provider.releaseMain();
     await f.app.dispatch('loop.chat',{id,message:ownerExecutionData.goal,options:seeded.mainOptions});
     await vi.waitFor(async()=>{expect(provider.errors).toEqual([]);expect((await ownerExecutionRecords(f.user,id)).scopes[0]?.status).toBe('closed');expect(f.app.runtime.snapshot().pressure.activeRuns).toBe(0)},{timeout:45000,interval:30});
-    const saved=await ownerExecutionRecords(f.user,id);expect(saved.scopes[0].outcome).toBe('completed');expect(saved.runs).toHaveLength(2);
+    const saved=await ownerExecutionRecords(f.user,id);expect(saved.scopes[0].outcome).toBe('completed');expect(saved.runs).toHaveLength(0);const business=(await f.app.workspace(id).dispatchStore.read()).agentBusinessRuns!;expect(business).toHaveLength(2);expect(business.every(run=>run.status==='closed')).toBe(true);expect(new Set(business.map(run=>run.binding.agentInstanceId)).size).toBe(2);
     expect(provider.members.map(requests=>requests.length)).toEqual([5,5]);
     for(const body of provider.members.flat())expect(body.tools?.some(tool=>moduleOwnershipToolNames.includes(tool.function.name))).toBe(false);
     for(const moduleId of seeded.modules)expect((await moduleOwnershipDetail(f.app,id,moduleId)).history.total).toBe(1);

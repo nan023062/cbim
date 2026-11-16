@@ -1,7 +1,7 @@
 /**
  * 目录归属：logic/execution/rules/execution；运行协议与计量。
  * 作用定位：定义主对话与已登记 Agent 实例、逻辑会话之间的可信绑定，供运行时和日志恢复共用。
- * 设计原因：同一主会话的聊天与派发图引用同一个主实例，只负责调度；业务执行属于独立执行实例，单独绑定避免混合双方身份或原生历史。
+ * 设计原因：同一主会话的聊天与派发图引用同一个主实例，主运行可直接执行或调用独立执行实例；单独绑定避免混合双方身份或原生历史。
  * 职责边界：绑定只能由后端已登记实例装配；这里只校验一致性，不创建实例、不选择通道，也不签发权限或租约。
  */
 import {safeId} from '../ports/identity';
@@ -40,4 +40,12 @@ export function checkedConversationAgentBinding(value:unknown,task:TaskSpec):Con
   if(task.mode!=='chat'||task.agentId!=='cbim:main'||binding.agentId!=='cbim:main')fail('CONVERSATION_IDENTITY','主对话实例绑定只适用于 cbim:main 普通对话');
   if(binding.workspaceId!==task.workspaceId||binding.rootSessionId!==task.taskId)fail('CONVERSATION_IDENTITY','主对话实例绑定与工作区或根会话不一致');
   return structuredClone(value) as ConversationAgentBinding;
+}
+
+/** 主控制面工具的窄生命周期端口；捕获已受理根运行，不创建周期或授予写权。 */
+export interface MainToolContext {
+  readonly binding:Readonly<{workspaceId:string;rootSessionId:string;scopeId:string;runId:string}>;
+  assertCurrent(signal:AbortSignal):void;
+  /** 先登记在途再启动操作，关闭等待原提交，不自动重试保存未知。 */
+  track<T>(operation:()=>Promise<T>):Promise<T>;
 }

@@ -2,7 +2,7 @@
  * 作用定位：侧栏用户栏右侧的更新图标，提供版本 tooltip、真实准备进度和显式安装操作。
  * 设计原因：入口常驻而不占用菜单；未就绪时仍可键盘聚焦查看状态，但不会下载、排队或安装。
  * 生命周期：tooltip 使用视口内的独立浮层；完整进度与呼吸提示只属于已验证的 ready 快照。
- * 仅展示 CBIM 应用更新；引擎的准备、失败和管理统一归引擎详情。
+ * 引擎准备迁入对话下拉菜单；此入口只管理应用 C/R 更新。
  */
 import {useEffect,useId,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';

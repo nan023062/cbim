@@ -88,3 +88,8 @@ BusinessArchitecture 保留唯一模块树，模块责任、知识正文、目�
 ## 跨页面草稿保护
 
 模块责任面板向所属扩展页上报脏稿标记；登记岗位与责任子页复用同一来源回调，不改变预览和原请求核实。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

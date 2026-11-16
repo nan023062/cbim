@@ -15,16 +15,25 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 function gate(){let release=()=>{};const promise=new Promise<void>(resolve=>{release=resolve});return {promise,release}}
 
 /** Real product write/read/capture/validator calls; only localhost model responses and explicit pauses are scripted. */
-export async function jsonValidationProvider(mode:JsonValidationMode='complete',scenario:Omit<typeof jsonValidationFixture,'schema'>&{binary?:'base64'}=jsonValidationFixture){
+export async function jsonValidationProvider(mode:JsonValidationMode='complete',scenario:Omit<typeof jsonValidationFixture,'schema'>&{binary?:'base64'}=jsonValidationFixture,agentMode=false){
   const d=scenario,main:Request[]=[],member:Request[]=[],errors:string[]=[],repair=gate(),review=gate();let agentId='',moduleId='',workflowId:string|undefined,ownerSelection:OwnerExecutionSelection|undefined;
-  const state:{badProgress?:any;badCapture?:any;rejected?:any;badStep?:any;deniedDelivery?:any;freshProgress?:any;freshCapture?:any;passed?:any;freshStep?:any;delivery?:any;readyForReview?:boolean;reviewInput?:any;reviewError?:any}={};
+  const state:{call?:any;check?:any;humanReview?:any;noReplay?:any;badProgress?:any;badCapture?:any;rejected?:any;badStep?:any;deniedDelivery?:any;freshProgress?:any;freshCapture?:any;passed?:any;freshStep?:any;delivery?:any;readyForReview?:boolean;reviewInput?:any;reviewError?:any}={};
   const write=(tool:(id:string,name:string,args:unknown)=>void,id:string,content:string)=>{if(d.binary){assert.match(d.file,/^[a-zA-Z0-9_-]+\.png$/);assert.match(content,/^[A-Za-z0-9+/]+={0,2}$/);tool(id,'bash',{command:'node -e '+JSON.stringify("require('fs').writeFileSync('"+d.file+"',Buffer.from('"+content+"','base64'))")})}else tool(id,'write',{path:d.file,content})};
   const selection=()=>{assert.ok(ownerSelection,'测试必须先通过真实登记/责任查询准备岗位选择');return {ownerSelection,...(workflowId?{workflowSelections:[{moduleId,workflowId}]}:{})}};
   const goalPlan=(expectedRevision=1)=>{const original=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],acceptance:d.acceptance},expectedRevision),plan={...original,assignments:original.assignments.map(item=>({...item,...selection()}))};return mode==='human-negative'?{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))}:plan};
   const server=http.createServer(async(req,res)=>{try{
-    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);
+    assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;const body=JSON.parse(raw)as Request;assert.equal(body.model,d.model);const isMain=agentMode?!body.tools?.some(item=>item.function.name==='cbim_validation_run'):body.tools?.some(item=>item.function.name==='cbim_dispatch_task')===true,list=isMain?main:member,turn=list.length;list.push(body);
     res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'json-validation-'+(main.length+member.length),object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n'),tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')},reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
-    if(isMain){
+    if(isMain&&agentMode){
+      assert.ok(body.tools?.some(item=>item.function.name==='cbim_agent_call'));
+      assert.ok(!body.tools?.some(item=>item.function.name==='cbim_dispatch_task'));
+      if(turn===0)tool('json-agent-call','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance,...(workflowId?{workflowSelections:[{moduleId,workflowId}]}:{})}});
+      else if(turn===1){state.call=mainToolValue(body,'json-agent-call');assert.equal(state.call.status,'completed',JSON.stringify(state.call));assert.equal(state.call.verification.state,'verified');state.readyForReview=true;emit({role:'assistant',content:'子调用已返回，准备核实当前文件。'});await review.promise;tool(mode==='human-negative'?'json-human-review':'json-agent-check',mode==='human-negative'?'cbim_agent_result_review':'cbim_agent_result_check',{callId:'json-agent-call'})}
+      else if(turn===2&&mode==='human-negative'){state.humanReview=mainToolValue(body,'json-human-review');assert.ok(['reject','request_evidence'].includes(state.humanReview.record?.decision),JSON.stringify(state.humanReview));assert.equal(state.humanReview.continued,true);assert.equal(state.humanReview.executionAuthorized,false);tool('json-human-no-replay','cbim_agent_call',{agentId:ownerSelection!.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}})}
+      else if(turn===3&&mode==='human-negative'){state.noReplay=mainToolValue(body,'json-human-no-replay');assert.equal(state.noReplay.error?.code,'AGENT_HUMAN_DECISION_REQUIRED');reply('负面意见已经保存，旧证据不能通过；没有启动返工或重放原调用。')}
+      else if(turn===2){state.check=mainToolValue(body,'json-agent-check');if(mode==='changed'){state.reviewError=state.check;assert.equal(state.check.error?.code,'WORKFLOW_VALIDATION_STALE')}else assert.equal(state.check.state,'verified');reply(mode==='changed'?'文件已变化，旧验证不能作为当前通过证明。':'已核实本轮实际文件；结构验证不替代用户业务验收。')}
+      else throw Error('Unexpected recursive main replay '+turn);
+    }else if(isMain){
       assert.ok(body.tools?.every(item=>!['cbim_validation_run'].includes(item.function.name)));
       if(turn===0)tool('json-goal-plan','cbim_goal_plan',goalPlan());
       else if(turn===1)tool('json-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],...selection(),goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
@@ -44,6 +53,7 @@ export async function jsonValidationProvider(mode:JsonValidationMode='complete',
       else throw Error('Unexpected main replay '+turn);
     }else{
       assert.ok(body.tools?.some(item=>item.function.name==='cbim_validation_run'),'真实冻结要求必须装配验证工具');
+      if(agentMode)assert.ok(!body.tools?.some(item=>['cbim_task_help','cbim_task_checkpoint','cbim_dispatch_task'].includes(item.function.name)));
       if(turn===0)tool('json-member-plan','cbim_task_plan',{expectedVersion:0,goal:d.memberGoal,acceptance:d.acceptance,reason:'严格按冻结Schema验证当前文件，不以工具调用成功替代结构通过',steps:[{id:'verify',title:'验证真实产物结构及当前字节',owner:'开发者'}]});
       else if(turn===1)write(tool,'json-bad-write',d.bad);
       else if(turn===2)tool('json-bad-read','read',{path:d.file});

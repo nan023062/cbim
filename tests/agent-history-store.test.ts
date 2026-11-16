@@ -136,3 +136,38 @@ describe('静态 Agent 持久化历史索引',()=>{
     expect((await f.history.runs({workspaceId,agentId:'cbim:main',sessionId:'session-one'})).items[0].status).toBe('completed');await f.history.close();
   });
 });
+
+function recursiveStart(root:string){
+ const start=started(root,'child-task','child-run','child-session','.cbim/team/worker');
+ (start.data.task as TaskSpec).moduleIds=['.cbim/workspace/app'];
+ start.data.memberBinding={workspaceId,teamId:'.cbim/team',agentId:'.cbim/team/worker',agentInstanceId:'child-instance',agentSessionId:'child-session',rootSessionId:'root-task',taskId:'child-task',runId:'child-run',leaseEpoch:0,planRevision:1};
+ start.data.executionModel='agent-tools-v1';
+ start.data.agentCall={version:1,workspaceId,callerTaskId:'root-task',callerRunId:'root-run',toolCallId:'call-child',taskId:'child-task',runId:'child-run'};
+ return start;
+}
+it('archives a recursive business child in its original loop journal and restores the same identity',async()=>{
+ const f=await setup(),start=recursiveStart(f.root),log=await writeLog(f.root,start,[next(start,2,'message',{role:'assistant',text:'child evidence'}),next(start,3,'run.settled',{status:'completed'})]);
+ for(const event of log.summary.events)f.history.observeRun(event,'loop');await f.history.close();
+ const stored=await f.store.load();expect(stored.diagnostics).toEqual([]);expect(stored.records).toHaveLength(1);
+ expect(stored.records[0]).toMatchObject({kind:'task',journal:'loop',agentCall:start.data.agentCall,view:{source:'member',binding:'registered',status:'completed',rootSessionId:'root-task'}});
+ const reopened=new AgentHistoryService(workspaceId,f.root,{store:f.store,read:f.read});await reopened.initialize();
+ expect((await reopened.roles({workspaceId})).diagnostics).toEqual([]);
+ const events=await reopened.events({workspaceId,agentId:'.cbim/team/worker',sessionId:'child-session',taskId:'child-task',runId:'child-run'});
+ expect(JSON.stringify(events)).toContain('child evidence');expect(f.read).toHaveBeenCalledTimes(1);await reopened.close();
+});
+it.each(['missing-protocol','foreign-child','self-reference','legacy-directory'] as const)('does not relabel invalid recursive history as a legacy member (%s)',async mode=>{
+ const f=await setup(),start=recursiveStart(f.root);
+ if(mode==='missing-protocol')delete start.data.executionModel;
+ if(mode==='foreign-child')(start.data.agentCall as any).taskId='foreign-task';
+ if(mode==='self-reference')(start.data.agentCall as any).callerRunId=start.runId;
+ f.history.observeRun(start,mode==='legacy-directory'?'member':'loop');await f.history.flush();
+ const roles=await f.history.roles({workspaceId});expect(roles.roles).toEqual([]);expect(roles.diagnostics).not.toHaveLength(0);expect((await f.store.load()).records).toEqual([]);await f.history.close();
+});
+it('a changed parent reference in canonical child history cannot reuse the old indexed identity',async()=>{
+ const f=await setup(),start=recursiveStart(f.root),log=await writeLog(f.root,start,[next(start,2,'run.settled',{status:'completed'})]);
+ f.history.restoreRun(log.summary,'loop');await f.history.flush();
+ const file=path.join(log.directory,'events.jsonl'),bytes=await fs.readFile(file,'utf8');
+ await fs.writeFile(file,bytes.replace('"callerRunId":"root-run"','"callerRunId":"other-run"'));
+ await expect(f.history.events({workspaceId,agentId:'.cbim/team/worker',sessionId:'child-session',taskId:'child-task',runId:'child-run'})).rejects.toMatchObject({code:'AGENT_HISTORY_UNREADABLE'});
+ await f.history.close();
+});

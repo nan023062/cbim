@@ -88,6 +88,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMessage["DispatchMe
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMessage : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchState"] {
   <<interface>>
+  +agentBusinessRuns
   +workspaceId
   +teamSessions
   +members
@@ -103,7 +104,6 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchStat
   +ownershipChanges
   +ownershipCursor
   +knowledgeSourceGenerations
-  +knowledgeSourceTransitions
 }
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommand["DispatchCommand"] {
@@ -123,6 +123,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts["dispatch-storage.ts"] {
 }
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchState["DispatchState"] {
   <<interface>>
+  +knowledgeSourceTransitions
   +knowledgeSourceChanges
   +sourceCursor
   +effectDispositions
@@ -147,6 +148,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommandEvidence["Di
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchCommandEvidence : 声明
 class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchMutation["DispatchMutation"] {
   <<interface>>
+  +agentBusinessRuns
   +teamSessions
   +modelRequestBudgetChanges
   +controlledFileChanges
@@ -184,7 +186,7 @@ class N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore["DispatchStor
 N_src_logic_dispatch_rules_dispatch_storage_ts ..> N_src_logic_dispatch_rules_dispatch_storage_ts_DispatchStore : 声明
 ```
 
-直接依赖：[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../tasks/rules/effect-observation.ts](../../tasks/rules/effect-observation.ts)、[../../file-operations/rules/controlled-file-event.ts](../../file-operations/rules/controlled-file-event.ts)、[../../budget/rules/model-request-budget.ts](../../budget/rules/model-request-budget.ts)。
+直接依赖：[../../execution/rules/business-run.ts](../../execution/rules/business-run.ts)、[../../team/rules/agent-types.ts](../../team/rules/agent-types.ts)、[../../team/rules/team-session.ts](../../team/rules/team-session.ts)、[../../tasks/rules/graph-types.ts](../../tasks/rules/graph-types.ts)、[../../tasks/rules/dispatch-execution.ts](../../tasks/rules/dispatch-execution.ts)、[../../tasks/rules/dispatch-scope.ts](../../tasks/rules/dispatch-scope.ts)、[../../tasks/rules/scope-view.ts](../../tasks/rules/scope-view.ts)、[../../tasks/rules/member-checkpoint.ts](../../tasks/rules/member-checkpoint.ts)、[../../team/rules/workspace-member.ts](../../team/rules/workspace-member.ts)、[../../workspace/rules/module-ownership.ts](../../workspace/rules/module-ownership.ts)、[../../workspace/rules/knowledge-source.ts](../../workspace/rules/knowledge-source.ts)、[../../tasks/rules/effect-observation.ts](../../tasks/rules/effect-observation.ts)、[../../file-operations/rules/controlled-file-event.ts](../../file-operations/rules/controlled-file-event.ts)、[../../budget/rules/model-request-budget.ts](../../budget/rules/model-request-budget.ts)。
 
 
 ## 子目录导航

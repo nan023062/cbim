@@ -10,6 +10,8 @@ import {ConversationTurn} from '../src/view/conversation/ConversationTurn';
 import {inlineMainRuns} from './inline-conversation-fixture';
 import {progressFixture} from './conversation-progress-fixture';
 import {ToolTimeline} from '../src/view/execution-view/ToolTimeline';
+import {AgentCallDetails,agentCallReference,assertAgentCallRun} from '../src/view/execution-view/AgentCallDetails';
+import {MemberRunTranscript} from '../src/view/tasks/MemberRunTranscript';
 
 it('失败轨道显示核实建议，熔断提示不输出 undefined，也不提供重试动作',()=>{
  const run=structuredClone(inlineMainRuns(2)[0]);
@@ -87,4 +89,31 @@ it('没有最终正文的已结束主对话在流中显示记录反馈，运行�
   const render=()=>renderToStaticMarkup(createElement(ConversationTurn,{run,workspaceId:run.task.workspaceId,now:0,recovery:{state:{}} as any,active:false,onSelectTask:()=>{}}));
   expect(render()).toContain('aria-label="本轮反馈（运行记录）"');expect(render()).toContain('未记录 Agent 的最终反馈');
   run.status='running';expect(render()).not.toContain('aria-label="本轮反馈（运行记录）"');
+});
+
+it('Agent 调用引用在进度事件即能定位，必须匹配原调用且冲突时拒绝读取',()=>{
+  const run=structuredClone(inlineMainRuns(0)[0]),call={version:1 as const,workspaceId:run.task.workspaceId,callerTaskId:run.task.taskId,callerRunId:run.runId,toolCallId:'agent-call',taskId:'callee',runId:'callee-run'};
+  const event={...run.events[0],seq:10,type:'tool.updated' as const,data:{id:'agent-call',name:'cbim_agent_call',agentCall:call}};
+  run.events.push(event);expect(agentCallReference(run,'agent-call')).toEqual(call);
+  expect(agentCallReference(run,'another-call')).toBeUndefined();
+  const render=renderToStaticMarkup(createElement(AgentCallDetails,{parentRun:run,toolCallId:'agent-call',active:false}));
+  expect(render).toContain('查看执行对话');expect(render).not.toContain('<textarea');expect(render).not.toContain('重新执行');
+  run.events.push({...event,seq:11,data:{...event.data,agentCall:{...call,runId:'conflicting-run'}}});expect(agentCallReference(run,'agent-call')).toBeUndefined();
+  run.events.pop();event.data.agentCall={...call,callerRunId:'other-parent'};expect(agentCallReference(run,'agent-call')).toBeUndefined();
+});
+
+it('读取后的子对话必须与调用引用及 run.started 绑定一致',()=>{
+  const run=structuredClone(inlineMainRuns(0)[0]),call={version:1 as const,workspaceId:run.task.workspaceId,callerTaskId:'parent',callerRunId:'parent-run',toolCallId:'call',taskId:run.task.taskId,runId:run.runId};
+  run.events[0].data.agentCall=call;
+  expect(()=>assertAgentCallRun(call,run)).not.toThrow();
+  const changes=[(r:typeof run)=>{r.task.workspaceId='foreign'},(r:typeof run)=>{r.runId='foreign'},(r:typeof run)=>{delete r.events[0].data.agentCall},(r:typeof run)=>{r.events[0].data.agentCall={...call,toolCallId:'foreign'}}];
+  for(const change of changes){const changed=structuredClone(run);change(changed);expect(()=>assertAgentCallRun(call,changed)).toThrow('执行对话身份')}
+});
+
+it('执行 Agent 的输入、正文与工具按原顺序展示且无用户输入框',()=>{
+  const run=structuredClone(inlineMainRuns(0)[0]),base=run.events[0];
+  run.events=[base,{...base,seq:2,type:'message',data:{text:'执行前说明'}},{...base,seq:3,type:'tool.started',data:{id:'read1',name:'read',input:{path:'state.ts'}}},{...base,seq:4,type:'tool.finished',data:{id:'read1',name:'read',result:'读取结果'}},{...base,seq:5,type:'message',data:{text:'完成后反馈'}}];
+  const html=renderToStaticMarkup(createElement(MemberRunTranscript,{run,workspaceId:run.task.workspaceId,memberName:'执行 Agent',active:false}));
+  expect(html).toContain('调用方指令');expect(html).not.toContain('<textarea');
+  expect(html.indexOf('执行前说明')).toBeLessThan(html.indexOf('data-tool-call-id="read1"'));expect(html.indexOf('data-tool-call-id="read1"')).toBeLessThan(html.indexOf('完成后反馈'));
 });

@@ -10,7 +10,9 @@ ComposerAttachments 对已保存图片读取 chat.preview，卡片显示40px缩�
 
 本目录承接主对话、成员详情和团队履历的真实公共消费者。transcript 只投影公开日志；MarkdownMessage 保留流式修复、受控链接和复制；WorkStatus 与 ToolTimeline 只显示传入运行事实，回合结束不代表业务目标验收。
 
-WorkStatus 接收可选 activityDetails，ToolTimeline 接收按原调用 ID 的 renderControls。任务领域在 tasks/ToolActivity 组合命令核实、影响观察及恢复上下文；共享层不导入任务状态或页面，不查询或启动恢复。主对话负责组合任务域控制，成员履历默认只读轨道，无伪造主来源的核实入口。
+WorkStatus 接收可选 activityDetails；ToolTimeline 接收按原调用 ID 的 renderControls 和 renderDetails，由 tasks/ToolActivity 组合既有命令核实、影响观察及恢复上下文。ToolTimeline 只在展开时挂载详情，不拥有查询或恢复权。成员正文默认只读，不伪造缺少来源的核实入口。
+
+AgentCallDetails 是独立的只读查询边界：仅接受 cbim_agent_call 的 tool.updated 或 tool.finished 中宿主持久引用，核对工作区、父 task/run 和工具 ID；loop.inspect 返回后再次核对目标 task/run 与首个 run.started 的相同引用。缺失、冲突或异源身份不拼接。查询重试不执行 Agent；每个已展开视图串行读取，运行结束或详情关闭停止轮询，迟到响应失效。递归调用复用同一工具详情，不沿旧派发图猜测关系；原生 dialog 保持手机全宽，返回调用方恢复焦点与原阅读位置，不提供执行 Agent 输入框。
 
 QuestionCard、ComposerAttachments 和 MessageQueue 只保持已有展示和显式交互：本地选择不提交，附件预览仅显式读取已保存快照，排队操作由调用方回调执行。原 CSS 类名、事件顺序、身份核对、错误展示和原始回执保留。
 
@@ -30,6 +32,14 @@ ToolTimeline 按同一调用事件确认 tool.denied 且没有 tool.allowed/star
 
 `team-conversations.ts` 供侧栏、成员文字页和办公室共用，不依赖任一业务页面。只接受同工作区/主根的正式 TeamSession；角色的不同执行实例统一到同一人物/导航项，公开任务引用保留原身份，正文仍按原 task/run 读取。`teamConversationKey` 以工作区实例隔离本机动态缓存。该模块只投影，不创建会话或修改执行。
 
+## 同调用问答状态
+
+ToolTimeline 根据原工具的 agentCallState 显示等待调用方答复、执行中、已完成或执行未完成。waiting 的中间 tool.finished 不覆盖暂停状态；后续 tool.updated 的终态结束同一卡片。cbim_agent_reply 以普通工具显示“答复执行 Agent”，不新增频道或层级。
 ### 原任务的对话定位
 
 taskConversationTarget 只把当前 workspace/root 下唯一任务映射为已登记 TeamSession；主根及主 Agent 自执行回主对话，其他任务必须有唯一同 Agent 的登记。缺记录、跨会话或重复登记抛出明确错误，不能猜名字、复用另一执行实例或偷偷回主 Agent。纯函数只返回 sessionId/scopeId/taskId，页面切换和一次性定位代次由 Conversation/MemberConversation 拥有。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。

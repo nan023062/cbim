@@ -1,6 +1,14 @@
 # 项目协作与注释规范
 
-开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 只保留 01、02、03、04 四份概念设计；`design/` 保存关联方案、设计说明和验证记录；产品运行规范与 Schema 位于 assets/，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
+## 文档分层
+
+`docs/` 独立维护概念设计、标准规范与准则，不引用或依赖 `design/` 文件。`design/` 保存依据这些准则制定的项目方案和历史验证记录；运行资产归 `assets/`，可引用 `docs/`；项目实施细节不得反向成为通用规范的前置依据。当前实现说明仍随 `src/` 维护。
+
+## C# 风格的源码阅读规范
+
+维护者熟悉 Unity/C#。本项目继续使用 TypeScript，按 [源码组织与模块说明规范](docs/05-工程文件组织与代码阅读设计.md) 编写和 review：文件头说明实现形式、作用和意图；字段、属性、方法用 `// #region` 分区，私有在前、公开在后，每个成员有简短中文说明。无状态工具模块统一采用静态工具类，有状态对象保留实例类。目录作为内聚系统封装理解，其架构文档提供全部直接文件的可点击清单、各类设计意图、接口契约与子封装导航。此要求覆盖 `src/`，是源码修改的同步完成条件。
+
+开发 CBIM 工程时使用 `cbim-development`：从当前仓库 [GitHub Issues](https://github.com/nan023062/cbim/issues) 拉取开发清单，读取选定 Issue 及 [相关开发记录](design/development-log.md)，结合实际代码明确范围、依赖与验收；每个 Issue 独立开发、验证和提交，在已有授权内同步 Issue 进度并追加实际验证记录。Issues 是开发清单与实时进度的唯一来源，历史计划和记录不自动成为下一步任务。`docs/` 保存 01–04 概念设计、05 工程文件组织设计及 06–07 架构标准与治理准则；`design/` 保存关联方案、设计说明和验证记录；产品运行规范与 Schema 位于 `assets/`，不另建实时待办。当前实现说明维护在 `src/` 的契约和架构文档中。此开发流程适用于本仓库开发，不替代产品内置业务 Skill。
 
 开发 Skill 入口：[通用项目](.agents/skills/cbim-development/SKILL.md)、[Claude Code](.claude/skills/cbim-development/SKILL.md)、[Codex](.codex/skills/cbim-development/SKILL.md)，三份内容同步维护。只读分析或计划讨论不自动触发代码实施。
 
@@ -8,7 +16,7 @@
 
 ## 架构规范与强制关系
 
-设计与开发必须遵守 [文档 1：通用项目架构设计规范与原则](design/project-architecture-standard.md)。`cbim-development` 必须在设计和实施前读取并应用文档 1；项目架构治理入口 `architecture-evolution` 必须同时读取文档 1 和 [文档 2：架构治理规范与治理流程](design/architecture-governance-process.md)，按文档 2 的 S1–S7 执行。`architecture-maintenance` 遵守文档 1，并在治理中衔接文档 2 的验证、资料与认知交付。
+设计与开发必须遵守 [文档 1：通用项目架构设计规范与原则](docs/06-通用项目架构设计规范与原则.md)。`cbim-development` 必须在设计和实施前读取并应用文档 1；项目架构治理入口 `architecture-evolution` 必须同时读取文档 1 和 [文档 2：架构治理规范与治理流程](docs/07-架构治理规范与治理流程.md)，按文档 2 的 S1–S7 执行。`architecture-maintenance` 遵守文档 1，并在治理中衔接文档 2 的验证、资料与认知交付。
 
 已核实且未变化的上下文可复用，普通开发不机械启动全套治理，已有授权不逐步重复确认；三个宿主入口及引用同步维护。两份规范服务本仓库开发，不自动改写产品内置业务 Skill。
 

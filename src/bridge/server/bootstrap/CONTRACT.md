@@ -1,3 +1,7 @@
+## 对话中的引擎管理端口
+
+冷壳提供 EngineArtifacts 验签与准备端口，安装选择和进度由 Application 的 EnginePackages 持有。对话菜单经 Main 读取同一账本或显式准备，不另建活动选择；开发态显示随应用提供。
+
 # 固定桌面冷壳
 
 本目录随 C 发布。入口只验证资源、选择版本、持有 OS 单实例锁、提供更新/引擎端口和恢复界面；不持有任务、模型密钥或知识事务。业务入口由 `startDesktop(runtime)` 接收窄宿主端口。计算式装载 `loadApplication(entry)` 在依赖检查器中映射到真实 Main 源码边，不能据动态加载隐藏循环。

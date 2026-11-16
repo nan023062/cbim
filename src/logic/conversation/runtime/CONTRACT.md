@@ -111,7 +111,43 @@ Auto 与 Team 主指引都说明 cbim_dispatch_review：先核对具体候选、
 历史后续通过 enqueue 的 followupOf 明确关联，先核实同根已关闭话题再保存新队列身份。正文编辑不改变来源，真实 beforeRun 将该来源交给新 scope；不能借旧 queueInsert 把关联任务塞回原运行。已有异常/重启暂停和队首顺序仍保留。
 
 主 Agent 指引明确按 `cbim_office_history` 追溯本办公室原话题与内容、分块版本和 followupOf；当前运行窗口可压缩，但完整 canonical 保留。历史资料与旧验收不是本轮新授权，子 Agent 仍只得到当前话题的冻结上下文。
+### 统一 Agent 工具路径与旧运行兼容
+
+`WorkspaceExecutionManager` 只从新用户请求与已核实 `run.started.executionModel` 选择工厂的可信 `ExecutionLaunchContext.executionModel`；公开运行选项不提供该字段。真实装配返回 `unifiedAgentTools` 时，启动、失败与结算仅交给独立 `agentLifecycle`，不再通知旧 AutoCollaboration 推进同一运行。旧日志、系统回注、恢复与内部正式启动协议维持原协调路径，不能在恢复时暗中替换状态所有者。
+
+`agentToolInstructions(root/called)` 面向已经装配真实 `cbim_agent_call` 的执行工厂：root 与用户交互，called 向直接调用方反馈；递归调用使用普通工具返回，深度／并发／预算错误不能被指令绕过。知识读写及 read/ask/execute 边界保持。该函数本身不授予能力，不能仅注入指令便声称端口已接通。
+
+旧周期恢复仍使用历史 `mainInstructions`／`collaborationInstructions`，在旧调度消费者退出前不删除其协议说明。新路径不得同时追加旧“结束主轮等待派发”指令；运行工厂拥有选择权，界面模式不决定执行权限。
+
+## 新递归协议的求助
+
+新 Agent 协议提示要求收到 waiting 后使用 cbim_agent_reply 答复原 callId/questionId，不用新建 Agent 调用替代续跑。执行 Agent 问直接调用方，可逐层向上转问；只有根向用户提问。该分支不改变以上旧协议历史恢复指令。
 
 ### 多角色发送选项
 
 executionOptions 接受并保留严格 V2 modelRoles，使聊天、排队和恢复沿原请求携带完整 Agent 选型；缺省不补造角色，不改变原消息和副作用回执语义。
+
+
+统一 Agent 主轮直接使用 LoopRuntime.start；主会话管理器在 done 后调用 Runtime.close，再结算根作用域。取消、引擎终态和排空不再经 AgentExecutionLoop 包装维护第二份状态；队列、历史选择与未知结果规则不变。
+
+### 递归调用等待时的普通补充
+
+resume 只对本进程 active Map 中 taskId/runId 完全匹配的活动主运行接收排队输入；不启动第二个运行、不核实未决工具、不将补充提前混入子结果。排队保存发送时的权限及模型选项，原运行安全完成后才由既有 pump 处理；停止仍暂停队列。历史未决工具没有活跃身份时继续返回 RECOVERY_INSPECTION_REQUIRED，reconciledToolIds 不签发恢复许可。已有更新轮次仍拒绝 STALE_RUN。
+
+
+## 根运行插入回执
+
+新 Agent 运行的队列插入通过 AgentLifecycle.insertInput 进入原持久回执机制；历史运行仍走既有协调器。beforeRun 传本轮正文、附件与队列话题身份，不能拿首次 TaskSpec.goal 替代续聊内容。
+
+## 关闭时的统一 Agent 结算
+ExecutionManager.close 禁止新工作后排空原循环，并等待每个捕获运行的 settled。统一 Agent 的生命周期结算在 closing 时仍执行，把真实终态封存到原 scope；关闭不再跳过它。关闭期间不 pump 队列、不继续模型；结算失败向关闭调用方报告，不冒充成功释放。旧协作协议的关闭协调保持原所有者。
+
+
+## 递归来源的全新只读核实
+
+WorkspaceExecutionManager 从可信 recoveryPreflight 返回值选择新核实运行的执行协议。递归来源在 startFreshMain 接受原核实意图后绑定同一 scopeId 的 AgentLifecycle，继续使用普通 Agent 工具、请求预算及停止收尾；旧来源或旧宿主无协议返回时保持 legacy。协议不能由公开请求指定，恢复不读取损坏历史作为模型上下文。
+
+
+### 递归工具迁移收口
+
+排队材料由 enqueue 对原始文本调用已有 prepareContinuationInput 一次冻结，MessageQueue 保存完整清单。queueInsert 先查原回执，再以同快照核图像；ACK 绑定含清单的输入指纹，成功后快照丢失不重读、不重发。编辑正文只更新展开摘要；自动发送同样校验原快照且把同次读取的图片交给 factory。正式修复预检返回可信执行协议、原模块及验收文本，并将要求作为业务数据传入全新根上下文；新递归来源不进入旧主循环。

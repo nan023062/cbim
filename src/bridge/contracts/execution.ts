@@ -5,6 +5,8 @@
  * 插入边界：排队消息插入必须携带点击时的真实主 runId，迟到请求不能改为下一轮执行。
  */
 export type {RunSummary,StoredEvent,EngineEvent,ConversationThreadView} from '../../logic/execution/rules/types';
+/** Agent 工具的可信日志引用；查看详情不取得执行或恢复权限。 */
+export type {AgentCallReference} from '../../logic/agents/contracts';
 export type {TaskSpec} from '../../logic/tasks/rules/types';
 export type {QueuedMessage,QueueCursor,QueueDelta} from '../../logic/tasks/rules/queue';
 export type {PendingQuestion,QuestionInput} from '../../logic/tools/rules/questions';

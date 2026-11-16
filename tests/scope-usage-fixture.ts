@@ -37,9 +37,9 @@ export async function usageScopes(user:string,workspaceId:string){
 export function assertScopeUsage(raw:unknown,which:'first'|'second'){
   const report=scopeUsageReportSchema.parse(raw),first=which==='first';
   assert.equal(report.coverage,'tracked');assert.equal(report.consistency,'stable');assert.equal(report.scopeStatus,'closed');assert.equal(report.scopeOutcome,'completed');assert.deepEqual(report.issues,[]);
-  assert.equal(report.totals.registeredRuns,first?3:1);assert.equal(report.totals.readRuns,first?3:1);assert.equal(report.totals.inFlightRuns,0);assert.equal(report.totals.missingUsageRuns,0);assert.equal(report.totals.partialUsageRuns,0);assert.equal(report.totals.unpricedRuns,0);assert.equal(report.totals.tokensComplete,true);assert.equal(report.totals.costComplete,true);
-  assert.deepEqual(report.totals.tokens,{input:first?1600:100,output:first?320:20,cacheRead:0,cacheWrite:0,reasoning:0,total:first?1920:120});assert.ok(Math.abs(report.totals.estimatedCostUsd!-(first?0.00224:0.00014))<1e-12);
-  assert.equal(report.runs.filter(run=>run.kind==='main').length,first?2:1);assert.equal(report.runs.filter(run=>run.kind==='member').length,first?1:0);assert.equal(new Set(report.runs.map(run=>run.runId)).size,report.runs.length);
+  assert.equal(report.totals.registeredRuns,first?2:1);assert.equal(report.totals.readRuns,first?2:1);assert.equal(report.totals.inFlightRuns,0);assert.equal(report.totals.missingUsageRuns,0);assert.equal(report.totals.partialUsageRuns,0);assert.equal(report.totals.unpricedRuns,0);assert.equal(report.totals.tokensComplete,true);assert.equal(report.totals.costComplete,true);
+  assert.deepEqual(report.totals.tokens,{input:first?1200:100,output:first?240:20,cacheRead:0,cacheWrite:0,reasoning:0,total:first?1440:120});assert.ok(Math.abs(report.totals.estimatedCostUsd!-(first?0.00168:0.00014))<1e-12);
+  assert.equal(report.runs.filter(run=>run.kind==='main').length,1);assert.equal(report.runs.filter(run=>run.kind==='member').length,first?1:0);assert.equal(new Set(report.runs.map(run=>run.runId)).size,report.runs.length);
   for(const run of report.runs){assert.equal(run.status,'completed');assert.equal(run.logState,'verified');assert.equal(run.usage.source,'run-summary');assert.equal(run.usage.tokensState,'reported');assert.equal(run.usage.costState,'priced');assert.deepEqual(run.usage.issues,[])}
   return report;
 }

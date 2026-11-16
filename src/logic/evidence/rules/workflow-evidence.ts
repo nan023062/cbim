@@ -105,11 +105,13 @@ function effectFinished(events:readonly ArtifactEvidenceEvent[],identity:Workflo
 /**
  * 在成员结算和主目标核验时重算完整 canonical，而非信任 taskProgress 的命中字段。
  * 有约定的新运行必须保留自己的计划和成功交付调用；续执行也须建立本轮计划，旧轮次回执不会继承。
+ * requireDelivery 由可信业务装配开启：无附加 Workflow 时仍核基础交付，不补造约定或 Workflow 证明。
  */
-export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'|'ownerBinding'|'fallbackBinding'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof):WorkflowEvidenceProof|undefined{
-  if(!bindings.length)return;checkedBindings(bindings);
+export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[],task:Pick<TaskSpec,'workspaceId'|'taskId'|'goal'|'acceptance'|'ownerBinding'|'fallbackBinding'>,bindings:readonly WorkflowContractBinding[],validations:readonly ValidationRecord[]=[],manifest?:OutputManifestProof,options:{requireDelivery?:boolean}={}):WorkflowEvidenceProof|undefined{
+  // 显式业务 Agent 即使无附加 Workflow，也必须保留真实计划和交付；旧无约定读取保持兼容。
+  if(!bindings.length&&!options.requireDelivery)return;checkedBindings(bindings);
   const first=events[0],last=events.at(-1),identity={workspaceId:task.workspaceId,taskId:task.taskId,runId:first?.runId};
-  valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts,bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
+  valid(first?.type==='run.started'&&first.runId&&same(first.data.workflowContracts??[],bindings)&&last?.type==='run.settled'&&last.data.status==='completed','WORKFLOW_LOG_INVALID','Workflow 运行缺少完整来源、冻结约定或正常终态');
   valid(events.every((event,index)=>event.seq===index+1&&event.workspaceId===identity.workspaceId&&event.taskId===identity.taskId&&event.runId===identity.runId),'WORKFLOW_LOG_INVALID','Workflow 日志身份或连续顺序不完整');
   const taskData=first.data.task as Partial<TaskSpec>|undefined;valid(taskData?.workspaceId===task.workspaceId&&taskData.taskId===task.taskId&&taskData.goal===task.goal&&same(taskData.acceptance,task.acceptance)&&same(taskData.fallbackBinding,task.fallbackBinding)&&same(taskData.ownerBinding,task.ownerBinding),'WORKFLOW_LOG_INVALID','Workflow 运行来源与真实任务及冻结岗位不一致');
   const candidateEvent=events.filter(event=>event.type==='task.updated').at(-1),candidate=candidateEvent?.data.progress as TaskProgress|undefined;
@@ -140,5 +142,5 @@ export function validateWorkflowEvidence(events:readonly ArtifactEvidenceEvent[]
   const ids=[...new Set(candidate.steps.flatMap(step=>step.evidence))],receipts=ids.map(id=>{
     const call=artifactSucceededCall(events,identity,id),ownEffect=effectEnds.some(effect=>effect.allowed.data.id===id);valid(call.allowed.seq>plan.savedSeq&&call.allowed.seq>=lastEffect&&call.finished.seq<delivery.allowed.seq&&(ownEffect||call.allowed.seq>lastEffectEnd),'WORKFLOW_EVIDENCE_INVALID','Workflow 证据必须在当前计划内，读取验证不得与尚未结束的副作用重叠');return call.receipt;
   });
-  const proof=evaluateWorkflowDelivery(bindings,receipts,identity,validations,manifest,verifyCodeChecks(events,bindings,identity));valid(same(proof,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return proof;
+  const proof=evaluateWorkflowDelivery(bindings,receipts,identity,validations,manifest,verifyCodeChecks(events,bindings,identity));valid(same(bindings.length?proof:undefined,candidate.delivery.workflow),'WORKFLOW_EVIDENCE_INVALID','Workflow 交付条件与真实日志重算结果不一致');return bindings.length?proof:undefined;
 }

@@ -872,3 +872,22 @@ graph-rules 的 acyclic 委托后端 isDirectedAcyclic。validateGraph 仍先校
 ### 多角色公开选型
 
 排队消息、目标续接、自动返回保留可选 V2 modelRoles，重放不回填缺省。成员运行快照的角色块由严格公开操作 schema 校验，拒绝凭据和未知字段；其余原运行状态和历史不可变约束不变。
+
+## 递归来源的影响处置
+
+影响报告 source.executionModel 可为 agent-tools-v1，仅用于已登记的执行 Agent 来源；不能携带旧派工任务版本或用于主运行。历史报告不补字段、指纹不变。effect-observation-invariants 在提交和重放时要求同 workspace/root/task/run 的登记已关闭且 scope 一致；不能用递归标识绕过旧任务归属。处置是独立附录，原 unknown、补偿和后续业务验收仍分别保留。
+
+
+## 递归执行记录核实
+
+执行记录报告 basis 的 agent-tools-v1 分支只公开原登记和冻结计划版本，禁止携带旧任务版本或状态。历史分支仍要求 taskRevision/planRevision/taskStatus，不能使用递归 active/closed。报告只读，不构成恢复或业务验收授权。
+
+
+## 递归业务来源的只读核实
+
+`scope-recovery.ts` 的 member_run 记录增加严格的 agent-tools-v1 变体：固定真实 taskId/runId/toolCallIds、原周期与日志观察，禁止携带旧 taskRevision/planRevision。`dispatch-scope-invariants.ts` 以 agentBusinessRuns 的工作区、根会话、原周期和 closed 状态核实该变体；旧来源继续按旧任务版本验证，不能混用身份。公开投影继承此来源契约，但仍不公开隔离上下文。
+
+
+### 递归工具迁移收口
+
+新输入可携带 attachmentManifest，prepare/accept 必须保持清单一致；旧无清单哈希和重放不变。Agent 重规划证明新增严格 agent-tools-v1 分支，使用 inspectionRunId、sourceAcceptance，不补造旧计划或 review。Store 核对精确源运行、已完成核实及模块范围。

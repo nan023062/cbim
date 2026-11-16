@@ -77,10 +77,13 @@ it.each(cases)('main direct work keeps permission and knowledge boundaries ($mod
     const instructions=JSON.stringify(requests[0].messages);
     expect(instructions).not.toContain('不能自行完成正式业务任务');
     expect(instructions).not.toContain('禁止把 cbim:main 作为业务执行角色');
-    expect(instructions).toContain('未配置自定义');
+    expect(instructions).toContain('每个模块默认由主 Agent 在当前会话执行');
     expect(instructions).toContain('直接');
-    // 0.1.7 明确区分主会话直接执行与独立成员 assignee；检查真实发送给模型的现行约束。
-    if(mode==='team')expect(instructions).toContain('禁止把 cbim:main 作为独立成员 assignee');
+    // 旧选项仍兼容同一根执行器；当前递归协议没有第二种团队执行模式。
+    expect(instructions).toContain('调用其他 Agent 与普通工具相同');
+    expect(instructions).toContain('结果和提问只返回直接调用方');
+    expect(requests[0].tools.some((tool:any)=>tool.function.name==='cbim_agent_call')).toBe(true);
+    expect(requests[0].tools.some((tool:any)=>tool.function.name==='cbim_dispatch_task')).toBe(false);
     expect(approved.size).toBe(permission==='ask'?2:0);
     const advertised=requests[0].tools.map((tool:any)=>tool.function.name);
     expect(advertised.includes('write')).toBe(canWrite);expect(JSON.stringify(requests[0].messages)).not.toContain('主 Agent 不提供业务写入或命令执行');expect(advertised.includes('bash')).toBe(canWrite);

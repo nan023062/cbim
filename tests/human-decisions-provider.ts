@@ -1,7 +1,7 @@
 import type {OwnerExecutionSelection} from '../src/logic/team/rules/member-execution-binding';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {goalInspection,goalPlanArguments,type GoalFixtureRequest} from './goal-provider-fixture';
+import {type GoalFixtureRequest} from './goal-provider-fixture';
 
 export const humanDecisionFixture={
   goal:'HUMAN_DECISION_MAIN: 生成受控文件成果，等待明确人工业务决定',
@@ -19,34 +19,29 @@ type Request=GoalFixtureRequest&{model:string;tools?:{function:{name:string}}[]}
 function toolResult(request:Request,id:string):any{
   const result=request.messages.find(message=>message.role==='tool'&&message.tool_call_id===id);assert.ok(result,'Missing actual tool response '+id);
   const text=typeof result.content==='string'?result.content:Array.isArray(result.content)?result.content.map(value=>value&&typeof value==='object'&&'text' in value?String(value.text):'').join(''):'';
-  let value=JSON.parse(text);if(Array.isArray(value.content))value=JSON.parse(value.content.filter((part:{type:string})=>part.type==='text').map((part:{text:string})=>part.text).join(''));return value;
+  let value:any;try{value=JSON.parse(text)}catch{if(id==='human-followup')return {text};throw Error('Invalid structured tool response '+id)};if(Array.isArray(value.content))value=JSON.parse(value.content.filter((part:{type:string})=>part.type==='text').map((part:{text:string})=>part.text).join(''));return value;
 }
 
 /** Only localhost model output is scripted; native files, tool evidence, candidate and waiting are real. */
-export async function humanDecisionProvider(){
+export async function humanDecisionProvider(reconsider=false,afterReview?:'call'|'write'|'read'){
   const d=humanDecisionFixture,main:Request[]=[],member:Request[]=[],errors:string[]=[],sequence:string[]=[];let agentId='',moduleId='';
-  const state:{baselineId?:string}={};
+  const state:{baselineId?:string;call?:any;review?:any;followup?:any}={};
   let ownerSelection:OwnerExecutionSelection|undefined;
   const server=http.createServer(async(req,res)=>{try{
     assert.equal(req.method,'POST');assert.ok(req.url?.endsWith('/chat/completions'));let raw='';for await(const chunk of req)raw+=chunk;
-    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_dispatch_task')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
+    const body=JSON.parse(raw) as Request;assert.equal(body.model,d.model);const isMain=body.tools?.some(tool=>tool.function.name==='cbim_agent_result_review')===true,requests=isMain?main:member,turn=requests.length;requests.push(body);sequence.push(`${isMain?'main':'member'}:${turn}`);
     assert.ok(body.tools?.every(tool=>!tool.function.name.includes('human_decision')),'人工决定不能提供给模型工具');
     res.writeHead(200,{'Content-Type':'text/event-stream'});
-    const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'human-decision-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}]})+'\n\n');
+    const emit=(delta:unknown,finish_reason:string|null=null)=>res.write('data: '+JSON.stringify({id:'human-decision-'+sequence.length,object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason}],...(finish_reason?{usage:{prompt_tokens:isMain?100:200,completion_tokens:isMain?20:40,total_tokens:isMain?120:240}}:{})})+'\n\n');
     const tool=(id:string,name:string,args:unknown)=>{emit({role:'assistant',tool_calls:[{index:0,id,type:'function',function:{name,arguments:JSON.stringify(args)}}]});emit({},'tool_calls')};
     const reply=(content:string)=>{emit({role:'assistant',content});emit({},'stop')};
     if(isMain){
       assert.ok(body.tools?.every(tool=>!['cbim_task_artifact_capture'].includes(tool.function.name)));
-      if(turn===0){const plan=goalPlanArguments({objective:d.goal,agentId,moduleIds:[moduleId],ownerSelection,acceptance:d.acceptance});tool('human-goal-plan','cbim_goal_plan',{...plan,criteria:[...plan.criteria,{id:d.humanId,text:d.humanCriterion,kind:'human'}],assignments:plan.assignments.map(item=>({...item,criterionIds:[...item.criterionIds,d.humanId]}))})}
-      else if(turn===1)tool('human-dispatch','cbim_dispatch_task',{agentId,moduleIds:[moduleId],ownerSelection,goal:d.memberGoal,acceptance:d.acceptance.map((text,index)=>({id:'criterion-'+index,text})),prerequisites:[]});
-      else if(turn===2)reply('已派发独立执行者，等待真实文件成果。');
-      else if(turn===3)tool('human-goal-inspect','cbim_goal_inspect',{});
-      else if(turn===4){
-        const {scope,graph}=goalInspection(body,'human-goal-inspect'),task=graph.tasks.find(value=>value.scopeId===scope.scopeId);assert.ok(task?.result);assert.equal(task.status,'result_ready');assert.deepEqual(task.result.evidenceRefs,['human-member-read']);
-        const evidence={kind:'member-result',taskId:task.taskId,runId:task.result.runId,resultId:task.result.resultId,planRevision:task.result.planRevision,toolCallIds:[...task.result.evidenceRefs]};
-        tool('human-goal-review','cbim_goal_review',{expectedRevision:scope.goal.revision,decision:'awaiting_user',checks:scope.goal.plan.criteria.map(criterion=>({criterionId:criterion.id,outcome:criterion.kind==='human'?'needs_human':'satisfied',reason:criterion.kind==='human'?d.reason:'已核实真实成员成果及读取回执',evidence:[evidence]})),superseded:[],gaps:[d.reason],reason:d.reason});
-      }else if(turn===5)reply(d.final);
-      else throw Error('保存人工决定不得启动主模型：'+turn);
+      if(turn===0){assert.ok(ownerSelection);tool('human-call','cbim_agent_call',{agentId:ownerSelection.memberId,message:d.memberGoal,business:{moduleIds:[moduleId],acceptance:d.acceptance}})}
+      else if(turn===1){state.call=toolResult(body,'human-call');assert.equal(state.call.status,'completed');assert.equal(state.call.verification.state,'verified');tool('human-review','cbim_agent_result_review',{callId:'human-call'})}
+      else if(turn===2){state.review=toolResult(body,'human-review');if(afterReview==='write')tool('human-followup','write',{path:d.file,content:d.changed});else if(afterReview==='read')tool('human-followup','read',{path:d.file});else if(afterReview==='call'){assert.ok(ownerSelection);tool('human-followup','cbim_agent_call',{agentId:ownerSelection.memberId,message:'未经新指令的返工',business:{moduleIds:[moduleId],acceptance:d.acceptance}})}else{assert.ok(reconsider||state.review.error,'保存意见未明确继续时不应进入下一模型请求');tool('human-review-again','cbim_agent_result_review',{callId:'human-call'})}}
+      else if(turn===3&&afterReview){state.followup=toolResult(body,'human-followup');reply('已保留原人工意见和原调用事实。')}
+      else throw Error('人工意见保存后不应自动重跑主模型：'+turn);
     }else if(turn===0)tool('human-member-plan','cbim_task_plan',{expectedVersion:0,goal:d.memberGoal,acceptance:d.acceptance,reason:'生成真实成果，保留人工业务判断边界',steps:[{id:'verify',title:'生成并核实成果',owner:'开发者'}]});
     else if(turn===1)tool('human-member-write','write',{path:d.file,content:d.fact});
     else if(turn===2)tool('human-member-read','read',{path:d.file});

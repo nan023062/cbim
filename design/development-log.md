@@ -1,3 +1,215 @@
+## 2026-11-16：标准上移 docs，解除对具体方案的反向引用
+
+- 来源：用户要求 docs 不引用 design，并允许标准、规范和准则迁入 docs；本步仅调整文档，不实施源码重构。
+- 将原通用架构标准和治理流程迁为 [06](../docs/06-通用项目架构设计规范与原则.md)、[07](../docs/07-架构治理规范与治理流程.md)。原治理附录单独保留为 [CBIM 项目映射与整改基线](cbim-architecture-governance-baseline.md)，历史基线与验收内容保留，实时任务仍归 Issues。
+- 清理 docs 01–05 对具体产品方案、运行资料与验收报告的依赖，改为自包含的目标和验证边界说明；保留未实现不冒充完成、概念不授权运行等限定。同步协作规范、导航、三宿主入口及历史记录中的迁移链接；历史执行事实未改写。
+- 验证：`git diff --check`、Python 检查 docs 全部正式相对链接与无 design 引用、三宿主入口一致及迁移文件存在性。仅文档变更，未运行产品测试、类型检查或构建；未提交或发布。
+
+## 2026-11-16：工程文件组织与代码阅读设计落档
+
+- 来源：用户直接要求，基线 `bda7f5cb`；查询开放 Issues（上限 200，实际 3 项），没有对应工程组织工单，未创建或修改其他工单。
+- 将设计落到 [docs/05](../docs/05-工程文件组织与代码阅读设计.md)：文件头说明形式/职责/意图；private、protected、public 依次分区，字段/属性/构造/方法细分，每个成员中文注释；目录按内聚系统封装列出可点击文件清单、逐类设计意图、接口契约、开闭边界与子封装导航。
+- 用户最终选择无状态工具统一静态类，覆盖先前保留函数形式的选择；有状态队列/服务保持实例，React/宿主入口保留框架语义。新增静态工具类、实例类和目录说明模板；保留初始化顺序、this、回调身份与消费者迁移要求。
+- 同步 AGENTS、README、设计导航、治理资料归属与三宿主开发/架构入口，解除 docs 仅限四份文档的旧限制。资料采用同一权威来源，不复制设计正文。
+- 验证范围为文档：运行 `git diff --check`，使用 Python 核对三宿主入口字节一致、设计文档正式相对链接存在及 Markdown 代码围栏配对。模板内示例链接是明确占位，不作为真实源码声明。
+- 完成的是设计与规范落档。源码重构、718 个 TypeScript/TSX 文件的逐成员 review 与全部模块说明尚未实施；未运行产品测试、类型检查、构建、全量 CI，未提交或发布。已有品牌与领域引擎草稿保持原状。
+
+## 2026-11-16 — #94 递归调用产物基线与完整清单报告
+
+基线 7f2ceb17。真实输出清单迁移后暴露 TASK_NOT_FOUND：报告只查旧图任务，新业务登记已存在仍不可读。ArtifactReportService 与 OutputManifestReportService 增加独立 inspectAgent 端口并读取原 agentBusinessRuns，装配复用已有按协议固定路径的 inspectMember。没有合成 TaskNode/DispatchRun、模型或派工记录。
+
+C2/L1：共同变化是只读报告的递归来源身份，新增 recursive-evidence-source 只核唯一根/周期/登记及 canonical 的原父调用、模块、岗位、原生通道、连续事件。旧报告与新报告的来源选择显式区分；文件对比、范围完整性、读占用、哈希和输出脱敏仍由原服务负责。active 仅表示原启动意图，可列已确认引用但不放行当前文件复核；closed 仍须与真实日志终态配合。读取后登记或日志变化保持不可核实；不修复旧日志或自动重放。第五问未新增通用规范候选。
+
+真实 Pi 完整清单/选定文件各 complete 与 stop 共四项迁为一主一子；保留真实 read、捕获成功先后顺序、捕获回执不作步骤证据、文件新增/移动/删除检测、重开相同报告与原字节不变。日志夹具新增显式协议参数，其他旧调用默认路径不变。测试中的主结束只说明对话完成，不签署人工验收。
+
+验证：
+- output-manifest-pi 初次完整场景因 TASK_NOT_FOUND 失败，定位后补产品；原两报告服务 13/13 通过。产品修复后的首次真实两项走到夹具旧日志路径 ENOENT，再改为明确 loop-engine 路径，未改产品回退路径。
+- pnpm exec vitest run tests/output-manifest-pi.test.ts（build/recursive-manifest-fixed.json）：2/2 通过。
+- pnpm exec vitest run tests/artifact-baseline-pi.test.ts（build/recursive-artifact-baseline-fixed.json）：2/2 通过。首次测试误从只返回 scopes 的夹具取 runs，改为直接检查实际 Store 为空。
+- 新递归报告反例 pnpm exec vitest run tests/output-manifest-report-service.test.ts tests/artifact-report-service.test.ts -t recursive（build/recursive-report-identity.json）：2/2 通过，覆盖跨父调用/原生/模块、协议缺失、坏尾、active、读取中变更、跨根和重复登记；旧 13 项已有本切片通过证据，无永久跳过。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过：1661 文件/7905 依赖、无环无违规；相关文件头、端口注释、evidence/runtime 和 application/assembly 契约及三份生成类图已同步。
+- 未执行共享旧桌面脚本、安装升级或发布；完整 CI 43790338820 正运行旧提交 ee9c3047，不代表本切片已通过全量检查。
+
+## 2026-11-16 — #94 Workflow 启动预检接入递归链路
+
+基线 b9849f52。迁移真实 Workflow 四场景时，正常、停止、并发证据均通过；缺能力场景发现新递归调用绕过了旧 MemberExecutionManager 的启动能力检查，只读权限仍启动要求 write 的模型。这是产品缺口，未通过更改预期或放开权限解决。
+
+S1–S7 简要：本次限 Logic 规则/启动装配，C2/L1。规则由 workspace/rules/workflow-contract 的 assertWorkflowCapabilities 持有，旧成员与 createWorkspaceLoop 两个真实消费者复用。可信装配提供当前引擎、权限和实际范围/验证端口；缺能力在受管引擎准备、运行登记和模型请求前拒绝。保护现有 LoopRuntime、权限策略、DispatchStore 和验证算法，不新增调度或生命周期。四问：语义为冻结 Workflow 能否在当前能力下执行；来源来自原准备/可信端口；状态仍属于原运行；共性是同一能力条件和错误码。第五问未发现需新增的通用架构规则。后续新增验证器只更新能力声明和实际端口，不改通用循环。
+
+测试迁移为 cbim_agent_call/result_check，审批集中主对话；旧图为空。保留计划前拒写、审批前无文件、仅 write 不可交付、实际 read 证据、并发旧 read 失效、停止和重开无重放。八种日志篡改反例仍执行既有验证器；输入投影取自真实业务登记/原日志，与生产 agent-business 的私有投影一致，不持久化伪造旧图。主循环 completed 不声称缺能力业务完成或人工验收。
+
+验证：
+- 初次 workflow-condition 四项：3 通过/缺能力 1 失败，保留真实问题证据。
+- 修复后 pnpm exec vitest run tests/workflow-condition-pi.test.ts -t missing-capability（build/recursive-workflow-preflight.json）：1/1，通过前模型请求与业务登记均为零。
+- pnpm exec vitest run tests/workflow-contract.test.ts tests/workflow-runtime.test.ts tests/agent-call-assembly.test.ts tests/application-runtime.test.ts（build/recursive-workflow-capabilities.json）：35/35 通过。
+- 新增隔离能力规则用例 -t '显式隔离范围'（build/workflow-capability-scope.json）：1/1 通过，不回退原生工具。
+- pnpm exec vitest run tests/member-execution.test.ts tests/workflow-condition-pi.test.ts（build/recursive-workflow-consumers.json）：25/25 通过，包含旧入口 21 和真实递归 Workflow 4；源码变化后重新验证消费者。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过；1660 文件/7893 依赖，无环/无违规。首次类型验证提示测试传了模型目录项，已改为真实 resolve 的冻结模型快照。
+- 三处源码注释及 workspace/rules、team/runtime、execution/assembly 的 CONTRACT/ARCHITECTURE 已同步。共享 workflow-condition-ui-smoke 仍使用旧页面/图定位，未冒称桌面验收通过；后续发布须迁移并实际验收。新 CI 43790338820 尚运行于 ee9c3047，不含本切片。
+
+## 2026-11-16 — #94 仓库只读工具新主调用协议
+
+repository-tools-provider 识别当前 cbim_agent_call 并拒绝旧 cbim_dispatch_task。新主 Agent 也可执行任务，不再以“不列出 write/edit/bash”充当角色权限断言；实际授权仍由 permission=read 和工具策略控制。五个真实 HTTP 集成保留资源 scope、真实内容 hash、撤销/服务代次变化后的内容不回流、停止、未授权不列工具、历史脱敏和重启不重放，没有替换网络结果或删减这些断言。此测试范围验证仓库读取，不声称覆盖原生写工具拒绝；该权限边界由现有执行策略用例负责。
+
+pnpm exec vitest run tests/repository-tools-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-repository-tools.json：5/5 通过。共享桌面脚本沿用同一 provider，但此次未运行桌面验收。仅变更测试选择协议，无公共类型、源码或测试归属变更，不重复产品静态检查。完整 CI、安装升级与发布仍未通过。
+
+## 2026-11-16 — #94 原调用求助经主 Agent 转交用户
+
+question-tool-contract 的四种真实 Pi 情况迁入同一主运行：主偏好问题 → cbim_agent_call → 子 Agent 原调用 waiting → 主 Agent 向用户转交原题 → cbim_agent_reply → 原子执行继续。子 Agent 没有独立用户问题卡；旧 dispatch.questions/answerQuestion 拒绝该身份。取消问题返回 cancelled 并由父级转交，与停止整个任务不同；坏回包仅在真实答案已消费后注入，保留 TOOL_OUTPUT_INVALID 和不重问。主/子原日志、唯一登记、实际文件证据、重启不重放仍检查。
+
+问答回执不能完成业务步骤，真实 read 回执才可进入步骤证据与 delivery。退出旧 goal_plan/goal_review 二次主轮；result_check 核验不冒充人工验收。旧 GoalTools 严格证据校验仍由原服务/契约套件负责。此次只改测试，不修改产品行为。
+
+验证：
+- pnpm exec vitest run tests/question-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-question-relay-fixed.json：stop 通过，其他 3 项因夹具错误假设证据错误码必须包含 EVIDENCE 失败；实际工具明确返回“证据不存在、已过期或不属于本轮”。
+- 改为匹配实际拒绝语义后，-t 'complete|cancel-question|invalid-output'（build/recursive-question-relay-answers.json）3/3 通过。四种情况各有通过证据，无永久跳过；初次误将旧入口当空列表的错误也已改为明确拒绝断言。
+- pnpm typecheck、pnpm check:test-modules 通过。完整 CI /桌面安装升级/合并发布未通过。
+
+## 2026-11-16 — #94 修复递归业务 Agent 历史归档与重开
+
+基线 ac264383，CI 43786781920 的 main-session-instance-pi 仍等待旧二次主轮。迁移该真实 Pi 场景后暴露产品缺口：AgentHistoryService、索引契约和 WorkspaceRuntimeMonitor 都把 memberBinding 等同于旧 dispatch/runs 路径，导致新 loop-engine 业务子运行归档失败、全局 complete=false。
+
+新实现保留 journal 原路径，通过严格原 agentCall 引用区分新递归业务：业务子记录仍是 task/member/registered，但 journal=loop；索引增加可选引用，旧记录形状不补写。增量、重开和正文读取都核对同一引用，不允许更换父身份或把旧目录伪装成新日志。agents/contracts 统一格式与当前子身份校验，budget 的引用格式复用它；父授权和周期归属仍由用量服务核对。没有引入新的历史服务或扫描机制。
+
+真实场景保留独立主/子实例与原生文件、私有主上下文不传给子、实际文件读取/候选证据、准确回原主工具、旧执行入口不可复活、用量只计一次、重开原履历与正文不变。新流程 2 主请求+5 子请求、2 个运行，共 770 tokens；原 3 运行/11 请求退出，计量算法不变。重开后的工作区对象重新取得，未使用已关闭旧 store。
+
+验证：
+- pnpm exec vitest run tests/main-session-instance-pi.test.ts -t 'explicitly registered' --reporter=default --reporter=json --outputFile=build/recursive-main-instance-fixed.json：1/1 通过，含真实 AgentHistory.runs/events 查询及重开一致性。初次验证的归档错误保留在诊断输出，未放宽 complete 断言。
+- pnpm exec vitest run tests/agent-history-store.test.ts tests/agent-history-assembly.test.ts tests/scope-usage-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-history-contracts.json：30 通过，新增两个正向夹具因遗漏业务 moduleIds 失败；补齐实际模块身份后 -t 'recursive|changed parent'（build/recursive-history-new.json）6/6 通过。四个反例也一起重跑，保证不因夹具身份先失败形成假阳性。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:dependencies 通过；1660 文件/7890 依赖无循环违规。node scripts/source-architecture.mjs --check 通过；不重复相同依赖检查。
+- agents、history/runtime、team/rules、application/assembly、budget/runtime 契约、相关代码注释和生成类图同步。完整 CI /桌面安装升级/合并发布未通过，不以此部分通过替代。
+
+## 2026-11-16 — #94 补齐递归运行的周期用量统计
+
+基线 a60a9be3。真实缺口：ScopeUsageService 原只枚举旧图成员，遗漏 agent-tools-v1 的子运行；FileRunStorage 的活动主运行也可暂显示 interrupted，不能据此认为不在途。本切片仍由 Logic/budget 持有只读计量规则，Application 注入固定 loop-engine 日志读取端口，dispatch 只装配；不创建第二个预算账本或修改预算准入。
+
+从 scope.runTracking 的可信主运行出发，逐层核对已授权 cbim_agent_call 首次引用与子 run.started.agentCall，支持普通和显式业务递归；业务子运行还匹配同 scope 的持久 agentBusinessRuns。无终态的主/子都计为在途。跨根、矛盾、循环、重复来源及缺日志不能使报告完整；总来源超过 532 拒绝报告，不截断数字。旧任务/成员计量入口保留。类型 ScopeUsageLogs 的 inspectAgent 独立于主证据端口，未放宽 inspectMain 的主身份校验。
+
+验证与边界：
+- pnpm exec vitest run tests/scope-usage-pi.test.ts tests/scope-usage-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-scope-usage.json：7/7（真实 Pi 1 项 + 原计量服务 6 项）通过。第一目标新协议为 1 主+1 子，实际供应商 2 主请求+5 子请求，总 input=1200/output=240/total=1440、估价 0.00168 USD；第二目标独立且重启后不变。请求数减少源自退出旧规划/结果审阅轮次，未修改价格或计量算法。
+- 新增递归服务用例 7 项：三层精确归属、父引用未授权/跨根/冲突、子头跨调用、活动/缺日志、重复/环、业务绑定无登记、来源超限。第一次选取新增 5 项有 4 项通过，子头反例因测试夹具共享父子引用失败；修正夹具独立快照后 -t 'child header|business-bound|too many' 的 3 项通过。13 项服务测试各有通过证据，无永久 skip。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture 通过；540 文件测试归属不变，1660 文件/7889 依赖无循环或违规。
+- 源码注释、budget/runtime、dispatch/runtime、application/assembly 契约及其生成类图（含 logic 上层关系）同步；本切片未验证真实在线模型账单、桌面安装/升级、合并或公开发布。其余缺口继续归 Issue #94 / PR #96。
+
+## 2026-11-16 — #94 主调用登记与回执丢失验证迁移
+
+基线 4368d947。main-tool-contract-pi 的正常回流/停止迁为单个主运行的 cbim_agent_call 和 result_check；不再等待旧 goal_plan/dispatch_task/member-results 二次主轮。旧坏规划/派发回包场景迁为新链路的业务登记已保存后回执丢失、父工具关联已 fsync 后回执丢失。故障只注入真实保存之后，验证唯一原关联/登记、子引擎未启动、unknown 且禁止重试、关闭释放以及重启日志/请求计数不变。正常场景保留真实成员读取和交付证据；停止场景保持原子运行未完成。
+
+原 GoalTools/DispatchTools 的严格坏回包验证继续保留在 main-tool-output-core（15 项）及 main-tool-output-service（2 项，真实事务），未删除旧记录兼容覆盖。新调用失败工具回执 outcome=failed 表示工具报错，独立 ToolOutcome.status=unknown/retryable=false 表示执行影响不能推断；不能混为安全重做。
+
+实际验证：
+- pnpm exec vitest run tests/main-tool-contract-pi.test.ts tests/main-tool-output-core.test.ts tests/main-tool-output-service.test.ts --reporter=default --reporter=json --outputFile=build/recursive-main-receipts.json：旧输出 17 项及停止 1 项通过，三个新断言失败。
+- 修正从实际 steps.evidence 取证、依据原错误对象及独立 ToolOutcome 断言后，-t 'complete|lost-'（build/recursive-main-receipts-faults.json）正常 1 项通过；-t lost-（build/recursive-main-lost-ack.json）两种回执丢失 2 项通过。四个集成场景各有通过证据，选择器排除未修改已通过用例，无永久 skip。
+- pnpm typecheck、pnpm check:test-modules 通过；540 文件归属不变。仅测试/夹具改动，无产品源码或架构变更。
+- 全量 CI、桌面安装/升级与公开发布仍未完成；其余迁移仍归 #94。
+
+## 2026-11-16 — #94 原调用问答发布快照隔离
+
+基线 50a1f285。Logic/agents 的 AgentCallExchange 原先把自身持有的原题、已校验答案直接传给异步 publish；适配器可在记录后修改同一对象，影响后续校验或唤醒值。现在只向发布端传递 structuredClone 快照；状态仍由同一个 Exchange 持有，调度、循环、持久化归属不变，不增加服务或层级。
+
+验证选择：exchange 的 5 项单元覆盖连续问答、重复答案、发布失败、发布端修改、取消与落盘回执丢失；scheduler 20 项与 assembly 15 项验证其真实直接消费者，包括递归及跨模型同调用暂停。命令 pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts --reporter=default --reporter=json --outputFile=build/recursive-question-isolation.json：40/40 通过。pnpm check:architecture：135 份文档同步、1660 文件/7886 依赖、无循环或边界违规。首次 typecheck 发现测试替身遗漏 cancelled 答案分支，已修正为生产端口参数类型并显式收窄；再次 pnpm typecheck 通过。
+
+源码文件头已有职责说明，更新类注释及关键发布点注释；同步 agents/CONTRACT.md，生成 agents/ARCHITECTURE.md。当前仍不实现重启自动恢复暂停；未知结果继续不得重放。全量 CI 和发布验收另行完成。
+
+## 2026-11-16 — #94 成员坏回包验证迁入原调用问答
+
+基线 639948f3，Issue #94 / PR #96。迁移 member-tool-contract-pi 两项真实 Pi 集成：只读后求助、写入及真实基线采集后求助。确定性供应商通过 cbim_agent_call/cbim_agent_reply 执行，同一个子 task/run 内暂停和回答；QuestionTools 的实际 request 已消费父级答案后，仅损坏传给严格输出包装器的返回值。
+
+保留验证：原问题与正确答案只记一次、错误输出不泄漏损坏字段、原生会话记录 TOOL_OUTPUT_INVALID、实际 read/write 与基线采集、未准备交付时不得得到 verified、无旧派工图/第二成员运行、重启后文件时间/原生与 canonical 日志/问答请求计数不变。新设计不再要求旧 task.help_requested/task.checkpoint_requested 暂存后结束轮次；写后“checkpoint”场景现在是原调用内问答，不能据此宣称已支持跨进程恢复等待。
+
+测试夹具显式冻结含文件范围和交付证据要求的 Workflow，避免无约束 Workflow 的结构核验被误当作交付要求；采集版本读取真实 cbim_task_inspect，不硬编码写前 plan.version。公共 seedMainToolContract 新增可选 Workflow 正文参数，原消费者缺省行为不变。
+
+验证：
+- pnpm exec vitest run tests/member-tool-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-member-output.json：help 通过，checkpoint 暴露旧固定版本并失败。
+- 修正为真实 inspect 版本后 pnpm exec vitest run tests/member-tool-contract-pi.test.ts -t checkpoint --reporter=default --reporter=json --outputFile=build/recursive-member-output-checkpoint.json：checkpoint 通过；help 未重跑，按明确选择器排除。两项各有通过证据，无永久 skip。
+- pnpm check:test-modules：540 文件边界通过，归属不变。本切片未修改产品源码或架构依赖。
+- 全量 CI、桌面安装/升级、合并与公开发布尚未完成；其余迁移仍跟踪 Issue #94。
+
+## 2026-11-15 — #94 自动派工/结果回流测试迁入递归 Agent 链路
+
+基线 836173f3，继续用户授权的 PR #96 / 0.1.21 发布修复。原 `application-collaboration-pi.test.ts` 仍用 cbim_dispatch_task 识别主 Agent，等待额外的 member-results / goal-repair 轮次；新设计通过同一个主运行的普通工具返回结果。
+
+本次保留 9 个真实集成场景，采用真实 Application、Pi SDK、受控本地模型响应、真实文件与独立崩溃进程：正常回流、错误核验后的原调用再核验、已完成子运行回流前崩溃、主日志残尾、子运行尚未终结时崩溃、显式停止后重启、模型配置变化后重启、审批/排队完成、审批/排队停止。原生实际结果回到原主调用；旧图为空，未恢复 Team 派工。主 Agent 的模型响应明确保留尚未人工验收的限制。
+
+语义迁移：旧 goal-repair 的额外主轮替换为同一主轮处理真实工具核验错误，不重放子调用；旧自动续接/未记账回流替换为中断后禁止重放，新的用户指令另行处理。崩溃夹具不再替换 continueFromResults，不写虚构旧 scope 意图；从实际模型请求观察已写文件/未返回的窗口，强制终止自己创建的宿主及其进程树。只读拒绝写入、单次审批不能借用旧批准、排队消息不提前混入结果、停止暂停队列、文件与日志重启后不重放均保留。
+
+迁移发现实际缺陷：活动主运行正在等待 Agent 工具时，resume 在排队前按未决工具拒绝补充。Logic/conversation 的 WorkspaceExecutionManager 现在先核对当前准确 taskId/runId、active 主运行及停止屏障，仅持久排队，不启动第二个模型、不恢复工具；无存活事实的历史仍返回 RECOVERY_INSPECTION_REQUIRED，reconciledToolIds 不能绕过。状态仍由原 manager/queue 持有，未新建调度或恢复机制。源码文件头/JSDoc、runtime/CONTRACT.md、runtime/ARCHITECTURE.md 同步。
+
+验证与选择依据：
+- `pnpm exec vitest run tests/application-collaboration-pi.test.ts --reporter=default --reporter=json --outputFile=test-results/agent-return-migration.json`：9/9 通过，覆盖本次全部集成消费者。测试报告为本地确定性模型，非在线模型验收。
+- `pnpm exec vitest run tests/execution-collaboration.test.ts`：18/18 通过；新增活动未决工具只排队、停止后仍拒绝未知恢复的模块回归，原恢复/队列消费者同时验证。
+- `pnpm typecheck`、`pnpm check:test-modules`：通过（537 文件，174 unit / 163 contract / 200 integration）。测试归属未变。
+- `node scripts/source-architecture.mjs` 同步 1 份；`pnpm check:architecture` 通过：135 目录 / 831 代码样式文件无差异，1649 文件 / 7816 依赖 / 0 环 / 0 违规。
+- 类型检查初次发现测试的 findLast 不在配置的标准库内，改为同义 filter(...).at(-1)，类型复核通过。初次崩溃夹具清理遇到 EBUSY，改用本夹具宿主 PID 的进程树终止并关闭新 Application；最终完整九项通过。
+- 未重新构建、未安装升级、未合并、未公开发布：上一个精确 head 的完整 CI 已失败，不以定向通过或旧包安装证据放行。
+
+完整 CI 43728249910（836173f3）已完成且失败：第 2 片 801 通过 / 48 失败，第 4 片 754 通过 / 42 失败；第 1/3 片均被 GitHub 标注超过 30m0s，仅有分片清单，无完整测试 JSON。此 90 项是两份完整报告的失败数，不是全仓失败总数，不是新提交结果；静态检查通过。剩余失败包括旧等待、人工接续、预算、产物/效果、依赖和源码结构契约；不能统一当作无效测试、延长超时掩盖失败或取消门禁。完整原始报告/日志保留于 Actions；本次摘录见现有版本验证记录。开发清单与进度继续由 Issue #94 承载。
+
+
+## 2026-11-15 — #94 显式 Workflow 选择迁入 Agent 调用验证
+
+发布复核补充：`pnpm exec vitest run tests/application-collaboration-pi.test.ts -t 'reopen \(normal\)' --reporter=default --reporter=json --outputFile=test-results/release-collaboration-blocker.json` 实际选中 1 项失败，另外 8 项未被选择。30 秒等待后预期 2 个历史运行，实际只有 1 个；夹具仍用 cbim_dispatch_task 识别主 Agent，并调用旧 cbim_goal_plan/dispatch/goal_review。不能仅改历史数量放行，须迁移实际调用、回流与恢复覆盖。该失败是当前发布阻塞；完整 CI 即使尚在运行，也不能声称全部通过。未执行新的构建、合并或公开发布。
+
+发布复核在 f2e9790a 复现 `workflow-selection-pi.test.ts` 仍按旧派工工具识别主 Agent，导致两项无法进入业务验证。仅迁移测试消费者：使用真实 cbim_agent_call 的 business.workflowSelections，沿父运行持久引用读取 loop-engine 子运行；核对第二 Workflow 冻结版本、验证要求和交付证明，保留停止、真实文件及重启不重放，并明确旧任务图为空。不恢复旧派工入口，不删减业务验证。
+
+验证：`pnpm exec vitest run tests/workflow-selection-pi.test.ts` 两项通过；`pnpm check:test-modules` 通过（537 文件，174 unit / 163 contract / 200 integration）。测试文件仍归原集成模块；本次没有 src 变更，不涉及源码类图。完整 CI run 43727211812 的静态检查已通过，四片测试仍运行，不能据专项通过发布。旧 6541c41d 候选继续保留为历史，当前源码尚未重新构建或公开发布。
+
+## 2026-11-15：0.1.21 发布整合准备
+
+- 用户授权提交 PR 并发布。保留 0.1.20 已冻结图标草稿，使用新的 0.1.21；沿用已明确的 Windows 未签名方式，既有 User 作用域资源签名密钥文件可用，不输出凭据。独立 worktree 整合 bda7f5cb 与 origin/develop eb03dc61，保留全部原提交及用户草稿。
+- 解决主线引擎模型/多角色计费、EngineArtifacts 与 assets 迁移冲突：递归调用冻结岗位 modelRoles，根/子按角色计费端口分开，原子生命周期门禁保留；菜单复用 Application 唯一 EnginePackages，含 Memory 引擎，设置引擎入口退出。历史中断草稿继续使用原作用域存储。
+- 整合后 typecheck、check:architecture（1650 文件、7801 依赖、0 循环/违规）、check:test-modules（538 文件）、check:brand 通过。agent-call-assembly 13、agent-request-budget 4、conversation-waiting 3、team-conversation-view 2、ipc-desktop 4、managed-engines 3、inline-conversation 13、engine packages/roles/budget角色/IPC/settings导航 15 项通过。IPC 替身曾仍使用旧冷壳接口，改为 Application 包服务替身后通过；没有将旧接口测试结果替代新整合证据。
+- 运行指令已随主线迁到 assets；同步当前源码契约、注释和16份受影响架构文档。完整 CI、候选构建、安装和公开升级尚待后续回执，不把本条准备记录当成发布完成。
+
+## 2026-11-15：#94 跨模型递归与原调用暂停求助
+
+- 来源：[Issue #94](https://github.com/nan023062/cbim/issues/94)，基线 4ceb9b5b；用户授权继续跨模型递归及同调用暂停求助，并补专项测试。沿 Agent 调度、模型捕获、请求预算、Runtime 门禁及工具时间线核实本步范围，保留原品牌和领域引擎草稿。
+- Application 装配为每个子调用捕获自身引擎、模型、凭据与冻结价格，复核岗位配置哈希，清除根 process 覆盖；缺配置和变化不降级为根模型。各模型独立 RequestBudgetPort，共享根作用域已用及预留额度；agentRun 只记录实际子 task/run，不授予额度。发送前同时核实根与子生命周期，迟到真实用量仍保留。旧运行汇总预算仍拒绝递归。
+- AgentCallExchange 独立封装原调用单题暂停、先记录再消费与答复去重；Scheduler 的 cbim_agent_reply 只允许直接父级按原 callId/questionId 回答。原子 task/run、引擎和循环不变。C→B→A 可逐层转问，只有根使用用户端口。等待期间禁止父写操作和新子调用；未答复结束回合触发中断并停止排空，停止后的迟到答案不恢复。清理活动占用早于结果回传，避免父引擎收尾误判。
+- View 按原 tool.updated 显示等待调用方答复、执行中和终态，中间 tool.finished 不误标完成；答复仍是普通工具。同步 runtime/business-execution、runtime/common-rules、task/task-loop 运行指令；源码注释和 agents、application/assembly、budget/rules、budget/runtime、conversation/runtime、execution/assembly、execution/rules/runtime、view/execution-view 的契约及 8 份类图同步。
+- 专项选择依据：调度器验证身份、取消和去重，真实装配串联验证多层调用与运行恢复，预算契约验证独立价格和共同额度，时间线验证暂停状态。执行 `pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts`，21 项通过；补充配置捕获变化和跨引擎暂停后执行 `pnpm exec vitest run tests/agent-call-assembly.test.ts -t 'changed-model-capture|cross-model-question'`，2 项通过、11 项未重跑。执行 `pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-call-view.test.ts`，3 项通过；替身边界修正及发送前门禁补充后 `pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-request-budget.test.ts`，6 项通过。以上按不同用例去重共 30 项。
+- 直接消费者与登记规则：`pnpm exec vitest run tests/execution-collaboration.test.ts tests/model-request-budget.test.ts tests/request-budget-ports.test.ts tests/inline-conversation.test.ts tests/dependencies.test.ts tests/layer-boundaries.test.ts`，195 项通过。原预算应用集成覆盖保留，新预算测试仅组合账本不变量与服务，不加载完整 Application。新增 3 份套件登记 unit/contract，测试边界检查曾发现 exchange 测试引用另一模块结果函数，改为纯数据替身后 `pnpm check:test-modules` 通过（509 文件）。
+- `pnpm typecheck`、`pnpm check:architecture`（1547 文件、7524 依赖、0 循环/违规）及 `git diff --check` 通过。初次问答装配测试缺少替身父引擎答复分支，补齐后通过；不将该次失败隐藏为首次即通过。
+- 验证边界：装配用真实 Runtime、调度、文件日志和准入，外部 Pi/Claude Code/Codex 引擎及凭据解析端口为明确替身；不等于真实在线 SDK 验收。未运行完整 CI、桌面安装、打包、合并或发布。暂停对象当前仅进程内有效，重启后的未知等待不自动重建；保留旧历史读取，不宣称旧协议全部退出。下一次调整问答改 exchange/scheduler，模型冻结改 assembly，额度改 budget；Agent 对象及循环生命周期保持独立。
+
+## 2026-11-15：#95 对话引擎下拉菜单统一安装与更新
+
+- 来源：[Issue #95](https://github.com/nan023062/cbim/issues/95)，用户要求移除设置引擎分页、独立安装界面，将所有支持引擎及安装/更新/环形进度移入对话菜单。基线 `911347b7`，查询全部开放 Issues（上限 200，实际 2 项）后独立登记；当前源码 SettingsView 无引擎分页，不虚构删除。实际旧入口是首次执行自动准备与侧栏 E 进度，现统一到 EnginePicker，应用 C/R 更新保留。
+- View 默认显示三个引擎；安装/更新与配置选择分开，未就绪不可选；关闭菜单不停止或重放准备。Logic ManagedEngines 复用 RuntimeStore 的下载、解压和校验，状态只读本地缓存；同引擎的显式准备与执行解析合并，目标由签名清单固定，更新不会覆盖旧运行目录。准备成功的摘要/版本记录只用于展示，不授予路径或执行信任。Bridge 严格枚举请求，主 Frame/应用安装门禁保留，Codex 同时准备其 Pi 工具依赖。
+- 兼容边界：新的 engineStatus 随冷壳发布，旧冷壳明确不可管理；开发态显示随应用提供。可更新仅表示当前签名清单目标发生改变，不查询任意引擎上游最新版。本次没有下载真实引擎或改变本机安装，未打包、安装验收、完整 CI、合并或发布。
+- 受影响服务、IPC、旧更新投影：`pnpm exec vitest run tests/managed-engines.test.ts tests/ipc-desktop.test.ts tests/update-button-state.test.ts` 12 项通过。覆盖只读目录、真实临时缓存准备、并发去重、进度、失败重试、固定版本变化和旧目录保留、IPC 额外字段/安装门禁。调用契约与运行版本冻结消费者：`pnpm exec vitest run tests/ipc-requests.test.ts tests/engine-runtime-binding.test.ts` 18 项通过。
+- 新服务公开入口及源说明/对话消费者：`pnpm exec vitest run tests/dependencies.test.ts tests/layer-boundaries.test.ts tests/inline-conversation.test.ts` 166 项通过。类型检查 `pnpm typecheck`、`pnpm check:architecture`（0 循环/违规）、`pnpm check:test-modules`（506 文件）通过。同步源文件注释及 conversation、updates、Bridge/contracts、server/bootstrap、Logic/updates/service 的 CONTRACT/类图，生成器更新 8 份受影响架构文档。
+- `$env:CBIM_UI_ROOT='C:\XDTWorkspace\cbim-ai'; node scripts/engine-menu-ui-smoke.mjs` 通过五组真实组件 Edge 无头检查：全部引擎可见且查看无安装、更新进度与关闭重开不重放、320px/减少动效、安装不自动选择与草稿保留、失败显式重试。首次发现准备按钮移除导致焦点落到 body 后 Escape 失效，修复后通过；另修验收脚本样式路径。证据 `test-results/engine-menu-report.json`、`engine-menu-mobile.png`，页面错误为空；组件状态为明确替身，不冒充安装版验证。旧配置、自动化、多引擎和应用更新验收脚本同步选择器/断言，本轮未执行其完整安装验收。
+
+## 2026-11-15：#94 独立 Agent、执行循环与递归调度首片实现
+
+- 来源：[Issue #94](https://github.com/nan023062/cbim/issues/94)，用户授权替换产品源码并明确要求三种独立系统封装。基线 `06509c1b`；沿主输入、运行受理、引擎装配、工具执行、子运行记录与只读展示核查，未宣称全仓逐行审计。原品牌素材及领域引擎草稿不纳入提交。
+- Logic 新增 `Agent` 冻结身份、权限、模型与对话引用；`AgentExecutionLoop` 独立管理一次启动、停止与关闭，复用既有 Runtime/SDK；`AgentCallScheduler` 通过注入端口持有调用关系、深度、并发、去重、取消及直接结果回传。三者单向依赖，Application 只装配真实工作区、准入、预算和引擎。
+- 新普通会话使用 `agent-tools-v1`，主与子共用对象/循环。`cbim_agent_list` 读取真实配置，`cbim_agent_call` 使用可信调用身份；父工具与子日志双向可核对。根持工作区租约，所有实际进程领取全局名额；退出未确认保留占用，不重放工作。引擎历史预检移到受理前，避免超限先创建旧目标。
+- View 恢复主连续对话，移除输入框模式切换；Agent 调用像普通工具逐层查看，历史只读，320px 详情全宽，读失败只重查。运行指令同步统一模型，旧无标记历史仍走原恢复路径。
+- 验证按变化选择：`pnpm exec vitest run tests/runtime-continuation.test.ts tests/runtime-failed-retry.test.ts tests/runtime-fresh-main.test.ts tests/engine-session.test.ts` 38 项通过；对象/循环/调度/真实装配及消费者使用 `pnpm exec vitest run tests/agent-object.test.ts tests/agent-execution-loop.test.ts tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/execution-collaboration.test.ts tests/main-history-context.test.ts` 40 项通过，包含真实三层调用（外部 Pi 引擎替身）、父身份区分、根预算、权限与准入拒绝、取消和关闭失败保留占用。
+- `pnpm typecheck` 通过。`pnpm check:architecture` 最初发现新组件公开入口未登记，修正后 0 循环、0 违规。`pnpm check:test-modules` 通过，505 文件（unit=153、contract=156、integration=196）。架构检测器专项 `tests/dependencies.test.ts` 151 项、`tests/source-architecture.test.ts` 4 项通过；`tests/layer-boundaries.test.ts` 初次发现新增出口文件头缺设计原因，补齐后 2 项通过。同步全部修改源码注释、相关 CONTRACT 及 11 个目录架构文档（含新增 agents）。
+- 浏览器专项：`$env:CBIM_UI_ROOT='C:\XDTWorkspace\cbim-ai'; node scripts/agent-call-ui-smoke.mjs` 和 `node scripts/waiting-chat-ui-smoke.mjs` 通过，报告位于忽略的 `test-results/agent-call-ui-report.json`、`waiting-chat-ui-report.json`；包含递归只读、身份错配拒绝、320px 返回保留草稿、原等待续接与未知回执防重。页面异常为空，详情交互执行写入为 0；这些是隔离 Edge 组件验收，不是安装后的真实桌面验收。
+- 支持边界：目前只支持与根相同冻结模型；启用旧汇总预算及同调用暂停提问返回明确 unsupported，未伪造完成。旧办公室外壳、旧恢复和旧工具适配尚未全部退出。完整 CI、多引擎在线集成、桌面安装、合并与发布未执行，#94 保持开放。后续修改入口见 [Agent 契约](../src/logic/agents/CONTRACT.md)、[装配契约](../src/logic/application/assembly/CONTRACT.md) 与 [工程交接](agent-tool-engineering.md)。
+
+- 前端选取连续正文、历史展示、输入等待和续接消费者：`pnpm exec vitest run tests/inline-conversation.test.ts tests/team-conversation-view.test.ts tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 初次 24 通过、旧 SVG 断言 1 失败；改为真实禁用状态断言后单独运行 `tests/conversation-waiting.test.ts` 3 项通过。补齐 continuing 参数后以同一命令前缀运行 `tests/chat-chrome.test.ts tests/conversation-waiting.test.ts tests/continuation-chat-inputs.test.ts` 10 项通过，五套累计 25 项最终通过，未重复重跑已通过且未再改变的套件。
+
+## 2026-11-15：统一 Agent 工具模型的产品、UX 与工程交接
+
+- 来源：用户逐步确认主 Agent 对用户、执行 Agent 对直接调用方，Agent 可递归调用 Agent／工具；深度、并发、预算作为工具约束，超限返回错误；随后明确要求替换旧 Agent／Team 需求、界面及 UX。基线 `06509c1b`，未跟踪的品牌素材与领域引擎草稿保留。查询开放 Issues（上限 200，实际 1 项）仅有既有 #65，未将其扩成此次产品重设计工单。
+- 按产品需求 → UX → 程序员接入核查完成设计交接。新需求、UX、工程方案及 [替换范围](agent-tool-design-replacement.md) 描述目标与迁移；同步替换概念设计、Agent／Team 核心模型、办公室／话题旧方案、两份 UX 设计和原型、图标动效规范及导航。普通设置与项目管理设计继续保留。
+- 工程核查指出：成员不装配派发能力、父运行写租约可能阻断递归子执行、旧成员求助后封轮；不能只删除禁止派发提示或改 UI 就报告实现。交接拆为启动预检与调用关系、真实递归工具、统一对话呈现、历史兼容与验收，具体接入和测试入口见 [工程交接](agent-tool-engineering.md)。
+- 当前运行规范及源码契约保持事实，须随对应执行实现迁移；历史验证和发布记录不改写。未修改产品源码、用户运行数据或执行权限。本次仅做文档、原型验证；不运行产品单元、类型检查、完整 CI、打包或桌面安装验收，不宣称产品已支持递归执行。
+- 验证：本轮 16 份变更／新增 Markdown 的 383 条本地文件引用检查通过（不包含外部页面和全部标题锚点），无编码替换字符或成串问号；`git -c core.safecrlf=false diff --check` 通过。程序员核对工程方案所列 13 个测试路径存在，不代表这些测试已经执行。
+- 原型专项：`node design/build-cbim-icon-sprite.mjs --check` 及完整原型静态检查通过；`node test-results/check-agent-ux.cjs` 在隔离 headless Edge 检查 8 种核心状态、7 个变更页面、15 个工具状态组合、320／390／1280px 根部无溢出、草稿保留和执行 Agent 无输入框，页面异常为空。主题、减少动效与演示发送已核查；不代表全面无障碍审计或真实桌面产品通过。`node test-results/capture-agent-ux.cjs` 更新桌面和图标预览并新增 [390px 手机工具详情](agent-tool-mobile-preview.png)。
+
+## 2026-11-15：清理 design 临时缓存与失效开发方案
+
+- 来源：用户直接要求清理 `design/` 的临时文件和过期文档；基线 `14bf63f0a3b1adf90d5293f9df70f81a7f2535f4`，分支 `feat/ux-system-completion`。查询 `nan023062/cbim` 全部开放 Issues（上限 100，实际 1 项）仅有无关 #65，不创建或回填工单。开始时未跟踪的品牌素材和 `task/domain-agent-loop-engine-architecture.md` 保留原样。
+- 删除 `tool-architecture-roadmap.md` 的旧迁移占位、`task/remaining-deliveries.md` 的 R01–R20 旧接续清单，以及已退出当前路线的 `cindy-development-pipeline.md`。当前开发入口继续使用项目 Skill 与 Issues；删除文档不表示其中未实现能力已经完成。历史引用固定到清理前提交，并经 GitHub API 确认该提交存在。
+- 清除已删除 Python 工具留下的 10 个 `.pyc` 文件（153959 字节）及 4 个空目录；执行前核对目标位于本仓库 `design/scripts/`、没有重解析点或其他文件，逐文件删除后只移除空目录。临时扫描器与结果放在忽略的 `test-results/design-cleanup-20261115/`。
+- 将阶段收尾总结移至 [历史验证目录](verification/development-closeout-20261108.md)，保留日期、成果、失败和交接事实，修复其相对链接。更新 [设计入口](README.md) 与任务目录入口：清除过期“本轮正式发布／候选”导航，说明运行资产、关联方案和历史证据的区别；图标规范链接到后续实施和未完成桌面验收。仍有用途的 UX 原型、图标母版、配套脚本、预览图、架构 HTML 快照、发布及验证记录全部保留。
+- 验证选择：本次仅维护文档和本机缓存。`node test-results/design-cleanup-20261115/check.mjs --snapshot` 建立原链接及内容指纹；清理后执行 `node test-results/design-cleanup-20261115/check.mjs`，520 份 Markdown 的本地文件链接无断链、无指向已删除旧路径的链接，53 项运行规范／Schema／既有未跟踪资产的 SHA-256 不变；不检查外部页面内容或全部标题锚点。`git -c core.safecrlf=false diff --check` 通过。
+- 未运行产品单元、全量回归、类型检查、构建、安装升级或发布验收；没有改动 `src/`、测试、Skill 或产品运行资产，无需同步源码注释／类图。清理完成时结果留在本地工作树；随后用户授权将本次清理独立提交并推送 `feat/ux-system-completion`，不包含原有未跟踪素材，不合并或发布。
 ## 2026-11-15：0.1.20 完整 CI 与隔离安装通过（#91/#92）
 
 - 完整 CI 43702922295：c73d8a49 对 master 基线 6ef19cff，四片与汇总通过，530 文件/3575 通过/0 失败/2 历史 EXE 条件跳过。
@@ -2171,18 +2383,18 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 ## 2026-11-08：软件内 BUG／需求反馈接入开发管线（初稿，已由后续要求调整）
 
 - 根据用户新增要求，补充[反馈入口方案](task/user-feedback-intake.md)：软件内 BUG／需求表单、我的反馈、诊断预览、可靠回执、补充材料、重复关联及用户进度。
-- 在[管线方案](cindy-development-pipeline.md)前增加 `cbim-triage`，区分原始反馈、已采纳工单、开发授权和 PR 交付；用户无需 GitHub 账号，仓库写入由服务端适配器处理。保留人工合并／发布边界，按真实发布版本回传，旧意见和未知提交结果不伪造成功。
+- 在[管线方案](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/cindy-development-pipeline.md)前增加 `cbim-triage`，区分原始反馈、已采纳工单、开发授权和 PR 交付；用户无需 GitHub 账号，仓库写入由服务端适配器处理。保留人工合并／发布边界，按真实发布版本回传，旧意见和未知提交结果不伪造成功。
 - 只读核对现有用户菜单、设置、诊断和治理反馈，尚未找到产品用户 BUG／需求入口；账号登录仍未接入。反馈服务、适配身份和新界面均为待实现条件。本次检查文档链接与差异，不运行产品测试，不创建外部服务或工单。
 
 ## 2026-11-08：Cindy + Git 岗位开发管线方案
 
-- 用户选择以现有 CBIM 工程试点、自动推进到 PR 就绪并人工合并。已整理[管线方案](cindy-development-pipeline.md)，包含七类岗位入口、工单交接、提交绑定、返修与停止条件、实际验收和分步落地。
+- 用户选择以现有 CBIM 工程试点、自动推进到 PR 就绪并人工合并。已整理[管线方案](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/cindy-development-pipeline.md)，包含七类岗位入口、工单交接、提交绑定、返修与停止条件、实际验收和分步落地。
 - 已读取项目脚本与 Git 状态，并通过 Cindy 能力发现核实独立任务/worktree、运行查询、定时自动化与 PR 跟踪接口；当前伙伴例行任务入口不可用。仓库尚无已跟踪的 `.github` 工作流，远端默认分支为 `master`。
 - 仅设计交付，尚未创建 Skill、自动化、Issue／PR、CI 或分支保护；不启动新的产品功能步骤。文档引用与差异检查，不重跑产品测试。
 
 ## 2026-11-08：本轮开发收尾总结（仅文档）
 
-- 按用户要求整理[收尾总结](development-closeout-20261108.md)，汇总截至 Step55 的能力、R01–R17 完成与保留范围、R18–R20 后续计划、最终本地提交及 Windows 成品。
+- 按用户要求整理[收尾总结](verification/development-closeout-20261108.md)，汇总截至 Step55 的能力、R01–R17 完成与保留范围、R18–R20 后续计划、最终本地提交及 Windows 成品。
 - 区分 Step46 历史全仓 2068/2068 与 Step55 相关 203/203；引用已有报告，不计作本次重跑或最终全仓结论。
 - 同步开发入口与 roadmap 的总结链接；检查本次新增引用、成品位置和原有独立修改的保留情况。仅文档整理，不改变功能代码、构建或结束条件，不启动下一开发步骤。
 
@@ -2409,7 +2621,7 @@ pnpm exec vitest run tests/engine-build-cli.test.ts --reporter=default 通过：
 - 接收与历史：运行内记录独立于安全等待继续，混合输入序列有界连续，不重置真实主轮上限。两处目标详情展示状态与快照，未知不造正文；普通无计划对话保持轻量。已关闭旧周期的 unknown 不阻止同主会话的新周期，原周期待重规划只拦新领取、不拦已有运行结算。
 - 验证：独立 `ea680de` 基线真实 Pi 复现旧完成/等待审阅绕过，各7/5请求。首轮全仓232文件1425项中1423通过；两个旧返回语义断言修正后6/6。交叉审查再修正按实际新增事实而非cause判定未决门禁，最终22文件 **213/213**、边界 **13/13**、类型/架构通过；不冒称最终全仓通过。十条真实Pi覆盖新输入、混合等待、停止前后接收、日志/保存故障和重开无重放。
 - 真机：同一 Windows EXE `20261107-194848` 正常、停止、确认丢失通过，主/成员请求22/5、6/5、7/5；普通草稿保留，重开原记录/日志/请求不变，页面/通信错误0。正常脚本两处异步截图/断言等待已修正，产品未因此改动；故障模式只拦截自有Pi精确真实queued ACK，不伪造业务回执。成功场次TMP已清理；首失败目录删除被自动策略拒绝，保留未重试；基线junction有意保留。
-- 维护：Core brain/tasks、调度 conversation/execution/tools、Bridge与前端tasks的中文注释、6份CONTRACT、11份类图同步；51目录392源码/样式、715维护文件3415含类型依赖、0循环。[计划](task/active-goal-input.md)、[报告](verification/active-goal-input-20261107.md)。本轮按用户要求结束于剩余组8，组9仅留计划，交付包边界见[清单](task/remaining-deliveries.md)。下一片 R04-1 未领取任务追加单条前置；本机确定性供应商不等于在线自主判断或计费验证。
+- 维护：Core brain/tasks、调度 conversation/execution/tools、Bridge与前端tasks的中文注释、6份CONTRACT、11份类图同步；51目录392源码/样式、715维护文件3415含类型依赖、0循环。[计划](task/active-goal-input.md)、[报告](verification/active-goal-input-20261107.md)。本轮按用户要求结束于剩余组8，组9仅留计划，交付包边界见[清单](https://github.com/nan023062/cbim/blob/14bf63f0a3b1adf90d5293f9df70f81a7f2535f4/design/task/remaining-deliveries.md)。下一片 R04-1 未领取任务追加单条前置；本机确定性供应商不等于在线自主判断或计费验证。
 
 ## 2026-11-07：队列插入绑定原主运行与独立停止
 
@@ -2776,3 +2988,389 @@ A 已通过准确 head 的四片完整 CI（408 文件，2774 通过、0 失败�
 ## 2026-11-12：A/B 已公开，预下载通过，差分缓存缺陷确认
 
 A 的公开升级 43153427566 通过；B 经正式四片 CI 43153778797（2774 通过、0 失败、2 个历史 EXE 跳过）和候选安装 43154244827 后公开。严格 A→B 差分测试 43155757174 失败，因 NSIS 写入 cbim-assistant-updater 而应用读取 cbim-desktop-updater，真实传输为完整 391409091 字节。显式全量回退场景 43156807720 补齐预下载、正常退出不安装、有效缓存复用、UI 点击后安装及全部数据保留，differentialDownload=false；1 次模型请求、零页面错误。构建配置已改为复用 NSIS 的 AppInfo 目录规则，原回归先失败后通过，37 项制品测试和依赖检查通过；未公开 0.1.12 修复候选另行验证，不改 A/B 原附件。详见 [B 结果](verification/desktop-release-0.1.11-20261112.md) 与 [缓存调查](verification/desktop-update-cache-diagnosis-20261112.md)。
+
+0.1.21 发布复核补充：首个 f99490bf 构建虽通过制品检查，但发现对话整合遗漏附加模型角色入口，未上传或公开该候选。恢复 AgentModelForm 的 revision、角色保留和可用性校验，入口置于引擎菜单；模型发送/续接/核实均传 modelRoles。inline-conversation/model-roles 15 项和 engine-menu-ui-smoke 五场景通过（含四引擎、320px、进度、重开无重放、失败重试，页面错误为零）。重新冻结后另建候选；完整 CI 以最终 head 为准。
+
+0.1.21 制品复核：105bc644 候选通过 verify:desktop 和打包 EXE 六项隔离检查，但与公开 E 1.1.0 比较发现四包仅 adapter.cjs 字节发生变化；沿用版本会被 EngineArtifacts 同版异包保护拒绝。该候选未上传/公开；为四引擎递增适配器到 1.1.1，保持 SDK 版本不变，重新生成最终候选。
+
+
+### 0.1.21 安装验收基线修正
+
+冻结制品源为 6541c41da6b11d6b0c003cb4c3a13e631735a863。后续仅调整隔离安装验收脚本与开发文档，不修改产品、资源或构建输入；保留同一候选。升级验收按旧版实际引擎摘要和文件表核对缓存，不能用新版推荐 E 的摘要替代旧安装。0.1.21 同样检查品牌与匿名 E 索引，旧停用状态不被更新发现改变。候选 EXE 隔离六场景通过；正式 CI 与安装验收仍待完成。
+
+
+### 0.1.21 发布门禁未通过（2026-11-15）
+
+PR #96 已提交并转为草稿。候选构建、校验、EXE 隔离六场景及真实 Windows 候选安装通过；完整回归发现旧业务验证/派发集成消费者尚未迁移。当前源码最小复现 9 失败、6 通过，不能删除断言或恢复旧 Team 模式来放行。已暂停合并与发布；未发布 R/E 索引或切换官网。详见 [实际验证记录](verification/desktop-v0.1.21-20261115.md)。
+
+
+### #94：执行循环与调度收敛（2026-11-15）
+
+来源：用户明确要求 AgentExecutionLoop 并入 LoopRuntime，调度复用 execution 现有机制。基线 76d87a58；在 release/agent-0.1.21 工作树实施，原工作树未跟踪品牌及架构草稿未改动。C3 专项治理、L2 跨模块认知交付：问题是主/子循环包装重复持有 started/closed/stopFailure，以及本根 reserved 与全局运行准入两套并发状态。依据实际调用链读取 agents、execution/runtime 与 admission、application/assembly/agent-calls、conversation/runtime 管理器及其消费者测试。
+
+实施：删除 agents/loop.ts 及旧包装测试，把原行为验证迁入真实 LoopRuntime 套件。主与子直接调用 Runtime.start，现有 Runtime 持有信号、日志、工具授权和引擎收尾；主会话管理器及调用协调器在 done 后 close，不重复维护生命周期。AgentCallScheduler 从 agents 移至 execution/assembly，保留调用身份、深度、问答及取消树，移除 reserved、本根并发限制；prepare 继续复用唯一 GlobalRunAdmission，capacity 仅显示其权威快照。关闭未知仍保留实际许可，仅重试排空，不重放运行。Agent 对象和便携协议保持独立，不恢复旧 Team 入口。
+
+保护的稳定机制：LoopRuntime、全局准入、根预算和历史读取。新增调用路由策略只修改 execution 调用协调器，具体引擎选择留在应用装配；无需再维护一套 Agent 循环。此次不迁移旧业务验证/派发集成，原 #94 发布阻塞仍存在。候选 6541c41d 不含本次源码，不得作为本次重构发布制品。
+
+验证选择：调用协调单元检查去重、深度、问答与排空；装配契约使用真实 Runtime/GlobalRunAdmission，仅替换外部引擎，核对跨模型与父占用计数；主会话显式恢复用实际 SDK 和确定性本地 HTTP 响应，未调用在线模型服务。实际命令：
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts tests/agent-call-exchange.test.ts tests/agent-request-budget.test.ts：40 项通过。
+- 移动公开入口和登记模块后，pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts tests/dependencies.test.ts tests/agent-history-assembly.test.ts：216 项通过，含依赖检测器 178 项；重复执行仅针对修改过的套件。
+- pnpm exec vitest run tests/conversation-retry.test.ts：2 项通过，真实 Codex HTTP 400 后同对话分别重试 Codex/Pi，旧日志保持。
+- 合计去重行为验证 46 项、依赖规则 178 项通过。pnpm typecheck 通过；pnpm check:test-modules 通过，537 文件（unit174/contract163/integration200）。
+- pnpm check:architecture 核对所有受影响类图与类型依赖；初次发现新增精确入口未登记，补登记并删除旧入口后复查。未放宽层级规则。
+
+同步维护 agents、execution/assembly、execution/rules/runtime、application/assembly、conversation/runtime 的注释、CONTRACT 和类图及父目录导航；设计只更新对应封装说明。单元职责登记同步更新，无完整 Application 单元夹具。未运行全量 CI、构建、安装或发布；既有旧业务集成失败不计为本次通过，PR 保持草稿。review 从 application/assembly/agent-calls.ts → execution/assembly/agent-call-scheduler.ts → execution/rules/runtime/runtime.ts → conversation/runtime/execution-manager.ts 阅读。
+
+### #94：业务文件验证迁入递归 Agent 工具链（2026-11-15）
+
+用户授权：补齐旧业务验证到新 Agent 工具链的迁移，让九项回归通过。基线 17f032c7，release/agent-0.1.21 工作树；PR #96 仍为草稿。S1–S4 采用 C3/L2：实际读取 Agent 调用装配、execution 调用协调/LoopRuntime、冻结知识、岗位责任核实、原始日志验证器、文件平台及九项真实 Pi 集成夹具。断点是新子调用只构造 chat TaskSpec，遗漏冻结 Workflow 和验证端口；测试仍调用旧 goal/dispatch 工具。
+
+S5：business 参数显式传模块、验收和可选 Workflow；application/assembly/agent-business.ts 通过既有来源、岗位、模型检查冻结知识，接入原 ArtifactFiles、验证器、清单和代码检查端口。业务运行使用同一 LoopRuntime.startMember，beforeRun 关联父工具；普通运行保持 start。私有 TaskNode/DispatchRun 投影复用原 canonical 验证规则，不写旧派发图/队列，不创建 Team 入口。模型结束后仍校验真实 canonical 和当前文件；cbim_agent_result_check 只核本父运行原 callId，变化返回 WORKFLOW_VALIDATION_STALE，不重新执行。递归业务禁用旧终止式求助和检查点，保留同调用问答。未装配隔离端口的业务要求拒绝启动。修复原缺省 Pi 引擎被补进模型快照而误报哈希变化的问题，并保留工具错误码/outcome。
+
+稳定边界：未复制 JSON/CSV/PNG 算法、证据重建、文件读取、运行循环或全局调度状态。新增验证器仍经既有 Workflow/平台扩展，调用协调器只接受可信 launch/verify；下一次业务规则变化从原 evidence/workspace 能力修改，端口装配从 agent-business 修改。本次保留旧验证器输入投影以避免同时改写历史日志契约，其退出需另迁移验证器公共输入，不能靠伪造持久派发解决。
+
+S6 验证范围与实际结果：
+- pnpm exec vitest run tests/json-validation-pi.test.ts -t 'validates actual' --reporter=default --reporter=json --outputFile=build/agent-business-regression.json：选中 JSON/CSV/PNG × complete/changed/stop 九项。真实 Application、Pi SDK、本地确定性模型服务及实际文件写/读/采集/验证；未访问在线模型。保留 rejected 不可交付、修复后新基线、CSV/PNG 具体拒绝原因、当前字节、错误/缺失复核回执拒绝、取消排空、重启日志和文件不重放断言；增加父工具精确关联和没有旧图任务/交接工具的断言。同文件六项旧人工目标决策测试未选中、未删除，仍待后续迁移。
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts tests/loop-engine.test.ts：37 项通过。覆盖原递归/限额/跨模型/求助及新增可信业务启动、同调用者重核、外部变更错误、不重启子运行、验证失败不返回完成、缺省引擎哈希。
+- pnpm typecheck：通过；新增测试的 unknown 直接属性断言最初被类型检查拒绝，改为对象匹配断言后通过。
+- pnpm check:test-modules：通过，537 文件，unit174/contract163/integration200；没有改变归属或把集成降级为单元。
+- pnpm check:architecture：通过，1649 文件、7823 依赖、零环、零违规。同步源码说明后再次 node scripts/source-architecture.mjs --check：零差异。
+- 前期失败包括夹具仍期待旧协议、真实缺省引擎哈希问题、新断言将 validator 误写入 requirement，以及测试替身未给缺省 Pi 的真实 kind；逐项修正，未恢复旧 Team，也未删减文件验证安全断言。最终结果以本节列明的范围为准。
+
+S7 认知与 review：阅读 agent-calls → agent-business → agent-call-scheduler → LoopRuntime，再看 json-validation-pi/provider 的真实工具请求；完整 diff 从 17f032c7 起。同步这三个源码目录的 CONTRACT、文件头/接口说明及类图和父导航。未运行完整 CI、构建、桌面或安装升级验收；旧人工目标决策和其他未迁移集成不在本次通过声明内。0.1.21 旧候选未包含本次修改，不合并、不发布。
+
+### #94：六项人工决策迁移到原 Agent 调用（2026-11-15）
+
+用户授权：迁移剩余六项旧人工决策测试，通过后更新 PR 并申请评审。基线 c39a8b58；C3/L2，复用前次已核实的执行/证据边界，精读 AgentCallScheduler、主运行问题端口、QuestionQueue、原人工目标集成及验证夹具。旧 scope-goal/humanContinue 依赖派发图与持久目标等待，不符合连续主对话的普通工具调用模型。
+
+实施：根 Agent 的 cbim_agent_result_review 只接收本根已验证交付的 callId，重新核验当前文件，通过真实原问题队列收集用户决定。文件变化或无法复核只提供 reject/request_evidence；输入文字“接受”也不能覆盖允许集；展示之后的 accept 还要再次复核。决定先通过原 tool.updated 可靠追加，保存原调用/运行身份、原字节证明、当前核验和真实答案；然后在同一工具内等待明确“继续处理意见”。负面决定或只保存不允许本运行新建子调用，返回 AGENT_HUMAN_DECISION_REQUIRED，原调用的幂等结果仍可读。停止/close 取消并排空评审等待，已保存记录保留，不重放提问或执行。
+
+协议迁移边界：不创建旧图目标、人工服务或独立页面；旧人决策 API 的重复提交回执改为原工具 ID 的结果去重，问题卡重复提交明确拒绝。旧 humanContinue 改为同工具中的显式继续；中断后只保留 canonical 历史，重启不自动恢复等待，后续需要新的用户指令。测试不再虚构旧 scope/图任务，保留文件变化拒绝接受、精确原证明、保存意见时不推进模型/子运行、重复/跨任务答案拒绝、显式继续仍不重跑子 Agent及重启历史不重放。中断后不原地恢复旧目标周期是新链路的明确语义，不宣称迁移了旧持久 goal 服务。
+
+实际验证：
+- pnpm exec vitest run tests/json-validation-pi.test.ts -t 'preserves real negative' --bail=1：六项通过，JSON/CSV/PNG × reject/request_evidence，真实 Application、Pi SDK、本地确定性模型、实际文件与公开问题命令，无在线模型。首轮因继续答案漏填契约要求的 other 字段失败，补正确请求后通过，未放宽产品校验。
+- 共享调用目录/夹具变化，运行 pnpm exec vitest run tests/json-validation-pi.test.ts -t 'validates actual'：此前九项全部通过。该文件 15 项已在两个明确选择中全部覆盖，无删项/跳过声明。
+- pnpm exec vitest run tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts：最终 31 项通过（17 单元、14 装配契约），新增人工保存/继续、接受竞态、关闭排空、原身份幂等、跨调用者和子 Agent 拒绝、typed accept 拒绝；已有跨模型/求助及全局准入覆盖保留。
+- pnpm typecheck、pnpm check:test-modules 通过（537 文件，unit174/contract163/integration200）。
+- pnpm check:architecture 通过，1649 文件、7821 依赖、零环、零违规；增加评审取消字段后再次生成并检查类图，零差异。未修改边界规则或测试归属。
+- 共 46 项受影响行为验证通过。未运行完整 CI、桌面、构建或安装升级验收，不能以此批准合并/发布。
+
+职责与 review：本步保持 QuestionQueue、LoopRuntime、原文件证据规则稳定，人工工具的身份/去重/负面门禁由 execution 调用协调器持有，可信用户端口在 application 装配；没有新增第二个调度/消息状态源。源码头、两个装配目录的 CONTRACT/ARCHITECTURE 同步。阅读 agent-calls 的 requestReview → agent-call-scheduler.review → json-validation-pi 人工六项，完整 diff 从 c39a8b58 起。用户已要求转为可评审；指定评审者尚待用户名，仓库当前只列出 PR 作者 nan023062，GitHub 不允许作者评审自身。PR/GitHub 更新结果另记录于 #94，当前制品仍过时，未合并/发布。
+
+
+## 2026-11-16 · #94 全界面字号与字重统一
+
+依据 UI 排版审查修改 52 份 View 样式：普通文字统一 15px/400、短标题 500，代码独立默认 14px；长目标恢复正文，主/子 Agent 的 Markdown 复用相同层级。同步 14 个目录契约和架构说明；调度与状态所有权不变。
+
+受影响单元选择外观偏好和话题投影：`pnpm exec vitest run tests/appearance-settings.test.ts` 9/9、`pnpm exec vitest run tests/conversation-topics.test.ts` 7/7；`pnpm typecheck`、`pnpm check:architecture` 通过。设置/页面目录/完整 App/递归 Agent/引擎菜单专项通过，产生 276 张截图与单文件索引。具体命令、覆盖页面、截图修复和未覆盖状态见 [实施验收记录](verification/ui-typography-implementation-20261116.md)。
+
+验证仅涵盖真实前端组件和隔离数据；未运行本轮全仓 CI、打包安装或升级验收，未合并或发布。
+
+
+## 2026-11-16 · #94 新 Agent 输入回执与归档迁移修复
+
+基线 56eb2ca2，用户要求修复发布 CI。最新 CI 43735372529 仍失败；已下载的 shard 2/4 分别有 48/42 项失败，另两片缺完整报告，不能声称总数只有 90。此前 43731516597 的三个完整分片有 133 项失败，本步不将旧报告当作本轮全量结果。
+
+S1–S3（C2/L2）：精读 conversation/execution-manager → application/agent-calls → tasks/scope-active-input-service 与 dispatch/auto-collaboration，以及只读 office-history 工具和真实 Pi 夹具。新根没有旧 cycle，原队列插入会绕过 prepare/resolve；根周期未登记本轮输入及队列身份；未知回执导致成功关闭被拒绝后周期悬空；归档工具只挂在旧协调器。稳定的持久事务、原生日志核证及读取限制保留，变化限制在可信装配和生命周期。
+
+S4–S5：将旧协调器内的发送事务移至 ScopeActiveInputService.send，新旧消费者共用；AgentLifecycle 接收本轮正文/附件与可选队列身份，并提供插入端口。根收尾等待插入结算，GOAL_* 完成拒绝记录 blocked、failed 封存并向调用方抛出，队列暂停，unknown 不自动重发。原生 completed 与业务失败分别保留。OfficeHistoryTools 在统一主运行单独装配，固定 workspace/rootSession，子运行不继承；不恢复旧 Team 工具。旧自动直接执行测试移除 goal_plan/review 脚本，保留真实文件、副作用、权限、精确工具日志和重启不重放断言。
+
+S6 实际验证（同一文件可能因实际后续改动补跑，以下按用例去重共 83 项通过）：
+
+- pnpm exec vitest run tests/unified-tool-policy.test.ts tests/core-layer-contracts.test.ts tests/automatic-execution-pi.test.ts：分别 7、2、2 项通过；最初旧工具目录和静态边界断言失败，迁移后通过。
+- pnpm exec vitest run tests/queue-insert.test.ts tests/queue-insertion-pi.test.ts tests/scope-active-input-core.test.ts --reporter=default --reporter=json --outputFile=build/agent-input-repair-v2.json：21 通过、1 失败（回执 unknown 周期未关闭）。首次挂起运行已取消，不算通过。
+- pnpm exec vitest run tests/queue-insertion-pi.test.ts tests/agent-call-assembly.test.ts tests/execution-collaboration.test.ts --reporter=default --reporter=json --outputFile=build/agent-input-repair-v3.json：5 项插入与 14 项装配全部通过；生命周期 17 通过、1 因新增真实输入参数失败。更新该参数断言后该套件 18 项全部通过（build/agent-queue-context.json）。
+- pnpm exec vitest run tests/office-history-pi.test.ts tests/unified-tool-policy.test.ts tests/core-layer-contracts.test.ts --reporter=default --reporter=json --outputFile=build/agent-history-repair.json：10 项通过，原归档集成未改断言。
+- pnpm exec vitest run tests/loop-engine.test.ts tests/office-history-tools.test.ts tests/office-history-service.test.ts --reporter=default --reporter=json --outputFile=build/agent-history-boundaries.json：17 项通过，覆盖工具装配、只读身份与归档边界。
+- pnpm typecheck：最终通过。pnpm check:architecture：135 目录零差异，1654 文件/7841 依赖、零环零违规。git diff --check 通过（仅换行提示）。没有新增/移动测试或改变归属。
+- 新 Pi 集成使用真实 Application/Pi SDK、临时文件和本机确定性模型服务，不是在线模型或桌面安装验收。
+
+剩余实测失败：tests/queued-task-cancel-pi.test.ts 3 项仍依赖旧 goal_plan/dispatch_cancel/持久等待图，未删除或跳过，需按递归调用与新用户输入语义迁移。其他旧业务、派工、预算、检查点集成尚未完成迁移，本步不宣称全量 CI 通过。未重建候选、未合并、未公开发布；旧 0.1.21 草稿制品不是本次源码。
+
+S7 review：从 AgentLifecycle → execution-manager → agent-calls → ScopeActiveInputService.send 阅读；OfficeHistoryTools 只读限制未改。同步六个源码目录的 CONTRACT/ARCHITECTURE 与 Logic 父图，接口注释说明状态归属和失败含义。后续引擎仍复用同一 send 事务，不增加第二个输入账本。完整 diff 从 56eb2ca2 起；人工 review 尚未发生。
+
+
+## 2026-11-16 · #94 顺序调用取消三项迁移
+
+基线 eede62dd。将 queued-task-cancel-pi 的 complete/stop/cancel-not-success 三个真实 Pi 集成改为顺序 Agent 调用：A 求助沿原 call/task/run 暂停，B/C 尚未创建，不伪造 cancelled 图节点。完整答案只续原 A；错误 questionId 和重复用户答复拒绝。停止及未答复收尾排空原子树，未开始的 B/C 没有引擎、日志或文件操作；重启不重放，用户明确新输入才创建新一轮 A/B/C。旧图层精确撤销集合、依赖闭包及历史规则继续由原 queued-task-cancel.test.ts / queued-task-cancel-tools.test.ts 覆盖，本步未删除这些覆盖或重启旧 Team 执行。
+
+验证：pnpm exec vitest run tests/queued-task-cancel-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-cancel-migration.json 首次 complete 通过，另外两项仅在续聊后的原生会话字节断言失败。核实同一 Pi 会话显式 resume 会追加原生日志，修正为仅原主 session 允许前缀不变追加，原 canonical、子日志、scope 仍严格不变。pnpm exec vitest run tests/queued-task-cancel-pi.test.ts -t 'stop|cancel-not-success' --reporter=default --reporter=json --outputFile=build/recursive-cancel-resume.json 两项通过；第一项未再次选中，不是永久跳过。合计三项通过。pnpm check:test-modules 通过：537 文件，174 unit/163 contract/200 integration；未改归属。纯测试迁移，不改产品契约或类图。其他失败仍待处理，未达到完整 CI/公开发行门槛。
+
+
+## 2026-11-16 · #94 求助同调用续跑四项迁移
+
+基线 10d12029。member-help-pi 的 complete/waiting/stop/unknown-log 改为真实子 Agent 工具求助：直接调用方收到 waiting，主 Agent 可自行答复或转原用户问题队列，子 task/run 不变。主根始终持工作区租约，原写只发生一次；不再创建 replacement 图任务或 member-results 续轮。unknown-log 实际追加不完整 canonical 行，最终原读取必须 RUN_LOG_INVALID，父工具返回同错误，不能把损坏记录报告为 completed。重启前后精确日志字节、原文件、写入时间及请求次数不变。旧持久 goal 等待不冒称在新问答中实现。
+
+pnpm exec vitest run tests/member-help-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-help-migration.json：前三项通过；unknown-log 首次误期望可读 interrupted，但真实记录按设计拒绝读取。改为断言 RUN_LOG_INVALID 与原父工具错误后，pnpm exec vitest run tests/member-help-pi.test.ts -t unknown-log --reporter=default --reporter=json --outputFile=build/recursive-help-unknown.json 选中一项通过。合计四项通过，无永久 skip，未减掉原写不重放、租约、损坏证据限制。产品代码未修改，测试入口未变。
+
+后续源码核实：prepareAgentBusiness 当前只装配采集、验证、清单、代码检查；scope 隔离明确拒绝，controlled-files 的运行核验、报告与补偿仍依赖旧 DispatchState 的 run/task/member 事实。不能只替换测试工具名或放宽断言让六项受控文件集成转绿；必须迁移真实身份与恢复边界。此项仍是发布阻塞，不声明全部完成。
+
+
+## 2026-11-16 · #94 全局并发三项迁移
+
+global-admission-pi 改为父/子真实进程共用准入：两个工作区的父进程已启动时降为额度 1，不终止既有运行；新的主请求 CAPACITY_BUSY，子工具 AGENT_CONCURRENCY_LIMIT，未启动子引擎且没有延后派工票。增加额度不自动重试；只有用户明确新一轮输入才启动子调用，父+子恰计两个占用。覆盖正常完成、停止原子树、运行中重启后的无重放及两工作区文件隔离。旧 FIFO 单元/契约及 global-runtime 夹具保留原 provider；新增 recursiveAdmissionProvider 只用于新的集成语义，不重用旧派发身份。
+
+pnpm exec vitest run tests/global-admission-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-admission-migration.json：3/3 通过。前两组 7 项的 pnpm check:test-modules、pnpm typecheck 均通过。测试没有永久 skip 或分类降级；本步未改产品源码。实时完整 CI 43741771038 仍运行中，不把本机三个场景当成全量通过。
+
+
+同批 global-runtime-view-pi 也已迁移：同一实际 Application 的两个根及一个递归子运行均进入全局监管，3 个活动运行与真实准入一致；原 scope/任务身份、只读 cursor no-op、停止原树、重启后的历史恢复与日志字节不重写均验证。pnpm exec vitest run tests/global-runtime-view-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-runtime-view.json：1/1 通过。全局准入与监管共 4 项通过；不把子调用伪装成旧 dispatch 图任务。本批原 provider 保留仅供尚未迁移的历史夹具，不构成正式新运行入口。
+
+
+## 2026-11-16 · #94 递归业务真实删除/移动端口补齐
+
+基线 d22cfff5。S1–S4：精读 Application→execution→agent-calls→agent-business、既有 artifact-transitions 与 Runtime 证据流程，缺口属于 L 级装配遗漏；稳定的文件工人、权限/冻结范围、阶段日志与验证规则不变。Application 传递已有可信 ControlledFileTransport，业务子调用捕获原工作区实例与准入状态；未提供端口仍拒绝，不恢复旧派工图、不建立第二执行器。S5–S7：同步 application 与 assembly 的注释、CONTRACT 和两份生成类图，真实 Pi+Electron utility 验证 5 项（正常、源再现、人工接受、评审后源变化/目标变化）。原图的 humanContinue 机制改为同工具二阶段问答；不声称旧跨重启人工续轮已实现，保持原日志和文件不自动重放。
+
+验证选择：装配契约、受控删除/移动 Runtime 与证据规则，另跑真实平台集成。pnpm exec vitest run tests/agent-call-assembly.test.ts tests/artifact-transition-runtime.test.ts tests/artifact-transition-evidence.test.ts --reporter=default --reporter=json --outputFile=build/recursive-transition-contracts.json：51/51 通过。artifact-transition-pi 首轮 changed 通过，另两项因夹具误读 result_check 的 state 层级失败；校正后 -t 'automatic|human' 两项通过；追加 -t 'stale acceptance' 两项通过，共 5 个不同集成用例通过。详情分别 build/recursive-transition.json、recursive-transition-review.json、recursive-transition-stale.json，无永久 skip。pnpm typecheck、pnpm check:architecture（0 环/0 违规）、pnpm check:test-modules（537 文件）和 git diff --check 通过；测试归属不变。
+
+核实完整 CI 43743143208（d22cfff5）失败：三片完整报告共 113 个失败，第 3 片取消，不能当作全量统计。尚有受控写入/补偿、隔离执行、旧预算/持久等待等迁移缺口。本步不合并、不公开旧候选、不把单项平台验收当安装升级验收。
+
+
+## 2026-11-16 · #94 已保存接受在继续前重新核验
+
+基线 8744ccbc。发现新二阶段评审在用户保存 accept 后等待继续，原实现不再次检查文件：该间隙的修改可能消费过期接受。现由既有 AgentCallScheduler 在交回模型前按原 callId 再调用只读验证器；失败保留已存 humanDecision，追加 continued=false/verification_failed，返回原错误并阻止本轮自动新建子调用。不新增等待服务、不改派发持久协议或重放工具。同步执行装配注释、CONTRACT 与 ARCHITECTURE。
+
+迁移 complete-output-pi 的 3 项到新 Agent 业务工具，保留真实 Pi 文件写、完整目录集合/JSON 同清单证明、额外文件导致拒绝、人工两阶段、重启文件/原日志字节及请求计数不变；新增第四项在已接受但未继续时增加文件，验证意见不改写且继续拒绝。旧 humanContinue 跨重启补充机制没有冒充为新能力，原历史服务覆盖仍保留。
+
+pnpm exec vitest run tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/review-continuation-contract.json：18/18 通过，包含新增过期接受拒绝、原工具幂等、禁止自动返工断言。pnpm exec vitest run tests/complete-output-pi.test.ts --reporter=default --reporter=json --outputFile=build/complete-output-recursive.json：4/4 通过。选取原因是实际修改人工评审释放边界及其完整清单消费者；未重复其它已通过测试。两片累计 78 个不同用例通过，非全仓测试结论。完整发布仍被其它旧业务迁移与全量 CI 阻塞。
+
+
+## 2026-11-16 · #94 递归业务受控写入与隔离身份
+
+基线 c37f4a22。S1–S4：沿 Application→agent-business→LoopRuntime→ControlledFiles/IsolatedExecutions 精读生命周期；缺口是新业务调用没有可供原文件阶段及报告核实的持久身份。复用唯一 DispatchStore 增加 agentBusinessRuns 独立登记事务，保留原文件工人、阶段、fsync/未知结果和隔离清理。登记不创建旧图任务、消息队列或第二个执行循环；active 只表示启动意图，closed 只在原 Runtime.close 后保存。新最小 BusinessRunSource 隔离协议路径差异，旧运行读路径不变。父工具原引用及逐层 canonical 授权在启动前核实，重复等待引用允许，换绑拒绝；普通中间 Agent 可继续递归。所有业务后代关闭后才能封存祖先，异步保存失败保留占用且不重放。
+
+S5–S7：同步源码注释、8 个变更目录及父目录的 CONTRACT/生成架构说明，登记 3 个新细粒度公开入口，没有放宽边界规则。新测试按规则、存储契约及真实平台集成分别登记。受影响验证：business-run-registry、controlled-file-core/store/service、agent-call-scheduler 首批 57/57；追加来源链、等待/换绑、间接后代及异步关闭失败后，business-run-registry/storage/agent-call-scheduler 37/37。新增 agent-controlled-file-pi 4/4 验证真实写入、回包损坏、部分写入 unknown、写前停止及显式补偿/重启不重放。迁移 scoped-execution-pi 1/1 验证真实 LPAC、越界拒绝、原生工具伪装拒绝、受控写、清理及重启。首次隔离断言误将宿主实时观察值当作持久事实，校正为保留资源身份和阶段，另显式验证旧宿主退出。首次运行来源校验错误使用聚合 summary.status，已改成检查 canonical 终态事件，进行中的未完工具不再误判为已停止。
+
+实际命令与报告：pnpm exec vitest run tests/business-run-registry.test.ts tests/controlled-file-core.test.ts tests/controlled-file-store.test.ts tests/controlled-file-service.test.ts tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/business-run-contracts.json；pnpm exec vitest run tests/business-run-registry.test.ts tests/business-run-storage.test.ts tests/agent-call-scheduler.test.ts --reporter=default --reporter=json --outputFile=build/business-run-lifecycle.json。pnpm typecheck、pnpm check:test-modules（540 文件）、pnpm check:architecture 通过；补充 CONTRACT 后 node scripts/source-architecture.mjs --check 无差异。旧 controlled-file-pi 的影响处置及异常后写屏障 6 项尚待迁移，保留原测试而非删除；其它旧预算/等待测试和完整 CI、安装升级验收均不能据此宣告通过。
+
+
+## 2026-11-16 · #94 递归受控文件影响观察与处置迁移
+
+基线 2a8e7937。沿原 effect-source→EffectObservationService→effect-observation-invariants 迁移来源解析：新业务身份读取 agentBusinessRuns 与 loop-engine canonical，逐一核实根、绑定、岗位、模块、父工具及原生会话。新报告 source.executionModel 明确标识 agent-tools-v1，不伪造旧任务版本；旧报告和摘要保持原形。保存处置复核同一已关闭登记及周期，观察期间登记变化使依据失效。复用原报告、事务及只读副作用核实服务，没有新增处置引擎。
+
+迁移原 controlled-file-pi 全部 6 项，保留真实 utility 部分写、坏回包、写前停止、备份原字节、原 canonical/native 不改、显式补偿、处置 CAS 与重启零重放。异常后 5 种写入/命令/交付绕过仍被拒绝。发现新问题工具被原只读屏障遗漏，RunControlledFile 允许 cbim_ask_user_question 面向直接调用方；答复不清除屏障，最终仍 interrupted。首次夹具单选不符合原问题 Schema，改为两个有效选项；原 unknown 工具回包按原状态核对而非误断言为普通 error。
+
+验证：pnpm exec vitest run tests/controlled-effect-service.test.ts tests/effect-observation-service.test.ts tests/effect-observation-core.test.ts tests/effect-disposition-store.test.ts --reporter=default --reporter=json --outputFile=build/recursive-effect-contracts.json，61/61 通过；追加 -t 'persists recursive effect' 1/1 通过，覆盖登记缺失/活动/跨周期拒绝。pnpm exec vitest run tests/controlled-file-runtime.test.ts --reporter=default --reporter=json --outputFile=build/recursive-controlled-question.json，14/14 通过。集成首批 build/recursive-controlled-effects.json 正常/停止 2 项通过；修正异常夹具及问题入口后，-t 'partial|bad-wire' 输出 build/recursive-controlled-effects-errors.json，4/4 通过，共 6 个不同场景；没有永久跳过用例。pnpm typecheck、check:test-modules、check:architecture 通过。同步 evidence/runtime、tasks/rules、execution/rules/capabilities 注释、CONTRACT 及生成类图。完整 CI 和发布仍未通过，后续按实际失败继续迁移。
+
+
+## 2026-11-16 · #94 主调用知识契约测试迁移
+
+基线 f532d80a。knowledge-contract、knowledge-effect-object、knowledge-refresh 三个确定性供应商退出旧 cbim_goal_plan/review 和 cbim_dispatch_task 假设，按新主会话直接执行原知识事务。移除的旧目标回合不作为知识提交的授权或验收；仍完整验证原目录/Schema、无效预览、未找到诊断、审批与停止、精确一次提交、坏输出原 failed 回执、事务查询、处置幂等、native/canonical 原字节及重启零重放。新的根 completed 表示主会话正常返回说明，异常提交的工具回执仍 failed；不将其等同于旧 goal_review 接受或业务验收通过。
+
+pnpm exec vitest run tests/knowledge-effect-pi.test.ts tests/knowledge-contract-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-knowledge-effects.json：6/6 通过。仅测试供应商和断言迁移，没有修改产品源码。初次 current-main-effects.json 另有责任工具缺失失败，后续单独修复主上下文端口，不把该项记为通过。
+
+
+## 2026-11-16 · #94 主岗位及责任工具复用当前 Agent 根生命周期
+
+基线 7b02f719。S1–S4：主工具工厂此前仅从 Auto 批次取得上下文，新协议不启动该批次，导致岗位/模块责任工具消失。把现有 MainToolContext 定义迁入 execution/rules/conversation-binding，由原 Auto 和 AgentCallAssembly 共用；不是新增调度器。新根只在 beforeRun 已受理后提供固定 workspace/root/scope/run；关闭立即拒绝新控制面操作，复用根在途集合等待原提交，再关闭 scope/预算。服务命令 ID、审批、权限、来源与回执逻辑不变，子运行不暴露主管理能力。S5–S7 同步五个受影响目录的注释、CONTRACT 及生成类图。
+
+验证选择：根装配的身份与排空、岗位/责任原工具直接消费者，以及真实 Pi 控制面。agent-call-assembly、module-ownership-tools、workspace-member-tools 共 26/26 通过，新增关闭等待原提交、跨根/未受理禁止访问。module-ownership-pi 6 个主场景（read/ask拒绝/ask批准/execute/坏回包/stop）通过；其执行 Agent 隔离场景迁至 cbim_agent_call，两个真实岗位模型分别执行且均无责任管理工具，-t 'actual executor' 1/1 通过。persistent-effect-pi -t ownership 1/1 通过；原保存损坏回包可查询且重启不重放。
+
+coordination-pi 迁移至新主责任工具：统一只读目录 Schema 实际发送可编译、真实责任预览后过期依据提交拒绝、原回执查询不授权重试、连续三次失败熔断、没有责任写入或派发图任务，1/1 通过。相应报告为 build/recursive-root-context.json、recursive-root-tools.json（6 项通过及旧流程 4 项失败的原始报告）、recursive-owner-executor.json、recursive-ownership-effect.json、recursive-coordination.json。member-tool-contract-pi 两个旧 help/checkpoint 场景仍待迁移，不计为通过。pnpm typecheck、check:architecture（0 环/0 违规）、check:test-modules（540 文件）、git diff --check 通过。未运行全套桌面安装/升级，未公开旧候选。
+
+
+## 2026-11-16 · #94 递归执行记录报告与旧恢复边界
+- ExecutionReportService 使用 agentBusinessRuns 与明确 inspectAgent 读取原调用，复用唯一来源/父引用/岗位/原生绑定核验。无需旧任务图，展示原 active/closed 登记；不伪造任务版本、候选或恢复资格。
+- 失败工具的已有副作用、未选运行、缺失/截断日志、读取期间状态变化、分页和关闭周期语义保留；异常正文不击穿整张报告。
+- 报告协议和界面同步；旧 ScopeRecoveryService 明确拒绝递归报告充当旧任务凭据。相关六目录 CONTRACT、源码说明和生成架构图同步。
+- 验证选取：执行报告行为和 UI 直接受影响，ScopeRecovery 是版本字段消费者；真实 Pi 用例仍执行读/写/失败命令及只读报告，不以替身删除平台覆盖。
+- pnpm exec vitest run tests/execution-report-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-execution-report.json：2/2 通过。
+- pnpm exec vitest run tests/execution-report.test.ts tests/execution-report-view.test.ts tests/scope-recovery.test.ts --reporter=default --reporter=json --outputFile=build/recursive-execution-report-contracts.json：32 通过、1 新断言失败。坏工具正文原规则保留可读前缀且标 TOOL_EVIDENCE_INVALID/unknown；断言修正为该真实语义，不降低授权核验。
+- pnpm exec vitest run tests/execution-report.test.ts -t '递归报告' --reporter=default --reporter=json --outputFile=build/recursive-execution-report-identity.json：新增用例通过，16 未选；已通过用例不重复运行。
+- pnpm typecheck、pnpm check:test-modules、pnpm check:architecture、git diff --check 通过。边界 540 测试文件，依赖 1661 文件/7908 边，零环。
+- 未运行桌面报告逐页验收、安装升级或最终制品构建；CI 43790338820 是 ee9c3047，不能作为此本地提交的通过证明。
+
+
+## 2026-11-16 · #94 主 Agent 直接执行的权限回归
+- direct-main-execution-pi 原 8 项已实际完成工具调用，失败点均为要求已退役 Team 提示词。迁移为统一主 Agent 默认执行、调用按工具展开、反馈只返直接调用方及实际新工具目录断言。
+- 保留 8 种旧参数兼容组合的真实文件/命令、read 禁写、ask 两次审批、忙碌准入、知识目录保护、无团队开工和重开无重放验证；没有用提示词代替权限行为测试。
+- pnpm exec vitest run tests/direct-main-execution-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-direct-main-before.json：8 项旧文案断言失败。
+- 同命令输出 build/recursive-direct-main.json：8/8 通过。仅测试断言与说明变化，无产品源码/类型/导入修改，不重复产品静态检查；未运行桌面或发布验收。
+
+
+## 2026-11-16 · #94 递归主子调用共用请求预算
+- scope-budget-provider 增加显式递归场景供逐请求预算测试使用；旧持久等待/轮次预算的供应商不假称已迁移。新根先读取身份，再调用业务 Agent 和复核实际返回，成员计划、读取、交付均为真实工具。
+- main-block 阻止第二次主请求且无子运行；member-block 在原共享冻结账本内同时拒绝子后续请求与父接收后续请求，实际 3 次上游请求、2 次拒绝、480 token，无额外重试；完整链路 4 主 + 5 子请求，1680 token，真实结果复核 verified。
+- pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员' --reporter=default --reporter=json --outputFile=build/recursive-request-budget.json：2 通过，1 旧拒绝计数断言失败。改为核对实际父子共同门禁的两次拒绝，而非只计旧成员下一轮。
+- pnpm exec vitest run tests/model-request-budget-pi.test.ts -t '实际主轮与正式岗位成员.*(member-block|complete)' --reporter=default --reporter=json --outputFile=build/recursive-request-budget-fixed.json：2/2 通过；main-block 已通过且不受结果复核断言变化影响，未重复。
+- pnpm check:test-modules 通过；无产品源码变化。持久等待补充预算用例尚未迁移，不将以上三项报告为整个文件或全量 CI 通过。
+
+
+## 2026-11-16 · #94 Agent 数据契约的架构验收缺口
+- CI 43790338820 的 core-layer-contracts 仍把 agents/contracts 限定为装配层可读，和已登记的细粒度公开引用冲突；用量及证据服务因此被误判。逐项核实该文件仅依赖 Zod 和规则类型，没有引擎或应用实现。
+- 只允许 agents/contracts 这个明确入口；Agent 对象、问答协调及聚合入口仍限制在 execution/assembly。同时将 contracts 纳入纯规则的禁止反向导入检查，并明确禁止 assembly，不能通过开放整个目录掩盖依赖。
+- pnpm exec vitest run tests/core-layer-contracts.test.ts --reporter=default --reporter=json --outputFile=build/recursive-contract-boundary-final.json：2/2 通过；新增边界断言后复验，无产品代码改动。
+- ee9c3047 的 CI 43790338820 四片报告为 782/31/1、771/36/0、1135/23/1、866/42/0（通过/失败/待执行）；报告记录 132 失败，片 1/3/4 缺 terminal-state，不是完整通过。全部报告已下载 build/ci-43790338820/。后续提交修复不能倒填该次结果。
+
+
+## 2026-11-16 · #94 人工决定迁移与普通采集字节复核
+基线先快进到 065d9697，保留并应用文档组织规范更新。本片将 human-decisions-pi 四项真实 Pi 场景迁入 cbim_agent_call/result_review 和主问题队列；接受、拒绝、要求证据、原调用再次评价、意见保存后的独立继续、停止与重启不重放均核对原 canonical/native 和唯一子运行。新流程不制造旧 goal waiting 或 humanContinue；旧命令 CAS、来源/决定版本及 supersedes 的兼容检查仍由 human-decision-service/core 专项负责，本片不将普通文本视为人工授权。共享桌面旧脚本尚未迁移，未宣称桌面验收通过。
+
+发现实际缺陷：已成功采集的普通文本文件，因 Workflow 没有结构验证要求，原业务 verify 返回空文件证明，文件改变后仍可接受。新增无状态 AgentArtifactVerification 静态工具类，组合既有 verifyArtifactBaselines 和受限 checkFiles；精确登记 evidence/runtime 公共入口。损坏采集、已失效无替代、字节变化、缺失或虚假文件返回均拒绝；不重新采集、不过度宣称完整影响范围。装配的交付/result_check/人工接受/接受后继续共用此复核闭包，结构验证和完整清单仍保留。源码注释、CONTRACT 与生成类图同步；新契约测试登记 evidence 模块。
+
+验证选择：新证据组合及普通人工意见直接受影响，完整清单和 JSON/CSV/PNG 为共享业务 verify 消费者。初跑 human-decisions-pi 3 通过、过期接受失败，暴露上述缺口。修复后定向 stale acceptance 1/1 通过。pnpm exec vitest run tests/agent-artifact-verification.test.ts tests/human-decisions-pi.test.ts tests/complete-output-pi.test.ts tests/artifact-baseline-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-human-artifact-consumers.json：12/12 通过。按路径合并证明后 pnpm exec vitest run tests/json-validation-pi.test.ts --reporter=default --reporter=json --outputFile=build/recursive-artifact-validation-consumers.json：15/15 通过。
+
+pnpm typecheck、check:architecture、check:test-modules、git diff --check 通过；依赖 1663 文件/7915 边、零环，541 测试文件。首次架构检查发现新公共入口尚未登记，精确补入后通过，没有扩大整个目录权限。新文件按静态类/中文成员说明组织；现有 agent-business 保留装配函数与闭包生命周期，未顺带重排全部装配源码。未运行全套桌面、安装升级、完整本地回归；远端 43794310879 为本片之前的提交，不能充作本片通过依据。
+
+## 2026-11-16 · #94 人工继续迁移与统一副作用限制
+
+迁移 human-continuation-pi 的 8 项场景到同一 cbim_agent_result_review 工具内的明确继续：接受/拒绝/补证、仅保存、保存后文件变化、停止及根请求预算拒绝。真实 Pi、文件、canonical 与重开验证保留，不生成旧目标等待。旧 humanContinue 的 CAS/跨等待服务兼容覆盖仍由原服务测试负责，不将新工具伪装成旧入口。
+
+修复：原 humanBlocked 只限制子调用，主运行原生 write 可绕过否定或仅保存意见。AgentToolsBinding.guardEffects 只收紧权限，Runtime 放行前应用同一 runId 的副作用屏障；read/preview 可用，未知/写入/命令拒绝。同步 agents、execution/assembly、rules/runtime 的契约、注释和生成类图。
+
+验证选择：调度器拥有屏障，人工继续集成覆盖真实原生工具与持久状态，人工决定消费者覆盖共享夹具提取。初次 12 项中 11 通过；唯一失败为模型替身把真实 read 文本误作 JSON，已修正解析而保留实际读回内容断言。human-continuation-pi 重跑 8/8；human-decisions-pi 初次 4/4；agent-call-scheduler 20/20。pnpm typecheck、pnpm check:architecture（1663 文件/7911 边/0 环）、pnpm check:test-modules（541 文件）通过。未跑全量与桌面安装验收，未发布。
+
+## 2026-11-16 · #94 原调用再审与等待预算迁移
+
+human-reconsideration-pi 原旧目标等待入口改为同一原调用的第二次 result_review；分成原完整集合不变、目录新增文件、canonical 尾行损坏三项。保留真实集合和来源日志破坏验证、独立意见身份、旧意见不覆盖、重开不自动恢复问题或重发模型。旧跨 waitId/reconsidersDecisionId 接口仍由 human-reconsideration-service 兼容测试覆盖；新链路不伪造旧等待。
+
+model-request-budget-pi 的旧 goalContinue 等待用例改为原工具内暂停后的继续。将未来默认额度调大仍不能改变本轮冻结账本；被拒绝后保存的意见、原调用、1920 tokens 和拒绝记录经重开保持不变。共享夹具 app 改为读取当前已重开实例。
+
+验证：human-reconsideration-pi 3/3；complete-output-pi 4/4（同模型替身消费者）；model-request-budget-pi -t "recursive human wait" 1/1（其余10项未选择，不记通过）。pnpm typecheck、pnpm check:test-modules 通过。完整 CI、桌面/升级未运行，未发布。
+
+## 2026-11-16 · #94 原调用暂停与后继执行迁移
+
+member-pause-pi 四项改用真实递归 Agent 工具：A 实际写入、读取、采集后向直接调用方求助；主 Agent 转交用户并通过 agent_reply 继续同一 task/run/session。完成才依次执行 B/C 并真实读取前置文件；原写入仅一次。等待停止、答复后停止均无后继；等待中外部改写使原采集复核失败，后继不启动。重开保持日志与原文件，不自动恢复或重放已结束的问题。
+
+边界：新协议不再以停泊图创建新运行恢复检查点；原旧检查点/暂停持久服务兼容测试保留，不能将新同调用等待声称为跨进程继续能力。旧桌面 member-pause-ui-smoke 仍使用旧模型替身，尚待迁移，不记已验收。
+
+受影响验证：pnpm exec vitest run tests/member-pause-pi.test.ts 4/4（build/recursive-member-pause.json）；pnpm typecheck、pnpm check:test-modules 通过。该批仅测试迁移，无 src 改动。全量 CI、桌面发布未通过。
+
+## 2026-11-16 · #94 连续暂停、基础交付与关闭结算
+
+连续暂停迁移到同一 agent_call 的两次 question/reply，覆盖完成、停止、放弃和修改最早采集文件；错误/迟到答案不唤醒旧问题，后继只在实际交付后执行。scope-wait 三项验证根租约保持至真实排空、普通排队文字不消费问题、关闭保存原终态、未答复子调用直接结束导致 interrupted 且不制造 repair 运行。旧跨进程停泊恢复、检查点展示仍是旧协议兼容语义，不将本次新工具进程内等待冒称为持久续跑。
+
+实际缺陷与修复：
+- 无附加 Workflow 的业务 Agent 原先可能缺少 delivery 仍被标为 verified。复用 validateWorkflowEvidence 新增可信 requireDelivery 选项，核原目标、计划、步骤、交付回执、日志顺序与真实证据；不补造 Workflow。agent-business 在显式业务入口启用并拒绝截断/未决日志。
+- ExecutionManager.close 原先跳过统一 Agent lifecycle.settled，关闭后 scope 仍 active。现在关闭仍保存原终态并等待 settled；禁止排队新工作，持久结算失败向关闭方报告。旧协议协调归属不变。
+- 人工审阅集成夹具引入 Vitest 后被共享种子链传入 Electron，导致宿主启动超时。将完整集成/断言移入 recursive-human-review-fixture，原 human-decisions-fixture 保留可在 Electron 使用的纯种子/日志读取。
+
+验证与实际失败：首次 abandon 用例暴露缺交付仍放行，已修复；一次重开比较暴露测试只等 activeRuns=0、未等 scope 持久闭合，改为同时等待两者，不删除持久状态断言。关闭用例先暴露 active scope，已修复。Electron 初次 4 项均启动失败，保留错误记录，分离夹具后 4/4 通过真实 utility 写入/未知/停止/补偿。
+
+实际通过：workflow-evidence 24/24；recursive-delivery-consumers.json 中连续暂停4、单次暂停4、问答4、请求预算11共23/23；human-decisions 4/4；分离夹具后 human-decisions + human-continuation 12/12；scope-wait 3/3；execution-collaboration18 + queue-insertion-boundary26 + recovery-start-race4 + replan-start-race5共53/53，另新增关闭等待/失败2/2；业务消费者 JSON/CSV/PNG15、完整集合4、原采集2、执行报告2共23/23，受控文件重跑4/4。pnpm typecheck、pnpm check:architecture（1666 文件/7923 边/0 环）、pnpm check:test-modules（541 文件）通过。同步 application/assembly、conversation/runtime、evidence/rules 注释、契约及类图。
+
+远端旧头065d9697的CI 43794310879已结束：四片报告共3588通过、105失败、2pending，不能作为本地新头结果；四份报告已保留 build/ci-43794310879。仍有旧派工、恢复/重规划、依赖变更、附件等待及桌面脚本待迁移。未宣称全量通过，未合并/发布。
+
+
+## 2026-11-16：运行中补充指令迁移到递归 Agent（Issue #94 / PR #96）
+
+- 将 active-goal-input 的 10 种真实 Pi 场景迁移到同一根运行的 steer / ACK 及原 Agent 结果复核，不再依赖旧 goal plan/review 或成员派工。覆盖两次插入、暂停提问、ACK 未知、保存失败、发送前停止、确认后停止；旧 stale-review 场景改为实际拒绝已退出目录的工具，不能复活旧流程。
+- 保留接受事实、原生会话及重启不重放断言。停止竞态等待 scope 持久关闭后再比较幂等快照，避免把合法生命周期收尾误判为重复插入。共享供应商保持默认旧路径，尚未迁移的桌面夹具不被隐式改写。
+- 验证：首次专项 9/10 通过（build/recursive-active-input.json）；调整终态等待后，pnpm exec vitest run tests/active-goal-input-pi.test.ts -t "ack-stop|before-send-stop" --reporter=json --outputFile=build/recursive-active-input-stop.json 为 2/2 通过。pnpm typecheck、pnpm check:test-modules 通过（541 文件）。本步只改测试，未运行安装/升级验收；30a98c15 的完整 CI 仍在运行，不以本地结果代替其结论。
+
+
+## 2026-11-16：岗位独立模型调用与原结果复核（Issue #94 / PR #96）
+
+- owner-execution 六项集成迁移到 cbim_agent_call：实际注册岗位、独立 HTTP 路由/模型、适配和继承 Skill；调用前换负责人/改模型拒绝，不隐式切换。调用开始后改配置仍使用冻结的 4096 请求额度。未启动停止没有子运行，响应丢失后按原 callId 核验而不重放。
+- 原旧队列 ABA/领取语义不冒充新调用生命周期；兼容服务测试仍保留。bad-wire 改为真实子执行完成后丢失返回确认，未声称新 Agent 工具已有旧 dispatch 输出 Schema。所有根/子 canonical 和 native 在重启后逐字节保持，任务图为空。
+- pnpm exec vitest run tests/owner-execution-pi.test.ts tests/module-ownership-pi.test.ts --reporter=json --outputFile=build/recursive-owner-verified.json：13/13 通过。首次 6 项运行均在测试读取日志路径时误用 TaskSpec.id 失败，修正为实际 taskId 后通过；pnpm typecheck 通过。未跑完整桌面/安装升级。
+- 当前 30a98c15 CI 分片 2：868 通过、13 失败；发现源文件头使用“设计意图”而非强制“设计原因”，同步修正；架构生成器核查 135 目录、836 源码，结构与行为未变，无文档差异；其余属于待迁移业务/附件测试。
+
+
+## 2026-11-16：预算集成迁移到根请求账本（Issue #94 / PR #96）
+
+- scope-budget 七项改用 enforcement=request。真实 Pi 的根与子请求共用冻结策略；费用/价格缺失不放行，单纯 token 限额允许未定价模型；未来全局配置提升不改变当前调用额度。同调用提问后的下一次请求仍检查原额度，失败后排队指令保持暂停。
+- 旧 run 间软限额不是递归调用的支持模式，未恢复旧成员领取或持久 wait 协议。共享供应商只增加显式 recursive 分支，历史默认未改。
+- 初次 build/recursive-scope-budget.json 为 4/7 通过：未知价格费用完整性断言应为 false；正常完成不应附带一个供应商未实现的额外任务；提问选项须使用真实 label Schema。修正后 pnpm exec vitest run tests/scope-budget-pi.test.ts -t "unknown-price|tokens-unpriced|complete|waiting" --reporter=json --outputFile=build/recursive-scope-budget-followup.json 为 4/4 通过；首轮其余三项无需重复。pnpm typecheck、pnpm check:test-modules 通过。
+- 仅为本批受影响集成验证，完整 CI 和桌面安装验收尚未通过。
+
+
+## 2026-11-16：移除目标审阅/自动返工轮次假设（Issue #94 / PR #96）
+
+- goal-review 四项验证改为原调用交付核验：成功读取仍是 not_evaluated，失败子调用不生成交付；伪造 callId 无法取得证明；第二次独立复核使用新的工具调用身份，旧结果日志保持不变。根对话解释失败后结束不代表业务验收通过，不再要求旧 goal review 或凭空追加修复轮次。
+- goal-repair 验证主 Agent 在同一真实循环内执行失败命令、修复文件、再次运行命令，原失败与新成功回执并存；重新打开不自动返工、不修改 canonical/native。历史队列、目标修复与审阅服务的单元/契约测试保留，未重新启用旧运行工具。
+- pnpm exec vitest run tests/goal-repair-pi.test.ts --reporter=json --outputFile=build/recursive-direct-repair.json：1/1 通过。goal-review 首轮测试迁移有残留语法块，随后 4 项在重开后误用已关闭的旧 Workspace 句柄失败；改为当前生命周期实例后 build/recursive-goal-review-verified.json：4/4 通过。pnpm typecheck、pnpm check:test-modules 通过。完整 CI/桌面验收仍未完成。
+
+
+## 2026-11-16：停止续聊与同调用等待（Issue #94 / PR #96）
+
+- topic-interruption 的真实 Pi 验证改为显式停止原主循环再 resume 对话；继续前重新读取实际文件，不重建旧话题重规划；唯一已完成子调用身份和 canonical/native 不变。旧话题中断命令的兼容服务测试仍保留。
+- scope-continuation 四项迁移到原工具提问/答复：完成后重开、二次求助的旧题拒绝、答案已接收后停止、独立排队要求不作为答案且仅原任务结束后执行。未把进程内暂停包装成重启恢复旧检查点。
+- build/recursive-interruption.json 1/1、build/recursive-continuation.json 4/4 通过；pnpm typecheck 与 pnpm check:test-modules 通过。共享暂停供应商仅对明确排队标识响应额外根请求，正常子调用路径保留；历史默认 activeInputProvider 行为未改。
+
+
+## 2026-11-16：检查点退出与暂停期间配置变化（Issue #94 / PR #96）
+
+- member-checkpoint 四项迁移为同一递归调用的完成、停止、关闭重开及命令使旧采集失效。真实 bash 修改采集后的文件，后续步骤与交付均成功保存，但原采集仍被 ARTIFACT_BASELINE_STALE 拒绝；不靠失败步骤或模型假报来制造拒绝。
+- owner-execution-checkpoint 三项改为原调用冻结负责人/模型、暂停时换负责人、答复后改模型。已经启动的调用继续使用原冻结身份与 4096 请求上限；下一次调用分别被 AGENT_BUSINESS_OWNER / AGENT_CONFIGURATION_CHANGED 拒绝，不接管或切换执行。
+- 首次 checkpoint 测试将尚未封口 canonical 的读取投影误认为实时 running，改为检查持久 active 登记、真实在途问答及无终态事件；命令失效用例的进度版本增加一，确保拒绝来自旧采集而非未提交交付。build/recursive-checkpoint-exit-followup.json 3/4，build/recursive-checkpoint-command.json 补跑 1/1。owner 初轮 2/3，按冻结在途/新调用复核的真实契约修正断言后 build/recursive-owner-pause-change.json 1/1。pnpm typecheck、pnpm check:test-modules 通过。
+- 完整 CI 43798125917（30a98c15）结束失败：分片 1 为 1110/22/0，分片 2 为 868/13/0，分片 4 为 788/18/1（通过/失败/待定）；分片 3 达 30 分钟任务上限，仅留下选择清单和执行日志，无完整 JSON。不能给出全量准确失败总数，也不把本地修复从旧 CI 数字相减冒充当前结果。制品与日志留在 build/ci-43798125917。
+
+
+## 2026-11-16：本地交接与后继引用迁移（Issue #94 / PR #96）
+
+- checkpoint-handoff 四项使用真实用户答复结束旧岗位的原调用，并由当前注册岗位 B 的独立模型分别重新读取三个文件。旧 A 真实写入一次、没有交付；新 B 的不同 run/native 及其证据不借旧候选。覆盖正常、重复答案拒绝、停止、真实新调用完成后的确认丢失；丢失后只按原 callId 复核。
+- abandoned-checkpoint-dependency 四项在新岗位第一项已验证后暂停父模型，后续调用指令只携带当前新调用的 task/run 证明，排除旧 A 身份。正常与坏回包继续；停止或关闭重开不再启动后继。既成的两份 canonical/native 与冻结身份逐字节保留。
+- 未恢复旧检查点预约、换边事务或任务图；这些兼容服务及其原子性单元/契约覆盖保留。新流程按用户设计使用问答与普通 Agent 工具。
+- build/recursive-handoff.json 4/4、build/recursive-handoff-successors.json 4/4 通过；pnpm typecheck、pnpm check:test-modules 通过。新的供应商是独立集成辅助文件，没有将 Vitest 注入桌面共享种子。
+
+
+### 2026-11-16 · #94 递归调用的依赖追加、替换与多项调整
+
+迁移 queued-dependency-addition/replacement/revision 的 11 项真实 Pi 集成场景。主 Agent 在实际问答后明确选择调用顺序；后继只引用已完成原调用 taskId/runId 并重新读取实际文件，替换失败前置时保留旧调用但不引用它作为成功依据。覆盖确认前停止、前置完成后停止、关闭重开、真实结果回包丢失后按原 callId 核实；不构造旧 TaskNode、assignment 或伪造交付。
+
+首次执行暴露测试模型对含 JSON 引号的目标文本匹配错误，导致计划未发出，后续版本检查正确拒绝；修正序列化匹配，并将前置输入限制为原证明身份字段。产品源码未改动，旧队列服务契约测试保留。
+
+实际验证：`pnpm exec vitest run tests/queued-dependency-addition-pi.test.ts tests/queued-dependency-replacement-pi.test.ts tests/queued-dependency-revision-pi.test.ts --reporter=json --outputFile=build/recursive-dependencies-verified.json`：11/11 通过。`pnpm typecheck`、`pnpm check:test-modules` 通过（541 套件，174 unit / 166 contract / 201 integration）。仅覆盖本步依赖行为，未代表全量 CI、桌面安装或发布验收通过。
+
+
+### 2026-11-16 · #94 递归未知副作用观察与独立只读核实
+
+本步迁移 3 项影响观察与 3 项 inspection-cycle 集成场景。真实写入后丢失结束事件保留 unknown；命令失败及无交付的成功编辑不推断业务成功。文件变化使原处置依据过期，删除文件后报告 missing；跨根读取不泄露来源，重启不重放。
+
+发现并修复产品缺口：原 recovery 要求旧任务修订号、fresh 运行强制 legacy、递归登记一律禁止 recovery。现增加严格 agent-tools-v1 原业务来源记录，由真实 agentBusinessRuns 核原周期/身份/关闭状态；可信预检决定新根协议，意图接受后由 AgentLifecycle 拥有预算、子调用和终态，旧 Auto 不另建 cycles。核实只允许 read，持久事务也拒绝 ask/execute 及旧恢复周期混入。
+
+测试故障定位：初次夹具误将工具 unknown 结构视为 error，丢失结束事件实际为 interrupted；其次发现实际 legacy 选择及登记门禁缺口。一次参数位置编辑错误已修正。保留各次失败报告，最终按失败场景选择器复验：`recursive-effect-observation-followup.json` 的 unsupported/edit 2 项通过，`recursive-effect-changed.json` changed 1 项通过；`recursive-inspection-verified.json` stop 1 项通过，`recursive-inspection-successors.json` complete-restart/again 2 项通过。旧日志以真实损坏字节验证，未伪造旧任务。
+
+相关验证：`pnpm exec vitest run tests/business-run-registry.test.ts tests/scope-recovery.test.ts tests/recovery-start-race.test.ts tests/scope-detail-recovery.test.ts --reporter=json --outputFile=build/recursive-recovery-boundaries.json` 29/29 通过，包含新增 4 项持久权限边界。`pnpm check:architecture`、`pnpm check:test-modules` 通过；源码涉及 conversation/runtime、dispatch/runtime、execution/rules、tasks/rules、tasks/runtime 的注释与 CONTRACT/ARCHITECTURE 已同步。正式业务重规划、补充材料、原控制调用核查及剩余桌面迁移尚未在本步完成；不声明全量 CI 或发布通过。
+
+类型复验：修正新增单元夹具缺少 profileId 及可选字段断言后，`pnpm typecheck` 通过。CI 43801296964（旧头 47ef1e8b）四片全部返回：3663 通过、41 失败、2 pending；这是新交接/依赖/核实提交之前的历史基线，不代表当前头剩余失败数。
+
+
+## Issue #94：递归原调用核查迁移
+
+以 b06f3f9e 为基线，将原命令核查的三种场景迁移至实际 Agent 调用：登记后回包丢失、执行结果回包丢失、进入调用前失败。另迁移父调用副作用观察，分别核实失败的父工具回包与已完成的子调用，未将父回包失败等同于未发生执行。保留精确 callId、跨 root 隔离、重复只读查询、重启字节不变和无自动重放断言；不生成旧 TaskNode。
+
+验证：`pnpm exec vitest run tests/original-command-pi.test.ts tests/main-tool-contract-pi.test.ts --reporter=json --outputFile=build/recursive-original-commands.json`：7/7 通过（新迁移 3 项、受影响供应器消费者 4 项）。`pnpm exec vitest run tests/effect-observation-pi.test.ts -t 'observes a failed recursive parent' --reporter=json --outputFile=build/recursive-parent-effect.json`：1/1 选中通过，其余 4 项未选中。`pnpm typecheck`、`pnpm check:test-modules` 通过，541 套件登记（174 unit、166 contract、201 integration）。仅测试与记录修改，无 src 注释/类图变更。全量 CI、桌面、安装升级未在本切片执行；仍待迁移补充材料 8 项、业务重新规划 3 项及完整观察后修复 1 项。
+
+
+## Issue #94：递归对话材料校验及两项等待场景迁移
+
+普通 message/images 路径此前直接解析快照，未统一校验身份及非图片来源证明。本切片在 Logic/materials/service 内复用已有有界快照读取和 Schema，校验严格 UTF-8、快照身份、重复 ID、来源 proof、图片签名及大小；普通文本展开保留原 transcript 分隔格式。保留旧 connector 静态引用语义，不冒充真实资源采集。更新 chat-inputs 注释、service/CONTRACT.md 和生成的 ARCHITECTURE.md。
+
+两项旧等待场景迁移至真实 Agent 调用后、原根调用中用户问题暂停：附件预接收拒绝（无视觉模型、未知 ID、跨工作区、损坏快照），以及真实 HTTP 材料导入取消。使用真实子调用、问题队列、导入取消、持久状态及原生会话；未创建旧 TaskNode。停止后重启不重放，不声称新问题支持旧检查点跨进程续接。
+
+验证：chat-inputs + continuation-chat-inputs 首轮 10 通过、1 transcript 格式回归失败；恢复原分隔文本后精确补跑该项通过（build/recursive-material-transcript.json）。vision + chat-clipboard 7/7 通过（build/recursive-material-image-consumers.json）。新 import-cancel 首轮模型夹具只提供一个选项，被真实工具拒绝；改为两个选项后 1/1 通过（build/recursive-material-import-cancel-verified.json）。新附件 preaccept 1/1 通过（build/recursive-material-preaccept.json）。类型检查通过；架构检查 135 目录/836 文件、依赖 1671 文件/7920 边、零循环/违规。测试归属检查 541 套件通过。
+
+尚未完成：材料其他 6 场景（含运行中插入附件清单持久化与回包丢失）、业务重新规划 3 场景、完整观察后修复 1 场景，以及桌面脚本/安装升级。现有校验不等于这些流程全部通过。
+
+上一提交 b06f3f9e 的完整 CI 43804317093 已结束：3692 通过、16 失败、2 pending；第三分片成功。该 CI 不含 53959156 及本切片，不能用本地新增通过项推算新 head 的全量结果。
+
+
+## Issue #94：剩余十项递归工具链迁移收口
+
+以 96e6a7c9352fd4047a05c48001636d13b7cacdb9 为基线，按用户“剩下的 10 项迁移全部补完”授权完成材料 6 项、正式业务重新规划 3 项、完整副作用观察后修复 1 项。范围来自 Issue #94 及上一提交记录，未将桌面验收和发布混作本地测试完成。
+
+### 实现与维护者阅读顺序
+
+1. loop.enqueue → WorkspaceExecutionManager.enqueue → MessageQueue：原始输入和附件在同次受管读取中冻结清单；运行中插入先查原接收回执，再核快照、文本字节和哈希。ScopeActiveInputService、输入指纹及 Runtime ACK 绑定相同清单；重复已接收输入不再读取已删除快照，不重发。队列编辑保留附件身份，仅更新正文指纹；自动续发把本次已核图像直接交给 factory。
+2. agent-business → AgentBusinessRun.request → ScopeReplanService：冻结原业务目标及验收文本；新修复必须引用实际封存只读核实、覆盖原模块、保留原验收要求。可信预检把模块和验收文本传给新根模型；旧日志损坏不作为上下文，不生成旧计划/审阅或持久 TaskNode。
+3. ScopeGoalService → RecursiveInspectionEvidence → validateBusinessWorkflow/AgentArtifactVerification：复用既有 Workflow、文件及日志证明。根输入校验由 Tasks 注入，Evidence 不反向引用 Tasks 的运行实现；公开核证入口精确登记，零新增调度器或持久注册表。旧派工包装继续保留原规则。EffectObservationService 的关联加入实际递归 taskId；未知原结果即使后续修复也保持未知。
+4. 执行、逐次写入审批和停止共享现有启动屏障；全新上下文、重复命令、失效依据、原记录和文件字节、重启不重放都由实际集成断言覆盖。View 的重新规划回执识别新 inspectionRunId，同时兼容旧 reviewRunId。
+
+S1–S3：跨业务持久契约与核证链变化，按 C3 / L3 处理；主要风险为旧记录兼容、附件 ACK 身份、未知写入重放及核实被误当成新业务完成。S4–S5：材料与正式修复两个切片，共用原 LoopRuntime、输入接收、Store、证据及启动机制，不复制旧业务计划。S6：完成以下定向验证与源码资料同步；S7：本提交与 PR #96 为完整 review 入口，全量 CI/桌面仍为后续门禁。
+四问与候选：Q1 保护原调度/权限/幂等/Workflow 机制；Q2 变化分别封装在 Conversation 的快照输入、Tasks 的修复证明及 Evidence 的只读核证；Q3 既有旧来源分支不放宽，新来源缺少原要求时保守拒绝；Q4 下一种材料仍扩展原 prepareContinuation，下一种证据仍扩展既有验证器，不改中央循环；Q5 本轮无新增强制规则候选。新持久字段是可选兼容扩展，旧记录不补造新能力。
+
+### 实际验证
+
+选择依据：材料插入改变 queue/active-input/Runtime 的输入身份；正式修复改变登记、核证、重规划、恢复和 View 回执分支；Workflow 提取另核真实消费者。测试均使用真实 Pi 进程、工具、文件和日志以及确定性本地响应，不代表在线模型或真实桌面验收。
+
+- `pnpm exec vitest run tests/waiting-attachments-pi.test.ts tests/waiting-mixed-sources-pi.test.ts --reporter=json --outputFile=build/recursive-all-materials.json`：7 通过、1 失败。预算停止夹具仍配置不支持递归子调用的旧预算模式，调整为真实 request enforcement 后，用 `tests/waiting-attachments-pi.test.ts -t budget-stop` 精确复验 1/1 通过（recursive-material-budget.json）。合计两个套件 8 项最终均通过，其中本轮迁移 6 项，先前 2 项保留。
+- `pnpm exec vitest run tests/business-replan-pi.test.ts --reporter=json --outputFile=build/recursive-business-replan-retry.json`：3/3 通过。首次夹具误传旧 source.scopeId 且在旧目标已闭合时入队导致正常自动续发；改为新请求 Schema、先明确停止队列再入队，不修改产品队列语义绕过。随后补充可信原要求进入模型及根输入验证端口，运行 `tests/business-replan-pi.test.ts tests/replan-start-race.test.ts`：8/8 通过（recursive-replan-final.json）。
+- `pnpm exec vitest run tests/effect-observation-pi.test.ts -t 'observes an actual lost write result' --reporter=json --outputFile=build/recursive-effect-complete.json`：1/1 通过，另 4 项未选中。覆盖真实写入回包丢失→用户处置→独立只读核实→新修复，原调用不重放。
+- `pnpm exec vitest run tests/business-run-registry.test.ts tests/message-queue.test.ts tests/scope-active-input-core.test.ts tests/active-goal-input-service.test.ts tests/active-goal-input-runtime.test.ts tests/queue-insert.test.ts tests/queue-insertion-boundary.test.ts tests/scope-replan.test.ts tests/replan-start-race.test.ts tests/scope-replan-view.test.ts tests/scope-recovery.test.ts --reporter=json --outputFile=build/recursive-migration-boundaries.json`：109/109 通过。
+- `pnpm exec vitest run tests/json-validation-pi.test.ts tests/workflow-condition-pi.test.ts --reporter=json --outputFile=build/recursive-migration-workflow-consumers.json`：19/19 通过。
+- `pnpm exec vitest run tests/active-goal-input-pi.test.ts tests/queue-insertion-pi.test.ts --reporter=json --outputFile=build/recursive-migration-input-consumers.json`：14 通过、1 失败。旧 images-stop 测试拦截已不使用的二次图片读取而超时；改到真实 queuedImages 核证完成/发送之前暂停，保持停止后不得发送断言；用 `tests/queue-insertion-pi.test.ts -t images-stop` 复验 1/1 通过（recursive-migration-input-stop.json）。
+- `pnpm typecheck` 通过；`pnpm check:architecture` 通过，135 目录、837 代码/样式文件、1674 依赖文件、7938 边、零循环/违规；`pnpm check:test-modules` 通过，541 套件（174 unit / 166 contract / 201 integration）。初次边界检查发现两处未登记/反向运行引用，通过注入 Tasks 校验与登记单一 Evidence 入口修复。
+- 同步变更源码文件头、接口说明及 12 个受影响目录的 CONTRACT/ARCHITECTURE（IPC、Application assembly、Conversation、Dispatch、Evidence、Execution rules/runtime、Materials service、Tasks rules/runtime、Team runtime、View tasks）。新增两个集成夹具，无新增未登记测试套件。
+
+本轮没有运行全仓本地测试、桌面脚本或安装升级；完整 CI 由更新 PR 后执行。旧头 96e6a7c9 的 CI 43806206246 已结束：静态检查和第 3/4 分片通过，第 1/2 分片失败；它不包含本次十项修复，不能作为新头结论。旧 0.1.21 草稿制品未重建，本步未合并、未发布、未投放更新通道。

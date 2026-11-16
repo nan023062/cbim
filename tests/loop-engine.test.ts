@@ -149,3 +149,18 @@ it('task revisions survive logs and resume with stale evidence cleared, never au
     const second=await f.runtime.start(f.task,'继续修改',{runId:first.runId});await second.done;
   }finally{await f.cleanup()}
 });
+
+it('直接运行保留实际失败终态并关闭引擎，Runtime 关闭后拒绝再次启动',async()=>{
+  let closed=0,started=0;
+  class Engine extends StubEngine {
+    async start(context:EngineContext){started++;await super.start(context)}
+    async run():Promise<{status:'completed'}>{throw Error('engine execution failed')}
+    async close(){closed++}
+  }
+  const f=await setup(()=>new Engine());
+  try{
+    const run=await f.runtime.start(f.task);expect((await run.done).status).toBe('interrupted');
+    expect(closed).toBe(1);await f.runtime.close();
+    await expect(f.runtime.start(f.task)).rejects.toThrow('正在关闭');expect(started).toBe(1);expect(closed).toBe(1);
+  }finally{await f.cleanup()}
+});

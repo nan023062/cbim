@@ -1,3 +1,8 @@
+### 对话引擎管理
+
+EnginePicker 是引擎选择、安装和更新的唯一交互入口，默认枚举全部支持引擎，不按模型配置或安装状态隐藏。选择受配置锁控制，查看目录不受该锁影响。安装/更新与选择分开，未就绪不可选；关闭菜单不取消后台准备。每秒只读固定 IPC，迟到查询不能覆盖操作回执，重复点击有同步锁。真实百分比使用环形进度，未知进度不填 0；减少动效时静止显示文字。模型供应商仍留在设置。
+
+### 连续主对话与只读执行记录
 ### 按原任务跳转对话
 
 Conversation 将办公室“任务详情”、历史任务和运行管理定位统一解析为原逻辑成员、话题和任务；主 Agent 调度及自执行任务回到主对话。taskConversationTarget 必须核对当前 workspace/root 和正式成员登记，缺失/重复登记明确提示，不根据名称或执行实例合成会话。MemberConversation 的 taskNavigation 使用一次性 requestId 覆盖曾经浏览的任务/话题，消费后允许独立选择；再点同一任务会重新定位，旧读取仍由 useMemberRun 代次隔离。导航不发送、不停止、不清除草稿。
@@ -12,13 +17,15 @@ InteractionModeToggle 不创建独立工具栏，由 Conversation 只向当前�
 
 `teamConversations` 用已验证的长期 `TeamSession` 汇总同角色任务，主 Agent 保持主入口；不同执行实例不生成重复人物。缺登记旧数据不合成身份。`ConversationEntries` 在主条目下以成员名称直接选择，不再展开二级“查看对话”入口；按钮保留选中状态、执行指示和键盘可达性。沿原回调只切换查看身份，对话模式显示成员工作审阅，办公室模式定位对应成员，不创建/改名/删除子 Session。
 
-`MemberConversation` 从该办公室、角色和选中话题筛选任务，显示主 Agent 派发、成员公开正文、工具及交付候选。一次只挂载一个真实 task/run 的读取，历史轮次可选择；切换身份丢弃迟到响应。输入仍由外层原主 Session 的发送流程处理，界面注明收件人为主 Agent，不能直接启动成员。当前切片不把选择视为插入指令或暂停操作。
+`Conversation` 默认按运行顺序展示连续用户输入、主 Agent 文字和工具调用，不再要求先选择话题或 Agent/Team 模式。用户输入只发送主 Agent；`MemberConversation` 保留旧办公室/角色任务的只读历史，选中后隐藏输入框并提供返回主对话。一次只挂载一个真实 task/run 的读取，历史轮次可选择；切换身份丢弃迟到响应。
+
+`ConversationToolCall` 将真实 `cbim_agent_call` 详情作为普通 `ToolActivity` 插槽；展开后通过 `AgentCallDetails` 核验引用、读取子运行并递归展示工具。旧派发记录仍按验证后的旧图显示原记录，不能冒充新 Agent 调用引用。等待状态下普通主输入复用原目标的持久续接控制器，保存原草稿和附件；异常回执可展开续接记录核实。原中断恢复只在确有旧持久中断记录时提供。
 
 ### 话题列表与正文归属
 
 `conversationTopics` 只把同工作区、同主 Session 的聊天运行投影到原话题。优先使用摘要的持久 `mainRunIds`，旧记录仅在来源显式包含 scopeId 或全部回注任务同属一个话题时关联；未知、缺任务和冲突保留未分类，不按时间或当前选择推测。归属身份不复制正文或触发执行。
 
-`ConversationTopics` 主列表仅显示话题摘要；打开后渲染该话题的原 `ConversationTurn`，任务入口仍定位真实任务。完成及撤销进入默认折叠历史，失败和中断继续可见；未分类历史独立折叠。主页面保留当前目标控制，阅读选择与执行状态分离。
+`ConversationTopics` 与归属投影仅保留旧历史消费者兼容；主对话不再用其卡片代替正文。当前执行状态与恢复记录折叠为辅助内容，不要求用户以选中频道来决定正常输入的接收者。
 
 ### 输入框粘贴
 
@@ -212,3 +219,16 @@ MemberConversation 为只读工作审阅，按逻辑会话、频道、任务、�
 - ChannelDraftStore 按 workspace/root/scope 分键保存文本、有界附件元数据和版本；useChannelDraft 绑定可见代次，迟到文件选择不能写进切换后的频道。存储损坏不覆盖，受理/转交冻结请求后只清除提交时版本。主草稿仍属于原 Shell 页签。
 - ChannelComposer 只路由显式发送：active 使用 TopicInterruptionController 冻结原正文、模型、权限及有序 attachmentIds；waiting 使用唯一 ScopeContinuationController.submitInput；closed 创建关联后续任务。原请求持久化失败不发送；未知回执只沿原命令查询/显式重试。隐藏/切换不取消已受理任务或自动重试。
 - 普通主聊天发送继续排队新任务。分屏不新增并行主运行，不改变全员退出、准入、人工验收和停止语义。公开工具/思考说明在工作审阅，缺少记录不补造。
+
+## 0.1.21 主线整合
+
+EnginePicker 使用当前四种受支持引擎的目录；主进程将菜单状态投影自唯一 EnginePackages，准备复用其 revision/identity 校验和依赖闭包。历史话题的中断恢复用 LegacyTopicInterruptionForm 接回原持久草稿，不创建新频道。
+
+菜单内“配置当前引擎模型”复用 AgentModelForm；打开时冻结 revision，同引擎切换主模型保留附加角色，换引擎不携带旧角色。发送、续接和恢复均传入冻结的 modelRoles；角色缺失时禁止发送。
+
+
+## 统一排版（2026-11-16）
+
+普通文字、按钮、状态和说明复用 components/interface.css 的 --font-ui 与 --weight-regular；结构短标题使用 --weight-medium。颜色和间距承担次要信息层级，不把说明文字缩小。代码使用 --font-code，真实 Markdown 标题保留语义层级。
+
+ConversationTopics 的长目标使用正文段落或 span，不作为整段粗体标题。主对话、输入框、工具摘要和状态复用相同字号。

@@ -7,7 +7,7 @@ import type {ToolResult} from '../tools/rules/results';
 
 function deferred<T>(){let resolve!:(value:T)=>void,reject!:(error:unknown)=>void;const promise=new Promise<T>((a,b)=>{resolve=a;reject=b});void promise.catch(()=>{});return {promise,resolve,reject}}
 function error(code:string,message:string){return Object.assign(Error(message),{code})}
-/** 一次只保留一个原题；答案先持久记录再消费，重复答案返回原回包，不唤醒第二次。 */
+/** 一次只保留一个原题；发布端使用独立快照。答案先持久记录再消费，重复答案返回原回包，不唤醒第二次。 */
 export class AgentCallExchange {
   private frame=deferred<ToolResult>();
   private pending?:{id:string;input:QuestionInput;answer:ReturnType<typeof deferred<QuestionResult>>};
@@ -25,7 +25,8 @@ export class AgentCallExchange {
     const abort=()=>answer.reject(error('AGENT_CALL_CANCELLED','原求助已取消，不能用空答案续跑'));
     signal.addEventListener('abort',abort,{once:true});
     try{
-      const result=await this.publish('waiting',id,input);
+      // 发布端只取得快照，不能在落盘后改写本调用校验答案时使用的原题。
+      const result=await this.publish('waiting',id,structuredClone(input));
       signal.throwIfAborted();this.yielded=true;this.frame.resolve(result);
       return await answer.promise;
     }finally{signal.removeEventListener('abort',abort);if(this.pending?.id===id)this.pending=undefined}
@@ -38,7 +39,8 @@ export class AgentCallExchange {
     const pending=this.pending,answer=questionResultForInput(pending.input).parse(raw);
     const next=deferred<ToolResult>();
     const result=(async()=>{
-      await this.publish('running',questionId,undefined,answer);
+      // 记录与消费共享语义而不共享可变引用，防止发布适配器污染已校验答案。
+      await this.publish('running',questionId,undefined,structuredClone(answer));
       if(this.ended||this.pending!==pending)throw error('AGENT_QUESTION_STALE','原问题已取消');
       this.frame=next;this.pending=undefined;pending.answer.resolve(answer);
       return next.promise;

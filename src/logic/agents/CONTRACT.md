@@ -39,3 +39,7 @@ Application 的 `agent-calls.ts` 采用深度 8；并发只有 execution/admissi
 ## 根运行插入回执
 
 AgentLifecycle 在根运行受理前接收本轮正文与可选队列 scopeId/followupOf；insertInput 仅声明可信回执端口，事务仍由 tasks/runtime 的 ScopeActiveInputService 持有。
+
+## 问答发布边界
+
+Exchange 校验并持有原题与答案，publish 适配器只取得深拷贝快照；适配器在 await 期间修改输入不得改变答案校验或唤醒原子循环的值。取消发生在答案持久化等待中时，答案发布完成也不得唤醒已取消的等待；原答复 Promise 继续作为去重回执，不重发未知结果。等待发布失败仍保留已经发生的日志事实，但不伪造成功交接或恢复问题。

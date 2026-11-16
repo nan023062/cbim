@@ -1,3 +1,11 @@
+## 2026-11-16 — #94 原调用问答发布快照隔离
+
+基线 50a1f285。Logic/agents 的 AgentCallExchange 原先把自身持有的原题、已校验答案直接传给异步 publish；适配器可在记录后修改同一对象，影响后续校验或唤醒值。现在只向发布端传递 structuredClone 快照；状态仍由同一个 Exchange 持有，调度、循环、持久化归属不变，不增加服务或层级。
+
+验证选择：exchange 的 5 项单元覆盖连续问答、重复答案、发布失败、发布端修改、取消与落盘回执丢失；scheduler 20 项与 assembly 15 项验证其真实直接消费者，包括递归及跨模型同调用暂停。命令 pnpm exec vitest run tests/agent-call-exchange.test.ts tests/agent-call-scheduler.test.ts tests/agent-call-assembly.test.ts --reporter=default --reporter=json --outputFile=build/recursive-question-isolation.json：40/40 通过。pnpm check:architecture：135 份文档同步、1660 文件/7886 依赖、无循环或边界违规。首次 typecheck 发现测试替身遗漏 cancelled 答案分支，已修正为生产端口参数类型并显式收窄；再次 pnpm typecheck 通过。
+
+源码文件头已有职责说明，更新类注释及关键发布点注释；同步 agents/CONTRACT.md，生成 agents/ARCHITECTURE.md。当前仍不实现重启自动恢复暂停；未知结果继续不得重放。全量 CI 和发布验收另行完成。
+
 ## 2026-11-16 — #94 成员坏回包验证迁入原调用问答
 
 基线 639948f3，Issue #94 / PR #96。迁移 member-tool-contract-pi 两项真实 Pi 集成：只读后求助、写入及真实基线采集后求助。确定性供应商通过 cbim_agent_call/cbim_agent_reply 执行，同一个子 task/run 内暂停和回答；QuestionTools 的实际 request 已消费父级答案后，仅损坏传给严格输出包装器的返回值。

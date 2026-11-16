@@ -20,3 +20,35 @@ it('a failed durable answer publication does not consume the question or publish
  expect(exchange.waiting()).toBe(true);await expect(exchange.reply('1',answer)).rejects.toThrow('disk failure');
  expect(publish).toHaveBeenCalledTimes(2);exchange.fail(Error('closed'));await expect(waiting).rejects.toThrow('closed');
 });
+
+it('publication cannot mutate the frozen question or the answer consumed by the original child',async()=>{
+ const publish=vi.fn(async(phase:string,_id:string,question?:typeof input,result?:Parameters<ConstructorParameters<typeof AgentCallExchange>[0]>[3])=>{
+  if(question)question.questions[0].question='private changed question';
+  if(result&&'answers' in result)result.answers[0].answer='private changed answer';
+  return jsonToolResult('call',{phase});
+ });
+ const exchange=new AgentCallExchange(publish),waiting=exchange.ask(input,new AbortController().signal);
+ await exchange.wait();const reply=exchange.reply('1',answer);
+ expect(await waiting).toEqual(answer);expect(input.questions[0].question).toBe('Choose');expect(answer.answers[0].answer).toBe('A');
+ const done=jsonToolResult('call',{status:'completed'});exchange.finish(done);expect(await reply).toEqual(done);
+ expect(await exchange.reply('1',answer)).toEqual(done);expect(publish).toHaveBeenCalledTimes(2);
+});
+it('cancellation during answer persistence never resumes the child or republishes the original answer',async()=>{
+ let release!:()=>void,entered=false;
+ const publish=vi.fn(async(phase:string)=>{if(phase==='running'){entered=true;await new Promise<void>(resolve=>{release=resolve})}return jsonToolResult('call',{phase})});
+ const exchange=new AgentCallExchange(publish),controller=new AbortController(),waiting=exchange.ask(input,controller.signal);
+ await exchange.wait();const reply=exchange.reply('1',answer);void reply.catch(()=>{});
+ await vi.waitFor(()=>expect(entered).toBe(true));controller.abort();await expect(waiting).rejects.toMatchObject({code:'AGENT_CALL_CANCELLED'});
+ release();await expect(reply).rejects.toMatchObject({code:'AGENT_QUESTION_STALE'});
+ await expect(exchange.reply('1',answer)).rejects.toMatchObject({code:'AGENT_QUESTION_STALE'});expect(publish).toHaveBeenCalledTimes(2);
+ exchange.finish(jsonToolResult('call',{status:'cancelled'}));
+});
+it('a lost waiting publication receipt preserves no live question and does not invent a successful handoff',async()=>{
+ const journal:unknown[]=[];
+ const publish=vi.fn(async(phase:string,id:string,question?:typeof input)=>{journal.push(structuredClone({phase,id,question}));throw Error('saved but acknowledgement lost')});
+ const exchange=new AgentCallExchange(publish);
+ await expect(exchange.ask(input,new AbortController().signal)).rejects.toThrow('acknowledgement lost');
+ expect(journal).toHaveLength(1);expect(exchange.waiting()).toBe(false);expect(exchange.yielded).toBe(false);
+ await expect(exchange.reply('1',answer)).rejects.toMatchObject({code:'AGENT_QUESTION_STALE'});
+ exchange.fail(Error('original run failed'));await expect(exchange.wait()).rejects.toThrow('original run failed');expect(publish).toHaveBeenCalledTimes(1);
+});
